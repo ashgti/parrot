@@ -214,6 +214,7 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 /*
  * write barrier
  */
+
 #if PARROT_GC_IMS
 #  define DOD_WRITE_BARRIER(interp, agg, old, _new) \
     do { \
@@ -256,6 +257,11 @@ void Parrot_gc_ims_init(PARROT_INTERP)
         parrot_gc_gms_wb_key(interp, agg, old, old_key, _new, new_key); \
 } while (0)
 
+#endif
+
+#if PARROT_GC_IT 
+#  define DOD_WRITE_BARRIER(interp, agg, old, _new) 
+#  define DOD_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) 
 #endif
 
 #endif /* PARROT_DOD_H_GUARD */
