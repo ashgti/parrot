@@ -1,5 +1,5 @@
 /*
-$Id:$
+$Id$
 Copyright (C) 2001-2008, The Perl Foundation.
 
 =head1 NAME
@@ -11,8 +11,6 @@ src/pmc/mutable.pmc.template - Template for the mutable PMC
 Forwards all but some methods to the held PMC.
 
 =head2 Methods
-
-=over 4
 
 =cut
 
@@ -41,5 +39,9 @@ pmclass Mutable need_ext dynpmc group perl6_group {
 
     VTABLE void assign_pmc(PMC *value) {
         PMC_data(SELF) = value;
+    }
+
+    VTABLE PMC * get_pmc() {
+        return PMC_data(SELF);
     }
 }

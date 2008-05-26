@@ -159,6 +159,21 @@ Return a true value if the invocant 'isa' C<x>.
     .return ($I0)
 .end
 
+=item can(x)
+
+Return a true value if the invocant 'can' C<x>.
+
+=cut
+
+.sub 'can' :method
+    .param string x
+    .local pmc parrotclass
+    $P0 = self.'WHAT'()
+    $I0 = can $P0, x
+    .return ($I0)
+.end
+
+
 =item add_parent(parentclass [, 'to'=>parrotclass])
 
 =cut
@@ -200,10 +215,10 @@ Return a true value if the invocant 'isa' C<x>.
   method_loop:
     unless methoditer goto mro_loop
     $S0 = shift methoditer
-    $P0 = parrotclassns.'find_sub'($S0)
-    unless null $P0 goto method_loop
+    push_eh method_loop
     $P0 = methods[$S0]
     parrotclassns.'add_sub'($S0, $P0)
+    pop_eh
     goto method_loop
   mro_end:
 
@@ -244,10 +259,13 @@ or 'Object').
     .local pmc parentclass
     parentclass = options['parent']
     if null parentclass goto parent_done
+    $I0 = isa parentclass, 'P6protoobject'
+    if $I0 goto parent_single
     $I0 = does parentclass, 'array'
     if $I0 goto parent_array
     $S0 = typeof parentclass
     if $S0 == 'String' goto parent_string
+  parent_single:
     self.'add_parent'(parentclass, 'to'=>parrotclass)
     goto parent_done
   parent_string:

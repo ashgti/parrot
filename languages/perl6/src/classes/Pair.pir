@@ -43,6 +43,21 @@ Gets the value of the pair.
 .end
 
 
+=item get_string()  (vtable method)
+
+Stringify the Pair.
+
+=cut
+
+.sub 'get_string' :method :vtable
+    $S0 = self.'key'()
+    concat $S0, "\t"
+    $S1 = self.'value'()
+    concat $S0, $S1
+    .return ($S0)
+.end
+
+
 =item perl
 
 Returns a Perl code representation of the pair.
@@ -122,6 +137,16 @@ fatarrow:
     $S3 = $P1.perl()
     concat $S2, $S3
     .return($S2)
+.end
+
+
+.namespace
+
+.sub 'infix:=>'
+    .param pmc key
+    .param pmc value
+    $P0 = get_hll_global 'Pair'
+    .return $P0.'new'('key'=>key, 'value'=>value)
 .end
 
 
