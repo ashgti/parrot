@@ -78,6 +78,29 @@ typedef struct _gc_gms_gen {
 
 #endif /* PARROT_GC_GMS */
 
+#if PARROT_GC_IT
+
+/*
+ * Define the data structures that we need here, if any
+ */
+
+/*
+ * Header, a linked list
+ */
+typedef struct _gc_it_hdr {
+    struct _gc_gms_hdr *prev;
+    struct _gc_gms_hdr *next;
+} Gc_it_hdr;
+
+/*
+ * A type for our card marking scheme, if any
+ */
+typedef struct _gc_it_card {
+    INTVAL marked;
+} Gc_it_card;
+
+#endif /* PARROT_GC_IT */
+
 /* Tracked resource pool */
 typedef struct Small_Object_Pool {
     Small_Object_Arena *last_Arena;
@@ -116,12 +139,16 @@ typedef struct Small_Object_Pool {
     struct _gc_gms_gen *last_gen;
 
 #endif
+#if PARROT_GC_IT
+    /* define things that we might need here, if any */
+#endif
 } Small_Object_Pool;
 
 /*
  * macros used in arena scan code to convert from object pointers
  * to arena pointers ...
  */
+
 
 #if PARROT_GC_GMS
 #  define GC_HEADER_SIZE (sizeof (Gc_gms_hdr))
