@@ -81,23 +81,56 @@ typedef struct _gc_gms_gen {
 #if PARROT_GC_IT
 
 /*
- * Define the data structures that we need here, if any
- */
-
-/*
  * Header, a linked list
  */
 typedef struct _gc_it_hdr {
-    struct _gc_gms_hdr *prev;
-    struct _gc_gms_hdr *next;
+    struct _gc_it_hdr *prev;
+    struct _gc_it_hdr *next;
+    void *data_ptr;
 } Gc_it_hdr;
 
 /*
- * A type for our card marking scheme, if any
+ * Cards for marking. set up like a linked list with
+ * GC_IT_FLAGS_PER_CARD items on each card
  */
-typedef struct _gc_it_card {
-    INTVAL marked;
-} Gc_it_card;
+typedef struct _gc_it_card_node {
+    struct _gc_it_card *prev;
+    struct _gc_it_card *next;
+    INTVAL bitmap;      /* flags for status */
+    INTVAL status;      /* Determines which flags are active */
+} Gc_it_card_node;
+
+#define GC_IT_FLAGS_PER_CARD    (sizeof(INTVAL) * 4)
+#define GC_IT_SET_FLAG(n, f)    ((f) << (n) * 2)
+#define GC_IT_MARK_WHITE (0x0)
+#define GC_IT_MARK_GREY  (0x1)
+#define GC_IT_MARK_BLACK (0x3)
+
+/*
+ * Gc_it_data structure
+ * Contains information for the IT GC to operate.
+ * Allows for a basic generational scheme, with an old and
+ * a new generation list. The old generation is scanned less
+ * often then the young generation. If we don't intend this
+ * GC to be generational, we will simply not use the old list.
+ * The GC is designed to be run iteratively, in short bursts.
+ * We have to account for new items that are created during
+ * a run, which are stored but not yet reclaimed. After a run,
+ * All "new" items are moved into the young generation list.
+ * We also need to maintain a pointer to the last item scanned
+ * so we can pick up where we left off. We might need to
+ * maintain a stack of nodes that represents the state of the
+ * scan, since it's a tree and we need to recurse.
+ * Finally, there is a list for the cards to be marked.
+ */
+
+typedef struct _gc_it_data {
+    Gc_it_hdr *old_gen;     /* old generation list */
+    Gc_it_hdr *young_gen;   /* young generation list */
+    Gc_it_hdr *new_list;    /* list of items created during the current scan */
+    void *last;             /* the last node scanned, so we can resume */
+    Gc_it_card_node *cards; /* a list of cards for marking */
+} Gc_it_data;
 
 #endif /* PARROT_GC_IT */
 
@@ -140,7 +173,7 @@ typedef struct Small_Object_Pool {
 
 #endif
 #if PARROT_GC_IT
-    /* define things that we might need here, if any */
+    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
 #endif
 } Small_Object_Pool;
 
