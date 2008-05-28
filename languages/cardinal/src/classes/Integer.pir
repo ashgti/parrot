@@ -21,7 +21,7 @@ CardinalInteger - Cardinal integers
     .local pmc cardinalmeta, intproto
     cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
     intproto = cardinalmeta.'new_class'('CardinalInteger', 'parent'=>'Integer CardinalObject')
-    cardinalmeta.'register'('Float', 'parent'=>'Object', 'protoobject'=>intproto)
+    cardinalmeta.'register'('Float', 'parent'=>'CardinalObject', 'protoobject'=>intproto)
 .end
 
 
@@ -32,19 +32,6 @@ CardinalInteger - Cardinal integers
 .sub 'ACCEPTS' :method
     .param num topic
     .return 'infix:=='(topic, self)
-.end
-
-
-=item clone()
-
-=cut
-
-.sub 'clone' :method :vtable
-    .local pmc clone_type
-    clone_type = self.HOW()
-    $P0 = clone_type.'new'()
-    $P0 = self
-    .return($P0)
 .end
 
 

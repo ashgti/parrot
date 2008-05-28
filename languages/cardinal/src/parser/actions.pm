@@ -160,7 +160,7 @@ method indexed_variable($/) {
         $args := $( $<args>[0] );
     }
 
-    my $past := PAST::Var.new( :scope('keyed'), :node($/) );
+    my $past := PAST::Var.new( :scope('keyed'), :viviself('Undef'), :node($/) );
     $past.push($var);
     while $args[0] {
         $past.push( $args.shift() );
@@ -266,7 +266,19 @@ method ensure($/) {
 method while_stmt($/) {
     my $cond := $( $<expr> );
     my $body := $( $<comp_stmt> );
+    $body.blocktype('immediate');
     make PAST::Op.new( $cond, $body, :pasttype(~$<sym>), :node($/) );
+}
+
+method for_stmt($/) {
+    my $list := $( $<expr> );
+    my $body := $( $<comp_stmt> );
+    my $var := $( $<variable> );
+    $body.blocktype('declaration');
+    $var.scope('parameter');
+    $var.isdecl(0);
+    $body[0].push($var);
+    make PAST::Op.new( $list, $body, :pasttype('for'), :node($/) );
 }
 
 method module($/) {
@@ -467,11 +479,16 @@ method array($/) {
 }
 
 method ahash($/) {
-    # XXX handle class stuff
-    my $past;
-    my $getclass := PAST::Op.new( :inline('    %r = new "Hash"'), :node($/) );
-    $past := PAST::Op.new( $getclass, :name('new'), :pasttype('callmethod'), :node($/) );
-    make $past;
+    my $hash;
+    if $<args> {
+        $hash := $( $<args>[0] );
+        $hash.name('hash');
+    }
+    else {
+        $hash := PAST::Op.new( :name('hash'), :node($/) );
+    }
+
+    make $hash;
 }
 
 method assocs($/) {

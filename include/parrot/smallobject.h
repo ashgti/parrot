@@ -78,7 +78,7 @@ typedef struct _gc_gms_gen {
 
 #endif /* PARROT_GC_GMS */
 
-#if PARROT_GC_IT
+#if PARROT_GC_IT /* Incremental Tricolor Garbage Collector, PDD09 */
 
 /*
  * Header, a linked list
@@ -96,11 +96,11 @@ typedef struct _gc_it_hdr {
 typedef struct _gc_it_card_node {
     struct _gc_it_card *prev;
     struct _gc_it_card *next;
-    INTVAL bitmap;      /* flags for status */
-    INTVAL status;      /* Determines which flags are active */
+    UINTVAL bitmap;      /* flags for status */
+    UINTVAL status;      /* Determines which flags are active */
 } Gc_it_card_node;
 
-#define GC_IT_FLAGS_PER_CARD    (sizeof(INTVAL) * 4)
+#define GC_IT_FLAGS_PER_CARD    (sizeof(UINTVAL) * 4)
 #define GC_IT_SET_FLAG(n, f)    ((f) << (n) * 2)
 #define GC_IT_MARK_WHITE (0x0)
 #define GC_IT_MARK_GREY  (0x1)
@@ -129,7 +129,9 @@ typedef struct _gc_it_data {
     Gc_it_hdr *young_gen;   /* young generation list */
     Gc_it_hdr *new_list;    /* list of items created during the current scan */
     void *last;             /* the last node scanned, so we can resume */
-    Gc_it_card_node *cards; /* a list of cards for marking */
+    Gc_it_card_node *old_cards;   /* a list of cards for marking old generation*/
+    Gc_it_card_node *young cards; /* cards for marking young generation */
+    UINTVAL items_marked;         /* Items marked since the beginning of the run */
 } Gc_it_data;
 
 #endif /* PARROT_GC_IT */
@@ -166,7 +168,7 @@ typedef struct Small_Object_Pool {
     struct _gc_gms_hdr *black_fin;      /* alive, needs destruction */
     struct _gc_gms_hdr *gray;           /* to be scanned */
     struct _gc_gms_hdr *white;          /* unprocessed */
-    struct _gc_gms_hdr *white_fin;      /* unprocesse, needs destruction */
+    struct _gc_gms_hdr *white_fin;      /* unprocessed, needs destruction */
 
     struct _gc_gms_gen *first_gen;      /* linked list of generations */
     struct _gc_gms_gen *last_gen;
