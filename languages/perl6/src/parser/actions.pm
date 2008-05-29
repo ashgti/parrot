@@ -840,7 +840,7 @@ method postcircumfix($/, $key) {
         $past := PAST::Var.new(
             $( $<semilist> ),
             :scope('keyed_int'),
-            :vivibase('List'),
+            :vivibase('Perl6Array'),
             :viviself('Undef'),
             :node( $/ )
         );
@@ -938,12 +938,8 @@ method package_declarator($/, $key) {
                             :scope('lexical')
                         ),
                         PAST::Op.new(
-                            :pasttype('callmethod'),
+                            :pasttype('call'),
                             :name('!keyword_class'),
-                            PAST::Var.new(
-                                :name('Perl6Object'),
-                                :scope('package')
-                            ),
                             PAST::Val.new( :value(~$<name>) )
                         )
                     )
@@ -970,12 +966,8 @@ method package_declarator($/, $key) {
                             :scope('lexical')
                         ),
                         PAST::Op.new(
-                            :pasttype('callmethod'),
+                            :pasttype('call'),
                             :name('!keyword_role'),
-                            PAST::Var.new(
-                                :name('Perl6Object'),
-                                :scope('package')
-                            ),
                             PAST::Val.new( :value(~$<name>) )
                         )
                     )
@@ -1003,12 +995,8 @@ method package_declarator($/, $key) {
                             :scope('lexical')
                         ),
                         PAST::Op.new(
-                            :pasttype('callmethod'),
+                            :pasttype('call'),
                             :name('!keyword_grammar'),
-                            PAST::Var.new(
-                                :name('Perl6Object'),
-                                :scope('package')
-                            ),
                             PAST::Val.new( :value(~$<name>) )
                         )
                     )
@@ -1050,12 +1038,8 @@ method package_declarator($/, $key) {
                     # Role.
                     $?PACKAGE.push(
                         PAST::Op.new(
-                            :pasttype('callmethod'),
+                            :pasttype('call'),
                             :name('!keyword_does'),
-                            PAST::Var.new(
-                                :name('Perl6Object'),
-                                :scope('package')
-                            ),
                             PAST::Var.new(
                                 :name('$def'),
                                 :scope('lexical')
@@ -1299,12 +1283,8 @@ sub declare_attribute($/) {
     my $name := ~$variable<sigil> ~ '!' ~ ~$variable<name>;
     $class_def.push(
         PAST::Op.new(
-            :pasttype('callmethod'),
+            :pasttype('call'),
             :name('!keyword_has'),
-            PAST::Var.new(
-                :name('Perl6Object'),
-                :scope('package')
-            ),
             PAST::Var.new(
                 :name('$def'),
                 :scope('lexical')
@@ -1573,7 +1553,7 @@ method variable($/, $key) {
         else {
             # Variable. Set how it vivifies.
             my $viviself := 'Undef';
-            if $<sigil> eq '@' { $viviself := 'List'; }
+            if $<sigil> eq '@' { $viviself := 'Perl6Array'; }
             if $<sigil> eq '%' { $viviself := 'Mapping'; }
 
             # [!:^] twigil should be kept in the name.
@@ -1618,10 +1598,13 @@ method variable($/, $key) {
 method circumfix($/, $key) {
     my $past;
     if $key eq '( )' {
-        $past := $( $<statementlist> );
+        $past := $<statementlist><statement>
+                     ?? $( $<statementlist> )
+                     !! PAST::Op.new(:name('list'));
     }
     if $key eq '[ ]' {
-        $past := $( $<statementlist> );
+        $past := PAST::Op.new(:name('!Arrayref'), :node($/) );
+        if $<statementlist><statement> { $past.push( $( $<statementlist> ) ); }
     }
     elsif $key eq '{ }' {
         $past := $( $<pblock> );
@@ -1895,21 +1878,21 @@ method EXPR($/, $key) {
         }
 
         # If it's an assignment or binding, we may need to emit a type-check.
-        if $past.name() eq 'infix:=' {
-            # We can skip it if we statically know the variable had no type
-            # associated with it, though.
-            our $?BLOCK;
-            my $sym_info := $?BLOCK.symbol($past[0].name());
-            unless $sym_info<untyped> {
-                $past := PAST::Op.new(
-                    :lvalue(1),
-                    :node($/),
-                    :inline("    %r = '!TYPECHECKEDASSIGN'(%0, %1)\n"),
-                    $past[0],
-                    $past[1]
-                );
-            }
-        }
+#        if $past.name() eq 'infix:=' {
+#            # We can skip it if we statically know the variable had no type
+#            # associated with it, though.
+#            our $?BLOCK;
+#            my $sym_info := $?BLOCK.symbol($past[0].name());
+#            unless $sym_info<untyped> {
+#                $past := PAST::Op.new(
+#                    :lvalue(1),
+#                    :node($/),
+#                    :inline("    %r = '!TYPECHECKEDASSIGN'(%0, %1)\n"),
+#                    $past[0],
+#                    $past[1]
+#                );
+#            }
+#        }
 
         make $past;
     }

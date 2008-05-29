@@ -4,13 +4,11 @@
 
 src/classes/List.pir - Perl 6 List class and related functions
 
-=head1 Methods
+=head2 Methods
 
 =over 4
 
 =cut
-
-.namespace ['List']
 
 .sub 'onload' :anon :load :init
     .local pmc p6meta, listproto
@@ -20,11 +18,35 @@ src/classes/List.pir - Perl 6 List class and related functions
 .end
 
 
+=item clone()    (vtable method)
+
+Return a clone of this list.  (Clones its elements also.)
+
+=cut
+
+.namespace ['List']
+.sub 'clone' :vtable :method
+    .local pmc p6meta, result, iter
+    $P0 = typeof self
+    result = new $P0
+    iter = self.'iterator'()
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    $P0 = clone $P0
+    push result, $P0
+    goto iter_loop
+  iter_end:
+    .return (result)
+.end
+
+
 =item get_string()    (vtable method)
 
 Return the elements of the list joined by spaces.
 
 =cut
+
 
 .sub 'get_string' :vtable :method
     $S0 = join ' ', self
@@ -32,14 +54,35 @@ Return the elements of the list joined by spaces.
 .end
 
 
-=item clone()    (vtable method)
+=item item()
 
-Clones the list.
+Return the List invocant in scalar context (i.e., an Arrayref).
 
 =cut
 
-.sub 'clone' :vtable :method
-    $P0 = 'list'(self)
+.sub 'item' :method
+    .return '!Arrayref'(self)
+.end
+
+=item list()
+
+Return the List as a list.
+
+=cut
+
+.sub 'list' :method
+    .return (self)
+.end
+
+
+=item iterator()
+
+Returns an iterator for the list.
+
+=cut
+
+.sub 'iterator' :method
+    $P0 = iter self
     .return ($P0)
 .end
 
@@ -51,77 +94,22 @@ Returns a Perl representation of a List.
 =cut
 
 .sub 'perl' :method
-    .local string res
-    res .= '['
+    .local string result
+    result = '['
 
-    .local pmc elem
-    .local int elems
-    .local int i
-
-    elems = self.'elems'()
-    i = 0
-
-  loop:
-    if i == elems goto done
-    unless i  > 0 goto no_comma
-
-    res .= ', '
-  no_comma:
-    elem = self[i]
-    $S0 = elem
-    res .= $S0
-
-    i += 1
-    goto loop
-
-
-  done:
-    res .= ']'
-
-    .return(res)
-
-.end
-
-
-=item ACCEPTS(topic)
-
-=cut
-
-.sub 'ACCEPTS' :method
-    .param pmc topic
-    .local int i
-
-    .local string what
-    what = topic.'WHAT'()
-    if what == "List" goto acc_list
-    goto no_match
-
-acc_list:
-    # Smartmatch against another list. Smartmatch each
-    # element.
-    .local int count_1, count_2
-    count_1 = self.'elems'()
-    count_2 = topic.'elems'()
-    if count_1 != count_2 goto no_match
-    i = 0
-list_cmp_loop:
-    if i >= count_1 goto list_cmp_loop_end
-    .local pmc elem_1, elem_2
-    elem_1 = self[i]
-    elem_2 = topic[i]
-    ($I0) = elem_1.ACCEPTS(elem_2)
-    unless $I0 goto no_match
-    inc i
-    goto list_cmp_loop
-list_cmp_loop_end:
-    goto match
-
-no_match:
-    $P0 = get_hll_global ['Bool'], 'False'
-    .return($P0)
-match:
-    $P0 = get_hll_global ['Bool'], 'True'
-    .return($P0)
+    .local pmc iter
+    iter = self.'iterator'()
+    unless iter goto iter_done
+  iter_loop:
+    $P1 = shift iter
+    $S1 = $P1.'perl'()
+    result .= $S1
+    unless iter goto iter_done
+    result .= ', '
+    goto iter_loop
+  iter_done:
+    result .= ']'
+    .return (result)
 .end
 
 
@@ -136,30 +124,6 @@ Return the number of elements in the list.
     .return ($I0)
 .end
 
-=item unshift(ELEMENTS)
-
-Prepends ELEMENTS to the front of the list.
-
-=cut
-
-.sub 'unshift' :method
-    .param pmc args :slurpy
-    .local int narg
-    .local int i
-
-    narg = args
-    i = 0
-
-    .local pmc tmp
-  loop:
-    if i == narg goto done
-    pop tmp, args
-    unshift self, tmp
-    inc i
-    goto loop
-  done:
-.end
-
 =item keys()
 
 Returns a List containing the keys of the List.
@@ -167,28 +131,11 @@ Returns a List containing the keys of the List.
 =cut
 
 .sub 'keys' :method
-    .local pmc elem
-    .local pmc res
-    .local int len
-    .local int i
-
-    res = new 'List'
-    len = self.'elems'()
-    i = 0
-
-  loop:
-    if i == len goto done
-
-    elem = new 'Integer'
-    elem = i
-    res.'push'(elem)
-
-    inc i
-    goto loop
-
-  done:
-    .return(res)
+    $I0 = self.'elems'()
+    dec $I0
+    .return 'infix:..'(0, $I0)
 .end
+
 
 =item values()
 
@@ -197,28 +144,28 @@ Returns a List containing the values of the List.
 =cut
 
 .sub 'values' :method
-    .local pmc elem
-    .local pmc res
-    .local int len
-    .local int i
+    .return (self)
+.end
 
-    res = new 'List'
-    len = self.'elems'()
-    i = 0
+=item unshift(ELEMENTS)
+
+Prepends ELEMENTS to the front of the list.
+
+=cut
+
+.sub 'unshift' :method
+    .param pmc args :slurpy
 
   loop:
-    if i == len goto done
-
-    elem = new 'Integer'
-    elem = self[i]
-    res.'push'(elem)
-
-    inc i
+    unless args goto done
+    .local pmc val
+    val = pop args
+    unshift self, val
     goto loop
-
   done:
-    .return(res)
+    .return self.'elems'()
 .end
+
 
 =item shift()
 
@@ -228,9 +175,18 @@ Shifts the first item off the list and returns it.
 
 .sub 'shift' :method
     .local pmc x
+    .local int len
+
+    len = self.'elems'()
+    if len < 1 goto empty
     x = shift self
+    goto done
+  empty:
+    x = new 'Failure'
+  done:
     .return (x)
 .end
+
 
 =item pop()
 
@@ -243,18 +199,15 @@ Treats the list as a stack, popping the last item off the list and returning it.
     .local int len
 
     len = self.'elems'()
-
-    if len == 0 goto empty
-    pop x, self
+    if len < 1 goto empty
+    x = pop self
     goto done
-
   empty:
-    x = new 'Undef'
-    goto done
-
+    x = new 'Failure'
   done:
     .return (x)
 .end
+
 
 =item push(ELEMENTS)
 
@@ -264,23 +217,15 @@ Treats the list as a stack, pushing ELEMENTS onto the end of the list.  Returns 
 
 .sub 'push' :method
     .param pmc args :slurpy
-    .local int len
-    .local pmc tmp
-    .local int i
-
-    len = args
-    i = 0
-
   loop:
-    if i == len goto done
-    shift tmp, args
-    push self, tmp
-    inc i
+    unless args goto done
+    $P0 = shift args
+    push self, $P0
     goto loop
   done:
-    len = self.'elems'()
-    .return (len)
+    .return self.'elems'()
 .end
+
 
 =item join(SEPARATOR)
 
@@ -290,36 +235,10 @@ Returns a string comprised of all of the list, separated by the string SEPARATOR
 
 .sub 'join' :method
     .param string sep
-    .local string res
-    .local string tmp
-    .local int len
-    .local int i
-
-    res = ""
-
-    len = self.'elems'()
-    if len == 0 goto done
-
-    len = len - 1
-    i = 0
-
-  loop:
-    if i == len goto last
-
-    tmp = self[i]
-    concat res, tmp
-    concat res, sep
-
-    inc i
-    goto loop
-
-  last:
-    tmp = self[i]
-    concat res, tmp
-
-  done:
-    .return(res)
+    $S0 = join sep, self
+    .return ($S0)
 .end
+
 
 =item reverse()
 
@@ -328,85 +247,54 @@ Returns a list of the elements in revese order.
 =cut
 
 .sub 'reverse' :method
-    .local pmc res
-    .local int len
-    .local int i
-
-    res = new 'List'
-
-    len = self.'elems'()
-    if len == 0 goto done
-    i = 0
-
-    .local pmc elem
-loop:
-    if len == 0 goto done
-
-    dec len
-    elem = self[len]
-    res[i] = elem
-    inc i
-
-    goto loop
-
-done:
-    .return(res)
+    .local pmc result, iter
+    result = new 'List'
+    iter = self.'iterator'()
+  iter_loop:
+    unless iter goto iter_done
+    $P0 = shift iter
+    unshift result, $P0
+    goto iter_loop
+  iter_done:
+    .return (result)
 .end
 
 =item delete()
 
-Deletes the given elements from the List, replacing them with Undef.  Returns a List of removed elements.
+Deletes the given elements from the List, replacing them with null.  Returns a List of removed elements.
 
 =cut
 
 .sub delete :method
     .param pmc indices :slurpy
-    .local pmc newelem
-    .local pmc elem
-    .local int last
-    .local pmc res
-    .local int ind
-    .local int len
-    .local int i
+    .local pmc result
+    result = new 'List'
+    null $P99
 
-    newelem = new 'Undef'
-    res = new 'List'
+  indices_loop:
+    unless indices goto indices_end
+    $I0 = shift indices
+    $P0 = self[$I0]
+    push result, $P0
+    self[$I0] = $P99
 
-    # Index of the last element in the array
-    last = self.'elems'()
-    dec last
+  shorten:
+    $I0 = self.'elems'()
+    dec $I0
+  shorten_loop:
+    if $I0 < 0 goto shorten_end
+    $P0 = self[$I0]
+    unless null $P0 goto shorten_end
+    delete self[$I0]
+    dec $I0
+    goto shorten_loop
+  shorten_end:
+    goto indices_loop
 
-    len = elements indices
-    i = 0
-
-  loop:
-    if i == len goto done
-
-    ind = indices[i]
-
-    if ind == -1 goto endofarray
-    if ind == last goto endofarray
-    goto restofarray
-
-  endofarray:
-    # If we're at the end of the array, remove the element entirely
-    elem = pop self
-    res.push(elem)
-    goto next
-
-  restofarray:
-    # Replace the element with undef.
-    elem = self[ind]
-    res.push(elem)
-
-    self[ind] = newelem
-
-  next:
-    inc i
-    goto loop
-  done:
-    .return(res)
+  indices_end:
+    .return (result)
 .end
+
 
 =item exists(INDEX)
 
@@ -417,59 +305,38 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 .sub exists :method
     .param pmc indices :slurpy
     .local int test
-    .local int len
-    .local pmc res
-    .local int ind
-    .local int i
 
-    test = 1
-    len = elements indices
-    i = 0
-
-  loop:
-    if i == len goto done
-
-    ind = indices[i]
-
-    test = exists self[ind]
-    if test == 0 goto done
-
-    inc i
-    goto loop
-
-  done:
+    test = 0
+  indices_loop:
+    unless indices goto indices_end
+    $I0 = shift indices
+    test = exists self[$I0]
+    if test goto indices_loop
+  indices_end:
     .return 'prefix:?'(test)
 .end
+
 
 =item kv()
 
 =cut
 
 .sub kv :method
-    .local pmc elem
-    .local pmc res
-    .local int len
+    .local pmc result, iter
     .local int i
 
-    res = new 'List'
-    len = self.'elems'()
+    result = new 'List'
+    iter = self.'iterator'()
     i = 0
-
-  loop:
-    if i == len goto done
-
-    elem = new 'Integer'
-    elem = i
-    res.'push'(elem)
-
-    elem = self[i]
-    res.'push'(elem)
-
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    push result, i
+    push result, $P0
     inc i
-    goto loop
-
-  done:
-    .return(res)
+    goto iter_loop
+  iter_end:
+    .return (result)
 .end
 
 =item pairs()
@@ -477,36 +344,23 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 =cut
 
 .sub pairs :method
-    .local pmc pair
-    .local pmc key
-    .local pmc val
-    .local pmc res
-    .local int len
+    .local pmc result, iter
     .local int i
 
-    res = new 'List'
-    len = self.'elems'()
+    result = new 'List'
+    iter = self.'iterator'()
     i = 0
-
-  loop:
-    if i == len goto done
-
-    key = new 'Integer'
-    key = i
-
-    val = self[i]
-
-    pair = new 'Pair'
-    pair[key] = val
-
-    res.'push'(pair)
-
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    $P1 = 'infix:=>'(i, $P0)
+    push result, $P1
     inc i
-    goto loop
-
-  done:
-    .return(res)
+    goto iter_loop
+  iter_end:
+    .return (result)
 .end
+
 
 =item grep(...)
 
@@ -515,32 +369,19 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 .sub grep :method
     .param pmc test
     .local pmc retv
-    .local pmc block
+    .local pmc iter
     .local pmc block_res
     .local pmc block_arg
-    .local int narg
-    .local int i
 
     retv = new 'List'
-    narg = self.'elems'()
-    i = 0
-
+    iter = new 'Iterator', self
   loop:
-    if i == narg goto done
-    block_arg = self[i]
+    unless iter goto done
+    block_arg = shift iter
+    block_res = test(block_arg)
 
-    newclosure block, test
-    block_res = block(block_arg)
-
-    if block_res goto grepped
-    goto next
-
-  grepped:
+    unless block_res goto loop
     retv.'push'(block_arg)
-    goto next
-
-  next:
-    inc i
     goto loop
 
   done:
@@ -552,26 +393,22 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 =cut
 
 .sub reduce :method
-    .param pmc test
+    .param pmc oper
     .local pmc retv
-    .local pmc block
+    .local pmc iter
+    .local pmc block_res
     .local pmc block_arg
-    .local int narg
-    .local int i
 
-    narg = self.'elems'()
-    if narg == 0 goto empty
-    retv = self[0]
-    i = 1
+    retv = new 'List'
+    iter = new 'Iterator', self
+    unless iter goto empty
+
+    retv = shift iter
 
   loop:
-    if i >= narg goto done
-
-    newclosure block, test
-    block_arg = self[i]
-    retv = block(retv, block_arg)
-
-    inc i
+    unless iter goto done
+    block_arg = shift iter
+    block_res = oper(retv, block_arg)
     goto loop
 
   empty:
@@ -589,25 +426,17 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 .sub first :method
     .param pmc test
     .local pmc retv
-    .local pmc block
+    .local pmc iter
     .local pmc block_res
     .local pmc block_arg
-    .local int narg
-    .local int i
 
-    narg = self.'elems'()
-    i = 0
+    iter = new 'Iterator', self
 
   loop:
-    if i == narg goto nomatch
-    block_arg = self[i]
-
-    newclosure block, test
-    block_res = block(block_arg)
-
+    unless iter goto nomatch
+    block_arg = shift iter
+    block_res = test(block_arg)
     if block_res goto matched
-
-    inc i
     goto loop
 
   matched:
@@ -625,6 +454,8 @@ Checks to see if the specified index or indices have been assigned to.  Returns 
 =item uniq(...)
 
 =cut
+
+# TODO Rewrite it. It's too naive.
 
 .sub uniq :method
     .local pmc ulist
@@ -706,7 +537,57 @@ Sort list by copying into FPA, sorting and creating new List.
     arr.'sort'(comparer)
 
     # and return new List.
-    .return 'list'(arr)
+    $P0 = get_hll_global 'list'
+    .return $P0(arr)
+.end
+
+
+=item map()
+
+Map.
+
+=cut
+
+.sub 'map' :method
+    .param pmc expression
+    .local pmc res, elem, block, mapres, iter, args
+    .local int i, arity
+
+    arity = expression.'arity'()
+    if arity > 0 goto body
+    arity = 1
+  body:
+    res = new 'List'
+    iter = self.'iterator'()
+  map_loop:
+    unless iter goto done
+
+    # Creates arguments for closure
+    args = new 'ResizablePMCArray'
+
+    i = 0
+  args_loop:
+    if i == arity goto invoke
+    unless iter goto elem_undef
+    elem = shift iter
+    goto push_elem
+  elem_undef:
+    elem = new 'Failure'
+  push_elem:
+    push args, elem
+    inc i
+    goto args_loop
+
+  invoke:
+    mapres = expression(args :flat)
+    if null mapres goto map_loop
+
+  push_res:
+    res.'push'(mapres)
+    goto map_loop
+
+  done:
+    .return(res)
 .end
 
 =back
@@ -732,8 +613,8 @@ Build a List from its arguments.
     item = shift args
     $I0 = defined item
     unless $I0 goto add_item
-    # $I0 = isa item, 'Array'
-    # if $I0 goto add_item
+    $I0 = isa item, 'Arrayref'
+    if $I0 goto add_item
     $I0 = does item, 'array'
     unless $I0 goto add_item
     splice args, item, 0, 0
@@ -765,6 +646,20 @@ Sort arguments using (optional) comparition sub.
   with_cmp:
     l = 'list'(args :flat)
     .return l.'sort'(comparer)
+.end
+
+
+=item C<map>
+
+Operator form of C<map>. Delegates map to passed list.
+
+=cut
+
+.sub 'map' :multi(_,List)
+    .param pmc expression
+    .param pmc list
+
+    .return list.'map'(expression)
 .end
 
 
@@ -1118,7 +1013,14 @@ Returns the elements of LIST in the opposite order.
     .return list.'uniq'()
 .end
 
-## TODO: join map reduce sort zip
+.sub 'pop' :multi('List')
+    .param pmc list
+
+    .return list.'pop'()
+.end
+
+
+## TODO: zip
 
 =back
 
