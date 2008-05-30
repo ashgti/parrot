@@ -14,9 +14,6 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *prev;
     struct Small_Object_Arena *next;
     void                      *start_objects;
-#if PARROT_GC_IT
-    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
-#endif
 } Small_Object_Arena;
 
 struct Small_Object_Pool;
@@ -112,6 +109,9 @@ typedef struct _gc_it_card {
 #define GC_IT_MARK_GREY  (0x1)
 #define GC_IT_MARK_BLACK (0x3)
 
+#define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
+#define IT_HDR_to_PObj(p) ((PObj*) ((p)+1))
+
 /*
  * Structure to define individual generations.
  * Initially borrowed from the GC_GMS
@@ -141,7 +141,7 @@ typedef struct _gc_it_gen {
 typedef struct _gc_it_hdr_store {
     struct _gc_it_hdr_store *next;
     Gc_it_hdr **ptr;                           /* insert location */
-    Gc_it_hdr * (store[GC_IT_STORE_SIZE]);    /* array of hdr pointers */
+    Gc_it_hdr * (store[GC_IT_STORE_SIZE]);     /* array of hdr pointers */
 } Gc_it_hdr_store;
 
 typedef struct _gc_it_hdr_list {
@@ -168,7 +168,8 @@ typedef struct _gc_it_state {
  */
 
 typedef struct _gc_it_data {
-    Gc_it_gen * generations;  /* linked list of generations, youngest first, i assume */
+    Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
+    Gc_it_gen * last_gen;   /* Most recent generation */
     UINTVAL num_generations;  /* number of generations */
     Gc_it_hdr * new_list;     /* list of items created before the end of the scan */
     Gc_it_state * state;      /* information about GC state, so we can resume */
@@ -214,7 +215,8 @@ typedef struct Small_Object_Pool {
     struct _gc_gms_gen *last_gen;
 #endif
 #if PARROT_GC_IT
-    struct _gc_it_hdr
+    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
+#endif
 } Small_Object_Pool;
 
 /*
