@@ -14,6 +14,9 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *prev;
     struct Small_Object_Arena *next;
     void                      *start_objects;
+#if PARROT_GC_IT
+    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
+#endif
 } Small_Object_Arena;
 
 struct Small_Object_Pool;
@@ -153,7 +156,7 @@ typedef struct _gc_it_hdr_list {
  */
 
 typedef struct _gc_it_state {
-    void * last;
+    UINTVAL last_generation; /* number of the last generation scanned */
 } Gc_it_state;
 
 /*
@@ -166,8 +169,9 @@ typedef struct _gc_it_state {
 
 typedef struct _gc_it_data {
     Gc_it_gen * generations;  /* linked list of generations, youngest first, i assume */
+    UINTVAL num_generations;  /* number of generations */
     Gc_it_hdr * new_list;     /* list of items created before the end of the scan */
-    Gc_it_state * state;          /* information about GC state, so we can resume */
+    Gc_it_state * state;      /* information about GC state, so we can resume */
 } Gc_it_data;
 
 #endif /* PARROT_GC_IT */
@@ -208,11 +212,9 @@ typedef struct Small_Object_Pool {
 
     struct _gc_gms_gen *first_gen;      /* linked list of generations */
     struct _gc_gms_gen *last_gen;
-
 #endif
 #if PARROT_GC_IT
-    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
-#endif
+    struct _gc_it_hdr
 } Small_Object_Pool;
 
 /*
