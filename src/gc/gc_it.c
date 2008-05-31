@@ -64,6 +64,21 @@ increment, or one step from many.
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
+/*
+ * Basic Algorithm:
+ * 1) Determine which pool/generation to scan
+ * 2) Mark root items as being grey
+ * 3) For all grey items, mark all children as grey, then mark item as black
+ * 4) repeat (3) until there are no grey items in current pool/generation
+ * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
+ * 6) Add all items that are still white to the free list
+ * 7) reset all flags to white
+ *
+ * Only reclaim objects where there are no greys in the current area,
+ * and when a run has completed. Do not reclaim, for instance, any white
+ * objects after a run has completed and all black objects have been turned
+ * back to white (which would free all objects, alive or dead).
+ */
 }
 
 /*
@@ -80,10 +95,10 @@ void
 Parrot_gc_it_deinit(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-
-    /*
-     * TODO free generation structures without moving or destroying
-     * any objects. Maybe need to free GC headers?
+    /* Algorithm:
+     * 1) Free all generation structures
+     * 2) Free all GC headers in all pools and arenas, if possible
+     * 3) Free any additional memory that i will create in the future
      */
     mem_sys_free(arena_base->gc_private);
     arena_base->gc_private = NULL;

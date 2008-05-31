@@ -247,6 +247,10 @@ Return the number of elements in the list.
   matched:
     retv = block_arg
     goto done
+
+  nomatch:
+    retv = new 'Undef'
+    goto done
   nomatch:
     retv = new 'Undef'
     goto done
@@ -571,6 +575,7 @@ Returns a List containing the values of the invocant.
 .sub 'values' :method :multi(ResizablePMCArray)
     .return (self)
 .end
+
 
 =back
 
