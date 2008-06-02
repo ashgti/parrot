@@ -162,18 +162,30 @@ typedef struct _gc_it_state {
 /*
  * Gc_it_data structure
  * Contains information for the IT GC to operate.
- * A basic singleton GC data structure. Contains fields and pointers
- * that the GC needs to operate.
- * Attempts, as far as is able, to be incremental and generational.
+ * global, inserted into the Arenas structure
  */
 
 typedef struct _gc_it_data {
-    Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
-    Gc_it_gen * last_gen;   /* Most recent generation */
+    
     UINTVAL num_generations;  /* number of generations */
-    Gc_it_hdr * new_list;     /* list of items created before the end of the scan */
+   
     Gc_it_state * state;      /* information about GC state, so we can resume */
 } Gc_it_data;
+
+/*
+ * GC data per pool. Contains information that the GC needs in every pool
+ */
+typedef struct _gc_it_pool_data {
+    Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
+    Gc_it_gen * last_gen;   /* Most recent generation */
+    struct _gc_it_hdr * marker;         /* limit of list */
+    struct _gc_it_hdr * black;          /* alive */
+    struct _gc_it_hdr * black_fin;      /* alive, needs destruction */
+    struct _gc_it_hdr * gray;           /* to be scanned */
+    struct _gc_it_hdr * white;          /* unprocessed */
+    struct _gc_it_hdr * white_fin;      /* unprocessed, needs destruction */
+    struct _gc_it_hdr * new_list;       /* list of items created before the end of the scan */
+} Gc_it_pool_data;
 
 #endif /* PARROT_GC_IT */
 
@@ -215,7 +227,7 @@ typedef struct Small_Object_Pool {
     struct _gc_gms_gen *last_gen;
 #endif
 #if PARROT_GC_IT
-    struct _gc_it_data gc_it_data;      /* Data for use by the IT GC */
+    struct _gc_it_pool_data gc_it_data;      /* Data for use by the IT GC */
 #endif
 } Small_Object_Pool;
 

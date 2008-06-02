@@ -40,7 +40,7 @@ void
 Parrot_gc_it_init(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-    arena_base->gc_private    = mem_allocate_zeroed_typed(Gc_ims_private);
+    arena_base->gc_private    = mem_allocate_zeroed_typed(Gc_it_data);
 
     /* set function hooks according to pdd09 */
 
@@ -79,6 +79,119 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * objects after a run has completed and all black objects have been turned
  * back to white (which would free all objects, alive or dead).
  */
+
+/*
+ * 1) Determine which pool/generation to scan
+ * We are doing this in increments, so we do pool at a time, generation at a
+ * time. Some kind of state will determine which pool we are in now (maybe a
+ * linked list of pool by priority?). Current generation will be determined
+ * by some sort of counter. Youngest generation is scanned by default, older
+ * generations are scanned less frequently.
+ */
+    Arenas * arena_base = interp->arena_base;
+    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
+    Small_object_pool * cur_pool;  /* Current pool */
+    Gc_it_gen * generation;        /* Current generation */
+
+/*
+ * 2) Mark root items as grey
+ * I don't currently know how to determine which items are root. However,
+ * When we find them, we can mark them
+ */
+
+/*
+ * 3) for all grey items, mark children as grey. Then mark as black
+ * I'll call some kind of inline-able sub-function here.
+ *
+ * 4) Repeat (3) until there are no grey items in current pool/generation
+ * At any point, we should be able to break out of this loop at any time,
+ * because state is stored in the white/grey/black lists and in the bitmap,
+ * which is kept across runs.
+ */
+    Gc_it_hdr * cur_item, * a, * b;
+    Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
+    while(cur_item = cur_pool->gray) {
+        gc_it_mark_children_grey(cur_pool, cur_item);
+        gc_it_mark_node_black(cur_pool, cur_item);
+        /* Move this node to the black list
+        With card marking, we might not need separate white/black lists, only an
+        "items" list and a grey list "queue". Items in the queue are managed and
+        moved back to the ordinary list. We can just drop every node off at
+        the end of the list and avoid the insert-node-into-linked-list ballet. */
+        a = pool_data->black;
+        b = cur_item->next;
+        pool_data->black = cur_item;
+        cur_item->next = a;
+        cur_pool->grey = b;
+
+        /* These will be moved out of the function, keeping everything together for now */
+#define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
+#define GC_IT_NEED_TA_DO_DA_BREAK(x) ((x)->break)
+
+        GC_IT_INCREMENT_ITEM_COUNT(gc_priv_data);
+        if(NEED_TA_DO_DA_BREAK(gc_priv_data)) return; /* break out of the loop, if needed */
+    }
+
+/*
+ * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
+ * out-going links will have already been followed above (I hope). Incoming links
+ * mark children grey. We might need to handle these first, if we handle them
+ * at all.
+ */
+    while(cur_item = gc_it_igp_next(gc_priv_data)) {
+        gc_it_mark_node_grey(cur_item);
+    }
+
+/*
+ * 6) move all white objects to the free list
+ * After we have traced all incoming IGP and run through the pool, all remaining
+ * white objects can be freed. Do that, or enqueue it so it can be done later.
+ * Also, finalize any items that require it.
+ */
+
+/*
+ * 7) reset all flags to white
+ * Reset the whole card to white. All items should be out of the grey list, and
+ * back in the generic "items" list. All newly created items should be appended
+ * into the "items" list.
+ */
+ 
+}
+
+void
+gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
+{
+    /* Mark all children of the node grey. With cardmarking, if:
+
+    BLACK = PObj_is_live_FLAG | PObj_is_fully_marked_FLAG
+    GREY = PObj_is_live_FLAG
+    WHITE = 0;
+
+    We don't need to test whether the object is already black, we simply
+    perform a bitwise OR with PObj_is_live_FLAG. BLACK items stay BLACK, and
+    WHITE items turn to grey.
+    */
+
+    /*Here, we need to figure out how to identify all the children of the
+    current object. */
+    /* This function could become a macro */
+}
+
+inline void
+gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
+{
+    /* Mark the current object black. It should already be grey.
+    do an OR with PObj_is_fully_marked_FLAG. We could warn about an
+    object here that is white instead of grey, but that should never
+    happen, and will waste an entire conditional */
+    /* This function should probably become a macro */
+}
+
+inline void
+gc_it_mark_node_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
+{
+    /* Mark the current node as grey, add it to the grey queue */
+    /* This function might become a macro */
 }
 
 /*
