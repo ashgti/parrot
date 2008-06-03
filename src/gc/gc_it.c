@@ -8,8 +8,10 @@ src/gc/gc_it.c - Incremental Tricolor Garbage Collector
 
 =head1 DESCRIPTION
 
-This garbage collector, as described in PDD09, will use a tricolor 
+This garbage collector, as described in PDD09, will use a tricolor
 incremental marking scheme. More details to be fleshed out later.
+
+ALL YOUR DOCUMENTATION ARE BELONG TO HERE.
 */
 
 #include "parrot/parrot.h"
@@ -40,6 +42,9 @@ void
 Parrot_gc_it_init(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
+    
+    /* Create our private data. We might need to initialize some things
+    here, depending on the data we include in this structure */
     arena_base->gc_private    = mem_allocate_zeroed_typed(Gc_it_data);
 
     /* set function hooks according to pdd09 */
@@ -111,8 +116,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     Gc_it_hdr * cur_item, * a, * b;
     Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
     while(cur_item = cur_pool->gray) {
-        gc_it_mark_children_grey(cur_pool, cur_item);
-        gc_it_mark_node_black(cur_pool, cur_item);
+        /* For these "mark_children..." macros and functions, I dont know what
+        arguments they are going to require. These shims take a pointer to the
+        current pool (although IGPs will lead to different pools) and the
+        current header*/
+#define GC_IT_MARK_CHILDRE_GREY(x, y) gc_it_mark_children_grey(x, y)
+        GC_IT_MARK_CHILDREN_GREY(cur_pool, cur_item);
+#define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
+        GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
         /* Move this node to the black list
         With card marking, we might not need separate white/black lists, only an
         "items" list and a grey list "queue". Items in the queue are managed and
@@ -126,7 +137,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* These will be moved out of the function, keeping everything together for now */
 #define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
-#define GC_IT_NEED_TA_DO_DA_BREAK(x) ((x)->break)
+#define GC_IT_NEED_TA_DO_DA_BREAK(x) ((x)->break) /* working title :) */
 
         GC_IT_INCREMENT_ITEM_COUNT(gc_priv_data);
         if(NEED_TA_DO_DA_BREAK(gc_priv_data)) return; /* break out of the loop, if needed */
@@ -139,7 +150,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * at all.
  */
     while(cur_item = gc_it_igp_next(gc_priv_data)) {
-        gc_it_mark_node_grey(cur_item);
+#define GC_IT_MARK_NODE_GREY(x, y) gc_it_mark_node_grey(x, y)
+        GC_IT_MARK_NODE_GREY(cur_pool, cur_item);
     }
 
 /*
