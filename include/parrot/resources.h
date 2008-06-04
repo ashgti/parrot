@@ -108,7 +108,8 @@ typedef struct Arenas {
      * function slots that each subsystem must provide
      */
     void (*do_dod_run)(PARROT_INTERP, int flags);
-    void (*de_init_gc_system) (PARROT_INTERP);
+    void (*de_init_gc_system)(PARROT_INTERP);
+    void (*init_gc_system)(PARROT_INTERP);
     void (*init_pool)(PARROT_INTERP, struct Small_Object_Pool *);
     /*
      * statistics for DOD and GC

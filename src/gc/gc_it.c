@@ -45,14 +45,13 @@ Parrot_gc_it_init(PARROT_INTERP)
     
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
-    arena_base->gc_private    = mem_allocate_zeroed_typed(Gc_it_data);
+    arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
 
     /* set function hooks according to pdd09 */
 
     arena_base->do_dod_run        = Parrot_gc_it_run;
     arena_base->de_init_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool         = Parrot_gc_it_pool_init;
-
 }
 
 /*

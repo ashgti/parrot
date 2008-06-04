@@ -289,19 +289,36 @@ mem_setup_allocator(PARROT_INTERP)
     interp->arena_base = mem_allocate_zeroed_typed(Arenas);
     interp->arena_base->sized_header_pools = NULL;
 
+    /* There has to be a better way to set the GC.
+       Once we have a good "default" gc we can always use that,
+       and then hot-swap in different cores after the fact */
+
+    /* Possible macro to handle this:
+#define PARROT_INSTALL_GC(interp, init, deinit, dodod, poolinit) do { \
+    if((interp)->arena_base->de_init_gc_system)         \
+        (interp)-arena_base->de_init_gc_system(interp); \
+    (interp)->arena_base->init_gc_system = (init);      \
+    (interp)->arena_base->de_init_gc_system = (deinit); \
+    (interp)->arena_base->do_dod_run = (dodod);         \
+    (interp)->arena_base->init_pool = (poolinit);       \
+    (interp)->arena_base->init_gc_system(interp);       \
+} while(0);
+
+    */
 #if PARROT_GC_MS
-    Parrot_gc_ms_init(interp);
+    interp->arena_base->init_gc_system = Parrot_gc_ms_init;
 #endif
 #if PARROT_GC_IMS
-    Parrot_gc_ims_init(interp);
+    interp->arena_base->init_gc_system = Parrot_gc_ims_init;
 #endif
 #if PARROT_GC_GMS
-    Parrot_gc_gms_init(interp);
+    interp->arena_base->init_gc_system = Parrot_gc_gms_init;
 #endif
 #if PARROT_GC_IT
-    Parrot_gc_it_init(interp);
+    interp->arena_base->init_gc_system = Parrot_gc_it_init;
 #endif
 
+    interp->arena_base->init_gc_system(interp);
     Parrot_initialize_memory_pools(interp);
     Parrot_initialize_header_pools(interp);
 }
