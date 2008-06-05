@@ -103,9 +103,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * When we find them, we can mark them
  */
 
+    gc_it_turn_globals_grey(interp); /* Do point #2 */
+
 /*
  * 3) for all grey items, mark children as grey. Then mark as black
  * I'll call some kind of inline-able sub-function here.
+ * We need to keep track of items that require finalization, that might
+ * mean a separate queue and a separate loop, or a flag somewhere that we
+ * need to test and preserve.
  *
  * 4) Repeat (3) until there are no grey items in current pool/generation
  * At any point, we should be able to break out of this loop at any time,
@@ -118,21 +123,18 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         /* For these "mark_children..." macros and functions, I dont know what
         arguments they are going to require. These shims take a pointer to the
         current pool (although IGPs will lead to different pools) and the
-        current header*/
+        current header.
+        */
+        /*
+        Move the children's headers into the queue, and possibly mark them
+        grey as well.
+        */
 #define GC_IT_MARK_CHILDRE_GREY(x, y) gc_it_mark_children_grey(x, y)
         GC_IT_MARK_CHILDREN_GREY(cur_pool, cur_item);
+        /* Mark the current node's card black, and return it to the list of
+        all items */
 #define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
         GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
-        /* Move this node to the black list
-        With card marking, we might not need separate white/black lists, only an
-        "items" list and a grey list "queue". Items in the queue are managed and
-        moved back to the ordinary list. We can just drop every node off at
-        the end of the list and avoid the insert-node-into-linked-list ballet. */
-        a = pool_data->black;
-        b = cur_item->next;
-        pool_data->black = cur_item;
-        cur_item->next = a;
-        cur_pool->grey = b;
 
         /* These will be moved out of the function, keeping everything together for now */
 #define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
@@ -166,25 +168,24 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * back in the generic "items" list. All newly created items should be appended
  * into the "items" list.
  */
- 
+
 }
+
+void
+gc_it_turn_globals_grey(PARROT_INTERP)
+{
+    /* find globals. Make sure they all have headers (I don't know what
+       they are going to look like here). Add those headers to the grey
+       grey list queue. */
+}
+
 
 void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
-    /* Mark all children of the node grey. With cardmarking, if:
-
-    BLACK = PObj_is_live_FLAG | PObj_is_fully_marked_FLAG
-    GREY = PObj_is_live_FLAG
-    WHITE = 0;
-
-    We don't need to test whether the object is already black, we simply
-    perform a bitwise OR with PObj_is_live_FLAG. BLACK items stay BLACK, and
-    WHITE items turn to grey.
-    */
-
-    /*Here, we need to figure out how to identify all the children of the
-    current object. */
+    /* Add all children of the current node to the queue for processing.
+    Also we might want to mark the card grey as well (although that
+    seems like unnecessary work) */
     /* This function could become a macro */
 }
 
@@ -194,7 +195,11 @@ gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
     /* Mark the current object black. It should already be grey.
     do an OR with PObj_is_fully_marked_FLAG. We could warn about an
     object here that is white instead of grey, but that should never
-    happen, and will waste an entire conditional */
+    happen, and will waste an entire conditional.
+    
+    move the node from the queue to the items list, or the finalize list
+    if that's what's needed (we might need to use a separate function
+    or something). */
     /* This function should probably become a macro */
 }
 
@@ -240,7 +245,7 @@ and set the size of the objects to include the GC header.
 */
 
 static void
-Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool)) 
 {
     /* Set up function pointers for pool. */
     pool->add_free_object = gc_it_add_free_object;

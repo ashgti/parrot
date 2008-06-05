@@ -81,10 +81,17 @@ typedef struct _gc_gms_gen {
 #if PARROT_GC_IT /* Incremental Tricolor Garbage Collector, PDD09 */
 
 /*
- * Header, a linked list
+ * Header, a linked list.
+ I don't know whether it should be single or double-linked.
+ We don't keep track of headers when we aren't marking, so
+ they can move freely (so long as the arena can still find them)
+ When marking, we add them to the grey list like a queue, and
+ remove them from the queue when they are marked. Once marked
+ (or if left unmarked), the headers aren't used and don't need
+ to be linked together (i don't think).
  */
 typedef struct _gc_it_hdr {
-    struct _gc_it_hdr *prev;
+    /* struct _gc_it_hdr *prev; */
     struct _gc_it_hdr *next;
     void *data_ptr;
 } Gc_it_hdr;
@@ -166,24 +173,24 @@ typedef struct _gc_it_state {
  */
 
 typedef struct _gc_it_data {
-    
+
     UINTVAL num_generations;  /* number of generations */
-   
+
     Gc_it_state * state;      /* information about GC state, so we can resume */
 } Gc_it_data;
 
 /*
- * GC data per pool. Contains information that the GC needs in every pool
+ * GC data per pool. Contains information that the GC needs in every pool.
+ * This structure is changing rapidly, and some of the things in it are
+ * probably unnecessary.
  */
 typedef struct _gc_it_pool_data {
     Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
-    Gc_it_gen * last_gen;   /* Most recent generation */
-    struct _gc_it_hdr * marker;         /* limit of list */
-    struct _gc_it_hdr * black;          /* alive */
-    struct _gc_it_hdr * black_fin;      /* alive, needs destruction */
-    struct _gc_it_hdr * gray;           /* to be scanned */
-    struct _gc_it_hdr * white;          /* unprocessed */
-    struct _gc_it_hdr * white_fin;      /* unprocessed, needs destruction */
+    Gc_it_gen * last_gen;   /* Most recent generation, or oldest, or whatever */
+    struct _gc_it_hdr * marker;         /* limit of list. Do I need this? */
+    struct _gc_it_hdr * finalize;       /* items to be finalized on death */
+    struct _gc_it_hdr * items;          /* all items not in queue or finalized */
+    struct _gc_it_hdr * queue;          /* list of grey items, to mark */
     struct _gc_it_hdr * new_list;       /* list of items created before the end of the scan */
 } Gc_it_pool_data;
 
