@@ -11,6 +11,12 @@ src/gc/gc_it.c - Incremental Tricolor Garbage Collector
 This garbage collector, as described in PDD09, will use a tricolor
 incremental marking scheme. More details to be fleshed out later.
 
+=head1 NOTES
+
+This file is under heavy manipulation, and it isn't going to be the
+prettiest or most standards-compliant code for now. We can add
+spit and polish later.
+
 ALL YOUR DOCUMENTATION ARE BELONG TO HERE.
 */
 
@@ -42,13 +48,15 @@ void
 Parrot_gc_it_init(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-    
+
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
+    arena_base->gc_private->stop_flag = 0;
+    arena_base->gc_private->num_generations = 0;
+    arena_base->gc_private->state = mem_allocate_zeroed_typed(Gc_it_state);
 
     /* set function hooks according to pdd09 */
-
     arena_base->do_dod_run        = Parrot_gc_it_run;
     arena_base->de_init_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool         = Parrot_gc_it_pool_init;
@@ -143,10 +151,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* These will be moved out of the function, keeping everything together for now */
 #define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
-#define GC_IT_NEED_TA_DO_DA_BREAK(x) ((x)->break) /* working title :) */
+#define GC_IT_NEED_TA_DO_DA_BREAK(x) if((x)->stop_flag) return;
 
         GC_IT_INCREMENT_ITEM_COUNT(gc_priv_data);
-        if(NEED_TA_DO_DA_BREAK(gc_priv_data)) return; /* break out of the loop, if needed */
+        GC_IT_NEED_TA_DO_DA_BREAK(gc_priv_data); /* break out of the loop, if needed */
     }
 
 
@@ -225,6 +233,7 @@ gc_it_free_white_items(PARROT_INTERP)
 {
     /* Add all items which are still white to the free lists.
        Possibly also clear the bitmaps */
+    /* This can be a macro */
 }
 
 void gc_it_clear_cards(PARROT_INTERP)
@@ -232,6 +241,7 @@ void gc_it_clear_cards(PARROT_INTERP)
     /* If we don't do it in gc_it_free_white_items, or somewhere else
        then clear the cards here. Don't know what all that's going to
        entail. */
+    /* This can be a macro */
 }
 
 /*
@@ -253,8 +263,14 @@ Parrot_gc_it_deinit(PARROT_INTERP)
      * 2) Free all GC headers in all pools and arenas, if possible
      * 3) Free any additional memory that i will create in the future
      */
+    mem_sys_free(arena_base->gc_private->state);
     mem_sys_free(arena_base->gc_private);
-    arena_base->gc_private = NULL;
+    arena_base->gc_private        = NULL;
+    /* Null-out the function pointers, except the init pointer
+       who knows? the interp might want to load us up again. */
+    arena_base->do_dod_run        = NULL;
+    arena_base->de_init_gc_system = NULL;
+    arena_base->init_pool         = NULL;
 }
 
 /*

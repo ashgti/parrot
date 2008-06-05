@@ -177,6 +177,7 @@ typedef struct _gc_it_data {
     UINTVAL num_generations;  /* number of generations */
 
     Gc_it_state * state;      /* information about GC state, so we can resume */
+    UINTVAL stop_flag;        /* flag to determine when the trace needs to pause */
 } Gc_it_data;
 
 /*
