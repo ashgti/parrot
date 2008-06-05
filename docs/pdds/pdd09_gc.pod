@@ -194,8 +194,6 @@ locations:
 
 =item PMC register stack
 
-=item General/User stack
-
 =back
 
 =head2 Incremental Marking
@@ -229,8 +227,6 @@ The root set for buffers includes the following locations:
 =item Current String register set
 
 =item String register set stack
-
-=item General/User stack
 
 =item Control stack
 
@@ -339,9 +335,9 @@ Each GC core provides a standard interface for interaction with the core.
 
 =head3 Initialization
 
-Each GC core declares an initialization routine, which is called from
-F<src/memory.c:mem_setup_allocator()> after creating C<arena_base> in the
-interpreter struct.
+Each GC core declares an initialization routine as a function pointer,
+which is installed in F<src/memory.c:mem_setup_allocator()> after
+creating C<arena_base> in the interpreter struct.
 
 =over 4
 
@@ -360,6 +356,12 @@ member.
 Each GC system declares 3 function pointers, stored in the Arenas structure.
 
 =over 4
+
+=item C<void (*init_gc_system) (Interp *)>
+
+Initialize the GC system. Install the additional function pointers into
+the Arenas structure, and prepare any private storage to be used by
+the GC in the Arenas->gc_private field.
 
 =item C<void (*do_gc_mark) (Interp *, int flags)>
 
