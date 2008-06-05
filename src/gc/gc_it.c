@@ -101,9 +101,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * 2) Mark root items as grey
  * I don't currently know how to determine which items are root. However,
  * When we find them, we can mark them
+ *
+ * 5) mark all objects grey that appear in incoming IGP lists.
+ * I think we need to do this by adding all incoming IGP pointers to the
+ * queue here at the beginning, and then processing the whole set.
  */
 
     gc_it_turn_globals_grey(interp); /* Do point #2 */
+    gc_it_turn_igp_grey(interp);     /* Do point #5 */
 
 /*
  * 3) for all grey items, mark children as grey. Then mark as black
@@ -144,16 +149,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         if(NEED_TA_DO_DA_BREAK(gc_priv_data)) return; /* break out of the loop, if needed */
     }
 
-/*
- * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
- * out-going links will have already been followed above (I hope). Incoming links
- * mark children grey. We might need to handle these first, if we handle them
- * at all.
- */
-    while(cur_item = gc_it_igp_next(gc_priv_data)) {
-#define GC_IT_MARK_NODE_GREY(x, y) gc_it_mark_node_grey(x, y)
-        GC_IT_MARK_NODE_GREY(cur_pool, cur_item);
-    }
 
 /*
  * 6) move all white objects to the free list
@@ -162,12 +157,16 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * Also, finalize any items that require it.
  */
 
+    gc_it_free_white_items(interp);
+
 /*
  * 7) reset all flags to white
  * Reset the whole card to white. All items should be out of the grey list, and
  * back in the generic "items" list. All newly created items should be appended
  * into the "items" list.
  */
+
+    gc_it_reset_cards(interp);
 
 }
 
@@ -179,6 +178,17 @@ gc_it_turn_globals_grey(PARROT_INTERP)
        grey list queue. */
 }
 
+void gc_it_turn_igp_grey(PARROT_INTERP)
+{
+    /* Find all incoming IGP to the currently scanned pool/arena/whatever
+       and add them to the grey pile. This way, we ensure that they get
+       processed in a timely manner, and we don't need to use two loops
+       or anything funny.
+       */
+    /* I'm not sure about the arguments that this function will require,
+       I'm sure it doesnt need to be the whole damn iterpreter structure
+       unless these IGPs get way out of hand. */
+}
 
 void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
@@ -208,6 +218,20 @@ gc_it_mark_node_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
     /* Mark the current node as grey, add it to the grey queue */
     /* This function might become a macro */
+}
+
+void
+gc_it_free_white_items(PARROT_INTERP)
+{
+    /* Add all items which are still white to the free lists.
+       Possibly also clear the bitmaps */
+}
+
+void gc_it_clear_cards(PARROT_INTERP)
+{
+    /* If we don't do it in gc_it_free_white_items, or somewhere else
+       then clear the cards here. Don't know what all that's going to
+       entail. */
 }
 
 /*
