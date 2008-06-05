@@ -43,6 +43,55 @@ Gets the value the range goes up to.
 .end
 
 
+=item list
+
+Gets the range in list context.
+
+XXX For now we just produce a list of values in the range. When we go lazy,
+we need to not do that.
+
+=cut
+
+.sub 'list' :method
+    .local pmc res, cur_val
+    res = new 'List'
+  it_loop:
+    unless self goto it_loop_end
+    cur_val = shift self
+    push res, cur_val
+    goto it_loop
+  it_loop_end:
+    .return(res)
+.end
+
+
+=item ACCEPTS(topic)
+
+Smart-matches the given topic against the range.
+
+=cut
+
+.sub 'ACCEPTS' :method
+    .param pmc topic
+    
+    # Get the range of values to test.
+    .local pmc from, to
+    from = self.'from'()
+    to = self.'to'()
+
+    # Do test.
+    lt topic, from, false
+    gt topic, to, false
+
+  true:
+    $P0 = get_hll_global [ 'Bool' ], 'True'
+    .return ($P0)
+  false:
+    $P0 = get_hll_global [ 'Bool' ], 'False'
+    .return ($P0)
+.end
+
+
 =item perl
 
 Returns a Perl code representation of the range.
@@ -147,14 +196,13 @@ Constructs a range from the value on the LHS to the value on the RHS.
 
 .namespace
 
-# XXX We'll uncomment this when we're ready to do lazy ranges for real.
-#.sub "infix:.."
-#    .param pmc a
-#    .param pmc b
-#    .local pmc proto
-#    proto = get_hll_global 'Range'
-#    .return proto.'new'('from' => a, 'to' => b)
-#.end
+.sub "infix:.."
+    .param pmc a
+    .param pmc b
+    .local pmc proto
+    proto = get_hll_global 'Range'
+    .return proto.'new'('from' => a, 'to' => b)
+.end
 
 
 =back
