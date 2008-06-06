@@ -157,27 +157,26 @@ typedef struct _gc_it_hdr_list {
 } Gc_it_hdr_list;
 
 /*
- * A structure that contains state information, sot that the GC can
- * resume operation after a partial run. What information, if any
- * that this structure will need to contain is currently a mystery.
- */
-
-typedef struct _gc_it_state {
-    UINTVAL last_generation; /* number of the last generation scanned */
-} Gc_it_state;
-
-/*
  * Gc_it_data structure
  * Contains information for the IT GC to operate.
  * global, inserted into the Arenas structure
  */
 
+#define GC_IT_FLAG_NEW_MARK      0x01    /* starting a new scan, from scratch */
+#define GC_IT_FLAG_RESUME_MARK   0x02    /* resuming a scan in the middle */
+#define GC_IT_FLAG_NEW_SWEEP     0x04    /* reached the end of the mark, begin sweep */
+#define GC_IT_FLAG_RESUME_SWEEP  0x08    /* resume sweep phase */
+#define GC_IT_FLAG_STOP          0x10    /* indicator to stop in the middle */
+
+/* A private datastructure for the GC. All the global data that we need to
+   operate will be stored here. */
+
 typedef struct _gc_it_data {
-
+    UINTVAL item_count;       /* number of items scanned in current run */
+    UNITVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
-
-    Gc_it_state * state;      /* information about GC state, so we can resume */
-    UINTVAL stop_flag;        /* flag to determine when the trace needs to pause */
+    UINTVAL flags;        /* flag to determine when the trace needs to pause */
+    UINTVAL config;     /* config data to tell how the GC operates */
 } Gc_it_data;
 
 /*
@@ -190,7 +189,7 @@ typedef struct _gc_it_pool_data {
     Gc_it_gen * last_gen;   /* Most recent generation, or oldest, or whatever */
     struct _gc_it_hdr * marker;         /* limit of list. Do I need this? */
     struct _gc_it_hdr * finalize;       /* items to be finalized on death */
-    struct _gc_it_hdr * items;          /* all items not in queue or finalized */
+    /* struct _gc_it_hdr * items;          all items not in queue or finalized */
     struct _gc_it_hdr * queue;          /* list of grey items, to mark */
     struct _gc_it_hdr * new_list;       /* list of items created before the end of the scan */
 } Gc_it_pool_data;
@@ -235,7 +234,7 @@ typedef struct Small_Object_Pool {
     struct _gc_gms_gen *last_gen;
 #endif
 #if PARROT_GC_IT
-    struct _gc_it_pool_data gc_it_data;      /* Data for use by the IT GC */
+    struct _gc_it_pool_data gc_it_pool_data; /* Data for use by the IT GC */
 #endif
 } Small_Object_Pool;
 

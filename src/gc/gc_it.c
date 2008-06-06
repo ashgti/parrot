@@ -52,9 +52,8 @@ Parrot_gc_it_init(PARROT_INTERP)
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
-    arena_base->gc_private->stop_flag = 0;
     arena_base->gc_private->num_generations = 0;
-    arena_base->gc_private->state = mem_allocate_zeroed_typed(Gc_it_state);
+    arena_base->gc_private->flags = GC_IT_FLAG_NEW;
 
     /* set function hooks according to pdd09 */
     arena_base->do_dod_run        = Parrot_gc_it_run;
@@ -115,8 +114,13 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * queue here at the beginning, and then processing the whole set.
  */
 
-    gc_it_turn_globals_grey(interp); /* Do point #2 */
-    gc_it_turn_igp_grey(interp);     /* Do point #5 */
+    if(gc_priv_data->flags & GC_IT_FLAG_NEW) {
+        gc_priv_data->total_count = 0;
+        gc_it_turn_globals_grey(interp); /* Do point #2 */
+        gc_it_turn_igp_grey(interp);     /* Do point #5 */
+        gc_priv_data->flags = gc_priv_data->flags ^ GC_IT_FLAG_NEW;
+    }
+    gc_priv_data->item_count = 0;
 
 /*
  * 3) for all grey items, mark children as grey. Then mark as black
@@ -130,7 +134,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * because state is stored in the white/grey/black lists and in the bitmap,
  * which is kept across runs.
  */
-    Gc_it_hdr * cur_item, * a, * b;
+    Gc_it_hdr * cur_item;
     Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
     while(cur_item = cur_pool->gray) {
         /* For these "mark_children..." macros and functions, I dont know what
@@ -151,12 +155,22 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* These will be moved out of the function, keeping everything together for now */
 #define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
-#define GC_IT_NEED_TA_DO_DA_BREAK(x) if((x)->stop_flag) return;
+        /* turn off the stop flag, set the resume flag, and quit for now */
+#define GC_IT_NEED_TA_DO_DA_BREAK(x,f) if((x)->flags & GC_IT_FLAG_STOP) {\
+            (x)->flags = f;\
+            return;\
+        }
+#define GC_IT_MAYBE_SET_STOP_FLAG(x) /* figure out what we need to test here to set the stop flag */
 
         GC_IT_INCREMENT_ITEM_COUNT(gc_priv_data);
-        GC_IT_NEED_TA_DO_DA_BREAK(gc_priv_data); /* break out of the loop, if needed */
+        GC_IT_MAYBE_SET_STOP_FLAG(gc_priv_data); /* The arguments to this need to change */
+        GC_IT_NEED_TA_DO_DA_BREAK(gc_priv_data, GC_IT_FLAG_RESUME_MARK);
     }
 
+    /* Done with the mark phase, begin the sweep phase */
+    gc_priv_data->flags = GC_IT_NEW_SWEEP;
+    if(GC_IT_CHECK_IF_WE_BREAK_BEFORE_SWEEP)
+        return;
 
 /*
  * 6) move all white objects to the free list
@@ -165,7 +179,13 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * Also, finalize any items that require it.
  */
 
-    gc_it_free_white_items(interp);
+    if(gc_priv_data->flags & GC_IT_NEW_SWEEP) {
+        gc_it_free_white_items(interp);
+        if(GC_IT_CHECK_IF_WE_BREAK_AFTER_THIS) {
+            gc_priv_data->flags = GC_IT_RESUME_SWEEP;
+            return;
+        }
+    }
 
 /*
  * 7) reset all flags to white
@@ -175,7 +195,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  */
 
     gc_it_reset_cards(interp);
-
+    gc_priv_data->flags = GC_IT_NEW_MARK;
 }
 
 void
@@ -214,7 +234,7 @@ gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
     do an OR with PObj_is_fully_marked_FLAG. We could warn about an
     object here that is white instead of grey, but that should never
     happen, and will waste an entire conditional.
-    
+
     move the node from the queue to the items list, or the finalize list
     if that's what's needed (we might need to use a separate function
     or something). */
@@ -263,7 +283,6 @@ Parrot_gc_it_deinit(PARROT_INTERP)
      * 2) Free all GC headers in all pools and arenas, if possible
      * 3) Free any additional memory that i will create in the future
      */
-    mem_sys_free(arena_base->gc_private->state);
     mem_sys_free(arena_base->gc_private);
     arena_base->gc_private        = NULL;
     /* Null-out the function pointers, except the init pointer
