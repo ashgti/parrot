@@ -171,6 +171,13 @@ typedef enum _gc_it_state {
     GC_IT_START_CLEANUP
 } Gc_it_state;
 
+/* Structure to contain configuration data about the GC, to determine
+   how it operates */
+
+typedef struct _gc_it_config {
+    UINTVAL num_to_mark;
+}
+
 /* A private datastructure for the GC. All the global data that we need to
    operate will be stored here. */
 
@@ -179,8 +186,7 @@ typedef struct _gc_it_data {
     UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
     Gc_it_state state;            /* status of the current run */
-    UINTVAL stop;            /* flag to determine when the trace needs to pause */
-    UINTVAL config;           /* config data to tell how the GC operates */
+    Gc_it_config config;           /* config data to tell how the GC operates */
 } Gc_it_data;
 
 /*

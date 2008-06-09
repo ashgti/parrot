@@ -259,7 +259,7 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 
 #endif
 
-#if PARROT_GC_IT 
+#if PARROT_GC_IT
 #  define DOD_WRITE_BARRIER(interp, agg, old, _new) 
 #  define DOD_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) 
 #endif

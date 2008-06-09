@@ -123,8 +123,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
     Arenas * arena_base = interp->arena_base;
     Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
-    UINTVAL state = gc_priv_data->state;
-    UINTVAL gc_flags = gc_prov_data->flags;
+    Gc_it_state state = gc_priv_data->state;
+    gc_it_config * config = &(gc_priv_data->config);
+    UINTVAL gc_flags = gc_priv_data->flags;
 
     if (arena_base->DOD_block_level)
         return;
@@ -146,28 +147,27 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         }
     }
     if(flags & GC_lazy_FLAG) {
-        /* Sweep through old clutter. We might need to demarcate this */
-        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP) {
+        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP)
             gc_it_sweep_normal(interp);
-            if(gc_flags & GC_IT_FLAG
-        gc_it_sweep_simple_buffers(interp);
-        gc_it_reset_cards(interp);
         --arena_base->DOD_block_level;
+        return;
     }
 }
 
-void gc_it_trace_normal(PARROT_INTERP) {
+void
+gc_it_trace_normal(PARROT_INTERP)
+{
 
 /*
  * 1) Determine which pool/generation to scan
- * We are doing this in increments, so we do pool at a time, generation at a
- * time. Some kind of state will determine which pool we are in now (maybe a
- * linked list of pool by priority?). Current generation will be determined
- * by some sort of counter. Youngest generation is scanned by default, older
- * generations are scanned less frequently.
+ * All globals are added to the queue, it might not make a lot of sense
+ * to try to differentiate between items in different generations here.
+ * At the very least, we want to scan outgoing links from the older generations,
+ * in case some of them point to the current generation that we are scanning.
  */
 
-
+    Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = arena_base->gc_private;
 
 /*
  * 2) Mark root items as grey
@@ -179,13 +179,13 @@ void gc_it_trace_normal(PARROT_INTERP) {
  * queue here at the beginning, and then processing the whole set.
  */
 
-    if(gc_priv_data->flags & GC_IT_FLAG_NEW) {
-        gc_priv_data->total_count = 0;
-        gc_it_turn_globals_grey(interp); /* Do point #2 */
-        gc_it_turn_igp_grey(interp);     /* Do point #5 */
-        gc_priv_data->flags = gc_priv_data->flags ^ GC_IT_FLAG_NEW;
+    if(gc_priv_data->state == GC_IT_START_MARK) {
+        gc_priv_data->total_count = 0;   /* number of elements scanned this run */
+        gc_it_enqueue_globals(interp);   /* Do point #2 */
+        gc_it_enqueue_igp(interp);       /* Do point #5 */
+        gc_priv_data->state++; /* set state to "resume" */
     }
-    gc_priv_data->item_count = 0;
+    gc_priv_data->item_count = 0; /* reset per-increment count */
 
 /*
  * 3) for all grey items, mark children as grey. Then mark as black
@@ -199,49 +199,44 @@ void gc_it_trace_normal(PARROT_INTERP) {
  * because state is stored in the white/grey/black lists and in the bitmap,
  * which is kept across runs.
  */
+
     Gc_it_hdr * cur_item;
     Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
     while(cur_item = cur_pool->gray) {
-        /* For these "mark_children..." macros and functions, I dont know what
-        arguments they are going to require. These shims take a pointer to the
-        current pool (although IGPs will lead to different pools) and the
-        current header.
-        */
+        /* All the macros defined here should not really include function
+        calls unless there is a lot of work to do. If possible, we should
+        try to keep this efficient, remembering that we are looping over
+        a potentially large number of items */
+
         /*
         Move the children's headers into the queue, and possibly mark them
         grey as well.
         */
-#define GC_IT_MARK_CHILDRE_GREY(x, y) gc_it_mark_children_grey(x, y)
+#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
         GC_IT_MARK_CHILDREN_GREY(cur_pool, cur_item);
+
         /* Mark the current node's card black, and return it to the list of
         all items */
 #define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
         GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
 
-        /* These will be moved out of the function, keeping everything together for now */
-#define GC_IT_INCREMENT_ITEM_COUNT(x) ((x)->item_count)++
-        /* turn off the stop flag, set the resume flag, and quit for now */
-#define GC_IT_NEED_TA_DO_DA_BREAK(x,f) if((x)->flags & GC_IT_FLAG_STOP) {\
-            (x)->flags = f;\
-            --arena_base->DOD_block_level;\
-            return;\
+        gc_priv_data->item_count++;
+        gc_priv_data->total_count++;
+        /* TODO Determine if we need to stop the sweep, set gc_priv_data->stop
+           if we need to take a break */
+        if(GC_IT_NEED_TO_BREAK_AFTER_N_INCREMENTS) {
+            gc_priv_data->state = GC_IT_RESUME_MARK;
+            return;
         }
-#define GC_IT_MAYBE_SET_STOP_FLAG(x) /* figure out what we need to test here to set the stop flag */
-
-        GC_IT_INCREMENT_ITEM_COUNT(gc_priv_data);
-        GC_IT_MAYBE_SET_STOP_FLAG(gc_priv_data); /* The arguments to this need to change */
-        GC_IT_NEED_TA_DO_DA_BREAK(gc_priv_data, GC_IT_FLAG_RESUME_MARK);
     }
 }
 
 void
-gc_it_sweep_normal(PARROT_INTERP) {
-    /* Done with the mark phase, begin the sweep phase */
-    gc_priv_data->flags = GC_IT_NEW_SWEEP;
-    if(GC_IT_CHECK_IF_WE_BREAK_BEFORE_SWEEP) {
-        return;
-        
-    }
+gc_it_sweep_normal(PARROT_INTERP)
+{
+
+    const Arenas * arena_base = interp->arena_base;
+    Gc_it_data * gc_priv_data = arena_base->gc_private;
 
 /*
  * 6) move all white objects to the free list
@@ -250,11 +245,10 @@ gc_it_sweep_normal(PARROT_INTERP) {
  * Also, finalize any items that require it.
  */
 
-    if(gc_priv_data->flags & GC_IT_NEW_SWEEP) {
+    if(gc_priv_data->state == GC_IT_NEW_SWEEP) {
         gc_it_free_white_items(interp);
-        if(GC_IT_CHECK_IF_WE_BREAK_AFTER_THIS) {
-            gc_priv_data->flags = GC_IT_RESUME_SWEEP;
-            --arena_base->DOD_block_level;
+        if(NEED_TO_STOP_AFTER_WHITE_SWEEP) {
+            gc_priv_data->state = GC_IT_RESUME_SWEEP;
             return;
         }
     }
@@ -266,9 +260,7 @@ gc_it_sweep_normal(PARROT_INTERP) {
  * point and free them.
  */
 
-    
-    if(GC_IT_WE_BREAK_AFTER_SIMPLE_BUFFERS)
-        return;
+    gc_it_sweep_simple_buffers(interp);
 
 /*
  * 8) reset all flags to white
@@ -278,20 +270,19 @@ gc_it_sweep_normal(PARROT_INTERP) {
  * Reset all flags and stuff for a new scan.
  */
 
-    
-    gc_priv_data->flags = GC_IT_NEW_MARK;
-    --arena_base->DOD_block_level;
+    gc_it_reset_cards(interp);
+    gc_priv_data->state = GC_IT_NEW_MARK;
 }
 
 void
-gc_it_turn_globals_grey(PARROT_INTERP)
+gc_it_enqueue_globals(PARROT_INTERP)
 {
     /* find globals. Make sure they all have headers (I don't know what
        they are going to look like here). Add those headers to the grey
        grey list queue. */
 }
 
-void gc_it_turn_igp_grey(PARROT_INTERP)
+void gc_it_enqueue_igp(PARROT_INTERP)
 {
     /* Find all incoming IGP to the currently scanned pool/arena/whatever
        and add them to the grey pile. This way, we ensure that they get
@@ -309,7 +300,7 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
     /* Add all children of the current node to the queue for processing.
     Also we might want to mark the card grey as well (although that
     seems like unnecessary work) */
-    /* This function could become a macro */
+    /* This function could become a macro or an inline function*/
 }
 
 inline void
@@ -323,14 +314,14 @@ gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
     move the node from the queue to the items list, or the finalize list
     if that's what's needed (we might need to use a separate function
     or something). */
-    /* This function should probably become a macro */
+    /* This function should probably become a macro or an inline function */
 }
 
 inline void
 gc_it_mark_node_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
     /* Mark the current node as grey, add it to the grey queue */
-    /* This function might become a macro */
+    /* This function might become a macro or an inline function */
 }
 
 void
@@ -338,7 +329,7 @@ gc_it_free_white_items(PARROT_INTERP)
 {
     /* Add all items which are still white to the free lists.
        Possibly also clear the bitmaps */
-    /* This can be a macro */
+    /* This can be a macro or an inline function */
 }
 
 void gc_it_clear_cards(PARROT_INTERP)
@@ -346,7 +337,7 @@ void gc_it_clear_cards(PARROT_INTERP)
     /* If we don't do it in gc_it_free_white_items, or somewhere else
        then clear the cards here. Don't know what all that's going to
        entail. */
-    /* This can be a macro */
+    /* This can be a macro or an inline function */
 }
 
 void gc_it_finalize_all_pmc(PARROT_INTERP)
