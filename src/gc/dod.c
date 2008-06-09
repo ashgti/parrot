@@ -186,7 +186,14 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
                 PObj_to_GMSH(obj)->gen->gen_no >= interp->gc_generation) \
             parrot_gc_gms_pobject_lives(interp, obj); \
     } while (0);
-#else /* not PARROT_GC_GMS */
+#elif PARROT_GC_IT
+
+    /* TODO Write code here to handle cardmarking for PObjs, in lieu of
+       using the PObj flags to make that decision.
+       Alternatively, use the PObj flags as placeholders, and translate
+       these to the card at the start of a GC run. */
+
+#else /* not PARROT_GC_GMS or PARROT_GC_IT */
 
     /* if object is live or on free list return */
     if (PObj_is_live_or_free_TESTALL(obj))

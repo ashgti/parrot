@@ -125,7 +125,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
     Gc_it_state state = gc_priv_data->state;
     gc_it_config * config = &(gc_priv_data->config);
-    UINTVAL gc_flags = gc_priv_data->flags;
 
     if (arena_base->DOD_block_level)
         return;
@@ -157,6 +156,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 void
 gc_it_trace_normal(PARROT_INTERP)
 {
+    Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = arena_base->gc_private;
+    Gc_it_hdr * cur_item;
+    Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
 
 /*
  * 1) Determine which pool/generation to scan
@@ -165,9 +168,6 @@ gc_it_trace_normal(PARROT_INTERP)
  * At the very least, we want to scan outgoing links from the older generations,
  * in case some of them point to the current generation that we are scanning.
  */
-
-    Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = arena_base->gc_private;
 
 /*
  * 2) Mark root items as grey
@@ -200,8 +200,6 @@ gc_it_trace_normal(PARROT_INTERP)
  * which is kept across runs.
  */
 
-    Gc_it_hdr * cur_item;
-    Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
     while(cur_item = cur_pool->gray) {
         /* All the macros defined here should not really include function
         calls unless there is a lot of work to do. If possible, we should
