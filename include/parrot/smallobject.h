@@ -157,18 +157,19 @@ typedef struct _gc_it_hdr_list {
 } Gc_it_hdr_list;
 
 /*
- * Gc_it_data structure
- * Contains information for the IT GC to operate.
- * global, inserted into the Arenas structure
- * With the exception of the STOP flag, this could easily be some kind of
- * enum.
+ * GC States
+ * Determines where in a sweep the GC is
  */
 
-#define GC_IT_FLAG_NEW_MARK      0x01    /* starting a new scan, from scratch */
-#define GC_IT_FLAG_RESUME_MARK   0x02    /* resuming a scan in the middle */
-#define GC_IT_FLAG_NEW_SWEEP     0x04    /* reached the end of the mark, begin sweep */
-#define GC_IT_FLAG_RESUME_SWEEP  0x08    /* resume sweep phase */
-#define GC_IT_FLAG_STOP          0x10    /* indicator to stop in the middle */
+typedef enum _gc_it_state {
+    GC_IT_READY = 0,
+    GC_IT_START_MARK,
+    GC_IT_RESUME_MARK,
+    GC_IT_START_SWEEP,
+    GC_IT_RESUME_SWEEP,
+    GC_IT_START_BUFFERS,
+    GC_IT_START_CLEANUP
+} Gc_it_state;
 
 /* A private datastructure for the GC. All the global data that we need to
    operate will be stored here. */
@@ -177,8 +178,8 @@ typedef struct _gc_it_data {
     UINTVAL item_count;       /* number of items scanned in current run */
     UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
-    UINTVAL state;            /* status of the current run */
-    UINTVAL flags;            /* flag to determine when the trace needs to pause */
+    Gc_it_state state;            /* status of the current run */
+    UINTVAL stop;            /* flag to determine when the trace needs to pause */
     UINTVAL config;           /* config data to tell how the GC operates */
 } Gc_it_data;
 

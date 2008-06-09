@@ -72,9 +72,7 @@ increment, or one step from many.
 
 */
 
-void
-Parrot_gc_it_run(PARROT_INTERP, int flags)
-{
+
 /*
  * Basic Algorithm:
  * 1) Determine which pool/generation to scan
@@ -84,7 +82,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
  * 6) Add all items that are still white to the free list
  * 7) Scan through simple buffers, add white objects to free list
- * 7) reset all flags to white
+ * 8) reset all flags to white
  *
  * Only reclaim objects where there are no greys in the current area,
  * and when a run has completed. Do not reclaim, for instance, any white
@@ -92,23 +90,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * back to white (which would free all objects, alive or dead).
  */
 
-    if (arena_base->DOD_block_level) {
-        return;
-    }
-    ++arena_base->DOD_block_level;
-    if(flags && GC_finish_FLAG) {
-        /* If we have a finish situation, we need to finalize all PMCs
-           that have a custom finalization routine. We'll do this in a
-           subroutine to reduce clutter here */
-        gc_it_finalize_all_pmc(interp);
-        --arena_base->DOD_block_level;
-    }
-
-    Arenas * arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
-    Small_object_pool * cur_pool;  /* Current pool */
-    Gc_it_gen * generation;        /* Current generation */
-
+void
+Parrot_gc_it_run(PARROT_INTERP, int flags)
+{
 /* Check flags, figure out our mode of operation. Here are some:
 
     GC_trace_normal = run a trace, or a partial trace, but not a sweep.
@@ -136,6 +120,43 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         run a complete sweep of the PMC area calling finalizers only but not
         marking objects or adding objects to the free list
 */
+
+    Arenas * arena_base = interp->arena_base;
+    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
+    UINTVAL state = gc_priv_data->state;
+    UINTVAL gc_flags = gc_prov_data->flags;
+
+    if (arena_base->DOD_block_level)
+        return;
+    ++arena_base->DOD_block_level;
+    if(flags & GC_finish_FLAG) {
+        gc_it_finalize_all_pmc(interp);
+        --arena_base->DOD_block_level;
+    }
+    if(flags & GC_trace_normal) {
+        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP) {
+            /* mark is finished, maintain state, wait to run a sweep */
+            --arena_base->DOD_block_level;
+            return
+        }
+        if(gc_it_trace_normal(interp)) {
+            /* trace has been run as requested, return */
+            --arena_base->DOD_block_level;
+            return;
+        }
+    }
+    if(flags & GC_lazy_FLAG) {
+        /* Sweep through old clutter. We might need to demarcate this */
+        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP) {
+            gc_it_sweep_normal(interp);
+            if(gc_flags & GC_IT_FLAG
+        gc_it_sweep_simple_buffers(interp);
+        gc_it_reset_cards(interp);
+        --arena_base->DOD_block_level;
+    }
+}
+
+void gc_it_trace_normal(PARROT_INTERP) {
 
 /*
  * 1) Determine which pool/generation to scan
@@ -211,12 +232,15 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         GC_IT_MAYBE_SET_STOP_FLAG(gc_priv_data); /* The arguments to this need to change */
         GC_IT_NEED_TA_DO_DA_BREAK(gc_priv_data, GC_IT_FLAG_RESUME_MARK);
     }
+}
 
+void
+gc_it_sweep_normal(PARROT_INTERP) {
     /* Done with the mark phase, begin the sweep phase */
     gc_priv_data->flags = GC_IT_NEW_SWEEP;
     if(GC_IT_CHECK_IF_WE_BREAK_BEFORE_SWEEP) {
         return;
-        --arena_base->DOD_block_level;
+        
     }
 
 /*
@@ -236,13 +260,25 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     }
 
 /*
- * 7) reset all flags to white
+ * 7) Scan through simple buffers, add white objects to free list
+ * Buffers don't contain pointers, so we don't need to perform a
+ * full tree-based scan. Find the ones that are not marked at this
+ * point and free them.
+ */
+
+    
+    if(GC_IT_WE_BREAK_AFTER_SIMPLE_BUFFERS)
+        return;
+
+/*
+ * 8) reset all flags to white
  * Reset the whole card to white. All items should be out of the grey list, and
  * back in the generic "items" list. All newly created items should be appended
  * into the "items" list.
+ * Reset all flags and stuff for a new scan.
  */
 
-    gc_it_reset_cards(interp);
+    
     gc_priv_data->flags = GC_IT_NEW_MARK;
     --arena_base->DOD_block_level;
 }
