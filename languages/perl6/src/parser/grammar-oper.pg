@@ -6,6 +6,7 @@ proto postfix:<++> is precedence('x=') is lvalue(1) { ... }
 proto postfix:<--> is equiv(postfix:<++>) is lvalue(1) { ... }
 proto prefix:<++> is equiv(postfix:<++>) is lvalue(1) { ... }
 proto prefix:<--> is equiv(postfix:<++>) is lvalue(1) { ... }
+proto postfix:<i> is equiv(postfix:<++>) { ... }
 
 ## exponentiation
 proto infix:<**> is precedence('w=') { ... }
@@ -69,10 +70,14 @@ proto infix:<^> is equiv(infix:<|>)
 
 ## named unary
 proto prefix:<rand> is precedence('o=') { ... }
-proto prefix:<sleep> is equiv(prefix:<rand>) { ... }
+proto prefix:<HOW> is equiv(prefix:<rand>) is subname('HOW') { ... }
+proto prefix:<WHAT> is equiv(prefix:<rand>) is subname('WHAT') { ... }
 proto prefix:<abs> is equiv(prefix:<rand>)
     is pirop('n_abs')
     { ... }
+proto prefix:<pop> is equiv(prefix:<rand>) is subname('pop') { ... }
+proto prefix:<shift> is equiv(prefix:<rand>) is subname('shift') { ... }
+proto prefix:<sleep> is equiv(prefix:<rand>) is subname('sleep') { ... }
 
 ## nonchaining
 proto infix:<..> is precedence('n=') { ... }
@@ -164,8 +169,8 @@ proto infix:<^=> is equiv(infix:<:=>) { ... }
 proto infix:«=>» is equiv(infix:<:=>) { ... }
 
 ## loose unary
-proto prefix:<true> is precedence('h=') { ... }
-proto prefix:<not> is equiv(prefix:<true>) { ... }
+proto prefix:<true> is precedence('h=') is subname('true') { ... }
+proto prefix:<not> is equiv(prefix:<true>) is subname('not') { ... }
 
 ## comma
 proto infix:<,> is precedence('g=')

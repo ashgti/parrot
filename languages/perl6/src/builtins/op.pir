@@ -10,7 +10,7 @@ src/builtins/op.pir - Perl6 builtin operators
 
 =cut
 
-.namespace
+.namespace []
 
 ## autoincrement
 .sub 'postfix:++' :multi(_)
@@ -39,6 +39,14 @@ src/builtins/op.pir - Perl6 builtin operators
     .param pmc a
     dec a
     .return (a)
+.end
+
+
+.sub 'postfix:i' :multi(_)
+    .param num a
+    $P0 = new 'Complex'
+    $P0[1] = a
+    .return ($P0)
 .end
 
 
@@ -323,13 +331,13 @@ src/builtins/op.pir - Perl6 builtin operators
 .end
 
 
-.sub 'prefix:true' :multi(_)
+.sub 'true' :multi(_)
     .param pmc a
     .return 'prefix:?'(a)
 .end
 
 
-.sub 'prefix:not' :multi(_)
+.sub 'not' :multi(_)
     .param pmc a
     .return 'prefix:!'(a)
 .end

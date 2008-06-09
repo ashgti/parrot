@@ -10,7 +10,27 @@ src/builtins/named-unary.pir - Perl6 named unary builtins
 
 =cut
 
-.namespace
+.namespace []
+
+=item HOW($x)
+
+=item WHAT($x)
+
+Return the metaclass or protoobject for C<$x>.
+
+=cut
+
+.sub 'HOW'
+    .param pmc x
+    .return x.'HOW'()
+.end
+
+
+.sub 'WHAT'
+    .param pmc x
+    .return x.'WHAT'()
+.end
+
 
 =item defined($x)
 
