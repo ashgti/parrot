@@ -83,6 +83,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * 4) repeat (3) until there are no grey items in current pool/generation
  * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
  * 6) Add all items that are still white to the free list
+ * 7) Scan through simple buffers, add white objects to free list
  * 7) reset all flags to white
  *
  * Only reclaim objects where there are no greys in the current area,
@@ -90,6 +91,51 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * objects after a run has completed and all black objects have been turned
  * back to white (which would free all objects, alive or dead).
  */
+
+    if (arena_base->DOD_block_level) {
+        return;
+    }
+    ++arena_base->DOD_block_level;
+    if(flags && GC_finish_FLAG) {
+        /* If we have a finish situation, we need to finalize all PMCs
+           that have a custom finalization routine. We'll do this in a
+           subroutine to reduce clutter here */
+        gc_it_finalize_all_pmc(interp);
+        --arena_base->DOD_block_level;
+    }
+
+    Arenas * arena_base = interp->arena_base;
+    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
+    Small_object_pool * cur_pool;  /* Current pool */
+    Gc_it_gen * generation;        /* Current generation */
+
+/* Check flags, figure out our mode of operation. Here are some:
+
+    GC_trace_normal = run a trace, or a partial trace, but not a sweep.
+        set the macro CHECK_IF_WE_BREAK_BEFORE_SWEEP, however we do that,
+        to break off the function after the trace phase.
+    GC_trace_stack_FLAG = we need to trace the C stack and the processor
+        registers too. I wouldn't even know how to start doing this.
+    GC_lazy_FLAG = Appears we run a sweep phase if we have already marked,
+        or complete the current mark and then sweep. Or, we find some other
+        way to free items that are obviously dead.
+    GC_finish_FLAG = set all objects to dead, call all finalizers on PMC
+        objects. We don't need to mark free items, since everything is going
+        to die anyway.
+
+    If GC_trace_normal && (GC_IT_FLAG_NEW_MARK || GC_IT_FLAG_RESUME_MARK)
+        run a trace or resume the current trace.
+
+    if GC_trace_normal && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
+        do nothing
+
+    if GC_lazy_FLAG && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
+        run a sweep, possibly to conclusion.
+
+    if GC_finish_FLAG
+        run a complete sweep of the PMC area calling finalizers only but not
+        marking objects or adding objects to the free list
+*/
 
 /*
  * 1) Determine which pool/generation to scan
@@ -99,10 +145,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * by some sort of counter. Youngest generation is scanned by default, older
  * generations are scanned less frequently.
  */
-    Arenas * arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
-    Small_object_pool * cur_pool;  /* Current pool */
-    Gc_it_gen * generation;        /* Current generation */
+
+
 
 /*
  * 2) Mark root items as grey
@@ -158,6 +202,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         /* turn off the stop flag, set the resume flag, and quit for now */
 #define GC_IT_NEED_TA_DO_DA_BREAK(x,f) if((x)->flags & GC_IT_FLAG_STOP) {\
             (x)->flags = f;\
+            --arena_base->DOD_block_level;\
             return;\
         }
 #define GC_IT_MAYBE_SET_STOP_FLAG(x) /* figure out what we need to test here to set the stop flag */
@@ -169,8 +214,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
     /* Done with the mark phase, begin the sweep phase */
     gc_priv_data->flags = GC_IT_NEW_SWEEP;
-    if(GC_IT_CHECK_IF_WE_BREAK_BEFORE_SWEEP)
+    if(GC_IT_CHECK_IF_WE_BREAK_BEFORE_SWEEP) {
         return;
+        --arena_base->DOD_block_level;
+    }
 
 /*
  * 6) move all white objects to the free list
@@ -183,6 +230,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         gc_it_free_white_items(interp);
         if(GC_IT_CHECK_IF_WE_BREAK_AFTER_THIS) {
             gc_priv_data->flags = GC_IT_RESUME_SWEEP;
+            --arena_base->DOD_block_level;
             return;
         }
     }
@@ -196,6 +244,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
     gc_it_reset_cards(interp);
     gc_priv_data->flags = GC_IT_NEW_MARK;
+    --arena_base->DOD_block_level;
 }
 
 void
@@ -262,6 +311,16 @@ void gc_it_clear_cards(PARROT_INTERP)
        then clear the cards here. Don't know what all that's going to
        entail. */
     /* This can be a macro */
+}
+
+void gc_it_finalize_all_pmc(PARROT_INTERP)
+{
+    /* Run through the PMC pool here, call all finalize methods on PMCs
+       that have them.
+       At this point, we may have performed a mark but not a sweep, so some
+       PMCs that are still "white" might need finalization. Go through
+       all items, (white, black and grey) and finalize all. Don't bother
+       adding items to free list here, the program is terminating. */
 }
 
 /*

@@ -160,6 +160,8 @@ typedef struct _gc_it_hdr_list {
  * Gc_it_data structure
  * Contains information for the IT GC to operate.
  * global, inserted into the Arenas structure
+ * With the exception of the STOP flag, this could easily be some kind of
+ * enum.
  */
 
 #define GC_IT_FLAG_NEW_MARK      0x01    /* starting a new scan, from scratch */
@@ -173,10 +175,11 @@ typedef struct _gc_it_hdr_list {
 
 typedef struct _gc_it_data {
     UINTVAL item_count;       /* number of items scanned in current run */
-    UNITVAL total_count;      /* number of items scanned since beginning of mark phase */
+    UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
-    UINTVAL flags;        /* flag to determine when the trace needs to pause */
-    UINTVAL config;     /* config data to tell how the GC operates */
+    UINTVAL state;            /* status of the current run */
+    UINTVAL flags;            /* flag to determine when the trace needs to pause */
+    UINTVAL config;           /* config data to tell how the GC operates */
 } Gc_it_data;
 
 /*
