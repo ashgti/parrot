@@ -20,6 +20,7 @@ package auto::perldoc;
 use strict;
 use warnings;
 
+use File::Temp qw (tempfile );
 use base qw(Parrot::Configure::Step);
 
 use Parrot::Configure::Utils ':auto';
@@ -37,12 +38,12 @@ sub runstep {
     my ( $self, $conf ) = @_;
 
     my $cmd = $conf->data->get_p5('scriptdirexp') . q{/perldoc};
-    my $tmpfile = q{c99da7c4.tmp};
-    my $content = capture_output("$cmd -ud $tmpfile perldoc") || undef;
+    my ( $fh, $filename ) = tempfile( UNLINK => 1 );
+    my $content = capture_output("$cmd -ud $filename perldoc") || undef;
 
     return 1 unless defined( $self->_initial_content_check($conf, $content) );
 
-    my $version = $self->_analyze_perldoc($cmd, $tmpfile, $content);
+    my $version = $self->_analyze_perldoc($cmd, $filename, $content);
 
     _handle_version($conf, $version);
 
