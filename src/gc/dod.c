@@ -188,10 +188,20 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     } while (0);
 #elif PARROT_GC_IT
 
-    /* TODO Write code here to handle cardmarking for PObjs, in lieu of
+    /* Write code here to handle cardmarking for PObjs, in lieu of
        using the PObj flags to make that decision.
        Alternatively, use the PObj flags as placeholders, and translate
        these to the card at the start of a GC run. */
+
+    /* Actually, I'm going to need to rewrite most of this function,
+       and rewrite the following functions/macros to use the card
+       marking schemes:
+
+        PObj_live_TEST
+        PObj_is_live_of_free_TESTALL
+        PObj_live_SET
+        ...and others that I haven't identified yet.
+    */
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */
 
