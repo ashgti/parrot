@@ -80,6 +80,13 @@ typedef struct _gc_gms_gen {
 
 #if PARROT_GC_IT /* Incremental Tricolor Garbage Collector, PDD09 */
 
+/* Switches and modes */
+
+#define GC_IT_INCREMENT_MODE
+/* #define GC_IT_BATCH_MODE */
+#define GC_IT_SERIAL_MODE
+/* #define GC_IT_PARALLEL_MODE */
+
 /*
  * Header, a linked list.
  I don't know whether it should be single or double-linked.
@@ -97,24 +104,32 @@ typedef struct _gc_it_hdr {
 } Gc_it_hdr;
 
 /*
- * a basic structure to facilitate cardmarking.
- * Don't know if I want to make the array a fixed size or not.
+ * a basic structure to facilitate cardmarking. An array of these will represent
+ * the card for a particular pool. Using uchar for the basic card element,
+ * and assuming that a uchar is always 8bits or greater (we are simply ignoring
+ * any additional bits)
+ * The bitfield member will allow us to unwind the inner loop a little bit, and
+ * avoid a lot of manual bitwise arithmetic
  */
 
-typedef struct _gc_it_card {
-    UNITVAL * cards;
+typedef union _gc_it_card {
+    unsigned char _c;  /* the card */
+    struct _card_flag_overlay { /* easy-access bitfield overlays */
+        unsigned flag1:2;
+        unsigned flag2:2;
+        unsigned flag3:2;
+        unsigned flag4:2;
+    } _f;
 } Gc_it_card;
 
-/*
- * Here are a few macros and constants defined for us, although
- * they will probably need to change
- */
-
-#define GC_IT_FLAGS_PER_CARD    (sizeof(UINTVAL) * 4)
-#define GC_IT_SET_FLAG(n, f)    ((f) << (n) * 2)
-#define GC_IT_MARK_WHITE (0x0)
-#define GC_IT_MARK_GREY  (0x1)
-#define GC_IT_MARK_BLACK (0x3)
+#define GC_IT_CARD_WHITE 0x00
+#define GC_IT_CARD_GREY  0x01
+#define GC_IT_CARD_BLACK 0x03
+#define GC_IT_CARD_NEW   0x02       /* items which are newly created and should
+                                       not be scanned until the next mark */
+#define GC_IT_CARD_ALL_WHITE 0x00
+#define GC_IT_CARD_ALL_BLACK 0xFF
+#define GC_IT_CARD_ALL_GREY  0x55
 
 #define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
 #define IT_HDR_to_PObj(p) ((PObj*) ((p)+1))

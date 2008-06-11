@@ -126,6 +126,15 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     Gc_it_state state = gc_priv_data->state;
     gc_it_config * config = &(gc_priv_data->config);
 
+/* Here we have two options: Enter the trace directly, or spawn a tracing
+ * thread.
+ * I'll deal with this later
+ */
+    if(gc_priv_data->state == GC_IT_NEW_MARK) {
+        gc_priv_data->total_count = 0;
+        gc_priv_data->state == GC_IT_RESUME_MARK;
+    }
+
     if (arena_base->DOD_block_level)
         return;
     ++arena_base->DOD_block_level;
@@ -139,11 +148,25 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             --arena_base->DOD_block_level;
             return
         }
-        if(gc_it_trace_normal(interp)) {
-            /* trace has been run as requested, return */
-            --arena_base->DOD_block_level;
-            return;
-        }
+        /* Two options here. In batch mode, enqueue all globals immediately.
+           in increment mode, enqueue only the next root variable or IGP (if
+           it's an aggregate). If there are no more root aggregates, enqueue
+           all simple buffers */
+#if GC_IT_INCREMENT_MODE
+        gc_it_enqueue_next_root(interp);
+#elif GC_IT_BATCH_MODE
+        gc_it_enqueue_all_roots(interp);
+#endif
+
+        /* Two more options here. In single-threaded mode, run the trace
+           function. In parallel mode, attempt to spawn a new GC thread to
+           run the trace in the background */
+#if GC_IT_SERIAL_MODE
+        gc_it_trace_normal(interp);
+#elif GC_IT_PARALLEL_MODE
+        gc_it_trace_threaded(interp);
+#endif
+        --arena_base->DOD_block_level;
     }
     if(flags & GC_lazy_FLAG) {
         if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP)
@@ -178,13 +201,7 @@ gc_it_trace_normal(PARROT_INTERP)
  * I think we need to do this by adding all incoming IGP pointers to the
  * queue here at the beginning, and then processing the whole set.
  */
-
-    if(gc_priv_data->state == GC_IT_START_MARK) {
-        gc_priv_data->total_count = 0;   /* number of elements scanned this run */
-        gc_it_enqueue_globals(interp);   /* Do point #2 */
-        gc_it_enqueue_igp(interp);       /* Do point #5 */
-        gc_priv_data->state++; /* set state to "resume" */
-    }
+ 
     gc_priv_data->item_count = 0; /* reset per-increment count */
 
 /*
@@ -200,12 +217,7 @@ gc_it_trace_normal(PARROT_INTERP)
  * which is kept across runs.
  */
 
-    while(cur_item = cur_pool->gray) {
-        /* All the macros defined here should not really include function
-        calls unless there is a lot of work to do. If possible, we should
-        try to keep this efficient, remembering that we are looping over
-        a potentially large number of items */
-
+    while(cur_item = cur_pool->queue) {
         /*
         Move the children's headers into the queue, and possibly mark them
         grey as well.
@@ -218,15 +230,15 @@ gc_it_trace_normal(PARROT_INTERP)
 #define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
         GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
 
-        gc_priv_data->item_count++;
         gc_priv_data->total_count++;
-        /* TODO Determine if we need to stop the sweep, set gc_priv_data->stop
-           if we need to take a break */
-        if(GC_IT_NEED_TO_BREAK_AFTER_N_INCREMENTS) {
-            gc_priv_data->state = GC_IT_RESUME_MARK;
-            return;
-        }
     }
+}
+
+void
+gc_it_trace_threaded(PARROT_INTERP)
+{
+    /* Check the current number of threads running. If we have space, launch
+       another thread to help with the mark. */
 }
 
 void
@@ -273,11 +285,16 @@ gc_it_sweep_normal(PARROT_INTERP)
 }
 
 void
-gc_it_enqueue_globals(PARROT_INTERP)
+gc_it_enqueue_next_root(PARROT_INTERP)
 {
-    /* find globals. Make sure they all have headers (I don't know what
-       they are going to look like here). Add those headers to the grey
-       grey list queue. */
+    /* enqueue next root, algorithm:
+        1) Find the next root item
+        2) if it's an aggregate item, add it to the queue and return
+        3) if there are no more aggregates in the root list, start adding
+           aggregates from the IGP. Add one item at a time and return.
+        4) if there are no more aggregates to be had, add all simple buffers
+           to the queue
+    */
 }
 
 void gc_it_enqueue_igp(PARROT_INTERP)
