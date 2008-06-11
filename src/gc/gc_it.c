@@ -500,6 +500,7 @@ of the given size, and we allocate locally from these arenas as needed.
 static void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
+    UINTVAL i;
     const size_t real_size = pool->object_size;
     const size_t card_size = (real_size / 4 + ((real_size % 4) ? (1) : (0)));
     const size_t size = real_size * pool->objects_per_alloc + /* the stuff */
@@ -525,9 +526,13 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
        precidence then -> or not. */
     new_arena->cards = ((Gc_it_cards*) ((Small_Object_Arena*)new_arena)+1);
     new_arena->start_objects = ((void*) (((Gc_it_card*)(new_arenas->cards))+card_size);
+    memset(new_arena->cards, GC_IT_CARD_ALL_NEW, card_size);
 
     /* insert new_arena in pool's arena linked list */
-    Parrot_append_arena_in_pool(interp, pool, new_arena, size);
+    Parrot_append_arena_in_pool(interp, pool, new_arena, real_size * pool->objects_per_alloc);
+
+    /* Add all these new objects we've created into the pool's free list */
+    gc_it_add_arena_to_free_list(interp, pool, new_arena);
 
     /* allocate more next time */
     pool->objects_per_alloc = (UINTVAL) pool->objects_per_alloc *
@@ -535,6 +540,53 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     size = real_size * pool->objects_per_alloc;
     if (size > POOL_MAX_BYTES) {
         pool->objects_per_alloc = POOL_MAX_BYTES / real_size;
+    }
+}
+
+static void
+gc_it_add_arena_to_free_list(PARROT_INTERP, 
+                             ARGMOD(Small_Object_Pool *pool),
+                             ARGMOD(Small_Object_Arena *new_arena))
+{
+    /* Add all the objects in the new arena into the free list of the
+       pool for later allocation */
+    Gc_it_hdr *p;
+    UINTVAL i;
+    const size_t num_objs = new_arena->total_objects;
+    Gc_it_hdr *head = p = new_arena->start_objects;
+
+    for(i = 0; i < num_objs; i++) {
+        /* Here is what needs to happen in this loop:
+           1) calculate the address of the next GC header in the arena
+           2) set the ->next field of the current object to the address of the
+              next object.
+           3) move the current pointer to the next object, and repeat.
+       */
+        p->next = 
+    p->next 
+}
+
+/* Mark an object's card with a given flag */
+
+static void
+gc_it_mark_PMC_card(void * object, UINTVAL flag)
+{
+    const Gc_it_hdr * hdr = PObj_to_IT_HDR(object);
+    const Gc_it_card * card = hdr->parent_pool->cards;
+    card = card + (hdr->index / 4);
+    switch (hdr->index % 4) {
+        case 0:
+            card->_f->flag1 = flag;
+            break;
+        case 1:
+            card->_f->flag2 = flag;
+            break;
+        case 2:
+            card->_f->flag3 = flag;
+            break;
+        case 3:
+            card->_f->flag3 = flag;
+            break;
     }
 }
 

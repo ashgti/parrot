@@ -139,6 +139,7 @@ typedef union _gc_it_card {
 #define GC_IT_CARD_ALL_WHITE 0x00
 #define GC_IT_CARD_ALL_BLACK 0xFF
 #define GC_IT_CARD_ALL_GREY  0x55
+#define GC_IT_CARD_ALL_NEW   0xAA
 
 #define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
 #define IT_HDR_to_PObj(p) ((PObj*) ((p)+1))
