@@ -48,12 +48,17 @@ void
 Parrot_gc_it_init(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-
+    Gc_it_data * gc_priv_data;
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
-    arena_base->gc_private->num_generations = 0;
-    arena_base->gc_private->flags = GC_IT_FLAG_NEW;
+    gc_priv_data = arena_base->gc_private;
+    gc_priv_data->num_generations = 0;
+    gc_priv_data->config = GC_IT_INITIAL_CONFIG /* define this later, if needed */
+#if GC_IT_PARALLEL_MODE
+    gc_priv_data->num_threads = 0;
+#endif
+    gc_priv_data->state = GC_IT_NEW_MARK;
 
     /* set function hooks according to pdd09 */
     arena_base->do_dod_run        = Parrot_gc_it_run;
@@ -495,19 +500,18 @@ static void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     const size_t real_size = pool->object_size;
-    const size_t size = real_size * pool->objects_per_alloc;
-    Small_Object_Arena * const new_arena =
-        mem_internal_allocate(sizeof (Small_Object_Arena));
-    /* Allocate a space with enough storage for objects_per_alloc objects */
-    new_arena->start_objects = mem_internal_allocate(size);
+    const size_t size = real_size * pool->objects_per_alloc +
+                        sizeof(Small_Object_Arena);
+
+    /* Instead of two separate allocations here, let's do a single big
+       allocation, and append the two doodads together. We save on spacial
+       locality, fewer allocations, less fragmentation, etc. */
+
+    Small_Object_Arena * const new_arena = mem_internal_allocate(size);
+    new_arena->start_objects = ((void*) ((new_arena)+1));
+
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena, size);
-
-    /* GC GMS currently creates a ring or "chain" of objects. I
-     * Don't know if i'm going to use the same. This function
-     * call sets that up, but I might not keep it.
-    gc_gms_chain_objects(interp, pool, new_arena, real_size);
-     */
 
     /* allocate more next time */
     pool->objects_per_alloc = (UINTVAL) pool->objects_per_alloc *

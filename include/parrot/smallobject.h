@@ -15,7 +15,8 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *next;
     void                      *start_objects;
 #if PARROT_GC_IT
-    struct _gc_it_card * cards;
+    struct _gc_it_card        *cards;
+    UINTVAL                    last_index;
 #endif
 } Small_Object_Arena;
 
@@ -94,16 +95,20 @@ typedef struct _gc_gms_gen {
 #   define GC_IT_THREAD_MAX 4
 #endif
 
+#define GC_IT_INITIAL_CONFIG XXX /* define this to be whatever */
+
 /*
  * Header, a linked list.
  Contains a link to the pool/arena (don't know which) that contains this item
  Contains a link to the next header, to form linked lists.
- contains a link to the data itself (dont know if I need this, due to the
-   physical proximity of the header and the data.
+ Contains an index number that represents the position of the item in the pool
+ this item is not manipulated once set, unless the object (including the
+   header) is moved to somewhere else.
  */
 typedef struct _gc_it_hdr {
     struct _gc_it_hdr *next;
     Small_Object_Arena * parent_pool;
+    UINTVAL index;
 } Gc_it_hdr;
 
 /*
@@ -125,6 +130,7 @@ typedef union _gc_it_card {
     } _f;
 } Gc_it_card;
 
+#define GC_IT_FLAGS_PER_CARD 4
 #define GC_IT_CARD_WHITE 0x00
 #define GC_IT_CARD_GREY  0x01
 #define GC_IT_CARD_BLACK 0x03
