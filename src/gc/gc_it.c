@@ -490,7 +490,8 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 =item C<static void gc_it_alloc_objects>
 
 Allocate a new Small_Object_Arena from the OS. Set up the arena as
-necessary.
+necessary. The arena contains enough space to house several objects
+of the given size, and we allocate locally from these arenas as needed.
 
 =cut
 
@@ -500,15 +501,30 @@ static void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     const size_t real_size = pool->object_size;
-    const size_t size = real_size * pool->objects_per_alloc +
-                        sizeof(Small_Object_Arena);
+    const size_t card_size = (real_size / 4 + ((real_size % 4) ? (1) : (0)));
+    const size_t size = real_size * pool->objects_per_alloc + /* the stuff */
+                        sizeof(Small_Object_Arena) + /* for the arena struct */
+                        card_size * sizeof(Gc_it_card); /* for the card */
 
     /* Instead of two separate allocations here, let's do a single big
        allocation, and append the two doodads together. We save on spacial
-       locality, fewer allocations, less fragmentation, etc. */
+       locality, fewer allocations, less fragmentation, etc.
+       Ideally, this is what we should have in the memory location:
+
+       [ Small_Object_Arena | Cards | ... Objects ... ]
+
+       And each object looks like this:
+
+       [ Gc_it_hdr | Data ]
+
+    */
 
     Small_Object_Arena * const new_arena = mem_internal_allocate(size);
-    new_arena->start_objects = ((void*) ((new_arena)+1));
+    /* ...the downside is this messy pointer arithmetic, which I've probably
+       screwed up because I can't remember whether a typecast has higher
+       precidence then -> or not. */
+    new_arena->cards = ((Gc_it_cards*) ((Small_Object_Arena*)new_arena)+1);
+    new_arena->start_objects = ((void*) (((Gc_it_card*)(new_arenas->cards))+card_size);
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena, size);
