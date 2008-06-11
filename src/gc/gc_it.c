@@ -548,32 +548,34 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
                              ARGMOD(Small_Object_Pool *pool),
                              ARGMOD(Small_Object_Arena *new_arena))
 {
-    /* Add all the objects in the new arena into the free list of the
-       pool for later allocation */
-    Gc_it_hdr *p;
+    Gc_it_hdr *p = new_arena->start_objects;
+    void *temp;
     UINTVAL i;
     const size_t num_objs = new_arena->total_objects;
-    Gc_it_hdr *head = p = new_arena->start_objects;
 
-    for(i = 0; i < num_objs; i++) {
+    for(i = 0; i < num_objs - 1; i++) {
         /* Here is what needs to happen in this loop:
            1) calculate the address of the next GC header in the arena
            2) set the ->next field of the current object to the address of the
               next object.
            3) move the current pointer to the next object, and repeat.
+           If my pointer arithmetic is all good, this should work.
        */
-        p->next = 
-    p->next 
+        temp = (Gc_it_ptr *)p+1;
+        temp = (char *)temp+(pool->object_size);
+        p->next = temp;
+        p = temp;
+    }
+    p->next = pool->free_list;
+    pool->free_list = new_arena->start_objects;
 }
 
 /* Mark an object's card with a given flag */
 
 static void
-gc_it_mark_PMC_card(void * object, UINTVAL flag)
+gc_it_mark_PMC_card(Gc_it_hdr * hdr, UINTVAL flag)
 {
-    const Gc_it_hdr * hdr = PObj_to_IT_HDR(object);
-    const Gc_it_card * card = hdr->parent_pool->cards;
-    card = card + (hdr->index / 4);
+    Gc_it_card * card = hdr->parent_pool->cards[hdr->index / 4];
     switch (hdr->index % 4) {
         case 0:
             card->_f->flag1 = flag;
