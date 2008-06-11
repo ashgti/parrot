@@ -226,7 +226,12 @@ gc_it_trace_normal(PARROT_INTERP)
         GC_IT_MARK_CHILDREN_GREY(cur_pool, cur_item);
 
         /* Mark the current node's card black, and return it to the list of
-        all items */
+           all items.
+           1) Find the pool/arena that is associated with this node
+           2) Find the card associated with this node
+           3) mark the card black
+           4) remove the node from the queue
+       */
 #define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
         GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
 
@@ -463,8 +468,14 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
     hdr = pool->free_list;
     pool->free_list = hdr->next;
-    hdr->gen = pool->gc_it_data->last_gen;
+    hdr->parent_pool = pool;
+    /* I still don't know if I need to keep the items stored in a list, or if
+       they can just float until I need them. I'm erring on the side of
+       computational simplicity */
+    hdr->next = NULL;
     ptr = IT_HDR_to_PObj(hdr);
+    /* Figure out where in the arena we are now, and set the card to mark this
+       item as GC_IT_CARD_NEW */
     PObj_flags_SETTO((PObj*) ptr, 0);
     return ptr;
 }

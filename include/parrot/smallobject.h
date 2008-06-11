@@ -14,6 +14,9 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *prev;
     struct Small_Object_Arena *next;
     void                      *start_objects;
+#if PARROT_GC_IT
+    struct _gc_it_card * cards;
+#endif
 } Small_Object_Arena;
 
 struct Small_Object_Pool;
@@ -82,25 +85,25 @@ typedef struct _gc_gms_gen {
 
 /* Switches and modes */
 
-#define GC_IT_INCREMENT_MODE
-/* #define GC_IT_BATCH_MODE */
-#define GC_IT_SERIAL_MODE
-/* #define GC_IT_PARALLEL_MODE */
+#define GC_IT_INCREMENT_MODE 1
+/* #define GC_IT_BATCH_MODE 1 */
+#define GC_IT_SERIAL_MODE 1
+/* #define GC_IT_PARALLEL_MODE 1 */
+
+#ifdef GC_IT_PARALLEL_MODE
+#   define GC_IT_THREAD_MAX 4
+#endif
 
 /*
  * Header, a linked list.
- I don't know whether it should be single or double-linked.
- We don't keep track of headers when we aren't marking, so
- they can move freely (so long as the arena can still find them)
- When marking, we add them to the grey list like a queue, and
- remove them from the queue when they are marked. Once marked
- (or if left unmarked), the headers aren't used and don't need
- to be linked together (i don't think).
+ Contains a link to the pool/arena (don't know which) that contains this item
+ Contains a link to the next header, to form linked lists.
+ contains a link to the data itself (dont know if I need this, due to the
+   physical proximity of the header and the data.
  */
 typedef struct _gc_it_hdr {
-    /* struct _gc_it_hdr *prev; */
     struct _gc_it_hdr *next;
-    void *data_ptr;
+    Small_Object_Arena * parent_pool;
 } Gc_it_hdr;
 
 /*
@@ -155,7 +158,8 @@ typedef struct _gc_it_gen {
 
 /*
  * Other structures to help with generational capabilities.
- * Borrowed from GC_GMS, initially.
+ * Borrowed from GC_GMS, initially. I actually don't think I need these
+ * store structures, so I'll probably delete them
  */
 
 #  define GC_IT_STORE_SIZE (64-2)
@@ -202,6 +206,9 @@ typedef struct _gc_it_data {
     UINTVAL num_generations;  /* number of generations */
     Gc_it_state state;            /* status of the current run */
     Gc_it_config config;           /* config data to tell how the GC operates */
+#if GC_IT_PARALLEL_MODE
+    UINTVAL num_threads;    /* number of currently active threads */
+#endif
 } Gc_it_data;
 
 /*
