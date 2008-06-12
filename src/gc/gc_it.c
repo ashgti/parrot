@@ -331,15 +331,12 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 inline void
 gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
-    /* Mark the current object black. It should already be grey.
-    do an OR with PObj_is_fully_marked_FLAG. We could warn about an
-    object here that is white instead of grey, but that should never
-    happen, and will waste an entire conditional.
-
-    move the node from the queue to the items list, or the finalize list
-    if that's what's needed (we might need to use a separate function
-    or something). */
-    /* This function should probably become a macro or an inline function */
+    /* mark the current node black, and remove it from the queue if
+       it is on the queue */
+    const Gc_it_pool_data * pool_data = pool->gc_it_pool_data;
+    gc_it_mark_card(obj, GC_IT_CARD_BLACK);
+    pool_data->queue = obj->next;
+    obj->next = NULL;
 }
 
 inline void
@@ -347,6 +344,10 @@ gc_it_mark_node_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
     /* Mark the current node as grey, add it to the grey queue */
     /* This function might become a macro or an inline function */
+    const Gc_it_pool_data * pool_data = pool->gc_it_pool_data;
+    gc_it_mark_card(obj, GC_IT_GREY);
+    obj->next = pool_data->queue;
+    pool_data->queue = obj;
 }
 
 void
@@ -354,25 +355,21 @@ gc_it_free_white_items(PARROT_INTERP)
 {
     /* Add all items which are still white to the free lists.
        Possibly also clear the bitmaps */
-    /* This can be a macro or an inline function */
+    /* This can be a macro or an inline function, or else it could be
+       an incremental process, traversing through a pool-at-a-time */
+    /* Algorithm:
+       1) loop over every pool (or one pool at a time, if incremental)
+       2) loop over every arena in each pool
+       3) traverse the cards. when we find a white flag, add the corresponding
+          object to the free list. If it's a PMC, and if it has the finalize
+          flag, then we must call the custom finalization routine first. */
 }
 
 void gc_it_clear_cards(PARROT_INTERP)
 {
     /* If we don't do it in gc_it_free_white_items, or somewhere else
-       then clear the cards here. Don't know what all that's going to
-       entail. */
-    /* This can be a macro or an inline function */
-}
-
-void gc_it_finalize_all_pmc(PARROT_INTERP)
-{
-    /* Run through the PMC pool here, call all finalize methods on PMCs
-       that have them.
-       At this point, we may have performed a mark but not a sweep, so some
-       PMCs that are still "white" might need finalization. Go through
-       all items, (white, black and grey) and finalize all. Don't bother
-       adding items to free list here, the program is terminating. */
+       then clear the cards here. Go through each pool, through each
+       arena, clear the card in each with a memset */
 }
 
 /*

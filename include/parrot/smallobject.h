@@ -16,7 +16,13 @@ typedef struct Small_Object_Arena {
     void                      *start_objects;
 #if PARROT_GC_IT
     struct _gc_it_card        *cards;
-    UINTVAL                    last_index;
+    union {        /* store 2 16-bit values, force UINTVAL alignment */
+        struct {   /* These shouldn't get bigger then 65535, i don't think */
+            unsigned           card_size:16;
+            unsigned           last_index:16;
+        } _d;
+        UINTVAL                _align_x;
+    } _card
 #endif
 } Small_Object_Arena;
 
@@ -226,8 +232,6 @@ typedef struct _gc_it_data {
 typedef struct _gc_it_pool_data {
     Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
     Gc_it_gen * last_gen;   /* Most recent generation, or oldest, or whatever */
-    struct _gc_it_hdr * marker;         /* limit of list. Do I need this? */
-    struct _gc_it_hdr * finalize;       /* items to be finalized on death */
     /* struct _gc_it_hdr * items;          all items not in queue or finalized */
     struct _gc_it_hdr * queue;          /* list of grey items, to mark */
     struct _gc_it_hdr * new_list;       /* list of items created before the end of the scan */
