@@ -660,9 +660,9 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 /* Mark an object's card with a given flag */
 
 static void
-gc_it_mark_card(Gc_it_hdr * hdr, UINTVAL flag)
+gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 {
-    Gc_it_card * card = hdr->parent_pool->cards[hdr->index / 4];
+    Gc_it_card * card = &(hdr->parent_pool->cards[hdr->index / 4]);
     switch (hdr->index % 4) {
         case 0:
             card->_f->flag1 = flag;
@@ -677,6 +677,37 @@ gc_it_mark_card(Gc_it_hdr * hdr, UINTVAL flag)
             card->_f->flag3 = flag;
             break;
     }
+}
+
+static void
+gc_it_set_card_mark_obj(PMC * obj, UINTVAL flag)
+{
+    /* this will become a macro */
+    gc_it_mark_card(PObj_to_IT_HDR(obj), flag);
+}
+
+/* return an object's card value */
+
+static UINTVAL
+gc_it_get_card_mark(Gc_it_hdr * hdr)
+{
+    const Gc_it_card *card = &(hdr->parent_pool->cards[hdr->index / 4]);
+    switch (hdr->index % 4) {
+        case 0:
+            return card->_f->flag1;
+        case 1:
+            return card->_f->flag2;
+        case 2:
+            return card->_f->flag3;
+        case 3:
+            return card->_f->flag4;
+    }
+}
+
+static UINTVAL
+gc_it_get_card_mark_obj(PMC *obj)
+{
+    return gc_it_get_card_mark(PObj_to_IT_HDR(obj));
 }
 
 /*
