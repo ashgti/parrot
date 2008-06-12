@@ -221,6 +221,9 @@ typedef struct _gc_it_data {
     Gc_it_config config;           /* config data to tell how the GC operates */
 #if GC_IT_PARALLEL_MODE
     UINTVAL num_threads;    /* number of currently active threads */
+    Gc_it_hdr *root_queue   /* queue for temporary storage of root items */
+    Gc_it_hdr *queue;       /* list of grey items, to mark */
+    Gc_it_hdr *new_list;    /* list of items created before the end of the scan */
 #endif
 } Gc_it_data;
 
@@ -233,8 +236,6 @@ typedef struct _gc_it_pool_data {
     Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
     Gc_it_gen * last_gen;   /* Most recent generation, or oldest, or whatever */
     /* struct _gc_it_hdr * items;          all items not in queue or finalized */
-    struct _gc_it_hdr * queue;          /* list of grey items, to mark */
-    struct _gc_it_hdr * new_list;       /* list of items created before the end of the scan */
 } Gc_it_pool_data;
 
 #endif /* PARROT_GC_IT */

@@ -136,6 +136,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
  * I'll deal with this later
  */
     if(gc_priv_data->state == GC_IT_NEW_MARK) {
+        gc_it_find_all_roots(interp);
         gc_priv_data->total_count = 0;
         gc_priv_data->state == GC_IT_RESUME_MARK;
     }
@@ -295,17 +296,76 @@ gc_it_sweep_normal(PARROT_INTERP)
 }
 
 void
+gc_it_find_all_roots(PARROT_INTERP)
+{
+    /* Find all the root items, and possibly all IGPs, and add them to
+       gc_priv_data->root_queue. Make sure the pointer at the end of
+       the linked list is NULL. */
+    const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
+}
+
+#if GC_IT_BATCH_MODE
+void
+gc_it_enqueue_all_roots(PARROT_INTERP)
+{
+    const Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+    gc_priv_data->queue = gc_priv_data->root_queue;
+    gc_priv_data->root_queue = NULL;
+}
+#endif
+
+#if GC_IT_INCREMENT_MODE
+void
 gc_it_enqueue_next_root(PARROT_INTERP)
 {
     /* enqueue next root, algorithm:
-        1) Find the next root item
+        1) Get the next root item from gc_priv_data->root_queue
         2) if it's an aggregate item, add it to the queue and return
-        3) if there are no more aggregates in the root list, start adding
-           aggregates from the IGP. Add one item at a time and return.
         4) if there are no more aggregates to be had, add all simple buffers
            to the queue
     */
+    const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
+    const Gc_it_hdr *hdr = gc_priv_data->root_queue;
+    const Gc_it_hdr *head, *ptr;
+    gc_priv_data->root_queue = hdr->next;
+    if(GC_IT_IS_AGGREGATE(hdr)) { /* This needs to be defined */
+        /* if we are enqueueing a new root, the queue should be empty. However,
+           we can pretend that it isn't for now (just to be safe) */
+        hdr->next = gc_priv_data->queue;
+        gc_priv_data->queue = hdr;
+        return;
+    }
+    head = hdr;
+    ptr = gc_priv_data->root_queue;
+    /* the item is just a buffer, so we add it to the queue. We scan through
+       the root_queue until we find the next aggregate (or until the end of
+       the list). We add the aggregate and all items in between to the queue. */
+    while(1) {
+        if(!GC_IT_IS_AGGREGATE(ptr)) {
+            /* If it's not an aggregate, move to the next item, unless the
+               next item is NULL, then break. */
+            if(ptr->next == NULL)
+                break;
+            ptr = ptr->next;
+        }
+        else
+        {
+            /* we found an aggregate. Add this item and all previous buffers
+               to the queue at once. */
+            hdr->next = gc_priv_root->root_queue;
+            gc_priv_data->root_queue = ptr->next;
+            ptr->next = NULL;
+            return
+        }
+    }
+    /* If we fall through here, we've hit a NULL in our loop. This means the
+       queue is exhaused, and all remaining items, if any, were non-aggregates.
+       Add the whole shoot-and-match to the queue. */
+    hdr->next = gc_priv_data->root_queue;
+    ptr->next = gc_priv_data->queue;
+    gc_priv_data->queue = head;
 }
+#endif
 
 void gc_it_enqueue_igp(PARROT_INTERP)
 {
@@ -329,23 +389,21 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 }
 
 inline void
-gc_it_mark_node_black(Small_Object_Pool * pool, Gc_it_hdr * obj)
+gc_it_mark_node_black(Gc_it_pool_data * pool_data, Gc_it_hdr * obj)
 {
     /* mark the current node black, and remove it from the queue if
        it is on the queue */
-    const Gc_it_pool_data * pool_data = pool->gc_it_pool_data;
     gc_it_mark_card(obj, GC_IT_CARD_BLACK);
     pool_data->queue = obj->next;
     obj->next = NULL;
 }
 
 inline void
-gc_it_mark_node_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
+gc_it_mark_node_grey(Gc_it_pool_data * pool, Gc_it_hdr * obj)
 {
     /* Mark the current node as grey, add it to the grey queue */
     /* This function might become a macro or an inline function */
-    const Gc_it_pool_data * pool_data = pool->gc_it_pool_data;
-    gc_it_mark_card(obj, GC_IT_GREY);
+    /* gc_it_mark_card(obj, GC_IT_GREY); */
     obj->next = pool_data->queue;
     pool_data->queue = obj;
 }
