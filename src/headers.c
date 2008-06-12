@@ -637,7 +637,7 @@ Parrot_initialize_header_pools(PARROT_INTERP)
      * pmc_ext isn't a managed item. If a PMC has a pmc_ext structure
      * it is returned to the pool instantly - the structure is never
      * marked.
-     * Use GS MS pool functions
+     * Use GC MS pool functions
      */
     gc_pmc_ext_pool_init(arena_base->pmc_ext_pool);
     arena_base->pmc_ext_pool->name = "pmc_ext";

@@ -1200,11 +1200,19 @@ method package_declarator($/, $key) {
             $?CLASS := @?CLASS.shift();
         }
         elsif $<sym> eq 'role' {
-            # Attatch role declaration to the init code.
+            # Attatch role declaration to the init code, skipping blocks since
+            # those are accessors.
             unless defined( $?INIT ) {
                 $?INIT := PAST::Block.new();
             }
-            $?INIT.push( $?ROLE );
+            for @( $?ROLE ) {
+                if $_.WHAT() eq 'Block' {
+                    $past.push( $_ );
+                }
+                else {
+                    $?INIT.push( $_ );
+                }
+            }
 
             # Restore outer role.
             $?ROLE := @?ROLE.shift();
@@ -1251,7 +1259,10 @@ method package_declarator($/, $key) {
 
 method variable_decl($/) {
     my $past := $( $<variable> );
-    if $<trait> {
+
+    # If it's an attribute declaration, we handle traits elsewhere.
+    my $twigil := $<variable><twigil>[0];
+    if $<trait> && $twigil ne '.' && $twigil ne '!' {
         for $<trait> {
             my $trait := $_;
             if $trait<trait_auxiliary> {
@@ -1357,40 +1368,12 @@ sub declare_attribute($/) {
                 :name('$def'),
                 :scope('lexical')
             ),
-            PAST::Val.new( :value($name) )
+            PAST::Val.new( :value($name) ),
         )
     );
 
-    # If we have no twigil, make $name as an alias to $!name.
-    if $variable<twigil>[0] eq '' {
-        $?BLOCK.symbol(
-            ~$variable<sigil> ~ ~$variable<name>, :scope('attribute')
-        );
-    }
-
-    # If we have a . twigil, we need to generate an accessor.
-    elsif $variable<twigil>[0] eq '.' {
-        my $accessor := PAST::Block.new(
-            PAST::Stmts.new(
-                PAST::Var.new( :name($name), :scope('attribute') )
-            ),
-            :name(~$variable<name>),
-            :blocktype('declaration'),
-            :pirflags(':method'),
-            :node( $/ )
-        );
-        $?CLASS.unshift($accessor);
-    }
-
-    # If it's a ! twigil, we're done; otherwise, error.
-    elsif $variable<twigil>[0] ne '!' {
-        $/.panic(
-                "invalid twigil "
-            ~ $variable<twigil>[0] ~ " in attribute declaration"
-        );
-    }
-
-    # Is there any "handles" trait verb?
+    # Is there any "handles" trait verb or an "is rw" or "is ro"?
+    my $rw := 0;
     if $<scoped><variable_decl><trait> {
         for $<scoped><variable_decl><trait> {
             if $_<trait_verb><sym> eq 'handles' {
@@ -1405,12 +1388,62 @@ sub declare_attribute($/) {
                     $class_def.push($_);
                 }
             }
+            elsif $_<trait_auxiliary><sym> eq 'is' {
+                # Just handle rw for now.
+                if $_<trait_auxiliary><ident> eq 'rw' {
+                    $rw := 1;
+                }
+                else {
+                    $/.panic("Only 'is rw' trait is implemented for attributes");
+                }
+            }
+            else {
+                $/.panic("Only is and handles trait verbs are implemented for attributes");
+            }
         }
+    }
+
+    # If we have no twigil, make $name as an alias to $!name.
+    if $variable<twigil>[0] eq '' {
+        $?BLOCK.symbol(
+            ~$variable<sigil> ~ ~$variable<name>, :scope('attribute')
+        );
+    }
+
+    # If we have a . twigil, we need to generate an accessor.
+    elsif $variable<twigil>[0] eq '.' {
+        my $getset;
+        if $rw {
+            $getset := PAST::Var.new( :name($name), :scope('attribute') );
+        }
+        else {
+            $getset := PAST::Op.new(
+                :inline("    %r = new 'Perl6Scalar', %0\n" ~
+                        "    $P0 = get_hll_global [ 'Bool' ], 'True'\n" ~
+                        "    setprop %r, 'readonly', $P0\n"),
+                PAST::Var.new( :name($name), :scope('attribute') )
+            );
+        }
+        my $accessor := PAST::Block.new(
+            PAST::Stmts.new($getset),
+            :name(~$variable<name>),
+            :blocktype('declaration'),
+            :pirflags(':method'),
+            :node( $/ )
+        );
+        $class_def.unshift($accessor);
+    }
+
+    # If it's a ! twigil, we're done; otherwise, error.
+    elsif $variable<twigil>[0] ne '!' {
+        $/.panic(
+                "invalid twigil "
+            ~ $variable<twigil>[0] ~ " in attribute declaration"
+        );
     }
 
     # Register the attribute in the scope.
     $?BLOCK.symbol($name, :scope('attribute'));
-
 }
 
 method scope_declarator($/) {
@@ -1614,7 +1647,7 @@ method variable($/, $key) {
 
             # If we have no twigil, but we see the name noted as an attribute in
             # an enclosing scope, add the ! twigil anyway; it's an alias.
-            if $<twigil>[0] eq '' {
+            if $twigil eq '' {
                 our @?BLOCK;
                 for @?BLOCK {
                     if defined( $_ ) {
@@ -1634,6 +1667,11 @@ method variable($/, $key) {
             if @ident || $twigil eq '*' {
                 $past.namespace(@ident);
                 $past.scope('package');
+            }
+
+            # If it has a ! twigil, give it attribute scope.
+            if $twigil eq '!' {
+                $past.scope('attribute');
             }
 
             my $container_type;
