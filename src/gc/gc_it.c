@@ -139,6 +139,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         gc_it_find_all_roots(interp);
         gc_priv_data->total_count = 0;
         gc_priv_data->state == GC_IT_RESUME_MARK;
+#if GC_IT_BREAK_AFTER_FIND_ROOTS
+        return;
+#endif
     }
 
     if (arena_base->DOD_block_level)
@@ -245,13 +248,16 @@ gc_it_trace_normal(PARROT_INTERP)
     }
 }
 
+#if GC_IT_PARALLEL_MODE
 void
 gc_it_trace_threaded(PARROT_INTERP)
 {
     /* Check the current number of threads running. If we have space, launch
        another thread to help with the mark. */
 }
+#endif
 
+#if GC_IT_SERIAL_MODE
 void
 gc_it_sweep_normal(PARROT_INTERP)
 {
@@ -294,6 +300,7 @@ gc_it_sweep_normal(PARROT_INTERP)
     gc_it_reset_cards(interp);
     gc_priv_data->state = GC_IT_NEW_MARK;
 }
+#endif
 
 void
 gc_it_find_all_roots(PARROT_INTERP)
@@ -302,6 +309,24 @@ gc_it_find_all_roots(PARROT_INTERP)
        gc_priv_data->root_queue. Make sure the pointer at the end of
        the linked list is NULL. */
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
+    /* Here is a (mostly-complete) list of stuff I probably need to add here.
+       See src/gc/dod.c:Parrot_dod_trace_root() for more details.
+       1) interp->iglobals (an aggregate array PMC)
+       2) "system areas" (src/cpu_dep.c:trace_system_areas)
+       3) current context CONTEXT(interp)
+       4) dynamic stack (see src.stack.c:mark_stack)
+       5) vtables (see src/vtables.c:mark_vtables)
+       6) exceptions (interp->exception_list)
+       7) root namespace (interp->root_namespace)
+       8) The scheduler (interp->scheduler)
+       9) const subs (src/packfile.c:mark_const_subs)
+       10) caches (src/oo.c:mark_object_cache)
+       11) class hash (interp->class_hash)
+       12) DOD registry (interp->DOD_registry)
+       13) transaction log (src/stm/backend.c:Parrot_STM_mark_transaction)
+       14) IO Data (src/io/io.c:Parrot_IOData_mark)
+       15) IGP pointers
+    */
 }
 
 #if GC_IT_BATCH_MODE
@@ -377,14 +402,13 @@ void gc_it_enqueue_igp(PARROT_INTERP)
     /* I'm not sure about the arguments that this function will require,
        I'm sure it doesnt need to be the whole damn iterpreter structure
        unless these IGPs get way out of hand. */
+    /* This might have already been taken care of in gc_it_find_all_roots() */
 }
 
 void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
 {
-    /* Add all children of the current node to the queue for processing.
-    Also we might want to mark the card grey as well (although that
-    seems like unnecessary work) */
+    /* Add all children of the current node to the queue for processing. */
     /* This function could become a macro or an inline function*/
 }
 
