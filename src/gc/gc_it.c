@@ -604,15 +604,9 @@ gc_it_mark_card(Gc_it_hdr * hdr, UINTVAL flag)
 
 =item C<static void gc_it_more_objects>
 
-Run a GC cycle or allocate new objects for the given pool.
-
-Currently appears to do nothing under the following circumstances:
-pool->free_list != &pool->marker AND
-1) Pool->skip == 0 && pool->last_Arena == NULL
-2) pool->skip == 1
-
-I have to figure out why this would be the case and correct it if
-needed.
+Try to allocate new objects. If the mark phase is finished, run a quick sweep.
+If the sweep frees up some objects, return one of those. Otherwise, we allocate
+a new arena and return an object from that.
 
 =cut
 
@@ -621,17 +615,14 @@ needed.
 static void
 gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    if (pool->skip)
-        pool->skip = 0;
-    else if (pool->last_Arena) {
-        Parrot_do_dod_run(interp, DOD_trace_stack_FLAG);
-        if (pool->num_free_objects <= pool->replenish_level)
-            pool->skip = 1;
+    const Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+    const Gc_it_state state = gc_priv_data->state;
+    if(state == GC_IT_NEW_SWEEP || state == GC_IT_RESUME_SWEEP) {
+        gc_it_sweep_normal(interp);
+        if(pool->free_list != NULL)
+            return;
     }
-
-    if (pool->free_list == &pool->marker) {
-        (*pool->alloc_objects) (interp, pool);
-    }
+    gc_it_alloc_objects(interp, pool);
 }
 
 
