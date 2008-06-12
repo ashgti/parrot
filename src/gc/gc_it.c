@@ -680,7 +680,7 @@ gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 }
 
 static void
-gc_it_set_card_mark_obj(PMC * obj, UINTVAL flag)
+gc_it_set_card_mark_obj(PObj * obj, UINTVAL flag)
 {
     /* this will become a macro */
     gc_it_mark_card(PObj_to_IT_HDR(obj), flag);
@@ -705,7 +705,7 @@ gc_it_get_card_mark(Gc_it_hdr * hdr)
 }
 
 static UINTVAL
-gc_it_get_card_mark_obj(PMC *obj)
+gc_it_get_card_mark_obj(PObj *obj)
 {
     return gc_it_get_card_mark(PObj_to_IT_HDR(obj));
 }

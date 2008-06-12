@@ -198,13 +198,19 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     */
 
     /* To mark an object as being alive in the simplest possible way, we add
-       the object's header to the queue */
+       the object's header to the queue. We add it to the beginning of the
+       queue so we can exploit the cache locality benefits of marking a
+       node and it's children together. */
 
     const Gc_it_hdr *hdr = PObj_to_IT_HDR(obj);
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
     const Gc_it_hdr *temp;
     hdr->next = gc_priv_data->queue;
     gc_priv_data->queue = hdr;
+
+    /* incorporate ideas from mark_special() here, or call that function and
+       modify it to do what I need. */
+
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */
@@ -1119,7 +1125,7 @@ Parrot_dod_ms_run(PARROT_INTERP, int flags)
      * the sync sweep is always at the end, so that
      * the live bits are cleared
      */
-    if (flags & DOD_finish_FLAG) {
+    if (flags & GC_finish_FLAG) {
         clear_live_bits(interp->arena_base->pmc_pool);
         clear_live_bits(interp->arena_base->constant_pmc_pool);
 
@@ -1130,7 +1136,7 @@ Parrot_dod_ms_run(PARROT_INTERP, int flags)
     }
 
     ++arena_base->DOD_block_level;
-    arena_base->lazy_dod = flags & DOD_lazy_FLAG;
+    arena_base->lazy_dod = flags & GC_lazy_FLAG;
 
     /* tell the threading system that we're doing DOD mark */
     pt_DOD_start_mark(interp);
@@ -1140,7 +1146,7 @@ Parrot_dod_ms_run(PARROT_INTERP, int flags)
     Parrot_go_collect(interp);
 
     /* Now go trace the PMCs */
-    if (trace_active_PMCs(interp, flags & DOD_trace_stack_FLAG)) {
+    if (trace_active_PMCs(interp, flags & GC_trace_stack_FLAG)) {
         int ignored;
 
         arena_base->dod_trace_ptr = NULL;
@@ -1189,7 +1195,7 @@ Call the configured garbage collector to reclaim unused headers.
 void
 Parrot_do_dod_run(PARROT_INTERP, UINTVAL flags)
 {
-    interp->arena_base->do_dod_run(interp, flags);
+    interp->arena_base->do_gc_mark(interp, flags);
     parrot_gc_context(interp);
 }
 

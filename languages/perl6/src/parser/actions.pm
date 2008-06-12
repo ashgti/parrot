@@ -1102,8 +1102,26 @@ method package_declarator($/, $key) {
                 @?PACKAGE.unshift( $?PACKAGE );
                 $?PACKAGE := $?GRAMMAR;
             }
+        }
+        else {
+            # It's a module. We need a way to mark that the current package is
+            # not a role or a class, so we put the current one on the array and
+            # set $?PACKAGE to undef.
+            @?PACKAGE.unshift( $?PACKAGE );
+            $?PACKAGE := undef;
+        }
+    }
+    else {
+        my $past := $( $/{$key} );
 
-            # Apply any traits and do any roles.
+        # Declare the namespace and that this is something we do
+        # "on load".
+        $past.namespace($<name><ident>);
+        $past.blocktype('declaration');
+        $past.pirflags(':init :load');
+
+        # Apply any traits and do any roles, if it's a class or role or grammar.
+        if $<sym> eq 'class' || $<sym> eq 'role' || $<sym> eq 'grammar' {
             my $does_pir;
             for $<trait_or_does> {
                 if $_<trait> {
@@ -1141,22 +1159,6 @@ method package_declarator($/, $key) {
                 }
             }
         }
-        else {
-            # It's a module. We need a way to mark that the current package is
-            # not a role or a class, so we put the current one on the array and
-            # set $?PACKAGE to undef.
-            @?PACKAGE.unshift( $?PACKAGE );
-            $?PACKAGE := undef;
-        }
-    }
-    else {
-        my $past := $( $/{$key} );
-
-        # Declare the namespace and that this is something we do
-        # "on load".
-        $past.namespace($<name><ident>);
-        $past.blocktype('declaration');
-        $past.pirflags(':init :load');
 
         if $<sym> eq 'class' {
             # Make proto-object.
@@ -1299,9 +1301,12 @@ method scoped($/) {
     # Variable declaration?
     if $<variable_decl> {
         $past := $( $<variable_decl> );
-        if $<typename> {
+
+        # Unless it's an attribute, emit code to set type and initialize it to
+        # the correct proto.
+        if $<fulltypename> && $past.WHAT() eq 'Var' {
             my $type_pir := "    %r = new %0, %1\n    setprop %r, 'type', %2\n";
-            my $type := $( $<typename>[0] );
+            my $type := build_type($<fulltypename>);
             $past.viviself(
                 PAST::Op.new(
                     :inline($type_pir),
@@ -1329,7 +1334,7 @@ method scoped($/) {
         $past := $( $<routine_declarator> );
 
         # Don't support setting return type yet.
-        if $<typename> {
+        if $<fulltypename> {
             $/.panic("Setting return type of a routine not yet implemented.");
         }
     }
@@ -1369,6 +1374,7 @@ sub declare_attribute($/) {
                 :scope('lexical')
             ),
             PAST::Val.new( :value($name) ),
+            build_type($/<scoped><fulltypename>)
         )
     );
 
@@ -2281,7 +2287,7 @@ sub make_handles_method($/, $from_name, $to_name, $attr_name) {
                 :name('%h'),
                 :scope('lexical'),
                 :flat(1),
-                :named(1)
+                :named(PAST::Val.new( :value(1) ))
             )
         )
     )
@@ -2315,8 +2321,17 @@ sub build_type($cons_pt) {
     my $num_types := 0;
     my $type_cons := PAST::Op.new();
     for $cons_pt {
-        $type_cons.push( $( $_ ) );
+        $type_cons.push( $( $_<typename> ) );
         $num_types := $num_types + 1;
+    }
+
+    # If there were none, it's Object.
+    if $num_types == 0 {
+        $type_cons.push(PAST::Var.new(
+            :name('Object'),
+            :scope('package')
+        ));
+        $num_types := 1;
     }
 
     # Now need to apply the type constraints. How many are there?
