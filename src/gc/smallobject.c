@@ -334,7 +334,6 @@ Parrot_append_arena_in_pool(PARROT_INTERP,
     if (!pool->last_Arena
             || (pool->start_arena_memory > (size_t)new_arena->start_objects))
         pool->start_arena_memory = (size_t)new_arena->start_objects;
-
     if (!pool->last_Arena || (pool->end_arena_memory <
                 (size_t)new_arena->start_objects + size))
         pool->end_arena_memory = (size_t)new_arena->start_objects + size;

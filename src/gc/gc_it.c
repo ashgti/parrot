@@ -435,18 +435,26 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
 =item C<gc_it_add_free_object>
 
-Adds a dead item to the free list. GC GMS doesnt use this, and I'm
-not entirely certain what I should do with it either.
+Adds a dead item to the free list. I suppose this is for cases where other
+systems are trying to manage their own memory manually.
 
 =cut
 
 */
 
 static void
-gc_it_add_free_object(PARROT_INTERP, SHIM(Small_Object_Pool *pool),
-        SHIM(PObj *to_add))
+gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
+        PObj *to_add)
 {
-    real_exception(interp, NULL, 1, "GC does not support add_free_object");
+    /* I don't really know what this is for, so I'm going to wing it. */
+    /* Objects that aren't on the free list already, or on the queue, are
+       just floating. We can add this to the end of the free list very
+       easily. */
+    const Gc_it_hdr *hdr = PObj_to_IT_HDR(to_add);
+    const Gc_it_hdr *temp = pool->free_list;
+    pool->free_list = hdr;
+    hdr->next = temp;
+    Gc_it_mark_card(hdr, GC_IT_CARD_WHITE); /* just in case */
 }
 
 /*
@@ -573,7 +581,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 /* Mark an object's card with a given flag */
 
 static void
-gc_it_mark_PMC_card(Gc_it_hdr * hdr, UINTVAL flag)
+gc_it_mark_card(Gc_it_hdr * hdr, UINTVAL flag)
 {
     Gc_it_card * card = hdr->parent_pool->cards[hdr->index / 4];
     switch (hdr->index % 4) {
