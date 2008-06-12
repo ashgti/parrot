@@ -406,10 +406,29 @@ void gc_it_enqueue_igp(PARROT_INTERP)
 }
 
 void
-gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * obj)
+gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 {
     /* Add all children of the current node to the queue for processing. */
     /* This function could become a macro or an inline function*/
+    const PObj * obj = IT_HDR_to_PObj(hdr);
+    const UINTVAL flags = PObj_get_FLAGs(obj);
+    if(PObj_is_PMC_TEST(obj)) {
+        /* add the metadata PMC, if it exists */
+        if(PMC_metadata(obj))
+            pobject_lives(interp, (PObj *)PMC_metadata(obj));
+        /* add any headers that have been added by the system into the
+           _next_for_GC field, since that seems like a place where the
+           system wants me to look. */
+        if(PMC_next_for_GC(obj) != obj) {
+            /* loop through this list, add them all wherever they need to go.
+               I dont know whether these items should be added to queue or
+               the free list, so I won't implement anything here */
+        }
+    }
+    if(flags & PObj_data_is_PMC_array_FLAG)
+        Parrot_dod_trace_pmc_data(interp, obj);
+    if(flags & PObj_custom_mark_FLAG)
+        VTABLE_mark(interp, obj);
 }
 
 inline void
