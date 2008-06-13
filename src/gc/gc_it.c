@@ -325,7 +325,7 @@ gc_it_find_all_roots(PARROT_INTERP)
        12) DOD registry (interp->DOD_registry)
        13) transaction log (src/stm/backend.c:Parrot_STM_mark_transaction)
        14) IO Data (src/io/io.c:Parrot_IOData_mark)
-       15) IGP pointers
+       15) IGP pointers (if we haven't done too much work already)
     */
 }
 
@@ -333,6 +333,8 @@ gc_it_find_all_roots(PARROT_INTERP)
 void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
+    /* We've already found all the roots and if we are working in batch
+       mode we just take the list we've already gotten as the queue. */
     const Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
     gc_priv_data->queue = gc_priv_data->root_queue;
     gc_priv_data->root_queue = NULL;
@@ -364,7 +366,9 @@ gc_it_enqueue_next_root(PARROT_INTERP)
     ptr = gc_priv_data->root_queue;
     /* the item is just a buffer, so we add it to the queue. We scan through
        the root_queue until we find the next aggregate (or until the end of
-       the list). We add the aggregate and all items in between to the queue. */
+       the list). We add the aggregate and all items in between to the queue.
+
+       I need to fix this, the logic is screwey. */
     while(1) {
         if(!GC_IT_IS_AGGREGATE(ptr)) {
             /* If it's not an aggregate, move to the next item, unless the
@@ -380,7 +384,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
             hdr->next = gc_priv_root->root_queue;
             gc_priv_data->root_queue = ptr->next;
             ptr->next = NULL;
-            return
+            break;
         }
     }
     /* If we fall through here, we've hit a NULL in our loop. This means the
@@ -429,6 +433,10 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
         Parrot_dod_trace_pmc_data(interp, obj);
     if(flags & PObj_custom_mark_FLAG)
         VTABLE_mark(interp, obj);
+    /* If the item is shared, we need to do some magic trickery with it. I
+       don't know if I'm going to do said trickery here, or offload it to a
+       function like src/gc/dod.c:mark_special (which is where some of the
+       other logic in this function originated) */
 }
 
 inline void
