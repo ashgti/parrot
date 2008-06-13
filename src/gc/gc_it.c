@@ -128,61 +128,74 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
     Arenas * arena_base = interp->arena_base;
     Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
-    Gc_it_state state = gc_priv_data->state;
     gc_it_config * config = &(gc_priv_data->config);
-
-/* Here we have two options: Enter the trace directly, or spawn a tracing
- * thread.
- * I'll deal with this later
- */
-    if(gc_priv_data->state == GC_IT_NEW_MARK) {
-        gc_it_find_all_roots(interp);
-        gc_priv_data->total_count = 0;
-        gc_priv_data->state == GC_IT_RESUME_MARK;
-#if GC_IT_BREAK_AFTER_FIND_ROOTS
-        return;
-#endif
-    }
-
-    if (arena_base->DOD_block_level)
-        return;
-    ++arena_base->DOD_block_level;
     if(flags & GC_finish_FLAG) {
         gc_it_finalize_all_pmc(interp);
-        --arena_base->DOD_block_level;
-    }
-    if(flags & GC_trace_normal) {
-        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP) {
-            /* mark is finished, maintain state, wait to run a sweep */
-            --arena_base->DOD_block_level;
-            return
-        }
-        /* Two options here. In batch mode, enqueue all globals immediately.
-           in increment mode, enqueue only the next root variable or IGP (if
-           it's an aggregate). If there are no more root aggregates, enqueue
-           all simple buffers */
-#if GC_IT_INCREMENT_MODE
-        gc_it_enqueue_next_root(interp);
-#elif GC_IT_BATCH_MODE
-        gc_it_enqueue_all_roots(interp);
-#endif
-
-        /* Two more options here. In single-threaded mode, run the trace
-           function. In parallel mode, attempt to spawn a new GC thread to
-           run the trace in the background */
-#if GC_IT_SERIAL_MODE
-        gc_it_trace_normal(interp);
-#elif GC_IT_PARALLEL_MODE
-        gc_it_trace_threaded(interp);
-#endif
-        --arena_base->DOD_block_level;
-    }
-    if(flags & GC_lazy_FLAG) {
-        if(state == GC_IT_STATE_NEW_SWEEP || state == GC_IT_STATE_RESUME_SWEEP)
-            gc_it_sweep_normal(interp);
-        --arena_base->DOD_block_level;
+        gc_it_post_sweep_cleanup(interp);
         return;
     }
+    switch (gc_priv_data->state) {
+        case GC_IT_READY:
+            gc_priv_data->state = GC_IT_START_MARK;
+            GC_IT_BREAK_AFTER_0;
+
+        case GC_IT_START_MARK:
+            gc_priv_data->total_count = 0;
+            gc_priv_data->state = GC_IT_MARK_GLOBALS;
+            GC_IT_BREAK_AFTER_1;
+
+        case GC_IT_MARK_GLOBALS:
+            gc_it_find_all_roots(interp);
+            gc_priv_data->state = GC_IT_RESUME_MARK;
+            GC_IT_BREAK_AFTER_2;
+
+        case GC_IT_RESUME_MARK:
+#if GC_IT_INCREMENT_MODE
+            gc_it_enqueue_next_root(interp);
+#elif GC_IT_BATCH_MODE
+            gc_it_enqueue_all_roots(interp);
+#endif
+
+#if GC_IT_SERIAL_MODE
+            gc_it_trace_normal(interp);
+#elif GC_IT_PARALLEL_MODE
+            gc_it_trace_threaded(interp);
+#endif
+            if(gc_priv_data->queue == NULL)
+                gc_priv_data->state = GC_IT_END_MARK;
+            GC_IT_BREAK_AFTER_3;
+
+        case GC_IT_END_MARK:
+            gc_priv_data->state == GC_IT_START_SWEEP;
+            GC_IT_BREAK_AFTER_4;
+
+        case GC_IT_START_SWEEP:
+            gc_it_sweep_normal(interp);
+            gc_priv_data->state == GC_IT_RESUME_SWEEP;
+            GC_IT_BREAK_AFTER_5;
+
+        case GC_IT_RESUME_SWEEP:
+            gc_it_sweep_normal(interp);
+            GC_IT_BREAK_AFTER_6;
+
+        case GC_IT_SWEEP_BUFFERS:
+            gc_it_sweep_buffers(interp);
+            gc_priv_data->state == GC_IT_FINAL_CLEANUP;
+            GC_IT_BREAK_AFTER_7;
+
+        case GC_IT_FINAL_CLEANUP:
+            gc_it_post_sweep_cleanup(interp);
+            gc_priv_data->state == GC_IT_READY;
+    }
+    return;
+
+    /* I'm not sure how to deal with all these flags here, or how to integrate
+       them into my state machine above. I'll work on this later.
+
+    if(flags & GC_trace_normal)
+    if(flags & GC_lazy_FLAG)
+
+    */
 }
 
 void
@@ -309,8 +322,10 @@ gc_it_find_all_roots(PARROT_INTERP)
        gc_priv_data->root_queue. Make sure the pointer at the end of
        the linked list is NULL. */
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
-    /* Here is a (mostly-complete) list of stuff I probably need to add here.
-       See src/gc/dod.c:Parrot_dod_trace_root() for more details.
+    gc_priv_data->state = GC_IT_MARK_GLOBALS;
+    /* Here is a (mostly-complete) list of stuff that needs to be traced
+       as a global. This tracing work should all get done in
+       src/gc/dod.c:Parrot_dod_trace_root.
        1) interp->iglobals (an aggregate array PMC)
        2) "system areas" (src/cpu_dep.c:trace_system_areas)
        3) current context CONTEXT(interp)
@@ -327,6 +342,7 @@ gc_it_find_all_roots(PARROT_INTERP)
        14) IO Data (src/io/io.c:Parrot_IOData_mark)
        15) IGP pointers (if we haven't done too much work already)
     */
+    Parrot_dod_trace_root(interp)
 }
 
 #if GC_IT_BATCH_MODE
