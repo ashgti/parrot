@@ -153,9 +153,12 @@ method lambda_form($/) {
     else { # if no parameters, create a block here:
         $past := PAST::Block.new( :blocktype('declaration'), :node($/) );
     }
-    ## handle the function body XXX must this be a /return/ <expr> statement?
+
     my $expr := $( $<expression> );
-    $past.push($expr);
+
+    ## add a return statement to this block
+    $past.push( PAST::Op.new( $expr, :pasttype('return'), :node($/) ) );
+    $past.control('return_pir');
     make $past;
 }
 
@@ -170,8 +173,9 @@ method funcdef($/) {
     }
     my $name := $( $<funcname> );
     $past.name( $name.name() );
-    my $suite := $( $<suite> );
-    $past.push($suite);
+    $past.push( $($<suite>) );
+
+    $past.control('return_pir');
     make $past;
 }
 
@@ -296,6 +300,24 @@ method expression_stmt($/) {
     make $( $<expression_list> );
 }
 
+method return_stmt($/) {
+    my $past := PAST::Op.new( :pasttype('return'), :node($/) );
+    if $<expression_list> {
+        my $retvals := $( $<expression_list>[0] );
+        $past.push($retvals);
+    }
+    make $past;
+}
+
+method global_stmt($/) {
+    our $?BLOCK;
+    for $<identifier> {
+        $?BLOCK.symbol( $( $_ ).name(), :scope('package') );
+    }
+    ## make a no-op
+    make PAST::Op.new( :inline('    # global declaration'), :node($/) );
+}
+
 method expression_list($/) {
     my $past;
     if (+$<expression> == 1) {
@@ -314,8 +336,7 @@ method expression_list($/) {
 method identifier($/) {
     make PAST::Var.new( :name( ~$/ ),
                         :scope('package'),
-                        :node($/)
-                      );
+                        :node($/) );
 }
 
 
@@ -332,7 +353,13 @@ method print_stmt($/) {
 
 
 method expression($/, $key) {
-    make $( $<or_test>[0] );
+    ## XXX incomplete.
+    if $key eq 'lambda_form' {
+        make $( $<lambda_form> );
+    }
+    else {
+        make $( $<or_test>[0] );
+    }
 }
 
 method test($/, $key) {
@@ -346,8 +373,7 @@ method or_test($/) {
         $count := $count - 1;
         my $past := PAST::Op.new( $($<and_test>[$count]),
                                   $past,
-                                  :pasttype('if')
-                                );
+                                  :pasttype('if') );
     }
     make $past;
 }
@@ -359,8 +385,7 @@ method and_test($/) {
         $count := $count - 1;
         my $past := PAST::Op.new( $($<not_test>[$count]),
                                   $past,
-                                  :pasttype('unless')
-                                );
+                                  :pasttype('unless') );
     }
     make $past;
 }
@@ -471,11 +496,11 @@ method shortstring($/) {
 
 method parenth_form($/) {
     if +$<tuple_or_scalar> {
-	make $( $<tuple_or_scalar>[0] );
+    make $( $<tuple_or_scalar>[0] );
     }
     else {
-	make PAST::Op.new( :name('tuplemaker'),
-			   :pasttype('call'));
+        make PAST::Op.new( :name('tuplemaker'),
+                           :pasttype('call'));
     }
 }
 
@@ -497,10 +522,9 @@ method target($/, $key) {
 }
 
 method list_literal($/) {
-    my $past := PAST::Op.new( :name('listmaker'),
-                              :pasttype('call'));
+    my $past := PAST::Op.new( :name('listmaker'), :pasttype('call'), :node($/) );
     for $<expression> {
-	$past.push( $($_) );
+        $past.push( $($_) );
     }
     make $past;
 }
@@ -509,15 +533,43 @@ method list_display($/, $key) {
     make $( $/{$key} );
 }
 
+method dict_display($/) {
+    if $<key_datum_list> {
+        make $( $<key_datum_list>[0] );
+    }
+    else {
+        ## if there's no list of key_datum items, have 'dictmaker' return an empty
+        ## dictionary.
+        make PAST::Op.new( :name('dictmaker'), :pasttype('call'), :node($/) );
+    }
+}
+
+method key_datum_list($/) {
+    my $past := PAST::Op.new( :name('dictmaker'), :pasttype('call'), :node($/) );
+    for $<key_datum> {
+        $past.push( $( $_ ) );
+    }
+    make $past;
+}
+
+method key_datum($/) {
+    my $key   := $( $<key> );
+    my $value := $( $<value> );
+    ## this only works if $key /has/ a name() method
+    ## XXX need for some generic solution for all PAST node types.
+    my $hashedkey := PAST::Val.new( :value($key.name()) );
+    $value.named($hashedkey);
+    make $value;
+}
+
 method tuple_or_scalar($/, $key) {
     make $( $/{$key} );
 }
 
 method tuple_constructor($/) {
-    my $past := PAST::Op.new( :name('tuplemaker'),
-                              :pasttype('call'));
+    my $past := PAST::Op.new( :name('tuplemaker'), :pasttype('call'), :node($/) );
     for $<expression> {
-	$past.push( $($_) );
+        $past.push( $($_) );
     }
     make $past;
 }

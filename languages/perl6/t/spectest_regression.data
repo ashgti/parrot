@@ -4,7 +4,7 @@
 
 S02-builtin_data_types/type.t
 S02-literals/autoref.t
-S02-literals/hex_chars.t
+S02-literals/hex_chars.t                        # pure
 S02-literals/radix.t
 S02-polymorphic_types/subset-code.t             # pure
 S02-polymorphic_types/subset-range.t
@@ -25,7 +25,7 @@ S12-class/attributes.t                          # pure
 S12-class/instantiate.t                         # pure
 S12-class/parent_attributes.t                   # pure
 S12-methods/calling_syntax.t                    # pure
-S12-role/attributes.t                           # pure
+S12-role/attributes.t
 S12-role/composition.t                          # pure
 S16-filehandles/connect.t                       # pure
 S16-io/say.t
