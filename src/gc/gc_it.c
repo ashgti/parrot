@@ -141,10 +141,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         case GC_IT_START_MARK:
             gc_priv_data->total_count = 0;
-            gc_priv_data->state = GC_IT_MARK_GLOBALS;
+            gc_priv_data->state = GC_IT_MARK_ROOTS;
             GC_IT_BREAK_AFTER_1;
 
-        case GC_IT_MARK_GLOBALS:
+        case GC_IT_MARK_ROOTS:
             gc_it_find_all_roots(interp);
             gc_priv_data->state = GC_IT_RESUME_MARK;
             GC_IT_BREAK_AFTER_2;
@@ -223,7 +223,7 @@ gc_it_trace_normal(PARROT_INTERP)
  * I think we need to do this by adding all incoming IGP pointers to the
  * queue here at the beginning, and then processing the whole set.
  */
- 
+
     gc_priv_data->item_count = 0; /* reset per-increment count */
 
 /*

@@ -196,7 +196,7 @@ typedef struct _gc_it_hdr_list {
 typedef enum _gc_it_state {
     GC_IT_READY = 0,
     GC_IT_START_MARK,    /* starting a mark, initialize everything */
-    GC_IT_MARK_GLOBALS,  /* finding root objects */
+    GC_IT_MARK_ROOTS,    /* finding root objects */
     GC_IT_RESUME_MARK,   /* iterating over queue items, tree-at-a-time */
     GC_IT_END_MARK,      /* The mark is over, do cleanup, if any */
     GC_IT_START_SWEEP,   /* start the sweep, initialize it */
