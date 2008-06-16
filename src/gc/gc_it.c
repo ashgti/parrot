@@ -583,25 +583,20 @@ PARROT_CANNOT_RETURN_NULL
 static PObj *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    PObj *ptr;
     Gc_it_hdr *hdr;
 
+    /* If there are no objects, allocate a new arena */
     hdr = pool->free_list;
-    if (hdr == &pool->marker)       /* At the end of the pool, allocate new arena */
+    if (hdr == NULL)
         (pool->more_objects)(interp, pool);
 
+    /* pull the first header off the free list */
     hdr = pool->free_list;
     pool->free_list = hdr->next;
-    hdr->parent_pool = pool;
-    /* I still don't know if I need to keep the items stored in a list, or if
-       they can just float until I need them. I'm erring on the side of
-       computational simplicity */
     hdr->next = NULL;
-    ptr = IT_HDR_to_PObj(hdr);
-    /* Figure out where in the arena we are now, and set the card to mark this
-       item as GC_IT_CARD_NEW */
-    PObj_flags_SETTO((PObj*) ptr, 0);
-    return ptr;
+
+    /* return pointer to the object from the header */
+    return IT_HDR_to_PObj(hdr);
 }
 
 /*
@@ -689,7 +684,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->next = pool->free_list;
         pool->free_list = p;
 
-        /* Cache the object's card address */
+        /* Cache the object's parent pool and card addresses */
+        p->parent_pool = pool;
         p->index.num.card = i / 4;
         p->index.num.flag = i % 4;
 
