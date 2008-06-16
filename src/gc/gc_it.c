@@ -270,73 +270,24 @@ gc_it_trace(PARROT_INTERP)
 
 }
 
+#if GC_IT_SERIAL_MODE
 void
 gc_it_trace_normal(PARROT_INTERP)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = arena_base->gc_private;
+    Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * cur_item;
 
-/*
- * 1) Determine what to scan
- * This is already handled, we scan everything in the queue. What goes into
- * the queue is another matter handled in a parent function.
- */
-
-/*
- * 2) Mark root items as grey
- * This is already handled for us, in the parent function
- *
- * 5) mark all objects grey that appear in incoming IGP lists.
- * This is already handled for us, in the parent function.
- */
-
-    gc_priv_data->item_count = 0; /* reset per-increment count */
-
-/*
- * 3) for all grey items, mark children as grey. Then mark as black
- * I'll call some kind of inline-able sub-function here.
- * We need to keep track of items that require finalization, that might
- * mean a separate queue and a separate loop, or a flag somewhere that we
- * need to test and preserve.
- *
- * 4) Repeat (3) until there are no grey items in current pool/generation
- * At any point, we should be able to break out of this loop at any time,
- * because state is stored in the white/grey/black lists and in the bitmap,
- * which is kept across runs.
- */
-
     while(cur_item = cur_pool->queue) {
-        /*
-        Move the children's headers into the queue, and possibly mark them
-        grey as well.
-        */
-
+        /* for each item, add all chidren to the queue, and then mark the item
+           black. Once black, the item can be removed from the queue and
+           discarded */
         GC_IT_MARK_CHILDREN_GREY(gc_priv_data, cur_item);
-
-        /* Mark the current node's card black, and return it to the list of
-           all items.
-           1) Find the pool/arena that is associated with this node
-           2) Find the card associated with this node
-           3) mark the card black
-           4) remove the node from the queue
-       */
         GC_IT_MARK_NODE_BLACK(gc_priv_data, cur_item);
-
-        gc_priv_data->total_count++;
+        gc_priv_data->total_count++; /* total items since beginning of scan */
+        gc_priv_data->item_count++;  /* number of items this increment */
     }
 }
 
-#if GC_IT_PARALLEL_MODE
-void
-gc_it_trace_threaded(PARROT_INTERP)
-{
-    /* Check the current number of threads running. If we have space, launch
-       another thread to help with the mark. */
-}
-#endif
-
-#if GC_IT_SERIAL_MODE
 inline static void
 gc_it_sweep_dead_objects(PARROT_INTERP)
 {
@@ -365,11 +316,26 @@ gc_it_sweep_simple_buffers(PARROT_INTERP)
  */
 
 }
+#endif
 
+#if GC_IT_PARALLEL_MODE
+void
+gc_it_trace_threaded(PARROT_INTERP)
+{
+    /* Check the current number of threads running. If we have space, launch
+       another thread to help with the mark. This is low priority, so we'll
+       deal with it later. */
+}
+
+void
+gc_it_mark_threaded(PARROT_INTERP)
+{
+    /* spawn a thread to perform the current mark phase */
+}
 #endif
 
 #if GC_IT_BATCH_MODE
-static void
+inline static void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
     /* We've already found all the roots and if we are working in batch
@@ -417,20 +383,6 @@ gc_it_enqueue_next_root(PARROT_INTERP)
 }
 #endif
 
-static void
-gc_it_enqueue_igp(PARROT_INTERP)
-{
-    /* Find all incoming IGP to the currently scanned pool/arena/whatever
-       and add them to the grey pile. This way, we ensure that they get
-       processed in a timely manner, and we don't need to use two loops
-       or anything funny.
-       */
-    /* I'm not sure about the arguments that this function will require,
-       I'm sure it doesnt need to be the whole damn iterpreter structure
-       unless these IGPs get way out of hand. */
-    /* This might have already been taken care of in gc_it_find_all_roots() */
-}
-
 static inline void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 {
@@ -466,10 +418,9 @@ gc_it_reset_cards(PARROT_INTERP)
 {
     /*
      * 8) reset all flags to white
-     * Reset the whole card to white. All items should be out of the grey list, and
-     * back in the generic "items" list. All newly created items should be appended
-     * into the "items" list.
-     * Reset all flags and stuff for a new scan.
+     * Iterate over all pools and all arenas. For each arena, memset cards
+     * in use to GC_IT_CARD_WHITE. Cards on the free list should stay
+     * GC_IT_CARD_NEW
      */
 }
 
@@ -552,7 +503,7 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
     const Gc_it_hdr * const temp = pool->free_list;
     pool->free_list = hdr;
     hdr->next = temp;
-    Gc_it_mark_card(hdr, GC_IT_CARD_WHITE); /* just in case */
+    Gc_it_mark_card(hdr, GC_IT_CARD_NEW); /* just in case */
 }
 
 /*
