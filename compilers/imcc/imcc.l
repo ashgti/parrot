@@ -74,7 +74,7 @@ typedef struct macro_frame_t {
     YY_BUFFER_STATE buffer;
 } macro_frame_t;
 
-/* static function declariations */
+/* static function declarations */
 static void pop_parser_state(PARROT_INTERP, ARGMOD(void *yyscanner));
 
 static struct macro_frame_t *new_frame(PARROT_INTERP);
@@ -936,6 +936,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
         else if (c == '{') {
             current = read_braced(&val, interp, macro_name, current, yyscanner);
             c       = yylex_skip(&val, interp, " \n", yyscanner);
+            len     = strlen(current);
         }
         else {
             if (!need_id || c != ' ') {

@@ -202,17 +202,29 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
        queue so we can exploit the cache locality benefits of marking a
        node and it's children together. */
 
+    /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
+       objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
+
     const Gc_it_hdr *hdr = PObj_to_IT_HDR(obj);
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
     const Gc_it_hdr *temp;
     if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK)
         return;
-    hdr->next = gc_priv_data->queue;
-    gc_priv_data->queue = hdr;
+    if(gc_priv_data->state == GC_IT_MARK_ROOTS) {
+        hdr->next = gc_priv_data->queue;
+        gc_priv_data->queue = hdr;
+    }
+    else {
+        hdr->next = gc_priv_data->root_queue;
+        gc_priv_data->root_queue = hdr;
+    }
     if(PObj_is_PMC_TEST(obj)) {
         PMC * const p = (PMC *)obj;
         if (p->real_self != p) {
-            /* if the "real self" of the PMC is a separate PMC, mark that too */
+            /* if the "real self" of the PMC is a separate PMC, mark that too.
+               In the case of GC_IT_MARK_ROOTS, I dont know whether these
+               should go in the queue or the root_queue. I am inclined to say
+               the root_queue too. */
             const Gc_it_hdr * hdr = (PObj *)p->real_self;
             hdr->next = gc_priv_data->queue;
             gc_priv_data->queue = hdr;

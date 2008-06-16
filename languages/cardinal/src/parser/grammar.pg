@@ -28,7 +28,7 @@ token comp_stmt {
 }
 
 rule stmts {
-    <.term>?[ <stmt> <.term>+]* {*}
+    <.term>?[ <stmt> [<.term>+ | <.before <end_block>> | $] ]* {*}
 }
 
 token term { \n | ';' }
@@ -43,6 +43,7 @@ token basic_stmt {
     | <unless_stmt> {*}     #= unless_stmt
     | <module> {*}          #= module
     | <begin_end> {*}       #= begin_end
+    | <indexed_assignment> {*}      #= indexed_assignment
     | <assignment> {*}      #= assignment
     | <return_stmt> {*}     #= return_stmt
     | <expr> {*}            #= expr
@@ -81,6 +82,11 @@ rule begin {
 
 rule end {
     'END' '{' <comp_stmt> '}'
+    {*}
+}
+
+token indexed_assignment {
+    <basic_primary> '[' <key=arg> ']' <.ws> '=' <.ws> <rhs=arg>
     {*}
 }
 
