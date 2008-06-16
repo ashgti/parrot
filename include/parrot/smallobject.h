@@ -111,10 +111,18 @@ typedef struct _gc_gms_gen {
  this item is not manipulated once set, unless the object (including the
    header) is moved to somewhere else.
  */
+
+
 typedef struct _gc_it_hdr {
     struct _gc_it_hdr *next;
     Small_Object_Arena * parent_pool;
-    UINTVAL index;
+    union _gc_it_card_index {
+        UINTVAL _x_align; /* force UINTVAL alignment and sizing */
+        struct {
+            unsigned short card;
+            unsigned char flag;
+        } num;
+    } index;
 } Gc_it_hdr;
 
 /*

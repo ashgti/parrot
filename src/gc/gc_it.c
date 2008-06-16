@@ -94,6 +94,37 @@ increment, or one step from many.
  * objects after a run has completed and all black objects have been turned
  * back to white (which would free all objects, alive or dead).
  */
+ 
+/* Here is a (mostly-complete) list of stuff that needs to be traced
+as a global. This tracing work should all get done in
+src/gc/dod.c:Parrot_dod_trace_root.
+1) interp->iglobals (an aggregate array PMC)
+2) "system areas" (src/cpu_dep.c:trace_system_areas)
+3) current context CONTEXT(interp)
+4) dynamic stack (see src.stack.c:mark_stack)
+5) vtables (see src/vtables.c:mark_vtables)
+6) exceptions (interp->exception_list)
+7) root namespace (interp->root_namespace)
+8) The scheduler (interp->scheduler)
+9) const subs (src/packfile.c:mark_const_subs)
+10) caches (src/oo.c:mark_object_cache)
+11) class hash (interp->class_hash)
+12) DOD registry (interp->DOD_registry)
+13) transaction log (src/stm/backend.c:Parrot_STM_mark_transaction)
+14) IO Data (src/io/io.c:Parrot_IOData_mark)
+15) IGP pointers (if we haven't done too much work already)
+*/
+
+/* Set these to "break" if we break after the given stage. Leave them empty
+   if we should fall through to the next stage upon completion */
+#define GC_IT_BREAK_AFTER_0
+#define GC_IT_BREAK_AFTER_1
+#define GC_IT_BREAK_AFTER_2
+#define GC_IT_BREAK_AFTER_3
+#define GC_IT_BREAK_AFTER_4
+#define GC_IT_BREAK_AFTER_5
+#define GC_IT_BREAK_AFTER_6
+#define GC_IT_BREAK_AFTER_7
 
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
@@ -130,8 +161,11 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
     gc_it_config * config = &(gc_priv_data->config);
     if(flags & GC_finish_FLAG) {
+        gc_priv_data->state = GC_IT_RESUME_MARK;
+        Parrot_dod_trace_root(interp) /* Add globals directly to the queue */
         gc_it_finalize_all_pmc(interp);
         gc_it_post_sweep_cleanup(interp);
+        gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
     }
     switch (gc_priv_data->state) {
@@ -145,7 +179,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_1;
 
         case GC_IT_MARK_ROOTS:
-            gc_it_find_all_roots(interp);
+            Parrot_dod_trace_root(interp);
             gc_priv_data->state = GC_IT_RESUME_MARK;
             GC_IT_BREAK_AFTER_2;
 
@@ -198,30 +232,34 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     */
 }
 
+#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) \
+    gc_it_mark_card((hdr), GC_IT_CARD_BLACK); \
+    (gc_data)->queue = (hdr)->next; \
+    (hdr)->next = NULL;
+#define GC_IT_MARK_NODE_GREY(gc_data, hdr) \
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr);
+#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
+
 void
 gc_it_trace_normal(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
     Gc_it_hdr * cur_item;
-    Gc_it_pool_data * pool_data = cur_pool->gc_it_data;
 
 /*
- * 1) Determine which pool/generation to scan
- * All globals are added to the queue, it might not make a lot of sense
- * to try to differentiate between items in different generations here.
- * At the very least, we want to scan outgoing links from the older generations,
- * in case some of them point to the current generation that we are scanning.
+ * 1) Determine what to scan
+ * This is already handled, we scan everything in the queue. What goes into
+ * the queue is another matter handled in a parent function.
  */
 
 /*
  * 2) Mark root items as grey
- * I don't currently know how to determine which items are root. However,
- * When we find them, we can mark them
+ * This is already handled for us, in the parent function
  *
  * 5) mark all objects grey that appear in incoming IGP lists.
- * I think we need to do this by adding all incoming IGP pointers to the
- * queue here at the beginning, and then processing the whole set.
+ * This is already handled for us, in the parent function.
  */
 
     gc_priv_data->item_count = 0; /* reset per-increment count */
@@ -244,8 +282,8 @@ gc_it_trace_normal(PARROT_INTERP)
         Move the children's headers into the queue, and possibly mark them
         grey as well.
         */
-#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
-        GC_IT_MARK_CHILDREN_GREY(cur_pool, cur_item);
+
+        GC_IT_MARK_CHILDREN_GREY(gc_priv_data, cur_item);
 
         /* Mark the current node's card black, and return it to the list of
            all items.
@@ -254,8 +292,7 @@ gc_it_trace_normal(PARROT_INTERP)
            3) mark the card black
            4) remove the node from the queue
        */
-#define GC_IT_MARK_NODE_BLACK(x, y) gc_it_mark_node_black(x, y)
-        GC_IT_MARK_NODE_BLACK(cur_pool, cur_item);
+        GC_IT_MARK_NODE_BLACK(gc_priv_data, cur_item);
 
         gc_priv_data->total_count++;
     }
@@ -280,9 +317,10 @@ gc_it_sweep_normal(PARROT_INTERP)
 
 /*
  * 6) move all white objects to the free list
- * After we have traced all incoming IGP and run through the pool, all remaining
- * white objects can be freed. Do that, or enqueue it so it can be done later.
- * Also, finalize any items that require it.
+ * Traverse each pool, and each arena in each pool. For each arena, take a
+ * pointer to the card. Card items which are still white can be freed.
+ * We set the card value to GC_IT_CARD_NEW, and move the header to the free
+ * list. Items which are new, black, or grey can be ignored.
  */
 
     if(gc_priv_data->state == GC_IT_NEW_SWEEP) {
@@ -314,36 +352,6 @@ gc_it_sweep_normal(PARROT_INTERP)
     gc_priv_data->state = GC_IT_NEW_MARK;
 }
 #endif
-
-void
-gc_it_find_all_roots(PARROT_INTERP)
-{
-    /* Find all the root items, and possibly all IGPs, and add them to
-       gc_priv_data->root_queue. Make sure the pointer at the end of
-       the linked list is NULL. */
-    const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
-    gc_priv_data->state = GC_IT_MARK_GLOBALS;
-    /* Here is a (mostly-complete) list of stuff that needs to be traced
-       as a global. This tracing work should all get done in
-       src/gc/dod.c:Parrot_dod_trace_root.
-       1) interp->iglobals (an aggregate array PMC)
-       2) "system areas" (src/cpu_dep.c:trace_system_areas)
-       3) current context CONTEXT(interp)
-       4) dynamic stack (see src.stack.c:mark_stack)
-       5) vtables (see src/vtables.c:mark_vtables)
-       6) exceptions (interp->exception_list)
-       7) root namespace (interp->root_namespace)
-       8) The scheduler (interp->scheduler)
-       9) const subs (src/packfile.c:mark_const_subs)
-       10) caches (src/oo.c:mark_object_cache)
-       11) class hash (interp->class_hash)
-       12) DOD registry (interp->DOD_registry)
-       13) transaction log (src/stm/backend.c:Parrot_STM_mark_transaction)
-       14) IO Data (src/io/io.c:Parrot_IOData_mark)
-       15) IGP pointers (if we haven't done too much work already)
-    */
-    Parrot_dod_trace_root(interp)
-}
 
 #if GC_IT_BATCH_MODE
 void
@@ -425,7 +433,7 @@ void gc_it_enqueue_igp(PARROT_INTERP)
     /* This might have already been taken care of in gc_it_find_all_roots() */
 }
 
-void
+static inline void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 {
     /* Add all children of the current node to the queue for processing. */
@@ -453,26 +461,6 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
        don't know if I'm going to do said trickery here, or offload it to a
        function like src/gc/dod.c:mark_special (which is where some of the
        other logic in this function originated) */
-}
-
-inline void
-gc_it_mark_node_black(Gc_it_pool_data * pool_data, Gc_it_hdr * obj)
-{
-    /* mark the current node black, and remove it from the queue if
-       it is on the queue */
-    gc_it_mark_card(obj, GC_IT_CARD_BLACK);
-    pool_data->queue = obj->next;
-    obj->next = NULL;
-}
-
-inline void
-gc_it_mark_node_grey(Gc_it_pool_data * pool, Gc_it_hdr * obj)
-{
-    /* Mark the current node as grey, add it to the grey queue */
-    /* This function might become a macro or an inline function */
-    /* gc_it_mark_card(obj, GC_IT_GREY); */
-    obj->next = pool_data->queue;
-    pool_data->queue = obj;
 }
 
 void
@@ -688,13 +676,16 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
            1) calculate the address of the next GC header in the arena
            2) set the ->next field of the current object to the address of the
               next object.
-           3) move the current pointer to the next object, and repeat.
-           If my pointer arithmetic is all good, this should work.
+           3) move the current pointer to the next object
+           4) set the index values now, for faster retrieval later
+           5) repeat for all items in the arena
        */
         temp = (Gc_it_ptr *)p+1;
         temp = (char *)temp+(pool->object_size);
         p->next = temp;
         p = temp;
+        p->index.num.card = i / 4;
+        p->index.num.flag = i % 4;
     }
     p->next = pool->free_list;
     pool->free_list = new_arena->start_objects;
@@ -705,8 +696,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 static void
 gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 {
-    Gc_it_card * card = &(hdr->parent_pool->cards[hdr->index / 4]);
-    switch (hdr->index % 4) {
+    Gc_it_card * card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    switch (hdr->index.num.flag) {
         case 0:
             card->_f->flag1 = flag;
             break;
@@ -734,8 +725,8 @@ gc_it_set_card_mark_obj(PObj * obj, UINTVAL flag)
 static UINTVAL
 gc_it_get_card_mark(Gc_it_hdr * hdr)
 {
-    const Gc_it_card *card = &(hdr->parent_pool->cards[hdr->index / 4]);
-    switch (hdr->index % 4) {
+    const Gc_it_card *card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    switch (hdr->index.num.flag) {
         case 0:
             return card->_f->flag1;
         case 1:

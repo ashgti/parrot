@@ -208,15 +208,17 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     const Gc_it_hdr *hdr = PObj_to_IT_HDR(obj);
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
     const Gc_it_hdr *temp;
+    /* Short-circuit. The item is already marked, so there is no reason to
+       add it back to the queue */
     if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK)
         return;
     if(gc_priv_data->state == GC_IT_MARK_ROOTS) {
-        hdr->next = gc_priv_data->queue;
-        gc_priv_data->queue = hdr;
-    }
-    else {
         hdr->next = gc_priv_data->root_queue;
         gc_priv_data->root_queue = hdr;
+    }
+    else {
+        hdr->next = gc_priv_data->queue;
+        gc_priv_data->queue = hdr;
     }
     if(PObj_is_PMC_TEST(obj)) {
         PMC * const p = (PMC *)obj;
