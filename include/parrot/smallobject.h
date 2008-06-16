@@ -18,11 +18,11 @@ typedef struct Small_Object_Arena {
     struct _gc_it_card        *cards;
     union {        /* store 2 16-bit values, force UINTVAL alignment */
         struct {   /* These shouldn't get bigger then 65535, i don't think */
-            unsigned           card_size:16;
-            unsigned           last_index:16;
+            unsigned short int card_size;
+            unsigned short int last_index;
         } _d;
         UINTVAL                _align_x;
-    } _card
+    } card_info;
 #endif
 } Small_Object_Arena;
 

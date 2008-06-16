@@ -48,7 +48,7 @@ void
 Parrot_gc_it_init(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data;
+    Gc_it_data * const gc_priv_data;
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
@@ -157,9 +157,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         marking objects or adding objects to the free list
 */
 
-    Arenas * arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data = (Gc_it_data)(arena_base->gc_private);
-    gc_it_config * config = &(gc_priv_data->config);
+    const Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = (Gc_it_data)(arena_base->gc_private);
+    gc_it_config * const config = &(gc_priv_data->config);
+
     if(flags & GC_finish_FLAG) {
         gc_priv_data->state = GC_IT_RESUME_MARK;
         Parrot_dod_trace_root(interp) /* Add globals directly to the queue */
@@ -244,7 +245,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 void
 gc_it_trace_normal(PARROT_INTERP)
 {
-    Arenas * const arena_base = interp->arena_base;
+    const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
     Gc_it_hdr * cur_item;
 
@@ -312,8 +313,8 @@ void
 gc_it_sweep_normal(PARROT_INTERP)
 {
 
-    const Arenas * arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data = arena_base->gc_private;
+    const Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = arena_base->gc_private;
 
 /*
  * 6) move all white objects to the free list
@@ -359,7 +360,7 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
 {
     /* We've already found all the roots and if we are working in batch
        mode we just take the list we've already gotten as the queue. */
-    const Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+    Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     gc_priv_data->queue = gc_priv_data->root_queue;
     gc_priv_data->root_queue = NULL;
 }
@@ -375,9 +376,9 @@ gc_it_enqueue_next_root(PARROT_INTERP)
         4) if there are no more aggregates to be had, add all simple buffers
            to the queue
     */
-    const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
-    const Gc_it_hdr *hdr = gc_priv_data->root_queue;
-    const Gc_it_hdr *head, *ptr;
+    Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
+    Gc_it_hdr * const hdr = gc_priv_data->root_queue;
+    Gc_it_hdr * const head, * const ptr;
     gc_priv_data->root_queue = hdr->next;
     if(GC_IT_IS_AGGREGATE(hdr)) { /* This needs to be defined */
         /* if we are enqueueing a new root, the queue should be empty. However,
@@ -560,8 +561,8 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
     /* Objects that aren't on the free list already, or on the queue, are
        just floating. We can add this to the end of the free list very
        easily. */
-    const Gc_it_hdr *hdr = PObj_to_IT_HDR(to_add);
-    const Gc_it_hdr *temp = pool->free_list;
+    const Gc_it_hdr * hdr = PObj_to_IT_HDR(to_add);
+    const Gc_it_hdr * const temp = pool->free_list;
     pool->free_list = hdr;
     hdr->next = temp;
     Gc_it_mark_card(hdr, GC_IT_CARD_WHITE); /* just in case */
@@ -618,9 +619,9 @@ of the given size, and we allocate locally from these arenas as needed.
 static void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    UINTVAL i;
     const size_t real_size = pool->object_size;
-    const size_t card_size = (real_size / 4 + ((real_size % 4) ? (1) : (0)));
+    const size_t num_objects = pool->objects_per_alloc;
+    const size_t card_size = (num_objects / 4 + ((num_objects % 4) ? (1) : (0)));
     const size_t size = real_size * pool->objects_per_alloc + /* the stuff */
                         sizeof(Small_Object_Arena) + /* for the arena struct */
                         card_size * sizeof(Gc_it_card); /* for the card */
@@ -639,11 +640,12 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     */
 
     Small_Object_Arena * const new_arena = mem_internal_allocate(size);
-    /* ...the downside is this messy pointer arithmetic, which I've probably
-       screwed up because I can't remember whether a typecast has higher
-       precidence then -> or not. */
-    new_arena->cards = ((Gc_it_cards*) ((Small_Object_Arena*)new_arena)+1);
-    new_arena->start_objects = ((void*) (((Gc_it_card*)(new_arenas->cards))+card_size);
+    new_arena->card_info.card_size = card_size;
+    new_arena->card_info.last_index = num_objects - 1;
+
+    /* ...the downside is this messy pointer arithmetic. */
+    new_arena->cards = ((Gc_it_cards*) ((Small_Object_Arena*)new_arena) + 1);
+    new_arena->start_objects = ((void*) (((Gc_it_card*)(new_arenas->cards)) + card_size);
     memset(new_arena->cards, GC_IT_CARD_ALL_NEW, card_size);
 
     /* insert new_arena in pool's arena linked list */
@@ -666,7 +668,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
                              ARGMOD(Small_Object_Pool *pool),
                              ARGMOD(Small_Object_Arena *new_arena))
 {
-    Gc_it_hdr *p = new_arena->start_objects;
+    Gc_it_hdr * p = new_arena->start_objects;
     register UINTVAL i;
     const size_t num_objs = new_arena->total_objects;
 
@@ -681,7 +683,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
            6) repeat for all items in the arena
            My pointer voodoo might be mistaken, so we need to check this
            closely.
-       */
+        */
 
         /* Add the current item to the free list */
         p->next = pool->free_list;
@@ -704,7 +706,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 static void
 gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 {
-    Gc_it_card * card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
     switch (hdr->index.num.flag) {
         case 0:
             card->_f->flag1 = flag;
@@ -726,7 +728,7 @@ gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 static UINTVAL
 gc_it_get_card_mark(Gc_it_hdr * hdr)
 {
-    const Gc_it_card *card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    const Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
     switch (hdr->index.num.flag) {
         case 0:
             return card->_f->flag1;
@@ -754,7 +756,7 @@ a new arena and return an object from that.
 static void
 gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    const Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+    const Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     const Gc_it_state state = gc_priv_data->state;
     if(state == GC_IT_NEW_SWEEP || state == GC_IT_RESUME_SWEEP) {
         gc_it_sweep_normal(interp);
