@@ -125,6 +125,12 @@ src/gc/dod.c:Parrot_dod_trace_root.
 #define GC_IT_BREAK_AFTER_6
 #define GC_IT_BREAK_AFTER_7
 
+/* the number of items we must scan minimum before we move on. If we run a
+   mark increment and do not meet this minimum, we enqueue the next root
+   (if any) and continue */
+
+#define GC_IT_ITEMS_MARKED_MIN  1
+
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
@@ -168,6 +174,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
     }
+    gc_priv_data->item_count = 0; /* items scanned this run */
     switch (gc_priv_data->state) {
         case GC_IT_READY:
             gc_priv_data->state = GC_IT_START_MARK;
@@ -185,21 +192,22 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         case GC_IT_RESUME_MARK:
 #if GC_IT_INCREMENT_MODE
-            gc_it_enqueue_next_root(interp);
+            do {
+                gc_it_enqueue_next_root(interp);
+                gc_it_trace(interp);
+            } while(gc_priv_data->item_count < GC_IT_ITEMS_MARKED_MIN &&
+                    gc_priv_data->root_queue != NULL);
 #elif GC_IT_BATCH_MODE
             gc_it_enqueue_all_roots(interp);
+            gc_it_trace(interp)
 #endif
 
-#if GC_IT_SERIAL_MODE
-            gc_it_trace_normal(interp);
-#elif GC_IT_PARALLEL_MODE
-            gc_it_trace_threaded(interp);
-#endif
             if(gc_priv_data->queue == NULL)
                 gc_priv_data->state = GC_IT_END_MARK;
             GC_IT_BREAK_AFTER_3;
 
         case GC_IT_END_MARK:
+            /* Don't know if there is anything to be done here */
             gc_priv_data->state == GC_IT_START_SWEEP;
             GC_IT_BREAK_AFTER_4;
 
@@ -241,6 +249,26 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     (hdr)->next = (gc_data)->queue; \
     (gc_data)->queue = (hdr);
 #define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
+
+void
+gc_it_trace(PARROT_INTERP)
+{
+    /* Trace the queue to completion. */
+
+#if GC_IT_SERIAL_MODE
+
+    /* Trace the queue here, return when the queue has been completely traced */
+    gc_it_trace_normal(interp);
+
+#elif GC_IT_PARALLEL_MODE
+
+    /* start a thread to trace the queue, if the thread has not already been
+       created. */
+    gc_it_trace_threaded(interp);
+
+#endif
+
+}
 
 void
 gc_it_trace_normal(PARROT_INTERP)
@@ -369,7 +397,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
 
     do {
         gc_priv_data->root_queue = hdr->next;
-        if(GC_IT_IS_AGGREGATE(hdr)) { /* This needs to be defined */
+        if(PObj_is_PMC_TEST(PObj_to_IT_HDR(hdr))) {
             /* add the item to the queue. return */
             hdr->next = gc_priv_data->queue;
             gc_priv_data->queue = hdr;
@@ -381,6 +409,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
             gc_it_set_card_mark(hdr, GC_IT_MARK_BLACK);
             hdr->next = NULL;
             hdr = gc_priv_data->root_queue;
+        }
     } while(gc_priv_data->root_queue != NULL);
     /* If we've fallen through here, that means there are no more root objects,
        no more objects to mark, and we move on to the next stage */
