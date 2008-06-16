@@ -105,11 +105,10 @@ typedef struct _gc_gms_gen {
 
 /*
  * Header, a linked list.
- Contains a link to the pool/arena (don't know which) that contains this item
- Contains a link to the next header, to form linked lists.
- Contains an index number that represents the position of the item in the pool
- this item is not manipulated once set, unless the object (including the
-   header) is moved to somewhere else.
+ * Contains a link to the pool/arena (don't know which) that contains this item
+ * Contains a link to the next header, to form linked lists.
+ * Contains the number of the card and the flag that represents this item in
+ * the arena.
  */
 
 

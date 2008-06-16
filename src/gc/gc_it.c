@@ -667,25 +667,33 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
                              ARGMOD(Small_Object_Arena *new_arena))
 {
     Gc_it_hdr *p = new_arena->start_objects;
-    void *temp;
-    UINTVAL i;
+    register UINTVAL i;
     const size_t num_objs = new_arena->total_objects;
 
     for(i = 0; i < num_objs - 1; i++) {
         /* Here is what needs to happen in this loop:
-           1) calculate the address of the next GC header in the arena
-           2) set the ->next field of the current object to the address of the
+           1) add the current object to the free list
+           2) calculate the address of the next GC header in the arena
+           3) set the ->next field of the current object to the address of the
               next object.
-           3) move the current pointer to the next object
-           4) set the index values now, for faster retrieval later
-           5) repeat for all items in the arena
+           4) move the current pointer to the next object
+           5) set the index values now, for faster retrieval later
+           6) repeat for all items in the arena
+           My pointer voodoo might be mistaken, so we need to check this
+           closely.
        */
-        temp = (Gc_it_ptr *)p+1;
-        temp = (char *)temp+(pool->object_size);
-        p->next = temp;
-        p = temp;
+
+        /* Add the current item to the free list */
+        p->next = pool->free_list;
+        pool->free_list = p;
+
+        /* Cache the object's card address */
         p->index.num.card = i / 4;
         p->index.num.flag = i % 4;
+
+        /* Find the next item in the arena with voodoo pointer magic */
+        p = ((Gc_it_hdr *)p) + 1;
+        p = (Gc_it_hdr *)(((size_t)p) + (pool->object_size));
     }
     p->next = pool->free_list;
     pool->free_list = new_arena->start_objects;
@@ -713,13 +721,6 @@ gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
     }
 }
 
-static void
-gc_it_set_card_mark_obj(PObj * obj, UINTVAL flag)
-{
-    /* this will become a macro */
-    gc_it_mark_card(PObj_to_IT_HDR(obj), flag);
-}
-
 /* return an object's card value */
 
 static UINTVAL
@@ -736,12 +737,6 @@ gc_it_get_card_mark(Gc_it_hdr * hdr)
         case 3:
             return card->_f->flag4;
     }
-}
-
-static UINTVAL
-gc_it_get_card_mark_obj(PObj *obj)
-{
-    return gc_it_get_card_mark(PObj_to_IT_HDR(obj));
 }
 
 /*
