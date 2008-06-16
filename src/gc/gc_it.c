@@ -77,7 +77,6 @@ increment, or one step from many.
 
 */
 
-
 /*
  * Basic Algorithm:
  * 1) Determine which pool/generation to scan
@@ -94,7 +93,7 @@ increment, or one step from many.
  * objects after a run has completed and all black objects have been turned
  * back to white (which would free all objects, alive or dead).
  */
- 
+
 /* Here is a (mostly-complete) list of stuff that needs to be traced
 as a global. This tracing work should all get done in
 src/gc/dod.c:Parrot_dod_trace_root.
@@ -210,7 +209,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_5;
 
         case GC_IT_RESUME_SWEEP:
-            gc_it_sweep_normal(interp);
+            gc_it_sweep_dead_objects(interp);
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
@@ -219,6 +218,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_7;
 
         case GC_IT_FINAL_CLEANUP:
+            gc_it_reset_cards(interp);
             gc_it_post_sweep_cleanup(interp);
             gc_priv_data->state == GC_IT_READY;
     }
@@ -309,10 +309,9 @@ gc_it_trace_threaded(PARROT_INTERP)
 #endif
 
 #if GC_IT_SERIAL_MODE
-void
-gc_it_sweep_normal(PARROT_INTERP)
+inline static void
+gc_it_sweep_dead_objects(PARROT_INTERP)
 {
-
     const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
 
@@ -324,13 +323,11 @@ gc_it_sweep_normal(PARROT_INTERP)
  * list. Items which are new, black, or grey can be ignored.
  */
 
-    if(gc_priv_data->state == GC_IT_NEW_SWEEP) {
-        gc_it_free_white_items(interp);
-        if(NEED_TO_STOP_AFTER_WHITE_SWEEP) {
-            gc_priv_data->state = GC_IT_RESUME_SWEEP;
-            return;
-        }
-    }
+}
+
+inline static void
+gc_it_sweep_simple_buffers(PARROT_INTERP)
+{
 
 /*
  * 7) Scan through simple buffers, add white objects to free list
@@ -339,23 +336,12 @@ gc_it_sweep_normal(PARROT_INTERP)
  * point and free them.
  */
 
-    gc_it_sweep_simple_buffers(interp);
-
-/*
- * 8) reset all flags to white
- * Reset the whole card to white. All items should be out of the grey list, and
- * back in the generic "items" list. All newly created items should be appended
- * into the "items" list.
- * Reset all flags and stuff for a new scan.
- */
-
-    gc_it_reset_cards(interp);
-    gc_priv_data->state = GC_IT_NEW_MARK;
 }
+
 #endif
 
 #if GC_IT_BATCH_MODE
-void
+static void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
     /* We've already found all the roots and if we are working in batch
@@ -367,61 +353,43 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
 #endif
 
 #if GC_IT_INCREMENT_MODE
-void
+static void
 gc_it_enqueue_next_root(PARROT_INTERP)
 {
     /* enqueue next root, algorithm:
         1) Get the next root item from gc_priv_data->root_queue
         2) if it's an aggregate item, add it to the queue and return
-        4) if there are no more aggregates to be had, add all simple buffers
-           to the queue
+        3) if not, mark the item as live, remove from queue, and procede to
+           next item in the list
+        I probably need to double-check some of my loop logic, but this is a
+        good start.
     */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
-    Gc_it_hdr * const hdr = gc_priv_data->root_queue;
-    Gc_it_hdr * const head, * const ptr;
-    gc_priv_data->root_queue = hdr->next;
-    if(GC_IT_IS_AGGREGATE(hdr)) { /* This needs to be defined */
-        /* if we are enqueueing a new root, the queue should be empty. However,
-           we can pretend that it isn't for now (just to be safe) */
-        hdr->next = gc_priv_data->queue;
-        gc_priv_data->queue = hdr;
-        return;
-    }
-    head = hdr;
-    ptr = gc_priv_data->root_queue;
-    /* the item is just a buffer, so we add it to the queue. We scan through
-       the root_queue until we find the next aggregate (or until the end of
-       the list). We add the aggregate and all items in between to the queue.
+    Gc_it_hdr * hdr = gc_priv_data->root_queue;
 
-       I need to fix this, the logic is screwey. */
-    while(1) {
-        if(!GC_IT_IS_AGGREGATE(ptr)) {
-            /* If it's not an aggregate, move to the next item, unless the
-               next item is NULL, then break. */
-            if(ptr->next == NULL)
-                break;
-            ptr = ptr->next;
+    do {
+        gc_priv_data->root_queue = hdr->next;
+        if(GC_IT_IS_AGGREGATE(hdr)) { /* This needs to be defined */
+            /* add the item to the queue. return */
+            hdr->next = gc_priv_data->queue;
+            gc_priv_data->queue = hdr;
+            return;
         }
-        else
-        {
-            /* we found an aggregate. Add this item and all previous buffers
-               to the queue at once. */
-            hdr->next = gc_priv_root->root_queue;
-            gc_priv_data->root_queue = ptr->next;
-            ptr->next = NULL;
-            break;
-        }
-    }
-    /* If we fall through here, we've hit a NULL in our loop. This means the
-       queue is exhaused, and all remaining items, if any, were non-aggregates.
-       Add the whole shoot-and-match to the queue. */
-    hdr->next = gc_priv_data->root_queue;
-    ptr->next = gc_priv_data->queue;
-    gc_priv_data->queue = head;
+        else {
+            /* mark the buffer immediately, set the header to float, grab the
+               next item from the root_queue */
+            gc_it_set_card_mark(hdr, GC_IT_MARK_BLACK);
+            hdr->next = NULL;
+            hdr = gc_priv_data->root_queue;
+    } while(gc_priv_data->root_queue != NULL);
+    /* If we've fallen through here, that means there are no more root objects,
+       no more objects to mark, and we move on to the next stage */
+    gc_priv_data->queue = NULL;
 }
 #endif
 
-void gc_it_enqueue_igp(PARROT_INTERP)
+static void
+gc_it_enqueue_igp(PARROT_INTERP)
 {
     /* Find all incoming IGP to the currently scanned pool/arena/whatever
        and add them to the grey pile. This way, we ensure that they get
@@ -464,26 +432,16 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
        other logic in this function originated) */
 }
 
-void
-gc_it_free_white_items(PARROT_INTERP)
+static void
+gc_it_reset_cards(PARROT_INTERP)
 {
-    /* Add all items which are still white to the free lists.
-       Possibly also clear the bitmaps */
-    /* This can be a macro or an inline function, or else it could be
-       an incremental process, traversing through a pool-at-a-time */
-    /* Algorithm:
-       1) loop over every pool (or one pool at a time, if incremental)
-       2) loop over every arena in each pool
-       3) traverse the cards. when we find a white flag, add the corresponding
-          object to the free list. If it's a PMC, and if it has the finalize
-          flag, then we must call the custom finalization routine first. */
-}
-
-void gc_it_clear_cards(PARROT_INTERP)
-{
-    /* If we don't do it in gc_it_free_white_items, or somewhere else
-       then clear the cards here. Go through each pool, through each
-       arena, clear the card in each with a memset */
+    /*
+     * 8) reset all flags to white
+     * Reset the whole card to white. All items should be out of the grey list, and
+     * back in the generic "items" list. All newly created items should be appended
+     * into the "items" list.
+     * Reset all flags and stuff for a new scan.
+     */
 }
 
 /*
