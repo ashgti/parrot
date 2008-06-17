@@ -288,20 +288,87 @@ gc_it_trace_normal(PARROT_INTERP)
     }
 }
 
-inline static void
+static void
 gc_it_sweep_dead_objects(PARROT_INTERP)
 {
     const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
+    const Small_Object_Pool * pools[] = {
+        arena_base->string_header_pool,
+        arena_base->pmc_pool,
+        arena_base->constant_pmc_pool,
+        arena_base->buffer_header_pool,
+        arena_base->constant_string_header_pool
+    };
+    register UINTVAL i;
+    for(i = 0; i < 5; i++) {
+        gc_it_sweep_arenas(gc_priv_data, pools[i]);
+    }
+    for(i = arena_base->num_sized - ; i >= 0; i--) {
+        Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
+        if(pool)
+            gc_it_sweep_arenas(gc_priv_data, pool);
+    }
+    GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
+}
 
-/*
- * 6) move all white objects to the free list
- * Traverse each pool, and each arena in each pool. For each arena, take a
- * pointer to the card. Card items which are still white can be freed.
- * We set the card value to GC_IT_CARD_NEW, and move the header to the free
- * list. Items which are new, black, or grey can be ignored.
- */
+inline static void
+gc_it_sweep_arenas(Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
+{
+    /* Go through each arena in the pool, free objects marked white,
+       set black cards to white, and call finalization routines, if
+       needed. */
+    Small_Object_Arena * arena;
+    Gc_it_card * card;
+    register UINTVAL i;
+    for (arena = pool->last_Arena; arena; arena = arena->prev) {
+        card = &(arena->cards[arena->_d->card_size]);
+        i = arena->_d->last_index;
+        /* Duff's device magic for partial loop unrolling. We'll start at
+           the end of the card, and mark forward. See
+           http://en.wikipedia.org/wiki/Duff%27s_device for more details.
+           Duff's device is not necessarily the fastest way to unroll a loop,
+           and it may interfere with branch prediction, but it makes the most
+           sense considering the layout of our flags.
+           I may need to double-check the order of flags here, but I think
+           this makes good sense. */
+        switch (arena->_d->last_index % 4) {
+            case 0:
+                do {
+                    if(card->_f->flag4 == GC_IT_CARD_WHITE)
+                        gc_it_make_free_by_index(pool, arena, i);
+                    else if(card->_f->flag4 == GC_IT_CARD_BLACK)
+                        card->_f->flag4 = GC_IT_CARD_WHITE;
+                    i--;
+            case 3:
+                    if(card->_f->flag3 == GC_IT_CARD_WHITE)
+                        gc_it_make_free_by_index(pool, arena, i);
+                    else if(card->_f->flag3 == GC_IT_CARD_BLACK)
+                        card->_f->flag3 = GC_IT_CARD_WHITE;
+                    i--;
+            case 2:
+                    if(card->_f->flag2 == GC_IT_CARD_WHITE)
+                        gc_it_make_free_by_index(pool, arena, i);
+                    else if(card->_f->flag2 == GC_IT_CARD_BLACK)
+                        card->_f->flag2 = GC_IT_CARD_WHITE;
+                    i--;
+            case 1:
+                    if(card->_f->flag1 == GC_IT_CARD_WHITE)
+                        gc_it_make_free_by_index(pool, arena, i);
+                    else if(card->_f->flag1 == GC_IT_CARD_BLACK)
+                        card->_f->flag1 = GC_IT_CARD_WHITE;
+                    i--;
+                } while(card-- != arena->cards);
+        }
+    }
+}
 
+inline static void
+gc_it_make_free_by_index(Small_Object_Pool *pool, Small_Object_Arena *arena, UINTVAL index)
+{
+    Gc_it_hdr * const hdr = (Gc_it_hdr*)((char*)arena->start_objects) + (pool->object_size * index);
+    hdr->next = pool->free_list;
+    pool->free_list = hdr;
 }
 
 inline static void
