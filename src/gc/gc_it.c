@@ -293,27 +293,34 @@ gc_it_sweep_dead_objects(PARROT_INTERP)
 {
     const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
-    const Small_Object_Pool * pools[] = {
-        arena_base->string_header_pool,
+    /* PMCs need to be handled differently from other types of pools. We'll
+       set up lists of our pools here, and handle different types differently. */
+    const Small_Object_Pool * const pmc_pools[] = {
         arena_base->pmc_pool,
-        arena_base->constant_pmc_pool,
+        arena_base->constant_pmc_pool
+    };
+    const Small_Object_Pool * const header_pools[] = {
+        arena_base->string_header_pool,
         arena_base->buffer_header_pool,
         arena_base->constant_string_header_pool
     };
     register UINTVAL i;
-    for(i = 0; i < 5; i++) {
-        gc_it_sweep_arenas(gc_priv_data, pools[i]);
+    for(i = 0; i < 2; i++) {
+        gc_it_sweep_PMC_arenas(gc_priv_data, pmc_pools[i]);
+    }
+    for(i = 0; i < 3; i++) {
+        gc_it_sweep_header_arenas(gc_priv_data, header_pools[i]);
     }
     for(i = arena_base->num_sized - ; i >= 0; i--) {
         Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
         if(pool)
-            gc_it_sweep_arenas(gc_priv_data, pool);
+            gc_it_sweep_sized_arenas(gc_priv_data, pool);
     }
     GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
 }
 
 inline static void
-gc_it_sweep_arenas(Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
+gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
 {
     /* Go through each arena in the pool, free objects marked white,
        set black cards to white, and call finalization routines, if
@@ -336,25 +343,25 @@ gc_it_sweep_arenas(Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
             case 0:
                 do {
                     if(card->_f->flag4 == GC_IT_CARD_WHITE)
-                        gc_it_make_free_by_index(pool, arena, i);
+                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
                     else if(card->_f->flag4 == GC_IT_CARD_BLACK)
                         card->_f->flag4 = GC_IT_CARD_WHITE;
                     i--;
             case 3:
                     if(card->_f->flag3 == GC_IT_CARD_WHITE)
-                        gc_it_make_free_by_index(pool, arena, i);
+                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
                     else if(card->_f->flag3 == GC_IT_CARD_BLACK)
                         card->_f->flag3 = GC_IT_CARD_WHITE;
                     i--;
             case 2:
                     if(card->_f->flag2 == GC_IT_CARD_WHITE)
-                        gc_it_make_free_by_index(pool, arena, i);
+                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
                     else if(card->_f->flag2 == GC_IT_CARD_BLACK)
                         card->_f->flag2 = GC_IT_CARD_WHITE;
                     i--;
             case 1:
                     if(card->_f->flag1 == GC_IT_CARD_WHITE)
-                        gc_it_make_free_by_index(pool, arena, i);
+                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
                     else if(card->_f->flag1 == GC_IT_CARD_BLACK)
                         card->_f->flag1 = GC_IT_CARD_WHITE;
                     i--;
@@ -364,24 +371,68 @@ gc_it_sweep_arenas(Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
 }
 
 inline static void
-gc_it_make_free_by_index(Small_Object_Pool *pool, Small_Object_Arena *arena, UINTVAL index)
+gc_it_make_PMC_free_by_index(PARROT_INTERP, Small_Object_Pool *pool,
+    Small_Object_Arena *arena, UINTVAL index)
 {
+    /* this might be able to be a macro instead of a function. */
     Gc_it_hdr * const hdr = (Gc_it_hdr*)((char*)arena->start_objects) + (pool->object_size * index);
+    Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
     hdr->next = pool->free_list;
     pool->free_list = hdr;
 }
 
-inline static void
-gc_it_sweep_simple_buffers(PARROT_INTERP)
+static void
+gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
 {
+    /* Sweep through all arenas in the given pool, finding white objects and
+       adding them to the free list. Headers dont require the custom
+       finalization action that PMCs require. */
+    Small_Object_Arena * arena;
+    Gc_it_card * card;
+    register UINTVAL i;
+    for (arena = pool->last_Arena; arena; arena = arena->prev) {
+        card = &(arena->cards[arena->_d->card_size]);
+        i = arena->_d->last_index;
+        /* Partially unroll the loop with Duff's device, do 4 items at a time. */
+        switch (arena->_d->last_index % 4) {
+            case 0:
+                do {
+                    if(card->_f->flag4 == GC_IT_CARD_WHITE)
+                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    else if(card->_f->flag4 == GC_IT_CARD_BLACK)
+                        card->_f->flag4 = GC_IT_CARD_WHITE;
+                    i--;
+            case 3:
+                    if(card->_f->flag3 == GC_IT_CARD_WHITE)
+                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    else if(card->_f->flag3 == GC_IT_CARD_BLACK)
+                        card->_f->flag3 = GC_IT_CARD_WHITE;
+                    i--;
+            case 2:
+                    if(card->_f->flag2 == GC_IT_CARD_WHITE)
+                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    else if(card->_f->flag2 == GC_IT_CARD_BLACK)
+                        card->_f->flag2 = GC_IT_CARD_WHITE;
+                    i--;
+            case 1:
+                    if(card->_f->flag1 == GC_IT_CARD_WHITE)
+                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    else if(card->_f->flag1 == GC_IT_CARD_BLACK)
+                        card->_f->flag1 = GC_IT_CARD_WHITE;
+                    i--;
+                } while(card-- != arena->cards);
+        }
+    }
+}
 
-/*
- * 7) Scan through simple buffers, add white objects to free list
- * Buffers don't contain pointers, so we don't need to perform a
- * full tree-based scan. Find the ones that are not marked at this
- * point and free them.
- */
-
+inline static void
+gc_it_make_header_free_by_index(PARROT_INTERP, Small_Object_Pool * pool,
+    Small_Object_Arena * arena, UINTVAL index);
+{
+    /* this might be able to be a macro instead of a function. */
+    Gc_it_hdr * const hdr = (Gc_it_hdr*)((char*)arena->start_objects) + (pool->object_size * index);
+    hdr->next = pool->free_list;
+    pool->free_list = hdr;
 }
 #endif
 
