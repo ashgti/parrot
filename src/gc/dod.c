@@ -208,9 +208,17 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     const Gc_it_hdr *hdr = PObj_to_IT_HDR(obj);
     const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
     const Gc_it_hdr *temp;
-    /* Short-circuit. The item is already marked, so there is no reason to
-       add it back to the queue */
-    if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK)
+    /* Short-circuit. We don't add the item to the queue in two situations:
+       1) The item is already marked black
+       2) The header's ->next is pointing to something. There are only
+          two times when the ->next item should be non-null: on the free
+          list and on the queue. If it is in either of these two places,
+          the item does not need to be marked. If an item from the free
+          list is about to be marked, that's a big problem and we might
+          want some kind of diagnostic (if it happens, which I hope it
+          will not) */
+    if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK ||
+       hdr->next != NULL)
         return;
     if(gc_priv_data->state == GC_IT_MARK_ROOTS) {
         hdr->next = gc_priv_data->root_queue;
