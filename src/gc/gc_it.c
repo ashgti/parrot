@@ -389,7 +389,6 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
     /* Add all children of the current node to the queue for processing. */
     /* This function could become a macro or an inline function*/
     const PObj * obj = IT_HDR_to_PObj(hdr);
-    const UINTVAL flags = PObj_get_FLAGs(obj);
     if(PObj_is_PMC_TEST(obj)) {
         /* add the metadata PMC, if it exists */
         if(PMC_metadata(obj))
@@ -403,10 +402,17 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
                the free list, so I won't implement anything here */
         }
     }
+    /* if the PMC is an array of other PMCs, we cycle through those. I'm
+       surprised if this isn't covered by VTABLE_mark, but I won't question
+       it now. */
     if(flags & PObj_data_is_PMC_array_FLAG)
         Parrot_dod_trace_pmc_data(interp, obj);
-    if(flags & PObj_custom_mark_FLAG)
+    /* if it's a PMC with a custom mark routine, call that here. The
+       custom mark routine will call pobject_lives on the children,
+       which will add them to the queue properly. */
+    if(PObj_custom_mark_TEST(obj))
         VTABLE_mark(interp, obj);
+
     /* If the item is shared, we need to do some magic trickery with it. I
        don't know if I'm going to do said trickery here, or offload it to a
        function like src/gc/dod.c:mark_special (which is where some of the
