@@ -1,3 +1,11 @@
+# $Id$
+
+=head1
+
+src/builtins/all.pir -- abc builtin functions
+
+=cut
+
 .namespace []
 
 .sub 'infix:=='
@@ -137,9 +145,9 @@
     print "\n"
 .end
 
-
 # Local Variables:
 #   mode: pir
 #   fill-column: 100
 # End:
 # vim: expandtab shiftwidth=4 ft=pir:
+
