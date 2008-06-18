@@ -107,26 +107,36 @@ typedef struct _gc_gms_gen {
  * Macros for doing common things with the GC_IT
  */
 
-#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) \
+#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
     gc_it_mark_card((hdr), GC_IT_CARD_BLACK); \
     (gc_data)->queue = (hdr)->next; \
-    (hdr)->next = NULL;
+    (hdr)->next = NULL; \
+} while(0)
 
-#define GC_IT_MARK_NODE_GREY(gc_data, hdr) \
+#define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
     (hdr)->next = (gc_data)->queue; \
-    (gc_data)->queue = (hdr);
+    (gc_data)->queue = (hdr); \
+} while(0)
 
-#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) \
+#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) do {\
     (hdr)->next = (gc_data)->queue; \
-    (gc_data)->queue = (hdr);
+    (gc_data)->queue = (hdr); \
+} while(0)
 
-#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) \
+#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) do {\
     (hdr)->next = (gc_data)->root_queue; \
-    (gc_data)->root_queue = (hdr);
+    (gc_data)->root_queue = (hdr); \
+} while(0)
 
-#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) \
+#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
     (hdr)->next = (pool)->free_list; \
-    (pool)->free_list = (hdr);
+    (pool)->free_list = (hdr); \
+} while(0)
+
+#define GC_IT_POP_HDR_FROM_LIST(list, hdr) do {\
+    (hdr) = (list); \
+    (list) = (hdr)->next; \
+} while(0)
 
 #define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
 

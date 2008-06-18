@@ -53,8 +53,8 @@ Parrot_gc_it_init(PARROT_INTERP)
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
     gc_priv_data = arena_base->gc_private;
-    gc_priv_data->config = GC_IT_INITIAL_CONFIG /* define this later, if needed */
-    gc_priv_data->state = GC_IT_READY;
+    gc_priv_data->config          = GC_IT_INITIAL_CONFIG /* define this later, if needed */
+    gc_priv_data->state           = GC_IT_READY;
 
     /* set function hooks according to pdd09 */
     arena_base->do_dod_run        = Parrot_gc_it_run;
@@ -447,10 +447,12 @@ inline static void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
     /* We've already found all the roots and if we are working in batch
-       mode we just take the list we've already gotten as the queue. */
+       mode we just take the list we've already gotten as the queue.
+       We assume the queue is empty here, if not, there is a problem */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
-    gc_priv_data->queue = gc_priv_data->root_queue;
-    gc_priv_data->root_queue = NULL;
+    PARROT_ASSERT(gc_priv_data->queue == NULL);
+    gc_priv_data->queue       = gc_priv_data->root_queue;
+    gc_priv_data->root_queue  = NULL;
 }
 #endif
 
@@ -468,6 +470,8 @@ gc_it_enqueue_next_root(PARROT_INTERP)
     */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * hdr = gc_priv_data->root_queue;
+
+    PARROT_ASSERT(gc_priv_data->queue == NULL);
 
     while(gc_priv_data->root_queue != NULL) {
         gc_priv_data->root_queue = hdr->next;
@@ -526,17 +530,6 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
        other logic in this function originated) */
 }
 
-static void
-gc_it_reset_cards(PARROT_INTERP)
-{
-    /*
-     * 8) reset all flags to white
-     * Iterate over all pools and all arenas. For each arena, memset cards
-     * in use to GC_IT_CARD_WHITE. Cards on the free list should stay
-     * GC_IT_CARD_NEW
-     */
-}
-
 /*
 
 =item C<Parrot_gc_it_deinit>
@@ -569,7 +562,7 @@ Parrot_gc_it_deinit(PARROT_INTERP)
 
 =item C<Parrot_gc_in_pool_init>
 
-Initialize a new memory pool. Set the pointers to the necesary functions,
+Initialize a new memory pool. Set the pointers to the necessary functions,
 and set the size of the objects to include the GC header.
 
 =cut
@@ -584,10 +577,6 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     pool->get_free_object = gc_it_get_free_object;
     pool->alloc_objects   = gc_it_alloc_objects;
     pool->more_objects    = gc_it_more_objects;
-
-    /* initialize generations */
-    gc_gms_init_gen(interp, pool);
-    pool->white = pool->white_fin = pool->free_list = &pool->marker;
 
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
@@ -613,10 +602,8 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
        just floating. We can add this to the end of the free list very
        easily. */
     const Gc_it_hdr * hdr = PObj_to_IT_HDR(to_add);
-    const Gc_it_hdr * const temp = pool->free_list;
-    pool->free_list = hdr;
-    hdr->next = temp;
-    Gc_it_mark_card(hdr, GC_IT_CARD_NEW); /* just in case */
+    GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+    Gc_it_mark_card(hdr, GC_IT_CARD_FREE); /* just in case */
 }
 
 /*
@@ -642,8 +629,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         (pool->more_objects)(interp, pool);
 
     /* pull the first header off the free list */
-    hdr = pool->free_list;
-    pool->free_list = hdr->next;
+    GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr);
     hdr->next = NULL;
 
     /* return pointer to the object from the header */
@@ -715,25 +701,24 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
                              ARGMOD(Small_Object_Arena *new_arena))
 {
     Gc_it_hdr * p = new_arena->start_objects;
+    Gc_it_hdr * temp;
     register UINTVAL i;
     const size_t num_objs = new_arena->total_objects;
 
     for(i = 0; i < num_objs - 1; i++) {
         /* Here is what needs to happen in this loop:
            1) add the current object to the free list
-           2) calculate the address of the next GC header in the arena
-           3) set the ->next field of the current object to the address of the
+           2) initialize parent_pool and index fields of the object
+           3) calculate the address of the next GC header in the arena
+           4) set the ->next field of the current object to the address of the
               next object.
-           4) move the current pointer to the next object
-           5) set the index values now, for faster retrieval later
-           6) repeat for all items in the arena
+           5) repeat for all items in the arena
            My pointer voodoo might be mistaken, so we need to check this
            closely.
         */
 
         /* Add the current item to the free list */
-        p->next = pool->free_list;
-        pool->free_list = p;
+        GC_IT_ADD_TO_FREE_LIST(pool, p);
 
         /* Cache the object's parent pool and card addresses */
         p->parent_pool = pool;
@@ -741,8 +726,10 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->index.num.flag = i % 4;
 
         /* Find the next item in the arena with voodoo pointer magic */
-        p = ((Gc_it_hdr *)p) + 1;
-        p = (Gc_it_hdr *)(((size_t)p) + (pool->object_size));
+        temp = ((Gc_it_hdr *)p) + 1;
+        temp = (Gc_it_hdr *)(((char*)temp) + (pool->object_size));
+        p->next = temp;
+        p = temp;
     }
     p->next = pool->free_list;
     pool->free_list = new_arena->start_objects;
@@ -754,6 +741,7 @@ static void
 gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
 {
     Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    PARROT_ASSERT(hdr->index.num.flag < 4 && hdr->index.num.flag >= 0);
     switch (hdr->index.num.flag) {
         case 0:
             card->_f->flag1 = flag;
@@ -776,6 +764,7 @@ static UINTVAL
 gc_it_get_card_mark(Gc_it_hdr * hdr)
 {
     const Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    PARROT_ASSERT(hdr->index.num.flag < 4 && hdr->index.num.flag >= 0);
     switch (hdr->index.num.flag) {
         case 0:
             return card->_f->flag1;
