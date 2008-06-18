@@ -1,0 +1,73 @@
+/*
+Copyright (C) 2001-2008, The Perl Foundation.
+$Id: file.pmc 27529 2008-05-16 01:38:16Z chromatic $
+
+src/dynpmc/gcaccess.pmc - Experimental PMC access to GC system internals.
+
+*/
+
+#include "parrot/parrot.h"
+
+static PMC *GC_PMC;
+pmclass GCAccess dynpmc singleton {
+
+    void class_init() {
+        GC_PMC = NULL;
+    }
+
+    VTABLE void *get_pointer() {
+        return GC_PMC;
+    }
+
+    VTABLE void set_pointer(void *ptr) {
+        GC_PMC = (PMC *)ptr;
+    }
+
+    METHOD current_state() {
+        RETURN(INTVAL interp->arena_base->gc_private->state);
+    }
+
+    METHOD items_in_queue() {
+        INTVAL i = 0;
+        Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+        Gc_it_hdr * hdr = gc_priv_data->queue;
+        if(hdr == NULL)
+            RETURN(INTVAL 0);
+        while(hdr = hdr->next) i++;
+        RETURN(INTVAL i);
+    }
+
+    METHOD items_in_root_queue() {
+        INTVAL i = 0;
+        Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
+        Gc_it_hdr * hdr = gc_priv_data->root_queue;
+        if(hdr == NULL)
+            RETURN(INTVAL 0);
+        while(hdr = hdr->next) i++;
+        RETURN(INTVAL i);
+    }
+
+    METHOD current_threads() {
+        RETURN(INTVAL interp->arena_base->gc_private->num_threads);
+    }
+
+    METHOD run_increment() {
+        Gc_it_data *gc_data = interp->arena_base->gc_private;
+        Parrot_do_dod_run(interp, 0);
+        RETURN(INTVAL gc_data->item_count;
+    }
+
+    METHOD run_complete() {
+        Gc_it_data * gc_data = interp->arena_base->gc_private;
+        do {
+            Parrot_do_dod_run(interp, 0);
+        } while(gc_data->state != GC_IT_READY);
+        RETURN(INTVAL gc_data->total_items)
+    }
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
