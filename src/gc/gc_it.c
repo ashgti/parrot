@@ -127,6 +127,12 @@ src/gc/dod.c:Parrot_dod_trace_root.
 
 #define GC_IT_ITEMS_MARKED_MIN  1
 
+#if GC_IT_SERIAL_MODE
+#   define gc_it_trace(i) gc_it_trace_normal(i);
+#elif GC_IT_PARALLEL_MODE
+#   define gc_it_trace(i) gc_it_trace_threaded(i);
+#endif
+
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
@@ -163,6 +169,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     gc_it_config * const config = &(gc_priv_data->config);
 
     if(flags & GC_finish_FLAG) {
+        /* If we've gotten the finish flag, the interpreter is closing down.
+           go through all items, call finalization on all PMCs, and do
+           whatever else we need to do. */
         gc_priv_data->state = GC_IT_RESUME_MARK;
         Parrot_dod_trace_root(interp) /* Add globals directly to the queue */
         gc_it_finalize_all_pmc(interp);
@@ -222,8 +231,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_7;
 
         case GC_IT_FINAL_CLEANUP:
-            gc_it_reset_cards(interp);
-            gc_it_post_sweep_cleanup(interp);
+            gc_it_post_sweep_cleanup(interp); /* if any. */
             gc_priv_data->state == GC_IT_READY;
     }
     return;
@@ -235,26 +243,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     if(flags & GC_lazy_FLAG)
 
     */
-}
-
-void
-gc_it_trace(PARROT_INTERP)
-{
-    /* Trace the queue to completion. */
-
-#if GC_IT_SERIAL_MODE
-
-    /* Trace the queue here, return when the queue has been completely traced */
-    gc_it_trace_normal(interp);
-
-#elif GC_IT_PARALLEL_MODE
-
-    /* start a thread to trace the queue, if the thread has not already been
-       created. */
-    gc_it_trace_threaded(interp);
-
-#endif
-
 }
 
 #if GC_IT_SERIAL_MODE
@@ -481,12 +469,11 @@ gc_it_enqueue_next_root(PARROT_INTERP)
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * hdr = gc_priv_data->root_queue;
 
-    do {
+    while(gc_priv_data->root_queue != NULL) {
         gc_priv_data->root_queue = hdr->next;
         if(PObj_is_PMC_TEST(PObj_to_IT_HDR(hdr))) {
             /* add the item to the queue. return */
-            hdr->next = gc_priv_data->queue;
-            gc_priv_data->queue = hdr;
+            GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
             return;
         }
         else {
@@ -496,7 +483,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
             hdr->next = NULL;
             hdr = gc_priv_data->root_queue;
         }
-    } while(gc_priv_data->root_queue != NULL);
+    }
     /* If we've fallen through here, that means there are no more root objects,
        no more objects to mark, and we move on to the next stage */
     gc_priv_data->queue = NULL;
