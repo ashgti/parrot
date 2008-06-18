@@ -37,6 +37,16 @@ pmclass GCAccess dynpmc singleton {
         RETURN(INTVAL i);
     }
 
+    METHOD free_pmcs() {
+        INTVAL i = 0;
+        Small_Object_Pool * pmcpool = interp->arena_base->pmc_pool;
+        Gc_it_hdr * hdr = pmcpool->free_list;
+        if(hdr == NULL)
+            RETURN(INTVAL 0);
+        while(hdr = hdr->next) i++;
+        RETURN(INTVAL i);
+    }
+
     METHOD items_in_root_queue() {
         INTVAL i = 0;
         Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
@@ -54,7 +64,7 @@ pmclass GCAccess dynpmc singleton {
     METHOD run_increment() {
         Gc_it_data *gc_data = interp->arena_base->gc_private;
         Parrot_do_dod_run(interp, 0);
-        RETURN(INTVAL gc_data->item_count;
+        RETURN(INTVAL gc_data->item_count);
     }
 
     METHOD run_complete() {
@@ -64,6 +74,7 @@ pmclass GCAccess dynpmc singleton {
         } while(gc_data->state != GC_IT_READY);
         RETURN(INTVAL gc_data->total_items)
     }
+}
 
 /*
  * Local variables:
