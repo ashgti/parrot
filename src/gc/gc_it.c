@@ -53,12 +53,8 @@ Parrot_gc_it_init(PARROT_INTERP)
     here, depending on the data we include in this structure */
     arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
     gc_priv_data = arena_base->gc_private;
-    gc_priv_data->num_generations = 0;
     gc_priv_data->config = GC_IT_INITIAL_CONFIG /* define this later, if needed */
-#if GC_IT_PARALLEL_MODE
-    gc_priv_data->num_threads = 0;
-#endif
-    gc_priv_data->state = GC_IT_NEW_MARK;
+    gc_priv_data->state = GC_IT_READY;
 
     /* set function hooks according to pdd09 */
     arena_base->do_dod_run        = Parrot_gc_it_run;
@@ -241,15 +237,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     */
 }
 
-#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) \
-    gc_it_mark_card((hdr), GC_IT_CARD_BLACK); \
-    (gc_data)->queue = (hdr)->next; \
-    (hdr)->next = NULL;
-#define GC_IT_MARK_NODE_GREY(gc_data, hdr) \
-    (hdr)->next = (gc_data)->queue; \
-    (gc_data)->queue = (hdr);
-#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
-
 void
 gc_it_trace(PARROT_INTERP)
 {
@@ -340,45 +327,57 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Poo
            I may need to double-check the order of flags here, but I think
            this makes good sense. */
         switch (arena->_d->last_index % 4) {
+            Gc_it_hdr * hdr;
             case 0:
                 do {
-                    if(card->_f->flag4 == GC_IT_CARD_WHITE)
-                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag4 == GC_IT_CARD_WHITE) {
+                        /* Get a pointer to the object header from it's index */
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        /* add the header to the free list */
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        /* free the PMC */
+                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                        /* mark the card as "FREE" */
+                        card->_f->flag4 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag4 == GC_IT_CARD_BLACK)
+                        /* if it's black, reset it to white for the next run */
                         card->_f->flag4 = GC_IT_CARD_WHITE;
+                    /* move to the next index value, and fall through */
                     i--;
             case 3:
-                    if(card->_f->flag3 == GC_IT_CARD_WHITE)
-                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag3 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                        card->_f->flag3 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag3 == GC_IT_CARD_BLACK)
                         card->_f->flag3 = GC_IT_CARD_WHITE;
                     i--;
             case 2:
-                    if(card->_f->flag2 == GC_IT_CARD_WHITE)
-                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag2 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                        card->_f->flag2 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag2 == GC_IT_CARD_BLACK)
                         card->_f->flag2 = GC_IT_CARD_WHITE;
                     i--;
             case 1:
-                    if(card->_f->flag1 == GC_IT_CARD_WHITE)
-                        gc_it_make_PMC_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag1 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                        card->_f->flag1 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag1 == GC_IT_CARD_BLACK)
                         card->_f->flag1 = GC_IT_CARD_WHITE;
                     i--;
                 } while(card-- != arena->cards);
         }
     }
-}
-
-inline static void
-gc_it_make_PMC_free_by_index(PARROT_INTERP, Small_Object_Pool *pool,
-    Small_Object_Arena *arena, UINTVAL index)
-{
-    /* this might be able to be a macro instead of a function. */
-    Gc_it_hdr * const hdr = (Gc_it_hdr*)((char*)arena->start_objects) + (pool->object_size * index);
-    Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-    hdr->next = pool->free_list;
-    pool->free_list = hdr;
 }
 
 static void
@@ -397,26 +396,38 @@ gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_
         switch (arena->_d->last_index % 4) {
             case 0:
                 do {
-                    if(card->_f->flag4 == GC_IT_CARD_WHITE)
-                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag4 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        card->_f->flag4 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag4 == GC_IT_CARD_BLACK)
                         card->_f->flag4 = GC_IT_CARD_WHITE;
                     i--;
             case 3:
-                    if(card->_f->flag3 == GC_IT_CARD_WHITE)
-                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag3 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        card->_f->flag3 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag3 == GC_IT_CARD_BLACK)
                         card->_f->flag3 = GC_IT_CARD_WHITE;
                     i--;
             case 2:
-                    if(card->_f->flag2 == GC_IT_CARD_WHITE)
-                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag2 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        card->_f->flag2 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag2 == GC_IT_CARD_BLACK)
                         card->_f->flag2 = GC_IT_CARD_WHITE;
                     i--;
             case 1:
-                    if(card->_f->flag1 == GC_IT_CARD_WHITE)
-                        gc_it_make_header_free_by_index(interp, pool, arena, i);
+                    if(card->_f->flag1 == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        card->_f->flag1 = GC_IT_CARD_FREE;
+                    }
                     else if(card->_f->flag1 == GC_IT_CARD_BLACK)
                         card->_f->flag1 = GC_IT_CARD_WHITE;
                     i--;
@@ -425,15 +436,6 @@ gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_
     }
 }
 
-inline static void
-gc_it_make_header_free_by_index(PARROT_INTERP, Small_Object_Pool * pool,
-    Small_Object_Arena * arena, UINTVAL index);
-{
-    /* this might be able to be a macro instead of a function. */
-    Gc_it_hdr * const hdr = (Gc_it_hdr*)((char*)arena->start_objects) + (pool->object_size * index);
-    hdr->next = pool->free_list;
-    pool->free_list = hdr;
-}
 #endif
 
 #if GC_IT_PARALLEL_MODE

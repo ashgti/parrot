@@ -104,13 +104,42 @@ typedef struct _gc_gms_gen {
 #define GC_IT_INITIAL_CONFIG XXX /* define this to be whatever */
 
 /*
- * Header, a linked list.
+ * Macros for doing common things with the GC_IT
+ */
+
+#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) \
+    gc_it_mark_card((hdr), GC_IT_CARD_BLACK); \
+    (gc_data)->queue = (hdr)->next; \
+    (hdr)->next = NULL;
+
+#define GC_IT_MARK_NODE_GREY(gc_data, hdr) \
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr);
+
+#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) \
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr);
+
+#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) \
+    (hdr)->next = (gc_data)->root_queue; \
+    (gc_data)->root_queue = (hdr);
+
+#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) \
+    (hdr)->next = (pool)->free_list; \
+    (pool)->free_list = (hdr);
+
+#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
+
+#define GC_IT_HDR_FROM_INDEX(p, a, i) \
+    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object-size*(i))
+
+/*
+ * GC_IT Header, a linked list.
  * Contains a link to the pool/arena (don't know which) that contains this item
  * Contains a link to the next header, to form linked lists.
  * Contains the number of the card and the flag that represents this item in
  * the arena.
  */
-
 
 typedef struct _gc_it_hdr {
     struct _gc_it_hdr *next;
@@ -144,10 +173,10 @@ typedef union _gc_it_card {
 } Gc_it_card;
 
 #define GC_IT_FLAGS_PER_CARD 4
-#define GC_IT_CARD_WHITE 0x00
-#define GC_IT_CARD_GREY  0x01
-#define GC_IT_CARD_BLACK 0x03
-#define GC_IT_CARD_NEW   0x02       /* items which are newly created and should
+#define GC_IT_CARD_WHITE  0x00       /* Item is dead */
+#define GC_IT_CARD_UNUSED 0x01
+#define GC_IT_CARD_BLACK  0x03       /* Item is completely alive */
+#define GC_IT_CARD_FREE   0x02       /* items which are newly created and should
                                        not be scanned until the next mark */
 #define GC_IT_CARD_ALL_WHITE 0x00
 #define GC_IT_CARD_ALL_BLACK 0xFF
