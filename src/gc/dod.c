@@ -187,19 +187,11 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     } while (0);
 #elif PARROT_GC_IT
 
-    /* I can probably avoid the following entirely, although I may need to
-      rewrite the following functions/macros to use the card marking schemes:
-
-        PObj_live_TEST
-        PObj_is_live_of_free_TESTALL
-        PObj_live_SET
-        ...and others that I haven't identified yet.
-    */
-
     /* To mark an object as being alive in the simplest possible way, we add
        the object's header to the queue. We add it to the beginning of the
        queue so we can exploit the cache locality benefits of marking a
-       node and it's children together. */
+       node and it's children together. We make a few basic tests here to
+       avoid adding objects to the queue unnecessarily. */
 
     /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
@@ -215,9 +207,14 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           list is about to be marked, that's a big problem and we might
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
+    PARROT_ASSERT(obj);
+    PARROT_ASSERT(hdr);
     if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK ||
        hdr->next != NULL)
         return;
+    /* black items should have been caught. Nothing should ever be "UNUSED"
+       at the moment. "FREE" items should not be here either. */
+    PARROT_ASSERT(gc_it_get_card_mark(hdr) == GC_IT_CARD_WHITE);
     if(gc_priv_data->state == GC_IT_MARK_ROOTS)
         GC_IT_ADD_TO_ROOT_QUEUE(hdr);
     else

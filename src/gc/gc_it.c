@@ -257,6 +257,7 @@ gc_it_trace_normal(PARROT_INTERP)
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
            discarded */
+        PARROT_ASSERT(cur_item);
         GC_IT_MARK_CHILDREN_GREY(gc_priv_data, cur_item);
         GC_IT_MARK_NODE_BLACK(gc_priv_data, cur_item);
         gc_priv_data->total_count++; /* total items since beginning of scan */
@@ -307,6 +308,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Poo
     register UINTVAL i;
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         card = &(arena->cards[arena->_d->card_size]);
+        PARROT_ASSERT(card);
         i = arena->_d->last_index;
         /* Duff's device magic for partial loop unrolling. We'll start at
            the end of the card, and mark forward. See
@@ -381,6 +383,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_
     register UINTVAL i;
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         card = &(arena->cards[arena->_d->card_size]);
+        PARROT_ASSERT(card);
         i = arena->_d->last_index;
         /* Partially unroll the loop with Duff's device, do 4 items at a time. */
         switch (arena->_d->last_index % 4) {
@@ -477,6 +480,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
     */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * hdr = gc_priv_data->root_queue;
+    PARROT_ASSERT(hdr);
 
     while(gc_priv_data->root_queue != NULL) {
         gc_priv_data->root_queue = hdr->next;
@@ -504,6 +508,8 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 {
     /* Add all children of the current node to the queue for processing. */
     const PObj * obj = IT_HDR_to_PObj(hdr);
+    PARROT_ASSERT(hdr);
+    PARROT_ASSERT(obj);
     if(PObj_is_PMC_TEST(obj)) {
         if(PMC_metadata(obj))
             /* add the metadata PMC, if it exists */
