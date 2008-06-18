@@ -249,10 +249,11 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 void
 gc_it_trace_normal(PARROT_INTERP)
 {
+    /* trace through the entire queue until it is empty. */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * cur_item;
 
-    while(cur_item = cur_pool->queue) {
+    while(cur_item = gc_priv_data->queue) {
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
            discarded */
@@ -261,6 +262,7 @@ gc_it_trace_normal(PARROT_INTERP)
         gc_priv_data->total_count++; /* total items since beginning of scan */
         gc_priv_data->item_count++;  /* number of items this increment */
     }
+    gc_priv_data->queue = NULL;
 }
 
 static void
@@ -448,8 +450,11 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
 {
     /* We've already found all the roots and if we are working in batch
        mode we just take the list we've already gotten as the queue.
-       We assume the queue is empty here, if not, there is a problem */
+       if the queue isn't empty, empty it first and then move on to the
+       next root. */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
+    if(gc_priv_data->queue != NULL)
+        gc_it_trace_normal(interp);
     PARROT_ASSERT(gc_priv_data->queue == NULL);
     gc_priv_data->queue       = gc_priv_data->root_queue;
     gc_priv_data->root_queue  = NULL;
@@ -465,13 +470,13 @@ gc_it_enqueue_next_root(PARROT_INTERP)
         2) if it's an aggregate item, add it to the queue and return
         3) if not, mark the item as live, remove from queue, and procede to
            next item in the list
-        I probably need to double-check some of my loop logic, but this is a
-        good start.
+        We don't require the queue to be empty here, we just add the next root
+        to the top of the queue. There might be some items added (such as
+        with the write barrier) between increments, so we keep those in the
+        queue at the end of the list.
     */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * hdr = gc_priv_data->root_queue;
-
-    PARROT_ASSERT(gc_priv_data->queue == NULL);
 
     while(gc_priv_data->root_queue != NULL) {
         gc_priv_data->root_queue = hdr->next;
