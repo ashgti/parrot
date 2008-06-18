@@ -204,9 +204,8 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
 
-    const Gc_it_hdr *hdr = PObj_to_IT_HDR(obj);
-    const Gc_it_data *gc_priv_data = interp->arena_base->gc_private;
-    const Gc_it_hdr *temp;
+    Gc_it_hdr * const hdr = PObj_to_IT_HDR(obj);
+    Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
        2) The header's ->next is pointing to something. There are only
@@ -219,31 +218,10 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK ||
        hdr->next != NULL)
         return;
-    if(gc_priv_data->state == GC_IT_MARK_ROOTS) {
-        hdr->next = gc_priv_data->root_queue;
-        gc_priv_data->root_queue = hdr;
-    }
-    else {
-        hdr->next = gc_priv_data->queue;
-        gc_priv_data->queue = hdr;
-    }
-    if(PObj_is_PMC_TEST(obj)) {
-        PMC * const p = (PMC *)obj;
-        if (p->real_self != p) {
-            /* if the "real self" of the PMC is a separate PMC, mark that too.
-               In the case of GC_IT_MARK_ROOTS, I dont know whether these
-               should go in the queue or the root_queue. I am inclined to say
-               the root_queue too. */
-            const Gc_it_hdr * hdr = (PObj *)p->real_self;
-            hdr->next = gc_priv_data->queue;
-            gc_priv_data->queue = hdr;
-        }
-        if (PObj_is_special_PMC_TEST(obj))
-            mark_special(interp, p);
-    }
-    /* incorporate ideas from mark_special() here, or call that function and
-       modify it to do what I need. */
-
+    if(gc_priv_data->state == GC_IT_MARK_ROOTS)
+        GC_IT_ADD_TO_ROOT_QUEUE(hdr);
+    else
+        GC_IT_ADD_TO_QUEUE(hdr);
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */

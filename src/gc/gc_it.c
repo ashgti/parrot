@@ -503,25 +503,26 @@ static inline void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 {
     /* Add all children of the current node to the queue for processing. */
-    /* This function could become a macro or an inline function*/
     const PObj * obj = IT_HDR_to_PObj(hdr);
     if(PObj_is_PMC_TEST(obj)) {
-        /* add the metadata PMC, if it exists */
         if(PMC_metadata(obj))
+            /* add the metadata PMC, if it exists */
             pobject_lives(interp, (PObj *)PMC_metadata(obj));
-        /* add any headers that have been added by the system into the
-           _next_for_GC field, since that seems like a place where the
-           system wants me to look. */
+        if (p->real_self != p)
+            /* if the "real self" of the PMC is separate, mark that too. */
+            pobject_lives(interp, (PObj *)p->real_self);
         if(PMC_next_for_GC(obj) != obj) {
             /* loop through this list, add them all wherever they need to go.
                I dont know whether these items should be added to queue or
                the free list, so I won't implement anything here */
         }
+        if (PObj_is_special_PMC_TEST(obj))
+            mark_special(interp, p);
     }
     /* if the PMC is an array of other PMCs, we cycle through those. I'm
        surprised if this isn't covered by VTABLE_mark, but I won't question
        it now. */
-    if(flags & PObj_data_is_PMC_array_FLAG)
+    if(obj->flags & PObj_data_is_PMC_array_FLAG)
         Parrot_dod_trace_pmc_data(interp, obj);
     /* if it's a PMC with a custom mark routine, call that here. The
        custom mark routine will call pobject_lives on the children,
