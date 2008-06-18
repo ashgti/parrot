@@ -631,6 +631,10 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     /* pull the first header off the free list */
     GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr);
     hdr->next = NULL;
+    --pool->num_free_objects;
+
+    /* mark the item as black for now, so it doesn't get collected prematurely. */
+    gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
 
     /* return pointer to the object from the header */
     return IT_HDR_to_PObj(hdr);
@@ -733,6 +737,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     }
     p->next = pool->free_list;
     pool->free_list = new_arena->start_objects;
+    pool->num_free_objects += num_objs;
 }
 
 /* Mark an object's card with a given flag */

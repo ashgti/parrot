@@ -260,8 +260,20 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 #endif
 
 #if PARROT_GC_IT
-#  define DOD_WRITE_BARRIER(interp, agg, old, _new) 
-#  define DOD_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) 
+    /* The aggregate is obviously being used somewhere, so make sure it's
+       marked. pobject_lives will short circuit if it's already been marked.
+       mark the new item too. */
+#  define DOD_WRITE_BARRIER(interp, agg, old, new) do { \
+    pobject_lives(interp, agg); \
+    pobject_lives(interp, new); \
+} while(0)
+    /* Mark the aggregate, the new object and the new_key, they are all
+       apparently being used and I want to make sure they don't get lost */
+#  define DOD_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
+    pobject_lives(interp, agg); \
+    pobject_lives(interp, new); \
+    pobject_lives(interp, new_key); \
+} while(0)
 #endif
 
 #endif /* PARROT_DOD_H_GUARD */
