@@ -85,12 +85,16 @@ method statement($/,$key) {
         for $<statement> {
             $past_if_block.push( $($_) );
         }
-        make PAST::Op.new(
-                 $( $<relational_expression> ),
-                 $past_if_block,
-                 :pasttype('if'),
-                 :node($/)
-             );
+        my $past := PAST::Op.new(
+                        $( $<relational_expression> ),
+                        $past_if_block,
+                        :pasttype('if'),
+                        :node($/)
+                    );
+        for $<else_clause> {
+            $past.push( $( $_ ) );
+        }
+        make $past;
     }
     elsif $key eq 'inline_sea' {
         make PAST::Op.new(
@@ -103,6 +107,70 @@ method statement($/,$key) {
                  :node($/)
              );
     }
+    elsif $key eq 'scalar_assign' {
+        make $( $/{$key} );
+    }
+    elsif $key eq 'array_assign' {
+        make $( $/{$key} );
+    }
+}
+
+method scalar_assign($/) {
+    make PAST::Op.new(
+             $( $<var> ),
+             $( $<expression> ),
+             :pasttype('bind'),
+         );
+}
+
+method array_key($/) {
+    make $( $<expression> );
+}
+
+method array_assign($/) {
+    make PAST::Op.new(
+             $( $<array_elem> ),
+             $( $<expression> ),
+             :pasttype('copy'),
+         );
+}
+
+method array_elem($/) {
+    my $past_var_name := $( $<VAR_NAME> );
+    $past_var_name.scope('package');
+    $past_var_name.viviself('Hash');
+    make PAST::Var.new(
+             $past_var_name,
+             $( $<array_key> ),
+             :scope('keyed'),
+             :viviself("Undef"),
+             :lvalue(1)
+        );
+}
+
+method var($/) {
+    make $( $<VAR_NAME> );
+}
+
+method VAR_NAME($/) {
+    make PAST::Var.new(
+             :scope("package"),
+             :name(~$/),
+             :viviself("Undef"),
+             :lvalue(1)
+        );
+}
+
+# loop over the statements in the else block
+method else_clause($/) {
+    my $past  := PAST::Stmts.new(
+                     :node($/),
+                     :name('else block')
+                 );
+    for $<statement> {
+        $past.push( $($_) );
+    }
+    make $past;
 }
 
 method relational_expression($/) {
@@ -201,8 +269,21 @@ method unary_expression($/) {
 }
 
 method concat_expression($/) {
-    make $( $<string> );
+    my $past := $( $<string> );
+    if $<concat_tail> {
+       for $<concat_tail> {
+           my $past_prev := $past;
+           my $op := $_<CONCAT_OP> eq '.' ?? '~' !! ~$_<CONCAT_OP>;
+           $past := PAST::Op.new(
+                        $past_prev,
+                        $( $_<string> ),
+                        :name( "infix:" ~ $op )
+                    );
+       }
+    }
+    make $past;
 }
+
 
 method postfix_expression($/,$key) {
     make $( $/{$key} );

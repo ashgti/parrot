@@ -40,6 +40,9 @@ ASCII key.
     # Init miscellaneous globals
     init_globals()
 
+    # Create particle effect
+    init_particle_effect()
+
     # Set up GLUT callbacks
     .const .Sub draw       = 'draw'
     .const .Sub idle       = 'idle'
@@ -69,6 +72,9 @@ ASCII key.
     .local pmc import_gl
     import_gl = get_global ['OpenGL'], '_export_all_functions'
     import_gl()
+
+    # Set larger default window size
+    glutInitWindowSize(500, 500)
 
     # Initialize GLUT, overwriting argv in place
     .local pmc call_toolkit_init
@@ -107,18 +113,21 @@ ASCII key.
     set_global 'paused', paused
 
     # Set up time bases to control animation
-    .local pmc time_prev, time_curr, time_sim
+    .local pmc time_prev, time_curr, time_sim, time_sim_dt
     .local num now
-    now       = time
-    time_prev = new 'Float'
-    time_prev = now
-    time_curr = new 'Float'
-    time_curr = now
-    time_sim  = new 'Float'
-    time_sim  = 0
-    set_global 'time_prev', time_prev
-    set_global 'time_curr', time_curr
-    set_global 'time_sim',  time_sim
+    now         = time
+    time_prev   = new 'Float'
+    time_prev   = now
+    time_curr   = new 'Float'
+    time_curr   = now
+    time_sim    = new 'Float'
+    time_sim    = 0
+    time_sim_dt = new 'Float'
+    time_sim_dt = 0
+    set_global 'time_prev',   time_prev
+    set_global 'time_curr',   time_curr
+    set_global 'time_sim',    time_sim
+    set_global 'time_sim_dt', time_sim_dt
 
     # Create structure definition for float4 structure
     .local pmc float4
@@ -138,6 +147,17 @@ ASCII key.
     set_global 'float4', float4
 .end
 
+.sub init_particle_effect
+    .local pmc pfx_pos, pfx_vel
+    pfx_pos = new 'ResizablePMCArray'
+    pfx_vel = new 'ResizablePMCArray'
+
+    new_particle(0, pfx_pos, pfx_vel)
+
+    set_global 'pfx_pos', pfx_pos
+    set_global 'pfx_vel', pfx_vel
+.end
+
 .sub draw
     .local int buffers
     buffers  = .GL_COLOR_BUFFER_BIT | .GL_DEPTH_BUFFER_BIT
@@ -145,6 +165,12 @@ ASCII key.
     glClear(buffers)
 
     set_3d_view()
+
+    .local pmc time_sim_dt
+    .local num dt
+    time_sim_dt = get_global 'time_sim_dt'
+    dt          = time_sim_dt
+    update_particle_effect(dt)
 
     draw_reflected_scene()
 
@@ -168,17 +194,17 @@ ASCII key.
     glLoadIdentity()
     gluPerspective(60, aspect, 1, 100)
 
-    # Look at origin from (0,3,3), with +Y up
+    # Look at origin from (0,2,4), with +Y up
     glMatrixMode(.GL_MODELVIEW)
     glLoadIdentity()
-    gluLookAt(0, 3, 3, 0, 0, 0, 0, 1, 0)
+    gluLookAt(0, 2, 4, 0, 0, 0, 0, 1, 0)
 
     # Rotate view around origin, to see objects from all angles
     .local pmc time_sim
     .local num angle
     time_sim  = get_global 'time_sim'
     angle     = time_sim
-    angle    *= -36
+    angle    *= -24
     angle    %= 360
 
     glRotatef(angle, 0, 1, 0)
@@ -282,15 +308,27 @@ ASCII key.
 
 .sub draw_objects
     .local pmc time_sim
-    .local num angle
-    time_sim  = get_global 'time_sim'
-    angle     = time_sim
-    angle    *= 90
-    angle    %= 360
+    .local num time
+    time_sim = get_global 'time_sim'
+    time     = time_sim
+
+    draw_rgb_triangle   (time)
+    draw_lit_teapot     ()
+    draw_particle_effect()
+.end
+
+.sub draw_rgb_triangle
+    .param num time
 
     # Unlit spinning RGB triangle at -Z
+
+    .local num angle
+    angle     = time
+    angle    *= 45
+    angle    %= 360
+
     glPushMatrix()
-    glTranslatef(0, 0, -1.5)
+    glTranslatef(0, 0.04, -1.5)
     glRotatef(angle, 0, 1, 0)
 
     glBegin(.GL_TRIANGLES)
@@ -307,12 +345,16 @@ ASCII key.
     glEnd()
 
     glPopMatrix()
+.end
 
+.sub draw_lit_teapot
     # Lit cyan teapot at +X
-    glEnable(.GL_LIGHTING)
+
     glPushMatrix()
-    glTranslatef(1.5, .5, 0)
+    glTranslatef(1.5, .4, 0)
     glRotatef(90, 0, 1, 0)
+
+    glEnable(.GL_LIGHTING)
 
     .local pmc float4, color
     float4 = get_global 'float4'
@@ -332,8 +374,269 @@ ASCII key.
 
     glutSolidTeapot(.5)
 
-    glPopMatrix()
     glDisable(.GL_LIGHTING)
+
+    glPopMatrix()
+.end
+
+.sub new_particle
+    .param int particle_num
+    .param pmc pfx_pos
+    .param pmc pfx_vel
+
+    .local num x, y, z, vx, vy, vz
+    x  = 4.0
+    y  = 0.0
+    z  = 0.0
+
+    vx = 0.0
+    vy = 0.135
+    vz = 0.0
+
+    .local pmc random
+    .local num rand
+    random = new 'Random'
+    rand  = random
+    rand *= .1
+    x    += rand
+    rand  = random
+    rand *= .1
+    y    += rand
+    rand  = random
+    rand *= .1
+    z    += rand
+
+    rand  = random
+    rand -= .5
+    rand *= .01
+    vx   += rand
+    rand  = random
+    rand -= .5
+    rand *= .01
+    vy   += rand
+    rand  = random
+    rand -= .5
+    rand *= .01
+    vz   += rand
+
+    .local pmc pos
+    pos = new 'FixedFloatArray'
+    pos = 3
+    pos[0] = x
+    pos[1] = y
+    pos[2] = z
+
+    .local pmc vel
+    vel = new 'FixedFloatArray'
+    vel = 3
+    vel[0] = vx
+    vel[1] = vy
+    vel[2] = vz
+
+    pfx_pos[particle_num] = pos
+    pfx_vel[particle_num] = vel
+.end
+
+.sub update_particle_effect
+    .param num dt
+
+    # "Black hole" particle effect at +Z
+
+    # Speed up time a little; this effect is *slow*
+    dt *= 30.0
+
+    # Global particle state arrays
+    .local pmc pfx_pos, pfx_vel
+    pfx_pos = get_global 'pfx_pos'
+    pfx_vel = get_global 'pfx_vel'
+
+    # Add a particle at random
+    .local int count
+    count = pfx_pos
+    if count > 1000 goto update_particles
+    .local pmc random
+    .local num rand
+    random = new 'Random'
+    rand   = random
+    rand  *= 4
+    if rand > dt goto update_particles
+    new_particle(count, pfx_pos, pfx_vel)
+
+    # Update all particles
+  update_particles:
+    dec count
+    if count < 0 goto update_particles_end
+
+    # Update particle states
+    update_particle(pfx_pos, pfx_vel, count, dt)
+
+    goto update_particles
+  update_particles_end:
+.end
+
+.sub update_particle
+    .param pmc pfx_pos
+    .param pmc pfx_vel
+    .param int particle_num
+    .param num dt
+
+    .local pmc pos, vel
+    pos = pfx_pos[particle_num]
+    vel = pfx_vel[particle_num]
+
+    # Constants
+    .const num G           = -.075   # Gravitational force constant
+    .const num Cd          = -.00033 # Coefficient of drag
+    .const num event_grav  = -.3     # Gravity at "event horizon"
+    .const num min_dist2   =  .001   # Minimum distance**2 before calc blows up
+    .const num escape_dist = 30      # Distance at which "escape" occurs
+
+    # Particle states
+    .local num x, y, z, vx, vy, vz
+    x  = pos[0]
+    y  = pos[1]
+    z  = pos[2]
+    vx = vel[0]
+    vy = vel[1]
+    vz = vel[2]
+
+    # Calculate distance and distance squared
+    .local num x2, y2, z2, dist2, dist
+    x2     = x * x
+    y2     = y * y
+    z2     = z * z
+    dist2  = x2 + y2
+    dist2 += z2
+    if dist2 >= min_dist2 goto dist2_ok
+    dist2  = min_dist2
+  dist2_ok:
+    dist   = sqrt dist2
+
+    # If distance is too great, particle has "escaped"; regenerate it
+    if dist < escape_dist goto dist_ok
+    new_particle(particle_num, pfx_pos, pfx_vel)
+    .return ()
+  dist_ok:
+
+    # Compute gravity force
+    .local num grav
+    grav = G / dist2
+
+    # If gravity is too strong, it has "passed the event horizon"; regenerate it
+    if grav > event_grav goto grav_ok
+    new_particle(particle_num, pfx_pos, pfx_vel)
+    .return ()
+  grav_ok:
+
+    # Calculate gravity vector (always directed toward center of "hole")
+    .local num gx, gy, gz
+    gx  = x / dist
+    gy  = y / dist
+    gz  = z / dist
+    gx *= grav
+    gy *= grav
+    gz *= grav
+
+    # Calculate drag vector (always directed opposite of velocity)
+    # NOTE: Using drag proportional to velocity, instead of velocity squared
+    .local num dragx, dragy, dragz
+    dragx = Cd * vx
+    dragy = Cd * vy
+    dragz = Cd * vz
+
+    # Acceleration is gravity + drag
+    .local num ax, ay, az
+    ax = gx + dragx
+    ay = gy + dragy
+    az = gz + dragz
+
+    # Update velocity and position with simple Euler integration
+    .local num dvx, dvy, dvz
+    .local num  dx,  dy,  dz
+    dvx  = ax * dt
+    dvy  = ay * dt
+    dvz  = az * dt
+    vx  += dvx
+    vy  += dvy
+    vz  += dvz
+    dx   = vx * dt
+    dy   = vy * dt
+    dz   = vz * dt
+    x   += dx
+    y   += dy
+    z   += dz
+
+    # Save new values back to particle state
+    vel[0] = vx
+    vel[1] = vy
+    vel[2] = vz
+    pos[0] = x
+    pos[1] = y
+    pos[2] = z
+.end
+
+.sub draw_particle_effect
+    # "Black hole" particle effect at +Z
+
+    # Make it visually interesting
+    glPushMatrix()
+    glTranslatef(0, .3, 1.5)
+    glRotatef(-20, 0, 0, 1)
+    glRotatef( 90, 1, 0, 0)
+    glScalef(.15, .15, .15)
+
+    # OpenGL state for "glowing transparent particles"
+    glEnable(.GL_BLEND)
+    glBlendFunc(.GL_SRC_ALPHA, .GL_ONE)
+    glDepthMask(.GL_FALSE)
+    glEnable(.GL_POINT_SMOOTH)
+    glPointSize(4)
+
+#     # Show plane of effect
+#     glColor4f(1, 1, 1, .2)
+#     glBegin(.GL_QUADS)
+#     glVertex3f(-2, -2, 0)
+#     glVertex3f( 2, -2, 0)
+#     glVertex3f( 2,  2, 0)
+#     glVertex3f(-2,  2, 0)
+#     glEnd()
+
+    # Start drawing particles
+    glColor4f(1, 1, 1, .5)
+    glBegin(.GL_POINTS)
+
+    # Global particle state arrays
+    .local pmc pfx_pos, pfx_vel
+    pfx_pos = get_global 'pfx_pos'
+    pfx_vel = get_global 'pfx_vel'
+
+    # Loop over all particles, updating and drawing them
+    .local int count
+    count = pfx_pos
+  draw_particle_loop:
+    dec count
+    if count < 0 goto draw_particle_loop_end
+
+    # Draw particle
+    .local pmc pos
+    .local num x, y, z
+    pos = pfx_pos[count]
+    x   = pos[0]
+    y   = pos[1]
+    z   = pos[2]
+    glVertex3f(x, y, z)
+
+    goto draw_particle_loop
+
+    # Finished with all particles
+  draw_particle_loop_end:
+    glEnd()
+
+    # Done, return to normal OpenGL state
+    glDepthMask(.GL_TRUE)
+    glDisable(.GL_BLEND)
+
+    glPopMatrix()
 .end
 
 .sub set_2d_view
@@ -360,14 +663,18 @@ ASCII key.
     .local pmc paused
     paused = get_global 'paused'
     unless paused goto update_time_sim
-    .return ()
-
+    dt     = 0
   update_time_sim:
-    .local pmc time_sim
-    time_sim  = get_global 'time_sim'
-    time_sim += dt
+    .local pmc time_sim, time_sim_dt
+    time_sim     = get_global 'time_sim'
+    time_sim_dt  = get_global 'time_sim_dt'
+    time_sim_dt  = dt
+    time_sim    += dt
 
     # Request redraw if sim time updated
+    unless paused goto post_redisplay
+    .return ()
+  post_redisplay:
     glutPostRedisplay()
 .end
 
