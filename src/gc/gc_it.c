@@ -17,13 +17,7 @@ This file is under heavy manipulation, and it isn't going to be the
 prettiest or most standards-compliant code for now. We can add
 spit and polish later.
 
-ALL YOUR DOCUMENTATION ARE BELONG TO HERE.
-*/
-
-#include "parrot/parrot.h"
-#include "parrot/dod.h"
-
-/* Open Questions:
+Open Questions:
 1) Should GC headers exist in the small object pools, or should they be
    separate? I could create a separate pool for GC headers, managed manually
    by the GC.
@@ -32,6 +26,9 @@ ALL YOUR DOCUMENTATION ARE BELONG TO HERE.
    with an optional init/deinit flag. This makes the GC more dynamic.
 */
 
+#include "parrot/parrot.h"
+#include "parrot/dod.h"
+
 #if #PARROT_GC_IT
 
 /*
@@ -39,6 +36,8 @@ ALL YOUR DOCUMENTATION ARE BELONG TO HERE.
 =item C<Parrot_gc_it_init>
 
 Initializes the GC, sets the necessary pointers in the interpreter.
+We initialize the Gc_it_data structure for the GC, and set the initial
+state of the collector.
 
 =cut
 
@@ -62,33 +61,7 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->init_pool         = Parrot_gc_it_pool_init;
 }
 
-/*
 
-=item C<Parrot_gc_it_run>
-
-Run the GC. Not sure what it means to "run" yet, might only run one
-increment, or one step from many.
-
-=cut
-
-*/
-
-/*
- * Basic Algorithm:
- * 1) Determine which pool/generation to scan
- * 2) Mark root items as being grey
- * 3) For all grey items, mark all children as grey, then mark item as black
- * 4) repeat (3) until there are no grey items in current pool/generation
- * 5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
- * 6) Add all items that are still white to the free list
- * 7) Scan through simple buffers, add white objects to free list
- * 8) reset all flags to white
- *
- * Only reclaim objects where there are no greys in the current area,
- * and when a run has completed. Do not reclaim, for instance, any white
- * objects after a run has completed and all black objects have been turned
- * back to white (which would free all objects, alive or dead).
- */
 
 /* Here is a (mostly-complete) list of stuff that needs to be traced
 as a global. This tracing work should all get done in
@@ -133,37 +106,60 @@ src/gc/dod.c:Parrot_dod_trace_root.
 #   define gc_it_trace(i) gc_it_trace_threaded(i);
 #endif
 
+/*
+
+=item C<Parrot_gc_it_run>
+
+Run the GC. Not sure what it means to "run" yet, might only run one
+increment, or one step from many.
+
+Basic Algorithm:
+1) Determine which pool/generation to scan
+2) Mark root items as being grey
+3) For all grey items, mark all children as grey, then mark item as black
+4) repeat (3) until there are no grey items in current pool/generation
+5) mark all objects grey that appear in IGP lists. Repeat (1) - (4) for these
+6) Add all items that are still white to the free list
+7) Scan through simple buffers, add white objects to free list
+8) reset all flags to white
+Only reclaim objects where there are no greys in the current area,
+and when a run has completed. Do not reclaim, for instance, any white
+objects after a run has completed and all black objects have been turned
+back to white (which would free all objects, alive or dead).
+
+Flags and other issues:
+GC_trace_normal = run a trace, or a partial trace, but not a sweep.
+    set the macro CHECK_IF_WE_BREAK_BEFORE_SWEEP, however we do that,
+    to break off the function after the trace phase.
+GC_trace_stack_FLAG = we need to trace the C stack and the processor
+    registers too. I wouldn't even know how to start doing this.
+GC_lazy_FLAG = Appears we run a sweep phase if we have already marked,
+    or complete the current mark and then sweep. Or, we find some other
+    way to free items that are obviously dead.
+GC_finish_FLAG = set all objects to dead, call all finalizers on PMC
+    objects. We don't need to mark free items, since everything is going
+    to die anyway.
+
+If GC_trace_normal && (GC_IT_FLAG_NEW_MARK || GC_IT_FLAG_RESUME_MARK)
+    run a trace or resume the current trace.
+
+if GC_trace_normal && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
+    do nothing
+
+if GC_lazy_FLAG && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
+    run a sweep, possibly to conclusion.
+
+if GC_finish_FLAG
+    run a complete sweep of the PMC area calling finalizers only but not
+    marking objects or adding objects to the free list
+
+=cut
+
+*/
+
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
-/* Check flags, figure out our mode of operation. Here are some:
-
-    GC_trace_normal = run a trace, or a partial trace, but not a sweep.
-        set the macro CHECK_IF_WE_BREAK_BEFORE_SWEEP, however we do that,
-        to break off the function after the trace phase.
-    GC_trace_stack_FLAG = we need to trace the C stack and the processor
-        registers too. I wouldn't even know how to start doing this.
-    GC_lazy_FLAG = Appears we run a sweep phase if we have already marked,
-        or complete the current mark and then sweep. Or, we find some other
-        way to free items that are obviously dead.
-    GC_finish_FLAG = set all objects to dead, call all finalizers on PMC
-        objects. We don't need to mark free items, since everything is going
-        to die anyway.
-
-    If GC_trace_normal && (GC_IT_FLAG_NEW_MARK || GC_IT_FLAG_RESUME_MARK)
-        run a trace or resume the current trace.
-
-    if GC_trace_normal && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
-        do nothing
-
-    if GC_lazy_FLAG && (GC_IT_FLAG_NEW_SWEEP || GC_IT_FLAG_RESUME_SWEEP)
-        run a sweep, possibly to conclusion.
-
-    if GC_finish_FLAG
-        run a complete sweep of the PMC area calling finalizers only but not
-        marking objects or adding objects to the free list
-*/
-
     const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = (Gc_it_data)(arena_base->gc_private);
     gc_it_config * const config = &(gc_priv_data->config);
@@ -207,7 +203,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             gc_it_trace(interp)
 #endif
 
-            if(gc_priv_data->queue == NULL)
+            if(gc_priv_data->queue == NULL &&
+               gc_priv_data->root_queue == NULL)
                 gc_priv_data->state = GC_IT_END_MARK;
             GC_IT_BREAK_AFTER_3;
 
@@ -235,15 +232,24 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             gc_priv_data->state == GC_IT_READY;
     }
     return;
-
-    /* I'm not sure how to deal with all these flags here, or how to integrate
-       them into my state machine above. I'll work on this later.
-
-    if(flags & GC_trace_normal)
-    if(flags & GC_lazy_FLAG)
-
-    */
 }
+
+/*
+
+=item C<gc_it_trace_normal>
+
+Perform a "normal" (i.e. not "threaded") trace. We run through the entire
+queue, and continue to scan until the queue is empty. The secret to the
+incremental behavior of the collector is careful limiting of what objects
+are added to the queue in the first place. We store root objects on the
+separate C<root_queue>, and add them one-at-a-time to the queue before
+we call this function. This algorithm is probably best called "tree at a
+time", because we scan a single tree from the root all the way through to
+it's children.
+
+=cut
+
+*/
 
 #if GC_IT_SERIAL_MODE
 void
@@ -265,6 +271,18 @@ gc_it_trace_normal(PARROT_INTERP)
     }
     gc_priv_data->queue = NULL;
 }
+
+/*
+
+=item C<gc_it_sweep_dead_objects>
+
+Perform a normal sweep phase. Go through each pool, and call the proper
+iterator function on each. The iterator functions will travel through
+each arena in the given pool, and will free dead objects in each arena.
+
+=cut
+
+*/
 
 static void
 gc_it_sweep_dead_objects(PARROT_INTERP)
@@ -297,6 +315,27 @@ gc_it_sweep_dead_objects(PARROT_INTERP)
     GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
 }
 
+/*
+
+=item C<gc_it_sweep_PMC_arenas>
+
+If the pool contains PMCs, we sweep through it. When a dead object is found,
+we call C<Parrot_dod_free_pmc> on it. This should, in theory, kill the PMC
+and clean up all it's dependencies. After the PMC is dead, we add it to the
+pool's free list.
+
+This function uses Duff's device magic for partial loop unrolling. We'll
+start at the end of the card, and mark forward. Duff's device is not
+necessarily the fastest way to unroll most loops, and it may interfere
+with branch prediction. However, I think it makes the most sense here,
+considering the layout of our flags.
+
+See L<http://en.wikipedia.org/wiki/Duff%27s_device> for more details.
+
+=cut
+
+*/
+
 inline static void
 gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
 {
@@ -310,14 +349,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Poo
         card = &(arena->cards[arena->_d->card_size]);
         PARROT_ASSERT(card);
         i = arena->_d->last_index;
-        /* Duff's device magic for partial loop unrolling. We'll start at
-           the end of the card, and mark forward. See
-           http://en.wikipedia.org/wiki/Duff%27s_device for more details.
-           Duff's device is not necessarily the fastest way to unroll a loop,
-           and it may interfere with branch prediction, but it makes the most
-           sense considering the layout of our flags.
-           I may need to double-check the order of flags here, but I think
-           this makes good sense. */
+
         switch (arena->_d->last_index % 4) {
             Gc_it_hdr * hdr;
             case 0:
@@ -372,12 +404,21 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Poo
     }
 }
 
+/*
+
+=item C<gc_it_sweep_header_arenas>
+
+Sweep through the header pool, and free dead objects. Unlike PMCs, we don't
+need to kill the dead object first (that i'm aware of), we just add the
+header to the pool's free list.
+
+=cut
+
+*/
+
 static void
 gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_Pool *pool)
 {
-    /* Sweep through all arenas in the given pool, finding white objects and
-       adding them to the free list. Headers dont require the custom
-       finalization action that PMCs require. */
     Small_Object_Arena * arena;
     Gc_it_card * card;
     register UINTVAL i;
@@ -428,33 +469,76 @@ gc_it_sweep_header_arenas(PARROT_INTERP, Gc_it_data *gc_priv_data, Small_Object_
         }
     }
 }
-
 #endif
+
+/*
+
+=item C<gc_it_trace_threaded>
+
+If the GC is running in multithreaded mode, we do whatever we need to do
+in that situation. This is not implemented. Here are some ideas of what we
+could do:
+
+1) We have a GC thread which is persistent. In that case, this function will
+do nothing, and that thread will run continuously in the background doing it's
+thing.
+2) We launch child threads every time this function is called. For each child
+thread, we enqueue a single root (probably as a thread function parameter)
+and run the thread to completion. The GC thread will trace through it's queue
+entirely, and will terminate when it's queue has become empty. When all child
+threads have terminated, and when all root queue items have been scanned, we
+move on to the sweep phase.
+3) Same as #2, but instead of blindly launching a child thread every time this
+function is called, we only launch up to a finite number of threads. If we
+have too many threads running already, we do not launch another one here.
+
+=cut
+
+*/
 
 #if GC_IT_PARALLEL_MODE
 void
 gc_it_trace_threaded(PARROT_INTERP)
 {
-    /* Check the current number of threads running. If we have space, launch
-       another thread to help with the mark. This is low priority, so we'll
-       deal with it later. */
+
 }
+
+/*
+
+=item C<gc_it_mark_threaded>
+
+Run one thread's worth of the trace algorithm, as discussed in the function
+documentation of C<gc_it_trace_threaded>
+
+=cut
+
+*/
 
 void
 gc_it_mark_threaded(PARROT_INTERP)
 {
-    /* spawn a thread to perform the current mark phase */
+
 }
 #endif
+
+/*
+
+=item C<gc_it_enqueue_all_roots>
+
+"batch mode" is a mode where the GC performs a complete stop-the-world
+mark phase, instead of the incremental behaviour which is the default.
+
+Moves all items from the root queue into the ordinary queue. If the queue
+is not empty, we run a trace first to mark all items on the queue already.
+
+=cut
+
+*/
 
 #if GC_IT_BATCH_MODE
 inline static void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
-    /* We've already found all the roots and if we are working in batch
-       mode we just take the list we've already gotten as the queue.
-       if the queue isn't empty, empty it first and then move on to the
-       next root. */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     if(gc_priv_data->queue != NULL)
         gc_it_trace_normal(interp);
@@ -464,20 +548,23 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
 }
 #endif
 
+/*
+
+=item C<gc_it_enqueue_root>
+
+In normal incremental mode, we add a single item from the root queue onto
+the ordinary queue. However, we only add aggregate items: non-aggregate
+root items are marked immediately and discarded. We don't want to waste
+an entire GC increment marking a single item.
+
+=cut
+
+*/
+
 #if GC_IT_INCREMENT_MODE
 static void
 gc_it_enqueue_next_root(PARROT_INTERP)
 {
-    /* enqueue next root, algorithm:
-        1) Get the next root item from gc_priv_data->root_queue
-        2) if it's an aggregate item, add it to the queue and return
-        3) if not, mark the item as live, remove from queue, and procede to
-           next item in the list
-        We don't require the queue to be empty here, we just add the next root
-        to the top of the queue. There might be some items added (such as
-        with the write barrier) between increments, so we keep those in the
-        queue at the end of the list.
-    */
     Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
     Gc_it_hdr * hdr = gc_priv_data->root_queue;
     PARROT_ASSERT(hdr);
@@ -498,10 +585,38 @@ gc_it_enqueue_next_root(PARROT_INTERP)
         }
     }
     /* If we've fallen through here, that means there are no more root objects,
-       no more objects to mark, and we move on to the next stage */
-    gc_priv_data->queue = NULL;
+       no more objects to mark, and we move on to the next stage. Notice
+       that there may be items in the regular queue, added by Parrot explicitly
+       between increments. Those still need to be traced, if any. */
+    PARROT_ASSERT(gc_priv_data->root_queue == NULL);
 }
 #endif
+
+/*
+
+=item C<gc_it_mark_children_grey>
+
+Mark the children of the current node grey. "Children" can be data, or
+metadata, and may be in several places. We need to search around to see
+what children there are, and add all of them to the queue.
+
+Places to search (for PMCs):
+1) C<PMC_metadata(obj)>
+2) C<obj->real_self>
+3) C<PMC_next_for_GC(obj)>
+4) all sorts of other places, so if the PMC is special, we have to
+C<mark_special> it.
+
+For all PObjs:
+1) PObj data, if C<PObj_data_is_PMC_array_FLAG>
+
+Also, if C<PObj_custom_mark_TEST(obj)>, we have to call the custom mark
+vtable function. Hopefully, all PMC mark VTABLE functions call
+C<pobject_lives> and don't try to monkey around with the PObj flags directly.
+
+=cut
+
+*/
 
 static inline void
 gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
@@ -514,7 +629,7 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
         if(PMC_metadata(obj))
             /* add the metadata PMC, if it exists */
             pobject_lives(interp, (PObj *)PMC_metadata(obj));
-        if (p->real_self != p)
+        if (obj->real_self != obj)
             /* if the "real self" of the PMC is separate, mark that too. */
             pobject_lives(interp, (PObj *)p->real_self);
         if(PMC_next_for_GC(obj) != obj) {
@@ -548,6 +663,10 @@ gc_it_mark_children_grey(Small_Object_Pool * pool, Gc_it_hdr * hdr)
 
 Kill the GC and reset everything.
 
+1) Free all generation structures
+2) Free all GC headers in all pools and arenas, if possible
+3) Free any additional memory that i will create in the future
+
 =cut
 
 */
@@ -556,11 +675,7 @@ void
 Parrot_gc_it_deinit(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
-    /* Algorithm:
-     * 1) Free all generation structures
-     * 2) Free all GC headers in all pools and arenas, if possible
-     * 3) Free any additional memory that i will create in the future
-     */
+
     mem_sys_free(arena_base->gc_private);
     arena_base->gc_private        = NULL;
     /* Null-out the function pointers, except the init pointer
@@ -601,6 +716,8 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 Adds a dead item to the free list. I suppose this is for cases where other
 systems are trying to manage their own memory manually.
 
+I don't really know what this is for, so I'm going to wing it.
+
 =cut
 
 */
@@ -609,13 +726,9 @@ static void
 gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
         PObj *to_add)
 {
-    /* I don't really know what this is for, so I'm going to wing it. */
-    /* Objects that aren't on the free list already, or on the queue, are
-       just floating. We can add this to the end of the free list very
-       easily. */
     const Gc_it_hdr * hdr = PObj_to_IT_HDR(to_add);
     GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-    Gc_it_mark_card(hdr, GC_IT_CARD_FREE); /* just in case */
+    Gc_it_mark_card(hdr, GC_IT_CARD_FREE);
 }
 
 /*
@@ -660,6 +773,22 @@ Allocate a new Small_Object_Arena from the OS. Set up the arena as
 necessary. The arena contains enough space to house several objects
 of the given size, and we allocate locally from these arenas as needed.
 
+The memory block for the arena is allocated large enough to hold not only the
+arena's object, but also the C<Small_Object_Arena> structure itself and the
+C<Gc_it_card> array for cardmarking. Here's a layout of how things look in
+memory:
+
+[ Small_Object_Arena | Cards | ... Objects ... ]
+
+And each object looks like this:
+
+[ Gc_it_hdr | Data ]
+
+This kind of layout requires a few extra pointer operations, which is
+obnoxious, but it saves on fewer allocations and making better use of memory
+locality. Once everything gets set up, macros and cached pointers hide all
+the initialization nastyness.
+
 =cut
 
 */
@@ -673,19 +802,6 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     const size_t size = real_size * pool->objects_per_alloc + /* the stuff */
                         sizeof(Small_Object_Arena) + /* for the arena struct */
                         card_size * sizeof(Gc_it_card); /* for the card */
-
-    /* Instead of two separate allocations here, let's do a single big
-       allocation, and append the two doodads together. We save on spacial
-       locality, fewer allocations, less fragmentation, etc.
-       Ideally, this is what we should have in the memory location:
-
-       [ Small_Object_Arena | Cards | ... Objects ... ]
-
-       And each object looks like this:
-
-       [ Gc_it_hdr | Data ]
-
-    */
 
     Small_Object_Arena * const new_arena = mem_internal_allocate(size);
     new_arena->card_info.card_size = card_size;
@@ -711,10 +827,31 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     }
 }
 
+/*
+
+=item C<gc_it_add_arena_to_free_list>
+
+Take a newly allocated arena structure, and add all of it's new objects to
+the pool's free list. We start at the beginning of the arena's memory block
+and do the following steps:
+
+1) add the current object to the free list
+2) initialize the C<parent_pool> and C<index> fields of the object, for fast
+   lookup later.
+3) calculate the address of the next GC header in the arena. This is the part
+   that requires pointer dark magic, and is likely the source of bugs.
+4) set the C<next> field of the current object to the address of the
+   next object, which we've just calculated in #3 above. Update the current
+   object pointer to point to the next item.
+5) repeat for all items in the arena
+
+=cut
+
+*/
+
 static void
 gc_it_add_arena_to_free_list(PARROT_INTERP, 
-                             ARGMOD(Small_Object_Pool *pool),
-                             ARGMOD(Small_Object_Arena *new_arena))
+    ARGMOD(Small_Object_Pool *pool), ARGMOD(Small_Object_Arena *new_arena))
 {
     Gc_it_hdr * p = new_arena->start_objects;
     Gc_it_hdr * temp;
@@ -722,17 +859,6 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     const size_t num_objs = new_arena->total_objects;
 
     for(i = 0; i < num_objs - 1; i++) {
-        /* Here is what needs to happen in this loop:
-           1) add the current object to the free list
-           2) initialize parent_pool and index fields of the object
-           3) calculate the address of the next GC header in the arena
-           4) set the ->next field of the current object to the address of the
-              next object.
-           5) repeat for all items in the arena
-           My pointer voodoo might be mistaken, so we need to check this
-           closely.
-        */
-
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
 
@@ -752,7 +878,18 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     pool->num_free_objects += num_objs;
 }
 
-/* Mark an object's card with a given flag */
+/*
+
+=item C<gc_it_set_card_mark>
+
+Mark the card associated with the given item to the value given by C<flag>.
+We've done a lot of value caching, so finding the card is as easy
+as a few pointer dereferences and a little bit of algebra. Each card contains
+4 flags.
+
+=cut
+
+*/
 
 static void
 gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
@@ -775,7 +912,15 @@ gc_it_set_card_mark(Gc_it_hdr * hdr, UINTVAL flag)
     }
 }
 
-/* return an object's card value */
+/*
+
+=item C<gc_it_get_card_mark>
+
+Return the current flag value associated with the given object header.
+
+=cut
+
+*/
 
 static UINTVAL
 gc_it_get_card_mark(Gc_it_hdr * hdr)
@@ -818,8 +963,6 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     }
     gc_it_alloc_objects(interp, pool);
 }
-
-
 
 
 #endif  /* PARROT_GC_IT */
