@@ -87,12 +87,12 @@ src/gc/dod.c:Parrot_dod_trace_root.
    if we should fall through to the next stage upon completion */
 #define GC_IT_BREAK_AFTER_0
 #define GC_IT_BREAK_AFTER_1
-#define GC_IT_BREAK_AFTER_2
-#define GC_IT_BREAK_AFTER_3
+#define GC_IT_BREAK_AFTER_2 break
+#define GC_IT_BREAK_AFTER_3 break
 #define GC_IT_BREAK_AFTER_4
-#define GC_IT_BREAK_AFTER_5
-#define GC_IT_BREAK_AFTER_6
-#define GC_IT_BREAK_AFTER_7
+#define GC_IT_BREAK_AFTER_5 break
+#define GC_IT_BREAK_AFTER_6 break
+#define GC_IT_BREAK_AFTER_7 break
 
 /* the number of items we must scan minimum before we move on. If we run a
    mark increment and do not meet this minimum, we enqueue the next root
@@ -193,38 +193,47 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         case GC_IT_RESUME_MARK:
 #if GC_IT_INCREMENT_MODE
+            /* scan a single tree. Check to ensure we've hit a minimum number
+               of items. If not, scan another tree. */
             do {
                 gc_it_enqueue_next_root(interp);
                 gc_it_trace(interp);
             } while(gc_priv_data->item_count < GC_IT_ITEMS_MARKED_MIN &&
                     gc_priv_data->root_queue != NULL);
-#elif GC_IT_BATCH_MODE
-            gc_it_enqueue_all_roots(interp);
-            gc_it_trace(interp)
-#endif
-
+            /* We've either scanned the necessary number of items, or we've
+               run out of new root items to scan. Check to see if the mark
+               is complete, and if so move to the next state. Otherwise,
+               stay at the same state so we can come back. */
             if(gc_priv_data->queue == NULL &&
                gc_priv_data->root_queue == NULL)
                 gc_priv_data->state = GC_IT_END_MARK;
+            else
+                break;
+#elif GC_IT_BATCH_MODE
+            /* in batch mode, enqueue all roots, and scan the entire pile */
+            gc_it_enqueue_all_roots(interp);
+            gc_it_trace(interp)
+#endif
             GC_IT_BREAK_AFTER_3;
 
         case GC_IT_END_MARK:
             /* Don't know if there is anything to be done here */
-            gc_priv_data->state == GC_IT_START_SWEEP;
+            gc_priv_data->state = GC_IT_SWEEP_PMCS;
             GC_IT_BREAK_AFTER_4;
 
         case GC_IT_SWEEP_PMCS:
             gc_it_sweep_pmc_pools(interp);
-            gc_priv_data->state == GC_IT_RESUME_SWEEP;
+            gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
         case GC_IT_SWEEP_HEADERS:
             gc_it_sweep_header_pools(interp);
+            gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
             gc_it_sweep_sized_pools(interp);
-            gc_priv_data->state == GC_IT_FINAL_CLEANUP;
+            gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
         case GC_IT_FINAL_CLEANUP:
