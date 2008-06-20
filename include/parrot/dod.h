@@ -211,6 +211,65 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/gc_ims.c */
 
+/* HEADERIZER BEGIN: src/gc/gc_it.c */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+PARROT_API
+void gc_it_add_free_object(PARROT_INTERP,
+    ARGMOD(Small_Object_Pool *pool),
+    ARGMOD(PObj *to_add))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*pool)
+        FUNC_MODIFIES(*to_add);
+
+PARROT_API
+void gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+PARROT_API
+PObj * gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
+PARROT_API
+void gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
+PARROT_API
+void Parrot_gc_it_deinit(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+PARROT_API
+void Parrot_gc_it_init(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+PARROT_API
+void Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
+PARROT_API
+void Parrot_gc_it_run(PARROT_INTERP, int flags)
+        __attribute__nonnull__(1);
+
+void gc_it_mark_threaded(SHIM_INTERP);
+void gc_it_trace_normal(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+void gc_it_trace_threaded(SHIM_INTERP);
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: src/gc/gc_it.c */
+
 /*
  * write barrier
  */
