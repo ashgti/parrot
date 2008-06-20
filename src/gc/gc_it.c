@@ -213,17 +213,17 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             gc_priv_data->state == GC_IT_START_SWEEP;
             GC_IT_BREAK_AFTER_4;
 
-        case GC_IT_START_SWEEP:
-            gc_it_sweep_normal(interp);
+        case GC_IT_SWEEP_PMCS:
+            gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state == GC_IT_RESUME_SWEEP;
             GC_IT_BREAK_AFTER_5;
 
-        case GC_IT_RESUME_SWEEP:
-            gc_it_sweep_dead_objects(interp);
+        case GC_IT_SWEEP_HEADERS:
+            gc_it_sweep_header_pools(interp);
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
-            gc_it_sweep_buffers(interp);
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state == GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -274,18 +274,18 @@ gc_it_trace_normal(PARROT_INTERP)
 
 /*
 
-=item C<gc_it_sweep_dead_objects>
+=item C<gc_it_sweep_pmc_pools>
 
-Perform a normal sweep phase. Go through each pool, and call the proper
-iterator function on each. The iterator functions will travel through
-each arena in the given pool, and will free dead objects in each arena.
+Sweep through the PMC pools, freeing dead objects.
 
 =cut
 
 */
 
+#define GC_IT_DEAL_WITH_PMC_EXT(x)
+
 static void
-gc_it_sweep_dead_objects(PARROT_INTERP)
+gc_it_sweep_pmc_pools(PARROT_INTERP)
 {
     const Arenas * const arena_base = interp->arena_base;
     Gc_it_data * const gc_priv_data = arena_base->gc_private;
@@ -295,26 +295,64 @@ gc_it_sweep_dead_objects(PARROT_INTERP)
         arena_base->pmc_pool,
         arena_base->constant_pmc_pool
     };
+    register UINTVAL i;
+    for(i = 0; i < 2; i++) {
+        gc_it_sweep_PMC_arenas(gc_priv_data, pmc_pools[i]);
+    }
+    /* I'm going to ignore PMC_EXT for now, it has a separate, special
+       marking system set up for it already and I dont know that anything
+       I do here will improve on that. */
+    GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
+}
+
+/*
+
+=item C<gc_it_sweep_header_pools>
+
+Sweep through the header pools, freeing dead objects.
+
+=cut
+
+*/
+
+static void
+gc_it_sweep_header_pools(PARROT_INTERP)
+{
+    const Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = arena_base->gc_private;
     const Small_Object_Pool * const header_pools[] = {
         arena_base->string_header_pool,
         arena_base->buffer_header_pool,
         arena_base->constant_string_header_pool
     };
     register UINTVAL i;
-    for(i = 0; i < 2; i++) {
-        gc_it_sweep_PMC_arenas(gc_priv_data, pmc_pools[i]);
-    }
     for(i = 0; i < 3; i++) {
         gc_it_sweep_header_arenas(gc_priv_data, header_pools[i]);
     }
+}
+
+/*
+
+=item C<gc_it_sweep_sized_pools>
+
+Sweep through the sized pools, freeing dead objects.
+
+=cut
+
+*/
+
+static void
+gc_it_sweep_sized_pools(PARROT_INTERP)
+{
+    const Arenas * const arena_base = interp->arena_base;
+    Gc_it_data * const gc_priv_data = arena_base->gc_private;
+    register UINTVAL i;
     for(i = arena_base->num_sized - ; i >= 0; i--) {
         Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
         if(pool)
             gc_it_sweep_sized_arenas(gc_priv_data, pool);
     }
-    GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
 }
-
 /*
 
 =item C<gc_it_sweep_PMC_arenas>

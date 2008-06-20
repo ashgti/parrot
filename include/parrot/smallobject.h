@@ -245,8 +245,8 @@ typedef enum _gc_it_state {
     GC_IT_MARK_ROOTS,    /* finding root objects */
     GC_IT_RESUME_MARK,   /* iterating over queue items, tree-at-a-time */
     GC_IT_END_MARK,      /* The mark is over, do cleanup, if any */
-    GC_IT_START_SWEEP,   /* start the sweep, initialize it */
-    GC_IT_RESUME_SWEEP,  /* resuming a partial sweep */
+    GC_IT_SWEEP_PMCS,    /* sweep pmc pools */
+    GC_IT_SWEEP_HEADERS, /* sweep header pools */
     GC_IT_SWEEP_BUFFERS, /* sweep through all buffers, after everything else */
     GC_IT_FINAL_CLEANUP  /* do any necessary cleanup after the GC run is over */
 } Gc_it_state;
