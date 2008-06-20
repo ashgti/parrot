@@ -31,6 +31,12 @@ Open Questions:
 
 #if #PARROT_GC_IT
 
+#if GC_IT_SERIAL_MODE
+#   define gc_it_trace(i) gc_it_trace_normal(i);
+#elif GC_IT_PARALLEL_MODE
+#   define gc_it_trace(i) gc_it_trace_threaded(i);
+#endif
+
 /*
 
 =item C<Parrot_gc_it_init>
@@ -60,51 +66,6 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->de_init_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool         = Parrot_gc_it_pool_init;
 }
-
-
-
-/* Here is a (mostly-complete) list of stuff that needs to be traced
-as a global. This tracing work should all get done in
-src/gc/dod.c:Parrot_dod_trace_root.
-1) interp->iglobals (an aggregate array PMC)
-2) "system areas" (src/cpu_dep.c:trace_system_areas)
-3) current context CONTEXT(interp)
-4) dynamic stack (see src.stack.c:mark_stack)
-5) vtables (see src/vtables.c:mark_vtables)
-6) exceptions (interp->exception_list)
-7) root namespace (interp->root_namespace)
-8) The scheduler (interp->scheduler)
-9) const subs (src/packfile.c:mark_const_subs)
-10) caches (src/oo.c:mark_object_cache)
-11) class hash (interp->class_hash)
-12) DOD registry (interp->DOD_registry)
-13) transaction log (src/stm/backend.c:Parrot_STM_mark_transaction)
-14) IO Data (src/io/io.c:Parrot_IOData_mark)
-15) IGP pointers (if we haven't done too much work already)
-*/
-
-/* Set these to "break" if we break after the given stage. Leave them empty
-   if we should fall through to the next stage upon completion */
-#define GC_IT_BREAK_AFTER_0
-#define GC_IT_BREAK_AFTER_1
-#define GC_IT_BREAK_AFTER_2 break
-#define GC_IT_BREAK_AFTER_3 break
-#define GC_IT_BREAK_AFTER_4
-#define GC_IT_BREAK_AFTER_5 break
-#define GC_IT_BREAK_AFTER_6 break
-#define GC_IT_BREAK_AFTER_7 break
-
-/* the number of items we must scan minimum before we move on. If we run a
-   mark increment and do not meet this minimum, we enqueue the next root
-   (if any) and continue */
-
-#define GC_IT_ITEMS_MARKED_MIN  1
-
-#if GC_IT_SERIAL_MODE
-#   define gc_it_trace(i) gc_it_trace_normal(i);
-#elif GC_IT_PARALLEL_MODE
-#   define gc_it_trace(i) gc_it_trace_threaded(i);
-#endif
 
 /*
 
@@ -1011,6 +972,22 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     gc_it_alloc_objects(interp, pool);
 }
 
+/*
+
+=item C<static void gc_it_post_sweep_cleanup>
+
+Cleanup the GC system after we've completed an entire mark and sweep.
+Currently, no cleanup is needed, so this function does nothing.
+
+=cut
+
+*/
+
+static void
+gc_it_post_sweep_cleanup(SHIM_INTERP)
+{
+    UNUSED(interp);
+}
 
 #endif  /* PARROT_GC_IT */
 

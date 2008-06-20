@@ -143,6 +143,23 @@ typedef struct _gc_gms_gen {
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
     (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object-size*(i))
 
+/* minimum number of items to scan in a single increment. If we haven't reached
+   this minimum, go back and do another increment. */
+#define GC_IT_ITEMS_MARKED_MIN  20
+
+/* behavior macros to determine where the incremental mode breaks. Each
+   increment runs from the current state until the next "break", or until
+   the end if there are no more breaks. Some states might require several
+   increments before completion and moving to the next state. */
+#define GC_IT_BREAK_AFTER_0
+#define GC_IT_BREAK_AFTER_1
+#define GC_IT_BREAK_AFTER_2 break
+#define GC_IT_BREAK_AFTER_3 break
+#define GC_IT_BREAK_AFTER_4
+#define GC_IT_BREAK_AFTER_5 break
+#define GC_IT_BREAK_AFTER_6 break
+#define GC_IT_BREAK_AFTER_7 break
+
 /*
  * GC_IT Header, a linked list.
  * Contains a link to the pool/arena (don't know which) that contains this item
