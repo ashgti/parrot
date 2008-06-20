@@ -724,7 +724,7 @@ I don't really know what this is for, so I'm going to wing it.
 
 static void
 gc_it_add_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool),
-        PObj *to_add)
+    PObj *to_add)
 {
     const Gc_it_hdr * hdr = PObj_to_IT_HDR(to_add);
     GC_IT_ADD_TO_FREE_LIST(pool, hdr);

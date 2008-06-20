@@ -518,6 +518,23 @@ method routine_declarator($/, $key) {
 }
 
 
+method enum_declarator($/, $key) {
+    # Named enums aren't done yet, just the easy anonymous kind.
+    if $<name> {
+        $/.panic("Named enums not yet implemented.");
+    }
+    else {
+        # Get the list of values and call anonymous enum constructor.
+        my $values := $( $/{$key} );
+        make PAST::Op.new(
+            :pasttype('call'),
+            :name('!anon_enum'),
+            $values
+        );
+    }
+}
+
+
 method routine_def($/) {
     my $past := $( $<block> );
     if $<ident> {
@@ -537,6 +554,7 @@ method method_def($/) {
     $past.control('return_pir');
     make $past;
 }
+
 
 method signature($/) {
     my $params := PAST::Stmts.new( :node($/) );
@@ -571,6 +589,29 @@ method signature($/) {
                     :inline('%r = self')
                 )
             ));
+        }
+
+        # Are we going to take the type of the thing we were passed and bind
+        # it to an abstraction parameter?
+        if $_<parameter><generic_binder> {
+            my $tv_var := $( $_<parameter><generic_binder>[0]<variable> );
+            $params.push(PAST::Op.new(
+                :pasttype('bind'),
+                PAST::Var.new(
+                    :name($tv_var.name()),
+                    :scope('lexical'),
+                    :isdecl(1)
+                ),
+                PAST::Op.new(
+                    :pasttype('callmethod'),
+                    :name('WHAT'),
+                    PAST::Var.new(
+                        :name($parameter.name()),
+                        :scope('lexical')
+                    )
+                )
+            ));
+            $past.symbol($tv_var.name(), :scope('lexical'));
         }
 
         # See if we have any traits. For now, we just handle ro, rw and copy.
@@ -1742,6 +1783,21 @@ method variable($/, $key) {
                 $past.scope('attribute');
             }
 
+            # If we have something with an & sigil see if it has any entries
+            # in the enclosing blocks; otherwise, default to package.
+            if $<sigil> eq '&' {
+                $past.scope('package');
+                our @?BLOCK;
+                for @?BLOCK {
+                    if defined($_) {
+                        my $sym_table := $_.symbol($name);
+                        if defined($sym_table) && defined($sym_table<scope>) {
+                            $past.scope( $sym_table<scope> );
+                        }
+                    }
+                }
+            }
+
             my $container_type;
             if    $sigil eq '@' { $container_type := 'Perl6Array'  }
             elsif $sigil eq '%' { $container_type := 'Perl6Hash'   }
@@ -1929,6 +1985,7 @@ method quote_term($/, $key) {
 
 
 method typename($/) {
+    # Extract shortname part of identifier, if there is one.
     my $ns := $<name><ident>;
     my $shortname;
     PIR q<    $P0 = find_lex '$ns'         >;
@@ -1936,13 +1993,33 @@ method typename($/) {
     PIR q<    $P1 = pop $P0                >;
     PIR q<    store_lex '$ns', $P0         >;
     PIR q<    store_lex '$shortname', $P1  >;
-    make PAST::Var.new(
+
+    # Create default PAST node for package lookup of type.
+    my $past := PAST::Var.new(
         :name($shortname),
         :namespace($ns),
         :scope('package'),
         :node($/),
         :viviself('Failure')
     );
+
+    # If there's no namespace, could be lexical abstraction type.
+    if +@($ns) == 0 {
+        # See if we got lexical with the right name.
+        our @?BLOCK;
+        my $name := '::' ~ $shortname;
+        for @?BLOCK {
+            if defined($_) {
+                my $sym_table := $_.symbol($name);
+                if defined($sym_table) && defined($sym_table<scope>) {
+                    $past.name( $name );
+                    $past.scope( $sym_table<scope> );
+                }
+            }
+        }
+    }
+
+    make $past;
 }
 
 
@@ -2024,6 +2101,36 @@ method EXPR($/, $key) {
             $target
         );
 
+        make $past;
+    }
+    elsif ~$<type> eq 'infix:does' {
+        # If the RHS is a subcall, need to handle it specially, since this is
+        # not really a call, but supplying value to init first attribute with.
+        my $lhs := $( $/[0] );
+        my $rhs := $( $/[1] );
+        my $past := PAST::Op.new(
+            :pasttype('call'),
+            :name('infix:does'),
+            $lhs
+        );
+        if $rhs.WHAT() eq 'Op' && $rhs.pasttype() eq 'call' {
+            # Make sure we only have one initialization value.
+            if +@($rhs) != 1 {
+                $/.panic("Role initialization can only supply a value for one attribute");
+            }
+
+            # Extract role name.
+            $past.push(PAST::Var.new(
+                :name($rhs.name()),
+                :scope('package')
+            ));
+
+            # Push on initialization value.
+            $past.push($rhs[0]);
+        }
+        else {
+            $past.push($rhs);
+        }
         make $past;
     }
     else {
