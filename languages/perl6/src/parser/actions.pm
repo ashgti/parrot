@@ -111,6 +111,9 @@ method statement($/, $key) {
     if $key eq 'statement_control' {
         $past := $( $<statement_control> );
     }
+    elsif $key eq 'null' {
+        $past := PAST::Stmts.new();  # empty stmts seem eliminated by TGE
+    }
     else {
         my $expr := $( $<expr> );
         if $expr.WHAT() eq 'Block' && !$expr.blocktype() {
@@ -226,12 +229,12 @@ method given_statement($/) {
     # Node to assign expression to $_.
     my $expr := $( $<EXPR> );
     my $assign := PAST::Op.new(
+        PAST::Var.new( :name('$_') ),
+        $( $<EXPR> ),
         :name('infix::='),
         :pasttype('bind'),
         :node($/)
     );
-    $assign.push( PAST::Var.new( :node($/), :name('$_'), :scope('lexical') ) );
-    $assign.push( $expr );
 
     # Put as first instruction in block (but after .lex $_).
     my $statements := $past[1];
@@ -248,16 +251,13 @@ method when_statement($/) {
     # exit the innermost block in which $_ was set.
 
     # Invoke smartmatch of the expression.
-    my $expr := $( $<EXPR> );
     my $match_past := PAST::Op.new(
+        PAST::Var.new( :name('$_') ),
+        $( $<EXPR> ),
         :name('infix:~~'),
         :pasttype('call'),
         :node($/)
     );
-    $match_past.push(
-        PAST::Var.new( :node($/), :name('$_'), :scope('lexical') )
-    );
-    $match_past.push( $expr );
 
     # Use the smartmatch result as the condition.
     my $past := PAST::Op.new(
@@ -447,7 +447,7 @@ method statement_prefix($/) {
 }
 
 
-method plurality_declarator($/) {
+method multi_declarator($/) {
     my $past := $( $<routine_declarator> );
     if $<sym> eq 'multi' {
         our $?PARAM_TYPE_CHECK;
@@ -1986,13 +1986,8 @@ method quote_term($/, $key) {
 
 method typename($/) {
     # Extract shortname part of identifier, if there is one.
-    my $ns := $<name><ident>;
-    my $shortname;
-    PIR q<    $P0 = find_lex '$ns'         >;
-    PIR q<    $P0 = clone $P0              >;
-    PIR q<    $P1 = pop $P0                >;
-    PIR q<    store_lex '$ns', $P0         >;
-    PIR q<    store_lex '$shortname', $P1  >;
+    my $ns := $<name><ident>.clone();
+    my $shortname := $ns.pop();
 
     # Create default PAST node for package lookup of type.
     my $past := PAST::Var.new(
@@ -2023,21 +2018,28 @@ method typename($/) {
 }
 
 
-method subcall($/, $key) {
+method term($/, $key) {
     my $past;
-    if $key eq 'subcall' {
+    if $key eq 'func args' {
         $past := build_call( $( $<semilist> ) );
         $past.name( ~$<ident> );
-        $past.node( $/ );
+    }
+    elsif $key eq 'listop args' {
+        $past := build_call( $( $<arglist> ) );
+        $past.name( ~$<ident> );
+    }
+    elsif $key eq 'listop noarg' {
+        $past := PAST::Op.new( :name( ~$<ident> ), :pasttype('call') );
     }
     elsif $key eq 'VAR' {
         $past := PAST::Op.new(
-            :pasttype('call'),
             :name('!VAR'),
-            :node($/),
+            :pasttype('call'),
             $( $<variable> )
         );
     }
+    else { $past := $( $/{$key} ); }
+    $past.node($/);
     make $past;
 }
 
@@ -2046,20 +2048,6 @@ method semilist($/) {
     my $past := $<EXPR>
                     ?? $( $<EXPR>[0] )
                     !! PAST::Op.new( :node($/), :name('infix:,') );
-    make $past;
-}
-
-
-method listop($/, $key) {
-    my $past;
-    if $key eq 'arglist' {
-        $past := build_call( $( $<arglist> ) );
-    }
-    if $key eq 'noarg' {
-        $past := PAST::Op.new( :pasttype('call') );
-    }
-    $past.name( ~$<sym> );
-    $past.node($/);
     make $past;
 }
 
@@ -2104,29 +2092,21 @@ method EXPR($/, $key) {
         make $past;
     }
     elsif ~$<type> eq 'infix:does' {
-        # If the RHS is a subcall, need to handle it specially, since this is
-        # not really a call, but supplying value to init first attribute with.
-        my $lhs := $( $/[0] );
-        my $rhs := $( $/[1] );
         my $past := PAST::Op.new(
+            $( $/[0] ),
             :pasttype('call'),
             :name('infix:does'),
-            $lhs
+            :node($/)
         );
-        if $rhs.WHAT() eq 'Op' && $rhs.pasttype() eq 'call' {
+        my $rhs := $( $/[1] );
+        if $rhs.HOW().isa(PAST::Op) && $rhs.pasttype() eq 'call' {
             # Make sure we only have one initialization value.
-            if +@($rhs) != 1 {
+            if +@($rhs) > 2 {
                 $/.panic("Role initialization can only supply a value for one attribute");
             }
-
-            # Extract role name.
-            $past.push(PAST::Var.new(
-                :name($rhs.name()),
-                :scope('package')
-            ));
-
-            # Push on initialization value.
+            # Push role name and argument onto infix:does
             $past.push($rhs[0]);
+            $past.push($rhs[1]);
         }
         else {
             $past.push($rhs);

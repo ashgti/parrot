@@ -44,7 +44,7 @@
  * Please note that only '0' is tested.
  */
 
-#define PARROT_GC_SUBSYSTEM 0
+#define PARROT_GC_SUBSYSTEM 3
 
 #if PARROT_GC_SUBSYSTEM == 0
 #  define PARROT_GC_MS      1
@@ -63,7 +63,6 @@
 #  define PARROT_GC_IMS     0
 #  define PARROT_GC_GMS     1
 #  define PARROT_GC_IT      0
-#endif
 #endif
 #if PARROT_GC_SUBSYSTEM == 3
 #  define PARROT_GC_MS      0

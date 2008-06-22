@@ -203,6 +203,7 @@ rule statement {
             {*}                                  #= statement_mod_cond
         || {*}                                   #= expr
         ]
+    | <?before ';'> {*}                          #= null
 }
 
 rule statement_control {
@@ -321,7 +322,7 @@ rule statement_prefix {
 
 #### Subroutine and method definitions ####
 
-rule plurality_declarator {
+rule multi_declarator {
     $<sym>=[multi|proto|only] <routine_declarator> {*}
 }
 
@@ -439,7 +440,6 @@ token special_variable {
 
 token expect_term {
     | <noun> <postfix>* {*}                      #= noun
-    | <listop> {*}                               #= listop
     | '*' {*}                                    #= *
 }
 
@@ -491,26 +491,47 @@ token postcircumfix {
 # can be a noun too in STD.pm. However, at the moment that seems to lead us
 # to infinite recursion.
 token noun {
+    | <fatarrow> {*}                             #= fatarrow
     | <package_declarator> {*}                   #= package_declarator
     | <scope_declarator> {*}                     #= scope_declarator
-    | <plurality_declarator> {*}                 #= plurality_declarator
+    | <multi_declarator> {*}                     #= multi_declarator
     | <routine_declarator> {*}                   #= routine_declarator
+    | <regex_declarator> {*}                     #= regex_declarator
+    | <type_declarator> {*}                      #= type_declarator
     | <enum_declarator> {*}                      #= enum_declarator
     | <circumfix> {*}                            #= circumfix
     | <variable> {*}                             #= variable
-    | <subcall> {*}                              #= subcall
+    | <statement_prefix> {*}                     #= statement_prefix
     | <dotty>                                    #= dotty
     | <value> {*}                                #= value
-    | <capterm> {*}                              #= capterm
-    | <statement_prefix> {*}                     #= statement_prefix
-    | <regex_declarator> {*}                     #= regex_declarator
-    | <type_declarator> {*}                      #= type_declarator
-    | <colonpair> {*}                            #= colonpair
-    | <fatarrow> {*}                             #= fatarrow
     | 'self' >> {*}                              #= self
     | 'undef' >> {*}                             #= undef
+    | <term> {*}                                 #= term
+    | <capterm> {*}                              #= capterm
+    | <colonpair> {*}                            #= colonpair
 }
 
+
+token term {
+    [
+    | 'VAR(' <variable> ')' {*}                  #= VAR
+    | <typename> {*}                             #= typename
+    | <ident=named_0ary>
+        [ <.unsp>? '.'? '(' <.ws> ')' ]?
+        {*}                                      #= listop noarg
+    | <ident>
+        [
+        | \s <arglist> {*}                       #= listop args
+        | <.unsp>? '.'? '(' <semilist> ')' {*}   #= func args
+        | :: {*}                                 #= listop noarg
+        ]
+    ]
+}
+
+##  XXX: cheat until we get term:pi, term:rand, term:undef, etc.
+token named_0ary {
+    [pi|rand] >>
+}
 
 rule package_declarator {
     [
@@ -603,7 +624,6 @@ token name {
 token value {
     | <quote> {*}                                #= quote
     | <number> {*}                               #= number
-    | <typename> {*}                             #= typename
 }
 
 ##  Quoting is tricky -- the <quote_concat> subrule is in
@@ -694,11 +714,6 @@ token name {
     {*}
 }
 
-token subcall {
-    | 'VAR(' <variable> ')' {*}             #= VAR
-    | <ident> '.'? '(' <semilist> ')' {*}   #= subcall
-}
-
 # These regex rules are some way off STD.pm at the moment, but we'll work them
 # closer to it over time.
 rule regex_declarator {
@@ -733,20 +748,8 @@ rule semilist {
     {*}
 }
 
-##  S05 has this as prefix:listop... but since the operand (arglist)
-##  is part of the prefix token, PGE's operator precedence parser
-##  is left without an argument to parse.  So, for now we treat
-##  listop as the last (lowest priority) of the terms to be parsed.
-token listop {
-    <sym=ident>
-    [
-    || \s <arglist> {*}                          #= arglist
-    || {*}                                       #= noarg
-    ]
-}
-
 token arglist {
-    <EXPR>   # FIXME: need to parse only to list prefix priority
+    <EXPR: 'e='>                                 # EXPR(%list_assignment)
     {*}
 }
 
@@ -787,8 +790,4 @@ token desigilname {
 
 proto 'term:' is precedence('z=')
     is parsed(&expect_term)
-    { ... }
-
-proto 'prefix:' is precedence('e=')
-    is parsed(&listop)
     { ... }
