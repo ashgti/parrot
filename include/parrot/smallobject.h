@@ -8,6 +8,12 @@
 
 #  include "parrot/parrot.h"
 
+#if PARROT_GC_IT
+/* forward declarations */
+union Gc_it_card;
+struct Gc_it_hdr;
+#endif
+
 typedef struct Small_Object_Arena {
     size_t                     used;
     size_t                     total_objects;
@@ -15,7 +21,7 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *next;
     void                      *start_objects;
 #if PARROT_GC_IT
-    struct _gc_it_card        *cards;
+    union Gc_it_card        *cards;
     union {        /* store 2 16-bit values, force UINTVAL alignment */
         struct {   /* These shouldn't get bigger then 65535, i don't think */
             unsigned short int card_size;
@@ -92,10 +98,10 @@ typedef struct _gc_gms_gen {
 
 /* Switches and modes */
 
-#define GC_IT_INCREMENT_MODE 1
-/* #define GC_IT_BATCH_MODE 1 */
-#define GC_IT_SERIAL_MODE 1
-/* #define GC_IT_PARALLEL_MODE 1 */
+#define GC_IT_INCREMENT_MODE    1
+#define GC_IT_BATCH_MODE        0
+#define GC_IT_SERIAL_MODE       1
+#define GC_IT_PARALLEL_MODE     0
 
 #ifdef GC_IT_PARALLEL_MODE
 #   define GC_IT_THREAD_MAX 4
@@ -168,10 +174,10 @@ typedef struct _gc_gms_gen {
  * the arena.
  */
 
-typedef struct _gc_it_hdr {
-    struct _gc_it_hdr *next;
-    Small_Object_Arena * parent_pool;
-    union _gc_it_card_index {
+typedef struct Gc_it_hdr {
+    struct Gc_it_hdr   *next;
+    Small_Object_Arena *parent_pool;
+    union {
         UINTVAL _x_align; /* force UINTVAL alignment and sizing */
         struct {
             unsigned short card;
@@ -189,9 +195,9 @@ typedef struct _gc_it_hdr {
  * avoid a lot of manual bitwise arithmetic
  */
 
-typedef union _gc_it_card {
+typedef union Gc_it_card {
     unsigned char _c;  /* the card */
-    struct _card_flag_overlay { /* easy-access bitfield overlays */
+    struct { /* easy-access bitfield overlays */
         unsigned flag1:2;
         unsigned flag2:2;
         unsigned flag3:2;
@@ -214,49 +220,11 @@ typedef union _gc_it_card {
 #define IT_HDR_to_PObj(p) ((PObj*) ((p)+1))
 
 /*
- * Structure to define individual generations.
- * Initially borrowed from the GC_GMS
- */
-
-typedef struct _gc_it_gen {
-    UINTVAL gen_no;                     /* generation number */
-    UINTVAL timely_destruct_obj_sofar;  /* sum up to this generation */
-    struct _gc_it_hdr *first;           /* first header in this generation */
-    struct _gc_it_hdr *last;            /* last header in this generation */
-    struct _gc_it_hdr *finalize;        /* need destruction/finalization */
-    struct Small_Object_Pool *pool;     /* where this generation belongs to */
-    Gc_gms_hdr_list igp;                /* IGPs for this generation */
-    UINTVAL n_possibly_dead;            /* overwritten count */
-    UINTVAL n_objects;                  /* live objects count */
-    struct _gc_gms_gen *prev;
-    struct _gc_gms_gen *next;
-} Gc_gms_gen;
-
-/*
- * Other structures to help with generational capabilities.
- * Borrowed from GC_GMS, initially. I actually don't think I need these
- * store structures, so I'll probably delete them
- */
-
-#  define GC_IT_STORE_SIZE (64-2)
-
-typedef struct _gc_it_hdr_store {
-    struct _gc_it_hdr_store *next;
-    Gc_it_hdr **ptr;                           /* insert location */
-    Gc_it_hdr * (store[GC_IT_STORE_SIZE]);     /* array of hdr pointers */
-} Gc_it_hdr_store;
-
-typedef struct _gc_it_hdr_list {
-    Gc_it_hdr_store *first;
-    Gc_it_hdr_store *last;
-} Gc_it_hdr_list;
-
-/*
  * GC States
  * Determines which phase of the run is currently being performed.
  */
 
-typedef enum _gc_it_state {
+typedef enum Gc_it_state {
     GC_IT_READY = 0,
     GC_IT_START_MARK,    /* starting a mark, initialize everything */
     GC_IT_MARK_ROOTS,    /* finding root objects */
@@ -271,37 +239,23 @@ typedef enum _gc_it_state {
 /* Structure to contain configuration data about the GC, to determine
    how it operates */
 
-typedef struct _gc_it_config {
+typedef struct Gc_it_config {
     UINTVAL num_to_mark;
-}
+} Gc_it_config;
 
 /* A private datastructure for the GC. All the global data that we need to
    operate will be stored here. */
 
-typedef struct _gc_it_data {
+typedef struct Gc_it_data {
     UINTVAL item_count;       /* number of items scanned in current run */
     UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
     Gc_it_state state;            /* status of the current run */
     Gc_it_config config;           /* config data to tell how the GC operates */
-#if GC_IT_PARALLEL_MODE
     UINTVAL num_threads;    /* number of currently active threads */
-    Gc_it_hdr *root_queue   /* queue for temporary storage of root items */
-    Gc_it_hdr *queue;       /* list of grey items, to mark */
-    Gc_it_hdr *new_list;    /* list of items created before the end of the scan */
-#endif
+    Gc_it_hdr *root_queue;   /* queue for temporary storage of root items */
+    Gc_it_hdr *queue;      /* list of grey items, to mark */
 } Gc_it_data;
-
-/*
- * GC data per pool. Contains information that the GC needs in every pool.
- * This structure is changing rapidly, and some of the things in it are
- * probably unnecessary.
- */
-typedef struct _gc_it_pool_data {
-    Gc_it_gen * first_gen;  /* linked list of generations, youngest first, i assume */
-    Gc_it_gen * last_gen;   /* Most recent generation, or oldest, or whatever */
-    /* struct _gc_it_hdr * items;          all items not in queue or finalized */
-} Gc_it_pool_data;
 
 #endif /* PARROT_GC_IT */
 
@@ -341,9 +295,6 @@ typedef struct Small_Object_Pool {
 
     struct _gc_gms_gen *first_gen;      /* linked list of generations */
     struct _gc_gms_gen *last_gen;
-#endif
-#if PARROT_GC_IT
-    struct _gc_it_pool_data gc_it_pool_data; /* Data for use by the IT GC */
 #endif
 } Small_Object_Pool;
 

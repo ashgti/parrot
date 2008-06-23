@@ -58,11 +58,6 @@ static void gc_it_enqueue_all_roots(PARROT_INTERP)
 static void gc_it_enqueue_next_root(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_WARN_UNUSED_RESULT
-static UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(* hdr);
-
 PARROT_INLINE
 static void gc_it_mark_children_grey(
     ARGMOD(Small_Object_Pool * pool),
@@ -73,10 +68,6 @@ static void gc_it_mark_children_grey(
         FUNC_MODIFIES(* hdr);
 
 static void gc_it_post_sweep_cleanup(SHIM_INTERP);
-static void gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(* hdr);
-
 static void gc_it_sweep_header_arenas(PARROT_INTERP,
     ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
@@ -969,7 +960,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 
 /*
 
-=item C<static void gc_it_set_card_mark>
+=item C<void gc_it_set_card_mark>
 
 Mark the card associated with the given item to the value given by C<flag>.
 We've done a lot of value caching, so finding the card is as easy
@@ -980,7 +971,8 @@ as a few pointer dereferences and a little bit of algebra. Each card contains
 
 */
 
-static void
+PARROT_INLINE
+void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
 {
     Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
@@ -1003,7 +995,7 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
 
 /*
 
-=item C<static UINTVAL gc_it_get_card_mark>
+=item C<UINTVAL gc_it_get_card_mark>
 
 Return the current flag value associated with the given object header.
 
@@ -1012,7 +1004,8 @@ Return the current flag value associated with the given object header.
 */
 
 PARROT_WARN_UNUSED_RESULT
-static UINTVAL
+PARROT_INLINE
+UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
 {
     const Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);

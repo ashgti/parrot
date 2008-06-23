@@ -178,8 +178,8 @@ PARROT_API
 void
 pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
 {
-    PARROT_ASSERT(obj);
 #if PARROT_GC_GMS
+    PARROT_ASSERT(obj);
     do {
         if (!PObj_live_TEST(obj) && \
                 PObj_to_GMSH(obj)->gen->gen_no >= interp->gc_generation) \
@@ -197,7 +197,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
 
     Gc_it_hdr * const hdr = PObj_to_IT_HDR(obj);
-    Gc_it_data * const gc_priv_data = interp->arena_base->gc_private;
+    Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
        2) The header's ->next is pointing to something. There are only
@@ -216,13 +216,13 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
        at the moment. "FREE" items should not be here either. */
     PARROT_ASSERT(gc_it_get_card_mark(hdr) == GC_IT_CARD_WHITE);
     if(gc_priv_data->state == GC_IT_MARK_ROOTS)
-        GC_IT_ADD_TO_ROOT_QUEUE(hdr);
+        GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
-        GC_IT_ADD_TO_QUEUE(hdr);
+        GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */
-
+    PARROT_ASSERT(obj);
     /* if object is live or on free list return */
     if (PObj_is_live_or_free_TESTALL(obj))
         return;

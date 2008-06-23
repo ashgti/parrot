@@ -262,7 +262,18 @@ PARROT_API
 void Parrot_gc_it_run(PARROT_INTERP, int flags)
         __attribute__nonnull__(1);
 
+PARROT_WARN_UNUSED_RESULT
+PARROT_INLINE
+UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* hdr);
+
 void gc_it_mark_threaded(SHIM_INTERP);
+PARROT_INLINE
+void gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* hdr);
+
 void gc_it_trace_normal(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -322,16 +333,16 @@ void gc_it_trace_threaded(SHIM_INTERP);
     /* The aggregate is obviously being used somewhere, so make sure it's
        marked. pobject_lives will short circuit if it's already been marked.
        mark the new item too. */
-#  define DOD_WRITE_BARRIER(interp, agg, old, new) do { \
-    pobject_lives(interp, agg); \
-    pobject_lives(interp, new); \
+#  define GC_WRITE_BARRIER(interp, agg, old, _new) do { \
+    pobject_lives(interp, (PObj*)agg); \
+    pobject_lives(interp, (PObj*)_new); \
 } while(0)
     /* Mark the aggregate, the new object and the new_key, they are all
        apparently being used and I want to make sure they don't get lost */
-#  define DOD_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
-    pobject_lives(interp, agg); \
-    pobject_lives(interp, new); \
-    pobject_lives(interp, new_key); \
+#  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
+    pobject_lives(interp, (PObj*)agg); \
+    pobject_lives(interp, (PObj*)_new); \
+    pobject_lives(interp, (PObj*)new_key); \
 } while(0)
 #endif
 
