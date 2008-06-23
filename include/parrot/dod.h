@@ -217,8 +217,8 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 
 PARROT_API
 void gc_it_add_free_object(PARROT_INTERP,
-    ARGMOD(Small_Object_Pool *pool),
-    ARGMOD(PObj *to_add))
+    ARGMOD(struct Small_Object_Pool *pool),
+    ARGMOD(void *to_add))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
@@ -226,7 +226,8 @@ void gc_it_add_free_object(PARROT_INTERP,
         FUNC_MODIFIES(*to_add);
 
 PARROT_API
-void gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+void gc_it_alloc_objects(PARROT_INTERP,
+    ARGMOD(struct Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
@@ -234,7 +235,8 @@ void gc_it_alloc_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PARROT_API
-PObj * gc_it_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+void * gc_it_get_free_object(PARROT_INTERP,
+    ARGMOD(struct Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);

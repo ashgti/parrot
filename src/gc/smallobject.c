@@ -75,16 +75,6 @@ static void more_traceable_objects(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
-
-#define GC_DEBUG_REPLENISH_LEVEL_FACTOR        0.0
-#define GC_DEBUG_UNITS_PER_ALLOC_GROWTH_FACTOR 1
-#define REPLENISH_LEVEL_FACTOR                 0.3
-
-/* this factor is totally arbitrary, but gives good timings for stress.pasm */
-#define UNITS_PER_ALLOC_GROWTH_FACTOR          1.75
-
-#define POOL_MAX_BYTES                         65536 * 128
-
 /*
 
 =item C<INTVAL contained_in_pool>
@@ -99,6 +89,15 @@ PARROT_WARN_UNUSED_RESULT
 INTVAL
 contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
 {
+#if PARROT_GC_IT
+    Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
+    Small_Object_Arena * arena;
+    for(arena = pool->last_Arena; arena; arena = arena->prev) {
+        if(hdr->parent_pool == arena)
+            return 1;
+    }
+    return 0;
+#else
     const Small_Object_Arena *arena;
 
     ptr = PObj_to_ARENA(ptr);
@@ -114,6 +113,7 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
     }
 
     return 0;
+#endif
 }
 
 /*

@@ -8,6 +8,16 @@
 
 #  include "parrot/parrot.h"
 
+#define GC_DEBUG_REPLENISH_LEVEL_FACTOR        0.0
+#define GC_DEBUG_UNITS_PER_ALLOC_GROWTH_FACTOR 1
+#define REPLENISH_LEVEL_FACTOR                 0.3
+
+/* this factor is totally arbitrary, but gives good timings for stress.pasm */
+#define UNITS_PER_ALLOC_GROWTH_FACTOR          1.75
+
+#define POOL_MAX_BYTES                         65536 * 128
+
+
 #if PARROT_GC_IT
 /* forward declarations */
 union Gc_it_card;
@@ -107,7 +117,7 @@ typedef struct _gc_gms_gen {
 #   define GC_IT_THREAD_MAX 4
 #endif
 
-#define GC_IT_INITIAL_CONFIG XXX /* define this to be whatever */
+#define GC_IT_INITIAL_CONFIG 1 /* define this to be whatever */
 
 /*
  * Macros for doing common things with the GC_IT
@@ -139,9 +149,9 @@ typedef struct _gc_gms_gen {
     (pool)->free_list = (void *)(hdr); \
 } while(0)
 
-#define GC_IT_POP_HDR_FROM_LIST(list, hdr) do {\
-    (hdr) = (list); \
-    (list) = (hdr)->next; \
+#define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
+    (hdr) = (Gc_it_hdr*)(list); \
+    (list) = (type)(hdr)->next; \
 } while(0)
 
 #define GC_IT_MARK_CHILDREN_GREY(interp, node) gc_it_mark_children_grey(interp, node)
@@ -175,8 +185,8 @@ typedef struct _gc_gms_gen {
  */
 
 typedef struct Gc_it_hdr {
-    struct Gc_it_hdr   *next;
-    Small_Object_Arena *parent_pool;
+    struct Gc_it_hdr           *next;
+    struct Small_Object_Arena  *parent_pool;
     union {
         UINTVAL _x_align; /* force UINTVAL alignment and sizing */
         struct {
