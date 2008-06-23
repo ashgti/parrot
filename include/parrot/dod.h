@@ -211,6 +211,7 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/gc_ims.c */
 
+#if PARROT_GC_IT
 /* HEADERIZER BEGIN: src/gc/gc_it.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
@@ -263,13 +264,11 @@ void Parrot_gc_it_run(PARROT_INTERP, int flags)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
-PARROT_INLINE
 UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
         __attribute__nonnull__(1)
         FUNC_MODIFIES(* hdr);
 
 void gc_it_mark_threaded(SHIM_INTERP);
-PARROT_INLINE
 void gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
         __attribute__nonnull__(1)
         FUNC_MODIFIES(* hdr);
@@ -280,6 +279,7 @@ void gc_it_trace_normal(PARROT_INTERP)
 void gc_it_trace_threaded(SHIM_INTERP);
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/gc_it.c */
+#endif
 
 /*
  * write barrier

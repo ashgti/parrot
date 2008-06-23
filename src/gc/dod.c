@@ -219,6 +219,13 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
         GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
+    /* This is a bad hack. mark_special is a static function, which means I
+       can't call it from gc_it_mark_children_grey. So, I end up marking
+       some children of PMCs here, instead of in the proper place. I want
+       to change the function prototype for mark_special, and probably
+       rename it eventually. */
+    if (PObj_is_PMC_TEST(obj) && PObj_is_special_PMC_TEST(obj))
+        mark_special(interp, (PMC*)obj);
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */

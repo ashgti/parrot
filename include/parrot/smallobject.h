@@ -114,7 +114,7 @@ typedef struct _gc_gms_gen {
  */
 
 #define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
-    gc_it_mark_card((hdr), GC_IT_CARD_BLACK); \
+    gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
     (gc_data)->queue = (hdr)->next; \
     (hdr)->next = NULL; \
 } while(0)
@@ -135,8 +135,8 @@ typedef struct _gc_gms_gen {
 } while(0)
 
 #define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
-    (hdr)->next = (pool)->free_list; \
-    (pool)->free_list = (hdr); \
+    (hdr)->next = (Gc_it_hdr*)(pool)->free_list; \
+    (pool)->free_list = (void *)(hdr); \
 } while(0)
 
 #define GC_IT_POP_HDR_FROM_LIST(list, hdr) do {\
@@ -144,10 +144,10 @@ typedef struct _gc_gms_gen {
     (list) = (hdr)->next; \
 } while(0)
 
-#define GC_IT_MARK_CHILDREN_GREY(x, y) gc_it_mark_children_grey(x, y)
+#define GC_IT_MARK_CHILDREN_GREY(interp, node) gc_it_mark_children_grey(interp, node)
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
-    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object-size*(i))
+    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
 
 /* minimum number of items to scan in a single increment. If we haven't reached
    this minimum, go back and do another increment. */
@@ -217,7 +217,7 @@ typedef union Gc_it_card {
 #define GC_IT_CARD_ALL_NEW   0xAA
 
 #define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
-#define IT_HDR_to_PObj(p) ((PObj*) ((p)+1))
+#define IT_HDR_to_PObj(p) ((PObj*)((p)+1))
 
 /*
  * GC States
@@ -308,6 +308,10 @@ typedef struct Small_Object_Pool {
 #  define GC_HEADER_SIZE (sizeof (Gc_gms_hdr))
 #  define PObj_to_ARENA(o) PObj_to_GMSH(o)
 #  define ARENA_to_PObj(p) GMSH_to_PObj((Gc_gms_hdr*)(p))
+#elif PARROT_GC_IT
+#  define GC_HEADER_SIZE (sizeof (Gc_it_hdr))
+#  define PObj_to_ARENA(o) PObj_to_IT_HDR(o)
+#  define ARENA_to_PObj(p) IT_HDR_to_PObj(p)
 #else
 #  define GC_HEADER_SIZE 0
 #  define PObj_to_ARENA(o) (o)

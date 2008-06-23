@@ -45,7 +45,7 @@
  */
 
 #define PARROT_GC_SUBSYSTEM 3
-
+/*
 #if PARROT_GC_SUBSYSTEM == 0
 #  define PARROT_GC_MS      1
 #  define PARROT_GC_IMS     0
@@ -65,11 +65,12 @@
 #  define PARROT_GC_IT      0
 #endif
 #if PARROT_GC_SUBSYSTEM == 3
+*/
 #  define PARROT_GC_MS      0
 #  define PARROT_GC_IMS     0
 #  define PARROT_GC_GMS     0
 #  define PARROT_GC_IT      1
-#endif
+/*#endif*/
 
 
 /*

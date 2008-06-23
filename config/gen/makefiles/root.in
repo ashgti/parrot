@@ -387,6 +387,7 @@ INTERP_O_FILES = \
     $(SRC_DIR)/gc/dod$(O) \
     $(SRC_DIR)/gc/gc_gms$(O) \
     $(SRC_DIR)/gc/gc_ims$(O) \
+    $(SRC_DIR)/gc/gc_it$(O) \
     $(SRC_DIR)/gc/memory$(O) \
     $(SRC_DIR)/gc/register$(O) \
     $(SRC_DIR)/gc/smallobject$(O) \
@@ -1048,6 +1049,8 @@ $(SRC_DIR)/gc/dod$(O) : $(GENERAL_H_FILES)
 $(SRC_DIR)/gc/gc_ims$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/gc/gc_gms$(O) : $(GENERAL_H_FILES)
+
+$(SRC_DIR)/gc/gc_it$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/gc/resources$(O) : $(GENERAL_H_FILES)
 
