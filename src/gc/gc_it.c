@@ -37,6 +37,8 @@ Open Questions:
 #   define gc_it_trace(i) gc_it_trace_threaded(i);
 #endif
 
+#define GC_IT_DEBUG 1
+
 /* HEADERIZER HFILE: include/parrot/dod.h */
 
 /* HEADERIZER BEGIN: static */
@@ -211,6 +213,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     switch (gc_priv_data->state) {
         case GC_IT_READY:
             gc_priv_data->state = GC_IT_START_MARK;
+#ifdef GC_IT_DEBUG
+            printf("initializing new GC run.\n");
+#endif
             GC_IT_BREAK_AFTER_0;
 
         case GC_IT_START_MARK:
@@ -251,6 +256,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_END_MARK:
             /* Don't know if there is anything to be done here */
             gc_priv_data->state = GC_IT_SWEEP_PMCS;
+#ifdef GC_IT_DEBUG
+            printf("ending mark, marked %d items\n", gc_priv_data->total_count);
+#endif
             GC_IT_BREAK_AFTER_4;
 
         case GC_IT_SWEEP_PMCS:
@@ -272,6 +280,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             gc_it_post_sweep_cleanup(interp); /* if any. */
         default:
             gc_priv_data->state = GC_IT_READY;
+#ifdef GC_IT_DEBUG
+            printf("Finished GC run.\n");
+#endif
     }
     return;
 }
