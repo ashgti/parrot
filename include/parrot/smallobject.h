@@ -39,6 +39,7 @@ typedef struct Small_Object_Arena {
         } _d;
         UINTVAL                _align_x;
     } card_info;
+    struct Small_Object_Pool *parent_pool;
 #endif
 } Small_Object_Arena;
 
@@ -186,7 +187,7 @@ typedef struct _gc_gms_gen {
 
 typedef struct Gc_it_hdr {
     struct Gc_it_hdr           *next;
-    struct Small_Object_Arena  *parent_pool;
+    struct Small_Object_Arena  *parent_arena;
     union {
         UINTVAL _x_align; /* force UINTVAL alignment and sizing */
         struct {

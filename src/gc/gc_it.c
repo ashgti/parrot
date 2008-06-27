@@ -963,6 +963,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     Small_Object_Arena * const new_arena = (Small_Object_Arena*)mem_internal_allocate(size);
     new_arena->card_info._d.card_size = card_size;
     new_arena->card_info._d.last_index = num_objects - 1;
+    new_arena->parent_pool = pool;
 
     /* ...the downside is this messy pointer arithmetic. */
     new_arena->cards = ((Gc_it_card*) ((Small_Object_Arena*)new_arena) + 1);
@@ -993,7 +994,7 @@ the pool's free list. We start at the beginning of the arena's memory block
 and do the following steps:
 
 1) add the current object to the free list
-2) initialize the C<parent_pool> and C<index> fields of the object, for fast
+2) initialize the C<parent_arena> and C<index> fields of the object, for fast
    lookup later.
 3) calculate the address of the next GC header in the arena. This is the part
    that requires pointer dark magic, and is likely the source of bugs.
@@ -1020,7 +1021,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         GC_IT_ADD_TO_FREE_LIST(pool, p);
 
         /* Cache the object's parent pool and card addresses */
-        p->parent_pool = new_arena;
+        p->parent_arena = new_arena;
         p->index.num.card = i / 4;
         p->index.num.flag = i % 4;
 
@@ -1051,7 +1052,7 @@ as a few pointer dereferences and a little bit of algebra. Each card contains
 void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
 {
-    Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
     PARROT_ASSERT(flag < 4);
     switch (hdr->index.num.flag) {
         case 0:
@@ -1086,7 +1087,7 @@ PARROT_WARN_UNUSED_RESULT
 UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
 {
-    const Gc_it_card * const card = &(hdr->parent_pool->cards[hdr->index.num.card]);
+    const Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
     switch (hdr->index.num.flag) {
         case 0:
             return card->_f.flag1;
@@ -1144,6 +1145,39 @@ static void
 gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
 }
+
+PARROT_INLINE
+int
+gc_it_ptr_has_parent_pool(void * ptr, Small_Object_Pool * pool)
+{
+    const Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
+    if(hdr->parent_arena->parent_pool == pool)
+        return 1;
+    return 0;
+}
+
+int
+gc_it_ptr_is_pmc(PARROT_INTERP, void * ptr)
+{
+    return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->pmc_pool);
+}
+
+int
+gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
+{
+    return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->const_pmc_pool);
+}
+
+int
+gc_it_ptr_is_sized_buffer(PARROT_INTERP, void * ptr)
+{
+    register INTVAL i = 0;
+    for(i = interp->arena_base->num_sized; i >= 0; i--) {
+        gc_it_ptr_has_parent_pool(ptr, interp->arena_base->sized_pools);
+}
+
+
+
 
 #endif  /* PARROT_GC_IT */
 

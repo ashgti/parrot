@@ -517,14 +517,17 @@ token term {
     | 'VAR(' <variable> ')' {*}                  #= VAR
     | <typename> {*}                             #= typename
     | <ident=named_0ary>
-        [ <.unsp>? '.'? '(' <.ws> ')' ]?
-        {*}                                      #= listop noarg
+        [
+        | <.unsp>? '.'? '(' <semilist> ')' {*}   #= func args
+        | :: {*}                                 #= listop noarg
+        ]
     | <ident>
         [
         | \s <arglist> {*}                       #= listop args
         | <.unsp>? '.'? '(' <semilist> ')' {*}   #= func args
         | :: {*}                                 #= listop noarg
         ]
+    | <sigil> \s <arglist> {*}                   #= sigil
     ]
 }
 

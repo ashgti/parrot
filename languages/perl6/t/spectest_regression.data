@@ -2,12 +2,19 @@
 # on current rakudo.
 # empty lines and those beginning with a # are ignored
 
+S02-builtin_data_types/anon_block.t
+S02-builtin_data_types/array_extending.t
+S02-builtin_data_types/flattening.t
+S02-builtin_data_types/nested_arrays.t          # pure
+S02-builtin_data_types/nested_pairs.t           # pure
+S02-builtin_data_types/num.t
 S02-builtin_data_types/type.t
 S02-literals/autoref.t
 S02-literals/hex_chars.t                        # pure
 S02-literals/radix.t
 S02-polymorphic_types/subset-code.t             # pure
 S02-polymorphic_types/subset-range.t
+S03-operators/assign-is-not-binding.t
 S03-operators/autoincrement.t                   # pure
 S03-operators/comparison.t
 S03-operators/context.t
@@ -16,6 +23,8 @@ S03-operators/equality.t                        # pure
 S03-operators/not.t                             # pure
 S03-operators/relational.t                      # pure
 S03-operators/true.t                            # pure
+S04-declarations/multiple.t
+S04-statements/no-implict-block.t
 S04-statements/terminator.t                     # pure
 S04-statements/try.t
 S04-statements/until.t                          # pure

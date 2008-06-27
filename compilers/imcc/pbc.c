@@ -184,6 +184,9 @@ static PMC* mk_multi_sig(PARROT_INTERP, ARGIN(const SymReg *r))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_WARN_UNUSED_RESULT
+static int old_blocks(void);
+
 PARROT_CONST_FUNCTION
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
@@ -960,9 +963,7 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
         return NULL;
 
     for (s = globals.cs->first; s; s = s->next) {
-        SymReg * const sub = s->unit->instructions->symregs[0];
-
-        if (STREQ(sub->name, unit->outer->name)) {
+        if (STREQ(s->unit->lexid->name, unit->outer->name)) {
             PObj_get_FLAGS(s->unit->sub_pmc) |= SUB_FLAG_IS_OUTER;
             return s->unit->sub_pmc;
         }
@@ -1063,6 +1064,25 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), int offs, int end)
 
     r->color  = add_const_str(interp, r);
     sub->name = ct->constants[r->color]->u.string;
+
+    /* If the unit has no lexid, set the lexid to match the name. */
+    if (!unit->lexid) {
+        unit->lexid = r;
+    }
+    else {
+        char *name;
+
+        /* Otherwise, create string constant for it. */
+        unit->lexid->color = add_const_str(interp, unit->lexid);
+
+        /* We should also trim the quotes off it. */
+        name = mem_sys_allocate(strlen(unit->lexid->name) - 1);
+        strcpy(name, unit->lexid->name + 1);
+        name[strlen(name) - 1] = 0;
+        mem_sys_free(unit->lexid->name);
+        unit->lexid->name = name;
+    }
+    sub->lexid = ct->constants[unit->lexid->color]->u.string;
 
     ns_pmc    = NULL;
 

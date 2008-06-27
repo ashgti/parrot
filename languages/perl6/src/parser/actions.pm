@@ -505,13 +505,14 @@ method routine_declarator($/, $key) {
     if $key eq 'sub' {
         my $past := $($<routine_def>);
         $past.blocktype('declaration');
+        $past.pirflags(~$past.pirflags() ~ ' :instanceof("Perl6Sub")');
         $past.node($/);
         make $past;
     }
     elsif $key eq 'method' {
         my $past := $($<method_def>);
         $past.blocktype('declaration');
-        $past.pirflags(':method');
+        $past.pirflags(~$past.pirflags() ~ ' :method :instanceof("Perl6Method")');
         $past.node($/);
         make $past;
     }
@@ -1826,25 +1827,18 @@ method circumfix($/, $key) {
     elsif $key eq '$( )' {
         ##  Context - is just calling .item, .list etc on whatever we
         ##  got made by the expression in the brackets.
-        my $expr := $( $<semilist> );
         my $method;
-        if $<sigil> eq '$' {
-            $method := 'item';
-        }
-        elsif $<sigil> eq '@' {
-            $method := 'list';
-        }
-        elsif $<sigil> eq '%' {
-            $method := 'hash';
-        }
+        if    $<sigil> eq '$' { $method := 'item'; }
+        elsif $<sigil> eq '@' { $method := 'list'; }
+        elsif $<sigil> eq '%' { $method := 'hash'; }
         else {
-            $/.panic("Use of " ~ $<sigil> ~ " as contextualizer not yet implemented.");
+            $/.panic("Use of contextualizer " ~ $<sigil> ~ " not implemented.");
         }
         $past := PAST::Op.new(
             :pasttype('callmethod'),
             :name($method),
             :node($/),
-            $expr
+            $( $<semilist> )
         );
     }
     make $past;
@@ -2036,6 +2030,21 @@ method term($/, $key) {
             :name('!VAR'),
             :pasttype('call'),
             $( $<variable> )
+        );
+    }
+    elsif $key eq 'sigil' {
+        my $method;
+        if    $<sigil> eq '$' { $method := 'item'; }
+        elsif $<sigil> eq '@' { $method := 'list'; }
+        elsif $<sigil> eq '%' { $method := 'hash'; }
+        else {
+            $/.panic("Use of contextualizer " ~ $<sigil> ~ " not implemented.");
+        }
+        $past := PAST::Op.new(
+            :pasttype('callmethod'),
+            :name($method),
+            :node($/),
+            $( $<arglist> )
         );
     }
     else { $past := $( $/{$key} ); }
