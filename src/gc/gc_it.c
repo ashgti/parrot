@@ -77,14 +77,16 @@ spit and polish later.
     (list) = (type)(hdr)->next; \
 } while(0)
 
-#define GC_IT_MARK_CHILDREN_GREY(interp, node) do { \
-    if(gc_it_hdr_is_PObj_compatible(node)) \
-        gc_it_mark_PObj_children_grey(interp, node); \
+#define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \
+    if(gc_it_hdr_is_PObj_compatible(hdr)) \
+        gc_it_mark_PObj_children_grey(interp, hdr); \
 } while(0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
     (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
 
+#define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
+    ((hdr)->parent_arena->parent_pool == (pool))
 
 /* HEADERIZER HFILE: include/parrot/dod.h */
 
@@ -1201,11 +1203,6 @@ gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
 }
 
-#define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
-    (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
-#define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
-    ((hdr)->parent_arena->parent_pool == (pool))
-
 /*
 
 =item C<int gc_it_ptr_is_pmc>
@@ -1349,7 +1346,7 @@ Small_Object_Pool *
 gc_it_ptr_is_sized_buffer(PARROT_INTERP, void * ptr)
 {
     register INTVAL i = 0;
-    for(i = interp->arena_base->num_sized; i >= 0; i--) {
+    for(i = interp->arena_base->num_sized - 1; i >= 0; i--) {
         if(gc_it_ptr_has_parent_pool(ptr, interp->arena_base->sized_pools[i]))
             return interp->arena_base->sized_pools[i];
     }

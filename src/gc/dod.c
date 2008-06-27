@@ -278,6 +278,29 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
 
 /*
 
+=item C<void object_lives>
+
+Marks an object as alive if that object is not a PObj. Pobjs are marked
+using the C<pobject_lives> function, but that assumes that the object
+being marked is isomorphic with the PObj and Buffer data types. For
+simple data structures which are not isomorphic, call this instead. Some
+garbage collectors will likely leave this function undefined.
+
+=cut
+
+*/
+
+PARROT_API
+void
+object_lives(PARROT_INTERP, ARGMOD(PObj *obj))
+{
+#if PARROT_GC_IT
+    gc_it_set_card_mark(PObj_to_IT_HDR(obj), GC_IT_CARD_BLACK);
+#endif
+}
+
+/*
+
 =item C<int Parrot_dod_trace_root>
 
 Traces the root set. Returns 0 if it's a lazy DOD run and all objects

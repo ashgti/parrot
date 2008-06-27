@@ -689,6 +689,8 @@ Parrot_initialize_header_pools(PARROT_INTERP)
     /* pmc extension buffer */
     arena_base->pmc_ext_pool =
         new_small_object_pool(sizeof (PMC_EXT), 1024);
+
+#if PARROT_GC_MS
     /*
      * pmc_ext isn't a managed item. If a PMC has a pmc_ext structure
      * it is returned to the pool instantly - the structure is never
@@ -696,6 +698,9 @@ Parrot_initialize_header_pools(PARROT_INTERP)
      * Use GC MS pool functions
      */
     gc_pmc_ext_pool_init(arena_base->pmc_ext_pool);
+#else
+    /* rational, consistant behavior (as yet unwritten) */
+#endif
     arena_base->pmc_ext_pool->name = "pmc_ext";
 #elif PARROT_GC_IT
     /* PMC_EXTs are going to be treated as ordinary sized buffers in the
@@ -940,35 +945,25 @@ transferring their sync values to the destionation interpreter.
 static void
 fix_pmc_syncs(ARGMOD(Interp *dest_interp), ARGIN(Small_Object_Pool *pool))
 {
-    /* XXX largely copied from dod_sweep */
     Small_Object_Arena *cur_arena;
     const UINTVAL object_size = pool->object_size;
 
     for (cur_arena = pool->last_Arena; cur_arena; cur_arena = cur_arena->prev) {
-        Buffer *b = (Buffer *)cur_arena->start_objects;
+        PMC * p = (PMC *)((char*)cur_arena->start_objects + GC_HEADER_SIZE);
         size_t i;
 
         for (i = 0; i < cur_arena->used; i++) {
-            if (PObj_on_free_list_TEST(b))
-                ; /* if it's on free list, do nothing */
-            else {
-                if (PObj_is_PMC_TEST(b)) {
-                    PMC * const p = (PMC *)b;
-                    if (PObj_is_PMC_shared_TEST(p)) {
-                        PMC_sync(p)->owner = dest_interp;
-                    }
-                    else {
-                        /* XXX: This error-handling is bad, we should do
-                                something more standard here instead. */
-                        /* fprintf(stderr, "BAD PMC: address=%p,
-                                   base_type=%d\n",
-                                   p, p->vtable->base_type); */
-                        PARROT_ASSERT(0);
-                    }
-                }
+            if (!PObj_on_free_list_TEST(p) && PObj_is_PMC_TEST(p)) {
+                if (PObj_is_PMC_shared_TEST(p))
+                    PMC_sync(p)->owner = dest_interp;
+                else
+                    real_exception(dest_interp, NULL, INTERP_ERROR,
+                        "Unshared PMC still alive after interpreter \
+                        destruction. address=%p, base_type=%d\n",
+                        p, p->vtable->base_type);
             }
 
-            b = (Buffer *)((char *)b + object_size);
+            p = (PMC *)((char *)p + object_size);
         }
     }
 }
@@ -1032,7 +1027,7 @@ Parrot_merge_header_pools(ARGMOD(Interp *dest_interp), ARGIN(Interp *source_inte
 
 =item C<void Parrot_initialize_header_pool_names>
 
-UNUSED. Sets the C<name> parameter of the various header pools to a 
+UNUSED. Sets the C<name> parameter of the various header pools to a
 Parrot string structure for the name of the pool.
 
 =cut

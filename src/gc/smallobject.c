@@ -90,13 +90,7 @@ INTVAL
 contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
 {
 #if PARROT_GC_IT
-    Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
-    Small_Object_Arena * arena;
-    for(arena = pool->last_Arena; arena; arena = arena->prev) {
-        if(hdr->parent_pool == arena)
-            return 1;
-    }
-    return 0;
+    return (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == pool);
 #else
     const Small_Object_Arena *arena;
 
