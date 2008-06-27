@@ -126,7 +126,8 @@ typedef struct _gc_gms_gen {
 
 #define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
     gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
-    (gc_data)->queue = (hdr)->next; \
+    if((gc_data)->queue == (hdr)) \
+        (gc_data)->queue = (hdr)->next; \
     (hdr)->next = NULL; \
 } while(0)
 
@@ -156,10 +157,8 @@ typedef struct _gc_gms_gen {
 } while(0)
 
 #define GC_IT_MARK_CHILDREN_GREY(interp, node) do { \
-    if(gc_it_hdr_is_any_pmc(node)) \
-        gc_it_mark_pmc_children_grey(interp, node); \
-    else \
-        gc_it_mark_buffer_children_grey(interp, node); \
+    if(gc_it_hdr_is_PObj_compatible(node)) \
+        gc_it_mark_PObj_children_grey(interp, node); \
 } while(0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \

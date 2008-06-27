@@ -39,6 +39,51 @@ Open Questions:
 
 #define GC_IT_DEBUG 1
 
+/*
+ * Macros for doing common things with the GC_IT
+ */
+
+#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
+    gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
+    if((gc_data)->queue == (hdr)) \
+        (gc_data)->queue = (hdr)->next; \
+    (hdr)->next = NULL; \
+} while(0)
+
+#define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) do {\
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) do {\
+    (hdr)->next = (gc_data)->root_queue; \
+    (gc_data)->root_queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
+    (hdr)->next = (Gc_it_hdr*)((pool)->free_list); \
+    (pool)->free_list = (void *)(hdr); \
+} while(0)
+
+#define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
+    (hdr) = (Gc_it_hdr*)(list); \
+    (list) = (type)(hdr)->next; \
+} while(0)
+
+#define GC_IT_MARK_CHILDREN_GREY(interp, node) do { \
+    if(gc_it_hdr_is_PObj_compatible(node)) \
+        gc_it_mark_PObj_children_grey(interp, node); \
+} while(0);
+
+#define GC_IT_HDR_FROM_INDEX(p, a, i) \
+    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
+
+
 /* HEADERIZER HFILE: include/parrot/dod.h */
 
 /* HEADERIZER BEGIN: static */
@@ -353,8 +398,6 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
     /* I'm going to ignore PMC_EXT for now, it has a separate, special
        marking system set up for it already and I dont know that anything
        I do here will improve on that. */
-#define GC_IT_DEAL_WITH_PMC_EXT(x)
-    GC_IT_DEAL_WITH_PMC_EXT(arena_base->pmc_ext_pool); /* whatever */
 }
 
 /*
@@ -749,9 +792,9 @@ gc_it_enqueue_next_root(PARROT_INTERP)
 
 /*
 
-=item C<static void gc_it_mark_children_grey>
+=item C<static void gc_it_mark_PObj_children_grey>
 
-Mark the children of the current node grey. "Children" can be data, or
+Mark the children of the current pmc node grey. "Children" can be data, or
 metadata, and may be in several places. We need to search around to see
 what children there are, and add all of them to the queue.
 
@@ -765,9 +808,15 @@ C<mark_special> it.
 For all PObjs:
 1) PObj data, if C<PObj_data_is_PMC_array_FLAG>
 
+For strings:
+1) Memory pool buffer that contains the actual string data
+
 Also, if C<PObj_custom_mark_TEST(obj)>, we have to call the custom mark
 vtable function. Hopefully, all PMC mark VTABLE functions call
 C<pobject_lives> and don't try to monkey around with the PObj flags directly.
+
+Notice that the function C<src/gc/dod.c:mark_special> already marks some
+children grey inside the call to C<pobject_lives>.
 
 =cut
 
@@ -775,7 +824,7 @@ C<pobject_lives> and don't try to monkey around with the PObj flags directly.
 
 PARROT_INLINE
 static void
-gc_it_mark_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
+gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
 {
     /* Add all children of the current node to the queue for processing. */
     PObj * const obj = IT_HDR_to_PObj(hdr);
@@ -792,6 +841,10 @@ gc_it_mark_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
             /* Do whatever we need here */
         }
     }
+    else if(PObj_is_STRING_TEST(obj) {
+        /* It's a string or a const-string, or whatever. Deal with that
+           here. */
+    }
     /* if the PMC is an array of other PMCs, we cycle through those. I'm
        surprised if this isn't covered by VTABLE_mark, but I won't question
        it now. */
@@ -807,6 +860,22 @@ gc_it_mark_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
        don't know if I'm going to do said trickery here, or offload it to a
        function like src/gc/dod.c:mark_special (which is where some of the
        other logic in this function originated) */
+}
+
+/*
+
+=item C<PARROT_INLINE static void gc_it_mark_buffer_children_grey>
+
+Marks children nodes of the buffer as being
+
+=cut
+
+*/
+
+PARROT_INLINE
+static void
+gc_it_mark_buffer_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
+{
 }
 
 /*
@@ -1163,6 +1232,10 @@ Returns C<1> if so, C<0> otherwise.
 Determines whether the given C<Gc_it_hdr> structure is located in the PMC
 pool. Returns C<1> if so, C<0> otherwise.
 
+=item C<int gc_it_ptr_is_pmc_ext>
+
+=item C<static int gc_it_hdr_is_pmc_ext>
+
 =cut
 
 */
@@ -1173,10 +1246,22 @@ gc_it_ptr_is_pmc(PARROT_INTERP, void * ptr)
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool);
 }
 
-int
+static int
 gc_it_hdr_is_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
 {
-    return GC_IT_PTR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
+}
+
+int
+gc_it_ptr_is_pmc_ext(PARROT_INTERP, void * ptr)
+{
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_ext_pool);
+}
+
+static int
+gc_it_hdr_is_pmc_ext(PARROT_INTERP, Gc_it_hdr * hdr)
+{
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_ext_pool);
 }
 
 /*
@@ -1201,7 +1286,7 @@ gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
 }
 
-int
+static int
 gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *)
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
@@ -1220,6 +1305,13 @@ otherwise.
 Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either
 the regular PMC pool, or the constant PMC pool.
 
+=item C<int gc_it_hdr_is_PObj_compatible>
+
+Determines whether the given header is a data object that shares isomorphism
+with PObjs. If so, we can treat the object as a PObj, and read flags from it
+as normal. Otherwise, it's a plane non-aggregate buffer and can be treated
+as such.
+
 =cut
 
 */
@@ -1233,13 +1325,24 @@ gc_it_ptr_is_any_pmc(PARROT_INTERP, void * ptr)
            GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
 }
 
-int
+static int
 gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
 {
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
            GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
+}
+
+static int
+gc_it_hdr_is_PObj_compatible(PARROT_INTERP, Gc_it_hdr * hdr)
+{
+    /* Arrange these in order of most common to least common, to take
+       advantage of short-circuiting. */
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool) ||
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->string_header_pool) ||
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_string_header_pool);
 }
 
 /*
