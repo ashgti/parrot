@@ -1146,6 +1146,21 @@ gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
 }
 
+/*
+
+=item C<PARROT_INLINE int gc_it_ptr_has_parent_pool>
+
+Determines whether the object given by C<ptr> is located in the given
+C<pool>. We've used a C<parent_arena> pointer in the object's GC header
+and a C<parent_pool> pointer in each arena to simplify this calculation.
+The additional memory requirement of adding these fields is more then
+made up for by the increased calculation speed of this important
+determination.
+
+=cut
+
+*/
+
 PARROT_INLINE
 int
 gc_it_ptr_has_parent_pool(void * ptr, Small_Object_Pool * pool)
@@ -1156,11 +1171,34 @@ gc_it_ptr_has_parent_pool(void * ptr, Small_Object_Pool * pool)
     return 0;
 }
 
+/*
+
+=item C<int gc_it_ptr_is_pmc>
+
+Determines whether a given pointer is a PMC object from the PMC pool.
+Returns C<1> if so, C<0> otherwise.
+
+=cut
+
+*/
+
 int
 gc_it_ptr_is_pmc(PARROT_INTERP, void * ptr)
 {
     return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->pmc_pool);
 }
+
+/*
+
+=item C<it_gc_it_ptr_is_const_pmc>
+
+Determines whether a given pointer is a constant PMC object from the
+const_pmc pool. Returns C<1> if so, C<0> otherwise.
+
+=cut
+
+*/
+
 
 int
 gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
@@ -1168,16 +1206,30 @@ gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
     return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->const_pmc_pool);
 }
 
-int
+/*
+
+=item C<Small_Object_Pool * gc_it_ptr_is_sized_buffer>
+
+Determines whether a given pointer is located in one of the sized header
+pools. We loop over all these pools to determine if the pointer is in
+any of them. Returns a pointer to the pool that the object is found in,
+or returns C<NULL> if it is not found in any pools.
+
+=cut
+
+*/
+
+
+Small_Object_Pool *
 gc_it_ptr_is_sized_buffer(PARROT_INTERP, void * ptr)
 {
     register INTVAL i = 0;
     for(i = interp->arena_base->num_sized; i >= 0; i--) {
-        gc_it_ptr_has_parent_pool(ptr, interp->arena_base->sized_pools);
+        if(gc_it_ptr_has_parent_pool(ptr, interp->arena_base->sized_pools[i]))
+            return interp->arena_base->sized_pools[i];
+    }
+    return NULL;
 }
-
-
-
 
 #endif  /* PARROT_GC_IT */
 
