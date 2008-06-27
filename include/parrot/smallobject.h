@@ -155,7 +155,12 @@ typedef struct _gc_gms_gen {
     (list) = (type)(hdr)->next; \
 } while(0)
 
-#define GC_IT_MARK_CHILDREN_GREY(interp, node) gc_it_mark_children_grey(interp, node)
+#define GC_IT_MARK_CHILDREN_GREY(interp, node) do { \
+    if(gc_it_hdr_is_any_pmc(node)) \
+        gc_it_mark_pmc_children_grey(interp, node); \
+    else \
+        gc_it_mark_buffer_children_grey(interp, node); \
+} while(0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
     (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))

@@ -1146,30 +1146,10 @@ gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
 }
 
-/*
-
-=item C<PARROT_INLINE int gc_it_ptr_has_parent_pool>
-
-Determines whether the object given by C<ptr> is located in the given
-C<pool>. We've used a C<parent_arena> pointer in the object's GC header
-and a C<parent_pool> pointer in each arena to simplify this calculation.
-The additional memory requirement of adding these fields is more then
-made up for by the increased calculation speed of this important
-determination.
-
-=cut
-
-*/
-
-PARROT_INLINE
-int
-gc_it_ptr_has_parent_pool(void * ptr, Small_Object_Pool * pool)
-{
-    const Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
-    if(hdr->parent_arena->parent_pool == pool)
-        return 1;
-    return 0;
-}
+#define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
+    (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
+#define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
+    ((hdr)->parent_arena->parent_pool == (pool))
 
 /*
 
@@ -1178,6 +1158,11 @@ gc_it_ptr_has_parent_pool(void * ptr, Small_Object_Pool * pool)
 Determines whether a given pointer is a PMC object from the PMC pool.
 Returns C<1> if so, C<0> otherwise.
 
+=item C<int gc_it_hdr_is_pmc>
+
+Determines whether the given C<Gc_it_hdr> structure is located in the PMC
+pool. Returns C<1> if so, C<0> otherwise.
+
 =cut
 
 */
@@ -1185,25 +1170,76 @@ Returns C<1> if so, C<0> otherwise.
 int
 gc_it_ptr_is_pmc(PARROT_INTERP, void * ptr)
 {
-    return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->pmc_pool);
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool);
+}
+
+int
+gc_it_hdr_is_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
+{
+    return GC_IT_PTR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
 }
 
 /*
 
-=item C<it_gc_it_ptr_is_const_pmc>
+=item C<int gc_it_ptr_is_const_pmc>
 
 Determines whether a given pointer is a constant PMC object from the
 const_pmc pool. Returns C<1> if so, C<0> otherwise.
+
+=item C<int gc_it_hdr_is_const_pmc>
+
+Determines whether the given C<Gc_it_hdr> structure is located in the
+const PMC pool.
 
 =cut
 
 */
 
-
 int
 gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
 {
-    return gc_it_ptr_has_parent_pool(ptr, interp->arena_base->const_pmc_pool);
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
+}
+
+int
+gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *)
+{
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
+}
+
+/*
+
+=item C<int gc_it_ptr_is_any_pmc>
+
+Determines whether a given pointer is a PMC or a constant PMC object from
+the pmc pool or the const_pmc pool respectively. Returns C<1> if so, C<0>
+otherwise.
+
+=item C<int gc_it_hdr_is_any_pmc>
+
+Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either
+the regular PMC pool, or the constant PMC pool.
+
+=cut
+
+*/
+
+int
+gc_it_ptr_is_any_pmc(PARROT_INTERP, void * ptr)
+{
+    /* Whichever one is more common should go first here, to take advantage
+       of the short-circuiting OR operation. */
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool) ||
+           GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
+}
+
+int
+gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
+{
+    /* Whichever one is more common should go first here, to take advantage
+       of the short-circuiting OR operation. */
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
 }
 
 /*
