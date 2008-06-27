@@ -17,13 +17,15 @@ This file is under heavy manipulation, and it isn't going to be the
 prettiest or most standards-compliant code for now. We can add
 spit and polish later.
 
-Open Questions:
+=head1 Open Questions
+
 1) Should GC headers exist in the small object pools, or should they be
    separate? I could create a separate pool for GC headers, managed manually
    by the GC.
 2) Should the Arenas object have a fourth pointer for an initialization
    function? Alternatively, reuse the current deinit function pointer
    with an optional init/deinit flag. This makes the GC more dynamic.
+
 */
 
 #include "parrot/parrot.h"
@@ -794,7 +796,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
 
 =item C<static void gc_it_mark_PObj_children_grey>
 
-Mark the children of the current pmc node grey. "Children" can be data, or
+Marks the children of the current PObj node grey. "Children" can be data, or
 metadata, and may be in several places. We need to search around to see
 what children there are, and add all of them to the queue.
 
@@ -802,8 +804,10 @@ Places to search (for PMCs):
 1) C<PMC_metadata(obj)>
 2) C<obj->real_self>
 3) C<PMC_next_for_GC(obj)>
-4) all sorts of other places, so if the PMC is special, we have to
-C<mark_special> it.
+4) C<obj->pmc_ext>
+5) C<VTABLE_mark(obj)>, if C<PObj_custom_mark_TEST(obj) == 1>
+Notice that "special" children of the PMC are marked already using
+C<mark_special> in the call to C<pobject_lives>.
 
 For all PObjs:
 1) PObj data, if C<PObj_data_is_PMC_array_FLAG>
@@ -811,12 +815,13 @@ For all PObjs:
 For strings:
 1) Memory pool buffer that contains the actual string data
 
-Also, if C<PObj_custom_mark_TEST(obj)>, we have to call the custom mark
-vtable function. Hopefully, all PMC mark VTABLE functions call
-C<pobject_lives> and don't try to monkey around with the PObj flags directly.
-
-Notice that the function C<src/gc/dod.c:mark_special> already marks some
-children grey inside the call to C<pobject_lives>.
+To mark a child as grey, we do one of two things:
+1) If the child is a PMC, we call C<pobject_lives> to ensure that special
+   PMCs go through C<mark_special>
+2) If the child is a non-PMC PObj, we add it's header to the queue directly,
+   and do not need to call C<pobject_lives>.
+3) If the child is a non-PObj simple buffer, we mark it black directly and
+   do not enqueue it.
 
 =cut
 
@@ -832,14 +837,11 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
     PARROT_ASSERT(obj);
     if(PObj_is_PMC_TEST(obj)) {
         if(PMC_metadata((PMC*)obj))
-            /* add the metadata PMC, if it exists */
             pobject_lives(interp, (PObj *)PMC_metadata((PMC*)obj));
         if (((PMC*)obj)->real_self != (PMC*)obj)
-            /* if the "real self" of the PMC is separate, mark that too. */
             pobject_lives(interp, (PObj*)(((PMC*)obj)->real_self));
-        if(PMC_next_for_GC((PMC*)obj) != (PMC*)obj) {
-            /* Do whatever we need here */
-        }
+        if(obj->pmc_ext)
+            gc_it_set_card_mark(PObj_to_IT_HDR(obj->pmc_ext), GC_IT_CARD_BLACK);
     }
     else if(PObj_is_STRING_TEST(obj) {
         /* It's a string or a const-string, or whatever. Deal with that
@@ -864,22 +866,6 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
 
 /*
 
-=item C<PARROT_INLINE static void gc_it_mark_buffer_children_grey>
-
-Marks children nodes of the buffer as being
-
-=cut
-
-*/
-
-PARROT_INLINE
-static void
-gc_it_mark_buffer_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
-{
-}
-
-/*
-
 =item C<void Parrot_gc_it_deinit>
 
 Kill the GC and reset everything.
@@ -898,7 +884,7 @@ Parrot_gc_it_deinit(PARROT_INTERP)
 {
     Arenas * const arena_base = interp->arena_base;
 
-    mem_sys_free(arena_base->gc_private);
+    mem_internal_free(arena_base->gc_private);
     arena_base->gc_private        = NULL;
     /* Null-out the function pointers, except the init pointer
        who knows? the interp might want to load us up again. */
