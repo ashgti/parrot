@@ -137,6 +137,12 @@ typedef struct _gc_gms_gen {
 #define GC_IT_BREAK_AFTER_6 break
 #define GC_IT_BREAK_AFTER_7 break
 
+/* Macros that are useful outside src/gc/gc_it.c */
+
+#define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
+    (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
+
+
 /*
  * GC_IT Header, a linked list.
  * Contains a link to the pool/arena (don't know which) that contains this item
@@ -270,8 +276,8 @@ typedef struct Small_Object_Pool {
 } Small_Object_Pool;
 
 /*
- * macros used in arena scan code to convert from object pointers
- * to arena pointers ...
+ * macros used in arena-traversal code to move between GC headers and their
+ * associated objects, and from one adjacent object to the next in an arena
  */
 
 
@@ -288,6 +294,8 @@ typedef struct Small_Object_Pool {
 #  define PObj_to_ARENA(o) (o)
 #  define ARENA_to_PObj(p) (p)
 #endif
+
+#define GC_NEXT_OBJECT_IN_POOL(ptr, size) (void*)((char*)ptr + size)
 
 
 /* HEADERIZER BEGIN: src/gc/smallobject.c */

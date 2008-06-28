@@ -292,7 +292,7 @@ garbage collectors will likely leave this function undefined.
 
 PARROT_API
 void
-object_lives(PARROT_INTERP, ARGMOD(PObj *obj))
+object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 {
 #if PARROT_GC_IT
     gc_it_set_card_mark(PObj_to_IT_HDR(obj), GC_IT_CARD_BLACK);

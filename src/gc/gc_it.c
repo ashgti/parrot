@@ -843,7 +843,11 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
         if (((PMC*)obj)->real_self != (PMC*)obj)
             pobject_lives(interp, (PObj*)(((PMC*)obj)->real_self));
         if(obj->pmc_ext)
-            gc_it_set_card_mark(PObj_to_IT_HDR(obj->pmc_ext), GC_IT_CARD_BLACK);
+            object_lives(interp, obj->pmc_ext);
+        if(PMC_next_for_GC(obj) != obj) {
+            pobject_lives(PMC_next_for_GC(obj));
+            PMC_next_for_GC(obj) = obj;
+        }
     }
     else if(PObj_is_STRING_TEST(obj) {
         /* It's a string or a const-string, or whatever. Deal with that
