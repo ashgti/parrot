@@ -35,7 +35,7 @@ method SEA($/) {
     make PAST::Op.new(
              PAST::Val.new(
                  :value(~$/),
-                 :returns('String')
+                 :returns('PhpString')
              ),
              :name('echo'),
              :node($/)
@@ -63,7 +63,7 @@ method inline_sea($/) {
    make PAST::Op.new(
             PAST::Val.new(
                 :value(~$<SEA_empty_allowed>),
-                :returns('String')
+                :returns('PhpString')
             ),
             :name('echo'),
             :node($/)
@@ -71,20 +71,10 @@ method inline_sea($/) {
 }
 
 method echo_statement($/) {
-     if $/[0]<expression> {
-         make PAST::Op.new(
-                  $( $/[0]<expression> ),
-                  :name('echo'),
-                  :node($/)
-              );
-     }
-     elsif $/[0]<function_call> {
-         make PAST::Op.new(
-                  $( $/[0]<function_call> ),
-                  :name('echo'),
-                  :node($/)
-              );
-     }
+    my $past := $( $<arguments> );
+    $past.name( ~$<ECHO> );
+
+    make $past;
 }
 
 method function_call($/) {
@@ -95,7 +85,10 @@ method function_call($/) {
 }
 
 method arguments($/) {
-    my $past := PAST::Op.new( :pasttype('call'), :node($/) );
+    my $past := PAST::Op.new(
+                    :pasttype('call'),
+                    :node($/)
+                );
     for $<expression> {
         $past.push($($_));
     }
@@ -140,7 +133,7 @@ method array_assign($/) {
 method array_elem($/) {
     my $past_var_name := $( $<VAR_NAME> );
     $past_var_name.scope('package');
-    $past_var_name.viviself('Hash');
+    $past_var_name.viviself('PhpArray');
 
     make PAST::Var.new(
              $past_var_name,
@@ -296,7 +289,7 @@ method string($/,$key) {
 method INTEGER($/) {
     make PAST::Val.new(
              :value( ~$/ ),
-             :returns('Integer'),
+             :returns('PhpInteger'),
              :node($/)
          );
 }
@@ -304,7 +297,7 @@ method INTEGER($/) {
 method NUMBER($/) {
     make PAST::Val.new(
              :value( +$/ ),
-             :returns('Float'),
+             :returns('PhpFloat'),
              :node($/)
          );
 }
@@ -312,7 +305,7 @@ method NUMBER($/) {
 method SINGLEQUOTE_STRING($/) {
     make PAST::Val.new(
              :value( $( $<string_literal> ) ),
-             :returns('String'),
+             :returns('PhpString'),
              :node($/)
          );
 }
@@ -320,7 +313,7 @@ method SINGLEQUOTE_STRING($/) {
 method DOUBLEQUOTE_STRING($/) {
     make PAST::Val.new(
              :value( $( $<string_literal> ) ),
-             :returns('String'),
+             :returns('PhpString'),
              :node($/)
          );
 }

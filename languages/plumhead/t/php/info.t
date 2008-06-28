@@ -28,10 +28,6 @@ use lib "$FindBin::Bin/../../lib";
 use Test::More     tests => 8;
 use Parrot::Test;
 
-TODO: {
-    local $TODO = 'awaiting compiler updates';
-
-
 language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'php_egg_logo_guid()' );
 <?php
   echo php_egg_logo_guid(), "\n";
@@ -95,8 +91,6 @@ language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'zend_logo_guid()' );
 CODE
 PHPE9568F35-D428-11d2-A769-00AA001ACF42
 OUTPUT
-
-}
 
 # Local Variables:
 #   mode: cperl

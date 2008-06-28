@@ -16,26 +16,23 @@ token CODE_END                { '?>' \n? }
 
 rule  statements              { <statement>*           {*} }
 rule  statement               { <echo_statement>       {*} <statement_delimiter>  #= echo_statement
-                              | <function_call>        {*} <statement_delimiter>  #= function_call
+                              | <expression>           {*} <statement_delimiter>  #= expression
                               | <if_statement>         {*}                        #= if_statement
                               | <inline_sea>           {*}                        #= inline_sea
                               | <scalar_assign>        {*} <statement_delimiter>  #= scalar_assign
                               | <array_assign>         {*} <statement_delimiter>  #= array_assign
                               }
 rule  statement_delimiter     { ';' | <before \? > | $ }
-rule  echo_statement          { <ECHO>
-                                ( <expression> | <function_call> )
-                                {*}
-                              }
-rule  function_call           { <FUNCTION_NAME> <.PAREN_OPEN> <arguments> <.PAREN_CLOSE> {*} }
-rule  arguments               { <expression>*  {*} }
+rule  echo_statement          { <ECHO> <arguments> {*} }
+rule  function_call           { <FUNCTION_NAME> <.PAREN_OPEN> <arguments> <.PAREN_CLOSE>  {*} }
+rule  arguments               {  [ <expression> [',' <expression>]* ]?                    {*} }
 rule  if_statement            { <IF> <.PAREN_OPEN> <relational_expression> <.PAREN_CLOSE>
                                 \{ <statements> \}
                                 <else_clause>?
                                 {*}
                               }
-token inline_sea              { <.CODE_END> <SEA_empty_allowed> <.CODE_START> {*} }
-rule  scalar_assign           { <var> <ASSIGN_OP> <expression>        {*} }
+token inline_sea              { <.CODE_END> <SEA_empty_allowed> <.CODE_START>             {*} }
+rule  scalar_assign           { <var> <ASSIGN_OP> <expression>                            {*} }
 rule  array_assign            { <array_elem> <ASSIGN_OP> <expression> {*} }
 
 token ECHO                    { 'echo' }
@@ -71,6 +68,7 @@ regex SEA_empty_allowed       { <-[<]>*? <before \<> }  # everthing till the nex
 
 token expression              { <concat_expression>       {*}  #= concat_expression
                               | <bitwise_expression>      {*}  #= bitwise_expression
+                              | <function_call>           {*}  #= function_call
                               }
 
 rule  array_elem              { <VAR_NAME> '[' <array_key> ']' {*} }

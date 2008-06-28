@@ -25,13 +25,10 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
 
-use Test::More     tests => 17;
+use Test::More     tests => 18;
 use Parrot::Test;
 
-TODO: {
-    local $TODO = 'await compiler changes';
-
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'floatval()' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'floatval()', todo => 'broken in PCT variant' );
 <?php
   echo floatval(TRUE), "\n";
   echo floatval(NULL), "\n";
@@ -51,7 +48,7 @@ CODE
 0
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype(TRUE)' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype(TRUE)', todo => 'broken in PCT variant' );
 <?php
   echo gettype(TRUE), "\n";
 ?>
@@ -59,7 +56,7 @@ CODE
 boolean
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype(NULL)' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype(NULL)', todo => 'broken in PCT variant' );
 <?php
   echo gettype(NULL), "\n";
 ?>
@@ -83,10 +80,6 @@ CODE
 double
 OUTPUT
 
-TODO:
-{
-    local $TODO = 'update compiler';
-
 language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype("str")' );
 <?php
   echo gettype('str'), "\n";
@@ -95,9 +88,17 @@ CODE
 string
 OUTPUT
 
-}
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'gettype($array)' );
+<?php
+  $hello['world'] = 'hi';
+  echo gettype($hello), "\n";
+?>
+CODE
+array
+OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'intval()' );
+
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'intval()', todo => 'broken in PCT variant' );
 <?php
   echo intval(TRUE), "\n";
   echo intval(NULL), "\n";
@@ -131,7 +132,7 @@ CODE
 /Only one argument expected/
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_bool(TRUE)' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_bool(TRUE)', todo => 'broken in PCT variant' );
 <?php
   echo is_bool(TRUE), "\n";
 ?>
@@ -155,7 +156,7 @@ CODE
 1
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_null(NULL)' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_null(NULL)', todo => 'broken in PCT variant' );
 <?php
   echo is_null(NULL), "\n";
 ?>
@@ -163,7 +164,7 @@ CODE
 1
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_numeric()' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_numeric()', todo => 'broken in PCT variant' );
 <?php
   echo is_numeric(3), "\n";
   echo is_numeric(3.14), "\n";
@@ -189,7 +190,7 @@ CODE
 
 OUTPUT
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_scalar()' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_scalar()', todo => 'broken in PCT variant' );
 <?php
   echo is_scalar(NULL), "\n";
   echo is_scalar(TRUE), "\n";
@@ -230,15 +231,13 @@ OUTPUT
 
 }
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'strval(TRUE)' );
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'strval(TRUE)', todo => 'broken in PCT variant' );
 <?php
   echo strval(TRUE), "\n";
 ?>
 CODE
 1
 OUTPUT
-
-}
 
 # Local Variables:
 #   mode: cperl
