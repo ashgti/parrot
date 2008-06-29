@@ -139,20 +139,21 @@ PARROT_API
 void
 Parrot_gc_it_init(PARROT_INTERP)
 {
-    Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * gc_priv_data;
+    Gc_it_data        *gc_priv_data;
+    Arenas     * const arena_base  = interp->arena_base;
+
     /* Create our private data. We might need to initialize some things
     here, depending on the data we include in this structure */
-    arena_base->gc_private        = mem_allocate_zeroed_typed(Gc_it_data);
-    gc_priv_data = (Gc_it_data *)arena_base->gc_private;
-
-    gc_priv_data->state           = GC_IT_READY;
+    arena_base->gc_private         = mem_allocate_zeroed_typed(Gc_it_data);
+    gc_priv_data                   = (Gc_it_data *)arena_base->gc_private;
+    gc_priv_data->state            = GC_IT_READY;
 
     /* set function hooks according to pdd09 */
     arena_base->do_gc_mark         = Parrot_gc_it_run;
     arena_base->finalize_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool          = Parrot_gc_it_pool_init;
 }
+
 
 /*
 
@@ -209,21 +210,26 @@ PARROT_API
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)(arena_base->gc_private);
+    const Arenas * const arena_base   = interp->arena_base;
+    Gc_it_data   * const gc_priv_data = (Gc_it_data *)(arena_base->gc_private);
 
     if(flags & GC_finish_FLAG) {
         /* If we've gotten the finish flag, the interpreter is closing down.
            go through all items, call finalization on all PMCs, and do
            whatever else we need to do. */
         gc_priv_data->state = GC_IT_RESUME_MARK;
-        Parrot_dod_trace_root(interp, 1); /* Add globals directly to the queue */
+
+        /* Add globals directly to the queue */
+        Parrot_dod_trace_root(interp, 1);
         gc_it_finalize_all_pmc(interp);
         gc_it_post_sweep_cleanup(interp);
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
     }
-    gc_priv_data->item_count = 0; /* items scanned this run */
+
+    /* items scanned this run */
+    gc_priv_data->item_count = 0;
+
     switch (gc_priv_data->state) {
         case GC_IT_READY:
             gc_priv_data->state = GC_IT_START_MARK;
@@ -234,7 +240,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         case GC_IT_START_MARK:
             gc_priv_data->total_count = 0;
-            gc_priv_data->state = GC_IT_MARK_ROOTS;
+            gc_priv_data->state       = GC_IT_MARK_ROOTS;
             GC_IT_BREAK_AFTER_1;
 
         case GC_IT_MARK_ROOTS:
@@ -249,14 +255,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             do {
                 gc_it_enqueue_next_root(interp);
                 gc_it_trace(interp);
-            } while(gc_priv_data->item_count < GC_IT_ITEMS_MARKED_MIN &&
-                    gc_priv_data->root_queue != NULL);
+            } while(gc_priv_data->item_count < GC_IT_ITEMS_MARKED_MIN
+            &&      gc_priv_data->root_queue);
             /* We've either scanned the necessary number of items, or we've
                run out of new root items to scan. Check to see if the mark
                is complete, and if so move to the next state. Otherwise,
                stay at the same state so we can come back. */
-            if(gc_priv_data->queue == NULL &&
-               gc_priv_data->root_queue == NULL)
+            if (!gc_priv_data->queue
+            &&  !gc_priv_data->root_queue)
                 gc_priv_data->state = GC_IT_END_MARK;
             else
                 break;
@@ -271,7 +277,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             /* Don't know if there is anything to be done here */
             gc_priv_data->state = GC_IT_SWEEP_PMCS;
 #ifdef GC_IT_DEBUG
-            printf("ending mark, marked %d items\n", (int)gc_priv_data->total_count);
+            printf("ending mark, marked %d items\n",
+                (int)gc_priv_data->total_count);
 #endif
             GC_IT_BREAK_AFTER_4;
 
@@ -301,6 +308,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     return;
 }
 
+
 /*
 
 =item C<void gc_it_trace_normal>
@@ -323,21 +331,28 @@ void
 gc_it_trace_normal(PARROT_INTERP)
 {
     /* trace through the entire queue until it is empty. */
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)interp->arena_base->gc_private;
-    Gc_it_hdr * cur_item;
+    Gc_it_hdr         *cur_item;
+    Gc_it_data * const gc_priv_data =
+        (Gc_it_data *)interp->arena_base->gc_private;
 
-    while((cur_item = gc_priv_data->queue)) {
+    while ((cur_item = gc_priv_data->queue)) {
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
            discarded */
         PARROT_ASSERT(cur_item);
         GC_IT_MARK_CHILDREN_GREY(interp, cur_item);
         GC_IT_MARK_NODE_BLACK(gc_priv_data, cur_item);
-        gc_priv_data->total_count++; /* total items since beginning of scan */
-        gc_priv_data->item_count++;  /* number of items this increment */
+
+        /* total items since beginning of scan */
+        gc_priv_data->total_count++;
+
+        /* number of items this increment */
+        gc_priv_data->item_count++;
     }
+
     gc_priv_data->queue = NULL;
 }
+
 
 /*
 
@@ -352,29 +367,34 @@ Sweep through the PMC pools, freeing dead objects.
 static void
 gc_it_sweep_pmc_pools(PARROT_INTERP)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)arena_base->gc_private;
-    /* PMCs need to be handled differently from other types of pools. We'll
-       set up lists of our pools here, and handle different types differently. */
+    const Arenas * const arena_base   = interp->arena_base;
+    Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
+
+    /* PMCs need to be handled differently from other types of pools.  Set up
+       lists of our pools here, and handle different types differently.  */
     Small_Object_Pool * const pmc_pools[] = {
         arena_base->pmc_pool,
         arena_base->constant_pmc_pool
     };
+
     register UINTVAL i;
-    for(i = 0; i < 2; i++) {
+
+    for (i = 0; i < 2; i++) {
         gc_it_sweep_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
     }
+
     /* I'm going to ignore PMC_EXT for now, it has a separate, special
-       marking system set up for it already and I dont know that anything
-       I do here will improve on that. */
+       marking system set up for it already and I don't know that anything I do
+       here will improve on that. */
 }
+
 
 /*
 
 =item C<static void gc_it_finalize_all_pmc>
 
-Final GC run, sweep through the pmc pool and call custom destroy VTABLE
-methods, if any
+Performs the final GC run, sweeping through the pmc pool and calling any custom
+destroy VTABLE entries.
 
 =cut
 
@@ -383,25 +403,30 @@ methods, if any
 static void
 gc_it_finalize_all_pmc(PARROT_INTERP)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)arena_base->gc_private;
-    /* PMCs need to be handled differently from other types of pools. We'll
-       set up lists of our pools here, and handle different types differently. */
+    const Arenas * const arena_base   = interp->arena_base;
+    Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
+
+    /* PMCs need to be handled differently from other types of pools.  Set
+       up lists of our pools here, and handle different types differently. */
+
     Small_Object_Pool * const pmc_pools[] = {
         arena_base->pmc_pool,
         arena_base->constant_pmc_pool
     };
+
     register UINTVAL i;
+
     for(i = 0; i < 2; i++) {
         gc_it_finalize_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
     }
 }
 
+
 /*
 
 =item C<static void gc_it_finalize_PMC_arenas>
 
-In a particular PMC pool, run through all arenas and call custom finalization
+In a particular PMC pool, runs through all arenas and call custom finalization
 methods of all live PMCs, if any.
 
 I need to rework this whole function, but it's a good placeholder for now
@@ -414,24 +439,27 @@ static void
 gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data* gc_priv_data), 
     ARGMOD(Small_Object_Pool *pool))
 {
-    Small_Object_Arena * arena;
-    INTVAL index;
-    Gc_it_hdr * hdr;
+    Small_Object_Arena *arena;
+
+    /* walking backwards helps avoid incorrect order-of-destruction bugs */
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        for(index = arena->total_objects - 1; index >= 0; index--) {
-            hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
-            if(hdr->next == NULL) {
+        INTVAL index;
+
+        for (index = arena->total_objects - 1; index >= 0; index--) {
+            Gc_it_hdr *hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
+
+            if (!hdr->next)
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-            }
         }
     }
 }
+
 
 /*
 
 =item C<static void gc_it_sweep_header_pools>
 
-Sweep through the header pools, freeing dead objects.
+Sweeps through the header pools, freeing dead objects.
 
 =cut
 
@@ -440,24 +468,28 @@ Sweep through the header pools, freeing dead objects.
 static void
 gc_it_sweep_header_pools(PARROT_INTERP)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)arena_base->gc_private;
+    const Arenas * const arena_base   = interp->arena_base;
+    Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
+
     Small_Object_Pool * const header_pools[] = {
         arena_base->string_header_pool,
         arena_base->buffer_header_pool,
         arena_base->constant_string_header_pool
     };
+
     register UINTVAL i;
-    for(i = 0; i < 3; i++) {
+
+    for (i = 0; i < 3; i++) {
         gc_it_sweep_header_arenas(interp, gc_priv_data, header_pools[i]);
     }
 }
+
 
 /*
 
 =item C<static void gc_it_sweep_sized_pools>
 
-Sweep through the sized pools, freeing dead objects.
+Sweeps through the sized pools, freeing dead objects.
 
 =cut
 
@@ -466,30 +498,35 @@ Sweep through the sized pools, freeing dead objects.
 static void
 gc_it_sweep_sized_pools(PARROT_INTERP)
 {
-    const Arenas * const arena_base = interp->arena_base;
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)arena_base->gc_private;
+    const Arenas * const arena_base   = interp->arena_base;
+    Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
+
     register INTVAL i;
-    for(i = arena_base->num_sized - 1; i >= 0; i--) {
-        Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
-        if(pool)
+
 #define gc_it_sweep_sized_arenas(i, d, p) gc_it_sweep_header_arenas(i, d, p)
+
+    for (i = arena_base->num_sized - 1; i >= 0; i--) {
+        Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
+        if (pool)
             gc_it_sweep_sized_arenas(interp, gc_priv_data, pool);
     }
 }
+
+
 /*
 
 =item C<static void gc_it_sweep_PMC_arenas>
 
-If the pool contains PMCs, we sweep through it. When a dead object is found,
-we call C<Parrot_dod_free_pmc> on it. This should, in theory, kill the PMC
-and clean up all it's dependencies. After the PMC is dead, we add it to the
-pool's free list.
+If the pool contains PMCs, we sweep through it. When a dead object is found, we
+call C<Parrot_dod_free_pmc> on it. This should, in theory, kill the PMC and
+clean up all its dependencies. After the PMC is dead, we add it to the pool's
+free list.
 
-This function uses Duff's device magic for partial loop unrolling. We'll
-start at the end of the card, and mark forward. Duff's device is not
-necessarily the fastest way to unroll most loops, and it may interfere
-with branch prediction. However, I think it makes the most sense here,
-considering the layout of our flags.
+This function uses Duff's device magic for partial loop unrolling. We'll start
+at the end of the card, and mark forward. Duff's device is not necessarily the
+fastest way to unroll most loops, and it may interfere with branch prediction.
+However, I think it makes the most sense here, considering the layout of our
+flags.
 
 See L<http://en.wikipedia.org/wiki/Duff%27s_device> for more details.
 
@@ -501,59 +538,65 @@ static void
 gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
 {
+
     /* Go through each arena in the pool, free objects marked white,
-       set black cards to white, and call finalization routines, if
-       needed. */
+       set black cards to white, and call finalization routines, if needed. */
     Small_Object_Arena * arena;
-    Gc_it_card * card;
-    register UINTVAL i;
+
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        card = &(arena->cards[arena->card_info._d.card_size]);
+        Gc_it_card      *card = &(arena->cards[arena->card_info._d.card_size]);
+        register UINTVAL i    = arena->card_info._d.last_index;
+
         PARROT_ASSERT(card);
-        i = arena->card_info._d.last_index;
 
         switch (arena->card_info._d.last_index % 4) {
             Gc_it_hdr * hdr;
             case 0:
                 do {
-                    if(card->_f.flag4 == GC_IT_CARD_WHITE) {
-                        /* Get a pointer to the object header from it's index */
+                    if (card->_f.flag4 == GC_IT_CARD_WHITE) {
+                        /* Get a pointer to the object header from its index */
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+
                         /* add the header to the free list */
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+
                         /* free the PMC */
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+
                         /* mark the card as "FREE" */
                         card->_f.flag4 = GC_IT_CARD_FREE;
                     }
-                    else if(card->_f.flag4 == GC_IT_CARD_BLACK)
+                    else if (card->_f.flag4 == GC_IT_CARD_BLACK)
                         /* if it's black, reset it to white for the next run */
                         card->_f.flag4 = GC_IT_CARD_WHITE;
+
                     /* move to the next index value, and fall through */
                     i--;
             case 3:
-                    if(card->_f.flag3 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag3 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         card->_f.flag3 = GC_IT_CARD_FREE;
                     }
-                    else if(card->_f.flag3 == GC_IT_CARD_BLACK)
+                    else if (card->_f.flag3 == GC_IT_CARD_BLACK)
                         card->_f.flag3 = GC_IT_CARD_WHITE;
+
                     i--;
             case 2:
-                    if(card->_f.flag2 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag2 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         card->_f.flag2 = GC_IT_CARD_FREE;
                     }
-                    else if(card->_f.flag2 == GC_IT_CARD_BLACK)
+                    else if (card->_f.flag2 == GC_IT_CARD_BLACK)
                         card->_f.flag2 = GC_IT_CARD_WHITE;
+
                     i--;
             case 1:
             default:
-                    if(card->_f.flag1 == GC_IT_CARD_WHITE) {
+                    if( card->_f.flag1 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
@@ -561,19 +604,21 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     }
                     else if(card->_f.flag1 == GC_IT_CARD_BLACK)
                         card->_f.flag1 = GC_IT_CARD_WHITE;
+
                     i--;
-                } while(card-- != arena->cards);
+                } while (card-- != arena->cards);
         }
     }
 }
+
 
 /*
 
 =item C<static void gc_it_sweep_header_arenas>
 
-Sweep through the header pool, and free dead objects. Unlike PMCs, we don't
-need to kill the dead object first (that i'm aware of), we just add the
-header to the pool's free list.
+Sweeps through the header pool, and frees dead objects. Unlike PMCs, we don't
+need to kill the dead object first (that i'm aware of), we just add the header
+to the pool's free list.
 
 =cut
 
@@ -584,58 +629,64 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
 {
     Small_Object_Arena *arena;
-    Gc_it_card *card;
     Gc_it_hdr *hdr;
-    register UINTVAL i;
+
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        card = &(arena->cards[arena->card_info._d.card_size]);
+        Gc_it_card      *card = &(arena->cards[arena->card_info._d.card_size]);
+        register UINTVAL i    = arena->card_info._d.last_index;
+
         PARROT_ASSERT(card);
-        i = arena->card_info._d.last_index;
-        /* Partially unroll the loop with Duff's device, do 4 items at a time. */
+
+        /* Partially unroll the loop with Duff's device: four items at a time */
         switch (arena->card_info._d.last_index % 4) {
             case 0:
                 do {
-                    if(card->_f.flag4 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag4 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         card->_f.flag4 = GC_IT_CARD_FREE;
                     }
                     else if(card->_f.flag4 == GC_IT_CARD_BLACK)
                         card->_f.flag4 = GC_IT_CARD_WHITE;
+
                     i--;
             case 3:
-                    if(card->_f.flag3 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag3 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         card->_f.flag3 = GC_IT_CARD_FREE;
                     }
                     else if(card->_f.flag3 == GC_IT_CARD_BLACK)
                         card->_f.flag3 = GC_IT_CARD_WHITE;
+
                     i--;
             case 2:
-                    if(card->_f.flag2 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag2 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         card->_f.flag2 = GC_IT_CARD_FREE;
                     }
-                    else if(card->_f.flag2 == GC_IT_CARD_BLACK)
+                    else if (card->_f.flag2 == GC_IT_CARD_BLACK)
                         card->_f.flag2 = GC_IT_CARD_WHITE;
+
                     i--;
             case 1:
             default:
-                    if(card->_f.flag1 == GC_IT_CARD_WHITE) {
+                    if (card->_f.flag1 == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         card->_f.flag1 = GC_IT_CARD_FREE;
                     }
-                    else if(card->_f.flag1 == GC_IT_CARD_BLACK)
+                    else if (card->_f.flag1 == GC_IT_CARD_BLACK)
                         card->_f.flag1 = GC_IT_CARD_WHITE;
+
                     i--;
-                } while(card-- != arena->cards);
+                } while (card-- != arena->cards);
         }
     }
 }
 #endif
+
 
 /*
 
@@ -669,6 +720,7 @@ gc_it_trace_threaded(SHIM_INTERP)
 
 }
 
+
 /*
 
 =item C<void gc_it_mark_threaded>
@@ -686,6 +738,7 @@ gc_it_mark_threaded(SHIM_INTERP)
 
 }
 #endif
+
 
 /*
 
@@ -706,14 +759,18 @@ PARROT_INLINE
 static void
 gc_it_enqueue_all_roots(PARROT_INTERP)
 {
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)interp->arena_base->gc_private;
-    if(gc_priv_data->queue != NULL)
+    Gc_it_data * const gc_priv_data =
+        (Gc_it_data *)interp->arena_base->gc_private;
+
+    if (gc_priv_data->queue)
         gc_it_trace_normal(interp);
-    PARROT_ASSERT(gc_priv_data->queue == NULL);
+
+    PARROT_ASSERT(!gc_priv_data->queue);
     gc_priv_data->queue       = gc_priv_data->root_queue;
     gc_priv_data->root_queue  = NULL;
 }
 #endif
+
 
 #if GC_IT_INCREMENT_MODE
 /*
@@ -732,14 +789,16 @@ an entire GC increment marking a single item.
 static void
 gc_it_enqueue_next_root(PARROT_INTERP)
 {
-    Gc_it_data * const gc_priv_data = (Gc_it_data*)interp->arena_base->gc_private;
-    Gc_it_hdr * hdr = gc_priv_data->root_queue;
+    Gc_it_data * const gc_priv_data =
+        (Gc_it_data *)interp->arena_base->gc_private;
+    Gc_it_hdr         *hdr          = gc_priv_data->root_queue;
+
     PARROT_ASSERT(hdr);
 
-    while(gc_priv_data->root_queue != NULL) {
+    while (gc_priv_data->root_queue) {
         gc_priv_data->root_queue = hdr->next;
-        if(PObj_is_PMC_TEST(IT_HDR_to_PObj(hdr))) {
-            /* add the item to the queue. return */
+
+        if (PObj_is_PMC_TEST(IT_HDR_to_PObj(hdr))) {
             GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
             return;
         }
@@ -748,16 +807,18 @@ gc_it_enqueue_next_root(PARROT_INTERP)
                next item from the root_queue */
             gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
             hdr->next = NULL;
-            hdr = gc_priv_data->root_queue;
+            hdr       = gc_priv_data->root_queue;
         }
     }
+
     /* If we've fallen through here, that means there are no more root objects,
        no more objects to mark, and we move on to the next stage. Notice
        that there may be items in the regular queue, added by Parrot explicitly
        between increments. Those still need to be traced, if any. */
-    PARROT_ASSERT(gc_priv_data->root_queue == NULL);
+    PARROT_ASSERT(!gc_priv_data->root_queue);
 }
 #endif
+
 
 /*
 
@@ -823,22 +884,25 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
     else if (PObj_is_string_TEST(obj)) {
         /* It's a string or a const-string, or whatever. Deal with that here. */
     }
+
     /* if the PMC is an array of other PMCs, we cycle through those. I'm
-       surprised if this isn't covered by VTABLE_mark, but I won't question
-       it now. */
-    if(obj->flags & PObj_data_is_PMC_array_FLAG)
-        Parrot_dod_trace_pmc_data(interp, (PMC*)obj);
+       surprised if this isn't covered by VTABLE_mark, but I won't question it
+       now. */
+    if (obj->flags & PObj_data_is_PMC_array_FLAG)
+        Parrot_dod_trace_pmc_data(interp, pmc);
+
     /* if it's a PMC with a custom mark routine, call that here. The
        custom mark routine will call pobject_lives on the children,
        which will add them to the queue properly. */
-    if(PObj_custom_mark_TEST(obj))
-        VTABLE_mark(interp, (PMC*)obj);
+    if (PObj_custom_mark_TEST(obj))
+        VTABLE_mark(interp, pmc);
 
     /* If the item is shared, we need to do some magic trickery with it. I
        don't know if I'm going to do said trickery here, or offload it to a
        function like src/gc/dod.c:mark_special (which is where some of the
        other logic in this function originated) */
 }
+
 
 /*
 
@@ -862,6 +926,7 @@ Parrot_gc_it_deinit(PARROT_INTERP)
 
     mem_internal_free(arena_base->gc_private);
     arena_base->gc_private        = NULL;
+
     /* Null-out the function pointers, except the init pointer
        who knows? the interp might want to load us up again. */
     arena_base->do_gc_mark         = NULL;
@@ -869,12 +934,13 @@ Parrot_gc_it_deinit(PARROT_INTERP)
     arena_base->init_pool          = NULL;
 }
 
+
 /*
 
 =item C<void Parrot_gc_it_pool_init>
 
-Initialize a new memory pool. Set the pointers to the necessary functions,
-and set the size of the objects to include the GC header.
+Initializes a new memory pool by setting the pointers to the necessary
+functions, and setting the size of the objects to include the GC header.
 
 =cut
 
@@ -893,6 +959,7 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
 }
+
 
 /*
 
@@ -917,11 +984,12 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
 }
 
+
 /*
 
 =item C<void * gc_it_get_free_object>
 
-Get an object from the pool's free list and return a pointer to it.
+Gets an object from the pool's free list and return a pointer to it.
 
 =cut
 
@@ -933,32 +1001,32 @@ PARROT_API
 void *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    Gc_it_hdr *hdr;
+    Gc_it_hdr *hdr = (Gc_it_hdr *)pool->free_list;
 
     /* If there are no objects, allocate a new arena */
-    hdr = (Gc_it_hdr*)pool->free_list;
-    if (hdr == NULL)
+    if (!hdr)
         (pool->more_objects)(interp, pool);
 
     /* pull the first header off the free list */
-    GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void*);
+    GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
     hdr->next = NULL;
     --pool->num_free_objects;
 
-    /* mark the item as black for now, so it doesn't get collected prematurely. */
+    /* mark the item as black, so it doesn't get collected prematurely.  */
     gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
 
     /* return pointer to the object from the header */
-    return (void*)IT_HDR_to_PObj(hdr);
+    return (void *)IT_HDR_to_PObj(hdr);
 }
+
 
 /*
 
 =item C<void gc_it_alloc_objects>
 
-Allocate a new Small_Object_Arena from the OS. Set up the arena as
-necessary. The arena contains enough space to house several objects
-of the given size, and we allocate locally from these arenas as needed.
+Allocates a new Small_Object_Arena from the OS and sets it up as necessary. The
+arena contains enough space to house several objects of the given size, and we
+allocate locally from these arenas as needed.
 
 The memory block for the arena is allocated large enough to hold not only the
 arena's object, but also the C<Small_Object_Arena> structure itself and the
@@ -984,45 +1052,51 @@ PARROT_API
 void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    const size_t real_size = pool->object_size;
+    const size_t real_size   = pool->object_size;
     const size_t num_objects = pool->objects_per_alloc;
-    const size_t card_size = (num_objects / 4 + ((num_objects % 4) ? (1) : (0)));
-    size_t size = real_size * pool->objects_per_alloc + /* the stuff */
-                  sizeof(Small_Object_Arena) + /* for the arena struct */
-                  card_size * sizeof(Gc_it_card); /* for the card */
+    const size_t card_size   = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
 
-    Small_Object_Arena * const new_arena = (Small_Object_Arena*)mem_internal_allocate(size);
-    new_arena->card_info._d.card_size = card_size;
+    size_t       size        = real_size * pool->objects_per_alloc /* the obj */
+                             + sizeof (Small_Object_Arena)         /* arena   */
+                             + card_size * sizeof(Gc_it_card);     /* card    */
+
+    Small_Object_Arena * const new_arena =
+        (Small_Object_Arena *)mem_internal_allocate(size);
+
+    new_arena->card_info._d.card_size  = card_size;
     new_arena->card_info._d.last_index = num_objects - 1;
-    new_arena->parent_pool = pool;
+    new_arena->parent_pool             = pool;
 
     /* ...the downside is this messy pointer arithmetic. */
-    new_arena->cards = ((Gc_it_card*) ((Small_Object_Arena*)new_arena) + 1);
-    new_arena->start_objects = (void*) (((Gc_it_card*)(new_arena->cards)) + card_size);
+    new_arena->cards         = ((Gc_it_card *)((Small_Object_Arena *)new_arena) + 1);
+    new_arena->start_objects = (void *)(((Gc_it_card *)(new_arena->cards)) + card_size);
     memset(new_arena->cards, GC_IT_CARD_ALL_NEW, card_size);
 
     /* insert new_arena in pool's arena linked list */
-    Parrot_append_arena_in_pool(interp, pool, new_arena, real_size * pool->objects_per_alloc);
+    Parrot_append_arena_in_pool(interp, pool, new_arena,
+        real_size * pool->objects_per_alloc);
 
     /* Add all these new objects we've created into the pool's free list */
     gc_it_add_arena_to_free_list(interp, pool, new_arena);
 
     /* allocate more next time */
-    pool->objects_per_alloc = (UINTVAL) pool->objects_per_alloc *
-        UNITS_PER_ALLOC_GROWTH_FACTOR;
+    pool->objects_per_alloc =
+        (UINTVAL)pool->objects_per_alloc * UNITS_PER_ALLOC_GROWTH_FACTOR;
+
     size = real_size * pool->objects_per_alloc;
-    if (size > POOL_MAX_BYTES) {
+
+    if (size > POOL_MAX_BYTES)
         pool->objects_per_alloc = POOL_MAX_BYTES / real_size;
-    }
 }
+
 
 /*
 
 =item C<static void gc_it_add_arena_to_free_list>
 
-Take a newly allocated arena structure, and add all of it's new objects to
-the pool's free list. We start at the beginning of the arena's memory block
-and do the following steps:
+Adds all of the new objects from a newly allocated arena structure to the
+pool's free list. We start at the beginning of the arena's memory block and do
+the following steps:
 
 1) add the current object to the free list
 2) initialize the C<parent_arena> and C<index> fields of the object, for fast
@@ -1042,39 +1116,40 @@ static void
 gc_it_add_arena_to_free_list(PARROT_INTERP, 
     ARGMOD(Small_Object_Pool *pool), ARGMOD(Small_Object_Arena *new_arena))
 {
-    Gc_it_hdr * p = (Gc_it_hdr*)new_arena->start_objects;
-    Gc_it_hdr * temp;
+    Gc_it_hdr *p = (Gc_it_hdr *)new_arena->start_objects;
+    Gc_it_hdr *temp;
     register UINTVAL i;
     const size_t num_objs = new_arena->total_objects;
 
-    for(i = 0; i < num_objs - 1; i++) {
+    for (i = 0; i < num_objs - 1; i++) {
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
 
         /* Cache the object's parent pool and card addresses */
-        p->parent_arena = new_arena;
+        p->parent_arena   = new_arena;
         p->index.num.card = i / 4;
         p->index.num.flag = i % 4;
 
         /* Find the next item in the arena with voodoo pointer magic */
-        temp = ((Gc_it_hdr *)p) + 1;
-        temp = (Gc_it_hdr *)(((char*)temp) + (pool->object_size));
+        temp    = ((Gc_it_hdr *)p) + 1;
+        temp    = (Gc_it_hdr *)(((char *)temp) + (pool->object_size));
         p->next = temp;
-        p = temp;
+        p       = temp;
     }
-    p->next = (Gc_it_hdr*)pool->free_list;
-    pool->free_list = new_arena->start_objects;
+
+    p->next                 = (Gc_it_hdr *)pool->free_list;
+    pool->free_list         = new_arena->start_objects;
     pool->num_free_objects += num_objs;
 }
+
 
 /*
 
 =item C<void gc_it_set_card_mark>
 
-Mark the card associated with the given item to the value given by C<flag>.
-We've done a lot of value caching, so finding the card is as easy
-as a few pointer dereferences and a little bit of algebra. Each card contains
-4 flags.
+Marks the card associated with the given item to the value given by C<flag>.
+We've done a lot of value caching, so finding the card is a few pointer
+dereferences and a little bit of algebra. Each card contains four flags.
 
 =cut
 
@@ -1084,7 +1159,9 @@ void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
 {
     Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
+
     PARROT_ASSERT(flag < 4);
+
     switch (hdr->index.num.flag) {
         case 0:
             card->_f.flag1 = flag;
@@ -1104,11 +1181,12 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
     }
 }
 
+
 /*
 
 =item C<UINTVAL gc_it_get_card_mark>
 
-Return the current flag value associated with the given object header.
+Returns the current flag value associated with the given object header.
 
 =cut
 
@@ -1134,13 +1212,14 @@ gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
     }
 }
 
+
 /*
 
 =item C<void gc_it_more_objects>
 
-Try to allocate new objects. If the mark phase is finished, run a quick sweep.
-If the sweep frees up some objects, return one of those. Otherwise, we allocate
-a new arena and return an object from that.
+Tries to allocate new objects. If the mark phase is finished, run a quick
+sweep.  If the sweep frees up some objects, return one of those. Otherwise, we
+allocate a new arena and return an object from that.
 
 =cut
 
@@ -1150,23 +1229,28 @@ PARROT_API
 void
 gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    const Gc_it_data * const gc_priv_data = (Gc_it_data*)interp->arena_base->gc_private;
-    const Gc_it_state state = gc_priv_data->state;
-    if(state == GC_IT_SWEEP_PMCS || state == GC_IT_SWEEP_HEADERS || state == GC_IT_SWEEP_BUFFERS) {
+    const Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
+    const Gc_it_state        state        = gc_priv_data->state;
+
+    if (state == GC_IT_SWEEP_PMCS
+    ||  state == GC_IT_SWEEP_HEADERS
+    ||  state == GC_IT_SWEEP_BUFFERS) {
         /* Do a complete sweep now, go through all sweep increments, look for
            dead objects, whatever. I'll make a function to do that. */
-        if(pool->free_list != NULL)
+        if (pool->free_list)
             return;
     }
+
     gc_it_alloc_objects(interp, pool);
 }
+
 
 /*
 
 =item C<static void gc_it_post_sweep_cleanup>
 
-Cleanup the GC system after we've completed an entire mark and sweep.
-Currently, no cleanup is needed, so this function does nothing.
+Cleans up the GC system after completing an entire mark and sweep.  Currently,
+no cleanup is needed, so this function does nothing.
 
 =cut
 
@@ -1176,6 +1260,7 @@ static void
 gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
 }
+
 
 /*
 
@@ -1198,40 +1283,41 @@ pool. Returns C<1> if so, C<0> otherwise.
 */
 
 int
-gc_it_ptr_is_pmc(PARROT_INTERP, void * ptr)
+gc_it_ptr_is_pmc(PARROT_INTERP, void *ptr)
 {
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool);
 }
 
 static int
-gc_it_hdr_is_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
+gc_it_hdr_is_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
 }
 
 int
-gc_it_ptr_is_pmc_ext(PARROT_INTERP, void * ptr)
+gc_it_ptr_is_pmc_ext(PARROT_INTERP, void *ptr)
 {
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_ext_pool);
 }
 
 static int
-gc_it_hdr_is_pmc_ext(PARROT_INTERP, Gc_it_hdr * hdr)
+gc_it_hdr_is_pmc_ext(PARROT_INTERP, Gc_it_hdr *hdr)
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_ext_pool);
 }
+
 
 /*
 
 =item C<int gc_it_ptr_is_const_pmc>
 
 Determines whether a given pointer is a constant PMC object from the
-const_pmc pool. Returns C<1> if so, C<0> otherwise.
+constant_pmc pool. Returns C<1> if so, C<0> otherwise.
 
 =item C<int gc_it_hdr_is_const_pmc>
 
-Determines whether the given C<Gc_it_hdr> structure is located in the
-const PMC pool.
+Determines whether the given C<Gc_it_hdr> structure is located in the constant
+PMC pool.
 
 =cut
 
@@ -1249,67 +1335,68 @@ gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
 }
 
+
 /*
 
 =item C<int gc_it_ptr_is_any_pmc>
 
-Determines whether a given pointer is a PMC or a constant PMC object from
-the pmc pool or the const_pmc pool respectively. Returns C<1> if so, C<0>
+Determines whether a given pointer is a PMC or a constant PMC object from the
+pmc pool or the constant_pmc pool respectively. Returns C<1> if so, C<0>
 otherwise.
 
 =item C<int gc_it_hdr_is_any_pmc>
 
-Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either
-the regular PMC pool, or the constant PMC pool.
+Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either the
+regular PMC pool or the constant PMC pool.
 
 =item C<int gc_it_hdr_is_PObj_compatible>
 
-Determines whether the given header is a data object that shares isomorphism
-with PObjs. If so, we can treat the object as a PObj, and read flags from it
-as normal. Otherwise, it's a plane non-aggregate buffer and can be treated
-as such.
+Determines whether the given header is a data object isomorphic with PObj. If
+so, we can treat the object as a PObj, and read flags from it as normal.
+Otherwise, it's a plain non-aggregate buffer and can be treated as such.
 
 =cut
 
 */
 
 int
-gc_it_ptr_is_any_pmc(PARROT_INTERP, void * ptr)
+gc_it_ptr_is_any_pmc(PARROT_INTERP, void *ptr)
 {
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool) ||
-           GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool)
+        || GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
-gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
+gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
 {
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool)
+        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
-gc_it_hdr_is_PObj_compatible(PARROT_INTERP, Gc_it_hdr * hdr)
+gc_it_hdr_is_PObj_compatible(PARROT_INTERP, Gc_it_hdr *hdr)
 {
     /* Arrange these in order of most common to least common, to take
        advantage of short-circuiting. */
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->string_header_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_string_header_pool);
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool)
+        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool)
+        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->string_header_pool)
+        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_string_header_pool);
 }
+
 
 /*
 
 =item C<Small_Object_Pool * gc_it_ptr_is_sized_buffer>
 
-Determines whether a given pointer is located in one of the sized header
-pools. We loop over all these pools to determine if the pointer is in
-any of them. Returns a pointer to the pool that the object is found in,
-or returns C<NULL> if it is not found in any pools.
+Determines whether a given pointer is located in one of the sized header pools.
+We loop over all these pools to determine if the pointer is in any of them.
+Returns a pointer to the pool that the object is found in, or returns C<NULL>
+if it is not found in any pools.
 
 =cut
 
@@ -1324,6 +1411,7 @@ gc_it_ptr_is_sized_buffer(PARROT_INTERP, void *ptr)
         if (GC_IT_HDR_HAS_PARENT_POOL((Gc_it_hdr *)ptr, interp->arena_base->sized_header_pools[i]))
             return interp->arena_base->sized_header_pools[i];
     }
+
     return NULL;
 }
 
