@@ -708,7 +708,7 @@ Parrot_initialize_header_pools(PARROT_INTERP)
        appropriate sized pool. In this way, PMC_EXTs will now be managed
        in the same way as all other sized buffers, and will not need to 
        be treated specially by the GC. */
-    arena_base->pmc_ext_pool = get_bufferlike_bool(interp, sizeof(PMC_EXT));
+    arena_base->pmc_ext_pool = get_bufferlike_pool(interp, sizeof(PMC_EXT));
 #else
     /* rational, consistant behavior (as yet unwritten) */
 #endif

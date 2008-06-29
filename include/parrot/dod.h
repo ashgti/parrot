@@ -354,6 +354,51 @@ void gc_it_trace_threaded(SHIM_INTERP);
 } while(0)
 #endif
 
+/* Macros for doing common things with the GC_IT */
+
+#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
+    gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
+    if((gc_data)->queue == (hdr)) \
+        (gc_data)->queue = (hdr)->next; \
+    (hdr)->next = NULL; \
+} while(0)
+
+#define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) do {\
+    (hdr)->next = (gc_data)->queue; \
+    (gc_data)->queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) do {\
+    (hdr)->next = (gc_data)->root_queue; \
+    (gc_data)->root_queue = (hdr); \
+} while(0)
+
+#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
+    (hdr)->next = (Gc_it_hdr*)((pool)->free_list); \
+    (pool)->free_list = (void *)(hdr); \
+} while(0)
+
+#define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
+    (hdr)  = (Gc_it_hdr *)(list); \
+    (list) = (type)(hdr)->next; \
+} while(0)
+
+#define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \
+    if (gc_it_hdr_is_PObj_compatible(interp, hdr)) \
+        gc_it_mark_PObj_children_grey(interp, hdr); \
+} while(0);
+
+#define GC_IT_HDR_FROM_INDEX(p, a, i) \
+    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
+
+#define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
+    ((hdr)->parent_arena->parent_pool == (pool))
+
 #endif /* PARROT_DOD_H_GUARD */
 
 /*

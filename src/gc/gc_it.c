@@ -41,53 +41,6 @@ spit and polish later.
 
 #define GC_IT_DEBUG 1
 
-/*
- * Macros for doing common things with the GC_IT
- */
-
-#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
-    gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
-    if((gc_data)->queue == (hdr)) \
-        (gc_data)->queue = (hdr)->next; \
-    (hdr)->next = NULL; \
-} while(0)
-
-#define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
-    (hdr)->next = (gc_data)->queue; \
-    (gc_data)->queue = (hdr); \
-} while(0)
-
-#define GC_IT_ADD_TO_QUEUE(gc_data, hdr) do {\
-    (hdr)->next = (gc_data)->queue; \
-    (gc_data)->queue = (hdr); \
-} while(0)
-
-#define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) do {\
-    (hdr)->next = (gc_data)->root_queue; \
-    (gc_data)->root_queue = (hdr); \
-} while(0)
-
-#define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
-    (hdr)->next = (Gc_it_hdr*)((pool)->free_list); \
-    (pool)->free_list = (void *)(hdr); \
-} while(0)
-
-#define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
-    (hdr) = (Gc_it_hdr*)(list); \
-    (list) = (type)(hdr)->next; \
-} while(0)
-
-#define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \
-    if(gc_it_hdr_is_PObj_compatible(hdr)) \
-        gc_it_mark_PObj_children_grey(interp, hdr); \
-} while(0);
-
-#define GC_IT_HDR_FROM_INDEX(p, a, i) \
-    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
-
-#define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
-    ((hdr)->parent_arena->parent_pool == (pool))
-
 /* HEADERIZER HFILE: include/parrot/dod.h */
 
 /* HEADERIZER BEGIN: static */
@@ -105,6 +58,12 @@ static void gc_it_add_arena_to_free_list(PARROT_INTERP,
 PARROT_INLINE
 static void gc_it_enqueue_all_roots(PARROT_INTERP)
         __attribute__nonnull__(1);
+
+static void
+gc_it_mark_PObj_children_grey(PARROT_INTERP,
+    ARGMOD(Gc_it_hdr * hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 static void gc_it_enqueue_next_root(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -154,6 +113,12 @@ static void gc_it_sweep_pmc_pools(PARROT_INTERP)
 
 static void gc_it_sweep_sized_pools(PARROT_INTERP)
         __attribute__nonnull__(1);
+
+static int
+gc_it_hdr_is_PObj_compatible(PARROT_INTERP,
+    ARGIN(Gc_it_hdr *))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -306,7 +271,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             /* Don't know if there is anything to be done here */
             gc_priv_data->state = GC_IT_SWEEP_PMCS;
 #ifdef GC_IT_DEBUG
-            printf("ending mark, marked %d items\n", gc_priv_data->total_count);
+            printf("ending mark, marked %d items\n", (int)gc_priv_data->total_count);
 #endif
             GC_IT_BREAK_AFTER_4;
 
@@ -835,23 +800,28 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
 {
     /* Add all children of the current node to the queue for processing. */
     PObj * const obj = IT_HDR_to_PObj(hdr);
+    PMC  * const pmc = (PMC *)obj;
+
     PARROT_ASSERT(hdr);
     PARROT_ASSERT(obj);
+
     if(PObj_is_PMC_TEST(obj)) {
-        if(PMC_metadata((PMC*)obj))
-            pobject_lives(interp, (PObj *)PMC_metadata((PMC*)obj));
-        if (((PMC*)obj)->real_self != (PMC*)obj)
-            pobject_lives(interp, (PObj*)(((PMC*)obj)->real_self));
-        if(obj->pmc_ext)
-            object_lives(interp, obj->pmc_ext);
-        if(PMC_next_for_GC(obj) != obj) {
-            pobject_lives(PMC_next_for_GC(obj));
-            PMC_next_for_GC(obj) = obj;
+        if (PMC_metadata(pmc))
+            pobject_lives(interp, (PObj *)PMC_metadata(pmc));
+
+        if (pmc->real_self != pmc)
+            pobject_lives(interp, (PObj *)(pmc->real_self));
+
+        if (pmc->pmc_ext)
+            object_lives(interp, (PObj *)(pmc->pmc_ext));
+
+        if (PMC_next_for_GC(pmc) != pmc) {
+            pobject_lives(interp, (PObj *)PMC_next_for_GC(pmc));
+            PMC_next_for_GC(pmc) = pmc;
         }
     }
-    else if(PObj_is_STRING_TEST(obj) {
-        /* It's a string or a const-string, or whatever. Deal with that
-           here. */
+    else if (PObj_is_string_TEST(obj)) {
+        /* It's a string or a const-string, or whatever. Deal with that here. */
     }
     /* if the PMC is an array of other PMCs, we cycle through those. I'm
        surprised if this isn't covered by VTABLE_mark, but I won't question
@@ -1268,15 +1238,15 @@ const PMC pool.
 */
 
 int
-gc_it_ptr_is_const_pmc(PARROT_INTERP, void * ptr)
+gc_it_ptr_is_const_pmc(PARROT_INTERP, void *ptr)
 {
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
+    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
-gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *)
+gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
 {
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
+    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
 }
 
 /*
@@ -1309,7 +1279,7 @@ gc_it_ptr_is_any_pmc(PARROT_INTERP, void * ptr)
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool) ||
-           GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->const_pmc_pool);
+           GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
@@ -1318,7 +1288,7 @@ gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr * hdr)
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool);
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
@@ -1327,9 +1297,9 @@ gc_it_hdr_is_PObj_compatible(PARROT_INTERP, Gc_it_hdr * hdr)
     /* Arrange these in order of most common to least common, to take
        advantage of short-circuiting. */
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_pmc_pool) ||
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool) ||
            GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->string_header_pool) ||
-           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->const_string_header_pool);
+           GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_string_header_pool);
 }
 
 /*
@@ -1347,12 +1317,12 @@ or returns C<NULL> if it is not found in any pools.
 
 
 Small_Object_Pool *
-gc_it_ptr_is_sized_buffer(PARROT_INTERP, void * ptr)
+gc_it_ptr_is_sized_buffer(PARROT_INTERP, void *ptr)
 {
     register INTVAL i = 0;
-    for(i = interp->arena_base->num_sized - 1; i >= 0; i--) {
-        if(gc_it_ptr_has_parent_pool(ptr, interp->arena_base->sized_pools[i]))
-            return interp->arena_base->sized_pools[i];
+    for (i = interp->arena_base->num_sized - 1; i >= 0; i--) {
+        if (GC_IT_HDR_HAS_PARENT_POOL((Gc_it_hdr *)ptr, interp->arena_base->sized_header_pools[i]))
+            return interp->arena_base->sized_header_pools[i];
     }
     return NULL;
 }
