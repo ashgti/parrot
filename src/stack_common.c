@@ -62,16 +62,14 @@ Stack_Chunk_t *
 register_new_stack(PARROT_INTERP, ARGIN(const char *name), size_t item_size)
 {
     Stack_Chunk_t     *chunk;
-    Small_Object_Pool *ignored;
+    Small_Object_Pool *pool;
 
     item_size += offsetof(Stack_Chunk_t, u.data);
-    ignored    = make_bufferlike_pool(interp, item_size);
-
-    UNUSED(ignored);
-
-    chunk       = (Stack_Chunk_t *)new_bufferlike_header(interp, item_size);
+    pool        = make_bufferlike_pool(interp, item_size);
+    chunk       = (Stack_Chunk_t *)pool->get_free_object(interp, pool);
     chunk->prev = chunk;        /* mark the top of the stack */
     chunk->name = name;
+    Obj_is_stack_chunk_SET(chunk); /* mark it as a stack chunk for GC */
     chunk->size = item_size;    /* TODO store the pool instead the size */
 
     return chunk;

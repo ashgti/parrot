@@ -59,11 +59,13 @@ PARROT_API
 void
 mark_stack(PARROT_INTERP, ARGMOD(Stack_Chunk_t *chunk))
 {
+#if PARROT_GC_IT
+    pobject_lives(interp, chunk);
+#else
     for (; ; chunk = chunk->prev) {
         Stack_Entry_t  *entry;
 
         pobject_lives(interp, (PObj *)chunk);
-        object_lives(interp, entry);
 
         if (chunk == chunk->prev)
             break;
@@ -73,6 +75,7 @@ mark_stack(PARROT_INTERP, ARGMOD(Stack_Chunk_t *chunk))
         if (entry->entry_type == STACK_ENTRY_PMC && UVal_pmc(entry->entry))
             pobject_lives(interp, (PObj *)UVal_pmc(entry->entry));
     }
+#endif
 }
 
 /*

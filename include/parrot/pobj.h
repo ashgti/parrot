@@ -280,7 +280,10 @@ typedef enum PObj_enum {
     /* True if the PMC is a class */
     PObj_is_class_FLAG          = POBJ_FLAG(29),
     /* True if the PMC is a parrot object */
-    PObj_is_object_FLAG         = POBJ_FLAG(30)
+    PObj_is_object_FLAG         = POBJ_FLAG(30),
+
+    /* True if the PMC is a stack chunk */
+    PObj_is_stack_chunk_FLAG    = POBJ_FLAG(31)
 
 } PObj_flags;
 #undef POBJ_FLAG
@@ -419,6 +422,10 @@ typedef enum PObj_enum {
 #define PObj_is_shared_TEST(o) PObj_flag_TEST(is_shared, o)
 #define PObj_is_shared_SET(o)  PObj_flag_SET(is_shared, o)
 #define PObj_is_shared_CLEAR(o) PObj_flag_CLEAR(is_shared, o)
+
+#define PObj_is_stack_chunk_TEST(o) PObj_flag_TEST(is_stack_chunk, o)
+#define PObj_is_stack_chunk_SET(o) PObj_flag_SET(is_stack_chunk, o)
+#define PObj_is_stack_chunk_CLEAR(o) PObj_flag_CLEAR(is_stack_chunk, o)
 
 /* some combinations */
 #define PObj_is_cowed_TESTALL(o) (PObj_get_FLAGS(o) & \
