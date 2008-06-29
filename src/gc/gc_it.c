@@ -436,7 +436,7 @@ I need to rework this whole function, but it's a good placeholder for now
 */
 
 static void
-gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data* gc_priv_data), 
+gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
 {
     Small_Object_Arena *arena;
@@ -541,7 +541,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
     /* Go through each arena in the pool, free objects marked white,
        set black cards to white, and call finalization routines, if needed. */
-    Small_Object_Arena * arena;
+    Small_Object_Arena *arena;
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card      *card = &(arena->cards[arena->card_info._d.card_size]);
@@ -550,7 +550,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         PARROT_ASSERT(card);
 
         switch (arena->card_info._d.last_index % 4) {
-            Gc_it_hdr * hdr;
+            Gc_it_hdr *hdr;
             case 0:
                 do {
                     if (card->_f.flag4 == GC_IT_CARD_WHITE) {
@@ -857,7 +857,7 @@ To mark a child as grey, we do one of two things:
 
 PARROT_INLINE
 static void
-gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
+gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr *hdr))
 {
     /* Add all children of the current node to the queue for processing. */
     PObj * const obj = IT_HDR_to_PObj(hdr);
@@ -948,7 +948,7 @@ functions, and setting the size of the objects to include the GC header.
 
 PARROT_API
 void
-Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool)) 
+Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     /* Set up function pointers for pool. */
     pool->add_free_object = gc_it_add_free_object;
@@ -1001,15 +1001,14 @@ PARROT_API
 void *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    Gc_it_hdr *hdr = (Gc_it_hdr *)pool->free_list;
+    Gc_it_hdr *hdr;
 
     /* If there are no objects, allocate a new arena */
-    if (!hdr)
+    if (!pool->free_list)
         (pool->more_objects)(interp, pool);
 
     /* pull the first header off the free list */
     GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
-    hdr->next = NULL;
     --pool->num_free_objects;
 
     /* mark the item as black, so it doesn't get collected prematurely.  */
@@ -1068,8 +1067,8 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     new_arena->parent_pool             = pool;
 
     /* ...the downside is this messy pointer arithmetic. */
-    new_arena->cards         = ((Gc_it_card *)((Small_Object_Arena *)new_arena) + 1);
-    new_arena->start_objects = (void *)(((Gc_it_card *)(new_arena->cards)) + card_size);
+    new_arena->cards         = (Gc_it_card *)(new_arena + sizeof (Small_Object_Arena));
+    new_arena->start_objects = (void *)(new_arena->cards + card_size);
     memset(new_arena->cards, GC_IT_CARD_ALL_NEW, card_size);
 
     /* insert new_arena in pool's arena linked list */
@@ -1113,15 +1112,16 @@ the following steps:
 */
 
 static void
-gc_it_add_arena_to_free_list(PARROT_INTERP, 
+gc_it_add_arena_to_free_list(PARROT_INTERP,
     ARGMOD(Small_Object_Pool *pool), ARGMOD(Small_Object_Arena *new_arena))
 {
-    Gc_it_hdr *p = (Gc_it_hdr *)new_arena->start_objects;
-    Gc_it_hdr *temp;
+    Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
+    const size_t     num_objs = new_arena->total_objects;
     register UINTVAL i;
-    const size_t num_objs = new_arena->total_objects;
 
     for (i = 0; i < num_objs - 1; i++) {
+        Gc_it_hdr *next = (Gc_it_hdr *)(p + pool->object_size);
+
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
 
@@ -1131,14 +1131,9 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->index.num.flag = i % 4;
 
         /* Find the next item in the arena with voodoo pointer magic */
-        temp    = ((Gc_it_hdr *)p) + 1;
-        temp    = (Gc_it_hdr *)(((char *)temp) + (pool->object_size));
-        p->next = temp;
-        p       = temp;
+        p = next;
     }
 
-    p->next                 = (Gc_it_hdr *)pool->free_list;
-    pool->free_list         = new_arena->start_objects;
     pool->num_free_objects += num_objs;
 }
 
@@ -1156,7 +1151,7 @@ dereferences and a little bit of algebra. Each card contains four flags.
 */
 
 void
-gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
+gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 {
     Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
 
@@ -1194,7 +1189,7 @@ Returns the current flag value associated with the given object header.
 
 PARROT_WARN_UNUSED_RESULT
 UINTVAL
-gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
+gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
     const Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
     switch (hdr->index.num.flag) {

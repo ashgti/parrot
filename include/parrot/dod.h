@@ -379,13 +379,14 @@ void gc_it_trace_threaded(SHIM_INTERP);
 } while(0)
 
 #define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
-    (hdr)->next = (Gc_it_hdr*)((pool)->free_list); \
+    (hdr)->next       = (Gc_it_hdr *)((pool)->free_list); \
     (pool)->free_list = (void *)(hdr); \
 } while(0)
 
 #define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
-    (hdr)  = (Gc_it_hdr *)(list); \
-    (list) = (type)(hdr)->next; \
+    (hdr)       = (Gc_it_hdr *)(list); \
+    (list)      = (type)((hdr)->next); \
+    (hdr)->next = NULL; \
 } while(0)
 
 #define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \

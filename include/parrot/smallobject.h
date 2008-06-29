@@ -239,6 +239,7 @@ typedef struct Gc_it_data {
 /* Tracked resource pool */
 typedef struct Small_Object_Pool {
     Small_Object_Arena *last_Arena;
+    void               *free_list;
     /* Size in bytes of an individual pool item. This size may include
      * a GC-system specific GC header.
      * See the macros below.
@@ -249,7 +250,6 @@ typedef struct Small_Object_Pool {
     size_t num_free_objects;    /* number of resources in the free pool */
     int skip;
     size_t replenish_level;
-    void *free_list;
     /* adds a free object to the pool's free list  */
     add_free_object_fn_type     add_free_object;
     get_free_object_fn_type     get_free_object;
