@@ -692,7 +692,7 @@ Parrot_initialize_header_pools(PARROT_INTERP)
     arena_base->pmc_ext_pool =
         new_small_object_pool(sizeof (PMC_EXT), 1024);
 
-#if PARROT_GC_MS
+#elif PARROT_GC_GMS
     /*
      * pmc_ext isn't a managed item. If a PMC has a pmc_ext structure
      * it is returned to the pool instantly - the structure is never
@@ -700,9 +700,6 @@ Parrot_initialize_header_pools(PARROT_INTERP)
      * Use GC MS pool functions
      */
     gc_pmc_ext_pool_init(arena_base->pmc_ext_pool);
-#else
-    /* rational, consistant behavior (as yet unwritten) */
-#endif
     arena_base->pmc_ext_pool->name = "pmc_ext";
 #elif PARROT_GC_IT
     /* PMC_EXTs are going to be treated as ordinary sized buffers in the

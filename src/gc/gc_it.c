@@ -152,6 +152,9 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->do_gc_mark         = Parrot_gc_it_run;
     arena_base->finalize_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool          = Parrot_gc_it_pool_init;
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "GC IT Initialized: %p\n", gc_priv_data);
+#endif
 }
 
 
@@ -226,6 +229,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
     }
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "GC Run. items total: %d, flags: %x\n", gc_priv_data->total_count, flags);
+#endif
 
     /* items scanned this run */
     gc_priv_data->item_count = 0;
@@ -335,6 +341,10 @@ gc_it_trace_normal(PARROT_INTERP)
     Gc_it_data * const gc_priv_data =
         (Gc_it_data *)interp->arena_base->gc_private;
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Tracing queue, starting with %p\n", gc_priv_data->queue);
+#endif
+
     while ((cur_item = gc_priv_data->queue)) {
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
@@ -349,7 +359,9 @@ gc_it_trace_normal(PARROT_INTERP)
         /* number of items this increment */
         gc_priv_data->item_count++;
     }
-
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Trace complete: %d", (gc_priv_data->queue == NULL));
+#endif
     gc_priv_data->queue = NULL;
 }
 
@@ -377,15 +389,16 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
         arena_base->constant_pmc_pool
     };
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Sweeping PMC pools\n");
+#endif
+
     register UINTVAL i;
 
     for (i = 0; i < 2; i++) {
         gc_it_sweep_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
     }
 
-    /* I'm going to ignore PMC_EXT for now, it has a separate, special
-       marking system set up for it already and I don't know that anything I do
-       here will improve on that. */
 }
 
 
@@ -414,6 +427,10 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
         arena_base->constant_pmc_pool
     };
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Finalizing PMC pools\n");
+#endif
+
     register UINTVAL i;
 
     for(i = 0; i < 2; i++) {
@@ -441,6 +458,10 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 {
     Small_Object_Arena *arena;
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Finalizing PMCs %s (%p)\n", pool->name, pool);
+#endif
+
     /* walking backwards helps avoid incorrect order-of-destruction bugs */
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         INTVAL index;
@@ -448,7 +469,7 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         for (index = arena->total_objects - 1; index >= 0; index--) {
             Gc_it_hdr *hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
 
-            if (!hdr->next)
+            if (gc_it_get_card_mark(hdr) != GC_IT_CARD_FREE)
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
         }
     }
@@ -543,6 +564,10 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
        set black cards to white, and call finalization routines, if needed. */
     Small_Object_Arena *arena;
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Sweeping PMC pool %s (%p)\n", pool->name, pool);
+#endif
+
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card      *card = &(arena->cards[arena->card_info._d.card_size]);
         register UINTVAL i    = arena->card_info._d.last_index;
@@ -630,6 +655,10 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 {
     Small_Object_Arena *arena;
     Gc_it_hdr *hdr;
+
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Sweeping buffer pool %s (%p)\n", pool->name, pool);
+#endif
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card      *card = &(arena->cards[arena->card_info._d.card_size]);
@@ -932,6 +961,9 @@ Parrot_gc_it_deinit(PARROT_INTERP)
     arena_base->do_gc_mark         = NULL;
     arena_base->finalize_gc_system = NULL;
     arena_base->init_pool          = NULL;
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "GC IT Uninitialized\n");
+#endif
 }
 
 
@@ -958,6 +990,9 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Initializing pool (%p)\n", pool);
+#endif
 }
 
 
@@ -1024,6 +1059,11 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     /* mark the item as black, so it doesn't get collected prematurely.  */
     gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Get free object from pool %s (%p): %p (%d left) \n",
+            pool->name, pool, hdr, pool->num_free_objects);
+#endif
+
     /* return pointer to the object from the header */
     return (void *)IT_HDR_to_PObj(hdr);
 }
@@ -1069,6 +1109,10 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
                              + sizeof (Small_Object_Arena)         /* arena   */
                              + card_size * sizeof(Gc_it_card);     /* card    */
 
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Alloc objects for pool %s (%p)\n", pool->name, pool);
+#endif
+
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(size);
 
@@ -1087,6 +1131,12 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 
     /* Add all these new objects we've created into the pool's free list */
     gc_it_add_arena_to_free_list(interp, pool, new_arena);
+
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Alloc successful for %s (%p): %d objects [%p - %p]\n",
+            pool->name, pool, pool->objects_per_alloc, new_arena->start_objects,
+            (size_t)(new_arena->start_objects) + (pool->objects_per_alloc * pool->object_size));
+#endif
 
     /* allocate more next time */
     pool->objects_per_alloc =
@@ -1130,7 +1180,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     register UINTVAL i;
 
     for (i = 0; i < num_objs - 1; i++) {
-        Gc_it_hdr *next = (Gc_it_hdr *)(p + pool->object_size);
+        Gc_it_hdr *next = (Gc_it_hdr *)((size_t)p + pool->object_size);
 
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
