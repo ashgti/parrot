@@ -789,7 +789,9 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
         p->_metadata = NULL;
     }
     if(p->_synchronize) {
-        Parrot_dod_free_pmc(interp, p->_synchronize);
+        /* Eventually, these should be managed by the GC automatically.
+           Until then, make sure it gets freed. */
+        mem_internal_free(p->_synchronize);
         p->_synchronize = NULL;
     }
 

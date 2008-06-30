@@ -968,7 +968,10 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 Adds a dead item to the free list. I suppose this is for cases where other
 systems are trying to manage their own memory manually.
 
-I don't really know what this is for, so I'm going to wing it.
+This forces an unused item to be moved to the free list of it's parent pool.
+We only free an object if it's not already on the free list or on the queue.
+Ideally, all items should be freed automatically, so this function should
+become obsolete. If it's no longer used, I will get rid of it.
 
 =cut
 
@@ -980,6 +983,10 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     ARGMOD(void *to_add))
 {
     Gc_it_hdr * const hdr = PObj_to_IT_HDR(to_add);
+    /* The GC should already free everything automatically. Do not free an
+       object if it's already on the free list or if it is on the queue. */
+    if(hdr->next != NULL)
+        return;
     GC_IT_ADD_TO_FREE_LIST(pool, hdr);
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
 }
@@ -989,7 +996,10 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
 
 =item C<void * gc_it_get_free_object>
 
-Gets an object from the pool's free list and return a pointer to it.
+Gets an object from the pool's free list and return a pointer to it. If
+no objects are on the free list, allocate a new arena of objects. The item
+allocated is immediately marked black so any concurrent GC action doesn't
+snatch it up.
 
 =cut
 
