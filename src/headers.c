@@ -364,7 +364,7 @@ new_pmc_ext(PARROT_INTERP)
     PMC_EXT * const pmcext = (PMC_EXT *)pool->get_free_object(interp, pool);
     pmcext->_metadata = NULL;
     pmcext->_synchronize = NULL;
-    return 
+    return pmcext;
 }
 
 /*

@@ -69,7 +69,7 @@ register_new_stack(PARROT_INTERP, ARGIN(const char *name), size_t item_size)
     chunk       = (Stack_Chunk_t *)pool->get_free_object(interp, pool);
     chunk->prev = chunk;        /* mark the top of the stack */
     chunk->name = name;
-    Obj_is_stack_chunk_SET(chunk); /* mark it as a stack chunk for GC */
+    PObj_is_stack_chunk_SET(chunk); /* mark it as a stack chunk for GC */
     chunk->size = item_size;    /* TODO store the pool instead the size */
 
     return chunk;

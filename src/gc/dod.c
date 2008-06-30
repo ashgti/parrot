@@ -778,28 +778,24 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
     /* if the PMC has a PMC_EXT structure, return it to the pool/arena */
     Arenas            * const arena_base = interp->arena_base;
     Small_Object_Pool * const ext_pool   = arena_base->pmc_ext_pool;
+    PMC_EXT           * const pmcext     = p->pmc_ext;
 
     if (PObj_is_PMC_shared_TEST(p) && PMC_sync(p)) {
         MUTEX_DESTROY(PMC_sync(p)->pmc_lock);
         mem_internal_free(PMC_sync(p));
         PMC_sync(p) = NULL;
     }
-    if(p->_metadata) {
-        Parrot_dod_free_pmc(interp, p->_metadata);
-        p->_metadata = NULL;
+    if(pmcext->_metadata) {
+        Parrot_dod_free_pmc(interp, NULL, (PObj*)pmcext->_metadata);
+        pmcext->_metadata = NULL;
     }
-    if(p->_synchronize) {
+    if(pmcext->_synchronize) {
         /* Eventually, these should be managed by the GC automatically.
            Until then, make sure it gets freed. */
-        mem_internal_free(p->_synchronize);
-        p->_synchronize = NULL;
+        mem_internal_free(pmcext->_synchronize);
+        pmcext->_synchronize = NULL;
     }
-
-    if (p->pmc_ext)
-        ext_pool->add_free_object(interp, ext_pool, p->pmc_ext);
-
-    ext_pool->num_free_objects++;
-
+    ext_pool->add_free_object(interp, ext_pool, p->pmc_ext);
     p->pmc_ext = NULL;
 }
 

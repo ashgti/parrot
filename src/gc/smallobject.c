@@ -95,9 +95,9 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
        chance that the incoming pointer might magically be near a pointer
        that points to a valid arena, which in turn will point to the
        particular pool. This is unlikely, I think. */
-    ptr = PObj_to_IT_HDR(ptr);
-    if(ptr->parent_arena && ptr->parent_arena->parent_pool &&
-       ptr->parent_arena->parent_pool == pool)
+    const Gc_it_hdr * const hdr = cPObj_to_IT_HDR(ptr);
+    if(hdr->parent_arena && hdr->parent_arena->parent_pool &&
+       hdr->parent_arena->parent_pool == pool)
         return 1;
     return 0;
 #else
