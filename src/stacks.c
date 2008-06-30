@@ -112,7 +112,10 @@ void
 mark_stack(PARROT_INTERP, ARGMOD(Stack_Chunk_t *chunk))
 {
 #if PARROT_GC_IT
-    pobject_lives(interp, chunk);
+    /* We only need to mark the top of the stack for the root set. The
+       trace routine knows about stack_chunk objects and can find the
+       rest of them. */
+    pobject_lives(interp, (PObj*)chunk);
 #else
     for (; ; chunk = chunk->prev) {
         Stack_Entry_t  *entry;
