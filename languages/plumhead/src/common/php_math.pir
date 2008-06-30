@@ -46,6 +46,24 @@ php_math.pir - PHP math Standard Library
     .val = tmp / f
 .endm
 
+.macro TRIG1(args, func)
+    .local int argc
+    argc = .args
+    unless argc != 1 goto L1
+    wrong_param_count()
+    .RETURN_NULL()
+  L1:
+    $P1 = shift .args
+    $I0 = isa $P1, 'PhpFloat'
+    if $I0 goto L2
+    $N1 = $P1
+    new $P1, 'PhpFloat'
+    set $P1, $N1
+  L2:
+    $P0 = $P1. .func ()
+    .return ($P0)
+.endm
+
 
 =item C<int abs(int number)>
 
@@ -86,35 +104,18 @@ Return the arc cosine of the number in radians
 
 .sub 'acos'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = acos $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, acos)
 .end
 
 =item C<float acosh(float number)>
 
 Returns the inverse hyperbolic cosine of the number, i.e. the value whose hyperbolic cosine is number
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'acosh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    not_implemented()
+    .TRIG1(args, acosh)
 .end
 
 =item C<float asin(float number)>
@@ -125,35 +126,18 @@ Returns the arc sine of the number in radians
 
 .sub 'asin'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = asin $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, asin)
 .end
 
 =item C<float asinh(float number)>
 
 Returns the inverse hyperbolic sine of the number, i.e. the value whose hyperbolic sine is number
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'asinh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    not_implemented()
+    .TRIG1(args, asinh)
 .end
 
 =item C<float atan(float number)>
@@ -164,16 +148,7 @@ Returns the arc tangent of the number in radians
 
 .sub 'atan'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = atan $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, atan)
 .end
 
 =item C<float atan2(float y, float x)>
@@ -202,19 +177,11 @@ Returns the arc tangent of y/x, with the resulting quadrant determined by the si
 
 Returns the inverse hyperbolic tangent of the number, i.e. the value whose hyperbolic tangent is number
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'atanh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    not_implemented()
+    .TRIG1(args, atanh)
 .end
 
 =item C<string base_convert(string number, int frombase, int tobase)>
@@ -323,16 +290,7 @@ Returns the cosine of the number in radians
 
 .sub 'cos'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = cos $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, cos)
 .end
 
 =item C<float cosh(float number)>
@@ -343,16 +301,7 @@ Returns the hyperbolic cosine of the number, defined as (exp(number) + exp(-numb
 
 .sub 'cosh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = cosh $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, cosh)
 .end
 
 =item C<string decbin(int decimal_number)>
@@ -444,13 +393,12 @@ Returns e raised to the power of the number
 
 .sub 'exp'
     .param pmc args :slurpy
-    .local pmc number
+    .local num number
     ($I0, number) = parse_parameters('d', args :flat)
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    $N1 = number
-    $N0 = exp $N1
+    $N0 = exp number
     .RETURN_DOUBLE($N0)
 .end
 
@@ -504,15 +452,13 @@ Returns the remainder of dividing x by y as a float
 
 .sub 'fmod'
     .param pmc args :slurpy
-    .local pmc x
-    .local pmc y
+    .local num x
+    .local num y
     ($I0, x, y) = parse_parameters('dd', args :flat)
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    $N1 = x
-    $N2 = y
-    $N0 = cmod $N1, $N2
+    $N0 = cmod x, y
     .RETURN_DOUBLE($N0)
 .end
 
@@ -567,8 +513,6 @@ Returns sqrt(num1*num1 + num2*num2)
 
 Returns whether argument is finite
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'is_finite'
@@ -578,14 +522,13 @@ NOT IMPLEMENTED.
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    not_implemented()
+    $P0 = val.'is_finite'()
+    .return ($P0)
 .end
 
 =item C<bool is_infinite(float val)>
 
 Returns whether argument is infinite
-
-NOT IMPLEMENTED.
 
 =cut
 
@@ -596,14 +539,13 @@ NOT IMPLEMENTED.
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    not_implemented()
+    $P0 = val.'is_infinite'()
+    .return ($P0)
 .end
 
 =item C<bool is_nan(float val)>
 
 Returns whether argument is not a number
-
-NOT IMPLEMENTED.
 
 =cut
 
@@ -614,7 +556,8 @@ NOT IMPLEMENTED.
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    not_implemented()
+    $P0 = val.'is_nan'()
+    .return ($P0)
 .end
 
 =item C<float log(float number, [float base])>
@@ -829,16 +772,7 @@ Returns the sine of the number in radians
 
 .sub 'sin'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = sin $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, sin)
 .end
 
 =item C<float sinh(float number)>
@@ -849,16 +783,7 @@ Returns the hyperbolic sine of the number, defined as (exp(number) - exp(-number
 
 .sub 'sinh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = sinh $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, sinh)
 .end
 
 =item C<float sqrt(float number)>
@@ -889,16 +814,7 @@ Returns the tangent of the number in radians
 
 .sub 'tan'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = tan $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, tan)
 .end
 
 =item C<float tanh(float number)>
@@ -909,16 +825,7 @@ Returns the hyperbolic tangent of the number, defined as sinh(number)/cosh(numbe
 
 .sub 'tanh'
     .param pmc args :slurpy
-    .local int argc
-    argc = args
-    unless argc != 1 goto L1
-    wrong_param_count()
-    .RETURN_NULL()
-  L1:
-    $P1 = shift args
-    $N1 = $P1
-    $N0 = tanh $N1
-    .RETURN_DOUBLE($N0)
+    .TRIG1(args, tanh)
 .end
 
 =back

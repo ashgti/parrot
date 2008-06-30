@@ -25,21 +25,49 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
 
-use Test::More     tests => 32;
+use Test::More     tests => 38;
 use Parrot::Test;
 
-language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'abs', todo => 'broken in PCT variant' );
+
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'abs' );
 <?php
   echo abs(-3), "\n";
   echo abs(-3.14), "\n";
   echo abs(TRUE), "\n";
   echo abs(NULL), "\n";
+  echo abs('0x03'), "\n";
+  echo abs('-3'), "\n";
+  echo abs('-3.14'), "\n";
+  echo abs(' 0x03'), "\n";
+  echo abs(' -3'), "\n";
+  echo abs(' -3.14'), "\n";
+  echo abs(' 0x03 '), "\n";
+  echo abs(' -3 '), "\n";
+  echo abs(' -3.14 '), "\n";
+  echo abs('str'), "\n";
+  echo abs(' str'), "\n";
+  echo abs(' str '), "\n";
+  $hello['world'] = 'hi';
+  echo abs($hello), "\n";
 ?>
 CODE
 3
 3.14
 1
 0
+3
+3
+3.14
+3
+3
+3.14
+3
+3
+3.14
+0
+0
+0
+
 OUTPUT
 
 language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'acos' );
@@ -50,6 +78,14 @@ CODE
 /^1\.047/
 OUTPUT
 
+language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'acosh' );
+<?php
+  echo acosh(1.5), "\n";
+?>
+CODE
+/^0\.962/
+OUTPUT
+
 language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'asin' );
 <?php
   echo asin(0.5), "\n";
@@ -58,12 +94,28 @@ CODE
 /^0\.523/
 OUTPUT
 
+language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'asinh' );
+<?php
+  echo asinh(0.5), "\n";
+?>
+CODE
+/^0\.481/
+OUTPUT
+
 language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'atan' );
 <?php
   echo atan(0.5), "\n";
 ?>
 CODE
 /^0\.463/
+OUTPUT
+
+language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'atanh' );
+<?php
+  echo atanh(0.5), "\n";
+?>
+CODE
+/^0\.549/
 OUTPUT
 
 language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'atan2' );
@@ -184,6 +236,30 @@ language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'hypot' );
 ?>
 CODE
 /^2\.236/
+OUTPUT
+
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_finite' );
+<?php
+  echo is_finite(3.14), "\n";
+?>
+CODE
+1
+OUTPUT
+
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_infinite' );
+<?php
+  echo is_infinite(3.14), "\n";
+?>
+CODE
+
+OUTPUT
+
+language_output_is( 'Plumhead', <<'CODE', <<'OUTPUT', 'is_nan' );
+<?php
+  echo is_nan(3.14), "\n";
+?>
+CODE
+
 OUTPUT
 
 language_output_like( 'Plumhead', <<'CODE', <<'OUTPUT', 'log' );

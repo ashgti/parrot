@@ -79,7 +79,8 @@ static void more_traceable_objects(PARROT_INTERP,
 
 =item C<INTVAL contained_in_pool>
 
-Returns whether the given C<*ptr> points to a location in C<pool>.
+Returns whether the given C<*ptr> points to a location in C<pool>. Does not
+check whether the input pointer is C<NULL>.
 
 =cut
 
@@ -90,7 +91,15 @@ INTVAL
 contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
 {
 #if PARROT_GC_IT
-    return (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == pool);
+    /* This should be robust enough. However, I think there is a small
+       chance that the incoming pointer might magically be near a pointer
+       that points to a valid arena, which in turn will point to the
+       particular pool. This is unlikely, I think. */
+    ptr = PObj_to_IT_HDR(ptr);
+    if(ptr->parent_arena && ptr->parent_arena->parent_pool &&
+       ptr->parent_arena->parent_pool == pool)
+        return 1;
+    return 0;
 #else
     const Small_Object_Arena *arena;
 
@@ -182,6 +191,7 @@ static void
 gc_ms_add_free_pmc_ext(SHIM_INTERP, ARGMOD(Small_Object_Pool *pool), ARGIN(void *to_add))
 {
     PMC_EXT *object        = (PMC_EXT *)to_add;
+    object->_metadata      = NULL;
 
     /* yes, this cast is a hack for now, but a pointer is a pointer */
     object->_next_for_GC   = (PMC *)pool->free_list;

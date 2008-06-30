@@ -414,8 +414,10 @@ add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
     if (!PObj_is_PMC_EXT_TEST(pmc)) {
         add_pmc_ext(interp, pmc);
     }
-    /* XXX: Should we test the Sync* for non-null? should we allocate these
-            from a bufferlike pool instead of directly from the system? */
+    /* XXX: Should we allocate these from a bufferlike pool instead of
+            directly from the system? Sync items are smaller then
+            Buffer items, so I dont know which sized pool they would
+            go in. */
     PMC_sync(pmc) = (Sync *)mem_internal_allocate(sizeof (*PMC_sync(pmc)));
     PMC_sync(pmc)->owner = interp;
     MUTEX_INIT(PMC_sync(pmc)->pmc_lock);
@@ -550,7 +552,6 @@ get_min_buffer_address(PARROT_INTERP)
     UINTVAL i;
     Arenas * const arena_base = interp->arena_base;
     size_t min = (size_t) -1;
-
     for (i = 0; i < arena_base->num_sized; i++) {
         if (arena_base->sized_header_pools[i] &&
             arena_base->sized_header_pools[i]->start_arena_memory) {
