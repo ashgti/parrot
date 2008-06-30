@@ -361,9 +361,10 @@ static PMC_EXT *
 new_pmc_ext(PARROT_INTERP)
 {
     Small_Object_Pool * const pool = interp->arena_base->pmc_ext_pool;
-    /* XXX: Should we check here to ensure the PMC_EXT is non-null
-            like we do in C<new_pmc>? */
-    return (PMC_EXT *)pool->get_free_object(interp, pool);
+    PMC_EXT * const pmcext = (PMC_EXT *)pool->get_free_object(interp, pool);
+    pmcext->_metadata = NULL;
+    pmcext->_synchronize = NULL;
+    return 
 }
 
 /*

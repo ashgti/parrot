@@ -784,6 +784,14 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
         mem_internal_free(PMC_sync(p));
         PMC_sync(p) = NULL;
     }
+    if(p->_metadata) {
+        Parrot_dod_free_pmc(interp, p->_metadata);
+        p->_metadata = NULL;
+    }
+    if(p->_synchronize) {
+        Parrot_dod_free_pmc(interp, p->_synchronize);
+        p->_synchronize = NULL;
+    }
 
     if (p->pmc_ext)
         ext_pool->add_free_object(interp, ext_pool, p->pmc_ext);
