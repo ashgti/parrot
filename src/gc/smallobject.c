@@ -90,7 +90,8 @@ PARROT_WARN_UNUSED_RESULT
 INTVAL
 contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
 {
-#if PARROT_GC_IT
+#if 0
+#  if PARROT_GC_IT
     /* This should be robust enough. However, I think there is a small
        chance that the incoming pointer might magically be near a pointer
        that points to a valid arena, which in turn will point to the
@@ -100,7 +101,10 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
        hdr->parent_arena->parent_pool == pool)
         return 1;
     return 0;
-#else
+#  else
+
+#   endif
+#endif
     const Small_Object_Arena *arena;
 
     ptr = PObj_to_ARENA(ptr);
@@ -116,7 +120,7 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
     }
 
     return 0;
-#endif
+/*#endif*/
 }
 
 /*

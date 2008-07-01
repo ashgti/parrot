@@ -39,8 +39,6 @@ spit and polish later.
 #   define gc_it_trace(i) gc_it_trace_threaded(i);
 #endif
 
-#define GC_IT_DEBUG 1
-
 /* HEADERIZER HFILE: include/parrot/dod.h */
 
 /* HEADERIZER BEGIN: static */
@@ -1028,6 +1026,10 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     Gc_it_hdr * const hdr = PObj_to_IT_HDR(to_add);
     /* The GC should already free everything automatically. Do not free an
        object if it's already on the free list or if it is on the queue. */
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Freeing object manually: pool, hdr (%p, %p)\n",
+            pool, to_add);
+#endif
     if(hdr->next != NULL)
         return;
     GC_IT_ADD_TO_FREE_LIST(pool, hdr);
@@ -1211,12 +1213,13 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->index.num.flag = i % 4;
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
+/*
 #ifdef GC_IT_DEBUG
         fprintf(stderr, "new item: (%p), arena: (%p), pool: (%p) card: %d[%d]\n",
                 p, p->parent_arena, p->parent_arena->parent_pool,
                 p->index.num.card, p->index.num.flag);
 #endif
-
+*/
         /* Find the next item in the arena with voodoo pointer magic */
         p = next;
     }
@@ -1262,7 +1265,7 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
             card->_f.flag3 = flag;
             break;
         case 3:
-            card->_f.flag3 = flag;
+            card->_f.flag4 = flag;
             break;
         default:
             break;
@@ -1285,7 +1288,8 @@ PARROT_WARN_UNUSED_RESULT
 UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
-    const Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
+    Gc_it_card * const card_start = hdr->parent_arena->cards;
+    Gc_it_card * const card = (card_start + hdr->index.num.card);
     switch (hdr->index.num.flag) {
         case 0:
             return card->_f.flag1;

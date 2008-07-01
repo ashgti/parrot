@@ -199,8 +199,18 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
 
-    Gc_it_hdr * const hdr = PObj_to_IT_HDR(obj);
-    Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
+    PARROT_ASSERT(obj);
+    {
+        Gc_it_hdr * const hdr = PObj_to_IT_HDR(obj);
+        Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
+        INTVAL card_mark = gc_it_get_card_mark(hdr);
+        PARROT_ASSERT(hdr);
+
+#ifdef GC_IT_DEBUG
+        fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
+                hdr, hdr->parent_arena->parent_pool, (int)card_mark);
+#endif
+
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
        2) The header's ->next is pointing to something. There are only
@@ -210,25 +220,27 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           list is about to be marked, that's a big problem and we might
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
-    PARROT_ASSERT(obj);
-    PARROT_ASSERT(hdr);
-    if(gc_it_get_card_mark(hdr) == GC_IT_CARD_BLACK ||
-       hdr->next != NULL)
-        return;
+
+        if(card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
+            return;
     /* black items should have been caught. Nothing should ever be "UNUSED"
-       at the moment. "FREE" items should not be here either. */
-    PARROT_ASSERT(gc_it_get_card_mark(hdr) == GC_IT_CARD_WHITE);
-    if(gc_priv_data->state == GC_IT_MARK_ROOTS)
-        GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
-    else
-        GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
+       at the moment. "FREE" items should not be here either, but if an item
+       is marked free at this point, we can mark it as being unfree like
+       normal. */
+        PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
+        PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
+        if(gc_priv_data->state == GC_IT_MARK_ROOTS)
+            GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
+        else
+            GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
     /* This is a bad hack. mark_special is a static function, which means I
        can't call it from gc_it_mark_children_grey. So, I end up marking
        some children of PMCs here, instead of in the proper place. I want
        to change the function prototype for mark_special, and probably
        rename it eventually. */
-    if (PObj_is_PMC_TEST(obj) && PObj_is_special_PMC_TEST(obj))
-        mark_special(interp, (PMC*)obj);
+        if (PObj_is_PMC_TEST(obj) && PObj_is_special_PMC_TEST(obj))
+            mark_special(interp, (PMC*)obj);
+    }
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */
@@ -785,6 +797,8 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
         mem_internal_free(PMC_sync(p));
         PMC_sync(p) = NULL;
     }
+    if(!pmcext)
+        return;
     if(pmcext->_metadata) {
         Parrot_dod_free_pmc(interp, NULL, (PObj*)pmcext->_metadata);
         pmcext->_metadata = NULL;

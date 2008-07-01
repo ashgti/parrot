@@ -364,15 +364,20 @@ void gc_it_trace_threaded(SHIM_INTERP);
        marked. pobject_lives will short circuit if it's already been marked.
        mark the new item too. */
 #  define GC_WRITE_BARRIER(interp, agg, old, _new) do { \
-    pobject_lives(interp, (PObj*)agg); \
-    pobject_lives(interp, (PObj*)_new); \
+    if((agg) && !PMC_IS_NULL((agg)) ) \
+        pobject_lives(interp, (PObj*)(agg)); \
+    if((_new) && !PMC_IS_NULL((_new)) ) \
+        pobject_lives(interp, (PObj*)(_new)); \
 } while(0)
     /* Mark the aggregate, the new object and the new_key, they are all
        apparently being used and I want to make sure they don't get lost */
 #  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
-    pobject_lives(interp, (PObj*)agg); \
-    pobject_lives(interp, (PObj*)_new); \
-    pobject_lives(interp, (PObj*)new_key); \
+    if((agg) && !PMC_IS_NULL((agg)) ) \
+        pobject_lives(interp, (PObj*)(agg)); \
+    if((_new) && !PMC_IS_NULL((_new)) ) \
+        pobject_lives(interp, (PObj*)_new); \
+    if((new_key) && !PMC_IS_NULL((new_key)) ) \
+        pobject_lives(interp, (PObj*)new_key); \
 } while(0)
 #endif
 
