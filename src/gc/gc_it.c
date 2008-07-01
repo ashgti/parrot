@@ -59,12 +59,6 @@ PARROT_INLINE
 static void gc_it_enqueue_all_roots(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-static void
-gc_it_mark_PObj_children_grey(PARROT_INTERP,
-    ARGMOD(Gc_it_hdr * hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 static void gc_it_enqueue_next_root(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -72,19 +66,41 @@ static void gc_it_finalize_all_pmc(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void gc_it_finalize_PMC_arenas(PARROT_INTERP,
-    ARGMOD(Gc_it_data* gc_priv_data),
+    ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
-        FUNC_MODIFIES(* gc_priv_data)
+        FUNC_MODIFIES(*gc_priv_data)
         FUNC_MODIFIES(*pool);
 
+static int gc_it_hdr_is_any_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int gc_it_hdr_is_const_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int gc_it_hdr_is_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int gc_it_hdr_is_pmc_ext(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int gc_it_hdr_is_PObj_compatible(PARROT_INTERP,
+    ARGIN(Gc_it_hdr *hdr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_INLINE
-static void gc_it_mark_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr * hdr))
+static void gc_it_mark_PObj_children_grey(PARROT_INTERP,
+    ARGMOD(Gc_it_hdr *hdr))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        FUNC_MODIFIES(* hdr);
+        FUNC_MODIFIES(*hdr);
 
 static void gc_it_post_sweep_cleanup(SHIM_INTERP);
 static void gc_it_sweep_header_arenas(PARROT_INTERP,
@@ -113,12 +129,6 @@ static void gc_it_sweep_pmc_pools(PARROT_INTERP)
 
 static void gc_it_sweep_sized_pools(PARROT_INTERP)
         __attribute__nonnull__(1);
-
-static int
-gc_it_hdr_is_PObj_compatible(PARROT_INTERP,
-    ARGIN(Gc_it_hdr *))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
 
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -230,7 +240,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         return;
     }
 #ifdef GC_IT_DEBUG
-    fprintf(stderr, "GC Run. items total: %d, flags: %x\n", gc_priv_data->total_count, flags);
+    fprintf(stderr, "GC Run. items total: %d, flags: %x\n", (int)gc_priv_data->total_count, flags);
 #endif
 
     /* items scanned this run */
@@ -381,7 +391,7 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
 {
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
-
+    register UINTVAL i;
     /* PMCs need to be handled differently from other types of pools.  Set up
        lists of our pools here, and handle different types differently.  */
     Small_Object_Pool * const pmc_pools[] = {
@@ -392,8 +402,6 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Sweeping PMC pools\n");
 #endif
-
-    register UINTVAL i;
 
     for (i = 0; i < 2; i++) {
         gc_it_sweep_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
@@ -418,7 +426,7 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
 {
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
-
+    register UINTVAL i;
     /* PMCs need to be handled differently from other types of pools.  Set
        up lists of our pools here, and handle different types differently. */
 
@@ -431,7 +439,7 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
     fprintf(stderr, "Finalizing PMC pools\n");
 #endif
 
-    register UINTVAL i;
+    
 
     for(i = 0; i < 2; i++) {
         gc_it_finalize_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
@@ -1104,17 +1112,14 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     const size_t real_size   = pool->object_size;
     const size_t num_objects = pool->objects_per_alloc;
     const size_t card_size   = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
-
     size_t       size        = real_size * pool->objects_per_alloc /* the obj */
                              + sizeof (Small_Object_Arena)         /* arena   */
                              + card_size * sizeof(Gc_it_card);     /* card    */
-
+    Small_Object_Arena * const new_arena =
+        (Small_Object_Arena *)mem_internal_allocate(size);
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Alloc objects for pool %s (%p)\n", pool->name, pool);
 #endif
-
-    Small_Object_Arena * const new_arena =
-        (Small_Object_Arena *)mem_internal_allocate(size);
 
     new_arena->card_info._d.card_size  = card_size;
     new_arena->card_info._d.last_index = num_objects - 1;
@@ -1135,7 +1140,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Alloc successful for %s (%p): %d objects [%p - %p]\n",
             pool->name, pool, pool->objects_per_alloc, new_arena->start_objects,
-            (size_t)(new_arena->start_objects) + (pool->objects_per_alloc * pool->object_size));
+            (void*)((size_t)(new_arena->start_objects) + (pool->objects_per_alloc * pool->object_size)));
 #endif
 
     /* allocate more next time */
@@ -1324,7 +1329,7 @@ gc_it_post_sweep_cleanup(SHIM_INTERP)
 Determines whether a given pointer is a PMC object from the PMC pool.
 Returns C<1> if so, C<0> otherwise.
 
-=item C<int gc_it_hdr_is_pmc>
+=item C<static int gc_it_hdr_is_pmc>
 
 Determines whether the given C<Gc_it_hdr> structure is located in the PMC
 pool. Returns C<1> if so, C<0> otherwise.
@@ -1338,25 +1343,25 @@ pool. Returns C<1> if so, C<0> otherwise.
 */
 
 int
-gc_it_ptr_is_pmc(PARROT_INTERP, void *ptr)
+gc_it_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
 {
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool);
 }
 
 static int
-gc_it_hdr_is_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
+gc_it_hdr_is_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
 }
 
 int
-gc_it_ptr_is_pmc_ext(PARROT_INTERP, void *ptr)
+gc_it_ptr_is_pmc_ext(PARROT_INTERP, ARGIN(void *ptr))
 {
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_ext_pool);
 }
 
 static int
-gc_it_hdr_is_pmc_ext(PARROT_INTERP, Gc_it_hdr *hdr)
+gc_it_hdr_is_pmc_ext(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_ext_pool);
 }
@@ -1369,7 +1374,7 @@ gc_it_hdr_is_pmc_ext(PARROT_INTERP, Gc_it_hdr *hdr)
 Determines whether a given pointer is a constant PMC object from the
 constant_pmc pool. Returns C<1> if so, C<0> otherwise.
 
-=item C<int gc_it_hdr_is_const_pmc>
+=item C<static int gc_it_hdr_is_const_pmc>
 
 Determines whether the given C<Gc_it_hdr> structure is located in the constant
 PMC pool.
@@ -1379,13 +1384,13 @@ PMC pool.
 */
 
 int
-gc_it_ptr_is_const_pmc(PARROT_INTERP, void *ptr)
+gc_it_ptr_is_const_pmc(PARROT_INTERP, ARGIN(void *ptr))
 {
     return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
 }
 
 static int
-gc_it_hdr_is_const_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
+gc_it_hdr_is_const_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
 {
     return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
 }
@@ -1399,12 +1404,12 @@ Determines whether a given pointer is a PMC or a constant PMC object from the
 pmc pool or the constant_pmc pool respectively. Returns C<1> if so, C<0>
 otherwise.
 
-=item C<int gc_it_hdr_is_any_pmc>
+=item C<static int gc_it_hdr_is_any_pmc>
 
 Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either the
 regular PMC pool or the constant PMC pool.
 
-=item C<int gc_it_hdr_is_PObj_compatible>
+=item C<static int gc_it_hdr_is_PObj_compatible>
 
 Determines whether the given header is a data object isomorphic with PObj. If
 so, we can treat the object as a PObj, and read flags from it as normal.
@@ -1415,7 +1420,7 @@ Otherwise, it's a plain non-aggregate buffer and can be treated as such.
 */
 
 int
-gc_it_ptr_is_any_pmc(PARROT_INTERP, void *ptr)
+gc_it_ptr_is_any_pmc(PARROT_INTERP, ARGIN(void *ptr))
 {
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
@@ -1424,7 +1429,7 @@ gc_it_ptr_is_any_pmc(PARROT_INTERP, void *ptr)
 }
 
 static int
-gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
+gc_it_hdr_is_any_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
 {
     /* Whichever one is more common should go first here, to take advantage
        of the short-circuiting OR operation. */
@@ -1433,7 +1438,7 @@ gc_it_hdr_is_any_pmc(PARROT_INTERP, Gc_it_hdr *hdr)
 }
 
 static int
-gc_it_hdr_is_PObj_compatible(PARROT_INTERP, Gc_it_hdr *hdr)
+gc_it_hdr_is_PObj_compatible(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
 {
     /* Arrange these in order of most common to least common, to take
        advantage of short-circuiting. */
@@ -1458,8 +1463,9 @@ if it is not found in any pools.
 */
 
 
+PARROT_CANNOT_RETURN_NULL
 Small_Object_Pool *
-gc_it_ptr_is_sized_buffer(PARROT_INTERP, void *ptr)
+gc_it_ptr_is_sized_buffer(PARROT_INTERP, ARGIN(void *ptr))
 {
     register INTVAL i = 0;
     for (i = interp->arena_base->num_sized - 1; i >= 0; i--) {
