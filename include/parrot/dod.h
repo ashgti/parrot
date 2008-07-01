@@ -272,14 +272,36 @@ void Parrot_gc_it_run(PARROT_INTERP, int flags)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
-UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr * hdr))
+UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
         __attribute__nonnull__(1)
-        FUNC_MODIFIES(* hdr);
+        FUNC_MODIFIES(*hdr);
 
 void gc_it_mark_threaded(SHIM_INTERP);
-void gc_it_set_card_mark(ARGMOD(Gc_it_hdr * hdr), UINTVAL flag)
+int gc_it_ptr_is_any_pmc(PARROT_INTERP, ARGIN(void *ptr))
         __attribute__nonnull__(1)
-        FUNC_MODIFIES(* hdr);
+        __attribute__nonnull__(2);
+
+int gc_it_ptr_is_const_pmc(PARROT_INTERP, ARGIN(void *ptr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+int gc_it_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+int gc_it_ptr_is_pmc_ext(PARROT_INTERP, ARGIN(void *ptr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_CANNOT_RETURN_NULL
+Small_Object_Pool * gc_it_ptr_is_sized_buffer(PARROT_INTERP,
+    ARGIN(void *ptr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+void gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*hdr);
 
 void gc_it_trace_normal(PARROT_INTERP)
         __attribute__nonnull__(1);
