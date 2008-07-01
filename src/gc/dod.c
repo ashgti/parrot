@@ -380,10 +380,11 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     /* mark exception list */
     /* interp->exception_list is segfaulting for some reason, which means
        it probably isn't set up correctly. I dont know why, but I'm going
-       to ignore it for now.
-    for (i = 0; i <= E_LAST_PYTHON_E; ++i)
-        pobject_lives(interp, (PObj*)interp->exception_list[i]);
-    */
+       to ignore it for now. */
+    if(interp->exception_list) {
+        for (i = 0; i <= E_LAST_PYTHON_E; ++i)
+            pobject_lives(interp, (PObj*)interp->exception_list[i]);
+    }
 
     /* mark the root_namespace */
     pobject_lives(interp, (PObj *)interp->root_namespace);

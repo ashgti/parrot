@@ -109,7 +109,7 @@ typedef struct _gc_gms_gen {
 
 /* Switches and modes */
 
-/* #define GC_IT_DEBUG             1 */
+#define GC_IT_DEBUG             1
 
 #define GC_IT_INCREMENT_MODE    1
 #define GC_IT_BATCH_MODE        0

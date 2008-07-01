@@ -349,6 +349,10 @@ gc_it_trace_normal(PARROT_INTERP)
     Gc_it_data * const gc_priv_data =
         (Gc_it_data *)interp->arena_base->gc_private;
 
+    if(!gc_priv_data->queue)
+        /* The queue is empty, don't try to trace because it won't work. */
+        return;
+
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Tracing queue, starting with %p\n", gc_priv_data->queue);
 #endif
@@ -436,8 +440,6 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Finalizing PMC pools\n");
 #endif
-
-    
 
     for(i = 0; i < 2; i++) {
         gc_it_finalize_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
@@ -828,7 +830,9 @@ gc_it_enqueue_next_root(PARROT_INTERP)
         (Gc_it_data *)interp->arena_base->gc_private;
     Gc_it_hdr         *hdr          = gc_priv_data->root_queue;
 
-    PARROT_ASSERT(hdr);
+    if(!hdr)
+        /* The root queue is empty, nothing for us to do here. We return
+           immediately so the GC can move to the next state. */
 
     while (gc_priv_data->root_queue) {
         gc_priv_data->root_queue = hdr->next;
@@ -1248,7 +1252,7 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Card Set. Pool|hdr|card: (%p, %p, %p). card %d[%d]\n",
-        hdr->parent_arena->parent_pool, hdr, card, 
+        hdr->parent_arena->parent_pool, hdr, card,
         hdr->index.num.card, hdr->index.num.flag);
 #endif
 
