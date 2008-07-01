@@ -199,17 +199,22 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
 
-    PARROT_ASSERT(obj);
-    {
-        Gc_it_hdr * const hdr = PObj_to_IT_HDR(obj);
-        Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
-        INTVAL card_mark = gc_it_get_card_mark(hdr);
-        PARROT_ASSERT(hdr);
+    Gc_it_hdr * hdr;
+    Gc_it_data * gc_priv_data;
+    INTVAL card_mark;
+    if(!obj) {
+        fprintf(stderr, "PObj lives: null pointer received, ignoring.\n");
+        return;
+    }
+    hdr = PObj_to_IT_HDR(obj);
+    gc_priv_data =(Gc_it_data *)interp->arena_base->gc_private;
+    card_mark = gc_it_get_card_mark(hdr);
+    PARROT_ASSERT(hdr);
 
-#ifdef GC_IT_DEBUG
-        fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
-                hdr, hdr->parent_arena->parent_pool, (int)card_mark);
-#endif
+#  ifdef GC_IT_DEBUG
+    fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
+            hdr, hdr->parent_arena->parent_pool, (int)card_mark);
+#  endif
 
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
@@ -221,26 +226,25 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
 
-        if(card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
-            return;
+    if(card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
+        return;
     /* black items should have been caught. Nothing should ever be "UNUSED"
        at the moment. "FREE" items should not be here either, but if an item
        is marked free at this point, we can mark it as being unfree like
        normal. */
-        PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
-        PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
-        if(gc_priv_data->state == GC_IT_MARK_ROOTS)
-            GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
-        else
-            GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
+    PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
+    PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
+    if(gc_priv_data->state == GC_IT_MARK_ROOTS)
+        GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
+    else
+        GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
     /* This is a bad hack. mark_special is a static function, which means I
        can't call it from gc_it_mark_children_grey. So, I end up marking
        some children of PMCs here, instead of in the proper place. I want
        to change the function prototype for mark_special, and probably
        rename it eventually. */
-        if (PObj_is_PMC_TEST(obj) && PObj_is_special_PMC_TEST(obj))
-            mark_special(interp, (PMC*)obj);
-    }
+    if (PObj_is_PMC_TEST(obj) && PObj_is_special_PMC_TEST(obj))
+        mark_special(interp, (PMC*)obj);
     return;
 
 #else /* not PARROT_GC_GMS or PARROT_GC_IT */
@@ -374,8 +378,12 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     mark_vtables(interp);
 
     /* mark exception list */
+    /* interp->exception_list is segfaulting for some reason, which means
+       it probably isn't set up correctly. I dont know why, but I'm going
+       to ignore it for now.
     for (i = 0; i <= E_LAST_PYTHON_E; ++i)
         pobject_lives(interp, (PObj*)interp->exception_list[i]);
+    */
 
     /* mark the root_namespace */
     pobject_lives(interp, (PObj *)interp->root_namespace);
