@@ -1057,12 +1057,20 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     Gc_it_hdr *hdr;
 
     /* If there are no objects, allocate a new arena */
-    if (!pool->free_list)
+    if (!pool->free_list) {
+#ifdef GC_IT_DEBUG
+        fprintf(stderr, "free list empty, allocating more objects for pool (%p)\n",
+                pool);
+#endif
         (pool->more_objects)(interp, pool);
+    }
 
     /* pull the first header off the free list */
     GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
     --pool->num_free_objects;
+
+    PARROT_ASSERT(hdr->parent_arena);
+    PARROT_ASSERT(hdr->parent_arena->parent_pool == pool);
 
     /* mark the item as black, so it doesn't get collected prematurely.  */
     gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
@@ -1128,8 +1136,8 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 
     /* ...the downside is this messy pointer arithmetic. */
     new_arena->cards         = (Gc_it_card *)((char*)new_arena + sizeof (Small_Object_Arena));
-    new_arena->start_objects = (void *)((char*)new_arena->cards + card_size);
-    memset(new_arena->cards, GC_IT_CARD_ALL_FREE, card_size);
+    new_arena->start_objects = (void *)(new_arena->cards + card_size);
+    memset(new_arena->cards, GC_IT_CARD_ALL_FREE, card_size * sizeof (Gc_it_card));
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
@@ -1183,18 +1191,31 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 {
     Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
     const size_t     num_objs = new_arena->total_objects;
-    register UINTVAL i;
+    register INTVAL i;
 
-    for (i = 0; i < num_objs; i++) {
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Adding arena %p to pool %p. %u items\n",
+            new_arena, pool, num_objs);
+#endif
+
+    for (i = num_objs - 1; i >= 0; i--) {
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
+        PARROT_ASSERT(pool->free_list == p);
 
         /* Cache the object's parent pool and card addresses */
         p->parent_arena   = new_arena;
         p->index.num.card = i / 4;
         p->index.num.flag = i % 4;
+        PARROT_ASSERT(p->parent_arena == new_arena);
+        PARROT_ASSERT(p->parent_arena->parent_pool == pool);
+#ifdef GC_IT_DEBUG
+        fprintf(stderr, "new item: (%p), arena: (%p), pool: (%p) card: %d[%d]\n",
+                p, p->parent_arena, p->parent_arena->parent_pool,
+                p->index.num.card, p->index.num.flag);
+#endif
 
         /* Find the next item in the arena with voodoo pointer magic */
         p = next;
@@ -1219,7 +1240,14 @@ dereferences and a little bit of algebra. Each card contains four flags.
 void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 {
-    Gc_it_card * const card = &(hdr->parent_arena->cards[hdr->index.num.card]);
+    Gc_it_card * const card_start = hdr->parent_arena->cards;
+    Gc_it_card * const card = (card_start + hdr->index.num.card);
+
+#ifdef GC_IT_DEBUG
+    fprintf(stderr, "Card Set. Pool|hdr|card: (%p, %p, %p). card %d[%d]\n",
+        hdr->parent_arena->parent_pool, hdr, card, 
+        hdr->index.num.card, hdr->index.num.flag);
+#endif
 
     PARROT_ASSERT(flag < 4);
 
