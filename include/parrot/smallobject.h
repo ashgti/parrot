@@ -190,10 +190,11 @@ typedef union Gc_it_card {
 #define GC_IT_CARD_BLACK  0x03       /* Item is completely alive */
 #define GC_IT_CARD_FREE   0x02       /* items which are newly created and should
                                        not be scanned until the next mark */
-#define GC_IT_CARD_ALL_WHITE 0x00
-#define GC_IT_CARD_ALL_BLACK 0xFF
-#define GC_IT_CARD_ALL_GREY  0x55
-#define GC_IT_CARD_ALL_NEW   0xAA
+#define GC_IT_CARD_ALL_MARK(f) ((f) | ((f) << 2) | ((f) << 4) | ((f) << 6))
+#define GC_IT_CARD_ALL_WHITE  GC_IT_CARD_ALL_MARK(GC_IT_CARD_WHITE)
+#define GC_IT_CARD_ALL_BLACK  GC_IT_CARD_ALL_MARK(GC_IT_CARD_BLACK)
+#define GC_IT_CARD_ALL_UNUSED GC_IT_CARD_ALL_MARK(GC_IT_CARD_UNUSED)
+#define GC_IT_CARD_ALL_FREE   GC_IT_CARD_ALL_MARK(GC_IT_CARD_FREE)
 
 #define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
 #define IT_HDR_to_PObj(p) ((PObj*)((p)+1))

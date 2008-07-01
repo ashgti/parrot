@@ -1117,6 +1117,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
                              + card_size * sizeof(Gc_it_card);     /* card    */
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(size);
+
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Alloc objects for pool %s (%p)\n", pool->name, pool);
 #endif
@@ -1126,9 +1127,9 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     new_arena->parent_pool             = pool;
 
     /* ...the downside is this messy pointer arithmetic. */
-    new_arena->cards         = (Gc_it_card *)(new_arena + sizeof (Small_Object_Arena));
-    new_arena->start_objects = (void *)(new_arena->cards + card_size);
-    memset(new_arena->cards, GC_IT_CARD_ALL_NEW, card_size);
+    new_arena->cards         = (Gc_it_card *)((char*)new_arena + sizeof (Small_Object_Arena));
+    new_arena->start_objects = (void *)((char*)new_arena->cards + card_size);
+    memset(new_arena->cards, GC_IT_CARD_ALL_FREE, card_size);
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
@@ -1140,7 +1141,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Alloc successful for %s (%p): %d objects [%p - %p]\n",
             pool->name, pool, pool->objects_per_alloc, new_arena->start_objects,
-            (void*)((size_t)(new_arena->start_objects) + (pool->objects_per_alloc * pool->object_size)));
+            (void*)((char*)(new_arena->start_objects) + (num_objects * real_size)));
 #endif
 
     /* allocate more next time */
@@ -1184,8 +1185,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     const size_t     num_objs = new_arena->total_objects;
     register UINTVAL i;
 
-    for (i = 0; i < num_objs - 1; i++) {
-        Gc_it_hdr *next = (Gc_it_hdr *)((size_t)p + pool->object_size);
+    for (i = 0; i < num_objs; i++) {
+        Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
         GC_IT_ADD_TO_FREE_LIST(pool, p);
