@@ -210,12 +210,12 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     gc_priv_data =(Gc_it_data *)interp->arena_base->gc_private;
     card_mark = gc_it_get_card_mark(hdr);
     PARROT_ASSERT(hdr);
-
+/*
 #  ifdef GC_IT_DEBUG
     fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
             hdr, hdr->parent_arena->parent_pool, (int)card_mark);
 #  endif
-
+*/
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
        2) The header's ->next is pointing to something. There are only
@@ -770,9 +770,10 @@ Parrot_dod_free_pmc(PARROT_INTERP, SHIM(Small_Object_Pool *pool),
     if (PObj_active_destroy_TEST(p))
         VTABLE_destroy(interp, pmc);
 
-    if (PObj_is_PMC_EXT_TEST(p))
+    if (PObj_is_PMC_EXT_TEST(p) && ((PMC*)p)->pmc_ext)
          Parrot_free_pmc_ext(interp, pmc);
 
+    p->flags = 0;
 #ifndef NDEBUG
 
     pmc->pmc_ext     = (PMC_EXT *)0xdeadbeef;
@@ -801,13 +802,13 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
     Small_Object_Pool * const ext_pool   = arena_base->pmc_ext_pool;
     PMC_EXT           * const pmcext     = p->pmc_ext;
 
+    if(!pmcext)
+        return;
     if (PObj_is_PMC_shared_TEST(p) && PMC_sync(p)) {
         MUTEX_DESTROY(PMC_sync(p)->pmc_lock);
         mem_internal_free(PMC_sync(p));
         PMC_sync(p) = NULL;
     }
-    if(!pmcext)
-        return;
     if(pmcext->_metadata) {
         Parrot_dod_free_pmc(interp, NULL, (PObj*)pmcext->_metadata);
         pmcext->_metadata = NULL;

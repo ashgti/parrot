@@ -137,7 +137,7 @@ typedef struct _gc_gms_gen {
 #define GC_IT_BREAK_AFTER_4
 #define GC_IT_BREAK_AFTER_5 break
 #define GC_IT_BREAK_AFTER_6 break
-#define GC_IT_BREAK_AFTER_7 break
+#define GC_IT_BREAK_AFTER_7
 
 /* Macros that are useful outside src/gc/gc_it.c */
 

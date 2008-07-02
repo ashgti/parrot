@@ -1678,7 +1678,7 @@ run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
      * collected under us.
      */
     if (1 || (string_length(interp, image) > THAW_BLOCK_DOD_SIZE)) {
-        Parrot_do_dod_run(interp, 1);
+        /*Parrot_do_dod_run(interp, 1); I think this is causing problems -AW*/
         Parrot_block_GC_mark(interp);
         Parrot_block_GC_sweep(interp);
         dod_block = 1;
