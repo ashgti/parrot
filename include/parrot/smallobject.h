@@ -156,13 +156,11 @@ typedef struct _gc_gms_gen {
 typedef struct Gc_it_hdr {
     struct Gc_it_hdr           *next;
     struct Small_Object_Arena  *parent_arena;
-    union {
-        UINTVAL _x_align; /* force UINTVAL alignment and sizing */
-        struct {
-            unsigned short card;
-            unsigned char flag;
-        } num;
-    } index;
+    struct {
+        unsigned short card;   /* The number of the card that contains the flag */
+        unsigned char  flag;   /* The index of the flag on the card (1-4) */
+        unsigned char  agg;    /* 1 if the item is a PObj, 0 otherwise */
+    } data;
 } Gc_it_hdr;
 
 /*

@@ -107,7 +107,7 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
 #endif
     const Small_Object_Arena *arena;
 
-    ptr = PObj_to_ARENA(ptr);
+    ptr = (void*)PObj_to_ARENA(ptr);
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         const ptrdiff_t ptr_diff =

@@ -308,12 +308,12 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_5;
 
         case GC_IT_SWEEP_HEADERS:
-            gc_it_sweep_header_pools(interp);
+            /*gc_it_sweep_header_pools(interp);*/
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
-            gc_it_sweep_sized_pools(interp);
+            /*gc_it_sweep_sized_pools(interp);*/
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -1125,6 +1125,10 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 
     /* mark the item as black, so it doesn't get collected prematurely.  */
     gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
+
+    /* clear the aggregate flag, in case it hasn't been done yet */
+    hdr->data.agg = 0;
+
 /*
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Get free object from pool %s (%p): %p (%d left) \n",
@@ -1258,15 +1262,16 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 
         /* Cache the object's parent pool and card addresses */
         p->parent_arena   = new_arena;
-        p->index.num.card = i / 4;
-        p->index.num.flag = i % 4;
+        p->data.card = i / 4;
+        p->data.flag = i % 4;
+        p->data.agg = 0;
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
 /*
 #ifdef GC_IT_DEBUG
         fprintf(stderr, "new item: (%p), arena: (%p), pool: (%p) card: %d[%d]\n",
                 p, p->parent_arena, p->parent_arena->parent_pool,
-                p->index.num.card, p->index.num.flag);
+                p->data.card, p->data.flag);
 #endif
 */
         /* Find the next item in the arena with voodoo pointer magic */
@@ -1293,17 +1298,17 @@ void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 {
     Gc_it_card * const card_start = hdr->parent_arena->cards;
-    Gc_it_card * const card = (card_start + hdr->index.num.card);
+    Gc_it_card * const card = (card_start + hdr->data.card);
 /*
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "Card Set. Pool|hdr|card: (%p, %p, %p). card %d[%d]\n",
         hdr->parent_arena->parent_pool, hdr, card,
-        hdr->index.num.card, hdr->index.num.flag);
+        hdr->data.card, hdr->data.flag);
 #endif
 */
     PARROT_ASSERT(flag < 4);
 
-    switch (hdr->index.num.flag) {
+    switch (hdr->data.flag) {
         case 0:
             card->_f.flag1 = flag;
             break;
@@ -1338,8 +1343,8 @@ UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
     Gc_it_card * const card_start = hdr->parent_arena->cards;
-    Gc_it_card * const card = (card_start + hdr->index.num.card);
-    switch (hdr->index.num.flag) {
+    Gc_it_card * const card = (card_start + hdr->data.card);
+    switch (hdr->data.flag) {
         case 0:
             return card->_f.flag1;
         case 1:
@@ -1559,6 +1564,23 @@ gc_it_ptr_is_sized_buffer(PARROT_INTERP, ARGIN(void *ptr))
     }
 
     return NULL;
+}
+
+/*
+
+=item C<void gc_it_ptr_set_PObj>
+
+Sets whether the given object is a PObj or not
+
+=cut
+
+*/
+
+void
+gc_it_ptr_set_aggregate(ARGMOD(void *ptr), unsigned char flag)
+{
+    Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
+    hdr->data.agg = flag;
 }
 
 #endif  /* PARROT_GC_IT */

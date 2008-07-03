@@ -194,10 +194,12 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
        the object's header to the queue. We add it to the beginning of the
        queue so we can exploit the cache locality benefits of marking a
        node and it's children together. We make a few basic tests here to
-       avoid adding objects to the queue unnecessarily. */
+       avoid adding objects to the queue unnecessarily.
 
-    /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
-       objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
+        Only aggregate (PObj) items end up on the queue. Items which are not
+        PObjs are marked as black immediately, but are not put on the queue.
+        C<object_lives> handles the marking of these simple, non-aggregate
+        objects. */
 
     Gc_it_hdr * hdr;
     Gc_it_data * gc_priv_data;
@@ -206,10 +208,19 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         fprintf(stderr, "PObj lives: null pointer received, ignoring.\n");
         return;
     }
+    /* Eventually this will all be more clean. For now, it's spread-out for
+       debugging. */
+    PARROT_ASSERT(obj);
     hdr = PObj_to_IT_HDR(obj);
+    PARROT_ASSERT(hdr);
+    if(!hdr->data.agg) {
+        /* If the data is not an aggregate, mark it as being a simple buffer
+           and do not treat it like a PObj. */
+        object_lives(interp, obj);
+        return;
+    }
     gc_priv_data =(Gc_it_data *)interp->arena_base->gc_private;
     card_mark = gc_it_get_card_mark(hdr);
-    PARROT_ASSERT(hdr);
 /*
 #  ifdef GC_IT_DEBUG
     fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
@@ -228,12 +239,16 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
 
     if(card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
         return;
+
     /* black items should have been caught. Nothing should ever be "UNUSED"
-       at the moment. "FREE" items should not be here either, but if an item
-       is marked free at this point, we can mark it as being unfree like
-       normal. */
+       at the moment. "FREE" items should not be here either. */
+
     PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
     PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
+
+    /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
+       objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
+
     if(gc_priv_data->state == GC_IT_MARK_ROOTS)
         GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
@@ -312,6 +327,24 @@ object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 {
 #if PARROT_GC_IT
     gc_it_set_card_mark(PObj_to_IT_HDR(obj), GC_IT_CARD_BLACK);
+#endif
+}
+
+/*
+
+=item C<void is_PObj>
+
+Specify whether the given allocated item is a PObj or not
+
+=cut
+
+*/
+
+void
+is_PObj(ARGMOD(void * ptr))
+{
+#if PARROT_GC_IT
+    gc_it_ptr_set_aggregate(ptr, 1);
 #endif
 }
 

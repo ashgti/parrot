@@ -80,6 +80,9 @@ void
 Parrot_unmake_COW(PARROT_INTERP, ARGMOD(STRING *s))
 {
     PARROT_ASSERT(s);
+    /* Quick hack to try to isolate a problem. --AW */
+    if(!s->strstart)
+        return;
 
     /* COW_FLAG | constant_FLAG | external_FLAG) */
     if (PObj_is_cowed_TESTALL(s)) {

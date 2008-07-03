@@ -87,7 +87,8 @@ static int sweep_cb_pmc(PARROT_INTERP,
 
 Gets a free object or buffer from the given C<pool> and returns it.
 If the object is larger then a starndard C<PObj> structure, all
-additional memory is cleared.
+additional memory is cleared. Buffer is assumed to be a PObj or an
+object which is isomorphic with a PObj.
 
 =cut
 
@@ -103,6 +104,7 @@ get_free_buffer(PARROT_INTERP, ARGIN(Small_Object_Pool *pool))
     /* don't mess around with flags */
     PObj_bufstart(buffer) = NULL;
     PObj_buflen(buffer) = 0;
+    is_PObj(buffer);
 
     if (pool->object_size - GC_HEADER_SIZE > sizeof (PObj))
         memset(buffer + 1, 0,
@@ -321,6 +323,7 @@ new_pmc_header(PARROT_INTERP, UINTVAL flags)
             : interp->arena_base->pmc_pool;
     PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
 
+    is_PObj(pmc);
     if (!pmc)
         real_exception(interp, NULL, ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");
@@ -365,6 +368,26 @@ new_pmc_ext(PARROT_INTERP)
     pmcext->_metadata = NULL;
     pmcext->_synchronize = NULL;
     return pmcext;
+}
+
+/*
+
+=item C<Stack_Chunk_t * new_stack_chunk>
+
+Allocates a new stack chunk
+
+=cut
+
+*/
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+Stack_Chunk_t*
+new_stack_chunk(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
+{
+    Stack_Chunk_t * const chunk = get_free_buffer(interp, pool);
+    chunk->pool = pool;
+    return chunk;
 }
 
 /*
@@ -481,7 +504,10 @@ new_buffer_header(PARROT_INTERP)
 =item C<void * new_bufferlike_header>
 
 Returns a new buffer-like header from the appropriate sized pool. Does
-not check to ensure the header is non-null.
+not check to ensure the header is non-null. The buffer is not treated
+as if it is PObj isomorphic. This is best used for non-aggregate object
+allocations. Use C<new_pmc_header>, C<new_string_header>,
+C<new_buffer_header> and C<new_stack_chunk> to allocate PObjs.
 
 =cut
 
@@ -493,8 +519,7 @@ void *
 new_bufferlike_header(PARROT_INTERP, size_t size)
 {
     Small_Object_Pool * const pool = get_bufferlike_pool(interp, size);
-
-    return get_free_buffer(interp, pool);
+    return pool->get_free_object(interp, pool);
 }
 
 /*
