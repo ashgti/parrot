@@ -502,20 +502,19 @@ method multi_declarator($/) {
 
 
 method routine_declarator($/, $key) {
+    my $past;
     if $key eq 'sub' {
-        my $past := $($<routine_def>);
+        $past := $($<routine_def>);
         $past.blocktype('declaration');
-        $past.pirflags(~$past.pirflags() ~ ' :instanceof("Perl6Sub")');
-        $past.node($/);
-        make $past;
+        $past.pirflags( ~$past.pirflags() ~ ' :instanceof("Perl6Sub")');
     }
     elsif $key eq 'method' {
-        my $past := $($<method_def>);
-        $past.blocktype('declaration');
-        $past.pirflags(~$past.pirflags() ~ ' :method :instanceof("Perl6Method")');
-        $past.node($/);
-        make $past;
+        $past := $($<method_def>);
+        $past.blocktype('method');
+        $past.pirflags( ~$past.pirflags() ~ ' :instanceof("Perl6Method")');
     }
+    $past.node($/);
+    make $past;
 }
 
 
@@ -1670,49 +1669,18 @@ method variable($/, $key) {
             if $?BLOCK.symbol('___HAVE_A_SIGNATURE') {
                 $/.panic('A signature must not be defined on a sub that uses placeholder vars.');
             }
-            $?BLOCK.symbol('___HAS_PLACEHOLDERS', :scope('lexical'));
             unless $?BLOCK.symbol($fullname) {
                 $?BLOCK.symbol( $fullname, :scope('lexical') );
                 $?BLOCK.arity( +$?BLOCK.arity() + 1 );
-                my $var;
-                if $twigil eq ':' {
-                    $var := PAST::Var.new( :name($fullname), :scope('parameter'), :named( ~$name ) );
-                }
-                else {
-                    $var := PAST::Var.new( :name($fullname), :scope('parameter') );
-                }
+                my $var := PAST::Var.new(:name($fullname), :scope('parameter'));
+                if $twigil eq ':' { $var.named( ~$name ); }
                 my $block := $?BLOCK[0];
                 my $i := +@($block);
-                my $done := 0;
-                while $i >= 0 && !$done{
-                    my $minusblock;
-                    PIR q<  $P0 = find_lex '$i'  >;
-                    PIR q<  $P1 = find_lex '$block'  >;
-                    PIR q<  $I0 = $P0  >;
-                    PIR q<  $I0 = $I0 - 1  >;
-                    PIR q<  set $P2, $P1[$I0]  >;
-                    PIR q<  store_lex '$minusblock', $P2  >;
-                    # if $var<name> gt $block[$i-1]<name> ...
-                    if $var<name> gt $minusblock<name> || $i == 0 {
-                        # $block[$i] := $var;
-                        PIR q<  $P0 = find_lex '$block'   >;
-                        PIR q<  $P1 = find_lex '$i'   >;
-                        PIR q<  $P2 = find_lex '$var'   >;
-                        PIR q<  $I0 = $P1 >;
-                        PIR q<  set $P0[$I0], $P2 >;
-                        $done := 1;
-                    }
-                    else {
-                        #$block[$i] := $block[$i-1];
-                        PIR q<  $P0 = find_lex '$block'   >;
-                        PIR q<  $P1 = find_lex '$i'   >;
-                        PIR q<  $I0 = $P1 >;
-                        PIR q<  $I1 = $I0 - 1 >;
-                        PIR q<  set $P2, $P0[$I1] >;
-                        PIR q<  set $P0[$I0], $P2 >;
-                    }
+                while $i > 0 && $block[$i-1]<name> gt $fullname {
+                    $block[$i] := $block[$i-1];
                     $i--;
                 }
+                $block[$i] := $var;
             }
         }
 
@@ -1825,7 +1793,7 @@ method circumfix($/, $key) {
         $past := $( $<pblock> );
     }
     elsif $key eq '$( )' {
-        my $method := process_contextualizer($/, $<sigil>);
+        my $method := contextualizer_name($/, $<sigil>);
         $past := PAST::Op.new(
             :pasttype('callmethod'),
             :name($method),
@@ -2025,7 +1993,7 @@ method term($/, $key) {
         );
     }
     elsif $key eq 'sigil' {
-        my $method := process_contextualizer($/, $<sigil>);
+        my $method := contextualizer_name($/, $<sigil>);
 
         $past := PAST::Op.new(
             :pasttype('callmethod'),
@@ -2337,7 +2305,7 @@ sub build_call($args) {
 }
 
 
-sub process_contextualizer($/, $sigil) {
+sub contextualizer_name($/, $sigil) {
     ##  Contextualizing is calling .item, .list, .hash, etc.
     ##  on the expression in the brackets
     my $method;
