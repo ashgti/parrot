@@ -382,7 +382,7 @@ Allocates a new stack chunk
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-Stack_Chunk_t*
+Stack_Chunk_t *
 new_stack_chunk(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     Stack_Chunk_t * const chunk = get_free_buffer(interp, pool);

@@ -35,6 +35,34 @@ php_API.pir - PHP API Library
 .end
 
 
+=item C<fetch_resource>
+
+=cut
+
+.sub 'fetch_resource'
+    .param pmc val
+    .param string type
+    $I0 = isa val, 'PhpResource'
+    if $I0 goto L1
+    $P0 = getinterp
+    $P1 = $P0['sub', 1]
+    error(E_WARNING, $P1, "(): supplied argument is not a valid ", type, " resource")
+    null $P0
+    .return ($P0)
+  L1:
+    $P0 = deref val
+    $I0 = isa $P0, type
+    unless $I0 goto L2
+    .return ($P0)
+  L2:
+    $P0 = getinterp
+    $P1 = $P0['sub', 1]
+    error(E_WARNING, $P1, "(): supplied resource is not a valid ", type, " resource")
+    null $P0
+    .return ($P0)
+.end
+
+
 =item C<get_module_version>
 
 DUMMY IMPLEMENTATION.
@@ -275,8 +303,14 @@ STILL INCOMPLETE (see parse_arg_impl).
     .return ('boolean')
   not_boolean:
     unless c == 'r' goto not_resource
-    ###
+    $I0 = isa arg, 'PhpResource'
+    if $I0 goto L5
+    $I0 = isa arg, 'PhpUndef'
+    unless $I0 goto L51
+    unless return_null goto L51
     goto L5
+  L51:
+    .return ('resource')
   not_resource:
     unless c == 'a' goto not_array
     $I0 = isa arg, 'PhpArray'
@@ -372,6 +406,29 @@ STILL INCOMPLETE (see parse_arg_impl).
     .param pmc context :optional
     $P0 = open path, mode
     .return ($P0)
+.end
+
+=item C<stream_passthru>
+
+=cut
+
+.sub 'stream_passthru'
+    .param pmc stream
+    $S0 = stream.'slurp'('')
+    $I0 = length $S0
+    print $S0
+    .return ($I0)
+.end
+
+=item C<stream_stat>
+
+=cut
+
+.sub 'stream_stat'
+    .param string path
+    .param int type
+    $I0 = stat path, type
+    .return ($I0)
 .end
 
 =back

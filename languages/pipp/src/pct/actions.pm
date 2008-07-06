@@ -88,6 +88,16 @@ method function_call($/) {
     make $past;
 }
 
+method constant($/) {
+    make PAST::Op.new(
+             :name('constant'),
+             PAST::Val.new(
+                 :returns('PhpString'),
+                 :value( ~$<CONSTANT_NAME> ),
+             )
+         );
+}
+
 method arguments($/) {
     my $past := PAST::Op.new(
                     :pasttype('call'),
@@ -167,12 +177,9 @@ method else_clause($/) {
 
 method relational_expression($/) {
     if $<rel_op_clause> {
-        my %name;
-        %name{'=='} := 'infix:eq';
-        %name{'!='} := 'infix:ne';
         my $rel_op_clause := $/{'rel_op_clause'}{'REL_OP'};
-        my $op := ~$rel_op_clause{'REL_OP'};
-        my $name := %name{ $op } || "infix:" ~ $op;
+        my $op            := ~$rel_op_clause{'REL_OP'};
+        my $name          := 'infix:' ~ $op;
         make PAST::Op.new(
                  $( $<expression> ),
                  $( $rel_op_clause{'expression'} ),
@@ -189,93 +196,34 @@ method expression($/,$key) {
     make $( $/{$key} );
 }
 
-method bitwise_expression($/) {
-    my $past := $( $<adding_expression> );
-    if $<bitwise_tail> {
-       my %name;
-       %name{'&'} := 'infix:+&';
-       %name{'|'} := 'infix:+|';
-       %name{'^'} := 'infix:+^';
-
-       for $<bitwise_tail> {
-           my $past_prev := $past;
-           my $name := %name{ $_<BITWISE_OP> };
-           $past := PAST::Op.new(
-                        $past_prev,
-                        $( $_<adding_expression> ),
-                        :name($name)
-                    );
-       }
-    }
-
-    make $past;
-}
-
-method adding_expression($/) {
-    my $past := $( $<multiplying_expression> );
-    if $<adding_tail> {
-       for $<adding_tail> {
-           my $past_prev := $past;
-           my $pir_op := $_<ADD_OP> eq '+' ?? 'n_add' !! 'n_sub';
-           $past := PAST::Op.new(
-                        $past_prev,
-                        $( $_<multiplying_expression> ),
-                        :pirop($pir_op)
-                    );
-       }
-    }
-
-    make $past;
-}
-
-method multiplying_expression($/) {
-    my $past := $( $<unary_expression> );
-    if $<multiplicand> {
-       my %pirop;
-       %pirop{'*'} := 'n_mul';
-       %pirop{'/'} := 'n_div';
-       %pirop{'%'} := 'n_mod';
-
-       for $<multiplicand> {
-           my $past_prev := $past;
-           my $pir_op := %pirop{ $_<MUL_OP> };
-           $past := PAST::Op.new(
-                        $past_prev,
-                        $( $_<multiplying_expression> ),
-                        :pirop($pir_op)
-                    );
-       }
-    }
-
-    make $past;
-}
-
-method unary_expression($/) {
-    if $<UNARY_MINUS> {
-        make PAST::Op.new(
-                 $( $<postfix_expression> ),
-                 :name('prefix:-'),
-                 :pirop('n_neg'),
-                 :node($/)
-             );
+## Handle the operator precedence table.
+method bitwise_expression($/, $key) {
+    if ($key eq 'end') {
+        make $($<expr>);
     }
     else {
-        make $( $<postfix_expression> );
+        my $past := PAST::Op.new( :name($<type>),
+                                  :pasttype($<top><pasttype>),
+                                  :pirop($<top><pirop>),
+                                  :lvalue($<top><lvalue>),
+                                  :node($/)
+                                );
+        for @($/) {
+            $past.push( $($_) );
+        }
+        make $past;
     }
 }
 
 method concat_expression($/) {
     my $past := $( $<string> );
-    if $<concat_tail> {
-       for $<concat_tail> {
-           my $past_prev := $past;
-           my $op := $_<CONCAT_OP> eq '.' ?? '~' !! ~$_<CONCAT_OP>;
-           $past := PAST::Op.new(
-                        $past_prev,
-                        $( $_<string> ),
-                        :name( "infix:" ~ $op )
-                    );
-       }
+    for $<concat_tail> {
+        my $past_prev := $past;
+        $past := PAST::Op.new(
+                     $past_prev,
+                     $( $_<string> ),
+                     :name( "infix:" ~ $_<CONCAT_OP> )
+                 );
     }
 
     make $past;

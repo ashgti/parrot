@@ -13,6 +13,20 @@ php_file.pir - PHP file Standard Library
 
 =cut
 
+.const string STREAM_PMC = 'ParrotIO'
+
+.const int SEEK_SET = 0
+.const int SEEK_CUR = 1
+.const int SEEK_END = 2
+
+.sub '__init' :anon :load :init
+    .local pmc cst
+    .GET_CONSTANTS(cst)
+    .REGISTER_LONG_CONSTANT(cst, 'SEEK_SET', SEEK_SET)
+    .REGISTER_LONG_CONSTANT(cst, 'SEEK_CUR', SEEK_CUR)
+    .REGISTER_LONG_CONSTANT(cst, 'SEEK_END', SEEK_END)
+.end
+
 =item C<bool copy(string source_file, string destination_file)>
 
 Copy a file
@@ -29,12 +43,24 @@ NOT IMPLEMENTED.
 
 Close an open file pointer
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'fclose'
-    not_implemented()
+    .param pmc args :slurpy
+    .local int argc
+    argc = args
+    unless argc != 1 goto L1
+    wrong_param_count()
+    .RETURN_NULL()
+  L1:
+    $P1 = shift args
+    .local pmc stream
+    stream = fetch_resource($P1, STREAM_PMC)
+    unless null stream goto L2
+    .RETURN_FALSE()
+  L2:
+    close stream
+    .RETURN_TRUE()
 .end
 
 =item C<bool feof(resource fp)>
@@ -203,7 +229,7 @@ NOT IMPLEMENTED.
 
 Open a file or a URL and return a file pointer
 
-NOT IMPLEMENTED.
+STILL INCOMPLETE (see _getmode)
 
 =cut
 
@@ -225,6 +251,9 @@ NOT IMPLEMENTED.
   L2:
     $S0 = _getmode(mode)
     stream = stream_open(filename, $S0, $I0, context)
+    if stream goto L3
+    .RETURN_FALSE()
+  L3:
     .RETURN_RESOURCE(stream)
 .end
 
@@ -264,12 +293,24 @@ NOT IMPLEMENTED.
 
 Output all remaining data from a file pointer
 
-NOT IMPLEMENTED.
-
 =cut
 
 .sub 'fpassthru'
-    not_implemented()
+    .param pmc args :slurpy
+    .local int argc
+    argc = args
+    unless argc != 1 goto L1
+    wrong_param_count()
+    .RETURN_NULL()
+  L1:
+    $P1 = shift args
+    .local pmc stream
+    stream = fetch_resource($P1, STREAM_PMC)
+    unless null stream goto L2
+    .RETURN_FALSE()
+  L2:
+    $I0 = stream_passthru(stream)
+    .RETURN_LONG($I0)
 .end
 
 =item C<int fputcsv(resource fp, array fields [, string delimiter [, string enclosure]])>
@@ -441,10 +482,8 @@ STILL INCOMPLETE (see stream_open)
   L2:
     stream = stream_open(filename, '<', $I0, context)
     unless stream goto L3
-    $S0 = stream.'slurp'('')
+    $I0 = stream_passthru(stream)
     close stream
-    $I0 = length $S0
-    print $S0
     .RETURN_LONG($I0)
   L3:
     .RETURN_FALSE()

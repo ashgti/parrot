@@ -17,7 +17,7 @@ src/classes/List.pir - Perl 6 List class and related functions
     p6meta.'register'('ResizablePMCArray', 'parent'=>listproto, 'protoobject'=>listproto)
 
     $P0 = get_hll_namespace ['List']
-    '!EXPORT'('first grep keys kv map pairs reduce reverse values', $P0)
+    '!EXPORT'('first grep keys kv map pairs reduce values', $P0)
 .end
 
 =item clone()    (vtable method)
@@ -512,31 +512,6 @@ Return a list of Pair(index, value) elements for the invocant.
 .end
 
 
-=item reverse()
-
-Returns a list of the elements in reverse order.
-
-=cut
-
-.sub 'reverse' :method :multi('ResizablePMCArray')
-    .local pmc result, iter
-    result = new 'List'
-    iter = self.'iterator'()
-  iter_loop:
-    unless iter goto iter_done
-    $P0 = shift iter
-    unshift result, $P0
-    goto iter_loop
-  iter_done:
-    .return (result)
-.end
-
-.sub 'reverse' :multi()
-    .param pmc values          :slurpy
-    .return values.'reverse'()
-.end
-
-
 =item uniq(...)
 
 =cut
@@ -601,107 +576,6 @@ Returns a List containing the values of the invocant.
 .sub 'values' :multi()
     .param pmc values          :slurpy
     .return values.'!flatten'()
-.end
-
-
-=item min()
-
-Return minimum element in list
-
-=cut
-
-.sub 'min' :method :multi('ResizablePMCArray')
-    .param pmc by              :optional
-    .param int has_by          :opt_flag
-    .local pmc elem, res, iter
-
-    if has_by goto start
-    by = get_hll_global 'infix:<=>'
-  start:
-    iter = self.'iterator'()
-    if iter goto do_work
-    res = new 'Failure'
-    goto done
-
-  do_work:
-    res = shift iter
-  loop:
-    unless iter goto done
-    elem = shift iter
-    $I0 = by(elem, res)
-    unless $I0 < 0 goto loop
-    res = elem
-    goto loop
-
-  done:
-    .return(res)
-.end
-
-.namespace []
-.sub 'min' :multi(Closure)
-    .param pmc by
-    .param pmc values          :slurpy
-    $P0 = values.'min'(by)
-    .return ($P0)
-.end
-
-.sub 'min' :multi()
-    .param pmc values          :slurpy
-    .local pmc by
-    by = get_hll_global 'infix:<=>'
-    $P0 = values.'min'(by)
-    .return ($P0)
-.end
-
-
-.namespace ['List']
-=item max()
-
-Return maximum element in list
-
-=cut
-
-.sub 'max' :method :multi('ResizablePMCArray')
-    .param pmc by              :optional
-    .param int has_by          :opt_flag
-    .local pmc elem, res, iter
-
-    if has_by goto start
-    by = get_hll_global 'infix:<=>'
-  start:
-    iter = self.'iterator'()
-    if iter goto do_work
-    res = new 'Failure'
-    goto done
-
-  do_work:
-    res = shift iter
-  loop:
-    unless iter goto done
-    elem = shift iter
-    $I0 = by(elem, res)
-    unless $I0 > 0 goto loop
-    res = elem
-    goto loop
-
-  done:
-    .return(res)
-.end
-
-.namespace []
-.sub 'max' :multi(Closure)
-    .param pmc by
-    .param pmc values          :slurpy
-    $P0 = values.'max'(by)
-    .return ($P0)
-.end
-
-.sub 'max' :multi()
-    .param pmc values          :slurpy
-    .local pmc by
-    by = get_hll_global 'infix:<=>'
-    $P0 = values.'max'(by)
-    .return ($P0)
 .end
 
 

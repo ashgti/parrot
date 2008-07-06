@@ -12,6 +12,9 @@ our $?PERL6SCALAR := 'Failure';
 method TOP($/) {
     my $past := $( $<statement_block> );
     $past.blocktype('declaration');
+    declare_implicit_var($past, '$_', 'new');
+    declare_implicit_var($past, '$!', 'new');
+    declare_implicit_var($past, '$/', 'new');
 
     # Attach any initialization code.
     our $?INIT;
@@ -28,6 +31,9 @@ method TOP($/) {
         $past.unshift( $?INIT );
         $?INIT := PAST::Block.new(); # For the next eval.
     }
+
+    # Make sure we have the interpinfo constants.
+    $past.unshift( PAST::Op.new( :inline(".include \"interpinfo.pasm\"\n") ) );
 
     make $past;
 }
@@ -50,42 +56,10 @@ method statement_block($/, $key) {
             $?BLOCK := PAST::Block.new( PAST::Stmts.new(), :node($/));
         }
         @?BLOCK.unshift($?BLOCK);
-        my $init := $?BLOCK[0];
-        unless $?BLOCK.symbol('$_') {
-            $init.push( PAST::Var.new( :name('$_'), :isdecl(1) ) );
-            $?BLOCK.symbol( '$_', :scope('lexical') );
-        }
-        unless $?BLOCK.symbol('$/') {
-            $init.push( PAST::Var.new( :name('$/'), :isdecl(1) ) );
-            $?BLOCK.symbol( '$/', :scope('lexical') );
-            $init.push(
-                PAST::Op.new(
-                    :inline(
-                          "    %r = getinterp\n"
-                        ~ "    push_eh no_match_to_copy\n"
-                        ~ "    %r = %r['lexpad';1]\n"
-                        ~ "    pop_eh\n"
-                        ~ "    if null %r goto no_match_to_copy\n"
-                        ~ "    %r = %r['$/']\n"
-                        ~ "    store_lex '$/', %r\n"
-                        ~ "  no_match_to_copy:\n"
-                    )
-                )
-            );
-        }
-        unless $?BLOCK.symbol('$!') {
-            $init.push( PAST::Var.new( :name('$!'), :isdecl(1) ) );
-            $?BLOCK.symbol( '$!', :scope('lexical') ); }
     }
     if $key eq 'close' {
         my $past := @?BLOCK.shift();
         $?BLOCK := @?BLOCK[0];
-        if $past.symbol('___MAYBE_NEED_TOPIC_FIXUP') && !$past.symbol('___HAVE_A_SIGNATURE') {
-            if $past[0][0].name() ne '$_' { $/.panic('$_ handling is very poor right now.') };
-            $past.symbol('$_', :scope('lexical'));
-            $past[0][0].scope('parameter');
-            $past[0][0].isdecl(0);
-        }
         $past.push($($<statementlist>));
         make $past;
     }
@@ -169,6 +143,7 @@ method if_statement($/) {
     my $expr  := $( $<EXPR>[$count] );
     my $then  := $( $<block>[$count] );
     $then.blocktype('immediate');
+    declare_implicit_immediate_vars($then);
     my $past := PAST::Op.new(
         $expr, $then,
         :pasttype('if'),
@@ -177,6 +152,7 @@ method if_statement($/) {
     if $<else> {
         my $else := $( $<else>[0] );
         $else.blocktype('immediate');
+        declare_implicit_immediate_vars($else);
         $past.push( $else );
     }
     while $count != 0 {
@@ -184,6 +160,7 @@ method if_statement($/) {
         $expr  := $( $<EXPR>[$count] );
         $then  := $( $<block>[$count] );
         $then.blocktype('immediate');
+        declare_implicit_immediate_vars($then);
         $past  := PAST::Op.new(
             $expr, $then, $past,
             :pasttype('if'),
@@ -197,6 +174,7 @@ method if_statement($/) {
 method unless_statement($/) {
     my $then := $( $<block> );
     $then.blocktype('immediate');
+    declare_implicit_immediate_vars($then);
     my $past := PAST::Op.new(
         $( $<EXPR> ), $then,
         :pasttype('unless'),
@@ -223,23 +201,15 @@ method repeat_statement($/) {
 }
 
 method given_statement($/) {
-    my $past := $( $<block> );
-    $past.blocktype('immediate');
-
-    # Node to assign expression to $_.
-    my $expr := $( $<EXPR> );
-    my $assign := PAST::Op.new(
-        PAST::Var.new( :name('$_') ),
-        $( $<EXPR> ),
-        :name('infix::='),
-        :pasttype('bind'),
-        :node($/)
+    my $block := $( $<pblock> );
+    $block.blocktype('declaration');
+    declare_implicit_function_vars($block);
+    ##  call the block using the expression as an argument
+    my $past := PAST::Op.new(
+        :pasttype('call'),
+        $block,
+        $( $<EXPR> )
     );
-
-    # Put as first instruction in block (but after .lex $_).
-    my $statements := $past[1];
-    $statements.unshift( $assign );
-
     make $past;
 }
 
@@ -306,6 +276,7 @@ method loop_statement($/) {
 method for_statement($/) {
     my $block := $( $<pblock> );
     $block.blocktype('declaration');
+    declare_implicit_function_vars($block);
     my $past := PAST::Op.new(
         PAST::Op.new(:name('list'), $($<EXPR>)),
         $block,
@@ -506,14 +477,17 @@ method routine_declarator($/, $key) {
     if $key eq 'sub' {
         $past := $($<routine_def>);
         $past.blocktype('declaration');
-        $past.pirflags( ~$past.pirflags() ~ ' :instanceof("Perl6Sub")');
+        set_block_type($past, 'Sub');
     }
     elsif $key eq 'method' {
         $past := $($<method_def>);
         $past.blocktype('method');
-        $past.pirflags( ~$past.pirflags() ~ ' :instanceof("Perl6Method")');
+        set_block_type($past, 'Method');
     }
     $past.node($/);
+    declare_implicit_var($past, '$_', 'new');
+    declare_implicit_var($past, '$!', 'new');
+    declare_implicit_var($past, '$/', 'new');
     make $past;
 }
 
@@ -767,9 +741,7 @@ method signature($/) {
         }
     }
     $past.arity( +$/[0] );
-    if +$/[0] {
-        our $?BLOCK_SIGNATURED := $past;
-    }
+    our $?BLOCK_SIGNATURED := $past;
     our $?PARAM_TYPE_CHECK := $type_check;
     $past.push($type_check);
     make $past;
@@ -849,25 +821,13 @@ method expect_term($/, $key) {
             $past := $($_);
             if $past.name() eq 'infix:,' { $past.name(''); }
 
-            # Check if it's an indirect call.
-            if $_<dotty><methodop><variable> {
-                # What to call supplied; need to put the invocant second.
-                my $meth := $past[0];
-                $past[0] := $term;
-                $past.unshift($meth);
-            }
-            elsif $_<dotty><methodop><quote> && $past.pasttype() eq 'callmethod' {
-                # First child is something that we evaluate to get the
-                # name. Replace it with PIR to call find_method on it.
-                my $meth_name := $past[0];
-                $past[0] := $term;
-                $past.unshift(
-                    PAST::Op.new(
-                        :inline("$S1000 = %1\n%r = find_method %0, $S1000\n"),
-                        $term,
-                        $meth_name
-                    )
-                );
+            if  $past.isa(PAST::Op)
+                && $past.pasttype() eq 'callmethod'
+                && !$past.name() {
+                    # indirect call, invocant needs to be second arg
+                    my $meth := $past[0];
+                    $past[0] := $term;
+                    $past.unshift($meth);
             }
             else {
                 $past.unshift($term);
@@ -910,20 +870,15 @@ method dotty($/, $key) {
     elsif $key eq '.*' {
         $past := $( $<methodop> );
         if $/[0] eq '.?' || $/[0] eq '.+' || $/[0] eq '.*' {
-            unless $<methodop><name> || $<methodop><quote>  {
+            my $name := $past.name();
+            unless $name {
                 $/.panic("Cannot use " ~ $/[0] ~ " when method is a code ref");
             }
-            my $args := $past;
-            $past := PAST::Op.new(
-                :pasttype('call'),
-                :name('infix:' ~ $/[0])
-            );
-            if $<methodop><name> {
-                $past.push(PAST::Val.new( :value(~$args.name()) ));
+            unless $name.isa(PAST::Node) {
+                $name := PAST::Val.new( :value($name) );
             }
-            for @($args) {
-                $past.push($_);
-            }
+            $past.unshift($name);
+            $past.name('!' ~ $/[0]);
         }
         else {
             $/.panic($/[0] ~ ' method calls not yet implemented');
@@ -960,7 +915,7 @@ method methodop($/, $key) {
         $past.unshift( $( $<variable> ) );
     }
     else {
-        $past.unshift( $( $<quote> ) );
+        $past.name( $( $<quote> ) );
     }
 
     make $past;
@@ -1684,10 +1639,6 @@ method variable($/, $key) {
             }
         }
 
-        if $fullname eq '$_' && !$?BLOCK.symbol('___HAVE_A_SIGNATURE') {
-            $?BLOCK.symbol('___MAYBE_NEED_TOPIC_FIXUP', :scope('lexical'));
-        }
-
         # If it's $.x, it's a method call, not a variable.
         if $twigil eq '.' {
             $past := PAST::Op.new(
@@ -1791,6 +1742,7 @@ method circumfix($/, $key) {
     }
     elsif $key eq '{ }' {
         $past := $( $<pblock> );
+        declare_implicit_function_vars($past);
     }
     elsif $key eq '$( )' {
         my $method := contextualizer_name($/, $<sigil>);
@@ -2305,6 +2257,41 @@ sub build_call($args) {
 }
 
 
+sub declare_implicit_var($block, $name, $type) {
+    unless $block.symbol($name) {
+        my $var := PAST::Var.new( :name($name), :isdecl(1) );
+        $var.scope($type eq 'parameter' ?? 'parameter' !! 'lexical');
+        if $type eq 'new' {
+            $var.viviself( 'Perl6Scalar' );
+        }
+        else {
+            my $opast := PAST::Op.new(
+                :name('!OUTER'),
+                PAST::Val.new( :value($name) )
+            );
+            $var.viviself($opast);
+        }
+        $block[0].push($var);
+        $block.symbol($name, :scope('lexical') );
+    }
+}
+
+
+sub declare_implicit_function_vars($block) {
+    declare_implicit_var($block, '$_',
+        defined($block.arity()) ?? 'outer' !! 'parameter');
+    declare_implicit_var($block, '$!', 'outer');
+    declare_implicit_var($block, '$/', 'outer');
+}
+
+
+sub declare_implicit_immediate_vars($block) {
+    declare_implicit_var($block, '$_', 'outer');
+    declare_implicit_var($block, '$!', 'outer');
+    declare_implicit_var($block, '$/', 'outer');
+}
+
+
 sub contextualizer_name($/, $sigil) {
     ##  Contextualizing is calling .item, .list, .hash, etc.
     ##  on the expression in the brackets
@@ -2473,6 +2460,48 @@ sub build_type($cons_pt) {
     }
 
     $type_cons
+}
+
+
+# Get's the :immediate setup sub for a block; if it doesn't have one, adds it.
+sub get_block_setup_sub($block) {
+    my $init := $block[0];
+    my $found;
+    for @($init) {
+        if $_.WHAT() eq 'Block' && $_.pirflags() eq ':immediate' {
+            $found := $_;
+        }
+    }
+    unless $found {
+        $found := PAST::Block.new(
+            :blocktype('declaration'),
+            :pirflags(':immediate'),
+
+            # For block type; defaults to Block
+            PAST::Stmts.new(
+                PAST::Op.new(
+                    :inline("    $P0 = interpinfo .INTERPINFO_CURRENT_SUB\n" ~
+                            "    $P0 = $P0.'get_outer'()\n" ~
+                            "    setprop $P0, '$!proto', %0\n"),
+                    PAST::Var.new(
+                        :name('Block'),
+                        :scope('package')
+                    )
+                )
+            ),
+
+            # For signature setup - default to empty = unsignatured.
+            PAST::Stmts.new()
+        );
+        $init.push($found);
+    }
+    $found
+}
+
+# Set the proto object type of a block.
+sub set_block_type($block, $type) {
+    my $setup_sub := get_block_setup_sub($block);
+    $setup_sub[0][0][0].name($type);
 }
 
 

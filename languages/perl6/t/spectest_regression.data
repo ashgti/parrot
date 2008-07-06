@@ -15,6 +15,7 @@ S02-literals/hex_chars.t                        # pure
 S02-literals/radix.t
 S02-polymorphic_types/subset-code.t             # pure
 S02-polymorphic_types/subset-range.t
+S03-operators/arith.t
 S03-operators/assign-is-not-binding.t
 S03-operators/autoincrement.t                   # pure
 S03-operators/comparison.t
@@ -32,6 +33,7 @@ S03-operators/true.t                            # pure
 S03-junctions/misc.t
 S04-declarations/multiple.t
 S04-statements/no-implicit-block.t
+S04-statements/repeat.t
 S04-statements/terminator.t                     # pure
 S04-statements/try.t
 S04-statements/until.t                          # pure
@@ -86,3 +88,4 @@ S29-str/lcfirst.t
 S29-str/lc.t
 S29-str/sprintf.t
 S29-str/ucfirst.t
+S29-str/uc.t
