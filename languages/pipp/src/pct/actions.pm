@@ -76,7 +76,7 @@ method inline_sea_tp1($/) {
 
 method echo_statement($/) {
     my $past := $( $<arguments> );
-    $past.name( ~$<ECHO> );
+    $past.name( 'echo' );
 
     make $past;
 }
@@ -222,7 +222,7 @@ method concat_expression($/) {
         $past := PAST::Op.new(
                      $past_prev,
                      $( $_<string> ),
-                     :name( "infix:" ~ $_<CONCAT_OP> )
+                     :name( 'infix:.' )
                  );
     }
 
@@ -321,6 +321,12 @@ method parameters($/) {
         ## enter the parameter as a lexical into the block's symbol table
         $past.symbol($param.name(), :scope('lexical'));
     }
+
+    make $past;
+}
+
+method class_definition($/) {
+    my $past := PAST::Block.new( :blocktype('declaration'), :node($/) );
 
     make $past;
 }
