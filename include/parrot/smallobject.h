@@ -111,8 +111,8 @@ typedef struct _gc_gms_gen {
 
 #define GC_IT_DEBUG             1
 
-#define GC_IT_INCREMENT_MODE    1
-#define GC_IT_BATCH_MODE        0
+#define GC_IT_INCREMENT_MODE    0
+#define GC_IT_BATCH_MODE        1
 #define GC_IT_SERIAL_MODE       1
 #define GC_IT_PARALLEL_MODE     0
 
@@ -132,11 +132,11 @@ typedef struct _gc_gms_gen {
    increments before completion and moving to the next state. */
 #define GC_IT_BREAK_AFTER_0
 #define GC_IT_BREAK_AFTER_1
-#define GC_IT_BREAK_AFTER_2 break
-#define GC_IT_BREAK_AFTER_3 break
+#define GC_IT_BREAK_AFTER_2
+#define GC_IT_BREAK_AFTER_3
 #define GC_IT_BREAK_AFTER_4
-#define GC_IT_BREAK_AFTER_5 break
-#define GC_IT_BREAK_AFTER_6 break
+#define GC_IT_BREAK_AFTER_5
+#define GC_IT_BREAK_AFTER_6
 #define GC_IT_BREAK_AFTER_7
 
 /* Macros that are useful outside src/gc/gc_it.c */

@@ -385,7 +385,7 @@ PARROT_CANNOT_RETURN_NULL
 Stack_Chunk_t *
 new_stack_chunk(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
-    Stack_Chunk_t * const chunk = get_free_buffer(interp, pool);
+    Stack_Chunk_t * const chunk = (Stack_Chunk_t *)get_free_buffer(interp, pool);
     chunk->pool = pool;
     return chunk;
 }
@@ -469,10 +469,15 @@ new_string_header(PARROT_INTERP, UINTVAL flags)
             ? interp->arena_base->constant_string_header_pool
             : interp->arena_base->string_header_pool);
 
-    PObj_get_FLAGS(string) |=
+    PObj_get_FLAGS(string) =
         flags | PObj_is_string_FLAG | PObj_is_COWable_FLAG | PObj_live_FLAG;
 
     string->strstart        = NULL;
+    string->bufused = 0;
+    string->hashval = 0;
+    string->strlen = 0;
+    string->encoding = NULL;
+    string->charset = NULL;
 
     return string;
 }

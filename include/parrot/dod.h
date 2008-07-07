@@ -53,8 +53,7 @@
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_API
-void object_lives(PARROT_INTERP, ARGMOD(PObj *obj))
-        __attribute__nonnull__(1)
+void object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*obj);
 
@@ -68,6 +67,10 @@ void clear_cow(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool), int cleanup)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
+
+void is_PObj(ARGMOD(void * ptr))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* ptr);
 
 void Parrot_do_dod_run(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
@@ -299,6 +302,10 @@ Small_Object_Pool * gc_it_ptr_is_sized_buffer(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+void gc_it_ptr_set_aggregate(ARGMOD(void *ptr), unsigned char flag)
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*ptr);
+
 void gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
         __attribute__nonnull__(1)
         FUNC_MODIFIES(*hdr);
@@ -364,19 +371,19 @@ void gc_it_trace_threaded(SHIM_INTERP);
        marked. pobject_lives will short circuit if it's already been marked.
        mark the new item too. */
 #  define GC_WRITE_BARRIER(interp, agg, old, _new) do { \
-    if((agg) && !PMC_IS_NULL((agg)) ) \
+    if((agg)) \
         pobject_lives(interp, (PObj*)(agg)); \
-    if((_new) && !PMC_IS_NULL((_new)) ) \
+    if((_new)) \
         pobject_lives(interp, (PObj*)(_new)); \
 } while(0)
     /* Mark the aggregate, the new object and the new_key, they are all
        apparently being used and I want to make sure they don't get lost */
 #  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
-    if((agg) && !PMC_IS_NULL((agg)) ) \
+    if((agg)) \
         pobject_lives(interp, (PObj*)(agg)); \
-    if((_new) && !PMC_IS_NULL((_new)) ) \
+    if((_new)) \
         pobject_lives(interp, (PObj*)_new); \
-    if((new_key) && !PMC_IS_NULL((new_key)) ) \
+    if((new_key)) \
         pobject_lives(interp, (PObj*)new_key); \
 } while(0)
 #endif

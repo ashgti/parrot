@@ -415,7 +415,7 @@ compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
         for (cur_buffer_arena = header_pool->last_Arena;
                 cur_buffer_arena;
                 cur_buffer_arena = cur_buffer_arena->prev) {
-            Gc_it_hdr * const hdr = (Gc_it_hdr*)cur_buffer_arena->start_objects;
+            void * const hdr = (void *)cur_buffer_arena->start_objects;
             Buffer *b = (Buffer *)ARENA_to_PObj(hdr);
             UINTVAL i;
 

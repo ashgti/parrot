@@ -125,6 +125,14 @@ PARROT_CANNOT_RETURN_NULL
 Small_Object_Pool * new_pmc_pool(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+Stack_Chunk_t * new_stack_chunk(PARROT_INTERP,
+    ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 STRING * new_string_header(PARROT_INTERP, UINTVAL flags)

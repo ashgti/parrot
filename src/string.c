@@ -79,11 +79,10 @@ PARROT_API
 void
 Parrot_unmake_COW(PARROT_INTERP, ARGMOD(STRING *s))
 {
+#if GC_IT_DEBUG
+    fprintf(stderr, "String object: %p\n", s);
+#endif
     PARROT_ASSERT(s);
-    /* Quick hack to try to isolate a problem. --AW */
-    if(!s->strstart)
-        return;
-
     /* COW_FLAG | constant_FLAG | external_FLAG) */
     if (PObj_is_cowed_TESTALL(s)) {
         STRING for_alloc;
@@ -102,6 +101,7 @@ Parrot_unmake_COW(PARROT_INTERP, ARGMOD(STRING *s))
          */
         PObj_flags_CLEARALL(&for_alloc);
         Parrot_allocate_string(interp, &for_alloc, PObj_buflen(s));
+        PARROT_ASSERT(for_alloc.strstart);
 
         /* now copy memory over */
         mem_sys_memcopy(for_alloc.strstart, s->strstart, s->bufused);
