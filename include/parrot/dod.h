@@ -68,9 +68,8 @@ void clear_cow(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool), int cleanup)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-void is_PObj(ARGMOD(void * ptr))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(* ptr);
+UINTVAL is_PObj(ARGIN(void * ptr))
+        __attribute__nonnull__(1);
 
 void Parrot_do_dod_run(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
@@ -136,6 +135,10 @@ void Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*p);
+
+void set_PObj(ARGMOD(void * ptr))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* ptr);
 
 void trace_mem_block(PARROT_INTERP, size_t lo_var_ptr, size_t hi_var_ptr)
         __attribute__nonnull__(1);
@@ -280,6 +283,9 @@ UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
         FUNC_MODIFIES(*hdr);
 
 void gc_it_mark_threaded(SHIM_INTERP);
+UINTVAL gc_it_ptr_get_aggregate(ARGIN(void * const ptr))
+        __attribute__nonnull__(1);
+
 int gc_it_ptr_is_any_pmc(PARROT_INTERP, ARGIN(void *ptr))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);

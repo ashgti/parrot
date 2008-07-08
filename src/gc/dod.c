@@ -332,7 +332,7 @@ object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 
 /*
 
-=item C<void is_PObj>
+=item C<UINTVAL is_PObj>
 
 Specify whether the given allocated item is a PObj or not
 
@@ -341,11 +341,28 @@ Specify whether the given allocated item is a PObj or not
 */
 
 void
-is_PObj(ARGMOD(void * ptr))
+set_PObj(ARGMOD(void * ptr))
 {
 #if PARROT_GC_IT
     gc_it_ptr_set_aggregate(ptr, 1);
 #endif
+}
+
+/*
+
+=item C<UINTVAL is_PObj>
+
+Returns a boolean truth value as to whether the object is a PObj-isomorphic
+bufferlike object.
+
+=cut
+
+*/
+
+UINTVAL
+is_PObj(ARGIN(void * ptr))
+{
+    gc_it_ptr_get_aggregate(ptr);
 }
 
 /*

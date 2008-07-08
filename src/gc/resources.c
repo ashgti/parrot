@@ -419,6 +419,15 @@ compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
             UINTVAL i;
 
             for (i = cur_buffer_arena->used; i; --i) {
+                /* This should help us not follow pointers in objects that
+                   aren't PObjs. Keep in mind that just because we call them
+                   "bufferlike" doesn't mean they are isomorphic with the
+                   Buffer object. Keep in mind that this solution doesn't work
+                   with GCs that don't keep track of this information. */
+                if (!is_PObj(b)) {
+                    b = (Buffer *)((char *)b + object_size);
+                    continue;
+                }
                 /* ! (on_free_list | constant | external | sysmem) */
                 if (PObj_buflen(b) && PObj_is_movable_TESTALL(b)) {
                     ptrdiff_t offset = 0;

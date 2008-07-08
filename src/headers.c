@@ -104,7 +104,7 @@ get_free_buffer(PARROT_INTERP, ARGIN(Small_Object_Pool *pool))
     /* don't mess around with flags */
     PObj_bufstart(buffer) = NULL;
     PObj_buflen(buffer) = 0;
-    is_PObj(buffer);
+    set_PObj(buffer);
 
     if (pool->object_size - GC_HEADER_SIZE > sizeof (PObj))
         memset(buffer + 1, 0,
@@ -323,7 +323,7 @@ new_pmc_header(PARROT_INTERP, UINTVAL flags)
             : interp->arena_base->pmc_pool;
     PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
 
-    is_PObj(pmc);
+    set_PObj(pmc);
     if (!pmc)
         real_exception(interp, NULL, ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");

@@ -1644,6 +1644,13 @@ gc_it_ptr_set_aggregate(ARGMOD(void *ptr), unsigned char flag)
     hdr->data.agg = flag;
 }
 
+UINTVAL
+gc_it_ptr_get_aggregate(ARGIN(void * const ptr))
+{
+    const Gc_it_hdr * const hdr = PObj_to_IT_HDR(ptr);
+    return (UINTVAL)hdr->data.agg;
+}
+
 #endif  /* PARROT_GC_IT */
 
 
