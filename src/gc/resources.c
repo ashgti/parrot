@@ -409,7 +409,6 @@ compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
 
         if (!header_pool)
             continue;
-
         object_size = header_pool->object_size;
 
         for (cur_buffer_arena = header_pool->last_Arena;
@@ -501,7 +500,6 @@ compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
             }
         }
     }
-
     /* Okay, we're done with the copy. Set the bits in the pool struct */
     /* First, where we allocate next */
     new_block->top = cur_spot;

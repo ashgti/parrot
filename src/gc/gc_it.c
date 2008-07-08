@@ -157,11 +157,10 @@ Parrot_gc_it_init(PARROT_INTERP)
     gc_priv_data->state            = GC_IT_READY;
 
     /* Some sanity checks */
-    /*
     PARROT_ASSERT(offsetof(Buffer, flags) == offsetof(PObj, flags));
     PARROT_ASSERT(offsetof(Buffer, flags) == offsetof(PMC, flags));
     PARROT_ASSERT(offsetof(Buffer, flags) == offsetof(STRING, flags));
-    */
+    PARROT_ASSERT(offsetof(Buffer, flags) == offsetof(Stack_Chunk_t, flags));
     /* set function hooks according to pdd09 */
     arena_base->do_gc_mark         = Parrot_gc_it_run;
     arena_base->finalize_gc_system = Parrot_gc_it_deinit;
@@ -1201,10 +1200,25 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
     const size_t real_size   = pool->object_size;
     const size_t num_objects = pool->objects_per_alloc;
-    const size_t card_size   = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
-    size_t       size        = real_size * pool->objects_per_alloc /* the obj */
-                             + sizeof (Small_Object_Arena)         /* arena   */
-                             + card_size * sizeof(Gc_it_card);     /* card    */
+
+    /* The number of cards. I ASSUME that sizeof(Gc_it_card) == 1, but that
+       might not be the case. Therefore, this number must be multiplied by
+       sizeof(Gc_it_card) if it is going to be used as the physical size of
+       occupied memory. */
+    const size_t card_size = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
+
+    /* This is the actual size of the card in memory, plus any additional
+       space we need to allocate to force proper alignment of the rest of
+       the data objects. */
+    const size_t card_size_align = card_size * sizeof(Gc_it_card) /* The card */
+                                 + (card_size % sizeof(void *));  /* +align   */
+
+    /* The size of the allocated arena. This is the size of the
+       Small_Object_Arena structure, which goes at the front, the card, and
+       the objects. */
+    size_t size = (real_size * pool->objects_per_alloc) /* the objects */
+                + sizeof (Small_Object_Arena)           /* the arena   */
+                + card_size_align;                      /* the card    */
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(size);
 /*
@@ -1216,16 +1230,26 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     new_arena->card_info._d.last_index = num_objects - 1;
     new_arena->parent_pool             = pool;
 
-    /* ...the downside is this messy pointer arithmetic. */
-    new_arena->cards         = (Gc_it_card *)((char*)new_arena + sizeof (Small_Object_Arena));
-    new_arena->start_objects = (void *)(new_arena->cards + card_size);
-    memset(new_arena->cards, GC_IT_CARD_ALL_FREE, card_size * sizeof (Gc_it_card));
+    /* ...the downside is this messy pointer arithmetic. The cards are packed
+       against the end of the Small_Object_Arena. The objects are packed at
+       the end of the cards. */
+    new_arena->cards = (Gc_it_card *)((char*)new_arena
+                     + sizeof (Small_Object_Arena));
+    /* The objects are packed in after the cards (and any alignment space that
+       we've added). */
+    new_arena->start_objects = (void *)((char *)new_arena->cards
+                             + card_size_align);
+    /* Clear all the cards. Set them to the value GC_IT_CARD_ALL_FREE for now,
+       indicating that all items are (or will be) on the free list to start. */
+    memset(new_arena->cards, GC_IT_CARD_ALL_FREE,
+        card_size * sizeof (Gc_it_card));
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
         real_size * pool->objects_per_alloc);
 
-    /* Add all these new objects we've created into the pool's free list */
+    /* Add all these new objects we've created into the pool's free list.
+       this is where the rest of the messy pointer arithmetic happens. */
     gc_it_add_arena_to_free_list(interp, pool, new_arena);
 /*
 #ifdef GC_IT_DEBUG

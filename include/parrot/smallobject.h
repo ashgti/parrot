@@ -195,7 +195,7 @@ typedef union Gc_it_card {
 #define GC_IT_CARD_ALL_FREE   GC_IT_CARD_ALL_MARK(GC_IT_CARD_FREE)
 
 #define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
-#define IT_HDR_to_PObj(p) ((PObj*)((p)+1))
+#define IT_HDR_to_PObj(p) ((PObj*)((Gc_it_hdr*)(p)+1))
 #define cPObj_to_IT_HDR(o) (((const Gc_it_hdr*)(o))-1)
 
 /*
