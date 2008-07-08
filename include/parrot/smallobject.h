@@ -20,7 +20,6 @@
 
 #if PARROT_GC_IT
 /* forward declarations */
-union Gc_it_card;
 struct Gc_it_hdr;
 #endif
 
@@ -31,7 +30,7 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *next;
     void                      *start_objects;
 #if PARROT_GC_IT
-    union Gc_it_card        *cards;
+    unsigned char             *cards;
     union {        /* store 2 16-bit values, force UINTVAL alignment */
         struct {   /* These shouldn't get bigger then 65535, i don't think */
             unsigned short int card_size;
@@ -172,15 +171,24 @@ typedef struct Gc_it_hdr {
  * avoid a lot of manual bitwise arithmetic
  */
 
+typedef unsigned char Gc_it_card;
+#define GC_IT_CARD_MASK_1 0x03
+#define GC_IT_CARD_MASK_2 0x0C
+#define GC_IT_CARD_MASK_3 0x30
+#define GC_IT_CARD_MASK_4 0xC0
+
+/* This definition is being padded to 4 bytes, which is wasteful when i am
+   only using 1 byte each.
 typedef union Gc_it_card {
-    unsigned char _c;  /* the card */
-    struct { /* easy-access bitfield overlays */
+    unsigned char _c;
+    struct {
         unsigned flag1:2;
         unsigned flag2:2;
         unsigned flag3:2;
         unsigned flag4:2;
     } _f;
 } Gc_it_card;
+*/
 
 #define GC_IT_FLAGS_PER_CARD 4
 #define GC_IT_CARD_WHITE  0x00       /* Item is dead */

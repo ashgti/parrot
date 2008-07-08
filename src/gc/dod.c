@@ -332,7 +332,7 @@ object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 
 /*
 
-=item C<void is_PObj>
+=item C<UINTVAL is_PObj>
 
 Specify whether the given allocated item is a PObj or not
 

@@ -282,6 +282,11 @@ UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
         __attribute__nonnull__(1)
         FUNC_MODIFIES(*hdr);
 
+PARROT_INLINE
+PARROT_WARN_UNUSED_RESULT
+UINTVAL gc_it_get_card_mark_index(ARGIN(Gc_it_card * card), UINTVAL index)
+        __attribute__nonnull__(1);
+
 void gc_it_mark_threaded(SHIM_INTERP);
 UINTVAL gc_it_ptr_get_aggregate(ARGIN(void * const ptr))
         __attribute__nonnull__(1);
@@ -315,6 +320,14 @@ void gc_it_ptr_set_aggregate(ARGMOD(void *ptr), unsigned char flag)
 void gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
         __attribute__nonnull__(1)
         FUNC_MODIFIES(*hdr);
+
+PARROT_INLINE
+void gc_it_set_card_mark_index(
+    ARGMOD(Gc_it_card * card),
+    UINTVAL index,
+    UINTVAL flag)
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* card);
 
 void gc_it_trace_normal(PARROT_INTERP)
         __attribute__nonnull__(1);
