@@ -472,12 +472,18 @@ method routine_declarator($/, $key) {
     if $key eq 'sub' {
         $past := $($<routine_def>);
         $past.blocktype('declaration');
-        set_block_type($past, 'Sub');
+        set_block_proto($past, 'Sub');
+        if $<routine_def><multisig> {
+            set_block_sig($past, $( $<routine_def><multisig>[0]<signature> ));
+        }
     }
     elsif $key eq 'method' {
         $past := $($<method_def>);
         $past.blocktype('method');
-        set_block_type($past, 'Method');
+        set_block_proto($past, 'Method');
+        if $<method_def><multisig> {
+            set_block_sig($past, $( $<method_def><multisig>[0]<signature> ));
+        }
     }
     $past.node($/);
     if (+@($past[1])) {
@@ -531,61 +537,109 @@ method method_def($/) {
 
 
 method signature($/) {
-    my $params := PAST::Stmts.new( :node($/) );
-    my $type_check := PAST::Stmts.new( :node($/) );
-    my $past := PAST::Block.new( $params, :blocktype('declaration') );
+    # In here, we build a signature object and optionally some other things
+    # if $?SIG_BLOCK_NOT_NEEDED is not set to a true value.
+    # * $?BLOCK_SIGNATURED ends up containing the PAST tree for a block that
+    #   takes and binds the parameters. This is used for generating subs,
+    #   methods and so forth.
+    # * $?PARAM_TYPE_CHECK is used to export details of the types from here
+    #   so that the multi plurality declarator can make use of them.
+
+    # Initialize PAST for the signatured block, if we're going to have it.
+    our $?SIG_BLOCK_NOT_NEEDED;
+    my $params;
+    my $type_check;
+    my $block_past;
+    unless $?SIG_BLOCK_NOT_NEEDED {
+        $params := PAST::Stmts.new( :node($/) );
+        $block_past := PAST::Block.new( $params, :blocktype('declaration') );
+        $type_check := PAST::Stmts.new( :node($/) );
+    }
+
+    # Initialize PAST for constructing the signature object.
+    my $sig_past := PAST::Op.new(
+        :pasttype('callmethod'),
+        :name('!create'),
+        PAST::Var.new(
+            :name('Signature'),
+            :scope('package'),
+            :namespace(list())
+        )
+    );
+
+    # Go through the parameters.
     for $/[0] {
-        # Add parameter declaration.
         my $parameter := $($_<parameter>);
         my $separator := $_[0];
-        $past.symbol($parameter.name(), :scope('lexical'));
-        $params.push($parameter);
 
-        # If it is invocant, modify it to be just a lexical and bind self to it.
-        if substr($separator, 0, 1) eq ':' {
-            # Make sure it's first parameter.
-            if +@($params) != 1 {
-                $/.panic("There can only be one invocant and it must be the first parameter");
-            }
+        # Add parameter declaration to the block, if we're producing one.
+        unless $?SIG_BLOCK_NOT_NEEDED {
+            # Register symbol and put parameter PAST into the node.
+            $block_past.symbol($parameter.name(), :scope('lexical'));
+            $params.push($parameter);
 
-            # Modify.
-            $parameter.scope('lexical');
-            $parameter.isdecl(1);
+            # If it is invocant, modify it to be just a lexical and bind self to it.
+            if substr($separator, 0, 1) eq ':' {
+                # Make sure it's first parameter.
+                if +@($params) != 1 {
+                    $/.panic("There can only be one invocant and it must be the first parameter");
+                }
 
-            # Bind self to it.
-            $params.push(PAST::Op.new(
-                :pasttype('bind'),
-                PAST::Var.new(
-                    :name($parameter.name()),
-                    :scope('lexical')
-                ),
-                PAST::Op.new(
-                    :inline('%r = self')
-                )
-            ));
-        }
+                # Modify.
+                $parameter.scope('lexical');
+                $parameter.isdecl(1);
 
-        # Are we going to take the type of the thing we were passed and bind
-        # it to an abstraction parameter?
-        if $_<parameter><generic_binder> {
-            my $tv_var := $( $_<parameter><generic_binder>[0]<variable> );
-            $params.push(PAST::Op.new(
-                :pasttype('bind'),
-                PAST::Var.new(
-                    :name($tv_var.name()),
-                    :scope('lexical'),
-                    :isdecl(1)
-                ),
-                PAST::Op.new(
-                    :pasttype('callmethod'),
-                    :name('WHAT'),
+                # Bind self to it.
+                $params.push(PAST::Op.new(
+                    :pasttype('bind'),
                     PAST::Var.new(
                         :name($parameter.name()),
                         :scope('lexical')
+                    ),
+                    PAST::Op.new(
+                        :inline('%r = self')
                     )
-                )
-            ));
-            $past.symbol($tv_var.name(), :scope('lexical'));
+                ));
+            }
+
+            # Are we going to take the type of the thing we were passed and bind
+            # it to an abstraction parameter?
+            if $_<parameter><generic_binder> {
+                my $tv_var := $( $_<parameter><generic_binder>[0]<variable> );
+                $params.push(PAST::Op.new(
+                    :pasttype('bind'),
+                    PAST::Var.new(
+                        :name($tv_var.name()),
+                        :scope('lexical'),
+                        :isdecl(1)
+                    ),
+                    PAST::Op.new(
+                        :pasttype('callmethod'),
+                        :name('WHAT'),
+                        PAST::Var.new(
+                            :name($parameter.name()),
+                            :scope('lexical')
+                        )
+                    )
+                ));
+                $block_past.symbol($tv_var.name(), :scope('lexical'));
+            }
+        }
+
+        # Now start making a descriptor for the signature.
+        my $descriptor := sig_descriptor_create();
+        $sig_past.push($descriptor);
+        sig_descriptor_set($descriptor, 'name',
+            PAST::Val.new( :value(~$parameter.name()) ));
+        if $parameter.named() {
+            sig_descriptor_set($descriptor, 'named',
+                PAST::Val.new( :value(~$parameter.named()) ));
+        }
+        if $parameter.viviself() {
+            sig_descriptor_set($descriptor, 'optional', PAST::Val.new( :value(1) ));
+        }
+        if $parameter.slurpy() {
+            sig_descriptor_set($descriptor, 'slurpy', PAST::Val.new( :value(1) ));
         }
 
         # See if we have any traits. For now, we just handle ro, rw and copy.
@@ -628,17 +682,17 @@ method signature($/) {
         my $cur_param_types := PAST::Stmts.new();
         if $_<parameter><type_constraint> {
             for $_<parameter><type_constraint> {
+                my $type_obj;
+
                 # Just a type name?
                 if $_<typename> {
-                    $cur_param_types.push(
-                        PAST::Op.new(
-                            :pasttype('call'),
-                            :name('!TYPECHECKPARAM'),
-                            $( $_<typename> ),
-                            PAST::Var.new(
-                                :name($parameter.name()),
-                                :scope('lexical')
-                            )
+                    $type_obj := PAST::Op.new(
+                        :pasttype('call'),
+                        :name('!TYPECHECKPARAM'),
+                        $( $_<typename> ),
+                        PAST::Var.new(
+                            :name($parameter.name()),
+                            :scope('lexical')
                         )
                     );
                 }
@@ -682,69 +736,101 @@ method signature($/) {
 
                     # Now we'll just pass this block to the type checker,
                     # since smart-matching a block invokes it.
-                    $cur_param_types.push(
-                        PAST::Op.new(
-                            :pasttype('call'),
-                            :name('!TYPECHECKPARAM'),
-                            $past,
-                            PAST::Var.new(
-                                :name($parameter.name()),
-                                :scope('lexical')
-                            )
+                    $type_obj := PAST::Op.new(
+                        :pasttype('call'),
+                        :name('!TYPECHECKPARAM'),
+                        $past,
+                        PAST::Var.new(
+                            :name($parameter.name()),
+                            :scope('lexical')
                         )
                     );
                 }
+
+                # Add it to the types list.
+                $cur_param_types.push($type_obj);
             }
         }
-        $type_check.push($cur_param_types);
 
-        # Handle container type traits.
-        if $cont_trait eq 'rw' {
-            # We just leave it as it is.
+        # For blocks, we just collect the check into the list of all checks.
+        unless $?SIG_BLOCK_NOT_NEEDED {
+            $type_check.push($cur_param_types);
         }
-        elsif $cont_trait eq 'readonly' {
-            # Create a new container with ro set and bind the parameter to it.
-            $params.push(PAST::Op.new(
-                :pasttype('bind'),
-                PAST::Var.new(
+
+        # For signatures, we build a list from the constraints and store it.
+        my $sig_type_cons := PAST::Stmts.new(
+            PAST::Op.new(
+                :inline("    $P2 = new 'List'\n")
+            ),
+            PAST::Stmts.new(),
+            PAST::Op.new(
+                :inline("    %r = $P2\n")
+            )
+        );
+        for @($cur_param_types) {
+            # Just want the type, not the call to the checker.
+            $sig_type_cons[1].push(PAST::Op.new(
+                :inline("    push $P2, %0\n"),
+                $_[0]
+            ));
+        }
+        sig_descriptor_set($descriptor, 'constraints', $sig_type_cons);
+
+        # If we're making a block, emit code for trait types.
+        unless $?SIG_BLOCK_NOT_NEEDED {
+            if $cont_trait eq 'rw' {
+                # We just leave it as it is.
+            }
+            elsif $cont_trait eq 'readonly' {
+                # Create a new container with ro set and bind the parameter to it.
+                $params.push(PAST::Op.new(
+                    :pasttype('bind'),
+                    PAST::Var.new(
+                        :name($parameter.name()),
+                        :scope('lexical')
+                    ),
+                    PAST::Op.new(
+                        :inline(" %r = new 'Perl6Scalar', %0\n" ~
+                                " $P0 = get_hll_global ['Bool'], 'True'\n" ~
+                                " setprop %r, 'readonly', $P0\n"),
+                        PAST::Var.new(
+                            :name($parameter.name()),
+                            :scope('lexical')
+                        )
+                    )
+                ));
+            }
+            elsif $cont_trait eq 'copy' {
+                # Create a new container and copy the value into it..
+                $params.push(PAST::Op.new(
+                    :pasttype('bind'),
+                    PAST::Var.new(
                     :name($parameter.name()),
                     :scope('lexical')
-                ),
-                PAST::Op.new(
-                    :inline(" %r = new 'Perl6Scalar', %0\n" ~
-                            " $P0 = get_hll_global ['Bool'], 'True'\n" ~
-                            " setprop %r, 'readonly', $P0\n"),
-                    PAST::Var.new(
-                        :name($parameter.name()),
-                        :scope('lexical')
+                    ),
+                    PAST::Op.new(
+                        :inline(" %r = new 'Perl6Scalar'\n" ~
+                                " %r.'infix:='(%0)\n"),
+                        PAST::Var.new(
+                            :name($parameter.name()),
+                            :scope('lexical')
+                        )
                     )
-                )
-            ));
-        }
-        elsif $cont_trait eq 'copy' {
-            # Create a new container and copy the value into it..
-            $params.push(PAST::Op.new(
-                :pasttype('bind'),
-                PAST::Var.new(
-                :name($parameter.name()),
-                :scope('lexical')
-                ),
-                PAST::Op.new(
-                    :inline(" %r = new 'Perl6Scalar'\n" ~
-                            " %r.'infix:='(%0)\n"),
-                    PAST::Var.new(
-                        :name($parameter.name()),
-                        :scope('lexical')
-                    )
-                )
-            ));
+                ));
+            }
         }
     }
-    $past.arity( +$/[0] );
-    our $?BLOCK_SIGNATURED := $past;
-    our $?PARAM_TYPE_CHECK := $type_check;
-    $params.push($type_check);
-    make $past;
+
+    # Finish setting up the signatured block, if we're making one.
+    unless $?SIG_BLOCK_NOT_NEEDED {
+        $block_past.arity( +$/[0] );
+        our $?BLOCK_SIGNATURED := $block_past;
+        our $?PARAM_TYPE_CHECK := $type_check;
+        $params.push($type_check);
+    }
+
+    # Hand back the PAST to construct a signature object.
+    make $sig_past;
 }
 
 
@@ -782,6 +868,9 @@ method parameter($/) {
 
 
 method param_var($/) {
+    if $<twigil> && $<twigil>[0] ne '.' && $<twigil>[0] ne '!' {
+        $/.panic('Invalid twigil used in signature parameter.');
+    }
     make PAST::Var.new(
         :name(~$/),
         :scope('parameter'),
@@ -1271,7 +1360,7 @@ method package_block($/, $key) {
 }
 
 
-method variable_decl($/) {
+method variable_declarator($/) {
     my $past := $( $<variable> );
 
     # If it's an attribute declaration, we handle traits elsewhere.
@@ -1310,9 +1399,10 @@ method variable_decl($/) {
 
 method scoped($/) {
     my $past;
+
     # Variable declaration?
-    if $<variable_decl> {
-        $past := $( $<variable_decl> );
+    if $<declarator><variable_declarator> {
+        $past := $( $<declarator><variable_declarator> );
 
         # Unless it's an attribute, emit code to set type and initialize it to
         # the correct proto.
@@ -1341,6 +1431,15 @@ method scoped($/) {
             );
         }
     }
+
+    # Variable declaration, but with a signature?
+    elsif $<declarator><signature> {
+        if $<fulltypename> {
+            $/.panic("Distributing a type across a signature at declaration unimplemented.");
+        }
+        $past := $( $<declarator><signature> );
+    }
+
     # Routine declaration?
     else {
         $past := $( $<routine_declarator> );
@@ -1354,7 +1453,7 @@ method scoped($/) {
 }
 
 
-sub declare_attribute($/) {
+sub declare_attribute($/, $sym, $variable_sigil, $variable_twigil, $variable_name) {
     # Get the class or role we're in.
     our $?CLASS;
     our $?ROLE;
@@ -1369,15 +1468,13 @@ sub declare_attribute($/) {
     }
     unless defined( $class_def ) {
         $/.panic(
-                "attempt to define attribute '"
-            ~ $name ~ "' outside of class"
+                "attempt to define attribute '" ~ $name ~ "' outside of class"
         );
     }
 
     # Is this a role-private or just a normal attribute?
-    my $variable := $<scoped><variable_decl><variable>;
     my $name;
-    if $<sym> eq 'my' {
+    if $sym eq 'my' {
         # These are only allowed inside a role.
         unless $class_def =:= $?ROLE {
             $/.panic('Role private attributes can only be declared in a role');
@@ -1388,14 +1485,14 @@ sub declare_attribute($/) {
         # as $!attrname, add the real name and set the scope as rpattribute,
         # then translate it to the right thing when we see it.
         our $?NS;
-        $name := ~$variable<sigil> ~ '!' ~ $?NS[0] ~ '!' ~ ~$variable<name>;
-        my $visible_name := ~$variable<sigil> ~ '!' ~ ~$variable<name>;
-        my $real_name := '!' ~ $?NS[0] ~ '!' ~ ~$variable<name>;
+        $name := ~$variable_sigil ~ '!' ~ $?NS[0] ~ '!' ~ ~$variable_name;
+        my $visible_name := ~$variable_sigil ~ '!' ~ ~$variable_name;
+        my $real_name := '!' ~ $?NS[0] ~ '!' ~ ~$variable_name;
         $?BLOCK.symbol($visible_name, :scope('rpattribute'), :real_name($real_name));
     }
     else {
         # Register name as attribute scope.
-        $name := ~$variable<sigil> ~ '!' ~ ~$variable<name>;
+        $name := ~$variable_sigil ~ '!' ~ ~$variable_name;
         $?BLOCK.symbol($name, :scope('attribute'));
     }
 
@@ -1415,8 +1512,8 @@ sub declare_attribute($/) {
 
     # Is there any "handles" trait verb or an "is rw" or "is ro"?
     my $rw := 0;
-    if $<scoped><variable_decl><trait> {
-        for $<scoped><variable_decl><trait> {
+    if $<scoped><declarator><variable_declarator><trait> {
+        for $<scoped><declarator><variable_declarator><trait> {
             if $_<trait_verb><sym> eq 'handles' {
                 # Get the methods for the handles and add them to
                 # the class
@@ -1444,15 +1541,9 @@ sub declare_attribute($/) {
         }
     }
 
-    # If we have no twigil, make $name as an alias to $!name.
-    if $variable<twigil>[0] eq '' {
-        $?BLOCK.symbol(
-            ~$variable<sigil> ~ ~$variable<name>, :scope('attribute')
-        );
-    }
-
-    # If we have a . twigil, we need to generate an accessor.
-    elsif $variable<twigil>[0] eq '.' {
+    # Twigil handling.
+    if $variable_twigil eq '.' {
+        # We have a . twigil, so we need to generate an accessor.
         my $getset;
         if $rw {
             $getset := PAST::Var.new( :name($name), :scope('attribute') );
@@ -1467,19 +1558,27 @@ sub declare_attribute($/) {
         }
         my $accessor := PAST::Block.new(
             PAST::Stmts.new($getset),
-            :name(~$variable<name>),
+            :name(~$variable_name),
             :blocktype('declaration'),
             :pirflags(':method'),
             :node( $/ )
         );
         $class_def.unshift($accessor);
     }
-
-    # If it's a ! twigil, we're done; otherwise, error.
-    elsif $variable<twigil>[0] ne '!' {
+    elsif $variable_twigil eq '!' {
+        # Don't need to do anything.
+    }
+    elsif $variable_twigil eq '' {
+        # We have no twigil, make $name as an alias to $!name.
+        $?BLOCK.symbol(
+            ~$variable_sigil ~ ~$variable_name, :scope('attribute')
+        );
+    }
+    else {
+        # It's a twigil that you canny use in an attribute declaration.
         $/.panic(
                 "invalid twigil "
-            ~ $variable<twigil>[0] ~ " in attribute declaration"
+            ~ $variable_twigil ~ " in attribute declaration"
         );
     }
 }
@@ -1490,12 +1589,15 @@ method scope_declarator($/) {
     my $past := $( $<scoped> );
 
     # What sort of thing are we scoping?
-    if $<scoped><variable_decl> {
+    if $<scoped><declarator><variable_declarator> {
         # Variable. Now go by declarator or twigil if it's a role-private.
-        my $twigil := $<scoped><variable_decl><variable><twigil>[0];
+        my $twigil := $<scoped><declarator><variable_declarator><variable><twigil>[0];
         if $declarator eq 'has' || $declarator eq 'my' && $twigil eq '!' {
             # Attribute declarations need special handling.
-            declare_attribute($/);
+            my $sigil := ~$<scoped><declarator><variable_declarator><variable><sigil>;
+            my $twigil := ~$<scoped><declarator><variable_declarator><variable><twigil>[0];
+            my $name := ~$<scoped><declarator><variable_declarator><variable><name>;
+            declare_attribute($/, $declarator, $sigil, $twigil, $name);
 
             # We don't have any PAST at the point of the declaration.
             $past := PAST::Stmts.new();
@@ -1519,6 +1621,54 @@ method scope_declarator($/) {
 
                 # Add block entry.
                 $?BLOCK.symbol($name, :scope($scope));
+            }
+        }
+    }
+
+    # Signature.
+    elsif $<scoped><declarator><signature> {
+        # We'll emit code to declare each of the parameters, then we'll have
+        # the declaration evaluate to the signature object, thus allowing an
+        # assignment to it.
+        my @declare := sig_extract_declarables($/, $past);
+        $past := PAST::Stmts.new($past);
+        for @declare {
+            # Work out sigil and twigil.
+            my $sigil := substr($_, 0, 1);
+            my $twigil := substr($_, 1, 1);
+            my $desigilname;
+            if $twigil eq '.' || $twigil eq '!' {
+                $desigilname := substr($_, 2);
+            }
+            else {
+                $twigil := '';
+                $desigilname := substr($_, 1);
+            }
+
+            # Decide by declarator.
+            if $declarator eq 'my' || $declarator eq 'our' {
+                # Add declaration code.
+                my $scope;
+                if $declarator eq 'my' {
+                    $scope := 'lexical'
+                }
+                else {
+                    $scope := 'package';
+                }
+                $past.unshift(PAST::Var.new(
+                    :name($_),
+                    :isdecl(1),
+                    :scope($scope),
+                    :viviself('Perl6Scalar')
+                ));
+
+                # Add block entry.
+                $?BLOCK.symbol($_, :scope($scope));
+            } elsif $declarator eq 'has' {
+                declare_attribute($/, $declarator, $sigil, $twigil, $desigilname);
+            }
+            else {
+                $/.panic("Scope declarator " ~ $declarator ~ " unimplemented with signatures.");
             }
         }
     }
@@ -2225,6 +2375,12 @@ method capture($/) {
 }
 
 
+method sigterm($/) {
+    my $past := $( $/<signature> );
+    make $past;
+}
+
+
 # Used by all calling code to process arguments into the correct form.
 sub build_call($args) {
     if $args.WHAT() ne 'Op' || $args.name() ne 'infix:,' {
@@ -2468,7 +2624,8 @@ sub get_block_setup_sub($block) {
             # For block type; defaults to Block
             PAST::Stmts.new(
                 PAST::Op.new(
-                    :inline("    $P0 = interpinfo .INTERPINFO_CURRENT_SUB\n" ~
+                    :inline("    .local pmc desc\n" ~
+                            "    $P0 = interpinfo .INTERPINFO_CURRENT_SUB\n" ~
                             "    $P0 = $P0.'get_outer'()\n" ~
                             "    setprop $P0, '$!proto', %0\n"),
                     PAST::Var.new(
@@ -2478,20 +2635,95 @@ sub get_block_setup_sub($block) {
                 )
             ),
 
-            # For signature setup - default to empty = unsignatured.
-            PAST::Stmts.new()
+            # For signature setup - default to empty signature object.
+            PAST::Stmts.new(
+                PAST::Op.new(
+                    :inline("    setprop $P0, '$!signature', %0\n"),
+                    PAST::Op.new(
+                        :pasttype('callmethod'),
+                        :name('!create'),
+                        PAST::Var.new(
+                            :name('Signature'),
+                            :scope('package'),
+                            :namespace(list())
+                        )
+                    )
+                )
+            )
         );
         $init.push($found);
     }
     $found
 }
 
+
 # Set the proto object type of a block.
-sub set_block_type($block, $type) {
+sub set_block_proto($block, $type) {
     my $setup_sub := get_block_setup_sub($block);
     $setup_sub[0][0][0].name($type);
 }
 
+
+# Associate a signature object with a block.
+sub set_block_sig($block, $sig_obj) {
+    my $setup_sub := get_block_setup_sub($block);
+    $setup_sub[1][0][0] := $sig_obj;
+}
+
+# Creates a signature descriptor (for now, just a hash).
+sub sig_descriptor_create() {
+    PAST::Stmts.new(
+        PAST::Op.new( :inline("    $P1 = new 'Hash'\n") ),
+        PAST::Stmts.new(),
+        PAST::Op.new( :inline("    %r = $P1\n") )
+    )
+}
+
+# Sets a given value in the signature descriptor.
+sub sig_descriptor_set($descriptor, $name, $value) {
+    $descriptor[1].push(PAST::Op.new(
+        :inline("    $P1[%0] = %1\n"),
+        PAST::Val.new( :value(~$name) ),
+        $value
+    ));
+}
+
+# Returns a list of variables from a signature that we are to declare. Panics
+# if the signature is too complex to unpack.
+sub sig_extract_declarables($/, $sig_setup) {
+    # Just make sure it's what we expect.
+    if $sig_setup.WHAT() ne 'Op' || $sig_setup.pasttype() ne 'callmethod' ||
+       $sig_setup[0].name() ne 'Signature' {
+        $/.panic("sig_extract_declarables was not passed signature declaration PAST!");
+    }
+
+    # Now go through what signature and extract what to declare.
+    my @result := list();
+    my $first := 1;
+    for @($sig_setup) {
+        if $first {
+            # Skip over invocant.
+            $first := 0;
+        }
+        else {
+            # If it has a name, we're fine; if not, it's something odd - give
+            # it a miss for now.
+            my $found_name := undef;
+            for @($_[1]) {
+                if $_[0].value() eq 'name' {
+                    $found_name := ~$_[1].value();
+                }
+            }
+            if defined($found_name) {
+                @result.push($found_name);
+            }
+            else {
+                $/.panic("Signature too complex for LHS of assignment.");
+            }
+        }
+    }
+    @result
+}
 
 # Local Variables:
 #   mode: cperl

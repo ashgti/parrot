@@ -244,7 +244,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* Go through the PMC arena and finalize all PMCs that are still
            alive at this point. */
-        gc_it_finalize_all_pmc(interp);
+        /* gc_it_finalize_all_pmc(interp); */
         gc_it_post_sweep_cleanup(interp);
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;

@@ -383,6 +383,23 @@ token signature {
     {*}
 }
 
+token sigterm {
+    ':(' 
+    {{
+        $P0 = new 'Integer'
+        $P0 = 1
+        set_global [ 'Perl6' ; 'Grammar' ; 'Actions' ], '$?SIG_BLOCK_NOT_NEEDED', $P0
+    }}
+    <signature>
+    {{
+        $P0 = new 'Integer'
+        $P0 = 0
+        set_global [ 'Perl6' ; 'Grammar' ; 'Actions' ], '$?SIG_BLOCK_NOT_NEEDED', $P0
+    }}
+    [ ')' || <.panic: "Missing right parenthesis in signature"> ]
+    {*}
+}
+
 rule type_declarator {
     'subset'
     <name>
@@ -426,7 +443,7 @@ rule default_value {
 }
 
 token param_var {
-    <sigil> <ident>
+    <sigil> <twigil>? <ident>
     {*}
 }
 
@@ -506,6 +523,7 @@ token noun {
     | 'self' >> {*}                              #= self
     | <term> {*}                                 #= term
     | <capterm> {*}                              #= capterm
+    | <sigterm> {*}                              #= sigterm
     | <colonpair> {*}                            #= colonpair
 }
 
@@ -564,7 +582,7 @@ rule package_block {
 }
 
 
-token variable_decl {
+token variable_declarator {
     <variable>
     <trait>*
 # XXX let EXPR handle this automatically until we can pass arguments
@@ -585,14 +603,36 @@ rule enum_declarator {
 }
 
 
+token declarator {
+    [
+    | <variable_declarator>
+    | '(' 
+      {{
+          $P0 = new 'Integer'
+          $P0 = 1
+          set_global [ 'Perl6' ; 'Grammar' ; 'Actions' ], '$?SIG_BLOCK_NOT_NEEDED', $P0
+      }}
+      <signature>
+      {{
+          $P0 = new 'Integer'
+          $P0 = 0
+          set_global [ 'Perl6' ; 'Grammar' ; 'Actions' ], '$?SIG_BLOCK_NOT_NEEDED', $P0
+      }}
+      [ ')' || <.panic: "Missing right parenthsesis after signature"> ]
+    ]
+    {*}
+}
+
+
 rule scoped {
     <fulltypename>*
     [
-    | <variable_decl>
+    | <declarator>
     | <routine_declarator>
     ]
     {*}
 }
+
 
 rule scope_declarator {
     $<sym>=[my|our|state|constant|has]

@@ -233,6 +233,7 @@ mem_allocate(PARROT_INTERP, size_t size, ARGMOD(Memory_Pool *pool))
          * TODO pass required allocation size to the DOD system,
          *      so that collection can be skipped if needed
          */
+#if 0
         if (!interp->arena_base->DOD_block_level
         &&   interp->arena_base->mem_allocs_since_last_collect) {
             Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
@@ -248,6 +249,7 @@ mem_allocate(PARROT_INTERP, size_t size, ARGMOD(Memory_Pool *pool))
             }
 #endif
         }
+#endif
         if (pool->top_block->free < size) {
             if (pool->minimum_block_size < 65536 * 16)
                 pool->minimum_block_size *= 2;
