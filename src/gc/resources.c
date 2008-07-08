@@ -8,7 +8,8 @@ src/gc/resources.c - Allocate and deallocate tracked resources
 
 =head1 DESCRIPTION
 
-=head2 Parrot Memory Management Code
+Parrot Memory Management Code - Functions to manage Memory_Pool allocations,
+deallocations, resizings, movings, and other operations.
 
 =over 4
 
@@ -105,9 +106,10 @@ static Memory_Pool * new_memory_pool(
 
 =item C<static void alloc_new_block>
 
-Allocate a new memory block. We allocate either the requested size or the
-default size, whichever is larger. Add the new block to the given memory
-pool. The given C<char *why> text is used for debugging.
+Allocates a new C<Memory_Block> object. We allocate either the requested
+size or the minimum size for the pool, whichever is larger. Adds the
+newly created block to the given C<Memory_Pool>. The given C<char *why>
+text is used only for debugging purposes.
 
 =cut
 
@@ -129,26 +131,37 @@ alloc_new_block(PARROT_INTERP, size_t size, ARGMOD(Memory_Pool *pool),
     UNUSED(why)
 #endif
 
-    /* Allocate a new block. Header info's on the front */
+    /* Allocate a new block. We allocate enough storage for both the requested
+       size and the size of the Memory_Block struct, which is appended to
+       the front of the block. */
     new_block = (Memory_Block *)mem_internal_allocate_zeroed(
         sizeof (Memory_Block) + alloc_size);
 
+    /* this call is probably redundant, since the existance of the allocated
+       memory is already tested in mem_internal_allocate_zeroed. */
     if (!new_block) {
         fprintf(stderr, "out of mem allocsize = %d\n", (int)alloc_size);
         exit(EXIT_FAILURE);
     }
 
+    /* The block is empty, so the free space is equal to the total space. */
     new_block->free  = alloc_size;
     new_block->size  = alloc_size;
 
+    /* Set the initial pointer values. This block is the last in the linked
+       list of blocks in the pool, so set ->next to NULL. The start of data
+       memory in the block is located directly after the end of the
+       Memory_Block header structure. The top of the block, currently, is the
+       same as the ->start of the block. */
     new_block->next  = NULL;
     new_block->start = (char *)new_block + sizeof (Memory_Block);
     new_block->top   = new_block->start;
 
-    /* Note that we've allocated it */
+    /* Add the total amount of memory allocated to the running total in the
+       arena_base object. */
     interp->arena_base->memory_allocated += alloc_size;
 
-    /* If this is for a public pool, add it to the list */
+    /* Add the new block to the linked list of blocks in the pool. */
     new_block->prev = pool->top_block;
 
     /* If we're not first, then tack us on the list */
@@ -163,7 +176,12 @@ alloc_new_block(PARROT_INTERP, size_t size, ARGMOD(Memory_Pool *pool),
 
 =item C<static void * mem_allocate>
 
-Allocates memory for headers.
+Allocates memory of size C<size_t size> from pool C<Memory_Pool * pool>.
+Determines whether there is existing space in the memory pool to be
+reused. If enough space is available, but fragmented, attempts to compact
+the pool to free up a large enough chunk of space. If there is not enough
+space available in the pool, a new memory block is allocated. May trigger
+a normal GC run also, to try and free up some unused string buffers.
 
 Alignment problems history:
 
@@ -262,7 +280,10 @@ mem_allocate(PARROT_INTERP, size_t size, ARGMOD(Memory_Pool *pool))
 
 =item C<static const char* buffer_location>
 
-RT#48260: Not yet documented!!!
+Returns a constant string describing the current location of a given string.
+Searches only the string registers in the current content, and returns a
+string "Sxx" if the buffer is found, the string "???" otherwise. Used only
+in C<debug_print_buf>. Defined only if C<RESOURCE_DEBUG> is defined.
 
 =cut
 
@@ -294,7 +315,11 @@ buffer_location(PARROT_INTERP, ARGIN(const PObj *b))
 
 =item C<static void debug_print_buf>
 
-RT#48260: Not yet documented!!!
+Prints a debug message about the location and characteristics of a given
+string object. Prints the pointer location, the size of the string's
+buffer, the string's flags, and the current location of the string as
+determined by a call from C<buffer_location>. Defined only if
+C<RESOURCE_DEBUG> is defined.
 
 =cut
 
@@ -576,7 +601,8 @@ Parrot_go_collect(PARROT_INTERP)
 
 =item C<static size_t aligned_size>
 
-RT#48260: Not yet documented!!!
+Returns the true size of the memory buffer. Includes additional padding space
+used for alignment, if any, and a space for a reference count of COW objects.
 
 =cut
 
@@ -600,7 +626,9 @@ aligned_size(ARGIN(const Buffer *buffer), size_t len)
 
 =item C<static char * aligned_mem>
 
-RT#48260: Not yet documented!!!
+Takes a given pointer to a location in memory, and aligns it as necessary
+depending on the object's requirements. Increments the pointer location
+to account for a reference count on COW objects as well.
 
 =cut
 
@@ -626,7 +654,9 @@ aligned_mem(ARGIN(const Buffer *buffer), ARGIN(char *mem))
 
 =item C<static size_t aligned_string_size>
 
-RT#48260: Not yet documented!!!
+Determines the amount of memory storage required for a string of a given
+size. Adds enough space for a COW reference count, and accounts for
+memory alignment issues.
 
 =cut
 
@@ -847,9 +877,9 @@ Parrot_allocate(PARROT_INTERP, ARGOUT(Buffer *buffer), size_t size)
 
 =item C<void Parrot_allocate_aligned>
 
-Like above, except the C<size> will be rounded up and the address of
-the buffer will have the same alignment as a pointer returned by
-malloc(3) suitable to hold e.g. a C<FLOATVAL> array.
+Like C<Parrot_allocate>, except the C<size> will be rounded up and
+the address of the buffer will have the same alignment as a pointer
+returned by malloc(3) suitable to hold e.g. a C<FLOATVAL> array.
 
 =cut
 
@@ -919,8 +949,9 @@ Parrot_allocate_string(PARROT_INTERP, ARGOUT(STRING *str), size_t size)
 
 =item C<static Memory_Pool * new_memory_pool>
 
-Allocate a new C<Memory_Pool> structures, and set some initial values.
-return a pointer to the new pool.
+Allocates a new C<Memory_Pool> structure, and set some initial values.
+returns a pointer to the new pool. Does not allocate any storage blocks
+in the new pool.
 
 =cut
 
@@ -948,9 +979,9 @@ new_memory_pool(size_t min_block, NULLOK(compact_f compact))
 
 =item C<void Parrot_initialize_memory_pools>
 
-Initialize the managed memory pools. Parrot maintains two C<Memory_Pool>
-structures, the general memory pool and the constant string pool. Create
-and initialize both pool structures, and allocate initial blocks of memory
+Initializes the managed memory pools. Parrot maintains two C<Memory_Pool>
+structures, the general memory pool and the constant string pool. Creates
+and initializes both pool structures, and allocates initial blocks of memory
 for both.
 
 =cut
@@ -1010,7 +1041,7 @@ Parrot_destroy_memory_pools(PARROT_INTERP)
 
 =item C<static void merge_pools>
 
-Merge two memory pools together. Do this by moving all memory blocks
+Merges two memory pools together. Does this by moving all memory blocks
 from the C<*source> pool into the C<*dest> pool. The C<source> pool
 is emptied, but is not destroyed here.
 
@@ -1054,7 +1085,7 @@ merge_pools(ARGMOD(Memory_Pool *dest), ARGMOD(Memory_Pool *source))
 
 =item C<void Parrot_merge_memory_pools>
 
-Merge the memory pools of two interpreter structures. Merge the general
+Merges the memory pools of two interpreter structures. Merges the general
 memory pool and the constant string pools from C<source_interp> into
 C<dest_interp>.
 
