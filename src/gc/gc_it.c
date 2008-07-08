@@ -167,6 +167,8 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->init_pool          = Parrot_gc_it_pool_init;
 #ifdef GC_IT_DEBUG
     fprintf(stderr, "GC IT Initialized: %p\n", gc_priv_data);
+    fprintf(stderr, "Card: %d, Hdr: %d, Data: %d\n", sizeof(Gc_it_card),
+        sizeof(Gc_it_hdr), sizeof(Gc_it_data));
 #endif
 }
 
@@ -1632,6 +1634,11 @@ gc_it_ptr_is_sized_buffer(PARROT_INTERP, ARGIN(void *ptr))
 =item C<void gc_it_ptr_set_PObj>
 
 Sets whether the given object is a PObj or not
+
+=item C<UINTVAL gc_it_ptr_get_aggregate>
+
+Returns a boolean value for whether the given object is flagged as an
+aggregate object or not.
 
 =cut
 

@@ -35,6 +35,7 @@ S03-operators/short-circuit.t
 S03-operators/true.t                            # pure
 S03-junctions/misc.t
 S04-declarations/multiple.t
+S04-declarations/my.t
 S04-declarations/implicit-parameter.t           # pure
 S04-statements/no-implicit-block.t
 S04-statements/repeat.t
@@ -43,6 +44,7 @@ S04-statements/try.t
 S04-statements/until.t                          # pure
 S04-statements/while.t
 S06-signature/mixed-placeholders.t              # pure
+S06-signature/named-parameters.t
 S06-signature/named-placeholders.t              # pure
 S06-signature/positional-placeholders.t         # pure
 S06-signature/slurpy-placeholders.t             # pure

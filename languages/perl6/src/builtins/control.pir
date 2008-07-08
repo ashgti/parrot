@@ -26,7 +26,12 @@ the moment -- we'll do more complex handling a bit later.)
 .include 'except_types.pasm'
 
 .sub 'return'
-    .param pmc value
+    .param pmc value     :optional
+    .param int has_value :opt_flag
+
+    if has_value goto have_value
+    value = 'list'()
+  have_value:
     $P0 = new 'Exception'
     $P0['_type'] = .CONTROL_RETURN
     setattribute $P0, 'payload', value
@@ -135,10 +140,10 @@ on error.
 
     .local pmc compiler, invokable
     .local pmc res, exception
+    push_eh catch
     compiler = compreg 'Perl6'
     invokable = compiler.'compile'(code)
 
-    push_eh catch
     res = invokable()
     pop_eh
     exception = new 'Failure'

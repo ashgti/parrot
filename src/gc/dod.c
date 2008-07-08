@@ -332,7 +332,7 @@ object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 
 /*
 
-=item C<UINTVAL is_PObj>
+=item C<void is_PObj>
 
 Specify whether the given allocated item is a PObj or not
 
@@ -362,7 +362,11 @@ bufferlike object.
 UINTVAL
 is_PObj(ARGIN(void * ptr))
 {
-    gc_it_ptr_get_aggregate(ptr);
+#if PARROT_GC_IT
+    return gc_it_ptr_get_aggregate(ptr);
+#else
+    return 1;
+#endif
 }
 
 /*

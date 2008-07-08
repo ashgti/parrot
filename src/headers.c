@@ -338,7 +338,7 @@ new_pmc_header(PARROT_INTERP, UINTVAL flags)
     }
     else
         pmc->pmc_ext = NULL;
-    PObj_get_FLAGS(pmc) = PObj_is_PMC_FLAG|flags;
+    PObj_get_FLAGS(pmc) = PObj_is_PMC_FLAG | flags;
     pmc->vtable = NULL;
 #if ! PMC_DATA_IN_EXT
     PMC_data(pmc) = NULL;

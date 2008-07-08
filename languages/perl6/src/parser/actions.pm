@@ -4,11 +4,6 @@
 
 class Perl6::Grammar::Actions ;
 
-##  Change this to be 'Failure' to turn off the Mutable PMC version.
-##  Note that to make this work again, you will also need to change:
-##   * scoped method, to not do new %0, %1
-our $?PERL6SCALAR := 'Failure';
-
 method TOP($/) {
     my $past := $( $<statement_block> );
     $past.blocktype('declaration');
@@ -485,9 +480,14 @@ method routine_declarator($/, $key) {
         set_block_type($past, 'Method');
     }
     $past.node($/);
-    declare_implicit_var($past, '$_', 'new');
-    declare_implicit_var($past, '$!', 'new');
-    declare_implicit_var($past, '$/', 'new');
+    if (+@($past[1])) {
+        declare_implicit_var($past, '$_', 'new');
+        declare_implicit_var($past, '$!', 'new');
+        declare_implicit_var($past, '$/', 'new');
+    }
+    else {
+        $past[1].push( PAST::Op.new( :name('list') ) );
+    }
     make $past;
 }
 
@@ -553,7 +553,7 @@ method signature($/) {
             $parameter.isdecl(1);
 
             # Bind self to it.
-            $past.push(PAST::Op.new(
+            $params.push(PAST::Op.new(
                 :pasttype('bind'),
                 PAST::Var.new(
                     :name($parameter.name()),
@@ -704,7 +704,7 @@ method signature($/) {
         }
         elsif $cont_trait eq 'readonly' {
             # Create a new container with ro set and bind the parameter to it.
-            $past.push(PAST::Op.new(
+            $params.push(PAST::Op.new(
                 :pasttype('bind'),
                 PAST::Var.new(
                     :name($parameter.name()),
@@ -723,7 +723,7 @@ method signature($/) {
         }
         elsif $cont_trait eq 'copy' {
             # Create a new container and copy the value into it..
-            $past.push(PAST::Op.new(
+            $params.push(PAST::Op.new(
                 :pasttype('bind'),
                 PAST::Var.new(
                 :name($parameter.name()),
@@ -743,7 +743,7 @@ method signature($/) {
     $past.arity( +$/[0] );
     our $?BLOCK_SIGNATURED := $past;
     our $?PARAM_TYPE_CHECK := $type_check;
-    $past.push($type_check);
+    $params.push($type_check);
     make $past;
 }
 
@@ -965,17 +965,6 @@ method noun($/, $key) {
     my $past;
     if $key eq 'self' {
         $past := PAST::Stmts.new( PAST::Op.new( :inline('%r = self'), :node( $/ ) ) );
-    }
-    elsif $key eq 'undef' {
-        $past := PAST::Op.new(
-            :pasttype('callmethod'),
-            :name('new'),
-            :node($/),
-            PAST::Var.new(
-                :name('Failure'),
-                :scope('package')
-            )
-        );
     }
     elsif $key eq 'dotty' {
         # Call on $_.
@@ -1721,7 +1710,7 @@ method variable($/, $key) {
             my $container_type;
             if    $sigil eq '@' { $container_type := 'Perl6Array'  }
             elsif $sigil eq '%' { $container_type := 'Perl6Hash'   }
-            else                { $container_type := $?PERL6SCALAR }
+            else                { $container_type := 'Perl6Scalar' }
             $past.viviself($container_type);
         }
     }
@@ -2226,8 +2215,7 @@ method colonpair($/, $key) {
 method capterm($/) {
     # We will create the capture object, passing the things supplied.
     my $past := build_call( $( $<capture> ) );
-    $past.name('infix:\\( )');
-    $past.unshift( PAST::Op.new( :inline('    null %r') ) );
+    $past.name('prefix:\\');
     make $past;
 }
 
