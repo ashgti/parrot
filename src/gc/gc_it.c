@@ -1206,12 +1206,19 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
        sizeof(Gc_it_card) if it is going to be used as the physical size of
        occupied memory. */
     const size_t card_size = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
+    const size_t real_card_size = card_size * sizeof (Gc_it_card);
 
     /* This is the actual size of the card in memory, plus any additional
        space we need to allocate to force proper alignment of the rest of
-       the data objects. */
-    const size_t card_size_align = card_size * sizeof(Gc_it_card) /* The card */
-                                 + (card_size % sizeof(void *));  /* +align   */
+       the data objects.
+
+       At this point, all this arithmetic is just wishful thinking. Who knows
+       if it actually does what I keep saying it does? I'll have to test it or
+       something. */
+    const size_t card_size_align = real_card_size /* The card */
+                                 + ((real_card_size % sizeof(void *))
+                                 ? (sizeof(void *) - (real_card_size % sizeof(void *)))
+                                 : 0);  /* +align   */
 
     /* The size of the allocated arena. This is the size of the
        Small_Object_Arena structure, which goes at the front, the card, and
