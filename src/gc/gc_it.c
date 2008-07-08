@@ -165,7 +165,7 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->do_gc_mark         = Parrot_gc_it_run;
     arena_base->finalize_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool          = Parrot_gc_it_pool_init;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "GC IT Initialized: %p\n", gc_priv_data);
     fprintf(stderr, "Card: %d, Hdr: %d, Data: %d\n", sizeof(Gc_it_card),
         sizeof(Gc_it_hdr), sizeof(Gc_it_data));
@@ -233,7 +233,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
     if(flags & GC_finish_FLAG) {
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
         fprintf(stderr, "Finalizing GC system\n");
 #endif
 
@@ -252,7 +252,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     /* Short-circuiting here, killing the entire GC, and trying to isolate the
        problem. --AW */
     /*return;*/
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "GC Run. items total: %d, flags: %x, state: %d\n",
             (int)gc_priv_data->total_count, flags, gc_priv_data->state);
 #endif
@@ -263,13 +263,13 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     switch (gc_priv_data->state) {
         case GC_IT_READY:
             gc_priv_data->state = GC_IT_START_MARK;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("initializing new GC run.\n");
 #endif
             GC_IT_BREAK_AFTER_0;
 
         case GC_IT_START_MARK:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Start mark.\n");
 #endif
             gc_priv_data->total_count = 0;
@@ -277,22 +277,22 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_1;
 
         case GC_IT_MARK_ROOTS:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Mark roots.\n");
 #endif
             Parrot_dod_trace_root(interp, 1);
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Mark roots end.\n");
 #endif
             gc_priv_data->state = GC_IT_RESUME_MARK;
             GC_IT_BREAK_AFTER_2;
 
         case GC_IT_RESUME_MARK:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Resume mark.\n");
 #endif
 #if GC_IT_INCREMENT_MODE
-#  ifdef GC_IT_DEBUG
+#  if GC_IT_DEBUG
             printf("Start mark Increment Mode.\n");
 #  endif
             /* scan a single tree. Check to ensure we've hit a minimum number
@@ -312,7 +312,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             else
                 break;
 #elif GC_IT_BATCH_MODE
-#  ifdef GC_IT_DEBUG
+#  if GC_IT_DEBUG
             printf("Start mark Increment Mode.\n");
 #  endif
             /* in batch mode, enqueue all roots, and scan the entire pile */
@@ -322,19 +322,19 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_3;
 
         case GC_IT_END_MARK:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("End mark.\n");
 #endif
             /* Don't know if there is anything to be done here */
             gc_priv_data->state = GC_IT_SWEEP_PMCS;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("ending mark, marked %d items\n",
                 (int)gc_priv_data->total_count);
 #endif
             GC_IT_BREAK_AFTER_4;
 
         case GC_IT_SWEEP_PMCS:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Sweep PMCs.\n");
 #endif
             /* gc_it_sweep_pmc_pools(interp); */
@@ -342,7 +342,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_5;
 
         case GC_IT_SWEEP_HEADERS:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #endif
             /*gc_it_sweep_header_pools(interp); */
@@ -350,7 +350,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #endif
             /*gc_it_sweep_sized_pools(interp);*/
@@ -361,7 +361,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             gc_it_post_sweep_cleanup(interp); /* if any. */
         default:
             gc_priv_data->state = GC_IT_READY;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
             fprintf(stderr, "Finished GC run.\n");
 #endif
     }
@@ -399,7 +399,7 @@ gc_it_trace_normal(PARROT_INTERP)
         /* The queue is empty, don't try to trace because it won't work. */
         return;
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Tracing queue, starting with %p\n", gc_priv_data->queue);
 #endif
 
@@ -417,7 +417,7 @@ gc_it_trace_normal(PARROT_INTERP)
         /* number of items this increment */
         gc_priv_data->item_count++;
     }
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Trace complete: %d", (gc_priv_data->queue == NULL));
 #endif
     gc_priv_data->queue = NULL;
@@ -447,7 +447,7 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
         arena_base->constant_pmc_pool
     };
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Sweeping PMC pools\n");
 #endif
 
@@ -483,7 +483,7 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
         arena_base->constant_pmc_pool
     };
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Finalizing PMC pools\n");
 #endif
 
@@ -512,7 +512,7 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 {
     Small_Object_Arena *arena;
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Finalizing PMCs %s (%p)\n", pool->name, pool);
 #endif
 
@@ -524,14 +524,14 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             Gc_it_hdr * const hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
             PObj * const obj = IT_HDR_to_PObj(hdr);
             if(!obj) {
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
                 fprintf(stderr, "Attempt to finalize null PMC (%p), ignoring\n",
                         hdr);
 #endif
             }
             else {
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
                 fprintf(stderr, "Finalizing PMC (%p)\n", hdr);
 #endif
 */
@@ -636,7 +636,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     Small_Object_Arena *arena;
     Gc_it_hdr * hdr;
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Sweeping PMC pool %s (%p)\n", pool->name, pool);
 #endif
     if(!pool || !pool->last_Arena)
@@ -706,7 +706,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
                     i--;
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
                     fprintf(stderr, "Sweeping arena (%p) card (%p) %s\n",
                             arena, card, (card == arena->cards)?("last"):(""));
 #endif
@@ -736,7 +736,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     Small_Object_Arena *arena;
     Gc_it_hdr *hdr;
 
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Sweeping buffer pool %s (%p)\n", pool->name, pool);
 #endif
     if(!pool || !pool->last_Arena)
@@ -793,7 +793,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
                     i--;
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
                     fprintf(stderr, "Sweeping arena (%p) card (%p) %s\n",
                             arena, card, (card == arena->cards)?("last"):(""));
 #endif
@@ -801,7 +801,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 } while (card-- != arena->cards);
         }
     }
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Finished sweeping pool %s (%p)\n", pool->name, pool);
 #endif
 }
@@ -916,7 +916,7 @@ gc_it_enqueue_next_root(PARROT_INTERP)
         /* The root queue is empty, nothing for us to do here. We return
            immediately so the GC can move to the next state. */
         return;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Adding root item %p to queue.\n", hdr);
 #endif
     /* Move the hdr off the root queue, and add it to the queue. */
@@ -1038,7 +1038,7 @@ Parrot_gc_it_deinit(PARROT_INTERP)
     arena_base->do_gc_mark         = NULL;
     arena_base->finalize_gc_system = NULL;
     arena_base->init_pool          = NULL;
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "GC IT Uninitialized\n");
 #endif
 }
@@ -1067,7 +1067,7 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Initializing pool (%p)\n", pool);
 #endif
 }
@@ -1098,7 +1098,7 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     /* The GC should already free everything automatically. Do not free an
        object if it's already on the free list or if it is on the queue. */
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Freeing object manually: pool, hdr (%p, %p)\n",
             pool, to_add);
 #endif
@@ -1136,7 +1136,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     /* If there are no objects, allocate a new arena */
     if (!pool->free_list) {
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
         fprintf(stderr, "free list empty, allocating more objects for pool (%p)\n",
                 pool);
 #endif
@@ -1158,7 +1158,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     hdr->data.agg = 0;
 
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Get free object from pool %s (%p): %p (%d left) \n",
             pool->name, pool, hdr, pool->num_free_objects);
 #endif
@@ -1231,7 +1231,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(size);
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Alloc objects for pool %s (%p)\n", pool->name, pool);
 #endif
 */
@@ -1261,7 +1261,7 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
        this is where the rest of the messy pointer arithmetic happens. */
     gc_it_add_arena_to_free_list(interp, pool, new_arena);
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Alloc successful for %s (%p): %d objects [%p - %p]\n",
             pool->name, pool, pool->objects_per_alloc, new_arena->start_objects,
             (void*)((char*)(new_arena->start_objects) + (num_objects * real_size)));
@@ -1310,7 +1310,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     register INTVAL i;
 
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Adding arena %p to pool %p. %u items\n",
             new_arena, pool, num_objs);
 #endif
@@ -1331,7 +1331,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
         fprintf(stderr, "new item: (%p), arena: (%p), pool: (%p) card: %d[%d]\n",
                 p, p->parent_arena, p->parent_arena->parent_pool,
                 p->data.card, p->data.flag);
@@ -1363,7 +1363,7 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
     Gc_it_card * const card_start = hdr->parent_arena->cards;
     Gc_it_card * const card = (card_start + hdr->data.card);
 /*
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Card Set. Pool|hdr|card: (%p, %p, %p). card %d[%d]\n",
         hdr->parent_arena->parent_pool, hdr, card,
         hdr->data.card, hdr->data.flag);
@@ -1469,7 +1469,7 @@ no cleanup is needed, so this function does nothing.
 static void
 gc_it_post_sweep_cleanup(SHIM_INTERP)
 {
-#ifdef GC_IT_DEBUG
+#if GC_IT_DEBUG
     fprintf(stderr, "Post-sweep cleanup. Sweep ended\n");
 #endif
 }

@@ -222,7 +222,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     gc_priv_data =(Gc_it_data *)interp->arena_base->gc_private;
     card_mark = gc_it_get_card_mark(hdr);
 /*
-#  ifdef GC_IT_DEBUG
+#  if GC_IT_DEBUG
     fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
             hdr, hdr->parent_arena->parent_pool, (int)card_mark);
 #  endif

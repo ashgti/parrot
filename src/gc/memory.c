@@ -373,7 +373,7 @@ mem_setup_allocator(PARROT_INTERP)
 #endif
 #if PARROT_GC_IT
     interp->arena_base->init_gc_system = Parrot_gc_it_init;
-#  ifdef GC_IT_DEBUG
+#  if GC_IT_DEBUG
     fprintf(stderr, "GC initializing\n");
 #  endif
 #endif
