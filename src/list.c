@@ -323,6 +323,7 @@ allocate_chunk(PARROT_INTERP, ARGIN(List *list), UINTVAL items, UINTVAL size)
     Parrot_block_GC_mark(interp);
     /*Parrot_block_GC_sweep(interp); - why */
     chunk = (List_chunk *)new_bufferlike_header(interp, sizeof (List_chunk));
+    /*chunk = (List_chunk *)mem_sys_allocate_zeroed(sizeof(List_chunk));*/
     chunk->items = items;
     chunk->n_chunks = 0;
     chunk->n_items  = 0;
@@ -332,7 +333,7 @@ allocate_chunk(PARROT_INTERP, ARGIN(List *list), UINTVAL items, UINTVAL size)
     memset(PObj_bufstart((Buffer*)chunk), 0, size);
     /* see also src/hash.c */
     if (list->container) {
-        GC_WRITE_BARRIER(interp, list->container, 0, chunk);
+       /* GC_WRITE_BARRIER(interp, list->container, 0, chunk); */
     }
     Parrot_unblock_GC_mark(interp);
     /*Parrot_unblock_GC_sweep(interp); */
@@ -448,7 +449,7 @@ rebuild_other(PARROT_INTERP, ARGMOD(List *list))
                 Parrot_reallocate(interp, (Buffer *)prev,
                         MAX_ITEMS * list->item_size);
                 if (list->container) {
-                    GC_WRITE_BARRIER(interp, list->container, 0, prev);
+                   /* GC_WRITE_BARRIER(interp, list->container, 0, prev); */
                 }
                 mem_sys_memmove(
                         (char *) PObj_bufstart(&prev->data) +
@@ -468,7 +469,7 @@ rebuild_other(PARROT_INTERP, ARGMOD(List *list))
                 Parrot_reallocate(interp, (Buffer *)prev,
                         (prev->items + chunk->items) * list->item_size);
                 if (list->container) {
-                    GC_WRITE_BARRIER(interp, list->container, 0, prev);
+                  /*  GC_WRITE_BARRIER(interp, list->container, 0, prev); */
                 }
                 mem_sys_memmove(
                         (char *) PObj_bufstart(&prev->data) +
@@ -556,7 +557,7 @@ rebuild_chunk_list(PARROT_INTERP, ARGMOD(List *list))
         Parrot_reallocate(interp, (Buffer *)list,
                 len * sizeof (List_chunk *));
         if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, list);
+            /* GC_WRITE_BARRIER(interp, list->container, 0, list); */
         }
         list->collect_runs = interp->arena_base->collect_runs;
     }
@@ -998,7 +999,7 @@ split_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(List_chunk *chunk), UINTVA
         Parrot_reallocate(interp, (Buffer *)chunk,
                 chunk->items * list->item_size);
         if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, chunk);
+            /* GC_WRITE_BARRIER(interp, list->container, 0, chunk); */
         }
         chunk->flags |= no_power_2;
         chunk->flags &= ~sparse;
@@ -1015,7 +1016,7 @@ split_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(List_chunk *chunk), UINTVA
         Parrot_reallocate(interp, (Buffer *)chunk,
                 chunk->items * list->item_size);
         if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, chunk);
+            /* GC_WRITE_BARRIER(interp, list->container, 0, chunk); */
         }
         chunk->flags &= ~sparse;
         if (n3) {
@@ -1094,9 +1095,9 @@ list_set(PARROT_INTERP, ARGMOD(List *list), ARGIN(void *item), INTVAL type, INTV
         break;
     case enum_type_PMC:
         if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container,
+           /* GC_WRITE_BARRIER(interp, list->container,
                     ((PMC **) PObj_bufstart(&chunk->data))[idx],
-                    (PMC*)item);
+                    (PMC*)item); */
         }
         ((PMC **) PObj_bufstart(&chunk->data))[idx] = (PMC *)item;
         break;
@@ -1204,8 +1205,10 @@ PARROT_CANNOT_RETURN_NULL
 List *
 list_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 {
-    List * const list = (List *)new_bufferlike_header(interp, sizeof (*list));
-
+    //List * const list = (List *)new_bufferlike_header(interp, sizeof (List));
+    //memset(list, 0, sizeof(Buffer));
+    List * const list = (List *)mem_sys_allocate_zeroed(sizeof (List));
+    PARROT_ASSERT(list);
     list->item_type = type;
     switch (type) {
     case enum_type_sized:       /* gets overridden below */
@@ -1371,7 +1374,7 @@ list_pmc_new_init(PARROT_INTERP, ARGMOD(PMC *container), ARGIN(PMC *init))
     /*
      * this is a new PMC, so no old value
      */
-    GC_WRITE_BARRIER(interp, container, NULL, l->user_data);
+    /* GC_WRITE_BARRIER(interp, container, NULL, l->user_data); */
 }
 
 /*
@@ -1469,7 +1472,7 @@ list_mark(PARROT_INTERP, ARGMOD(List *list))
     List_chunk *chunk;
 
     for (chunk = list->first; chunk; chunk = chunk->next) {
-        pobject_lives(interp, (PObj *)chunk);
+ /*       pobject_lives(interp, (PObj *)chunk); */
         if (list->item_type == enum_type_PMC ||
                 list->item_type == enum_type_STRING) {
             if (!(chunk->flags & sparse)) {
@@ -1484,7 +1487,7 @@ list_mark(PARROT_INTERP, ARGMOD(List *list))
 
         }
     }
-    pobject_lives(interp, (PObj *)list);
+   /* pobject_lives(interp, (PObj *)list); */
     if (list->user_data)
         pobject_lives(interp, (PObj *) list->user_data);
 }

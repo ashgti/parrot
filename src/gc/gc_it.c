@@ -337,7 +337,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep PMCs.\n");
 #endif
-            /* gc_it_sweep_pmc_pools(interp); */
+            gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
@@ -345,7 +345,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #endif
-            /* gc_it_sweep_header_pools(interp); */
+            gc_it_sweep_header_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
@@ -353,7 +353,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #endif
-            /*gc_it_sweep_sized_pools(interp);*/
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -1155,7 +1155,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 */
         (pool->more_objects)(interp, pool);
     }
-
+    PARROT_ASSERT(pool->free_list);
     /* pull the first header off the free list */
     GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
     --pool->num_free_objects;

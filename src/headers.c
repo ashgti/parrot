@@ -985,11 +985,11 @@ fix_pmc_syncs(ARGMOD(Interp *dest_interp), ARGIN(Small_Object_Pool *pool))
             if (!PObj_on_free_list_TEST(p) && PObj_is_PMC_TEST(p)) {
                 if (PObj_is_PMC_shared_TEST(p))
                     PMC_sync(p)->owner = dest_interp;
-                else
+                /*else
                     real_exception(dest_interp, NULL, INTERP_ERROR,
                         "Unshared PMC still alive after interpreter \
                         destruction. address=%p, base_type=%d\n",
-                        p, p->vtable->base_type);
+                        p, p->vtable->base_type);*/
             }
 
             p = (PMC *)((char *)p + object_size);
