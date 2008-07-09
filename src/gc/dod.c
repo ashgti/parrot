@@ -204,16 +204,13 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     Gc_it_hdr * hdr;
     Gc_it_data * gc_priv_data;
     INTVAL card_mark;
-    if(!obj) {
-        fprintf(stderr, "PObj lives: null pointer received, ignoring.\n");
-        return;
-    }
+
     /* Eventually this will all be more clean. For now, it's spread-out for
        debugging. */
     PARROT_ASSERT(obj);
     hdr = PObj_to_IT_HDR(obj);
     PARROT_ASSERT(hdr);
-    if(!hdr->data.agg) {
+    if (!hdr->data.agg) {
         /* If the data is not an aggregate, mark it as being a simple buffer
            and do not treat it like a PObj. */
         object_lives(interp, obj);
@@ -237,7 +234,8 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
 
-    if(card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
+    PARROT_ASSERT(hdr->next == NULL);
+    if (card_mark == GC_IT_CARD_BLACK)
         return;
 
     /* black items should have been caught. Nothing should ever be "UNUSED"
@@ -249,7 +247,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     /* If gc_priv_data->state == GC_IT_MARK_ROOTS, we need to add all found
        objects to gc_priv_data->root_queue instead of gc_priv_data->queue. */
 
-    if(gc_priv_data->state == GC_IT_MARK_ROOTS)
+    if (gc_priv_data->state == GC_IT_MARK_ROOTS)
         GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
         GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);

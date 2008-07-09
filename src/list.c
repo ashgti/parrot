@@ -1205,9 +1205,9 @@ PARROT_CANNOT_RETURN_NULL
 List *
 list_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 {
-    //List * const list = (List *)new_bufferlike_header(interp, sizeof (List));
-    //memset(list, 0, sizeof(Buffer));
-    List * const list = (List *)mem_sys_allocate_zeroed(sizeof (List));
+    List * const list = (List *)new_bufferlike_header(interp, sizeof (List));
+    memset(list, 0, sizeof(List));
+    //List * const list = (List *)mem_sys_allocate_zeroed(sizeof (List));
     PARROT_ASSERT(list);
     list->item_type = type;
     switch (type) {

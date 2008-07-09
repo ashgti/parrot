@@ -448,7 +448,7 @@ void gc_it_trace_threaded(SHIM_INTERP);
 } while(0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
-    (Gc_it_hdr*)(((char*)(a)->start_objects)+((p)->object_size*(i)))
+    (Gc_it_hdr*)(((char*)((a)->start_objects))+((p)->object_size*(i)))
 
 #define GC_IT_HDR_HAS_PARENT_POOL(hdr, pool) \
     ((hdr)->parent_arena->parent_pool == (pool))

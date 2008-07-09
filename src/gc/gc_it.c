@@ -280,7 +280,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Mark roots.\n");
 #endif
-            Parrot_dod_trace_root(interp, 1);
+            //Parrot_dod_trace_root(interp, 1);
 #if GC_IT_DEBUG
             printf("Mark roots end.\n");
 #endif
@@ -297,11 +297,11 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  endif
             /* scan a single tree. Check to ensure we've hit a minimum number
                of items. If not, scan another tree. */
-            do {
+            /*do {
                 gc_it_enqueue_next_root(interp);
                 gc_it_trace(interp);
             } while(gc_priv_data->item_count < GC_IT_ITEMS_MARKED_MIN
-            &&      gc_priv_data->root_queue);
+            &&      gc_priv_data->root_queue);*/
             /* We've either scanned the necessary number of items, or we've
                run out of new root items to scan. Check to see if the mark
                is complete, and if so move to the next state. Otherwise,
@@ -316,8 +316,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             printf("Start mark Increment Mode.\n");
 #  endif
             /* in batch mode, enqueue all roots, and scan the entire pile */
-            gc_it_enqueue_all_roots(interp);
-            gc_it_trace(interp)
+            //gc_it_enqueue_all_roots(interp);
+            //gc_it_trace(interp)
 #endif
             GC_IT_BREAK_AFTER_3;
 
@@ -337,7 +337,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep PMCs.\n");
 #endif
-            gc_it_sweep_pmc_pools(interp);
+            //gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
@@ -345,7 +345,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #endif
-            gc_it_sweep_header_pools(interp);
+            //gc_it_sweep_header_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
@@ -353,7 +353,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #endif
-            gc_it_sweep_sized_pools(interp);
+            //gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -639,45 +639,34 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #if GC_IT_DEBUG
     fprintf(stderr, "Sweeping PMC pool %s (%p)\n", pool->name, pool);
 #endif
-    if(!pool || !pool->last_Arena)
-        return;
+
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card * const card_start = arena->cards;
-        Gc_it_card * card             = (card_start + arena->card_info._d.card_size);
+        Gc_it_card * card = (card_start + arena->card_info._d.card_size);
         UINTVAL i    = arena->card_info._d.last_index;
+        Gc_it_hdr *hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
         UINTVAL mark;
 
         PARROT_ASSERT(card);
 
         switch (arena->card_info._d.last_index % 4) {
-            Gc_it_hdr *hdr;
             case 0:
                 do {
                     mark = gc_it_get_card_mark_index(card, 0);
                     if (mark == GC_IT_CARD_WHITE) {
-                        /* Get a pointer to the object header from its index */
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
-
-                        /* add the header to the free list */
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-
-                        /* free the PMC */
+                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
+                        //GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-
-                        /* mark the card as "FREE" */
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
-                        /* if it's black, reset it to white for the next run */
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
-
-                    /* move to the next index value, and fall through */
                     i--;
             case 3:
                     mark = gc_it_get_card_mark_index(card, 3);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
+                        //GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
                     }
@@ -688,8 +677,8 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             case 2:
                     mark = gc_it_get_card_mark_index(card, 2);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
+                        //GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
                     }
@@ -701,8 +690,8 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             default:
                     mark = gc_it_get_card_mark_index(card, 1);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
+                        //GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
                     }
@@ -1115,12 +1104,12 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
             pool, to_add);
 #endif
 */
-/*
+
     if(hdr->next != NULL)
         return;
-    GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+    hdr->next = (Gc_it_hdr *)pool->free_list;
+    pool->free_list = hdr;
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
-*/
 }
 
 
@@ -1157,7 +1146,9 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     }
     PARROT_ASSERT(pool->free_list);
     /* pull the first header off the free list */
-    GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
+    hdr = (Gc_it_hdr *)pool->free_list;
+    pool->free_list = (void *)hdr->next;
+    hdr->next = NULL;
     --pool->num_free_objects;
 
     PARROT_ASSERT(hdr);
