@@ -108,39 +108,39 @@ typedef struct _gc_gms_gen {
 
 /* Switches and modes */
 
-#define GC_IT_DEBUG             0
+#  define GC_IT_DEBUG             0
 
-#define GC_IT_INCREMENT_MODE    0
-#define GC_IT_BATCH_MODE        1
-#define GC_IT_SERIAL_MODE       1
-#define GC_IT_PARALLEL_MODE     0
+#  define GC_IT_INCREMENT_MODE    0
+#  define GC_IT_BATCH_MODE        1
+#  define GC_IT_SERIAL_MODE       1
+#  define GC_IT_PARALLEL_MODE     0
 
-#ifdef GC_IT_PARALLEL_MODE
-#   define GC_IT_THREAD_MAX 4
-#endif
+#  ifdef GC_IT_PARALLEL_MODE
+#    define GC_IT_THREAD_MAX 4
+#  endif
 
-#define GC_IT_INITIAL_CONFIG 1 /* define this to be whatever */
+#  define GC_IT_INITIAL_CONFIG 1 /* define this to be whatever */
 
 /* minimum number of items to scan in a single increment. If we haven't reached
    this minimum, go back and do another increment. */
-#define GC_IT_ITEMS_MARKED_MIN  20
+#  define GC_IT_ITEMS_MARKED_MIN  20
 
 /* behavior macros to determine where the incremental mode breaks. Each
    increment runs from the current state until the next "break", or until
    the end if there are no more breaks. Some states might require several
    increments before completion and moving to the next state. */
-#define GC_IT_BREAK_AFTER_0
-#define GC_IT_BREAK_AFTER_1
-#define GC_IT_BREAK_AFTER_2
-#define GC_IT_BREAK_AFTER_3
-#define GC_IT_BREAK_AFTER_4
-#define GC_IT_BREAK_AFTER_5
-#define GC_IT_BREAK_AFTER_6
-#define GC_IT_BREAK_AFTER_7
+#  define GC_IT_BREAK_AFTER_0
+#  define GC_IT_BREAK_AFTER_1
+#  define GC_IT_BREAK_AFTER_2
+#  define GC_IT_BREAK_AFTER_3
+#  define GC_IT_BREAK_AFTER_4
+#  define GC_IT_BREAK_AFTER_5
+#  define GC_IT_BREAK_AFTER_6
+#  define GC_IT_BREAK_AFTER_7
 
 /* Macros that are useful outside src/gc/gc_it.c */
 
-#define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
+#  define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
     (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
 
 
@@ -172,10 +172,10 @@ typedef struct Gc_it_hdr {
  */
 
 typedef unsigned char Gc_it_card;
-#define GC_IT_CARD_MASK_1 0x03
-#define GC_IT_CARD_MASK_2 0x0C
-#define GC_IT_CARD_MASK_3 0x30
-#define GC_IT_CARD_MASK_4 0xC0
+#  define GC_IT_CARD_MASK_1 0x03
+#  define GC_IT_CARD_MASK_2 0x0C
+#  define GC_IT_CARD_MASK_3 0x30
+#  define GC_IT_CARD_MASK_4 0xC0
 
 /* This definition is being padded to 4 bytes, which is wasteful when i am
    only using 1 byte each.
@@ -190,21 +190,21 @@ typedef union Gc_it_card {
 } Gc_it_card;
 */
 
-#define GC_IT_FLAGS_PER_CARD 4
-#define GC_IT_CARD_WHITE  0x00       /* Item is dead */
-#define GC_IT_CARD_UNUSED 0x01
-#define GC_IT_CARD_BLACK  0x03       /* Item is completely alive */
-#define GC_IT_CARD_FREE   0x02       /* items which are newly created and should
+#  define GC_IT_FLAGS_PER_CARD 4
+#  define GC_IT_CARD_WHITE  0x00     /* Item is dead */
+#  define GC_IT_CARD_UNUSED 0x01
+#  define GC_IT_CARD_BLACK  0x03     /* Item is completely alive */
+#  define GC_IT_CARD_FREE   0x02     /* items which are newly created and should
                                        not be scanned until the next mark */
-#define GC_IT_CARD_ALL_MARK(f) ((f) | ((f) << 2) | ((f) << 4) | ((f) << 6))
-#define GC_IT_CARD_ALL_WHITE  GC_IT_CARD_ALL_MARK(GC_IT_CARD_WHITE)
-#define GC_IT_CARD_ALL_BLACK  GC_IT_CARD_ALL_MARK(GC_IT_CARD_BLACK)
-#define GC_IT_CARD_ALL_UNUSED GC_IT_CARD_ALL_MARK(GC_IT_CARD_UNUSED)
-#define GC_IT_CARD_ALL_FREE   GC_IT_CARD_ALL_MARK(GC_IT_CARD_FREE)
+#  define GC_IT_CARD_ALL_MARK(f) ((f) | ((f) << 2) | ((f) << 4) | ((f) << 6))
+#  define GC_IT_CARD_ALL_WHITE  GC_IT_CARD_ALL_MARK(GC_IT_CARD_WHITE)
+#  define GC_IT_CARD_ALL_BLACK  GC_IT_CARD_ALL_MARK(GC_IT_CARD_BLACK)
+#  define GC_IT_CARD_ALL_UNUSED GC_IT_CARD_ALL_MARK(GC_IT_CARD_UNUSED)
+#  define GC_IT_CARD_ALL_FREE   GC_IT_CARD_ALL_MARK(GC_IT_CARD_FREE)
 
-#define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
-#define IT_HDR_to_PObj(p) ((PObj*)((Gc_it_hdr*)(p)+1))
-#define cPObj_to_IT_HDR(o) (((const Gc_it_hdr*)(o))-1)
+#  define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
+#  define IT_HDR_to_PObj(p) ((PObj*)((Gc_it_hdr*)(p)+1))
+#  define cPObj_to_IT_HDR(o) (((const Gc_it_hdr*)(o))-1)
 
 /*
  * GC States

@@ -1,6 +1,6 @@
 /*
 Copyright (C) 2001-2008, The Perl Foundation.
-$Id: file.pmc 27529 2008-05-16 01:38:16Z chromatic $
+$Id$
 
 src/dynpmc/gcaccess.pmc - Experimental PMC access to GC system internals.
 
@@ -31,9 +31,9 @@ pmclass GCAccess dynpmc singleton {
         INTVAL i = 0;
         Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
         Gc_it_hdr * hdr = gc_priv_data->queue;
-        if(hdr == NULL)
+        if (hdr == NULL)
             RETURN(INTVAL 0);
-        while(hdr = hdr->next) i++;
+        while (hdr = hdr->next) i++;
         RETURN(INTVAL i);
     }
 
@@ -41,9 +41,9 @@ pmclass GCAccess dynpmc singleton {
         INTVAL i = 0;
         Small_Object_Pool * pmcpool = interp->arena_base->pmc_pool;
         Gc_it_hdr * hdr = pmcpool->free_list;
-        if(hdr == NULL)
+        if (hdr == NULL)
             RETURN(INTVAL 0);
-        while(hdr = hdr->next) i++;
+        while (hdr = hdr->next) i++;
         RETURN(INTVAL i);
     }
 
@@ -51,9 +51,9 @@ pmclass GCAccess dynpmc singleton {
         INTVAL i = 0;
         Gc_it_data * gc_priv_data = interp->arena_base->gc_private;
         Gc_it_hdr * hdr = gc_priv_data->root_queue;
-        if(hdr == NULL)
+        if (hdr == NULL)
             RETURN(INTVAL 0);
-        while(hdr = hdr->next) i++;
+        while (hdr = hdr->next) i++;
         RETURN(INTVAL i);
     }
 
@@ -71,7 +71,7 @@ pmclass GCAccess dynpmc singleton {
         Gc_it_data * gc_data = interp->arena_base->gc_private;
         do {
             Parrot_do_dod_run(interp, 0);
-        } while(gc_data->state != GC_IT_READY);
+        } while (gc_data->state != GC_IT_READY);
         RETURN(INTVAL gc_data->total_items)
     }
 }

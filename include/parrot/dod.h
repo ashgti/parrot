@@ -390,62 +390,62 @@ void gc_it_trace_threaded(SHIM_INTERP);
        marked. pobject_lives will short circuit if it's already been marked.
        mark the new item too. */
 #  define GC_WRITE_BARRIER(interp, agg, old, _new) do { \
-    if((agg)) \
+    if ((agg)) \
         pobject_lives(interp, (PObj*)(agg)); \
-    if((_new)) \
+    if ((_new)) \
         pobject_lives(interp, (PObj*)(_new)); \
-} while(0)
+} while (0)
     /* Mark the aggregate, the new object and the new_key, they are all
        apparently being used and I want to make sure they don't get lost */
 #  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do {\
-    if((agg)) \
+    if ((agg)) \
         pobject_lives(interp, (PObj*)(agg)); \
-    if((_new)) \
+    if ((_new)) \
         pobject_lives(interp, (PObj*)_new); \
-    if((new_key)) \
+    if ((new_key)) \
         pobject_lives(interp, (PObj*)new_key); \
-} while(0)
+} while (0)
 #endif
 
 /* Macros for doing common things with the GC_IT */
 
 #define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
     gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
-    if((gc_data)->queue == (hdr)) \
+    if ((gc_data)->queue == (hdr)) \
         (gc_data)->queue = (hdr)->next; \
     (hdr)->next = NULL; \
-} while(0)
+} while (0)
 
 #define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
     (hdr)->next = (gc_data)->queue; \
     (gc_data)->queue = (hdr); \
-} while(0)
+} while (0)
 
 #define GC_IT_ADD_TO_QUEUE(gc_data, hdr) do {\
     (hdr)->next = (gc_data)->queue; \
     (gc_data)->queue = (hdr); \
-} while(0)
+} while (0)
 
 #define GC_IT_ADD_TO_ROOT_QUEUE(gc_data, hdr) do {\
     (hdr)->next = (gc_data)->root_queue; \
     (gc_data)->root_queue = (hdr); \
-} while(0)
+} while (0)
 
 #define GC_IT_ADD_TO_FREE_LIST(pool, hdr) do { \
     (hdr)->next       = (Gc_it_hdr *)((pool)->free_list); \
     (pool)->free_list = (void *)(hdr); \
-} while(0)
+} while (0)
 
 #define GC_IT_POP_HDR_FROM_LIST(list, hdr, type) do {\
     (hdr)       = (Gc_it_hdr *)(list); \
     (list)      = (type)((hdr)->next); \
     (hdr)->next = NULL; \
-} while(0)
+} while (0)
 
 #define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \
     if (gc_it_hdr_is_PObj_compatible(interp, hdr)) \
         gc_it_mark_PObj_children_grey(interp, hdr); \
-} while(0);
+} while (0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
     (Gc_it_hdr*)(((char*)((a)->start_objects))+((p)->object_size*(i)))

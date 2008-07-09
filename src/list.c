@@ -323,7 +323,7 @@ allocate_chunk(PARROT_INTERP, ARGIN(List *list), UINTVAL items, UINTVAL size)
     Parrot_block_GC_mark(interp);
     /*Parrot_block_GC_sweep(interp); - why */
     chunk = (List_chunk *)new_bufferlike_header(interp, sizeof (List_chunk));
-    /*chunk = (List_chunk *)mem_sys_allocate_zeroed(sizeof(List_chunk));*/
+    /*chunk = (List_chunk *)mem_sys_allocate_zeroed(sizeof (List_chunk));*/
     chunk->items = items;
     chunk->n_chunks = 0;
     chunk->n_items  = 0;
@@ -1206,8 +1206,8 @@ List *
 list_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 {
     List * const list = (List *)new_bufferlike_header(interp, sizeof (List));
-    memset(list, 0, sizeof(List));
-    //List * const list = (List *)mem_sys_allocate_zeroed(sizeof (List));
+    memset(list, 0, sizeof (List));
+    /* List * const list = (List *)mem_sys_allocate_zeroed(sizeof (List)); */
     PARROT_ASSERT(list);
     list->item_type = type;
     switch (type) {

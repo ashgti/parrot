@@ -97,13 +97,13 @@ contained_in_pool(ARGIN(const Small_Object_Pool *pool), ARGIN(const void *ptr))
        that points to a valid arena, which in turn will point to the
        particular pool. This is unlikely, I think. */
     const Gc_it_hdr * const hdr = cPObj_to_IT_HDR(ptr);
-    if(hdr->parent_arena && hdr->parent_arena->parent_pool &&
+    if (hdr->parent_arena && hdr->parent_arena->parent_pool &&
        hdr->parent_arena->parent_pool == pool)
         return 1;
     return 0;
 #  else
 
-#   endif
+#  endif
 #endif
     const Small_Object_Arena *arena;
 

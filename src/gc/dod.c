@@ -433,7 +433,7 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     /* interp->exception_list is segfaulting for some reason, which means
        it probably isn't set up correctly. I dont know why, but I'm going
        to ignore it for now. */
-    if(interp->exception_list) {
+    if (interp->exception_list) {
         for (i = 0; i <= E_LAST_PYTHON_E; ++i)
             pobject_lives(interp, (PObj*)interp->exception_list[i]);
     }
@@ -854,18 +854,18 @@ Parrot_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
     Small_Object_Pool * const ext_pool   = arena_base->pmc_ext_pool;
     PMC_EXT           * const pmcext     = p->pmc_ext;
 
-    if(!pmcext)
+    if (!pmcext)
         return;
     if (PObj_is_PMC_shared_TEST(p) && PMC_sync(p)) {
         MUTEX_DESTROY(PMC_sync(p)->pmc_lock);
         mem_internal_free(PMC_sync(p));
         PMC_sync(p) = NULL;
     }
-    if(pmcext->_metadata) {
+    if (pmcext->_metadata) {
         Parrot_dod_free_pmc(interp, NULL, (PObj*)pmcext->_metadata);
         pmcext->_metadata = NULL;
     }
-    if(pmcext->_synchronize) {
+    if (pmcext->_synchronize) {
         /* Eventually, these should be managed by the GC automatically.
            Until then, make sure it gets freed. */
         mem_internal_free(pmcext->_synchronize);

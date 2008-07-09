@@ -83,6 +83,7 @@ Parrot_unmake_COW(PARROT_INTERP, ARGMOD(STRING *s))
     /* COW_FLAG | constant_FLAG | external_FLAG) */
     if (PObj_is_cowed_TESTALL(s)) {
         STRING for_alloc;
+        static char **foo;
 
         /* Create new pool data for this header to use,
          * independent of the original COW data */
