@@ -284,7 +284,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Mark roots.\n");
 #  endif
-            /* Parrot_dod_trace_root(interp, 1); */
+            Parrot_dod_trace_root(interp, 1);
 #  if GC_IT_DEBUG
             printf("Mark roots end.\n");
 #  endif
@@ -320,9 +320,9 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             printf("Start mark Increment Mode.\n");
 #    endif
             /* in batch mode, enqueue all roots, and scan the entire pile */
-            /* gc_it_enqueue_all_roots(interp);
-               gc_it_trace(interp) */
-#  endif
+            gc_it_enqueue_all_roots(interp);
+            gc_it_trace(interp);
+#endif
             GC_IT_BREAK_AFTER_3;
 
         case GC_IT_END_MARK:
@@ -1103,8 +1103,11 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
 #  endif
 */
 
-    if (hdr->next != NULL)
+    if(hdr->next != NULL) {
+        fprintf(stderr, "Attempt to add an object to free list that is already on a list.\
+obj: %p, hdr: %p, pool: %p %s\n", to_add, hdr, pool, pool->name);
         return;
+    }
     hdr->next = (Gc_it_hdr *)pool->free_list;
     pool->free_list = hdr;
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);

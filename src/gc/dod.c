@@ -234,12 +234,13 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
 
-    PARROT_ASSERT(hdr->next == NULL);
-    if (card_mark == GC_IT_CARD_BLACK)
+    if (card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
         return;
 
     /* black items should have been caught. Nothing should ever be "UNUSED"
-       at the moment. "FREE" items should not be here either. */
+       at the moment. "FREE" items should not be here either. Free items
+       should have failed the above test (hdr->next != NULL) since they
+       are on the free list. */
 
     PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
     PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
@@ -388,14 +389,14 @@ int
 Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
 {
     Arenas           * const arena_base = interp->arena_base;
-    parrot_context_t *ctx;
 
     /* note: adding locals here did cause increased DOD runs */
     unsigned int i = 0;
 
-    if (trace_stack == 2) {
-        trace_system_areas(interp);
-        return 0;
+    if (trace_stack) {
+        //trace_system_areas(interp);
+        if(trace_stack == 2)
+            return 0;
     }
 
     if (interp->profile)
@@ -412,8 +413,10 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     pobject_lives(interp, (PObj *)interp->iglobals);
 
     /* mark the current context. */
-    ctx = CONTEXT(interp);
-    mark_context(interp, ctx);
+    {
+        parrot_context_t * const ctx = CONTEXT(interp);
+        mark_context(interp, ctx);
+    }
 
     /* mark the dynamic environment. */
     mark_stack(interp, interp->dynamic_env);
@@ -470,10 +473,6 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     if (arena_base->lazy_dod && arena_base->num_early_PMCs_seen >=
             arena_base->num_early_DOD_PMCs)
         return 0;
-
-    /* Find important stuff on the system stack */
-    if (trace_stack)
-        trace_system_areas(interp);
 
     if (interp->profile)
         Parrot_dod_profile_end(interp, PARROT_PROF_DOD_p1);

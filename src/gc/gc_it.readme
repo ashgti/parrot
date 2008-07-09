@@ -1,0 +1,9 @@
+A few notes about GC_IT progress:
+# stack compact code causes pointer strangeness with STRING->strstart. I have
+  commented out the code in src/gc/gc_it.readme for now.
+# src/cpu_dep.c:trace_system_areas is causing segfaults (can't imagine why).
+  I commented out the call to it in src/gc/dod.c:Parrot_dod_trace_root.
+# Allocating lists causes problems in src/list.c:list_new. When I allocate
+  directly from the system (not from the GC) it doesnt cause problems.
+# Hashes and HashBuckets are not currently managed, but should be. I'll add them
+  into the system later as non-aggregates.
