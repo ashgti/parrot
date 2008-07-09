@@ -1210,7 +1210,8 @@ do_thaw(PARROT_INTERP, ARGIN(PMC* pmc), ARGIN(visit_info *info))
 
 #if FREEZE_USE_NEXT_FOR_GC
         /*
-         * the next_for_GC method doesn't keep track of repeated scalars
+         * the next_for_GC method doesn't keep track of repese are just duplicated with their data.
+         * But we track these when thawing, so that we don't creeated scalars
          * and such, as these are lacking the next_for_GC pointer, so
          * these are just duplicated with their data.
          * But we track these when thawing, so that we don't create dups
@@ -1678,7 +1679,7 @@ run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
      * collected under us.
      */
     if (1 || (string_length(interp, image) > THAW_BLOCK_DOD_SIZE)) {
-        /*Parrot_do_dod_run(interp, 1); I think this is causing problems -AW*/
+        Parrot_do_dod_run(interp, 1);
         Parrot_block_GC_mark(interp);
         Parrot_block_GC_sweep(interp);
         dod_block = 1;

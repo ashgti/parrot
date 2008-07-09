@@ -345,7 +345,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #endif
-            /*gc_it_sweep_header_pools(interp); */
+            /* gc_it_sweep_header_pools(interp); */
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
@@ -1160,6 +1160,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     GC_IT_POP_HDR_FROM_LIST(pool->free_list, hdr, void *);
     --pool->num_free_objects;
 
+    PARROT_ASSERT(hdr);
     PARROT_ASSERT(hdr->parent_arena);
     PARROT_ASSERT(hdr->parent_arena->parent_pool == pool);
 

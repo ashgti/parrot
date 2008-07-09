@@ -81,6 +81,10 @@ method echo_statement($/) {
     make $past;
 }
 
+method expression_statement($/) {
+    make $( $<expression> );
+}
+
 method function_call($/) {
     my $past := $( $<arguments> );
     $past.name( ~$<FUNCTION_NAME> );
@@ -136,7 +140,7 @@ method arguments($/) {
 
 method if_statement($/) {
     my $past := PAST::Op.new(
-                    $( $<relational_expression> ),
+                    $( $<expression> ),
                     $( $<statements> ),
                     :pasttype('if'),
                     :node($/)
@@ -199,29 +203,8 @@ method else_clause($/) {
     make $( $<statements> );
 }
 
-method relational_expression($/) {
-    if $<rel_op_clause> {
-        my $rel_op_clause := $/{'rel_op_clause'}{'REL_OP'};
-        my $op            := ~$rel_op_clause{'REL_OP'};
-        my $name          := 'infix:' ~ $op;
-        make PAST::Op.new(
-                 $( $<expression> ),
-                 $( $rel_op_clause{'expression'} ),
-                 :node($/),
-                 :name($name)
-             );
-    }
-    else {
-        make $( $<expression> );
-    }
-}
-
-method expression($/,$key) {
-    make $( $/{$key} );
-}
-
-## Handle the operator precedence table.
-method bitwise_expression($/, $key) {
+# Handle the operator precedence table.
+method expression($/, $key) {
     if ($key eq 'end') {
         make $($<expr>);
     }
@@ -239,22 +222,8 @@ method bitwise_expression($/, $key) {
     }
 }
 
-method concat_expression($/) {
-    my $past := $( $<string> );
-    for $<concat_tail> {
-        my $past_prev := $past;
-        $past := PAST::Op.new(
-                     $past_prev,
-                     $( $_<string> ),
-                     :name( 'infix:.' )
-                 );
-    }
 
-    make $past;
-}
-
-
-method postfix_expression($/,$key) {
+method term($/,$key) {
     make $( $/{$key} );
 }
 

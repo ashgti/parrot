@@ -894,7 +894,7 @@ get_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(UINTVAL *idx))
             return chunk;
         *idx -= chunk->items;
     }
-    real_exception(interp, NULL, INTERNAL_PANIC, 
+    real_exception(interp, NULL, INTERNAL_PANIC,
         "Reached end of list %p without finding item index %d\n",
         list, *idx);
 #endif
@@ -962,13 +962,13 @@ get_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(UINTVAL *idx))
             chunk = chunk->next;
             continue;
         }
-        real_exception(interp, NULL, INTERNAL_PANIC, 
-            "Cannot determine how to find location %d in list %p\n",
-            *idx, list);
+        real_exception(interp, NULL, INTERNAL_PANIC,
+            "Cannot determine how to find location %d in list %p of %d items\n",
+            *idx, list, list->cap);
     }
-    real_exception(interp, NULL, INTERNAL_PANIC, 
-        "Cannot find index %d in list %p using any method\n",
-        *idx, list);
+    real_exception(interp, NULL, INTERNAL_PANIC,
+        "Cannot find index %d in list %p of %d items using any method\n",
+        *idx, list, list->cap);
 }
 
 /*
