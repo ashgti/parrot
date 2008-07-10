@@ -653,23 +653,12 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         PARROT_ASSERT(card);
 
         switch (arena->card_info._d.last_index % 4) {
-            case 0:
-                do {
-                    mark = gc_it_get_card_mark_index(card, 0);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
-                        /* GC_IT_ADD_TO_FREE_LIST(pool, hdr); */
-                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
-                    i--;
             case 3:
+                do {
                     mark = gc_it_get_card_mark_index(card, 3);
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
-                        /* GC_IT_ADD_TO_FREE_LIST(pool, hdr); */
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
                     }
@@ -681,7 +670,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     mark = gc_it_get_card_mark_index(card, 2);
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
-                        /* GC_IT_ADD_TO_FREE_LIST(pool, hdr); */
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
                     }
@@ -690,17 +679,28 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
                     i--;
             case 1:
-            default:
                     mark = gc_it_get_card_mark_index(card, 1);
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
-                        /* GC_IT_ADD_TO_FREE_LIST(pool, hdr); */
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
 
+                    i--;
+            case 0:
+            default:
+                    mark = gc_it_get_card_mark_index(card, 0);
+                    if (mark == GC_IT_CARD_WHITE) {
+                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
+                    }
+                    else if (mark == GC_IT_CARD_BLACK)
+                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
                     i--;
 /*
 #    if GC_IT_DEBUG
@@ -750,20 +750,8 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
            I can make some parts of this more efficient, but for now let's
            stick with the basics. */
         switch (arena->card_info._d.last_index % 4) {
-            case 0:
-                do {
-                    mark = gc_it_get_card_mark_index(card, 0);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
-
-                    i--;
             case 3:
+                do {
                     mark = gc_it_get_card_mark_index(card, 3);
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
@@ -788,7 +776,6 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
                     i--;
             case 1:
-            default:
                     mark = gc_it_get_card_mark_index(card, 1);
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
@@ -798,6 +785,18 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
+
+                    i--;
+            case 0:
+                    mark = gc_it_get_card_mark_index(card, 0);
+                    if (mark == GC_IT_CARD_WHITE) {
+                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
+                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
+                    }
+                    else if (mark == GC_IT_CARD_BLACK)
+                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
 
                     i--;
 /*
