@@ -1068,7 +1068,7 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     pool->get_free_object = gc_it_get_free_object;
     pool->alloc_objects   = gc_it_alloc_objects;
     pool->more_objects    = gc_it_more_objects;
-
+    pool->free_list = NULL;
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
 #  if GC_IT_DEBUG
@@ -1140,6 +1140,16 @@ void *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
     Gc_it_hdr *hdr;
+
+    /* This is a bad hack. If we have an obviously absurd pointer on the
+       free list (which, apparently, is not uncommon right now), we just
+       set the free list to null. This has the potential to hemorrage
+       items that were on the free list past the bad pointer (if any). I
+       ultimately want to find the source of the error, and then remove
+       this hack. */
+    if (pool->free_list < 0x1000) {
+        pool->free_list = NULL;
+    }
 
     /* If there are no objects, allocate a new arena */
     if (!pool->free_list) {

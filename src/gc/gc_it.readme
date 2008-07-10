@@ -21,6 +21,9 @@
   makefile to remove offending items. This is a hack. The file
   compilers/json/JSON/pge2pir.pir is being generated as an empty file (which
   probably shouldn't happen)
+# Added bad hack to gc_it_get_free_object to avoid any obviously-bad pointers
+  on the free list. I do not currently know how bad pointers are ending up on
+  the free list in the first place. I need to find the source of these ASAP.
 
 == Tasks to be done ==
 
@@ -30,3 +33,6 @@
 # Test both batch mode and increment mode
 # Implement a multithreading alternative to the ordinary GC
 # Benchmark the GC
+# I need to find a way to reconcile the various PObj_*_TEST macros from
+  include/parrot/pobj.h with my notions of "free list", "alive", "dead", etc.
+  Those macros may need to be redirected, unfortunately.
