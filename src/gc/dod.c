@@ -418,6 +418,8 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
         mark_context(interp, ctx);
     }
 
+    pobject_lives(interp, (PObj *)interp->HLL_namespace);
+
     /* mark the dynamic environment. */
     mark_stack(interp, interp->dynamic_env);
 
@@ -813,7 +815,7 @@ Parrot_dod_free_pmc(PARROT_INTERP, SHIM(Small_Object_Pool *pool),
 {
     PMC    * const pmc        = (PMC *)p;
     Arenas * const arena_base = interp->arena_base;
-
+    PARROT_ASSERT(p != interp->HLL_namespace); /* diagnostic -AW */
     /* TODO collect objects with finalizers */
     if (PObj_needs_early_DOD_TEST(p))
         --arena_base->num_early_DOD_PMCs;

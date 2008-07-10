@@ -409,13 +409,6 @@ void gc_it_trace_threaded(SHIM_INTERP);
 
 /* Macros for doing common things with the GC_IT */
 
-#define GC_IT_MARK_NODE_BLACK(gc_data, hdr) do{ \
-    gc_it_set_card_mark((hdr), GC_IT_CARD_BLACK); \
-    if ((gc_data)->queue == (hdr)) \
-        (gc_data)->queue = (hdr)->next; \
-    (hdr)->next = NULL; \
-} while (0)
-
 #define GC_IT_MARK_NODE_GREY(gc_data, hdr) do { \
     (hdr)->next = (gc_data)->queue; \
     (gc_data)->queue = (hdr); \
@@ -441,11 +434,6 @@ void gc_it_trace_threaded(SHIM_INTERP);
     (list)      = (type)((hdr)->next); \
     (hdr)->next = NULL; \
 } while (0)
-
-#define GC_IT_MARK_CHILDREN_GREY(interp, hdr) do { \
-    if (gc_it_hdr_is_PObj_compatible(interp, hdr)) \
-        gc_it_mark_PObj_children_grey(interp, hdr); \
-} while (0);
 
 #define GC_IT_HDR_FROM_INDEX(p, a, i) \
     (Gc_it_hdr*)(((char*)((a)->start_objects))+((p)->object_size*(i)))

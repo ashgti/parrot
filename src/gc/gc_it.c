@@ -341,7 +341,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep PMCs.\n");
 #  endif
-            /* gc_it_sweep_pmc_pools(interp); */
+            gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
@@ -349,7 +349,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #  endif
-            /* gc_it_sweep_header_pools(interp); */
+            //gc_it_sweep_header_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
@@ -357,7 +357,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #  endif
-            gc_it_sweep_sized_pools(interp);
+            //gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -412,8 +412,11 @@ gc_it_trace_normal(PARROT_INTERP)
            black. Once black, the item can be removed from the queue and
            discarded */
         PARROT_ASSERT(cur_item);
-        GC_IT_MARK_CHILDREN_GREY(interp, cur_item);
-        GC_IT_MARK_NODE_BLACK(gc_priv_data, cur_item);
+
+        gc_it_mark_PObj_children_grey(interp, hdr);
+        gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
+        gc_priv_data->queue = hdr->next;
+        hdr->next = NULL;
 
         /* total items since beginning of scan */
         gc_priv_data->total_count++;
