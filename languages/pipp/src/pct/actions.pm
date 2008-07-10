@@ -43,14 +43,24 @@ method SEA($/) {
 }
 
 method code_tp1($/) {
-    make $( $<statements> );
+    my $past := PAST::Stmts.new( :node($/) );
+    for $<statement> {
+        $past.push( $($_) );
+    }
+
+    make $past;
 }
 
 method code_tp2($/) {
-    make $( $<statements> );
+    my $past := PAST::Stmts.new( :node($/) );
+    for $<statement> {
+        $past.push( $($_) );
+    }
+
+    make $past;
 }
 
-method statements($/) {
+method block($/) {
     my $past := PAST::Stmts.new( :node($/) );
     for $<statement> {
         $past.push( $($_) );
@@ -97,7 +107,7 @@ method method_call($/) {
                     :name( ~$<METHOD_NAME> ),
                     :pasttype( 'callmethod' ),
                     :name( ~$<METHOD_NAME> ),
-                    $( $<VAR_NAME> )
+                    $( $<var> )
                 );
 
     make $past;
@@ -141,7 +151,7 @@ method arguments($/) {
 method if_statement($/) {
     my $past := PAST::Op.new(
                     $( $<expression> ),
-                    $( $<statements> ),
+                    $( $<block> ),
                     :pasttype('if'),
                     :node($/)
                 );
@@ -160,10 +170,6 @@ method scalar_assign($/) {
          );
 }
 
-method array_key($/) {
-    make $( $<expression> );
-}
-
 method array_assign($/) {
     make PAST::Op.new(
              $( $<array_elem> ),
@@ -179,15 +185,15 @@ method array_elem($/) {
 
     make PAST::Var.new(
              $past_var_name,
-             $( $<array_key> ),
+             $( $<expression> ),
              :scope('keyed'),
              :viviself('Undef'),
              :lvalue(1)
         );
 }
 
-method var($/) {
-    make $( $<VAR_NAME> );
+method var($/,$key) {
+    make $( $/{$key} );
 }
 
 method VAR_NAME($/) {
@@ -199,8 +205,14 @@ method VAR_NAME($/) {
          );
 }
 
+method this($/) {
+    make PAST::Op.new(
+             :inline( "%r = self" )
+         );
+}
+
 method else_clause($/) {
-    make $( $<statements> );
+    make $( $<block> );
 }
 
 # Handle the operator precedence table.
@@ -227,7 +239,7 @@ method term($/,$key) {
     make $( $/{$key} );
 }
 
-method string($/,$key) {
+method literal($/,$key) {
     make $( $/{$key} );
 }
 
@@ -289,51 +301,53 @@ method DOUBLEQUOTE_STRING($/) {
 
 method function_definition($/) {
 
-    ## note that $<parameters> creates a new PAST::Block.
-    my $past := $( $<parameters> );
+    # note that $<param_list> creates a new PAST::Block.
+    my $past := $( $<param_list> );
 
-    ## set the function name
     $past.name( ~$<FUNCTION_NAME> );
-    for $<statement> {
-        $past.push($($_));
-    }
-
     $past.control('return_pir');
+    $past.push( $( $<block> ) );
 
     make $past;
 }
 
+method member_definition($/) {
+    make PAST::Op.new(
+             $( $<var> ),
+             $( $<literal> ),
+             :pasttype('bind'),
+         );
+}
+
 method method_definition($/) {
 
-    ## note that $<parameters> creates a new PAST::Block.
-    my $past := $( $<parameters> );
+    # note that $<param_list> creates a new PAST::Block.
+    my $past := $( $<param_list> );
 
-    ## set the function name
     $past.name( ~$<METHOD_NAME> );
     $past.blocktype( 'method' );
     $past.control('return_pir');
-    $past.push( PAST::Stmts.new() );
+    $past.push( $( $<block> ) );
 
-    my $stmts := PAST::Stmts.new();
-    for $<statement> {
-        $stmts.push($($_));
-    }
-    $past.push( $stmts );
-
-
-    make PAST::Stmts.new( $past );
+    make $past;
 }
 
-method parameters($/) {
+method param_list($/) {
 
-    my $past := PAST::Block.new( :blocktype('declaration'), :node($/) );
+    my $past := PAST::Block.new(
+                    :blocktype('declaration'),
+                    :node($/)
+                );
     for $<VAR_NAME> {
         my $param := $( $_ );
         $param.scope('parameter');
         $past.push($param);
 
-        ## enter the parameter as a lexical into the block's symbol table
-        $past.symbol($param.name(), :scope('lexical'));
+        # enter the parameter as a lexical into the block's symbol table
+        $past.symbol(
+             :scope('lexical'),
+             $param.name()
+        );
     }
 
     make $past;
@@ -348,7 +362,9 @@ method class_definition($/) {
                     :lexical( 0 ),
                     PAST::Stmts.new(
                         PAST::Op.new(
-                            :inline( "$P0 = get_hll_global 'P6metaclass'\n $P1 = split '::', 'Dings'\n push_eh subclass_done\n $P2 = $P0.'new_class'($P1)\n pop_eh\n subclass_done:\n" ),
+                            :inline(   "$P0 = get_hll_global 'P6metaclass'\n $P1 = split '::', '"
+                                     ~ $<CLASS_NAME>
+                                     ~ "'\n push_eh subclass_done\n $P2 = $P0.'new_class'($P1)\n pop_eh\n subclass_done:\n" ),
                             :pasttype( 'inline' )
                         )
                     )

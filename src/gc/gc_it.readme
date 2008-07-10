@@ -1,9 +1,32 @@
-A few notes about GC_IT progress:
+== Things which are known to work (or not segfault) ==
+
+# Allocators seem to work correctly.
+# pobject_lives and object_lives appear to work correctly
+# Parrot_dod_trace_roots (minus trace_system_areas, described below)
+# batch-mode enqueue roots and trace don't segfault
+
+== Things which are known not to work ==
+
 # stack compact code causes pointer strangeness with STRING->strstart. I have
   commented out the code in src/gc/gc_it.readme for now.
 # src/cpu_dep.c:trace_system_areas is causing segfaults (can't imagine why).
   I commented out the call to it in src/gc/dod.c:Parrot_dod_trace_root.
 # Allocating lists causes problems in src/list.c:list_new. When I allocate
   directly from the system (not from the GC) it doesnt cause problems.
+# Sweep code causes problems. Sweep_pmc_pools causes more problems more often,
+  sweep_sized_pools causes the fewest problems. Somehow, these are all allowing
+  objects to be added to the free list which are bogus (like, adding pointers
+  at 0xA8 and 0x08 to be added to the free list).
+# Build was failing inexplicably in compilers/JSON. I've modified the
+  makefile to remove offending items. This is a hack. The file
+  compilers/json/JSON/pge2pir.pir is being generated as an empty file (which
+  probably shouldn't happen)
+
+== Tasks to be done ==
+
 # Hashes and HashBuckets are not currently managed, but should be. I'll add them
   into the system later as non-aggregates.
+# Redo IMCC memory management
+# Test both batch mode and increment mode
+# Implement a multithreading alternative to the ordinary GC
+# Benchmark the GC

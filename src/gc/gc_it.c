@@ -357,7 +357,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #  endif
-            /* gc_it_sweep_sized_pools(interp); */
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -756,6 +756,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
@@ -767,6 +768,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
@@ -778,6 +780,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
@@ -790,6 +793,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
@@ -805,6 +809,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 } while (card-- != arena->cards);
         }
     }
+    PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
 #    if GC_IT_DEBUG
     fprintf(stderr, "Finished sweeping pool %s (%p)\n", pool->name, pool);
 #    endif
@@ -1110,6 +1115,7 @@ obj: %p, hdr: %p, pool: %p %s\n", to_add, hdr, pool, pool->name);
     }
     hdr->next = (Gc_it_hdr *)pool->free_list;
     pool->free_list = hdr;
+    PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
 }
 
@@ -1146,6 +1152,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
         (pool->more_objects)(interp, pool);
     }
     PARROT_ASSERT(pool->free_list);
+    PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
     /* pull the first header off the free list */
     hdr = (Gc_it_hdr *)pool->free_list;
     pool->free_list = (void *)hdr->next;
@@ -1323,8 +1330,9 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
-        GC_IT_ADD_TO_FREE_LIST(pool, p);
-        PARROT_ASSERT(pool->free_list == p);
+        p->next = (Gc_it_hdr *)pool->free_list;
+        pool->free_list = p;
+        PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
 
         /* Cache the object's parent pool and card addresses */
         p->parent_arena   = new_arena;
