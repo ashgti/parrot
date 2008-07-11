@@ -24,6 +24,10 @@
 # Added bad hack to gc_it_get_free_object to avoid any obviously-bad pointers
   on the free list. I do not currently know how bad pointers are ending up on
   the free list in the first place. I need to find the source of these ASAP.
+# gc_it_sweep_header_pools does not work, cannot work, and must be removed.
+  the string and constant string header pools are created in the sized pools,
+  so running that and then running gc_it_sweep_sized_pools causes all
+  alive items in the string pools to be freed anyway.
 
 == Tasks to be done ==
 

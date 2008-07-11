@@ -349,7 +349,11 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #  endif
-            //gc_it_sweep_header_pools(interp);
+            /* These pools are, if I am not mistaken, both actually located
+               in the sized header pools. That means if we sweep this and
+               then call gc_it_sweep_sized_pools, we are going to
+               double-sweep these pools and free all the alive objects. */
+            /* gc_it_sweep_header_pools(interp); */
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
             GC_IT_BREAK_AFTER_6;
 
@@ -357,7 +361,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #  endif
-            //gc_it_sweep_sized_pools(interp);
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -395,7 +399,7 @@ void
 gc_it_trace_normal(PARROT_INTERP)
 {
     /* trace through the entire queue until it is empty. */
-    Gc_it_hdr         *cur_item;
+    Gc_it_hdr         *hdr;
     Gc_it_data * const gc_priv_data =
         (Gc_it_data *)interp->arena_base->gc_private;
 
@@ -407,11 +411,11 @@ gc_it_trace_normal(PARROT_INTERP)
     fprintf(stderr, "Tracing queue, starting with %p\n", gc_priv_data->queue);
 #    endif
 
-    while ((cur_item = gc_priv_data->queue)) {
+    while ((hdr = gc_priv_data->queue)) {
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
            discarded */
-        PARROT_ASSERT(cur_item);
+        PARROT_ASSERT(hdr);
 
         gc_it_mark_PObj_children_grey(interp, hdr);
         gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
@@ -537,11 +541,10 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #    endif
             }
             else {
-/*
+
 #    if GC_IT_DEBUG
                 fprintf(stderr, "Finalizing PMC (%p)\n", hdr);
 #    endif
-*/
                 if (gc_it_get_card_mark(hdr) != GC_IT_CARD_FREE)
                     Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
             }
@@ -648,7 +651,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card * const card_start = arena->cards;
-        Gc_it_card * card = (card_start + arena->card_info._d.card_size);
+        Gc_it_card * card = (card_start + arena->card_info._d.card_size - 1);
         UINTVAL i    = arena->card_info._d.last_index;
         Gc_it_hdr *hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
         UINTVAL mark;
@@ -743,7 +746,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         return;
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card * const card_start = arena->cards;
-        Gc_it_card * card             = (card_start +arena->card_info._d.card_size);
+        Gc_it_card * card             = (card_start + arena->card_info._d.card_size - 1);
         UINTVAL i                     = arena->card_info._d.last_index;
         UINTVAL mark;
 
@@ -1407,7 +1410,9 @@ PARROT_INLINE
 void
 gc_it_set_card_mark_index(ARGMOD(Gc_it_card * card), UINTVAL index, UINTVAL flag)
 {
-    *card = (unsigned char)*card | (unsigned char)((GC_IT_CARD_MASK_1 & flag) << (index * 2));
+    unsigned char mask = ~(GC_IT_CARD_MASK_1 << (index * 2));
+    *card = *card & mask;
+    *card = *card | (unsigned char)(flag << (index * 2));
 }
 
 /*
@@ -1430,6 +1435,7 @@ gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
     Gc_it_card * const card_start = hdr->parent_arena->cards;
     Gc_it_card * const card = (card_start + hdr->data.card);
+    PARROT_ASSERT(hdr->data.flag < 4);
     return gc_it_get_card_mark_index(card, hdr->data.flag);
 
 }

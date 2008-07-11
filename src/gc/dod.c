@@ -201,14 +201,10 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         C<object_lives> handles the marking of these simple, non-aggregate
         objects. */
 
-    Gc_it_hdr * hdr;
+    Gc_it_hdr * hdr = PObj_to_IT_HDR(obj);
     Gc_it_data * gc_priv_data;
     INTVAL card_mark;
 
-    /* Eventually this will all be more clean. For now, it's spread-out for
-       debugging. */
-    PARROT_ASSERT(obj);
-    hdr = PObj_to_IT_HDR(obj);
     PARROT_ASSERT(hdr);
     if (!hdr->data.agg) {
         /* If the data is not an aggregate, mark it as being a simple buffer
