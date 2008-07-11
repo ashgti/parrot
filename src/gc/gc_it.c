@@ -371,7 +371,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  endif
             if(Parrot_is_blocked_GC_sweep(interp))
                 break;
-            gc_it_sweep_sized_pools(interp);
+            /*gc_it_sweep_sized_pools(interp);*/
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -421,12 +421,11 @@ gc_it_trace_normal(PARROT_INTERP)
     fprintf(stderr, "Tracing queue, starting with %p\n", gc_priv_data->queue);
 #    endif
 
-    while ((hdr = gc_priv_data->queue)) {
+    for (hdr = gc_priv_data->queue; hdr; hdr = gc_priv_data->queue) {
         /* for each item, add all chidren to the queue, and then mark the item
            black. Once black, the item can be removed from the queue and
            discarded */
         PARROT_ASSERT(hdr);
-
         gc_it_mark_PObj_children_grey(interp, hdr);
         gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
         gc_priv_data->queue = hdr->next;
@@ -441,7 +440,7 @@ gc_it_trace_normal(PARROT_INTERP)
 #    if GC_IT_DEBUG
     fprintf(stderr, "Trace complete: %d", (gc_priv_data->queue == NULL));
 #    endif
-    gc_priv_data->queue = NULL;
+    PARROT_ASSERT(gc_priv_data->queue == NULL);
 }
 
 
@@ -662,8 +661,8 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card * const card_start = arena->cards;
         Gc_it_card * card = (card_start + arena->card_info._d.card_size - 1);
-        UINTVAL i    = arena->card_info._d.last_index;
-        Gc_it_hdr *hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
+        UINTVAL i         = arena->card_info._d.last_index;
+        Gc_it_hdr *hdr    = arena->start_objects;
         UINTVAL mark;
 
         PARROT_ASSERT(card);
@@ -671,52 +670,49 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         switch (arena->card_info._d.last_index % 4) {
             case 3:
                 do {
-                    mark = gc_it_get_card_mark_index(card, 3);
+                    mark = gc_it_get_card_mark(hdr);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 3, GC_IT_CARD_WHITE);
-
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 2:
-                    mark = gc_it_get_card_mark_index(card, 2);
+                    mark = gc_it_get_card_mark(hdr);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 2, GC_IT_CARD_WHITE);
-
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 1:
-                    mark = gc_it_get_card_mark_index(card, 1);
+                    mark = gc_it_get_card_mark(hdr);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
-
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 0:
             default:
-                    mark = gc_it_get_card_mark_index(card, 0);
+                    mark = gc_it_get_card_mark(hdr);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = (Gc_it_hdr*)((char*)hdr - (pool->object_size));
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
+                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
 /*
 #    if GC_IT_DEBUG
@@ -747,17 +743,16 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
 {
     Small_Object_Arena *arena;
-    Gc_it_hdr *hdr;
 
 #    if GC_IT_DEBUG
     fprintf(stderr, "Sweeping buffer pool %s (%p)\n", pool->name, pool);
 #    endif
-    if (!pool || !pool->last_Arena)
-        return;
+
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         Gc_it_card * const card_start = arena->cards;
         Gc_it_card * card             = (card_start + arena->card_info._d.card_size - 1);
         UINTVAL i                     = arena->card_info._d.last_index;
+        Gc_it_hdr *hdr                = arena->start_objects;
         UINTVAL mark;
 
         PARROT_ASSERT(card);
@@ -770,50 +765,46 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 do {
                     mark = gc_it_get_card_mark_index(card, 3);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_WHITE);
-
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 2:
                     mark = gc_it_get_card_mark_index(card, 2);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_WHITE);
-
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 1:
                     mark = gc_it_get_card_mark_index(card, 1);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
-
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
             case 0:
                     mark = gc_it_get_card_mark_index(card, 0);
                     if (mark == GC_IT_CARD_WHITE) {
-                        hdr = GC_IT_HDR_FROM_INDEX(pool, arena, i);
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         PARROT_ASSERT(pool->free_list == NULL || pool->free_list > 0x1000);
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
-
+                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
                     i--;
 /*
 #    if GC_IT_DEBUG
@@ -1349,7 +1340,13 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
             new_arena, pool, num_objs);
 #  endif
 */
-
+    /* Here, we loop over the entire arena, finding the various object
+       headers and attaching them to the pool's free list. Each object
+       is also marked with a card and flag number to determine where the
+       corresponding flag is located. This is done backwards, so the first
+       object in the pool has the highest card number and therefore
+       corresponds to the last flag on the last card. The very last object
+       in contrast corresponds to the very first flag on the first card. */
     for (i = num_objs - 1; i >= 0; i--) {
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
@@ -1362,6 +1359,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->parent_arena   = new_arena;
         p->data.card = i / 4;
         p->data.flag = i % 4;
+        PARROT_ASSERT(((p->data.card * 4) + p->data.flag) == i);
         p->data.agg = 0;
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
@@ -1372,7 +1370,6 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
                 p->data.card, p->data.flag);
 #  endif
 */
-        /* Find the next item in the arena with voodoo pointer magic */
         p = next;
     }
 
