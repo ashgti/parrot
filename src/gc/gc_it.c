@@ -284,6 +284,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Mark roots.\n");
 #  endif
+            if(Parrot_is_blocked_GC_mark(interp))
+                break;
             Parrot_dod_trace_root(interp, 1);
 #  if GC_IT_DEBUG
             printf("Mark roots end.\n");
@@ -295,6 +297,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Resume mark.\n");
 #  endif
+            if(Parrot_is_blocked_GC_mark(interp))
+                break;
 #  if GC_IT_INCREMENT_MODE
 #    if GC_IT_DEBUG
             printf("Start mark Increment Mode.\n");
@@ -341,6 +345,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep PMCs.\n");
 #  endif
+            if(Parrot_is_blocked_GC_sweep(interp))
+                break;
             gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
@@ -349,6 +355,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep headers.\n");
 #  endif
+            if(Parrot_is_blocked_GC_sweep(interp))
+                break;
             /* These pools are, if I am not mistaken, both actually located
                in the sized header pools. That means if we sweep this and
                then call gc_it_sweep_sized_pools, we are going to
@@ -361,6 +369,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 #  if GC_IT_DEBUG
             printf("Sweep buffers.\n");
 #  endif
+            if(Parrot_is_blocked_GC_sweep(interp))
+                break;
             gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
@@ -982,19 +992,18 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr *hdr))
     PARROT_ASSERT(obj);
 
     if (PObj_is_PMC_TEST(obj)) {
-        if (PMC_metadata(pmc))
-            pobject_lives(interp, (PObj *)PMC_metadata(pmc));
+        if (pmc->pmc_ext) {
+            object_lives(interp, (PObj *)(pmc->pmc_ext));
+            if (PMC_metadata(pmc))
+                pobject_lives(interp, (PObj *)PMC_metadata(pmc));
+            if (PMC_next_for_GC(pmc) != pmc) {
+                pobject_lives(interp, (PObj *)PMC_next_for_GC(pmc));
+                PMC_next_for_GC(pmc) = pmc;
+            }
+        }
 
         if (pmc->real_self != pmc)
             pobject_lives(interp, (PObj *)(pmc->real_self));
-
-        if (pmc->pmc_ext)
-            object_lives(interp, (PObj *)(pmc->pmc_ext));
-
-        if (PMC_next_for_GC(pmc) != pmc) {
-            pobject_lives(interp, (PObj *)PMC_next_for_GC(pmc));
-            PMC_next_for_GC(pmc) = pmc;
-        }
     }
     else if (PObj_is_string_TEST(obj)) {
         /* It's a string or a const-string, or whatever. Deal with that here. */
