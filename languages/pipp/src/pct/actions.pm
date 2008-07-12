@@ -415,11 +415,11 @@ method quote_term($/, $key) {
     else {
         $past := $( $/{ $key } );
     }
-     
+
     make $past;
 }
 
-method circumfix($/) {
+method curly_interpolation($/) {
     make $( $<var> );
 }
 

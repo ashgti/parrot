@@ -1,31 +1,62 @@
-.include 'cclass.pasm'
+# Copyright (C) 2008, The Perl Foundation.
+# $Id$
+
+=for comment
+
+PHP 5.3 has four kinds of literal strings.
+
+=over 4
+
+=item single quoted
+
+Single quotes need to be escaped with a backslash.
+A backslash escapes a following backslash.
+A literal backslash needs to be escaped at end of string, as otherwise the delimiting single quote
+would be recognised as a literal single quote.
+Backslashes that preceede any other character besides backslash or single quote are literal.
+
+=item double quoted
+
+Backslash notation for
+\n, \r, \t, \v, \f, \\, \$, \".
+
+Octal notation for chars: \[0-7]{1,3}
+Hex notation for chars: \x[0-9A-Fa-f]{1,2}
+
+=item heredoc
+
+   $param = 'dummy';
+   $example = <<<EXAMPLE
+   Variables are interpolated.
+   $param
+   EXAMPLE
+
+Double quotes are literal.
+The backslashes before a double quote are literal.
+Unlike in Perl 5, the newline before the delimiter is not part of the string.
+
+=item nowdoc
+
+A heredoc with single quotes.
+
+   $param = 'dummy';
+   $example = <<<'EXAMPLE'
+   Variables are not interpolated.
+   $param
+   EXAMPLE
+
+Single quotes are literal.
+Backslashes are literal.
+Unlike in Perl 5, the newline before the delimiter is not part of the string.
+
+=cut
 
 .namespace ['Pipp::Grammar']
 
-.sub 'peek_brackets' :method
-    .param string target
-    .param int pos
-    .local string brackets, start, stop
-    brackets = unicode:"<>[](){}\xab\xbb"
-    start = substr target, pos, 1
-    stop = start
-    $I0 = index brackets, start
-    if $I0 < 0 goto end
-    $I1 = $I0 % 2
-    unless $I1 goto bracket_valid
-    self.'panic'("Using a closing delimiter for an opener is reserved")
-    goto end
-  bracket_valid:
-    inc $I0
-    stop = substr brackets, $I0, 1
-  end:
-    .return (start, stop)
-.end
-
-
+# called from code in grammar.pg
 .sub 'quote_expression' :method
     .param string flags
-    .param pmc options         :slurpy :named
+    .param pmc    options    :slurpy :named
 
     ##  create a new match object
     .local pmc mob
@@ -45,57 +76,31 @@
     unless iter goto iter_end
     .local string oname
     oname = shift iter
-    oname = substr oname, 1
+    oname = substr oname, 1   # remove the leading colon
     options[oname] = 1
-    if oname == 'ww' goto opt_ww
-    if oname == 'w' goto opt_w
     if oname == 'qq' goto opt_qq
-    if oname == 'b' goto opt_b
-    goto iter_loop
-  opt_ww:
-  opt_w:
-    options['wsstop'] = 1
     goto iter_loop
   opt_qq:
-    options['s'] = 1
-    options['a'] = 1
-    options['h'] = 1
-    options['f'] = 1
-    options['c'] = 1
-    options['b'] = 1
-  opt_b:
-    options['q'] = 1
+    options['s'] = 1        # interpolate variables
+    options['c'] = 1        # interpolate stuff in '{ }', when there is a $ right after the '{'
+    options['b'] = 1        # Interpolate \n, \t, etc.
+    options['q'] = 1        # Interpolate \\, \q and \' (or whatever)
     goto iter_loop
   iter_end:
 
+    ## there is no heredoc-support yet, so the delimiter are either single or double quotes
     .local string start, stop
-    (start, stop) = self.'peek_brackets'(target, pos)
-
-    ##  determine pos, lastpos
-    $I0 = length start
-    pos += $I0
-    .local int stoplen, lastpos, wsstop
-    stoplen = length stop
-    wsstop = options['wsstop']
-    lastpos = length target
-    lastpos -= stoplen
+    start = substr target, pos, 1
+    stop  = start
     options['stop'] = stop
+    pos = pos + 1
 
-    ##  handle :regex parsing
-    .local pmc p6regex, quote_regex
-    $I0 = options['regex']
-    unless $I0 goto word_start
-  regex_start:
-    p6regex = get_root_global ['parrot';'PGE::Perl6Regex'], 'regex'
-    mob.'to'(pos)
-    quote_regex = p6regex(mob, options :flat :named)
-    unless quote_regex goto fail
-    pos = quote_regex.'to'()
+    ##  determine lastpos
+    .local int lastpos
+    lastpos = length target
+    lastpos -= 1
+
     .local string key
-    key = 'quote_regex'
-    mob[key] = quote_regex
-    goto succeed
-
     ##  handle word parsing
   word_start:
     ##  set up escapes based on flags
@@ -112,65 +117,16 @@
   have_escapes:
     options['escapes'] = escapes
 
-    .local int optww
-    optww = options['ww']
-    unless optww goto have_wwopts
-    .local pmc wwsingleopts, wwdoubleopts
-    wwsingleopts = new 'Hash'
-    wwsingleopts['q'] = 1
-    wwsingleopts['stop'] = "'"
-    wwsingleopts['action'] = action
-    ##  FIXME: RT#48112  -- currently 'clone' on a Hash can't
-    ##  handle null entries (and does a deepcopy), so we're
-    ##  using an iterator to do it.
-    ##  wwdoubleopts = clone options
-            wwdoubleopts = new 'Hash'
-            .local pmc iter2
-            iter2 = new 'Iterator', options
-          iter2_loop:
-            unless iter2 goto iter2_end
-            $S0 = shift iter2
-            $P0 = options[$S0]
-            wwdoubleopts[$S0] = $P0
-            goto iter2_loop
-          iter2_end:
-    wwdoubleopts['stop'] = '"'
-    wwdoubleopts['wsstop'] = 0
-  have_wwopts:
-
     .local pmc quote_concat
     quote_concat = new 'ResizablePMCArray'
 
-    unless wsstop goto word_plain
+    goto word_plain
   word_loop:
-    pos = find_not_cclass .CCLASS_WHITESPACE, target, pos, lastpos
-    if pos > lastpos goto fail
-    $S0 = substr target, pos, stoplen
+    $S0 = substr target, pos, 1
     if $S0 == stop goto word_succeed
     if pos >= lastpos goto fail
-    unless optww goto word_plain
-  word_shell:
-    $S0 = substr target, pos, 1
-    if $S0 == '"' goto word_shell_double
-    if $S0 != "'" goto word_plain
-  word_shell_single:
-    inc pos
-    mob.'to'(pos)
-    $P0 = mob.'quote_concat'(wwsingleopts)
-    unless $P0 goto fail
-    push quote_concat, $P0
-    pos = $P0.'to'()
-    inc pos
-    goto word_loop
-  word_shell_double:
-    inc pos
-    mob.'to'(pos)
-    $P0 = mob.'quote_concat'(wwdoubleopts)
-    unless $P0 goto fail
-    push quote_concat, $P0
-    pos = $P0.'to'()
-    inc pos
-    goto word_loop
+    goto word_plain
+
   word_plain:
     mob.'to'(pos)
     $P0 = mob.'quote_concat'(options)
@@ -183,7 +139,7 @@
     mob[key] = quote_concat
 
   succeed:
-    pos += stoplen
+    pos += 1
     mob.'to'(pos)
     if null action goto succeed_done
     $I0 = can action, 'quote_expression'
@@ -208,12 +164,10 @@
 
     ##  determine pos, lastpos
     .local string stop
-    .local int stoplen, lastpos, wsstop
+    .local int lastpos
     stop = options['stop']
-    wsstop = options['wsstop']
-    stoplen = length stop
     lastpos = length target
-    lastpos -= stoplen
+    lastpos -= 1
 
     .local string escapes
     escapes = options['escapes']
@@ -228,11 +182,9 @@
     push quote_term, $P0
     pos = $P0.'to'()
     if pos > lastpos goto fail
-    $S0 = substr target, pos, stoplen
+    $S0 = substr target, pos, 1
     if $S0 == stop goto succeed
-    unless wsstop goto term_loop
-    $I0 = is_cclass .CCLASS_WHITESPACE, target, pos
-    unless $I0 goto term_loop
+    goto term_loop
   succeed:
     ##  save the array of captured terms
     mob['quote_term'] = quote_term
@@ -272,6 +224,7 @@
     if leadchar == '{' goto term_closure
   term_literal:
     mob.'to'(pos)
+    #_dumper(pos)
     $P0 = mob.'quote_literal'(options)
     unless $P0 goto fail
     pos = $P0.'to'()
@@ -291,10 +244,10 @@
 
   term_closure:
     mob.'to'(pos)
-    $P0 = mob.'circumfix'('action'=>action)
+    $P0 = mob.'curly_interpolation'('action'=>action)
     unless $P0 goto term_literal
     pos = $P0.'to'()
-    key = 'circumfix'
+    key = 'curly_interpolation'
     mob[key] = $P0
     goto succeed
 
@@ -316,19 +269,19 @@
 .sub 'quote_literal' :method
     .param pmc options
 
+    #_dumper( options )
+
     .local pmc mob
     .local int pos
     .local string target
     (mob, pos, target) = self.'new'(self)
 
     .local string stop, stop1
-    .local int stoplen, lastpos, wsstop
+    .local int lastpos
     stop = options['stop']
-    wsstop = options['wsstop']
     stop1 = substr stop, 0, 1
-    stoplen = length stop
     lastpos = length target
-    lastpos -= stoplen
+    lastpos -= 1
 
     .local string escapes
     .local int optq, optb
@@ -338,14 +291,15 @@
 
     .local string literal
     literal = ''
-
   scan_loop:
     if pos > lastpos goto fail
-    $S0 = substr target, pos, stoplen
+    $S0 = substr target, pos, 1
+    #_dumper( target, pos, $S0 )
+    #_dumper( pos )
+    #_dumper( $S0 )
+    #_dumper( stop )
     if $S0 == stop goto succeed
-    unless wsstop goto scan_loop_1
-    $I0 = is_cclass .CCLASS_WHITESPACE, target, pos
-    if $I0 goto succeed
+    goto scan_loop_1
   scan_loop_1:
     if pos >= lastpos goto fail
 
@@ -353,7 +307,9 @@
     .local string litchar
     litchar = substr target, pos, 1
     ##  if we've reached an escape char, we're done
+    if litchar == '{' goto add_litchar
     $I0 = index escapes, litchar
+    #_dumper( escapes )
     if $I0 >= 0 goto succeed
     ##  if this isn't an interpolation, add the char
     unless optq goto add_litchar
