@@ -416,7 +416,11 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
 
     gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
-    gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->constant_pmc_pool);
+
+    /* I don't know if I should be sweeping the constant PMC pool, because
+       I'm not certain that they are ever properly marked. I'm going to not
+       do that here, but I will include these in my finalization routine. */
+    /* gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->constant_pmc_pool); */
 }
 
 
