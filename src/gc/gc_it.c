@@ -329,7 +329,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_SWEEP_BUFFERS:
             if(Parrot_is_blocked_GC_sweep(interp))
                 break;
-            /*gc_it_sweep_sized_pools(interp);*/
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
@@ -444,18 +444,8 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
     /* PMCs need to be handled differently from other types of pools.  Set
        up lists of our pools here, and handle different types differently. */
 
-    Small_Object_Pool * const pmc_pools[] = {
-        arena_base->pmc_pool,
-        arena_base->constant_pmc_pool
-    };
-
-#    if GC_IT_DEBUG
-    fprintf(stderr, "Finalizing PMC pools\n");
-#    endif
-
-    for (i = 0; i < 2; i++) {
-        gc_it_finalize_PMC_arenas(interp, gc_priv_data, pmc_pools[i]);
-    }
+    gc_it_finalize_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
+    gc_it_finalize_PMC_arenas(interp, gc_priv_data, arena_base->constant_pmc_pool);
 }
 
 
@@ -485,8 +475,8 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
     /* walking backwards helps avoid incorrect order-of-destruction bugs */
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         INTVAL index;
-
-        for (index = arena->total_objects - 1; index >= 0; index--) {
+        Gc_it_hdr * hdr = (Gc_it_hdr *)arena->start_objects;
+        for (index = arena->total_objects; index > 0; index--) {
             Gc_it_hdr * const hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
             PObj * const obj = IT_HDR_to_PObj(hdr);
 
@@ -565,14 +555,6 @@ call C<Parrot_dod_free_pmc> on it. This should, in theory, kill the PMC and
 clean up all its dependencies. After the PMC is dead, we add it to the pool's
 free list.
 
-This function uses Duff's device magic for partial loop unrolling. We'll start
-at the end of the card, and mark forward. Duff's device is not necessarily the
-fastest way to unroll most loops, and it may interfere with branch prediction.
-However, I think it makes the most sense here, considering the layout of our
-flags.
-
-See L<http://en.wikipedia.org/wiki/Duff%27s_device> for more details.
-
 =cut
 
 */
@@ -591,62 +573,21 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #    endif
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        Gc_it_card * const card_start = arena->cards;
-        Gc_it_card * card = (card_start + arena->card_info._d.card_size - 1);
-        UINTVAL i         = arena->card_info._d.last_index;
-        Gc_it_hdr *hdr    = (Gc_it_hdr *)arena->start_objects;
+        INTVAL i         = arena->card_info._d.last_index;
+        Gc_it_hdr *hdr   = (Gc_it_hdr *)arena->start_objects;
         UINTVAL mark;
 
-        PARROT_ASSERT(card);
-
-        switch (arena->card_info._d.last_index % 4) {
-            case 3:
-                do {
-                    mark = gc_it_get_card_mark(hdr);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 2:
-                    mark = gc_it_get_card_mark(hdr);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 1:
-                    mark = gc_it_get_card_mark(hdr);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 0:
-            default:
-                    mark = gc_it_get_card_mark(hdr);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-                } while (card-- > arena->cards);
+        while(i >= 0) {
+            mark = gc_it_get_card_mark(hdr);
+            if (mark == GC_IT_CARD_WHITE) {
+                GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
+            }
+            else if (mark == GC_IT_CARD_BLACK)
+                gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+            hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
+            i--;
         }
     }
 }
@@ -1250,7 +1191,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
        object in the pool has the highest card number and therefore
        corresponds to the last flag on the last card. The very last object
        in contrast corresponds to the very first flag on the first card. */
-    for (i = num_objs - 1; i >= 0; i--) {
+    for (i = 0; i < num_objs; i++) {
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
