@@ -27,6 +27,20 @@ our $cache = q{.parrot_current_rev};
 
 our $current = _get_revision();
 
+sub update {
+    my $prev = _get_revision();
+    my $revision = _analyze_sandbox();
+    if (defined ($prev) && ($revision ne $prev)) {
+        $revision = 'unknown' unless defined $revision;
+        eval {
+            open my $FH, ">", $cache;
+            print $FH "$revision\n";
+            close $FH;
+            $current = $revision;
+        };
+    }
+}
+
 sub _get_revision {
     my $revision;
     if (-f $cache) {
