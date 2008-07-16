@@ -578,6 +578,10 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         UINTVAL    mark;
 
         while (i >= 0) {
+            if (hdr->next != NULL) {
+                i--;
+                continue;
+            }
             mark = gc_it_get_card_mark(hdr);
 
             if (mark == GC_IT_CARD_WHITE) {

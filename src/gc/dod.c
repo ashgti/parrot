@@ -248,6 +248,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
         GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
+    gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
     /* This is a bad hack. mark_special is a static function, which means I
        can't call it from gc_it_mark_children_grey. So, I end up marking
        some children of PMCs here, instead of in the proper place. I want
