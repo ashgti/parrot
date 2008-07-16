@@ -390,8 +390,8 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     unsigned int i = 0;
 
     if (trace_stack) {
-        //trace_system_areas(interp);
-        if(trace_stack == 2)
+        /* trace_system_areas(interp); */
+        if (trace_stack == 2)
             return 0;
     }
 

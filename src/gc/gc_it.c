@@ -270,14 +270,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_1;
 
         case GC_IT_MARK_ROOTS:
-            if(Parrot_is_blocked_GC_mark(interp))
+            if (Parrot_is_blocked_GC_mark(interp))
                 break;
             Parrot_dod_trace_root(interp, 1);
             gc_priv_data->state = GC_IT_RESUME_MARK;
             GC_IT_BREAK_AFTER_2;
 
         case GC_IT_RESUME_MARK:
-            if(Parrot_is_blocked_GC_mark(interp))
+            if (Parrot_is_blocked_GC_mark(interp))
                 break;
 #  if GC_IT_INCREMENT_MODE
             /* scan a single tree. Check to ensure we've hit a minimum number
@@ -309,14 +309,14 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_4;
 
         case GC_IT_SWEEP_PMCS:
-            if(Parrot_is_blocked_GC_sweep(interp))
+            if (Parrot_is_blocked_GC_sweep(interp))
                 break;
             gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
         case GC_IT_SWEEP_HEADERS:
-            if(Parrot_is_blocked_GC_sweep(interp))
+            if (Parrot_is_blocked_GC_sweep(interp))
                 break;
             /* These pools are, if I am not mistaken, both actually located
                in the sized header pools. That means if we sweep this and
@@ -327,7 +327,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             GC_IT_BREAK_AFTER_6;
 
         case GC_IT_SWEEP_BUFFERS:
-            if(Parrot_is_blocked_GC_sweep(interp))
+            if (Parrot_is_blocked_GC_sweep(interp))
                 break;
             gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
@@ -573,12 +573,13 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #    endif
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        INTVAL i         = arena->card_info._d.last_index;
+        INTVAL     i     = arena->card_info._d.last_index;
         Gc_it_hdr *hdr   = (Gc_it_hdr *)arena->start_objects;
-        UINTVAL mark;
+        UINTVAL    mark;
 
-        while(i >= 0) {
+        while (i >= 0) {
             mark = gc_it_get_card_mark(hdr);
+
             if (mark == GC_IT_CARD_WHITE) {
                 GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
@@ -586,6 +587,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             }
             else if (mark == GC_IT_CARD_BLACK)
                 gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+
             hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
             i--;
         }
@@ -928,11 +930,13 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     pool->get_free_object = gc_it_get_free_object;
     pool->alloc_objects   = gc_it_alloc_objects;
     pool->more_objects    = gc_it_more_objects;
-    pool->free_list = NULL;
+    pool->free_list       = NULL;
+
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
+
 #  if GC_IT_DEBUG
-    fprintf(stderr, "Initialized pool (%p). Item size: %d\n", pool, 
+    fprintf(stderr, "Initialized pool (%p). Item size: %d\n", pool,
         pool->object_size);
 #  endif
 }
@@ -965,10 +969,12 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
        it's in the queue, we can't free it or we lose all the free objects
        in the queue after this one. So, in either case, we short circuit
        here and don't free the object manually. */
-    if(hdr->next != NULL)
+    if (hdr->next)
         return;
-    hdr->next = (Gc_it_hdr *)pool->free_list;
+
+    hdr->next       = (Gc_it_hdr *)pool->free_list;
     pool->free_list = hdr;
+
     gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
 }
 
