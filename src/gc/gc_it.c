@@ -63,6 +63,11 @@ static void gc_it_enqueue_next_root(PARROT_INTERP)
 static void gc_it_finalize_all_pmc(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+static void gc_it_finalize_arena(PARROT_INTERP,
+    Small_Object_Pool * pool,
+    Small_Object_Arena *arena)
+        __attribute__nonnull__(1);
+
 static void gc_it_finalize_PMC_arenas(PARROT_INTERP,
     ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
@@ -243,7 +248,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* Go through the PMC arena and finalize all PMCs that are still
            alive at this point. */
-        /* gc_it_finalize_all_pmc(interp); */
+        gc_it_finalize_all_pmc(interp);
         gc_it_post_sweep_cleanup(interp);
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
@@ -474,24 +479,43 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 
     /* walking backwards helps avoid incorrect order-of-destruction bugs */
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        INTVAL index;
-        Gc_it_hdr * hdr = (Gc_it_hdr *)arena->start_objects;
-        for (index = arena->total_objects; index > 0; index--) {
-            Gc_it_hdr * const hdr = GC_IT_HDR_FROM_INDEX(pool, arena, index);
-            PObj * const obj = IT_HDR_to_PObj(hdr);
-
-#    if GC_IT_DEBUG
-            fprintf(stderr, "Finalizing PMC (%p)\n", hdr);
-#    endif
-
-            /* We call Parrot_dod_free_pmc here, when it might be easier
-               to just call the finalization methods and not free them. */
-            if (gc_it_get_card_mark(hdr) != GC_IT_CARD_FREE)
-                Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-        }
+        gc_it_finalize_arena(interp, pool, arena);
     }
 }
 
+/*
+
+=item C<static void gc_it_finalize_arena>
+
+Finalizes one arena, assume the objects in it are PMCs.
+Loops through the arena and adds all objects in it to a linked list in
+reverse order. Then, traverse through this linked list and finalize any
+items that are still alive.
+
+=cut
+
+*/
+
+static void
+gc_it_finalize_arena(PARROT_INTERP, Small_Object_Pool * pool, Small_Object_Arena *arena)
+{
+    UINTVAL i = arena->total_objects + 1;
+    Gc_it_hdr * hdr = (Gc_it_hdr *)arena->start_objects;
+    Gc_it_hdr * list = NULL;
+    while (i--) {
+        PObj * const obj = IT_HDR_to_PObj(hdr);
+        hdr->next = list;
+        list = hdr;
+        hdr = ((Gc_it_hdr *)(char *)hdr + pool->object_size);
+    }
+    while((hdr = list) != NULL) {
+        list = hdr->next;
+        /* We call Parrot_dod_free_pmc here, when it might be easier
+           to just call the finalization methods and not free them. */
+        if (gc_it_get_card_mark(hdr) != GC_IT_CARD_FREE)
+            Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+    }
+}
 
 /*
 
@@ -1186,7 +1210,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 {
     Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
     const size_t     num_objs = new_arena->total_objects;
-    register INTVAL i;
+    register size_t i;
 
 /*
 #  if GC_IT_DEBUG
@@ -1212,7 +1236,7 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->parent_arena   = new_arena;
         p->data.card = i / 4;
         p->data.flag = i % 4;
-        PARROT_ASSERT(((p->data.card * 4) + p->data.flag) == i);
+        PARROT_ASSERT((size_t)((p->data.card * 4) + p->data.flag) == i);
         p->data.agg = 0;
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
