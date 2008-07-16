@@ -68,11 +68,14 @@ sub _analyze_sandbox {
     my $revision = 0;
     # code taken from pugs/util/version_h.pl rev 14410
     my $nul = File::Spec->devnull;
-    if ( my @svn_info = qx/svn --xml info 2>$nul/ and $? == 0 ) {
-        if ( my ($line) = grep /^\s*revision=/, @svn_info ) {
+    my $oldLANG = $ENV{LANG};
+    $ENV{LANG} = 'C';
+    if ( my @svn_info = qx/svn info 2>$nul/ and $? == 0 ) {
+        if ( my ($line) = grep /^Revision:/, @svn_info ) {
             ($revision) = $line =~ /(\d+)/;
         }
     }
+    $ENV{LANG} = $oldLANG;
     return $revision;
 }
 
