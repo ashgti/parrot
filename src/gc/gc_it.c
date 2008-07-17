@@ -1030,15 +1030,8 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
        this hack. */
 
     /* If there are no objects, allocate a new arena */
-    if (!pool->free_list) {
-/*
-#  if GC_IT_DEBUG
-        fprintf(stderr, "free list empty, allocating more objects for pool (%p)\n",
-                pool);
-#  endif
-*/
+    if (!pool->free_list)
         (pool->more_objects)(interp, pool);
-    }
     PARROT_ASSERT(pool->free_list);
     /* pull the first header off the free list */
     hdr = (Gc_it_hdr *)pool->free_list;

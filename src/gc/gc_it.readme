@@ -1,33 +1,29 @@
 == Things which are known to work (or not segfault) ==
 
 # Allocators seem to work correctly.
-# pobject_lives and object_lives appear to work correctly
+# Finalizers seem to work nicely
+# pobject_lives and object_lives appear to work correctly (they do now)
 # Parrot_dod_trace_roots (minus trace_system_areas, described below)
 # batch-mode enqueue roots and trace don't segfault
 
 == Things which are known not to work ==
 
 # stack compact code causes pointer strangeness with STRING->strstart. I have
-  commented out the code in src/gc/gc_it.readme for now.
+  commented out the code in src/gc/resources.c for now.
 # src/cpu_dep.c:trace_system_areas is causing segfaults (can't imagine why).
   I commented out the call to it in src/gc/dod.c:Parrot_dod_trace_root.
 # Allocating lists causes problems in src/list.c:list_new. When I allocate
-  directly from the system (not from the GC) it doesnt cause problems.
+  directly from the system (not from the GC) it doesnt cause problems. (this might be fixed)
 # Sweep code causes problems. Sweep_pmc_pools causes more problems more often,
   sweep_sized_pools causes the fewest problems. Somehow, these are all allowing
   objects to be added to the free list which are bogus (like, adding pointers
-  at 0xA8 and 0x08 to be added to the free list).
+  at 0xA8 and 0x08 to be added to the free list). (might be fixed)
 # Build was failing inexplicably in compilers/JSON. I've modified the
   makefile to remove offending items. This is a hack. The file
   compilers/json/JSON/pge2pir.pir is being generated as an empty file (which
   probably shouldn't happen)
-# Added bad hack to gc_it_get_free_object to avoid any obviously-bad pointers
-  on the free list. I do not currently know how bad pointers are ending up on
-  the free list in the first place. I need to find the source of these ASAP.
-# gc_it_sweep_header_pools does not work, cannot work, and must be removed.
-  the string and constant string header pools are created in the sized pools,
-  so running that and then running gc_it_sweep_sized_pools causes all
-  alive items in the string pools to be freed anyway.
+# Strings are causing problems. s->encoding and s->charset fields are showing
+  up NULL and causing problems in assertions.
 
 == Tasks to be done ==
 
@@ -40,3 +36,4 @@
 # I need to find a way to reconcile the various PObj_*_TEST macros from
   include/parrot/pobj.h with my notions of "free list", "alive", "dead", etc.
   Those macros may need to be redirected, unfortunately.
+
