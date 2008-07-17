@@ -151,11 +151,11 @@ mark_special(PARROT_INTERP, ARGIN(PMC *obj))
         }
         else {
             /* put it on the end of the list */
-            PMC_next_for_GC(arena_base->dod_mark_ptr) = obj;
+            /* PMC_next_for_GC(arena_base->dod_mark_ptr) = obj; */
 
             /* Explicitly make the tail of the linked list be
              * self-referential */
-            arena_base->dod_mark_ptr = PMC_next_for_GC(obj) = obj;
+            /* arena_base->dod_mark_ptr = PMC_next_for_GC(obj) = obj; */
         }
     }
     else if (PObj_custom_mark_TEST(obj)) {
@@ -204,7 +204,8 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     Gc_it_hdr * hdr = PObj_to_IT_HDR(obj);
     Gc_it_data * gc_priv_data;
     INTVAL card_mark;
-
+    if(!obj)
+        return;
     PARROT_ASSERT(hdr);
     if (!hdr->data.agg) {
         /* If the data is not an aggregate, mark it as being a simple buffer
@@ -230,7 +231,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
 
-    if (card_mark == GC_IT_CARD_BLACK || hdr->next != NULL)
+    if (hdr->next != NULL)
         return;
 
     /* black items should have been caught. Nothing should ever be "UNUSED"
@@ -248,7 +249,6 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         GC_IT_ADD_TO_ROOT_QUEUE(gc_priv_data, hdr);
     else
         GC_IT_ADD_TO_QUEUE(gc_priv_data, hdr);
-    gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
     /* This is a bad hack. mark_special is a static function, which means I
        can't call it from gc_it_mark_children_grey. So, I end up marking
        some children of PMCs here, instead of in the proper place. I want
