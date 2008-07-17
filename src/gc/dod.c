@@ -204,8 +204,7 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
     Gc_it_hdr * hdr = PObj_to_IT_HDR(obj);
     Gc_it_data * gc_priv_data;
     INTVAL card_mark;
-    if(!obj)
-        return;
+    PARROT_ASSERT(obj);
     PARROT_ASSERT(hdr);
     if (!hdr->data.agg) {
         /* If the data is not an aggregate, mark it as being a simple buffer
