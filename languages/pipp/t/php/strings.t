@@ -18,7 +18,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../lib";
 
 # core Perl modules
-use Test::More     tests => 14;
+use Test::More     tests => 19;
 
 # Parrot modules
 use Parrot::Test;
@@ -251,3 +251,54 @@ echo "a carriage return: \r<--", "\n";
 END_CODE
 a carriage return: \r<--
 END_EXPECTED
+
+language_output_is( 'Pipp', <<'END_CODE', <<"END_EXPECTED", 'hex escapes' );
+<?php
+
+echo "ABC \x41\x42\x43", "\n";
+
+?>
+END_CODE
+ABC ABC
+END_EXPECTED
+
+language_output_is( 'Pipp', <<'END_CODE', <<"END_EXPECTED", 'octal escapes' );
+<?php
+
+echo "ABC \101\102\103", "\n";
+
+?>
+END_CODE
+ABC ABC
+END_EXPECTED
+
+language_output_is( 'Pipp', <<'END_CODE', <<"END_EXPECTED", 'octals ge \400 escapes', todo => 'not implemented yet' );
+<?php
+
+echo "ABC \501\502\503", "\n";
+
+?>
+END_CODE
+ABC ABC
+END_EXPECTED
+
+language_output_is( 'Pipp', <<'END_CODE', <<"END_EXPECTED", 'hex escapes followed by a digit', todo => 'not implemented yet' );
+<?php
+
+echo "A1B2C3 \x411\x422\x433", "\n";
+
+?>
+END_CODE
+A1B2C3 A1B2C3
+END_EXPECTED
+
+language_output_is( 'Pipp', <<'END_CODE', <<"END_EXPECTED", 'octal escapes followed by a digit', todo => 'not implemented yet' );
+<?php
+
+echo "A1B2C3 \1011\1022\1033", "\n";
+
+?>
+END_CODE
+A1B2C3 A1B2C3
+END_EXPECTED
+
