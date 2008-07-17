@@ -320,6 +320,7 @@ PARROT_API
 void
 object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
 {
+    PARROT_ASSERT(obj);
 #if PARROT_GC_IT
     gc_it_set_card_mark(PObj_to_IT_HDR(obj), GC_IT_CARD_BLACK);
 #endif

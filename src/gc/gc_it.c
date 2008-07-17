@@ -867,16 +867,15 @@ gc_it_mark_PObj_children_grey(PARROT_INTERP, ARGMOD(Gc_it_hdr *hdr))
 
     if (PObj_is_PMC_TEST(obj)) {
         if (pmc->pmc_ext) {
+            const PMC * next_for_gc = PMC_next_for_GC(pmc);
             object_lives(interp, (PObj *)(pmc->pmc_ext));
             if (PMC_metadata(pmc))
                 pobject_lives(interp, (PObj *)PMC_metadata(pmc));
-            if (PMC_next_for_GC(pmc) != pmc) {
+            if (next_for_gc != pmc && next_for_gc != NULL)
                 pobject_lives(interp, (PObj *)PMC_next_for_GC(pmc));
-                PMC_next_for_GC(pmc) = pmc;
-            }
         }
 
-        if (pmc->real_self != pmc)
+        if (pmc->real_self != pmc && pmc->real_self != NULL)
             pobject_lives(interp, (PObj *)(pmc->real_self));
     }
     else if (PObj_is_string_TEST(obj)) {
