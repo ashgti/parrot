@@ -812,7 +812,7 @@ Parrot_dod_free_pmc(PARROT_INTERP, SHIM(Small_Object_Pool *pool),
 {
     PMC    * const pmc        = (PMC *)p;
     Arenas * const arena_base = interp->arena_base;
-    PARROT_ASSERT(p != interp->HLL_namespace); /* diagnostic -AW */
+
     /* TODO collect objects with finalizers */
     if (PObj_needs_early_DOD_TEST(p))
         --arena_base->num_early_DOD_PMCs;

@@ -248,7 +248,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 
         /* Go through the PMC arena and finalize all PMCs that are still
            alive at this point. */
-        /* gc_it_finalize_all_pmc(interp); */
+        gc_it_finalize_all_pmc(interp);
         gc_it_post_sweep_cleanup(interp);
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
@@ -470,10 +470,6 @@ gc_it_finalize_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 {
     Small_Object_Arena *arena;
 
-#    if GC_IT_DEBUG
-    fprintf(stderr, "Finalizing PMCs %s (%p)\n", pool->name, pool);
-#    endif
-
     /* walking backwards helps avoid incorrect order-of-destruction bugs */
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
         gc_it_finalize_arena(interp, pool, arena);
@@ -496,16 +492,18 @@ items that are still alive.
 static void
 gc_it_finalize_arena(PARROT_INTERP, Small_Object_Pool * pool, Small_Object_Arena *arena)
 {
-    UINTVAL i = arena->total_objects + 1;
+    UINTVAL i;
+    const UINTVAL num_objs = arena->total_objects;
     Gc_it_hdr * hdr = (Gc_it_hdr *)arena->start_objects;
     Gc_it_hdr * list = NULL;
-    while (i--) {
+
+    for (i = 0; i < num_objs; i++) {
         PObj * const obj = IT_HDR_to_PObj(hdr);
         hdr->next = list;
         list = hdr;
-        hdr = ((Gc_it_hdr *)(char *)hdr + pool->object_size);
+        hdr = ((Gc_it_hdr *)((char *)hdr + pool->object_size));
     }
-    while((hdr = list) != NULL) {
+    while ((hdr = list) != NULL) {
         list = hdr->next;
         /* We call Parrot_dod_free_pmc here, when it might be easier
            to just call the finalization methods and not free them. */
