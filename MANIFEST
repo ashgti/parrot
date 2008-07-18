@@ -3867,10 +3867,6 @@ t/tools/ops2pmutils/10-print_module.t                       []
 t/tools/ops2pmutils/11-print_h.t                            []
 t/tools/parrot_debugger.t                                   []
 t/tools/pbc_merge.t                                         []
-<<<<<<< .working
-t/tools/parrot_debugger.t                                   []
-=======
->>>>>>> .merge-right.r29528
 t/tools/pmc2c.t                                             []
 t/tools/pmc2cutils/00-qualify.t                             []
 t/tools/pmc2cutils/01-pmc2cutils.t                          []

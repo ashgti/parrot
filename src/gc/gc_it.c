@@ -313,7 +313,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_SWEEP_PMCS:
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
-            gc_it_sweep_pmc_pools(interp);
+            //gc_it_sweep_pmc_pools(interp);
             gc_priv_data->state = GC_IT_SWEEP_HEADERS;
             GC_IT_BREAK_AFTER_5;
 
@@ -331,7 +331,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_SWEEP_BUFFERS:
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
-            gc_it_sweep_sized_pools(interp);
+            //gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_7;
 
