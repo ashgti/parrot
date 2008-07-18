@@ -237,11 +237,12 @@ typedef struct Gc_it_data {
     UINTVAL item_count;       /* number of items scanned in current run */
     UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
-    Gc_it_state state;            /* status of the current run */
-    Gc_it_config config;           /* config data to tell how the GC operates */
-    UINTVAL num_threads;    /* number of currently active threads */
-    Gc_it_hdr *root_queue;   /* queue for temporary storage of root items */
-    Gc_it_hdr *queue;      /* list of grey items, to mark */
+    Gc_it_state state;        /* status of the current run */
+    Gc_it_config config;      /* config data to tell how the GC operates */
+    UINTVAL num_threads;      /* number of currently active threads */
+    Gc_it_hdr *root_queue;    /* queue for temporary storage of root items */
+    Gc_it_hdr *queue;         /* list of grey items, to mark */
+    Gc_it_hdr *marked;        /* List of items already marked this phase. */
 } Gc_it_data;
 
 #endif /* PARROT_GC_IT */

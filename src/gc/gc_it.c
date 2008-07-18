@@ -386,7 +386,12 @@ gc_it_trace_normal(PARROT_INTERP)
         gc_it_mark_PObj_children_grey(interp, hdr);
         gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
         gc_priv_data->queue = hdr->next;
-        hdr->next = NULL;
+
+        /* Items that have been marked are not left to just float like they
+           were. They are instead put into a "marked" list to keep them from
+           being marked twice in the same mark phase. */
+        hdr->next = gc_priv_data->marked;
+        gc_priv_data->marked = hdr->next;
 
         /* total items since beginning of scan */
         gc_priv_data->total_count++;
@@ -418,11 +423,6 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
 
     gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
-
-    /* I don't know if I should be sweeping the constant PMC pool, because
-       I'm not certain that they are ever properly marked. I'm going to not
-       do that here, but I will include these in my finalization routine. */
-    /* gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->constant_pmc_pool); */
 }
 
 
@@ -597,10 +597,6 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         UINTVAL    mark;
 
         while (i >= 0) {
-            if (hdr->next != NULL) {
-                i--;
-                continue;
-            }
             mark = gc_it_get_card_mark(hdr);
 
             if (mark == GC_IT_CARD_WHITE) {
@@ -608,8 +604,11 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                 gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
             }
-            else if (mark == GC_IT_CARD_BLACK)
+            else if (mark == GC_IT_CARD_BLACK) {
                 gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                /* Make sure it's not on the marked list anymore */
+                hdr->next = NULL;
+            }
 
             hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
             i--;

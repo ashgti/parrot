@@ -202,24 +202,11 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         objects. */
 
     Gc_it_hdr * hdr = PObj_to_IT_HDR(obj);
-    Gc_it_data * gc_priv_data;
+    Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
     INTVAL card_mark;
     PARROT_ASSERT(obj);
     PARROT_ASSERT(hdr);
-    if (!hdr->data.agg) {
-        /* If the data is not an aggregate, mark it as being a simple buffer
-           and do not treat it like a PObj. */
-        object_lives(interp, obj);
-        return;
-    }
-    gc_priv_data =(Gc_it_data *)interp->arena_base->gc_private;
-    card_mark = gc_it_get_card_mark(hdr);
-/*
-#  if GC_IT_DEBUG
-    fprintf(stderr, "PObj lives: Object (%p), pool (%p), cardmark %d\n",
-            hdr, hdr->parent_arena->parent_pool, (int)card_mark);
-#  endif
-*/
+
     /* Short-circuit. We don't add the item to the queue in two situations:
        1) The item is already marked black
        2) The header's ->next is pointing to something. There are only
@@ -229,15 +216,23 @@ pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
           list is about to be marked, that's a big problem and we might
           want some kind of diagnostic (if it happens, which I hope it
           will not) */
-
     if (hdr->next != NULL)
         return;
+    if (!hdr->data.agg) {
+        /* If the data is not an aggregate, mark it as being a simple buffer
+           and do not treat it like a PObj. */
+        object_lives(interp, obj);
+        return;
+    }
+
 
     /* black items should have been caught. Nothing should ever be "UNUSED"
        at the moment. "FREE" items should not be here either. Free items
        should have failed the above test (hdr->next != NULL) since they
-       are on the free list. */
-
+       are on the free list. When the algorithm tightens up a little bit,
+       we can probably skip this part because we know the flag is never
+       either of these two colors. */
+    card_mark = gc_it_get_card_mark(hdr);
     PARROT_ASSERT(card_mark != GC_IT_CARD_UNUSED);
     PARROT_ASSERT(card_mark != GC_IT_CARD_FREE);
 
