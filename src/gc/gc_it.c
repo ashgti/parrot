@@ -53,6 +53,10 @@ static void gc_it_add_arena_to_free_list(PARROT_INTERP,
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*new_arena);
 
+static void gc_it_clear_gc_lists(ARGMOD(Gc_it_data * gc_priv_data))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* gc_priv_data);
+
 PARROT_INLINE
 static void gc_it_enqueue_all_roots(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -64,9 +68,13 @@ static void gc_it_finalize_all_pmc(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void gc_it_finalize_arena(PARROT_INTERP,
-    Small_Object_Pool * pool,
-    Small_Object_Arena *arena)
-        __attribute__nonnull__(1);
+    ARGMOD(Small_Object_Pool * pool),
+    ARGMOD(Small_Object_Arena *arena))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(* pool)
+        FUNC_MODIFIES(*arena);
 
 static void gc_it_finalize_PMC_arenas(PARROT_INTERP,
     ARGMOD(Gc_it_data *gc_priv_data),
@@ -114,9 +122,6 @@ static void gc_it_sweep_header_arenas(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*gc_priv_data)
         FUNC_MODIFIES(*pool);
-
-static void gc_it_sweep_header_pools(PARROT_INTERP)
-        __attribute__nonnull__(1);
 
 static void gc_it_sweep_PMC_arenas(PARROT_INTERP,
     ARGMOD(Gc_it_data *gc_priv_data),
@@ -249,7 +254,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         /* Go through the PMC arena and finalize all PMCs that are still
            alive at this point. */
         gc_it_finalize_all_pmc(interp);
-        gc_it_post_sweep_cleanup(interp);
         gc_priv_data->state = GC_IT_FINAL_CLEANUP;
         return;
     }
@@ -314,26 +318,15 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
             //gc_it_sweep_pmc_pools(interp);
-            gc_priv_data->state = GC_IT_SWEEP_HEADERS;
-            GC_IT_BREAK_AFTER_5;
-
-        case GC_IT_SWEEP_HEADERS:
-            if (Parrot_is_blocked_GC_sweep(interp))
-                break;
-            /* These pools are, if I am not mistaken, both actually located
-               in the sized header pools. That means if we sweep this and
-               then call gc_it_sweep_sized_pools, we are going to
-               double-sweep these pools and free all the alive objects. */
-            /* gc_it_sweep_header_pools(interp); */
             gc_priv_data->state = GC_IT_SWEEP_BUFFERS;
-            GC_IT_BREAK_AFTER_6;
+            GC_IT_BREAK_AFTER_5;
 
         case GC_IT_SWEEP_BUFFERS:
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
             //gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
-            GC_IT_BREAK_AFTER_7;
+            GC_IT_BREAK_AFTER_6;
 
         case GC_IT_FINAL_CLEANUP:
             gc_it_post_sweep_cleanup(interp); /* if any. */
@@ -342,7 +335,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     }
     return;
 }
-
 
 /*
 
@@ -490,7 +482,8 @@ items that are still alive.
 */
 
 static void
-gc_it_finalize_arena(PARROT_INTERP, Small_Object_Pool * pool, Small_Object_Arena *arena)
+gc_it_finalize_arena(PARROT_INTERP, ARGMOD(Small_Object_Pool * pool),
+    ARGMOD(Small_Object_Arena *arena))
 {
     UINTVAL i;
     const UINTVAL num_objs = arena->total_objects;
@@ -511,30 +504,6 @@ gc_it_finalize_arena(PARROT_INTERP, Small_Object_Pool * pool, Small_Object_Arena
             Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
     }
 }
-
-/*
-
-=item C<static void gc_it_sweep_header_pools>
-
-Sweeps through the header pools, freeing dead objects.
-
-=cut
-
-*/
-
-static void
-gc_it_sweep_header_pools(PARROT_INTERP)
-{
-    const Arenas * const arena_base   = interp->arena_base;
-    Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
-    Small_Object_Pool * pool;
-
-    /* We only need to trace here pools that are not PMC or PMC_const pools
-       and those which are not in the sized header pools list. I dont think
-       there are any such pools, so for now we do nothing here. */
-
-}
-
 
 /*
 
@@ -597,6 +566,13 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         UINTVAL    mark;
 
         while (i >= 0) {
+            /* this is a heavily stripped-down version of what it should be.
+               Eventually, this is all going to get more efficient:
+               1) going to re-unroll the loop like I have in the sized header
+                  sweep loop.
+               2) Going to handle the cards directly, instead of making all
+                  these function calls.
+            */
             mark = gc_it_get_card_mark(hdr);
 
             if (mark == GC_IT_CARD_WHITE) {
@@ -1337,7 +1313,6 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     const Gc_it_state        state        = gc_priv_data->state;
 
     if (state == GC_IT_SWEEP_PMCS
-    ||  state == GC_IT_SWEEP_HEADERS
     ||  state == GC_IT_SWEEP_BUFFERS) {
         /* Do a complete sweep now, go through all sweep increments, look for
            dead objects, whatever. I'll make a function to do that. */
@@ -1353,16 +1328,26 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
 =item C<static void gc_it_post_sweep_cleanup>
 
-Cleans up the GC system after completing an entire mark and sweep.  Currently,
-no cleanup is needed, so this function does nothing.
+Cleans up the GC system after completing an entire mark and sweep.
 
 =cut
 
 */
 
 static void
-gc_it_post_sweep_cleanup(SHIM_INTERP)
+gc_it_post_sweep_cleanup(PARROT_INTERP)
 {
+    Gc_it_hdr * ptr;
+    Gc_it_data * const gc_priv_data = (Gc_it_hdr *)interp->arena_base->gc_private;
+
+    while((ptr = gc_priv_data->marked) != NULL) {
+        gc_priv_data->marked = ptr->next;
+        ptr->next = NULL;
+    }
+    PARROT_ASSERT(gc_priv_data->root_queue == NULL);
+    PARROT_ASSERT(gc_priv_data->queue == NULL);
+    PARROT_ASSERT(gc_priv_data->marked == NULL);
+
 #  if GC_IT_DEBUG
     fprintf(stderr, "Post-sweep cleanup. Sweep ended\n");
 #  endif

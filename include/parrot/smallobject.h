@@ -136,7 +136,6 @@ typedef struct _gc_gms_gen {
 #  define GC_IT_BREAK_AFTER_4
 #  define GC_IT_BREAK_AFTER_5
 #  define GC_IT_BREAK_AFTER_6
-#  define GC_IT_BREAK_AFTER_7
 
 /* Macros that are useful outside src/gc/gc_it.c */
 
@@ -218,7 +217,6 @@ typedef enum Gc_it_state {
     GC_IT_RESUME_MARK,   /* iterating over queue items, tree-at-a-time */
     GC_IT_END_MARK,      /* The mark is over, do cleanup, if any */
     GC_IT_SWEEP_PMCS,    /* sweep pmc pools */
-    GC_IT_SWEEP_HEADERS, /* sweep header pools */
     GC_IT_SWEEP_BUFFERS, /* sweep through all buffers, after everything else */
     GC_IT_FINAL_CLEANUP  /* do any necessary cleanup after the GC run is over */
 } Gc_it_state;
