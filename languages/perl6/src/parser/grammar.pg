@@ -353,7 +353,7 @@ rule trait {
 
 rule trait_auxiliary {
     | $<sym>=[is] <name><postcircumfix>?
-    | $<sym>=[does] <role_name>
+    | $<sym>=[does] <name>['['<EXPR>']']?
     | $<sym>=[will] <ident> <block>
 }
 
@@ -361,8 +361,6 @@ rule trait_verb {
     | $<sym>=[of|returns] <typename>
     | $<sym>=[handles] <EXPR>
 }
-
-token role_name { <name> [ <?before '['> <postcircumfix> ]? }
 
 token capterm {
     '\\(' <capture> ')'
@@ -549,7 +547,7 @@ token term {
 
 ##  XXX: cheat until we get term:pi, term:rand, term:undef, etc.
 token named_0ary {
-    [pi|rand|undef] >>
+    [pi|rand|undef|nothing] >>
 }
 
 rule package_declarator {
@@ -563,13 +561,13 @@ rule package_declarator {
 
 
 rule package_def {
-    <name> <trait>* {*}                          #= open
+    <name>? <trait>* {*}                         #= open
     <package_block> {*}                          #= close
 }
 
 
 rule role_def {
-    <role_name> <trait>* {*}                     #= open
+    <name>['['<signature>']']? <trait>* {*}      #= open
     <package_block> {*}                          #= close
 }
 
