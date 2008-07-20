@@ -131,17 +131,18 @@ typedef struct _gc_gms_gen {
    increments before completion and moving to the next state. */
 #  define GC_IT_BREAK_AFTER_0
 #  define GC_IT_BREAK_AFTER_1
-#  define GC_IT_BREAK_AFTER_2
-#  define GC_IT_BREAK_AFTER_3
+#  define GC_IT_BREAK_AFTER_2 break
+#  define GC_IT_BREAK_AFTER_3 break
 #  define GC_IT_BREAK_AFTER_4
-#  define GC_IT_BREAK_AFTER_5
-#  define GC_IT_BREAK_AFTER_6
+#  define GC_IT_BREAK_AFTER_5 break
+#  define GC_IT_BREAK_AFTER_6 break
 
 /* Macros that are useful outside src/gc/gc_it.c */
 
 #  define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
     (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
 
+#  define GC_IT_MAX_IN_ARENA 65535
 
 /*
  * GC_IT Header, a linked list.
