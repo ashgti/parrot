@@ -1342,7 +1342,7 @@ gc_it_post_sweep_cleanup(PARROT_INTERP)
     Gc_it_hdr * ptr;
     Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
 
-    while((ptr = gc_priv_data->marked) != NULL) {
+    while ((ptr = gc_priv_data->marked) != NULL) {
         gc_priv_data->marked = ptr->next;
         ptr->next = NULL;
     }
