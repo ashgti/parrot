@@ -305,7 +305,7 @@ typedef struct Small_Object_Pool {
 #  define ARENA_to_PObj(p) (p)
 #endif
 
-#define GC_NEXT_OBJECT_IN_POOL(ptr, size) (void*)((char*)ptr + size)
+#define GC_NEXT_OBJECT_IN_POOL(ptr, size) (void*)((char*)(ptr) + (size))
 
 
 /* HEADERIZER BEGIN: src/gc/smallobject.c */
