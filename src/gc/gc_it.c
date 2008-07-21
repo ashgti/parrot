@@ -306,7 +306,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
             /* in batch mode, enqueue all roots, and scan the entire pile */
             gc_it_enqueue_all_roots(interp);
             gc_it_trace(interp);
-#endif
+#  endif
             GC_IT_BREAK_AFTER_3;
 
         case GC_IT_END_MARK:
