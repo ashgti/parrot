@@ -138,7 +138,12 @@ Create a new object having the same class as the invocant.
     .local pmc cardinalmeta
     cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
     $P0 = cardinalmeta.get_parrotclass(self)
-    $P1 = new $P0
+    $P1 = $P0.'new'()
+    $P2 = $P1.'HOW'()
+    $I0 = $P2.can('initialize')
+    unless $I0, no_initialize
+    $P2 = $P1.'initialize'(args :flat, named_args :named :flat)
+  no_initialize:
 
     # If this proto object has a WHENCE auto-vivification, we should use
     # put any values it contains but that init_this does not into init_this.
