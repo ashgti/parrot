@@ -239,12 +239,12 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)(arena_base->gc_private);
-    const UINTVAL gc_trace = flags & (GC_trace_normal | GC_trace_stack_FLAG);
-    const UINTVAL gc_stack = flags & GC_trace_stack_FLAG;
-    const UINTVAL gc_lazy  = flags & GC_lazy_FLAG;
+    const UINTVAL gc_trace    = flags & (GC_trace_normal | GC_trace_stack_FLAG);
+    const UINTVAL gc_lazy     = flags & GC_lazy_FLAG;
     const UINTVAL gc_volatile = flags & GC_no_trace_volatile_roots;
-    const UINTVAL gc_finish = flags & GC_finish_FLAG;
-
+    const UINTVAL gc_stack    = (gc_lazy || gc_volatile) ? (0)
+                              : (flags & GC_trace_stack_FLAG);
+    const UINTVAL gc_finish   = flags & GC_finish_FLAG;
 
     if (gc_finish) {
 
