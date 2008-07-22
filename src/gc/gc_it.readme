@@ -12,6 +12,7 @@
   commented out the code in src/gc/resources.c for now.
 # src/cpu_dep.c:trace_system_areas is causing segfaults (can't imagine why).
   I commented out the call to it in src/gc/dod.c:Parrot_dod_trace_root.
+  (Actually, this is back in now and seems to be working well)
 # Allocating lists causes problems in src/list.c:list_new. When I allocate
   directly from the system (not from the GC) it doesnt cause problems. (this might be fixed)
 # Sweep code causes problems. Sweep_pmc_pools causes more problems more often,

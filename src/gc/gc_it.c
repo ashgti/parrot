@@ -239,6 +239,11 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)(arena_base->gc_private);
+    const UINTVAL gc_trace = flags & (GC_trace_normal | GC_trace_stack_FLAG);
+    const UINTVAL gc_stack = flags & GC_trace_stack_FLAG;
+    const UINTVAL gc_lazy  = flags & GC_lazy_FLAG;
+    const UINTVAL gc_volatile = flags & GC_no_trace_volatile_roots;
+
 
     if (flags & GC_finish_FLAG) {
 
@@ -278,7 +283,12 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_MARK_ROOTS:
             if (Parrot_is_blocked_GC_mark(interp))
                 break;
-            Parrot_dod_trace_root(interp, 1);
+            if (gc_trace && gc_stack)
+                Parrot_dod_trace_root(interp, 1);
+            else if (gc_stack)
+                Parrot_dod_trace_root(interp, 2);
+            else if (gc_trace)
+                Parrot_dod_trace_root(interp, 0);
             gc_priv_data->state = GC_IT_RESUME_MARK;
             GC_IT_BREAK_AFTER_2;
 
