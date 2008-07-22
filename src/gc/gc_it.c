@@ -243,9 +243,10 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     const UINTVAL gc_stack = flags & GC_trace_stack_FLAG;
     const UINTVAL gc_lazy  = flags & GC_lazy_FLAG;
     const UINTVAL gc_volatile = flags & GC_no_trace_volatile_roots;
+    const UINTVAL gc_finish = flags & GC_finish_FLAG;
 
 
-    if (flags & GC_finish_FLAG) {
+    if (gc_finish) {
 
 #  if GC_IT_DEBUG
         fprintf(stderr, "Finalizing GC system\n");
