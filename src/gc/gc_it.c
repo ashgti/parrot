@@ -425,6 +425,8 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
 
+    if(gc_priv_data->queue)
+        gc_it_trace(interp);
     gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
 }
 
@@ -533,6 +535,8 @@ gc_it_sweep_sized_pools(PARROT_INTERP)
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
     register INTVAL i;
 
+    if(gc_priv_data->queue)
+        gc_it_trace(interp);
     for (i = arena_base->num_sized - 1; i >= 0; i--) {
         Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
         if (pool)
