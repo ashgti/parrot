@@ -1003,19 +1003,15 @@ PARROT_API
 void *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    Gc_it_hdr *hdr;
-
-    /* This is a bad hack. If we have an obviously absurd pointer on the
-       free list (which, apparently, is not uncommon right now), we just
-       set the free list to null. This has the potential to hemorrage
-       items that were on the free list past the bad pointer (if any). I
-       ultimately want to find the source of the error, and then remove
-       this hack. */
+    Gc_it_hdr * hdr;
+    const Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
+    const Gc_it_state state = gc_priv_data->state;
 
     /* If there are no objects, allocate a new arena */
     if (!pool->free_list)
         (pool->more_objects)(interp, pool);
     PARROT_ASSERT(pool->free_list);
+
     /* pull the first header off the free list */
     hdr = (Gc_it_hdr *)pool->free_list;
     pool->free_list = (void *)hdr->next;
@@ -1026,8 +1022,27 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     PARROT_ASSERT(hdr->parent_arena);
     PARROT_ASSERT(hdr->parent_arena->parent_pool == pool);
 
-    /* mark the item as black, so it doesn't get collected prematurely.  */
-    gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
+    /* Depending where we are in the GC run, we can set the mark accordingly */
+    switch(state) {
+        case GC_IT_READY:
+        case GC_IT_START_MARK:
+        case GC_IT_MARK_ROOTS:
+        case GC_IT_FINAL_CLEANUP:
+            gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+            break;
+        case GC_IT_RESUME_MARK:
+            gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
+            break;
+        case GC_IT_END_MARK:
+        case GC_IT_SWEEP_PMCS:
+        case GC_IT_SWEEP_BUFFERS:
+            gc_it_set_card_mark(hdr, GC_IT_CARD_BLACK);
+            break;
+        default:
+            /* we shouldn't ever be here, but the compiler spits out a
+               warning if we don't have a default, so I jam it in. */
+            break;
+    }
 
     /* clear the aggregate flag, in case it hasn't been done yet */
     hdr->data.agg = 0;
