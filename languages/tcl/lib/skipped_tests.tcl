@@ -1,11 +1,35 @@
 # skipped_tests - these are all the tests that the partcl implementation
-# cannot pass. Some of the tests cause harness failures (see RT#40716),
-# others simply require some functionality that we haven't implemented yet.
+# not only cannot pass, but cannot compile, or causes a parrot segfault, etc.
+# must use exact test names.
+#
+# todo_tests - these are the tests that are known to fail because they
+# require a feature we haven't implemented yet. Can use globs to specify
+# a range of skippable tests.
 #
 # stored as a dictionary, with the reason as a key, and the list of tests
 # that require the feature (or cause the listed error) as values.
 
-set skipped_tests [dict create \
+set todo_tests [dict create \
+  {list to string improvements} {
+    list-1.1[23] list-1.26
+  } {parsing errors} {
+    list-1.1[56]
+  } {[trace]} {
+    append-7.[12345]
+    appendComp-7.[123456789]
+    if-10.6
+    lset-1.3 lset-5.[12]
+  } {stacktrace support} {
+    apply-2.[2345] apply-5.1
+    if-5.3    if-6.4
+  } {tcltest: need better [testevalex]} {
+    lset-2.2 lset-7.[12] lset-10.3 lset-13.[012] lset-14.[12]
+  } {[apply]} {
+    apply-[4678].*
+  }
+]
+
+set skip_tests [dict create \
   {[binary]} {
     string-5.14 string-5.15 string-5.16 string-12.21
     stringComp-5.14 stringComp-5.15 stringComp-5.16 stringComp-9.7
@@ -14,20 +38,13 @@ set skipped_tests [dict create \
   } {[subst]} {
     parse-18.9 parse-18.12
   } {[trace]} {
-    append-7.1 append-7.2 append-7.3 append-7.4 append-7.5
-    appendComp-7.1 appendComp-7.2 appendComp-7.3 appendComp-7.4 appendComp-7.5
-    appendComp-7.6 appendComp-7.7 appendComp-7.8 appendComp-7.9
-    if-10.6
-    lset-1.3 lset-5.1 lset-5.2
   } {stacktrace support} {
-    apply-2.2 apply-2.3 apply-2.4 apply-2.5 apply-5.1
     basic-46.1
     cmdMZ-return-2.10 cmdMZ-3.5 cmdMZ-5.7
     dict-14.12 dict-17.13
     error-1.3 error-2.3 error-2.6 error-4.2 error-4.3 error-4.4
     eval-2.5
     iocmd-12.6
-    if-5.3 if-6.4
     incr-2.30 incr-2.31
     incr-old-2.4 incr-old-2.5
     misc-1.2
@@ -88,7 +105,7 @@ set skipped_tests [dict create \
     namespace-27.2 namespace-27.3
   } {nested dictionaries} {
     dict-3.5 dict-3.6 dict-3.7 dict-3.8 dict-3.9 dict-3.10 dict-9.3 dict-9.4
-    dict-9.5 dict-15.3 dict-15.5 dict-16.4
+    dict-9.5 dict-15.3 dict-15.5 dict-16.4 dict-21.16
   } {support for the variable named ""} {
     var-6.3 var-7.12 var-12.1
   } {Cannot get character past end of string} {
@@ -231,7 +248,6 @@ set skipped_tests [dict create \
 # stored as an array of test name -> reason pairs.
 
 array set abort_after {
-  apply-2.1            {}
   assocd-1.1           {}
   async-1.1            {}
   autoMkindex-1.1      {}

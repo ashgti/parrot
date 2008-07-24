@@ -21,11 +21,11 @@ Create a PIR sub on the fly for this user defined proc.
   args      = argv[1]
   body      = argv[2]
 
-  .local pmc pir_compiler, __script, toList, __namespace
+  .local pmc pir_compiler, compileTcl, toList, splitNamespace
   pir_compiler = compreg 'PIR'
-  __script     = get_root_global ['_tcl'], '__script'
+  compileTcl     = get_root_global ['_tcl'], 'compileTcl'
   toList       = get_root_global ['_tcl'], 'toList'
-  __namespace  = get_root_global ['_tcl'], '__namespace'
+  splitNamespace  = get_root_global ['_tcl'], 'splitNamespace'
 
   .local pmc code, args_code, defaults
   .local string namespace
@@ -41,7 +41,7 @@ Create a PIR sub on the fly for this user defined proc.
 
   if full_name == '' goto create
 
-  ns   = __namespace(full_name, 1)
+  ns   = splitNamespace(full_name, 1)
   $I0  = elements ns
   if $I0 == 0 goto create
   name = pop ns
@@ -209,7 +209,7 @@ END_PIR
 
   # Save the parsed body.
   .local string parsed_body, body_reg
-  (parsed_body, body_reg) = __script(body, 'pir_only'=>1)
+  (parsed_body, body_reg) = compileTcl(body, 'pir_only'=>1)
 
   code .= parsed_body
 

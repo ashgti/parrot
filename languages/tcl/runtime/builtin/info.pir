@@ -77,12 +77,12 @@ bad_subcommand:
   .local string procname
   procname = shift argv
 
-  .local pmc __namespace
-  __namespace = get_root_global ['_tcl'], '__namespace'
+  .local pmc splitNamespace
+  splitNamespace = get_root_global ['_tcl'], 'splitNamespace'
 
   .local pmc    ns
   .local string name
-  ns   = __namespace(procname)
+  ns   = splitNamespace(procname)
   name = pop ns
   name = '&' . name
 
@@ -116,12 +116,12 @@ bad_args:
   .local string procname
   procname = argv[0]
 
-  .local pmc __namespace
-  __namespace = get_root_global ['_tcl'], '__namespace'
+  .local pmc splitNamespace
+  splitNamespace = get_root_global ['_tcl'], 'splitNamespace'
 
   .local pmc    ns
   .local string name
-  ns   = __namespace(procname)
+  ns   = splitNamespace(procname)
   name = pop ns
   name = '&' . name
 
@@ -151,7 +151,7 @@ bad_args:
   .local pmc body
   body = argv[0]
   push_eh nope
-    $P1 = __script(body)
+    $P1 = compileTcl(body)
   pop_eh
   .return(1)
 
@@ -186,12 +186,12 @@ bad_args:
   .local pmc setVar
   setVar = get_root_global ['_tcl'], 'setVar'
 
-  .local pmc __namespace
-  __namespace = get_root_global ['_tcl'], '__namespace'
+  .local pmc splitNamespace
+  splitNamespace = get_root_global ['_tcl'], 'splitNamespace'
 
   .local pmc    ns
   .local string name
-  ns   = __namespace(procname)
+  ns   = splitNamespace(procname)
   name = pop ns
   name = '&' . name
 
@@ -474,15 +474,15 @@ current_level:
   .return($I0)
 
 find_level:
-  .local pmc toInteger, __call_level
+  .local pmc toInteger, getCallLevel
   toInteger    = get_root_global ['_tcl'], 'toInteger'
-  __call_level = get_root_global ['_tcl'], '__call_level'
+  getCallLevel = get_root_global ['_tcl'], 'getCallLevel'
 
   .local pmc level
   level = shift argv
   level = toInteger(level)
   if level >= 0 goto find_info_level
-  level = __call_level(level)
+  level = getCallLevel(level)
   .return(level)
 
 find_info_level:

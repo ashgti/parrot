@@ -27,7 +27,6 @@ providing a compreg-compatible method.
 
 # library files (HLL: _Tcl)
 .include 'languages/tcl/runtime/conversions.pir'
-.include 'languages/tcl/runtime/list_to_string.pir'
 .include 'languages/tcl/runtime/string_to_list.pir'
 .include 'languages/tcl/runtime/variables.pir'
 .include 'languages/tcl/runtime/options.pir'
@@ -242,7 +241,7 @@ env_loop_done:
   set_hll_global 'colons', colons
 
   # register the TCL compiler.
-  $P1 = get_root_global ['_tcl'], '__script'
+  $P1 = get_root_global ['_tcl'], 'compileTcl'
   compreg 'TCL', $P1
 
   # Setup a global to keep a unique id for compiled subs.
