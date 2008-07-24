@@ -425,7 +425,7 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
     const Arenas * const arena_base   = interp->arena_base;
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
 
-    if(gc_priv_data->queue)
+    if (gc_priv_data->queue)
         gc_it_trace(interp);
     gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
 }
@@ -535,7 +535,7 @@ gc_it_sweep_sized_pools(PARROT_INTERP)
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)arena_base->gc_private;
     register INTVAL i;
 
-    if(gc_priv_data->queue)
+    if (gc_priv_data->queue)
         gc_it_trace(interp);
     for (i = arena_base->num_sized - 1; i >= 0; i--) {
         Small_Object_Pool * const pool = arena_base->sized_header_pools[i];
@@ -1027,7 +1027,7 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     PARROT_ASSERT(hdr->parent_arena->parent_pool == pool);
 
     /* Depending where we are in the GC run, we can set the mark accordingly */
-    switch(state) {
+    switch (state) {
         case GC_IT_READY:
         case GC_IT_START_MARK:
         case GC_IT_MARK_ROOTS:
