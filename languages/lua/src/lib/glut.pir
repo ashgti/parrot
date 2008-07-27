@@ -23,19 +23,17 @@ see F<runtime/parrot/library/OpenGL.pir>.
 
 .sub '__onload' :anon :load
 #    print "__onload glut\n"
-
-    load_bytecode 'library/OpenGL.pbc'
-    load_bytecode 'library/NCI/call_toolkit_init.pbc'
-
     .const .Sub entry = 'luaopen_glut'
     set_hll_global 'luaopen_glut', entry
 .end
 
 .sub 'luaopen_glut'
 #    print "luaopen_glut\n"
+    load_bytecode 'OpenGL.pir'
+    load_bytecode 'NCI/call_toolkit_init.pir'
 
     # Import all OpenGL/GLU/GLUT functions
-    $P0 = get_global ['OpenGL'], '_export_all_functions'
+    $P0 = get_hll_global ['OpenGL'], '_export_all_functions'
     $P0()
 
     .local pmc _lua__GLOBAL
@@ -54,6 +52,11 @@ see F<runtime/parrot/library/OpenGL.pir>.
     _glut_CreateWindow.'setfenv'(_lua__GLOBAL)
     set $P1, 'CreateWindow'
     _glut[$P1] = _glut_CreateWindow
+
+    .const .Sub _glut_DestroyWindow= 'DestroyWindow'
+    _glut_DestroyWindow.'setfenv'(_lua__GLOBAL)
+    set $P1, 'DestroyWindow'
+    _glut[$P1] = _glut_DestroyWindow
 
     .const .Sub _glut_DisplayFunc= 'DisplayFunc'
     _glut_DisplayFunc.'setfenv'(_lua__GLOBAL)
@@ -123,7 +126,28 @@ see F<runtime/parrot/library/OpenGL.pir>.
     lua_error("incorrect argument to function 'glut.CreateWindow'")
   L1:
     $S1 = title
-    glutCreateWindow($S1)
+    $I0 = glutCreateWindow($S1)
+    new $P0, 'LuaNumber'
+    set $P0, $I0
+    .return ($P0)
+.end
+
+
+=item C<glut.DestroyWindow (window)>
+
+not LuaGL
+
+=cut
+
+.sub 'DestroyWindow' :anon
+    .param pmc window :optional
+    .param pmc extra :slurpy
+    $I0 = lua_isnumber(window)
+    if $I0 goto L1
+    lua_error("incorrect argument to function 'glut.DestroyWindow'")
+  L1:
+    $I1 = window
+    glutDestroyWindow($I1)
 .end
 
 
@@ -178,11 +202,9 @@ see F<runtime/parrot/library/OpenGL.pir>.
 .sub 'Init' :anon
     .param pmc extra :slurpy
     .local pmc argv
-    new argv, 'FixedStringArray'
-    set argv, 1
-    argv[0] = ''
+    new argv, 'ResizableStringArray'
     .const .Sub glutInit = 'glutInit'
-    $P0 = get_global ['NCI'], 'call_toolkit_init'
+    $P0 = get_hll_global ['NCI'], 'call_toolkit_init'
     $P0(glutInit, argv)
 .end
 
@@ -193,7 +215,7 @@ see F<runtime/parrot/library/OpenGL.pir>.
 
 .sub 'InitDisplayMode' :anon
     .param pmc extra :slurpy
-    $I0 = .GL_RGBA | .GL_DOUBLE
+    $I0 = .GLUT_RGBA | .GLUT_DOUBLE
     glutInitDisplayMode($I0)
 .end
 

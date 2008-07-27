@@ -23,18 +23,16 @@ see F<runtime/parrot/library/OpenGL.pir>.
 
 .sub '__onload' :anon :load
 #    print "__onload gl\n"
-
-    load_bytecode 'library/OpenGL.pbc'
-
     .const .Sub entry = 'luaopen_gl'
     set_hll_global 'luaopen_gl', entry
 .end
 
 .sub 'luaopen_gl'
 #    print "luaopen_gl\n"
+    load_bytecode 'OpenGL.pir'
 
     # Import all OpenGL/GLU/GLUT functions
-    $P0 = get_global ['OpenGL'], '_export_all_functions'
+    $P0 = get_hll_global ['OpenGL'], '_export_all_functions'
     $P0()
 
     .local pmc _lua__GLOBAL
@@ -2928,13 +2926,33 @@ see F<runtime/parrot/library/OpenGL.pir>.
 .end
 
 
-=item C<gl.Rotate ()>
+=item C<gl.Rotate (angle, x, y, z))>
 
 =cut
 
 .sub 'Rotate' :anon
+    .param pmc angle :optional
+    .param pmc x :optional
+    .param pmc y :optional
+    .param pmc z :optional
     .param pmc extra :slurpy
-    not_implemented()
+    $I0 = lua_isnumber(angle)
+    unless $I0 goto L1
+    $I0 = lua_isnumber(x)
+    unless $I0 goto L1
+    $I0 = lua_isnumber(y)
+    unless $I0 goto L1
+    $I0 = lua_isnumber(z)
+    unless $I0 goto L1
+    goto L2
+  L1:
+    lua_error("incorrect argument to function 'gl.Rotate'")
+  L2:
+    $N1 = angle
+    $N2 = x
+    $N3 = y
+    $N4 = z
+    glRotated($N1, $N2, $N3, $N4)
 .end
 
 
@@ -3135,7 +3153,7 @@ see F<runtime/parrot/library/OpenGL.pir>.
     $P1 = vararg[0]
     $I0 = lua_istable($P1)
     unless $I0 goto L2
-    (num_args, $P0) = get_arrayd($P1)
+    (num_args, $P0) = get_arrayf($P1)
     goto L3
   L2:
     unless num_args < 2 goto L4
