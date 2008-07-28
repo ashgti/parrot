@@ -108,7 +108,7 @@ get_free_buffer(PARROT_INTERP, ARGIN(Small_Object_Pool *pool))
 
     if (pool->object_size - GC_HEADER_SIZE > sizeof (PObj))
         memset(buffer + 1, 0,
-                pool->object_size - sizeof (PObj) - GC_HEADER_SIZE);
+               pool->object_size - sizeof (PObj) - GC_HEADER_SIZE);
     return buffer;
 }
 

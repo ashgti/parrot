@@ -413,7 +413,10 @@ gc_it_trace_normal(PARROT_INTERP)
 
 =item C<static void gc_it_sweep_pmc_pools>
 
-Sweep through the PMC pools, freeing dead objects.
+Sweeps through pools that are not part of the sized header pools, such as the
+string header pool and the PMC pool. Does not sweep through related pools,
+such as the constant string header pool or the constant PMC pool because those
+should not be swept. Frees dead objects and returns them to the pool free lists.
 
 =cut
 
@@ -427,7 +430,8 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
 
     if (gc_priv_data->queue)
         gc_it_trace(interp);
-    gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
+    //gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
+    gc_it_sweep_header_arenas(interp, gc_priv_data, arena_base->string_header_pool);
 }
 
 
