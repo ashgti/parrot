@@ -388,7 +388,8 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     if (trace_stack) {
         trace_system_areas(interp);
         if (trace_stack == 2)
-            return 0;
+            return !(arena_base->lazy_dod && arena_base->num_early_PMCs_seen >=
+                arena_base->num_early_DOD_PMCs);
     }
 
     if (interp->profile)
