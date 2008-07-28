@@ -245,7 +245,15 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     const UINTVAL gc_stack    = (gc_lazy || gc_volatile) ? (0)
                               : (flags & GC_trace_stack_FLAG);
     const UINTVAL gc_finish   = flags & GC_finish_FLAG;
+    const UINTVAL gc_force    = gc_lazy && interp->arena_base->num_early_DOD_PMCs;
 
+    /* on a lazy run, we only sweep if there are PMCs needing early destruction.
+       However, we must also sweep from the very beginning, to ensure the timely
+       objects get destroyed. */
+    if (gc_lazy && !gc_force)
+        return;
+    if (gc_force)
+        gc_priv_data->state = GC_IT_START_MARK;
     if (gc_finish) {
 
 #  if GC_IT_DEBUG
@@ -335,7 +343,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_SWEEP_BUFFERS:
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
-            gc_it_sweep_sized_pools(interp);
+            //gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_6;
 
@@ -592,6 +600,9 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             mark = gc_it_get_card_mark(hdr);
 
             if (mark == GC_IT_CARD_WHITE) {
+                PObj * pobj = IT_HDR_to_PObj(hdr);
+                if (PObj_needs_early_DOD_TEST(pobj))
+                    --interp->arena_base->num_early_DOD_PMCs;
                 GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                 gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
@@ -1241,9 +1252,12 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 
         /* Cache the object's parent pool and card addresses */
         p->parent_arena   = new_arena;
+        /*
         p->data.card = i / 4;
         p->data.flag = i % 4;
-        PARROT_ASSERT((size_t)((p->data.card * 4) + p->data.flag) == i);
+        */
+        p->data.flag = GC_IT_CARD_FREE;
+        //PARROT_ASSERT((size_t)((p->data.card * 4) + p->data.flag) == i);
         p->data.agg = 0;
         PARROT_ASSERT(p->parent_arena == new_arena);
         PARROT_ASSERT(p->parent_arena->parent_pool == pool);
@@ -1290,9 +1304,12 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
         hdr->data.card, hdr->data.flag);
 #  endif
 */
+/*
     PARROT_ASSERT(flag < 4);
     PARROT_ASSERT(hdr->data.flag < 4);
     gc_it_set_card_mark_index(card, hdr->data.flag, flag);
+*/
+    hdr->data.flag = flag;
 
 }
 
@@ -1323,10 +1340,13 @@ PARROT_WARN_UNUSED_RESULT
 UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
+/*
     Gc_it_card * const card_start = hdr->parent_arena->cards;
     Gc_it_card * const card = (card_start + hdr->data.card);
     PARROT_ASSERT(hdr->data.flag < 4);
     return gc_it_get_card_mark_index(card, hdr->data.flag);
+*/
+    return hdr->data.flag;
 
 }
 
