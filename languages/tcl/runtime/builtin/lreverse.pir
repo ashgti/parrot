@@ -1,29 +1,26 @@
 .HLL 'Tcl', 'tcl_group'
 .namespace []
 
-.sub '&llength'
+.sub '&lreverse'
   .param pmc argv :slurpy
 
   .local int argc
   argc = elements argv
   if argc != 1 goto bad_args
-  # get necessary conversion subs
+
   .local pmc toList
   toList = get_root_global ['_tcl'], 'toList'
-  .local pmc a_list
-  a_list = argv[0]
-  a_list = toList(a_list)
-  .local pmc R
-  .local pmc temp
+  .local pmc reverse
+  reverse = get_root_global ['_tcl'], 'reverse'
 
-$I0 = elements a_list
-R  = new 'TclInt'
-R  = $I0
-  .return(R)
+  $P0 = argv[0]
+  $P0 = toList($P0)
+  $P0 = reverse($P0)
+  .return ($P0)
+
 bad_args:
-  tcl_error 'wrong # args: should be "llength list"'
+  tcl_error 'wrong # args: should be "lreverse list"'
 .end
-
 
 # Local Variables:
 #   mode: pir

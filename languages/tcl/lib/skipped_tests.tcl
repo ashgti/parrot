@@ -28,6 +28,7 @@ set todo_tests [dict create \
     lset-1.3 lset-5.[12]
   } {stacktrace support} {
     apply-2.[2345] apply-5.1
+    cmdMZ-return-2.10 cmdMZ-5.7
     if-5.3 if-6.4
     incr-2.3[01]
     incr-old-2.[45]
@@ -64,6 +65,8 @@ set todo_tests [dict create \
     parseExpr-15.30 parseExpr-16.[12345789] parseExpr-16.11[ab]
     parseExpr-16.1[03456789] parseExpr-16.2[0123456789]
     parseExpr-16.3[012456789] parseExpr-16.4[0123] parseExpr-17.1
+  } {tcltest - [makeFile]} {
+    cmdMZ-3.6
   } {[apply]} {
     apply-[4678].*
   } {http://code.google.com/p/partcl/issues/detail?id=2} {
@@ -85,8 +88,27 @@ set todo_tests [dict create \
     parse-16.1
   } {bigint support} {
     parseExpr-20.[123]
+  } {[lsort -command]} {
+    cmdIL-1.5
+  } {[lsort -ascii]} {
+    cmdIL-1.4 cmdIL-3.7 cmdIL-4.3[45] cmdIL-5.1
+  } {[lsort -index]} {
+    cmdIL-1.1[1234] cmdIL-1.2[36] cmdIL-3.[23456] cmdIL-3.4.1 cmdIL-5.[234]
+  } {[lsort -indices]} {
+    cmdIL-1.27 cmdIL-1.28
+  } {[lsort -dictionary] - not sorting properly} {
+    cmdIL-4.[145] cmdIL-4.1[27] cmdIL-4.2[089] cmdIL-4.3[0123]
+  } {[lsort] misc} {
+    cmdIL-4.2[45]
+  } {[file] misc} {
+    cmdMZ-1.4
+  } {[return] options} {
+    cmdMZ-return-2.[0123] cmdMZ-return-2.11 cmdMZ-return-3.*
+  } {reset $errorCode} {
+    cmdMZ-4.[12]
   }
 ]
+
 
 set skip_tests [dict create \
   BOOM {
@@ -96,7 +118,6 @@ set skip_tests [dict create \
     stringComp-5.14 stringComp-5.15 stringComp-5.16 stringComp-9.7
   } {stacktrace support} {
     basic-46.1
-    cmdMZ-return-2.10 cmdMZ-3.5 cmdMZ-5.7
     dict-14.12 dict-17.13
     error-1.3 error-2.3 error-2.6 error-4.2 error-4.3 error-4.4
     eval-2.5
@@ -267,7 +288,6 @@ array set abort_after {
   case-1.1             {}
   cmdAH-31.13          {invalid command name "cd"}
   cmdinfo-1.1          {}
-  cmdMZ-5.7            {invalid command name "cleanupTests"}
   dcall-1.1            {}
   dstring-1.1          {}
   encoding-1.1         {}
