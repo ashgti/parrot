@@ -591,6 +591,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
                 gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
+                ++pool->num_free_objects;
             }
             else if (mark == GC_IT_CARD_BLACK) {
                 gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
@@ -646,6 +647,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
+                        ++pool->num_free_objects;
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 3, GC_IT_CARD_WHITE);
@@ -656,6 +658,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
+                        ++pool->num_free_objects;
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 2, GC_IT_CARD_WHITE);
@@ -666,6 +669,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
+                        ++pool->num_free_objects;
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
@@ -677,6 +681,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                     if (mark == GC_IT_CARD_WHITE) {
                         GC_IT_ADD_TO_FREE_LIST(pool, hdr);
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
+                        ++pool->num_free_objects;
                     }
                     else if (mark == GC_IT_CARD_BLACK)
                         gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
@@ -770,7 +775,6 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
     gc_priv_data->root_queue  = NULL;
 }
 #  endif
-
 
 #  if GC_IT_INCREMENT_MODE
 /*
@@ -980,6 +984,7 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
        here and don't free the object manually. */
     if (hdr->next)
         return;
+    ++pool->num_free_objects;
 
     hdr->next       = (Gc_it_hdr *)pool->free_list;
     pool->free_list = hdr;
@@ -1163,6 +1168,8 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     /* allocate more next time */
     pool->objects_per_alloc =
         (UINTVAL)pool->objects_per_alloc * UNITS_PER_ALLOC_GROWTH_FACTOR;
+    pool->replenish_level   =
+        (size_t)(pool->total_objects * REPLENISH_LEVEL_FACTOR);
 
     size = real_size * pool->objects_per_alloc;
 
