@@ -323,10 +323,11 @@ new_pmc_header(PARROT_INTERP, UINTVAL flags)
             : interp->arena_base->pmc_pool;
     PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
 
-    set_PObj(pmc);
     if (!pmc)
         real_exception(interp, NULL, ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");
+    set_PObj(pmc);
+    PObj_flags_SETTO(pmc, 0);
 
     /* clear flags, set is_PMC_FLAG */
     if (flags & PObj_is_PMC_EXT_FLAG) {
@@ -386,6 +387,7 @@ Stack_Chunk_t *
 new_stack_chunk(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     Stack_Chunk_t * const chunk = (Stack_Chunk_t *)get_free_buffer(interp, pool);
+    PObj_flags_SETTO(chunk, 0);
     chunk->pool = pool;
     return chunk;
 }
@@ -469,6 +471,7 @@ new_string_header(PARROT_INTERP, UINTVAL flags)
             ? interp->arena_base->constant_string_header_pool
             : interp->arena_base->string_header_pool);
 
+    PObj_flags_SETTO(string, 0);
     PObj_get_FLAGS(string) =
         flags | PObj_is_string_FLAG | PObj_is_COWable_FLAG | PObj_live_FLAG;
 
