@@ -152,7 +152,7 @@ more_traceable_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         if (arena) {
             if (arena->used == arena->total_objects)
                 Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
-
+            /* the <= doesn't make any sense, should it be >= instead? */
             if (pool->num_free_objects <= pool->replenish_level)
                 pool->skip = 1;
         }

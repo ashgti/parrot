@@ -945,6 +945,11 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     pool->more_objects    = gc_it_more_objects;
     pool->free_list       = NULL;
 
+    /* Initially, arena allocations are relatively small. Let's not try to
+       force a GC run until a few arena's are allocated. This should also
+       prevent wasting time in the GC for small one-liner programs. */
+    pool->skip            = 2;
+
     /* Increase allocated space to account for GC header */
     pool->object_size += sizeof (Gc_it_hdr);
 
@@ -1346,12 +1351,24 @@ void
 gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
     const Gc_it_data * const gc_priv_data = (Gc_it_data *)interp->arena_base->gc_private;
-    const Gc_it_state        state        = gc_priv_data->state;
 
-    if (state == GC_IT_SWEEP_PMCS
-    ||  state == GC_IT_SWEEP_BUFFERS) {
-        /* Do a complete sweep now, go through all sweep increments, look for
-           dead objects, whatever. I'll make a function to do that. */
+    /* If the last GC run didn't turn up a lot of new objects, it's probably
+       not worthwhile to try it again. We'll skip DOD once and just go
+       straight to the new object allocation. */
+    if (pool->skip) {
+        --pool->skip;
+    }
+    else if (gc_priv_data->state >= GC_IT_END_MARK) {
+        /* If we're after the trace phase in our GC, we'll try to complete the
+           run and look for new objects. If the GC run doesn't turn up new
+           objects, allocate more. */
+        while (gc_priv_data->state != GC_IT_READY)
+            Parrot_gc_it_run(interp, 0);
+
+        /* If we don't turn up enough new objects, this pool is pretty densly
+           packed and we should skip the dod attempt next round. */
+        if (pool->num_free_objects <= pool->replenish_level)
+            ++pool->skip;
         if (pool->free_list)
             return;
     }
