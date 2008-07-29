@@ -71,7 +71,8 @@ Returns the list as a string
                     case '}':
                         if (--count < 0) goto escape;
                         break;
-
+                    default:
+                        break;
                 }
                 pos++;
             }
@@ -203,8 +204,6 @@ An alias to assign_pmc to make other things happy before set_pmc is removed.
 
 Copy the contents of other to self.
 
-=back
-
 =cut
 
 */
@@ -243,7 +242,26 @@ Copy the contents of other to self.
         }
     }
 
+/*
+
+=item METHOD get_list
+
+Return a list version of ourself
+
+=cut
+
+*/
+
+    METHOD get_list() {
+      RETURN(PMC *SELF);
+    }
 }
+
+/*
+
+=back
+
+*/
 
 /*
  * Local variables:

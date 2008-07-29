@@ -12,6 +12,8 @@ Define the attributes required for the class.
 =cut
 
 .sub class_init :anon :load
+  # While it is tempting to inherit directly from TclString, if we do that
+  # we lose the predefined MMD is_equal that works with the existing structure.
   $P0 = get_class 'String'
   $P1 = subclass $P0, 'TclConst'
 

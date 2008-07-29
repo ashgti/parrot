@@ -36,7 +36,7 @@ Create a PIR sub on the fly for this user defined proc.
 
   .local pmc ns
   .local string name
-  ns   = new 'ResizablePMCArray'
+  ns   = new 'TclList'
   name = ''
 
   if full_name == '' goto create
@@ -240,17 +240,17 @@ END_PIR
   $P1 = new 'TclProc'
   assign $P1, $P0
 
-  $P9 = new 'String'
+  $P9 = new 'TclString'
   $P9 = $S0
   setattribute $P1, 'PIR_source', $P9
 
-  $P9 = new 'String'
+  $P9 = new 'TclString'
   $P9 = 'Tcl'
   setattribute $P1, 'HLL',        $P9
 
   setattribute $P1, 'HLL_source', body
 
-  $P9 = new 'String'
+  $P9 = new 'TclString'
   $P9 = args_info
   setattribute $P1, 'args',       $P9
 

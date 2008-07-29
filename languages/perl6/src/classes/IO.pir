@@ -62,6 +62,26 @@ Writes the given list of items to the file, then a newline character.
 .end
 
 
+=item printf
+
+Parses a format string and prints formatted output according to it.
+
+=cut
+
+.sub 'printf' :method
+    .param pmc args            :slurpy
+    .local pmc PIO
+    PIO = getattribute self, "$!PIO"
+
+    args.'!flatten'()
+    $P0 = new 'Str'
+    sprintf $P0, self, args
+
+    print PIO, $P0
+    .return (1)
+.end
+
+
 =item readline
 
 Reads a line from the file handle.
@@ -87,6 +107,24 @@ Slurp a file into a string.
     PIO = getattribute self, "$!PIO"
     $S0 = PIO.slurp('')
     .return($S0)
+.end
+
+
+=item eof
+
+Tests if we have reached the end of the file.
+
+=cut
+
+.sub 'eof' :method
+    .local pmc PIO
+    PIO = getattribute self, "$!PIO"
+    if PIO goto not_eof
+    $P0 = get_hll_global [ 'Bool' ], 'True'
+    .return ($P0)
+  not_eof:
+    $P0 = get_hll_global [ 'Bool' ], 'False'
+    .return ($P0)
 .end
 
 
@@ -146,7 +184,7 @@ more:
     .return(1)
 .end
 
-.sub shift_pmc :method :vtable
+.sub 'item' :method :vtable('shift_pmc')
     .local pmc pio
     $P0 = getattribute self, "$!IO"
     pio = getattribute $P0, "$!PIO"
@@ -154,7 +192,11 @@ more:
     .return($P0)
 .end
 
-.sub get_iter :method :vtable
+.sub 'get_string' :vtable
+    .return self.'item'()
+.end
+
+.sub 'get_iter' :method :vtable
     .return(self)
 .end
 

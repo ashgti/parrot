@@ -21,7 +21,7 @@
   subcommand_name = shift argv
 
   .local pmc options
-  options = new 'ResizablePMCArray'
+  options = new 'TclList'
   options[0] = 'anymore'
   options[1] = 'donesearch'
   options[2] = 'exists'
@@ -403,7 +403,7 @@ check_end:
 
   iter = new 'Iterator', the_array
 
-  retval = new 'String'
+  retval = new 'TclString'
   retval = ''
 
 check_loop:
