@@ -291,7 +291,6 @@ Given an expression, return a subroutine, or optionally, the raw PIR
 
 .sub compileExpr
     .param string expression
-    .param int    pir_only :named('pir_only') :optional
     .param pmc    ns       :named('ns')       :optional
     .param int    has_ns   :opt_flag
 
@@ -337,7 +336,6 @@ Given an expression, return a subroutine, or optionally, the raw PIR
 
     .local string ret
     ret = ast['ret']
-    if pir_only goto only_pir
 
     .local pmc pir
     pir = new 'CodeString'
@@ -352,9 +350,6 @@ Given an expression, return a subroutine, or optionally, the raw PIR
     $P1 = compreg 'PIR'
     $P2 = $P1(pir)
     .return ($P2)
-
-  only_pir:
-    .return(result, ret)
 
   premature_end:
     $S0 = expression
@@ -687,35 +682,6 @@ not_space:
 
 done:
   .return (contents)
-.end
-
-# Given a list, reverse the elements in the list.
-# Might make sense to make this a method on one of the parrot types we
-# inherit from.
-.sub 'reverse'
-  .param pmc value
-
-  .local int high
-  .local int low
-  .local pmc swap_one
-  .local pmc swap_two
-
-  high = value
-  dec high # need index, not count
-  low = 0
-
- loop:
-  if high <= low goto loop_end
-  swap_one    = value[low]
-  swap_two    = value[high]
-  value[low]  = swap_two
-  value[high] = swap_one
-  inc low
-  dec high
-  goto loop
- loop_end:
-
- .return()
 .end
 
 # Local Variables:

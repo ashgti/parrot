@@ -4,21 +4,19 @@
 .sub '&binary'
     .param pmc argv :slurpy
 
-    .local pmc retval
-
-    $I0 = elements argv
-    unless $I0 goto no_args
+    .local int argc
+    argc = elements argv
+    unless argc goto no_args
 
     .local string subcommand_name
     subcommand_name = shift argv
 
     .local pmc options
-    options = new 'TclList'
-    push options, 'format'
-    push options, 'scan'
+    options = get_root_global ['_tcl'; 'helpers'; 'binary'], 'options'
 
     .local pmc select_option
     select_option  = get_root_global ['_tcl'], 'select_option'
+
     .local string canonical_subcommand
     canonical_subcommand = select_option(options, subcommand_name)
 
@@ -43,8 +41,6 @@ no_args:
     .param pmc argv
 
     .local int argc
-    .local pmc retval
-
     argc = elements argv
     unless argc goto bad_args
 
@@ -94,6 +90,14 @@ bad_args:
     tcl_error 'wrong # args: should be "binary scan value formatString ?varName varName ...?"'
 .end
 
+.sub 'anon' :anon :load
+    .local pmc options
+    options = new 'TclList'
+    push options, 'format'
+    push options, 'scan'
+
+    set_root_global ['_tcl'; 'helpers'; 'binary'], 'options', options
+.end
 # Local Variables:
 #   mode: pir
 #   fill-column: 100
