@@ -1048,8 +1048,6 @@ gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     --pool->num_free_objects;
 
     PARROT_ASSERT(hdr);
-    PARROT_ASSERT(hdr->parent_arena);
-    PARROT_ASSERT(hdr->parent_arena->parent_pool == pool);
 
     /* Depending where we are in the GC run, we can set the mark accordingly */
     switch (state) {
@@ -1209,14 +1207,12 @@ pool's free list. We start at the beginning of the arena's memory block and do
 the following steps:
 
 1) add the current object to the free list
-2) initialize the C<parent_arena> and C<index> fields of the object, for fast
-   lookup later.
-3) calculate the address of the next GC header in the arena. This is the part
+2) calculate the address of the next GC header in the arena. This is the part
    that requires pointer dark magic, and is likely the source of bugs.
-4) set the C<next> field of the current object to the address of the
+3) set the C<next> field of the current object to the address of the
    next object, which we've just calculated in #3 above. Update the current
    object pointer to point to the next item.
-5) repeat for all items in the arena
+4) repeat for all items in the arena
 
 =cut
 
@@ -1250,24 +1246,9 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         p->next = (Gc_it_hdr *)pool->free_list;
         pool->free_list = p;
 
-        /* Cache the object's parent pool and card addresses */
-        p->parent_arena   = new_arena;
-        /*
-        p->data.card = i / 4;
-        p->data.flag = i % 4;
-        */
-        p->data.flag = GC_IT_CARD_FREE;
-        //PARROT_ASSERT((size_t)((p->data.card * 4) + p->data.flag) == i);
+        gc_it_set_card_mark(p, GC_IT_CARD_FREE);
+
         p->data.agg = 0;
-        PARROT_ASSERT(p->parent_arena == new_arena);
-        PARROT_ASSERT(p->parent_arena->parent_pool == pool);
-/*
-#  if GC_IT_DEBUG
-        fprintf(stderr, "new item: (%p), arena: (%p), pool: (%p) card: %d[%d]\n",
-                p, p->parent_arena, p->parent_arena->parent_pool,
-                p->data.card, p->data.flag);
-#  endif
-*/
         p = next;
     }
 
@@ -1280,46 +1261,19 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 =item C<void gc_it_set_card_mark>
 
 Marks the card associated with the given item to the value given by C<flag>.
-We've done a lot of value caching, so finding the card is a few pointer
-dereferences and a little bit of algebra. Each card contains four flags.
-
-=item C<void gc_it_set_card_mark_index>
-
-A streamlined version of C<gc_it_set_card_mark> that takes a card pointer
-and a precomputed index number to set the flag value.
+This is just a simple field access, and could probably be turned into a
+macro instead of a function call.
 
 =cut
 
 */
 
+PARROT_INLINE
 void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 {
-    Gc_it_card * const card_start = hdr->parent_arena->cards;
-    Gc_it_card * const card = (card_start + hdr->data.card);
-/*
-#  if GC_IT_DEBUG
-    fprintf(stderr, "Card Set. Pool|hdr|card: (%p, %p, %p). card %d[%d]\n",
-        hdr->parent_arena->parent_pool, hdr, card,
-        hdr->data.card, hdr->data.flag);
-#  endif
-*/
-/*
-    PARROT_ASSERT(flag < 4);
-    PARROT_ASSERT(hdr->data.flag < 4);
-    gc_it_set_card_mark_index(card, hdr->data.flag, flag);
-*/
     hdr->data.flag = flag;
 
-}
-
-PARROT_INLINE
-void
-gc_it_set_card_mark_index(ARGMOD(Gc_it_card * card), UINTVAL index, UINTVAL flag)
-{
-    unsigned char mask = ~(GC_IT_CARD_MASK_1 << (index * 2));
-    *card = *card & mask;
-    *card = *card | (unsigned char)(flag << (index * 2));
 }
 
 /*
@@ -1328,34 +1282,16 @@ gc_it_set_card_mark_index(ARGMOD(Gc_it_card * card), UINTVAL index, UINTVAL flag
 
 Returns the current flag value associated with the given object header.
 
-=item C<UINTVAL gc_it_get_card_mark_index>
-
-Returns the current flag value from the given card at the given index.
-
 =cut
 
 */
 
 PARROT_WARN_UNUSED_RESULT
+PARROT_INLINE
 UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
-/*
-    Gc_it_card * const card_start = hdr->parent_arena->cards;
-    Gc_it_card * const card = (card_start + hdr->data.card);
-    PARROT_ASSERT(hdr->data.flag < 4);
-    return gc_it_get_card_mark_index(card, hdr->data.flag);
-*/
     return hdr->data.flag;
-
-}
-
-PARROT_INLINE
-PARROT_WARN_UNUSED_RESULT
-UINTVAL
-gc_it_get_card_mark_index(ARGIN(Gc_it_card * card), UINTVAL index)
-{
-    return (*card >> (index * 2)) & GC_IT_CARD_MASK_1;
 }
 
 /*
@@ -1430,161 +1366,6 @@ gc_it_post_sweep_cleanup(PARROT_INTERP)
 #  endif
 }
 
-
-/*
-
-=item C<int gc_it_ptr_is_pmc>
-
-Determines whether a given pointer is a PMC object from the PMC pool.
-Returns C<1> if so, C<0> otherwise.
-
-=item C<static int gc_it_hdr_is_pmc>
-
-Determines whether the given C<Gc_it_hdr> structure is located in the PMC
-pool. Returns C<1> if so, C<0> otherwise.
-
-=item C<int gc_it_ptr_is_pmc_ext>
-
-=item C<static int gc_it_hdr_is_pmc_ext>
-
-=cut
-
-*/
-
-int
-gc_it_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
-{
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool);
-}
-
-static int
-gc_it_hdr_is_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-{
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool);
-}
-
-int
-gc_it_ptr_is_pmc_ext(PARROT_INTERP, ARGIN(void *ptr))
-{
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_ext_pool);
-}
-
-static int
-gc_it_hdr_is_pmc_ext(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-{
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_ext_pool);
-}
-
-
-/*
-
-=item C<int gc_it_ptr_is_const_pmc>
-
-Determines whether a given pointer is a constant PMC object from the
-constant_pmc pool. Returns C<1> if so, C<0> otherwise.
-
-=item C<static int gc_it_hdr_is_const_pmc>
-
-Determines whether the given C<Gc_it_hdr> structure is located in the constant
-PMC pool.
-
-=cut
-
-*/
-
-int
-gc_it_ptr_is_const_pmc(PARROT_INTERP, ARGIN(void *ptr))
-{
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
-}
-
-static int
-gc_it_hdr_is_const_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-{
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
-}
-
-
-/*
-
-=item C<int gc_it_ptr_is_any_pmc>
-
-Determines whether a given pointer is a PMC or a constant PMC object from the
-pmc pool or the constant_pmc pool respectively. Returns C<1> if so, C<0>
-otherwise.
-
-=item C<static int gc_it_hdr_is_any_pmc>
-
-Determines whether the given C<Gc_it_hdr> is any kind of PMC, from either the
-regular PMC pool or the constant PMC pool.
-
-=item C<static int gc_it_hdr_is_PObj_compatible>
-
-Determines whether the given header is a data object isomorphic with PObj. If
-so, we can treat the object as a PObj, and read flags from it as normal.
-Otherwise, it's a plain non-aggregate buffer and can be treated as such.
-
-=cut
-
-*/
-
-int
-gc_it_ptr_is_any_pmc(PARROT_INTERP, ARGIN(void *ptr))
-{
-    /* Whichever one is more common should go first here, to take advantage
-       of the short-circuiting OR operation. */
-    return GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->pmc_pool)
-        || GC_IT_PTR_HAS_PARENT_POOL(ptr, interp->arena_base->constant_pmc_pool);
-}
-
-static int
-gc_it_hdr_is_any_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-{
-    /* Whichever one is more common should go first here, to take advantage
-       of the short-circuiting OR operation. */
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool)
-        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool);
-}
-
-static int
-gc_it_hdr_is_PObj_compatible(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-{
-    /* Arrange these in order of most common to least common, to take
-       advantage of short-circuiting. */
-    return GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->pmc_pool)
-        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_pmc_pool)
-        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->string_header_pool)
-        || GC_IT_HDR_HAS_PARENT_POOL(hdr, interp->arena_base->constant_string_header_pool);
-}
-
-
-/*
-
-=item C<Small_Object_Pool * gc_it_ptr_is_sized_buffer>
-
-Determines whether a given pointer is located in one of the sized header pools.
-We loop over all these pools to determine if the pointer is in any of them.
-Returns a pointer to the pool that the object is found in, or returns C<NULL>
-if it is not found in any pools.
-
-=cut
-
-*/
-
-
-PARROT_CANNOT_RETURN_NULL
-Small_Object_Pool *
-gc_it_ptr_is_sized_buffer(PARROT_INTERP, ARGIN(void *ptr))
-{
-    register INTVAL i = 0;
-    for (i = interp->arena_base->num_sized - 1; i >= 0; i--) {
-        if (GC_IT_HDR_HAS_PARENT_POOL((Gc_it_hdr *)ptr, interp->arena_base->sized_header_pools[i]))
-            return interp->arena_base->sized_header_pools[i];
-    }
-
-    return NULL;
-}
-
 /*
 
 =item C<void gc_it_ptr_set_aggregate>
@@ -1615,7 +1396,6 @@ gc_it_ptr_get_aggregate(ARGIN(void * const ptr))
 }
 
 #endif  /* PARROT_GC_IT */
-
 
 /*
 

@@ -139,9 +139,6 @@ typedef struct _gc_gms_gen {
 
 /* Macros that are useful outside src/gc/gc_it.c */
 
-#  define GC_IT_PTR_HAS_PARENT_POOL(ptr, pool) \
-    (PObj_to_IT_HDR(ptr)->parent_arena->parent_pool == (pool))
-
 #  define GC_IT_MAX_IN_ARENA 65535
 
 /*
@@ -154,11 +151,9 @@ typedef struct _gc_gms_gen {
 
 typedef struct Gc_it_hdr {
     struct Gc_it_hdr           *next;
-    struct Small_Object_Arena  *parent_arena;
     struct {
-        unsigned short card;   /* The number of the card that contains the flag */
-        unsigned char  flag;   /* The index of the flag on the card (1-4) */
-        unsigned char  agg;    /* 1 if the item is a PObj, 0 otherwise */
+        unsigned short flag;
+        unsigned short agg;
     } data;
 } Gc_it_hdr;
 
