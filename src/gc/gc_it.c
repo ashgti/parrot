@@ -53,10 +53,6 @@ static void gc_it_add_arena_to_free_list(PARROT_INTERP,
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*new_arena);
 
-static void gc_it_clear_gc_lists(ARGMOD(Gc_it_data * gc_priv_data))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(* gc_priv_data);
-
 PARROT_INLINE
 static void gc_it_enqueue_all_roots(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -85,27 +81,6 @@ static void gc_it_finalize_PMC_arenas(PARROT_INTERP,
         FUNC_MODIFIES(*gc_priv_data)
         FUNC_MODIFIES(*pool);
 
-static int gc_it_hdr_is_any_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static int gc_it_hdr_is_const_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static int gc_it_hdr_is_pmc(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static int gc_it_hdr_is_pmc_ext(PARROT_INTERP, ARGIN(Gc_it_hdr *hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static int gc_it_hdr_is_PObj_compatible(PARROT_INTERP,
-    ARGIN(Gc_it_hdr *hdr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_INLINE
 static void gc_it_mark_PObj_children_grey(PARROT_INTERP,
     ARGMOD(Gc_it_hdr *hdr))
@@ -113,7 +88,9 @@ static void gc_it_mark_PObj_children_grey(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hdr);
 
-static void gc_it_post_sweep_cleanup(SHIM_INTERP);
+static void gc_it_post_sweep_cleanup(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void gc_it_sweep_header_arenas(PARROT_INTERP,
     ARGMOD(Gc_it_data *gc_priv_data),
     ARGMOD(Small_Object_Pool *pool))
