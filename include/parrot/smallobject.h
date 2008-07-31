@@ -29,17 +29,6 @@ typedef struct Small_Object_Arena {
     struct Small_Object_Arena *prev;
     struct Small_Object_Arena *next;
     void                      *start_objects;
-#if PARROT_GC_IT
-    unsigned char             *cards;
-    union {        /* store 2 16-bit values, force UINTVAL alignment */
-        struct {   /* These shouldn't get bigger then 65535, i don't think */
-            unsigned short int card_size;
-            unsigned short int last_index;
-        } _d;
-        UINTVAL                _align_x;
-    } card_info;
-    struct Small_Object_Pool *parent_pool;
-#endif
 } Small_Object_Arena;
 
 struct Small_Object_Pool;
@@ -119,8 +108,6 @@ typedef struct _gc_gms_gen {
 #    define GC_IT_THREAD_MAX 4
 #  endif
 
-#  define GC_IT_INITIAL_CONFIG 1 /* define this to be whatever */
-
 /* minimum number of items to scan in a single increment. If we haven't reached
    this minimum, go back and do another increment. */
 #  define GC_IT_ITEMS_MARKED_MIN  20
@@ -157,45 +144,11 @@ typedef struct Gc_it_hdr {
     } data;
 } Gc_it_hdr;
 
-/*
- * a basic structure to facilitate cardmarking. An array of these will represent
- * the card for a particular pool. Using uchar for the basic card element,
- * and assuming that a uchar is always 8bits or greater (we are simply ignoring
- * any additional bits)
- * The bitfield member will allow us to unwind the inner loop a little bit, and
- * avoid a lot of manual bitwise arithmetic
- */
-
-typedef unsigned char Gc_it_card;
-#  define GC_IT_CARD_MASK_1 0x03
-#  define GC_IT_CARD_MASK_2 0x0C
-#  define GC_IT_CARD_MASK_3 0x30
-#  define GC_IT_CARD_MASK_4 0xC0
-
-/* This definition is being padded to 4 bytes, which is wasteful when i am
-   only using 1 byte each.
-typedef union Gc_it_card {
-    unsigned char _c;
-    struct {
-        unsigned flag1:2;
-        unsigned flag2:2;
-        unsigned flag3:2;
-        unsigned flag4:2;
-    } _f;
-} Gc_it_card;
-*/
-
-#  define GC_IT_FLAGS_PER_CARD 4
 #  define GC_IT_CARD_WHITE  0x00     /* Item is dead */
 #  define GC_IT_CARD_UNUSED 0x01
 #  define GC_IT_CARD_BLACK  0x03     /* Item is completely alive */
 #  define GC_IT_CARD_FREE   0x02     /* items which are newly created and should
                                        not be scanned until the next mark */
-#  define GC_IT_CARD_ALL_MARK(f) ((f) | ((f) << 2) | ((f) << 4) | ((f) << 6))
-#  define GC_IT_CARD_ALL_WHITE  GC_IT_CARD_ALL_MARK(GC_IT_CARD_WHITE)
-#  define GC_IT_CARD_ALL_BLACK  GC_IT_CARD_ALL_MARK(GC_IT_CARD_BLACK)
-#  define GC_IT_CARD_ALL_UNUSED GC_IT_CARD_ALL_MARK(GC_IT_CARD_UNUSED)
-#  define GC_IT_CARD_ALL_FREE   GC_IT_CARD_ALL_MARK(GC_IT_CARD_FREE)
 
 #  define PObj_to_IT_HDR(o) (((Gc_it_hdr*)(o))-1)
 #  define IT_HDR_to_PObj(p) ((PObj*)(((Gc_it_hdr*)(p))+1))
@@ -217,13 +170,6 @@ typedef enum Gc_it_state {
     GC_IT_FINAL_CLEANUP  /* do any necessary cleanup after the GC run is over */
 } Gc_it_state;
 
-/* Structure to contain configuration data about the GC, to determine
-   how it operates */
-
-typedef struct Gc_it_config {
-    UINTVAL num_to_mark;
-} Gc_it_config;
-
 /* A private datastructure for the GC. All the global data that we need to
    operate will be stored here. */
 
@@ -232,7 +178,6 @@ typedef struct Gc_it_data {
     UINTVAL total_count;      /* number of items scanned since beginning of mark phase */
     UINTVAL num_generations;  /* number of generations */
     Gc_it_state state;        /* status of the current run */
-    Gc_it_config config;      /* config data to tell how the GC operates */
     UINTVAL num_threads;      /* number of currently active threads */
     Gc_it_hdr *root_queue;    /* queue for temporary storage of root items */
     Gc_it_hdr *queue;         /* list of grey items, to mark */

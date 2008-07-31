@@ -1120,53 +1120,17 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     const size_t real_size   = pool->object_size;
     const size_t num_objects = pool->objects_per_alloc;
 
-    /* The number of cards. I ASSUME that sizeof (Gc_it_card) == 1, but that
-       might not be the case. Therefore, this number must be multiplied by
-       sizeof (Gc_it_card) if it is going to be used as the physical size of
-       occupied memory. */
-    const size_t card_size = (num_objects / 4 + ((num_objects % 4) ? 1 : 0));
-    const size_t real_card_size = card_size * sizeof (Gc_it_card);
-
-    /* This is the actual size of the card in memory, plus any additional
-       space we need to allocate to force proper alignment of the rest of
-       the data objects.
-
-       At this point, all this arithmetic is just wishful thinking. Who knows
-       if it actually does what I keep saying it does? I'll have to test it or
-       something. */
-    const size_t align_offset = real_card_size % sizeof (void *);
-    const size_t card_size_align = real_card_size
-        + (align_offset ? (sizeof (void *) - align_offset) : 0);
-
     /* The size of the allocated arena. This is the size of the
        Small_Object_Arena structure, which goes at the front, the card, and
        the objects. */
     size_t size = (real_size * pool->objects_per_alloc) /* the objects */
-                + sizeof (Small_Object_Arena)           /* the arena   */
-                + card_size_align;                      /* the card    */
+                + sizeof (Small_Object_Arena);          /* the arena   */
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(size);
-/*
-#  if GC_IT_DEBUG
-    fprintf(stderr, "Alloc objects for pool %s (%p)\n", pool->name, pool);
-#  endif
-*/
-    new_arena->card_info._d.card_size  = card_size;
-    new_arena->card_info._d.last_index = num_objects - 1;
-    new_arena->parent_pool             = pool;
 
-    /* ...the downside is this messy pointer arithmetic. The cards are packed
-       against the end of the Small_Object_Arena. The objects are packed at
-       the end of the cards. */
-    new_arena->cards = (Gc_it_card *)((char*)new_arena
-                     + sizeof (Small_Object_Arena));
     /* The objects are packed in after the cards (and any alignment space that
        we've added). */
-    new_arena->start_objects = (void *)((char *)new_arena->cards
-                             + card_size_align);
-    /* Clear all the cards. Set them to the value GC_IT_CARD_ALL_FREE for now,
-       indicating that all items are (or will be) on the free list to start. */
-    memset(new_arena->cards, GC_IT_CARD_ALL_FREE, real_card_size);
+    new_arena->start_objects = (void *)((char *)new_arena + sizeof (Small_Object_Arena));
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
