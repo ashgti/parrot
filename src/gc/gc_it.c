@@ -562,7 +562,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #    endif
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        INTVAL     i     = arena->card_info._d.last_index;
+        INTVAL i         = arena->total_objects;
         Gc_it_hdr *hdr   = (Gc_it_hdr *)arena->start_objects;
         UINTVAL    mark;
 
@@ -621,65 +621,24 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
 #    endif
 
     for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        Gc_it_card * const card_start = arena->cards;
-        Gc_it_card * card             = (card_start + arena->card_info._d.card_size - 1);
-        UINTVAL i                     = arena->card_info._d.last_index;
+        INTVAL i                      = arena->total_objects;
         Gc_it_hdr *hdr                = (Gc_it_hdr *)arena->start_objects;
         UINTVAL mark;
-
-        PARROT_ASSERT(card);
 
         /* Partially unroll the loop with Duff's device: four items at a time.
            I can make some parts of this more efficient, but for now let's
            stick with the basics. */
-        switch (arena->card_info._d.last_index % 4) {
-            case 3:
-                do {
-                    mark = gc_it_get_card_mark_index(card, 3);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        gc_it_set_card_mark_index(card, 3, GC_IT_CARD_FREE);
-                        ++pool->num_free_objects;
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 3, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 2:
-                    mark = gc_it_get_card_mark_index(card, 2);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        gc_it_set_card_mark_index(card, 2, GC_IT_CARD_FREE);
-                        ++pool->num_free_objects;
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 2, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 1:
-                    mark = gc_it_get_card_mark_index(card, 1);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        gc_it_set_card_mark_index(card, 1, GC_IT_CARD_FREE);
-                        ++pool->num_free_objects;
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 1, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-            case 0:
-            default:
-                    mark = gc_it_get_card_mark_index(card, 0);
-                    if (mark == GC_IT_CARD_WHITE) {
-                        GC_IT_ADD_TO_FREE_LIST(pool, hdr);
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_FREE);
-                        ++pool->num_free_objects;
-                    }
-                    else if (mark == GC_IT_CARD_BLACK)
-                        gc_it_set_card_mark_index(card, 0, GC_IT_CARD_WHITE);
-                    hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
-                    i--;
-                } while (card-- != arena->cards);
+        while (i >= 0) {
+            mark = gc_it_get_card_mark(hdr);
+            if (mark == GC_IT_CARD_WHITE) {
+                GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
+                ++pool->num_free_objects;
+            }
+            else if (mark == GC_IT_CARD_BLACK)
+                gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+            hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
+            i--;
         }
     }
 }

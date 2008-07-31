@@ -17,12 +17,6 @@
 
 #define POOL_MAX_BYTES                         65536 * 128
 
-
-#if PARROT_GC_IT
-/* forward declarations */
-struct Gc_it_hdr;
-#endif
-
 typedef struct Small_Object_Arena {
     size_t                     used;
     size_t                     total_objects;
@@ -141,7 +135,7 @@ typedef struct Gc_it_hdr {
     struct {
         unsigned short flag;
         unsigned short agg;
-    } data;
+    }                           data;
 } Gc_it_hdr;
 
 #  define GC_IT_CARD_WHITE  0x00     /* Item is dead */
