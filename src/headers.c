@@ -324,7 +324,7 @@ new_pmc_header(PARROT_INTERP, UINTVAL flags)
     PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
 
     if (!pmc)
-        real_exception(interp, NULL, ALLOCATION_ERROR,
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");
     set_PObj(pmc);
     PObj_flags_SETTO(pmc, 0);
@@ -989,7 +989,8 @@ fix_pmc_syncs(ARGMOD(Interp *dest_interp), ARGIN(Small_Object_Pool *pool))
                 if (PObj_is_PMC_shared_TEST(p))
                     PMC_sync(p)->owner = dest_interp;
                 /*else
-                    real_exception(dest_interp, NULL, INTERP_ERROR,
+                    Parrot_ex_throw_from_c_args(dest_interp, NULL,
+                        EXCEPTION_INTERP_ERROR,
                         "Unshared PMC still alive after interpreter \
                         destruction. address=%p, base_type=%d\n",
                         p, p->vtable->base_type);*/
