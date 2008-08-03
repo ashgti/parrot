@@ -153,8 +153,8 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->init_pool          = Parrot_gc_it_pool_init;
 #  if GC_IT_DEBUG
     fprintf(stderr, "GC IT Initialized: %p\n", gc_priv_data);
-    fprintf(stderr, "SIZES. Card: %d, Hdr: %d, Data: %d\n", sizeof (Gc_it_card),
-        sizeof (Gc_it_hdr), sizeof (Gc_it_data));
+    fprintf(stderr, "SIZES. Hdr: %d, Data: %d\n", sizeof (Gc_it_hdr),
+        sizeof (Gc_it_data));
 #  endif
 }
 
