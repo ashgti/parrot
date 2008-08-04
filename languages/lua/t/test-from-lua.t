@@ -142,7 +142,7 @@ OUTPUT
 
 SKIP:
 {
-    skip('crash', 1) unless ($test_prog eq 'lua');
+    skip('uses too much memory with default runcore', 1) unless ($test_prog eq 'lua');
 
 $code = Parrot::Test::slurp_file(File::Spec->catfile( @dir, 'life.lua' ));
 $out = Parrot::Test::slurp_file(File::Spec->catfile( @dir, 'life-output.txt' ));
@@ -175,14 +175,9 @@ OUTPUT
 #       the sieve of of Eratosthenes programmed with coroutines
 #
 
-TODO:
-{
-    local $TODO = 'just one ?';
-
 $code = Parrot::Test::slurp_file(File::Spec->catfile( @dir, 'sieve.lua' ));
 $out = Parrot::Test::slurp_file(File::Spec->catfile( @dir, 'sieve-output.txt' ));
 language_output_is( 'lua', $code, $out, 'sieve' );
-}
 
 #
 #   sort.lua
