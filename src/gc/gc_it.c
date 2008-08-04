@@ -229,8 +229,6 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
        objects get destroyed. */
     if (gc_lazy && !gc_force)
         return;
-    if (gc_force)
-        gc_priv_data->state = GC_IT_START_MARK;
     if (gc_finish) {
 
 #  if GC_IT_DEBUG
@@ -320,7 +318,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         case GC_IT_SWEEP_BUFFERS:
             if (Parrot_is_blocked_GC_sweep(interp))
                 break;
-            //gc_it_sweep_sized_pools(interp);
+            gc_it_sweep_sized_pools(interp);
             gc_priv_data->state = GC_IT_FINAL_CLEANUP;
             GC_IT_BREAK_AFTER_6;
 
@@ -388,7 +386,7 @@ gc_it_trace_normal(PARROT_INTERP)
         gc_priv_data->item_count++;
     }
 #    if GC_IT_DEBUG
-    fprintf(stderr, "Trace complete: %d", (gc_priv_data->queue == NULL));
+    fprintf(stderr, "Trace complete: %d\n", (gc_priv_data->queue == NULL));
 #    endif
     PARROT_ASSERT(gc_priv_data->queue == NULL);
 }
@@ -415,8 +413,7 @@ gc_it_sweep_pmc_pools(PARROT_INTERP)
 
     if (gc_priv_data->queue)
         gc_it_trace(interp);
-    //gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
-    gc_it_sweep_header_arenas(interp, gc_priv_data, arena_base->string_header_pool);
+    gc_it_sweep_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
 }
 
 
@@ -441,7 +438,6 @@ gc_it_finalize_all_pmc(PARROT_INTERP)
        up lists of our pools here, and handle different types differently. */
 
     gc_it_finalize_PMC_arenas(interp, gc_priv_data, arena_base->pmc_pool);
-    gc_it_finalize_PMC_arenas(interp, gc_priv_data, arena_base->constant_pmc_pool);
 }
 
 
@@ -1222,7 +1218,7 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         /* If we're after the trace phase in our GC, we'll try to complete the
            run and look for new objects. If the GC run doesn't turn up new
            objects, allocate more. */
-        while (gc_priv_data->state != GC_IT_READY)
+        while (gc_priv_data->state >= GC_IT_END_MARK) 
             Parrot_gc_it_run(interp, 0);
 
         /* If we don't turn up enough new objects, this pool is pretty densly
