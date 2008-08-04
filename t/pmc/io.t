@@ -97,6 +97,7 @@ CODE
 a line
 OUTPUT
 
+TODO: {
 pasm_output_is( <<'CODE', <<'OUTPUT', "timely destruction" );
     interpinfo I0, 2	# DOD runs
     open P0, "temp.file", ">"
@@ -111,6 +112,8 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "timely destruction" );
 CODE
 a line
 OUTPUT
+
+}
 
 # RT#46843
 pir_output_is( <<'CODE', <<'OUTPUT', "get_fd()/fdopen" );
