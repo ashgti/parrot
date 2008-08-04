@@ -1218,7 +1218,7 @@ gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         /* If we're after the trace phase in our GC, we'll try to complete the
            run and look for new objects. If the GC run doesn't turn up new
            objects, allocate more. */
-        while (gc_priv_data->state >= GC_IT_END_MARK) 
+        while (gc_priv_data->state >= GC_IT_END_MARK)
             Parrot_gc_it_run(interp, 0);
 
         /* If we don't turn up enough new objects, this pool is pretty densly
