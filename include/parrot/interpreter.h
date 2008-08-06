@@ -71,7 +71,8 @@ typedef enum {
     PARROT_CGP_JIT_CORE     = 0x16,         /* JCP                */
     PARROT_SWITCH_JIT_CORE  = 0x12,         /* J P                */
     PARROT_EXEC_CORE        = 0x20,         /* TODO Parrot_exec_run variants */
-    PARROT_GC_DEBUG_CORE    = 0x40          /* run GC before each op */
+    PARROT_GC_DEBUG_CORE    = 0x40,         /* run GC before each op */
+    PARROT_DEBUGGER_CORE    = 0x80          /* used by parrot debugger */
 } Parrot_Run_core_t;
 /* &end_gen */
 
@@ -710,8 +711,8 @@ INTVAL Parrot_runops_fromc_args_reti(PARROT_INTERP,
 void destroy_runloop_jump_points(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void really_destroy_runloop_jump_points(ARGIN(Parrot_runloop *jump_point))
-        __attribute__nonnull__(1);
+void really_destroy_runloop_jump_points(
+    ARGIN_NULLOK(Parrot_runloop *jump_point));
 
 void runops(PARROT_INTERP, size_t offs)
         __attribute__nonnull__(1);
