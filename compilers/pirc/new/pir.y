@@ -21,8 +21,6 @@ Features are:
 
 =item * constant folding is implemented in the parser
 
-=item *
-
 =back
 
 
@@ -48,6 +46,94 @@ Features are:
 
 #include "pirlexer.h"
 
+/* mathematical operator types */
+typedef enum pir_math_operators {
+    OP_ADD,
+    OP_INC, /* special case for OP_ADD; must be 1 position after OP_ADD */
+    OP_SUB,
+    OP_DEC, /* special case for OP_DEC; must be 1 position after OP_SUB */
+    OP_DIV,
+    OP_MUL,
+    OP_MOD,
+    OP_BOR,
+    OP_BAND,
+    OP_BXOR,
+    OP_POW,
+    OP_CONCAT,
+    OP_LSR,
+    OP_SHR,
+    OP_SHL,
+    OP_OR,
+    OP_AND,
+    OP_FDIV,
+    OP_XOR,
+    OP_ISEQ,
+    OP_ISLE,
+    OP_ISLT,
+    OP_ISGE,
+    OP_ISGT,
+    OP_ISNE
+
+} pir_math_operator;
+
+/* relational operator types */
+typedef enum pir_rel_operators {
+    OP_NE = OP_ISNE + 1,   /* continue after OP_ISNE */
+    OP_EQ,
+    OP_LT,
+    OP_LE,
+    OP_GT,
+    OP_GE
+
+} pir_rel_operator;
+
+/* names of the binary operators */
+static char * const opnames[] = {
+    "add",
+    "inc", /* use this when "add"ing 1 */
+    "sub",
+    "dec", /* use this when "sub"ing 1 */
+    "div",
+    "mul",
+    "mod",
+    "bor",
+    "band",
+    "bxor",
+    "pow",
+    "concat",
+    "lsr",
+    "shr",
+    "shl",
+    "or",
+    "and",
+    "fdiv",
+    "xor",
+    "iseq",
+    "isle",
+    "islt",
+    "isge",
+    "isgt",
+    "isne",
+    /* note that from here on it's rel. ops */
+    "ne",
+    "eq",
+    "lt",
+    "le",
+    "gt",
+    "ge"
+};
+
+static constant *fold_i_i(int a, pir_math_operator op, int b);
+static constant *fold_n_i(double a, pir_math_operator op, int b);
+static constant *fold_i_n(int a, pir_math_operator op, double b);
+static constant *fold_n_n(double a, pir_math_operator op, double b);
+static int evaluate_i_i(int a, pir_rel_operator op, int b);
+static int evaluate_n_n(double a, pir_rel_operator op, double b);
+static int evaluate_i_n(int a, pir_rel_operator op, double b);
+static int evaluate_n_i(double a, pir_rel_operator op, int b);
+static int evaluate_s_s(char *a, pir_rel_operator op, char *b);
+
+static char *concat_strings(char *a, char *b);
 
 extern int yyerror(yyscan_t yyscanner, lexer_state * const lexer, char const * const message);
 
@@ -111,8 +197,6 @@ extern YY_DECL;
 
 %token TK_HLL               ".HLL"
        TK_HLL_MAP           ".HLL_map"
-       TK_N_OPERATORS       "n_operators"
-       TK_PRAGMA            ".pragma"
        TK_LOADLIB           ".loadlib"
 
 %token TK_SUB               ".sub"
@@ -212,9 +296,6 @@ extern YY_DECL;
        TK_FLAG_INVOCANT     ":invocant"
 
 %type <sval> unop
-             binop
-             augmented_op
-             rel_op
              identifier
              sub_id
              opt_paren_string
@@ -275,6 +356,11 @@ extern YY_DECL;
              sub_flag
              sub_flag_with_arg
              if_unless
+             binop
+             rel_op
+             condition
+             augmented_op
+             augm_add_op
 
 %type <invo> long_invocation
              methodcall
@@ -363,11 +449,6 @@ pir_chunk         : sub_def
                   | hll_specifier
                   | hll_mapping
                   | loadlib
-                  | pir_pragma
-                  ;
-
-pir_pragma        : ".pragma" "n_operators" TK_INTC
-                            { set_pragma(PRAGMA_N_OPERATORS, $3); }
                   ;
 
 loadlib           : ".loadlib" TK_STRINGC
@@ -511,6 +592,7 @@ statement         : conditional_stat
                   | error_stat
                   ;
 
+/* "error" is a built-in rule; used for trying to recover. */
 error_stat        : error "\n"
                          { if (lexer->parse_errors > MAX_NUM_ERRORS) {
                                fprintf(stderr, "Too many errors. Compilation aborted.\n");
@@ -524,17 +606,20 @@ null_stat         : null_instr "\n"
                   ;
 
 null_instr        : "null" target
-                         { set_instr(lexer, "null");
+                         {
+                           set_instr(lexer, "null");
                            push_operand(lexer, expr_from_target($2));
                          }
                   | target '=' "null"
-                         { set_instr(lexer, "null");
+                         {
+                           set_instr(lexer, "null");
                            push_operand(lexer, expr_from_target($1));
                          }
                   ;
 
 getresults_stat   : ".get_results" opt_target_list "\n"
-                         { set_instr(lexer, "get_results");
+                         {
+                           set_instr(lexer, "get_results");
                            push_operand(lexer, expr_from_target($2));
                          }
                   ;
@@ -543,31 +628,68 @@ assignment_stat   : assignment "\n"
                   ;
 
 assignment        : target '=' expression
-                         { set_instr(lexer, "set");
+                         {
+                           set_instr(lexer, "set");
                            add_operands(lexer, 2, expr_from_target($1), $3);
                          }
-                  | target augmented_op expression
-                         { set_instr(lexer, $2);
-                           add_operands(lexer, 2, expr_from_target($1), $3);
-                         }
+                  | target augmentive_expr
+                         { unshift_operand(lexer, expr_from_target($1)); }
                   | target '=' unop expression
-                         { set_instr(lexer, $3);
+                         {
+                           set_instr(lexer, $3);
                            add_operands(lexer, 2, expr_from_target($1), $4);
                          }
                   | target '=' binary_expr
                          { unshift_operand(lexer, expr_from_target($1)); }
                   | target keylist '=' expression
-                         { set_instr(lexer, "set");
+                         {
+                           set_instr(lexer, "set");
                            /* XXX fix key stuff */
+                           add_operands(lexer, 2, expr_from_target($1), $4);
+
                          }
                   | target '=' target keylist
-                         { set_instr(lexer, "set");
+                         {
+                           set_instr(lexer, "set");
                            /* XXX fix key stuff */
+                           add_operands(lexer, 1, expr_from_target($1));
                          }
                   | target '=' parrot_instruction
                          { unshift_operand(lexer, expr_from_target($1)); }
                   ;
 
+augmentive_expr   : augm_add_op TK_INTC
+                         {
+                           if ($2 == 1) { /* adding/subtracting 1? */
+                              /* "inc" is sorted right after "add";
+                               * "dec" is sorted right after "sub";
+                               * so select them by adding 1 to the index.
+                               */
+                              set_instr(lexer, opnames[$1 + 1]);
+                           }
+                           else {
+                              set_instr(lexer, opnames[$1]);
+                              push_operand(lexer, expr_from_const(
+                                           new_const(INT_TYPE, NULL, $2)));
+                           }
+                         }
+                  | augm_add_op TK_NUMC
+                         {
+                           set_instr(lexer, opnames[$1]);
+                           push_operand(lexer, expr_from_const(
+                                        new_const(NUM_TYPE, NULL, $2)));
+                         }
+                  | augm_add_op target
+                         {
+                           set_instr(lexer, opnames[$1]);
+                           push_operand(lexer, expr_from_target($2));
+                         }
+                  | augmented_op expression
+                         {
+                           set_instr(lexer, opnames[$1]);
+                           push_operand(lexer, $2);
+                         }
+                  ;
 /**
 
 implementation of constant folding IN the parser; this saves us a lot of back-end code
@@ -578,53 +700,56 @@ uglier, but oh well, still readable. Some refactoring would help (in the end).
 There's not so many combinations, as there's no such thing as a PMC constant literal,
 and there's only 1 binary operation for strings, so only {num, int} x {num, int}.
 
-XXX fix type of binop into integer, and use that in a switch statement to do the
-constant folding. Now binop is of type char *.
-
 **/
 
 binary_expr       : target binop expression
-                         { set_instr(lexer, $2);
+                         {
+                           set_instr(lexer, opnames[$2]);
                            add_operands(lexer, 2, expr_from_target($1), $3);
                          }
                   | TK_INTC binop target
-                         { set_instr(lexer, $2);
+                         {
+                           set_instr(lexer, opnames[$2]);
                            add_operands(lexer, 2, expr_from_const(new_const(INT_TYPE, NULL, $1)),
                                                                   expr_from_target($3));
                          }
-
                   | TK_NUMC binop target
-                         { set_instr(lexer, $2);
+                         {
+                           set_instr(lexer, opnames[$2]);
                            add_operands(lexer, 2, expr_from_const(new_const(NUM_TYPE, NULL, $1)),
                                                                   expr_from_target($3));
                          }
-
                   | TK_STRINGC "." target
-                         { set_instr(lexer, "concat");
+                         {
+                           set_instr(lexer, "concat");
                            add_operands(lexer, 2, expr_from_const(new_const(STRING_TYPE, NULL, $1)),
                                                                   expr_from_target($3));
                          }
                   | TK_STRINGC "." TK_STRINGC
                          {
                            set_instr(lexer, "set");
-                           /* concatenate strings and add result as operand */
+                           push_operand(lexer, expr_from_const(new_const(STRING_TYPE, NULL,
+                                                                         concat_strings($1, $3))));
                          }
                   | TK_INTC binop TK_INTC
-                         { set_instr(lexer, "set");
-                           push_operand(lexer, expr_from_const(new_const(INT_TYPE, NULL, $1 + $3)));
+                         {
+                           set_instr(lexer, "set");
+                           push_operand(lexer, expr_from_const(fold_i_i($1, $2, $3)));
                          }
-
                   | TK_NUMC binop TK_NUMC
                          {
-                          set_instr(lexer, "set");
+                           set_instr(lexer, "set");
+                           push_operand(lexer, expr_from_const(fold_n_n($1, $2, $3)));
                          }
                   | TK_INTC binop TK_NUMC
                          {
-                          set_instr(lexer, "set");
+                           set_instr(lexer, "set");
+                           push_operand(lexer, expr_from_const(fold_i_n($1, $2, $3)));
                          }
                   | TK_NUMC binop TK_INTC
                          {
-                          set_instr(lexer, "set");
+                           set_instr(lexer, "set");
+                           push_operand(lexer, expr_from_const(fold_n_i($1, $2, $3)));
                          }
                   ;
 
@@ -655,7 +780,7 @@ op_arg            : expression
                   ;
 
 keyaccess         : target keylist
-                         { $$ = NULL; }
+                         { $$ = expr_from_target($1); /* XXX fix key stuff */ }
                   ;
 
 keylist           : '[' keys ']'
@@ -672,33 +797,83 @@ conditional_stat  : conditional_instr "\n"
                   ;
 
 conditional_instr : if_unless "null" expression "goto" identifier
-                         { set_instr(lexer, $1 ? "unless_null" : "if_null");
+                         {
+                           set_instr(lexer, $1 ? "unless_null" : "if_null");
                            add_operands(lexer, 2, $3, expr_from_ident($5));
                          }
                   | if_unless target then identifier
-                         { set_instr(lexer, $1 ? "unless" : "if");
+                         {
+                           set_instr(lexer, $1 ? "unless" : "if");
                            add_operands(lexer, 2, expr_from_target($2), expr_from_ident($4));
                          }
-                  | if_unless constant then identifier
-                         {
-                            /* do an unconditional jump if $2 is true/false */
-                         }
-                  /*
-                  | if_unless expression rel_op expression "goto" identifier
-                         { set_instr(lexer, $1 ? get_inverse($3) : $3);
-                           add_operands(lexer, 3, $2, $4, expr_from_ident($6));
-
-
-                         }
-                  */
                   | if_unless condition "goto" identifier
+                         {
+                           if ($2 == -1) { /* -1 means the condition is evaluated during runtime */
+                              if ($1) /* "unless"? if so, invert the instruction. */
+                                  invert_instr(lexer);
+
+                              push_operand(lexer, expr_from_ident($4));
+                           }
+                           else { /* evaluation during compile time */
+                              /* if the result was false but the instr. was "unless", or,
+                               * if the result was true and the instr. was "if",
+                               * do an unconditional jump.
+                               */
+                              if ( (($2 == 0) && $1) || (($2 == 1) && !$1) ) {
+                                 set_instr(lexer, "branch");
+                                 push_operand(lexer, expr_from_ident($4));
+                              }
+                              else {
+                                 set_instr(lexer, "nop");
+                              }
+                           }
+                         }
                   ;
 
+/* the condition rule returns -1 if the condition can't be evaluated yet, so
+ * it must be done during runtime. Otherwise, if the condition evaluates to
+ * "false", 0 is returned, and if true, 1 is returned.
+ */
 condition         : target rel_op expression
+                         {
+                           set_instr(lexer, opnames[$2]);
+                           add_operands(lexer, 2, expr_from_target($1), $3);
+                           $$ = -1;  /* -1 indicates this is evaluated at runtime */
+                         }
                   | TK_INTC rel_op target
+                         {
+                           set_instr(lexer, opnames[$2]);
+                           add_operands(lexer, 2,
+                                        expr_from_const(new_const(INT_TYPE, NULL, $1)),
+                                        expr_from_target($3));
+                           $$ = -1;
+                         }
                   | TK_NUMC rel_op target
+                         {
+                           set_instr(lexer, opnames[$2]);
+                           add_operands(lexer, 2,
+                                        expr_from_const(new_const(NUM_TYPE, NULL, $1)),
+                                        expr_from_target($3));
+                           $$ = -1;
+                         }
                   | TK_INTC rel_op TK_INTC
+                         { $$ = evaluate_i_i($1, $2, $3); }
                   | TK_NUMC rel_op TK_NUMC
+                         { $$ = evaluate_n_n($1, $2, $3); }
+                  | TK_INTC rel_op TK_NUMC
+                         { $$ = evaluate_i_n($1, $2, $3); }
+                  | TK_NUMC rel_op TK_INTC
+                         { $$ = evaluate_n_i($1, $2, $3); }
+                  | TK_STRINGC rel_op TK_STRINGC
+                         { $$ = evaluate_s_s($1, $2, $3); }
+                  | TK_INTC
+                         { $$ = $1 ? 1 : 0; }
+                  | TK_NUMC
+                         { $$ = $1 ? 1 : 0; }
+                  | TK_STRINGC
+                         { /* if string length > 0 return true, unless the string equals "0". */
+                           $$ = strlen($1) ? ((strcmp($1, "0") == 0) ? 0 : 1) : 0;
+                         }
                   ;
 
 if_unless         : "if"       { $$ = 0; /* no need to invert */ }
@@ -710,7 +885,8 @@ then              : "goto" /* PIR mode */
                   ;
 
 goto_stat         : "goto" identifier "\n"
-                         { set_instr(lexer, "branch");
+                         {
+                           set_instr(lexer, "branch");
                            push_operand(lexer, expr_from_ident($2));
                          }
                   ;
@@ -769,7 +945,6 @@ long_invocation_stat: ".begin_call" "\n"
                            { /* $4 contains an invocation object */
                              set_invocation_args($4, $3);
                              set_invocation_results($4, $6);
-                             $$ = NULL;
                            }
                     ;
 
@@ -1132,12 +1307,12 @@ constant    : TK_STRINGC     { $$ = new_const(STRING_TYPE, NULL, $1); }
             | TK_NUMC        { $$ = new_const(NUM_TYPE, NULL, $1); }
             ;
 
-rel_op      : "!="           { $$ = "ne"; }
-            | "=="           { $$ = "eq"; }
-            | "<"            { $$ = "lt"; }
-            | "<="           { $$ = "le"; }
-            | ">="           { $$ = "ge"; }
-            | ">"            { $$ = "gt"; }
+rel_op      : "!="           { $$ = OP_NE; }
+            | "=="           { $$ = OP_EQ; }
+            | "<"            { $$ = OP_LT; }
+            | "<="           { $$ = OP_LE; }
+            | ">="           { $$ = OP_GE; }
+            | ">"            { $$ = OP_GT; }
             ;
 
 type        : "int"          { $$ = INT_TYPE; }
@@ -1171,50 +1346,219 @@ unop        : '-'            { $$ = "neg"; }
             | '~'            { $$ = "bnot"; }
             ;
 
-binop       : '+'            { $$ = "add"; }
-            | '-'            { $$ = "sub"; }
-            | '/'            { $$ = "div"; }
-            | '*'            { $$ = "mul"; }
-            | '%'            { $$ = "mod"; }
-            | '|'            { $$ = "bor"; }
-            | '&'            { $$ = "band"; }
-            | '~'            { $$ = "bxor"; }
-            | "**"           { $$ = "pow"; }
-            | "."            { $$ = "concat"; }
-            | ">>>"          { $$ = "lsr"; }
-            | ">>"           { $$ = "shr"; }
-            | "<<"           { $$ = "shl"; }
-            | "||"           { $$ = "or";  }
-            | "&&"           { $$ = "and"; }
-            | "//"           { $$ = "fdiv"; }
-            | "~~"           { $$ = "xor"; }
-            | "=="           { $$ = "iseq"; }
-            | "<="           { $$ = "isle"; }
-            | "<"            { $$ = "islt"; }
-            | ">="           { $$ = "isge"; }
-            | ">"            { $$ = "isgt"; }
-            | "!="           { $$ = "isne"; }
+binop       : '+'            { $$ = OP_ADD; }
+            | '-'            { $$ = OP_SUB; }
+            | '/'            { $$ = OP_DIV; }
+            | '*'            { $$ = OP_MUL; }
+            | '%'            { $$ = OP_MOD; }
+            | '|'            { $$ = OP_BOR; }
+            | '&'            { $$ = OP_BAND; }
+            | '~'            { $$ = OP_BXOR; }
+            | "**"           { $$ = OP_POW; }
+            | "."            { $$ = OP_CONCAT; }
+            | ">>>"          { $$ = OP_LSR; }
+            | ">>"           { $$ = OP_SHR; }
+            | "<<"           { $$ = OP_SHL; }
+            | "||"           { $$ = OP_OR; }
+            | "&&"           { $$ = OP_AND; }
+            | "//"           { $$ = OP_FDIV; }
+            | "~~"           { $$ = OP_XOR; }
+            | "=="           { $$ = OP_ISEQ; }
+            | "<="           { $$ = OP_ISLE; }
+            | "<"            { $$ = OP_ISLT; }
+            | ">="           { $$ = OP_ISGE; }
+            | ">"            { $$ = OP_ISGT; }
+            | "!="           { $$ = OP_ISNE; }
             ;
 
-
-augmented_op: "+="         { $$ = "add"; }
-            | "-="         { $$ = "sub"; }
-            | "*="         { $$ = "mul"; }
-            | "%="         { $$ = "mod"; }
-            | "**="        { $$ = "pow"; }
-            | "/="         { $$ = "div"; }
-            | "//="        { $$ = "fdiv"; }
-            | "|="         { $$ = "bor"; }
-            | "&="         { $$ = "band" }
-            | "~="         { $$ = "bxor"; }
-            | ".="         { $$ = "concat"; }
-            | ">>="        { $$ = "shr"; }
-            | "<<="        { $$ = "shl"; }
-            | ">>>="       { $$ = "lsr"; }
+/* note that += and -= are separated, because when adding/subtracting 1,
+ * this is optimized by using the "inc"/"dec" instructions.
+ */
+augmented_op: "*="         { $$ = OP_MUL; }
+            | "%="         { $$ = OP_MOD; }
+            | "**="        { $$ = OP_POW; }
+            | "/="         { $$ = OP_DIV; }
+            | "//="        { $$ = OP_FDIV; }
+            | "|="         { $$ = OP_BOR; }
+            | "&="         { $$ = OP_BAND; }
+            | "~="         { $$ = OP_BXOR; }
+            | ".="         { $$ = OP_CONCAT; }
+            | ">>="        { $$ = OP_SHR; }
+            | "<<="        { $$ = OP_SHL; }
+            | ">>>="       { $$ = OP_LSR; }
             ;
+
+augm_add_op : "+="         { $$ = OP_ADD; }
+            | "-="         { $$ = OP_SUB; }
+            ;
+
 %%
 
+/* Constant folding routines.
+ *
+ *
+ */
 
+#include <math.h>
+#include <assert.h>
+
+static constant *
+fold_i_i(int a, pir_math_operator op, int b) {
+    int result;
+
+    switch (op) {
+        case OP_ADD:
+            result = a + b;
+            break;
+        case OP_SUB:
+            result = a - b;
+            break;
+        case OP_DIV:
+            if (b == 0)
+                /* XXX replace this by a call to parse_error or yyerror */
+                printf("cannot divide by 0!\n");
+            else
+                result = a / b;
+            break;
+        case OP_MUL:
+            result = a * b;
+            break;
+        case OP_MOD:
+            result = a % b;
+            break;
+        case OP_BOR:
+            result = (a | b);
+            break;
+        case OP_BAND:
+            result = (a & b);
+            break;
+        case OP_BXOR:
+            result = (a ^ b);
+            break;
+        case OP_POW:
+            result = pow(a, b);
+            break;
+        case OP_CONCAT:
+            /* XXX replace this by a call to parse_error or yyerror */
+            printf("cannot concatenate operands of type 'int' and 'int'\n");
+            break;
+        case OP_LSR:
+            result = a; /* ?? */
+            break;
+        case OP_SHR:
+            result = a >> b;
+            break;
+        case OP_SHL:
+            result = a << b;
+            break;
+        case OP_OR:
+            result = (a || b);
+            break;
+        case OP_AND:
+            result = (a && b);
+            break;
+        case OP_FDIV:
+            result = a; /* fdiv in c? */
+            break;
+        case OP_XOR:
+            result = a ^ b; /* xor in c? */
+            break;
+        case OP_ISEQ:
+            result = (a == b);
+            break;
+        case OP_ISLE:
+            result = (a <= b);
+            break;
+        case OP_ISLT:
+            result = (a < b);
+            break;
+        case OP_ISGE:
+            result = (a >= b);
+            break;
+        case OP_ISGT:
+            result = (a > b);
+            break;
+        case OP_ISNE:
+            result = (a != b);
+            break;
+    }
+    return new_const(INT_TYPE, NULL, result);
+}
+
+static constant *
+fold_n_i(double a, pir_math_operator op, int b) {
+    double result;
+    /* XXX check out what binary ops work on operands of type (double, int)*/
+    return new_const(NUM_TYPE, NULL, result);
+}
+
+static constant *
+fold_i_n(int a, pir_math_operator op, double b) {
+    double result;
+    /* XXX check out what binary ops work on operands of type (int, double)*/
+    return new_const(NUM_TYPE, NULL, result);
+}
+
+static constant *
+fold_n_n(double a, pir_math_operator op, double b) {
+    double result;
+    /* XXX check out what binary ops work on operands of type (double, double)*/
+    return new_const(NUM_TYPE, NULL, result);
+}
+
+static int
+evaluate_i_i(int a, pir_rel_operator op, int b) {
+    return evaluate_n_n(a, op, b);
+}
+
+static int
+evaluate_n_i(double a, pir_rel_operator op, int b) {
+    return evaluate_n_n(a, op, b);
+}
+
+static int
+evaluate_i_n(int a, pir_rel_operator op, double b) {
+    return evaluate_n_n(a, op, b);
+}
+
+static int
+evaluate_n_n(double a, pir_rel_operator op, double b) {
+    switch (op) {
+        case OP_NE:
+            return (a != b);
+        case OP_EQ:
+            return (a == b);
+        case OP_LT:
+            return (a < b);
+        case OP_LE:
+            return (a <= b);
+        case OP_GT:
+            return (a > b);
+        case OP_GE:
+            return (a >= b);
+        default:
+            return 0;
+    }
+}
+
+static int
+evaluate_s_s(char *a, pir_rel_operator op, char *b) {
+    /* XXX todo: implement this */
+    /* for instance, "a" < "b" is true. */
+    return 0;
+}
+
+static char *
+concat_strings(char *a, char *b) {
+    int strlen_a = strlen(a);
+    char *newstr = (char *)calloc(strlen_a + strlen(b) + 1, sizeof (char));
+    assert(newstr != NULL);
+    strcpy(newstr, a);
+    strcpy(newstr + strlen_a, b);
+    free(a);
+    free(b);
+    return newstr;
+}
 
 /*
  * Local variables:

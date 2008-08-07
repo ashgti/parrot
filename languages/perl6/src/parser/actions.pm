@@ -388,6 +388,7 @@ method statement_mod_cond($/) {
 method statement_prefix($/) {
     my $past := $($<statement>);
     my $sym := ~$<sym>;
+
     if $sym eq 'do' {
         # fall through, just use the statement itself
     }
@@ -2218,9 +2219,13 @@ method variable($/, $key) {
                 $past.scope('package');
             }
 
-            # If it has a ! twigil, give it attribute scope.
+            # If it has a ! twigil, give it attribute scope and add self.
             if $twigil eq '!' {
                 $past.scope('attribute');
+                $past.unshift(PAST::Var.new(
+                    :name('self'),
+                    :scope('lexical')
+                ));
             }
 
             # If we have something with an & sigil see if it has any entries
@@ -2257,8 +2262,49 @@ method circumfix($/, $key) {
         if $<statementlist><statement> { $past.push( $( $<statementlist> ) ); }
     }
     elsif $key eq '{ }' {
+        # If it is completely empty or consists of a single list, the first
+        # element of which is either a hash or a pair, it's a hash constructor.
         $past := $( $<pblock> );
-        declare_implicit_function_vars($past);
+        my $is_hash := 0;
+        if +@($past) == 2 && +@($past[0]) == 0 {
+            if +@($past[1]) == 0 {
+                # Empty block, so a hash.
+                $is_hash := 1;
+            }
+            elsif +@($past[1]) == 1 && $past[1][0].WHAT() eq 'Op' {
+                if $past[1][0].name() eq 'infix:=>' {
+                    # Block with just one pair in it, so a hash.
+                    $is_hash := 1;
+                }
+                elsif $past[1][0].name() eq 'infix:,' {
+                    # List, but first elements must be...
+                    if $past[1][0][0].WHAT() eq 'Op' &&
+                            $past[1][0][0].name() eq 'infix:=>' {
+                        # ...a Pair
+                        $is_hash := 1;
+                    }
+                    elsif $past[1][0][0].WHAT() eq 'Var' &&
+                            substr($past[1][0][0].name(), 0, 1) eq '%' {
+                        # ...or a hash.
+                        $is_hash := 1
+                    }
+                }
+            }
+        }
+        if $is_hash {
+            my @children := @($past[1]);
+            $past := PAST::Op.new(
+                :pasttype('call'),
+                :name('hash'),
+                :node($/)
+            );
+            for @children {
+                $past.push($_);
+            }
+        }
+        else {
+            declare_implicit_function_vars($past);
+        }
     }
     elsif $key eq '$( )' {
         my $method := contextualizer_name($/, $<sigil>);
@@ -2400,7 +2446,9 @@ method quote_term($/, $key) {
     }
     elsif ($key eq 'circumfix') {
         $past := $( $<circumfix> );
-        $past.blocktype('immediate');
+        if $past.WHAT() eq 'Block' {
+            $past.blocktype('immediate');
+        }
     }
     make $past;
 }
@@ -2947,8 +2995,8 @@ sub make_handles_method_from_pair($/, $pair, $attr_name) {
     my $meth;
 
     # Single pair mapping. Check we have string name and value.
-    my $key := $pair[1];
-    my $value := $pair[2];
+    my $key := $pair[0];
+    my $value := $pair[1];
     if $key.WHAT() eq 'Val' && $value.WHAT() eq 'Val' {
         my $from_name := ~$key.value();
         my $to_name := ~$value.value();
