@@ -1049,22 +1049,24 @@ PARROT_API
 void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
+    const size_t object_size = pool->object_size;
+    const size_t objects_per_alloc = pool->objects_per_alloc;
     /* The size of the allocated arena. This is the size of the
        Small_Object_Arena structure, which goes at the front, the card, and
        the objects. */
-    size_t arena_size = (pool->object_size * pool->objects_per_alloc)
-                      + sizeof (Small_Object_Arena);
+    const size_t arena_size = (object_size * objects_per_alloc)
+                            + sizeof (Small_Object_Arena);
     Small_Object_Arena * const new_arena =
         (Small_Object_Arena *)mem_internal_allocate(arena_size);
 
     /* The objects are packed in after the cards (and any alignment space that
        we've added). */
-    new_arena->total_objects = pool->objects_per_alloc;
+    new_arena->total_objects = objects_per_alloc;
     new_arena->start_objects = (void *)(((char *)new_arena) + sizeof (Small_Object_Arena));
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
-        pool->object_size * pool->objects_per_alloc);
+        object_size * objects_per_alloc);
 
     /* Add all these new objects we've created into the pool's free list.
        this is where the rest of the messy pointer arithmetic happens. */
@@ -1072,12 +1074,12 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 
     /* allocate more next time */
     pool->objects_per_alloc =
-        (UINTVAL)pool->objects_per_alloc * UNITS_PER_ALLOC_GROWTH_FACTOR;
+        (UINTVAL)objects_per_alloc * UNITS_PER_ALLOC_GROWTH_FACTOR;
     pool->replenish_level   =
         (size_t)(pool->total_objects * REPLENISH_LEVEL_FACTOR);
 
     if (arena_size > POOL_MAX_BYTES)
-        pool->objects_per_alloc = POOL_MAX_BYTES / pool->object_size;
+        pool->objects_per_alloc = POOL_MAX_BYTES / object_size;
     if (pool->objects_per_alloc > GC_IT_MAX_IN_ARENA)
         pool->objects_per_alloc = GC_IT_MAX_IN_ARENA;
 }
