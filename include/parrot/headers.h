@@ -28,6 +28,8 @@
 #  define BUFFER_ALIGNMENT 8
 #endif
 
+#define SIZED_POOL_INDEX(s) ((s) / sizeof(void *))
+
 #define BUFFER_ALIGN_1 (BUFFER_ALIGNMENT - 1)
 #define BUFFER_ALIGN_MASK ~BUFFER_ALIGN_1
 

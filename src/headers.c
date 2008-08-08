@@ -252,7 +252,7 @@ make_bufferlike_pool(PARROT_INTERP, size_t buffer_size)
     Small_Object_Pool **sized_pools =
             interp->arena_base->sized_header_pools;
 
-    const UINTVAL idx = (buffer_size - sizeof (Buffer)) / sizeof (void *);
+    const UINTVAL idx = SIZED_POOL_INDEX(buffer_size);
 
     /* Expand the array of sized resource pools, if necessary */
     if (num_old <= idx) {
@@ -296,7 +296,7 @@ get_bufferlike_pool(PARROT_INTERP, size_t buffer_size)
     Small_Object_Pool ** const sized_pools =
             interp->arena_base->sized_header_pools;
 
-    return sized_pools[ (buffer_size - sizeof (Buffer)) / sizeof (void *) ];
+    return sized_pools[ SIZED_POOL_INDEX(buffer_size) ];
 }
 
 /*
