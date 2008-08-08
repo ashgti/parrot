@@ -1049,35 +1049,26 @@ PARROT_API
 void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    const size_t real_size   = pool->object_size;
-    const size_t num_objects = pool->objects_per_alloc;
-
     /* The size of the allocated arena. This is the size of the
        Small_Object_Arena structure, which goes at the front, the card, and
        the objects. */
-    size_t size = (real_size * pool->objects_per_alloc) /* the objects */
-                + sizeof (Small_Object_Arena);          /* the arena   */
+    size_t arena_size = (pool->object_size * pool->objects_per_alloc)
+                      + sizeof (Small_Object_Arena);
     Small_Object_Arena * const new_arena =
-        (Small_Object_Arena *)mem_internal_allocate(size);
+        (Small_Object_Arena *)mem_internal_allocate(arena_size);
 
     /* The objects are packed in after the cards (and any alignment space that
        we've added). */
-    new_arena->start_objects = (void *)((char *)new_arena + sizeof (Small_Object_Arena));
+    new_arena->total_objects = pool->objects_per_alloc;
+    new_arena->start_objects = (void *)(((char *)new_arena) + sizeof (Small_Object_Arena));
 
     /* insert new_arena in pool's arena linked list */
     Parrot_append_arena_in_pool(interp, pool, new_arena,
-        real_size * pool->objects_per_alloc);
+        pool->object_size * pool->objects_per_alloc);
 
     /* Add all these new objects we've created into the pool's free list.
        this is where the rest of the messy pointer arithmetic happens. */
     gc_it_add_arena_to_free_list(interp, pool, new_arena);
-/*
-#  if GC_IT_DEBUG
-    fprintf(stderr, "Alloc successful for %s (%p): %d objects [%p - %p]\n",
-            pool->name, pool, pool->objects_per_alloc, new_arena->start_objects,
-            (void*)((char*)(new_arena->start_objects) + (num_objects * real_size)));
-#  endif
-*/
 
     /* allocate more next time */
     pool->objects_per_alloc =
@@ -1085,10 +1076,8 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     pool->replenish_level   =
         (size_t)(pool->total_objects * REPLENISH_LEVEL_FACTOR);
 
-    size = real_size * pool->objects_per_alloc;
-
-    if (size > POOL_MAX_BYTES)
-        pool->objects_per_alloc = POOL_MAX_BYTES / real_size;
+    if (arena_size > POOL_MAX_BYTES)
+        pool->objects_per_alloc = POOL_MAX_BYTES / pool->object_size;
     if (pool->objects_per_alloc > GC_IT_MAX_IN_ARENA)
         pool->objects_per_alloc = GC_IT_MAX_IN_ARENA;
 }
@@ -1120,14 +1109,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
 {
     Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
     const size_t     num_objs = new_arena->total_objects;
-    register size_t i;
+    register size_t  i;
 
-/*
-#  if GC_IT_DEBUG
-    fprintf(stderr, "Adding arena %p to pool %p. %u items\n",
-            new_arena, pool, num_objs);
-#  endif
-*/
     /* Here, we loop over the entire arena, finding the various object
        headers and attaching them to the pool's free list. Each object
        is also marked with a card and flag number to determine where the
