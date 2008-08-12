@@ -221,7 +221,11 @@ method variable($/, $key) {
 }
 
 method varname($/, $key) {
-    make $( $/{$key} );
+    my $past := $( $/{$key} );
+    if is_a_sub(~$/) { # unary sub
+        $past := PAST::Op.new( :pasttype('call'), :node($/), $past );
+    }
+    make $past;
 }
 
 method global($/) {
@@ -298,6 +302,10 @@ method local_variable($/) {
     make $past;
 }
 
+method funcall($/) {
+    my $past := $( $<local_variable> );
+    make $past;
+}
 
 method constant_variable($/) {
     my @a;
@@ -465,11 +473,12 @@ method classdef($/,$key) {
 method functiondef($/) {
     my $past := $( $<comp_stmt> );
     my $name := $<fname>;
+    my $arity := $past[0]<arity>;
     #my $args := $( $<argdecl> );
     #$past.push($args);
     $past.name(~$name);
     our $?BLOCK;
-    $?BLOCK.symbol(~$name, :scope('package'));
+    $?BLOCK.symbol(~$name, :scope('package'), :arity($arity));
     make $past;
 }
 
@@ -689,6 +698,34 @@ method arg($/, $key) {
     }
 }
 
+sub is_a_sub($name) {
+    our $?BLOCK;
+    our @?BLOCK;
+    if $?BLOCK.symbol(~$name) {
+        if defined($?BLOCK.symbol(~$name)<arity>) {
+            return(1);
+        }
+        else {
+            return(0);
+        }
+    }
+    for @?BLOCK {
+        if $_ {
+            my $sym_table := $_.symbol(~$name);
+            if $sym_table {
+                if defined($sym_table<arity>) {
+                    return(1);
+                }
+                else {
+                    return(0);
+                }
+            }
+        }
+    }
+    my $lex := lex_lookup($name);
+    if $lex && ~lookup_class($lex) eq 'Sub' { return(1); }
+    return(0);
+}
 
 # Local Variables:
 #   mode: cperl

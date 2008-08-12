@@ -156,14 +156,14 @@ typedef struct key {
  * return continuation.
  */
 typedef struct target {
-    pir_type    type;
-    char       *name;  /* if this is a declared local */
-    int         regno; /* if this is a register */
-    int         color; /* for register allocation */
-    target_flag flags;
-    char       *named_flag_arg;
+    pir_type       type;
+    char          *name;  /* if this is a declared local */
+    int            regno; /* if this is a register */
+    int            color; /* for register allocation */
+    target_flag    flags;
+    char          *named_flag_arg;
 
-    struct key *key;
+    struct key    *key;
 
     struct target *next;
 
@@ -171,25 +171,6 @@ typedef struct target {
 
 void *panic(char *msg);
 
-/* maybe this is handy? */
-#define type(obj)   obj->type
-#define name(obj)   obj->name
-#define flags(obj)  obj->flags
-#define color(obj)  obj->color
-#define next(obj)   obj->next
-
-/* I think it's best to unify target, argument, constant and expression into 1 node type */
-typedef struct object {
-    pir_type    type;  /* type of this object */
-    char       *name;  /* name of this object */
-    value_type  vtype; /* selector for val union */
-    value       val;
-    int         flags;
-    int         color; /* this is the PASM register allocated to this object */
-
-    struct object *next;
-
-} object;
 
 
 /* function arguments or return values, but a return value is just
@@ -198,7 +179,7 @@ typedef struct object {
 typedef struct argument {
     expression *value;
     int         flags;
-    char       *named_flag_arg;
+    char       *alias;
 
     struct argument *next;
 
@@ -254,6 +235,9 @@ typedef struct statement {
 } statement;
 
 
+/* forward declaration of struct symbol */
+struct symbol;
+
 /* a sub */
 typedef struct subroutine {
     key       *name_space;          /* this sub's namespace */
@@ -267,6 +251,7 @@ typedef struct subroutine {
     target    *parameters;
     statement *statements;
 
+    struct symbol     *symbols;
 
     struct subroutine *next;
 
@@ -302,9 +287,10 @@ argument *add_arg(argument *arg1, argument *arg2);
 
 target *add_param(struct lexer_state *lexer, pir_type type, char *name);
 target *add_param_named(struct lexer_state *lexer, pir_type type, char *name, char *alias);
+void set_alias(struct lexer_state *lexer, char *alias);
+void set_curtarget(struct lexer_state *lexer, target *t);
 
 target *add_target(struct lexer_state *lexer, target *t1, target *t);
-target *find_target(struct lexer_state *lexer, char *name);
 
 target *new_target(pir_type type, char *name);
 target *reg(int type, int regno);
@@ -330,7 +316,10 @@ void set_arg_named(argument *arg, char *alias);
 
 void new_instr(struct lexer_state *lexer);
 void set_label(struct lexer_state *lexer, char *label);
+
 void set_instr(struct lexer_state *lexer, char *opname, ...);
+void set_instr0(struct lexer_state *lexer, char *opname, int count, ...);
+void set_instrf(struct lexer_state *lexer, char *opname, char const * const format, ...);
 
 void define_const(struct lexer_state *lexer, constant *var, int is_globalconst);
 
@@ -346,9 +335,10 @@ void unshift_operand(struct lexer_state *lexer, expression *operand);
 void push_operand(struct lexer_state *lexer, expression *operand);
 void add_operands(struct lexer_state *state, int count, ...);
 
-target *add_local(target *list, target *local);
-target *new_local(char *name, int unique);
+struct symbol *add_local(struct symbol *list, struct symbol *local);
+struct symbol *new_local(char *name, int unique);
 
+int targets_equal(target *t1, target *t2);
 
 void print_subs(struct lexer_state *lexer);
 
