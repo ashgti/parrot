@@ -277,6 +277,15 @@ PARROT_API
 void Parrot_gc_it_run(PARROT_INTERP, int flags)
         __attribute__nonnull__(1);
 
+PARROT_INLINE
+void gc_it_add_free_header(SHIM_INTERP,
+    ARGMOD(struct Small_Object_Pool * pool),
+    ARGMOD(struct Gc_it_hdr * hdr))
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(* pool)
+        FUNC_MODIFIES(* hdr);
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_INLINE
 UINTVAL gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))

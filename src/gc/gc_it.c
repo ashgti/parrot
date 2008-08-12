@@ -627,7 +627,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         while (i >= 0) {
             mark = gc_it_get_card_mark(hdr);
             if (mark == GC_IT_CARD_WHITE) {
-                GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                gc_it_add_free_header(interp, pool, hdr);
                 gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                 ++pool->num_free_objects;
             }
@@ -919,6 +919,11 @@ We only free an object if it's not already on the free list or on the queue.
 Ideally, all items should be freed automatically, so this function should
 become obsolete. If it's no longer used, I will get rid of it.
 
+=item C<void gc_it_add_free_header>
+
+Takes a Gc_it_hdr object and adds it's corresponding object to the pool's
+free list.
+
 =cut
 
 */
@@ -929,13 +934,26 @@ gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     ARGMOD(void *to_add))
 {
     Gc_it_hdr * const hdr = PObj_to_IT_HDR(to_add);
+    gc_it_add_free_header(interp, pool, hdr);
+}
 
+PARROT_INLINE
+void
+gc_it_add_free_header(SHIM_INTERP, ARGMOD(struct Small_Object_Pool * pool),
+    ARGMOD(struct Gc_it_hdr * hdr))
+{
     /* If the item is already on the free list, short-circuit and return. If
        it's in the queue, we can't free it or we lose all the free objects
        in the queue after this one. So, in either case, we short circuit
        here and don't free the object manually. */
     if (hdr->next)
-        return;
+       return;
+
+#  if GC_IT_DEBUG
+    /* This check is costly but helpful. */
+    PARROT_ASSERT(contained_in_pool(pool, IT_HDR_to_PObj(hdr)));
+#  endif
+
     ++pool->num_free_objects;
 
     hdr->next       = (Gc_it_hdr *)pool->free_list;
