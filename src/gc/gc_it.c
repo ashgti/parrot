@@ -159,6 +159,7 @@ Parrot_gc_it_init(PARROT_INTERP)
         UINTVAL p;
         PObj * pobj = (PObj*)(hdr + 1);
         p = h + sizeof(Gc_it_hdr);
+        PARROT_ASSERT(hdr == PObj_to_IT_HDR(IT_HDR_to_PObj(hdr)));
         PARROT_ASSERT(&(hdr[1]) == (hdr + 1));
         PARROT_ASSERT((hdr + 1) == (Gc_it_hdr*)((char*)hdr + sizeof(Gc_it_hdr)));
         PARROT_ASSERT((void*)pobj > (void*)hdr);
