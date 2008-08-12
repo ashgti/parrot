@@ -151,6 +151,22 @@ Parrot_gc_it_init(PARROT_INTERP)
     arena_base->do_gc_mark         = Parrot_gc_it_run;
     arena_base->finalize_gc_system = Parrot_gc_it_deinit;
     arena_base->init_pool          = Parrot_gc_it_pool_init;
+    {
+        /* Let's just test the hell out of this to make sure that things are
+           doing what I think they are doing. */
+        Gc_it_hdr * hdr = 0;
+        UINTVAL h = (UINTVAL)hdr;
+        UINTVAL p;
+        PObj * pobj = (PObj*)(hdr + 1);
+        p = h + sizeof(Gc_it_hdr);
+        PARROT_ASSERT(&(hdr[1]) == (hdr + 1));
+        PARROT_ASSERT((hdr + 1) == (Gc_it_hdr*)((char*)hdr + sizeof(Gc_it_hdr)));
+        PARROT_ASSERT((void*)pobj > (void*)hdr);
+        PARROT_ASSERT(p > h);
+        PARROT_ASSERT(p == (UINTVAL)pobj);
+        PARROT_ASSERT(hdr == PObj_to_IT_HDR(pobj));
+        PARROT_ASSERT(pobj == IT_HDR_to_PObj(hdr));
+    }
 #  if GC_IT_DEBUG
     fprintf(stderr, "GC IT Initialized: %p\n", gc_priv_data);
     fprintf(stderr, "SIZES. Hdr: %d, Data: %d\n", sizeof (Gc_it_hdr),
