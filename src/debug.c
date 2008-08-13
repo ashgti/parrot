@@ -31,6 +31,17 @@ the Parrot debugger, and the C<debug> ops.
 #include "parrot/oplib/ops.h"
 #include "debug.str"
 
+/* Hand switched debugger tracing */
+#define TRACE_DEBUGGER 1
+
+#ifdef TRACE_DEBUGGER
+#  define TRACEDEB_MSG(msg) fprintf(stderr, "%s\n", (msg))
+#else
+#  define TRACEDEB_MSG(msg)
+#endif
+
+/* Length of command line buffers */
+#define DEBUG_CMD_BUFFER_LENGTH 255
 
 /* Not sure how we want to handle this sort of cross-project header */
 PARROT_API
@@ -387,18 +398,55 @@ PARROT_API
 void
 Parrot_debugger_init(PARROT_INTERP)
 {
+    TRACEDEB_MSG("Parrot_debugger_init");
+
     if (! interp->pdb) {
         PDB_t *pdb = mem_allocate_zeroed_typed(PDB_t);
         Parrot_Interp debugger = Parrot_new(interp);
         interp->pdb     = pdb;
         debugger->pdb   = pdb;
         pdb->debugee    = interp;
+        pdb->debugger   = debugger;
+
+        /* Allocate space for command line buffers, NUL terminated c strings */
+        pdb->cur_command = (char *)mem_sys_allocate(DEBUG_CMD_BUFFER_LENGTH + 1);
+        pdb->last_command = (char *)mem_sys_allocate(DEBUG_CMD_BUFFER_LENGTH + 1);
     }
 
     /* PDB_disassemble(interp, NULL); */
 
-    interp->pdb->cur_opcode = interp->code->base.data;
     interp->pdb->state     |= PDB_RUNNING;
+}
+
+/*
+
+=item C<void Parrot_debugger_destroy>
+
+Destroy the current Parrot debugger instance.
+
+=cut
+
+*/
+
+PARROT_API
+void
+Parrot_debugger_destroy(PARROT_INTERP)
+{
+    /* Unfinished.
+       Free all debugger allocated resources.
+     */
+    PDB_t *pdb = interp->pdb;
+
+    TRACEDEB_MSG("Parrot_debugger_destroy");
+
+    PARROT_ASSERT(pdb);
+    PARROT_ASSERT(pdb->debugee == interp);
+
+    mem_sys_free(pdb->last_command);
+    mem_sys_free(pdb->cur_command);
+
+    mem_sys_free(pdb);
+    interp->pdb = NULL;
 }
 
 /*
@@ -439,10 +487,12 @@ PARROT_API
 void
 Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 {
-    /* fprintf(stderr, "Parrot_debugger_start\n"); */
+    TRACEDEB_MSG("Parrot_debugger_start");
 
     if (!interp->pdb)
         Parrot_ex_throw_from_c_args(interp, NULL, 0, "No debugger");
+
+    interp->pdb->cur_opcode = interp->code->base.data;
 
     if (interp->pdb->state & PDB_ENTER) {
         if (!interp->pdb->file) {
@@ -459,6 +509,8 @@ Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
         const char * command;
         PDB_get_command(interp);
         command = interp->pdb->cur_command;
+        if (command[0] == '\0')
+            command = interp->pdb->last_command;
 
         PDB_run_command(interp, command);
     }
@@ -487,6 +539,8 @@ PARROT_API
 void
 Parrot_debugger_break(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 {
+    TRACEDEB_MSG("Parrot_debugger_break");
+
     if (!interp->pdb)
         Parrot_ex_throw_from_c_args(interp, NULL, 0, "No debugger");
 
@@ -541,8 +595,6 @@ The input is saved in C<< pdb->cur_command >>.
 
 */
 
-#define DEBUG_CMD_BUFFER_LENGTH 255
-
 void
 PDB_get_command(PARROT_INTERP)
 {
@@ -554,15 +606,13 @@ PDB_get_command(PARROT_INTERP)
     /* flush the buffered data */
     fflush(stdout);
 
-    /* not used any more */
-    if (pdb->last_command && *pdb->cur_command) {
-        mem_sys_free(pdb->last_command);
-        pdb->last_command = NULL;
-    }
+    TRACEDEB_MSG("PDB_get_command");
 
+    PARROT_ASSERT(pdb->last_command);
+    PARROT_ASSERT(pdb->cur_command);
     /* update the last command */
-    if (pdb->cur_command && *pdb->cur_command)
-        pdb->last_command = pdb->cur_command;
+    if (pdb->cur_command[0] != '\0')
+        strcpy(pdb->last_command, pdb->cur_command);
 
     #if 0
     /* if the program is stopped and running show the next line to run */
@@ -585,9 +635,7 @@ PDB_get_command(PARROT_INTERP)
 
     i = 0;
 
-    /* RT #46109 who frees that */
-    /* need to allocate one more char as string is null-terminated */
-    c = (char *)mem_sys_allocate(DEBUG_CMD_BUFFER_LENGTH + 1);
+    c = pdb->cur_command;
 
     PIO_eprintf(interp, "\n(pdb) ");
 
@@ -606,8 +654,6 @@ PDB_get_command(PARROT_INTERP)
 
     if (ch == -1)
         strcpy(c, "quit");
-
-    pdb->cur_command = c;
 }
 
 /*
@@ -684,6 +730,8 @@ PDB_run_command(PARROT_INTERP, ARGIN(const char *command))
     unsigned long c;
     PDB_t        * const pdb = interp->pdb;
     const char   * const original_command = command;
+
+    TRACEDEB_MSG("PDB_run_command");
 
     /* keep a pointer to the command, in case we need to report an error */
 
@@ -839,6 +887,8 @@ PDB_trace(PARROT_INTERP, ARGIN_NULLOK(const char *command))
     PDB_t *  const pdb = interp->pdb;
     Interp        *debugee;
 
+    TRACEDEB_MSG("PDB_trace");
+
     /* if debugger is not running yet, initialize */
     if (!(pdb->state & PDB_RUNNING))
         PDB_init(interp, command);
@@ -859,19 +909,10 @@ PDB_trace(PARROT_INTERP, ARGIN_NULLOK(const char *command))
         pdb->state |= PDB_STOPPED;
         return;
     }
-
-    for (; n && pdb->cur_opcode; n--) {
-        trace_op(debugee,
-                debugee->code->base.data,
-                debugee->code->base.data +
-                debugee->code->base.size,
-                debugee->pdb->cur_opcode);
-        DO_OP(pdb->cur_opcode, debugee);
-    }
     pdb->tracing = n;
     pdb->debugee->run_core = PARROT_DEBUGGER_CORE;
 
-    runops_int(pdb->debugee, pdb->debugee->code->base.data - pdb->cur_opcode);
+    /* Clear the following when done some testing */
 
     /* we just stopped */
     pdb->state |= PDB_STOPPED;

@@ -155,6 +155,7 @@ typedef struct PDB_breakpoint {
  *  cur_opcode:         Current opcode.
  *  state:              The status of the program being debugged.
  *  debugee:            The interpreter we are debugging
+ *  debugger:           The debugger interpreter
  */
 
 typedef struct PDB {
@@ -167,6 +168,7 @@ typedef struct PDB {
     opcode_t                *cur_opcode;
     int                     state;
     Interp                  *debugee;
+    Interp                  *debugger;
     unsigned long           tracing;
 } PDB_t;
 
@@ -178,6 +180,10 @@ PARROT_API
 void Parrot_debugger_break(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+PARROT_API
+void Parrot_debugger_destroy(PARROT_INTERP)
+        __attribute__nonnull__(1);
 
 PARROT_API
 void Parrot_debugger_init(PARROT_INTERP)
