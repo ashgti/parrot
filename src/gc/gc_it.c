@@ -579,7 +579,7 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         Gc_it_hdr *hdr   = (Gc_it_hdr *)arena->start_objects;
         UINTVAL    mark;
 
-        while (i >= 0) {
+        while (i > 0) {
             /* this is a heavily stripped-down version of what it should be.
                Eventually, this is all going to get more efficient:
                1) going to re-unroll the loop like I have in the sized header
@@ -640,7 +640,7 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
         /* Partially unroll the loop with Duff's device: four items at a time.
            I can make some parts of this more efficient, but for now let's
            stick with the basics. */
-        while (i >= 0) {
+        while (i > 0) {
             mark = gc_it_get_card_mark(hdr);
             if (mark == GC_IT_CARD_WHITE) {
                 gc_it_add_free_header(interp, pool, hdr);
