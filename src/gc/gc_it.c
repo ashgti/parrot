@@ -1156,8 +1156,10 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
     const size_t     num_objs = new_arena->total_objects;
     register size_t  i;
+
     PARROT_ASSERT(new_arena == pool->last_Arena);
-    PARROT_ASSERT(contained_in_pool(pool, p));
+    PARROT_ASSERT((ptrdiff_t)p - (ptrdiff_t)new_arena->start_objects == 0);
+    PARROT_ASSERT(contained_in_pool(pool, IT_HDR_to_PObj(p)));
 
     /* Here, we loop over the entire arena, finding the various object
        headers and attaching them to the pool's free list. Each object
@@ -1167,11 +1169,12 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
        corresponds to the last flag on the last card. The very last object
        in contrast corresponds to the very first flag on the first card. */
     for (i = 0; i < num_objs; i++) {
+        PObj * pobj = IT_HDR_to_PObj(p);
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
-        PARROT_ASSERT(contained_in_pool(pool, p));
-        gc_it_add_free_object(interp, pool, p);
+        PARROT_ASSERT(contained_in_pool(pool, pobj));
+        gc_it_add_free_object(interp, pool, pobj);
         p->data.agg = 0;
         p = next;
     }
