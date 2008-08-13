@@ -593,9 +593,8 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                 PObj * pobj = IT_HDR_to_PObj(hdr);
                 if (PObj_needs_early_DOD_TEST(pobj))
                     --interp->arena_base->num_early_DOD_PMCs;
-                GC_IT_ADD_TO_FREE_LIST(pool, hdr);
+                gc_it_add_free_header(interp, pool, hdr);
                 Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                 ++pool->num_free_objects;
             }
             else if (mark == GC_IT_CARD_BLACK) {
@@ -645,11 +644,12 @@ gc_it_sweep_header_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
             mark = gc_it_get_card_mark(hdr);
             if (mark == GC_IT_CARD_WHITE) {
                 gc_it_add_free_header(interp, pool, hdr);
-                gc_it_set_card_mark(hdr, GC_IT_CARD_FREE);
                 ++pool->num_free_objects;
             }
-            else if (mark == GC_IT_CARD_BLACK)
+            else if (mark == GC_IT_CARD_BLACK) {
                 gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
+                hdr->next = NULL;
+            }
             hdr = (Gc_it_hdr*)((char*)hdr + (pool->object_size));
             i--;
         }
@@ -908,6 +908,7 @@ Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     pool->alloc_objects   = gc_it_alloc_objects;
     pool->more_objects    = gc_it_more_objects;
     pool->free_list       = NULL;
+    pool->last_Arena      = NULL;
 
     /* Initially, arena allocations are relatively small. Let's not try to
        force a GC run until a few arena's are allocated. This should also
@@ -950,14 +951,17 @@ void
 gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     ARGMOD(void *to_add))
 {
-    Gc_it_hdr * const hdr = PObj_to_IT_HDR(to_add);
+    PObj * p = (PObj*)to_add;
+    Gc_it_hdr * const hdr = PObj_to_IT_HDR(p);
+    PARROT_ASSERT(IT_HDR_to_PObj(hdr) == p);
+    PARROT_ASSERT(contained_in_pool(pool, p));
     gc_it_add_free_header(interp, pool, hdr);
 }
 
 PARROT_INLINE
 void
 gc_it_add_free_header(SHIM_INTERP, ARGMOD(struct Small_Object_Pool * pool),
-    ARGMOD(struct Gc_it_hdr * hdr))
+    ARGMOD(Gc_it_hdr * hdr))
 {
     /* If the item is already on the free list, short-circuit and return. If
        it's in the queue, we can't free it or we lose all the free objects
@@ -968,7 +972,10 @@ gc_it_add_free_header(SHIM_INTERP, ARGMOD(struct Small_Object_Pool * pool),
 
 #  if GC_IT_DEBUG
     /* This check is costly but helpful. */
-    PARROT_ASSERT(contained_in_pool(pool, IT_HDR_to_PObj(hdr)));
+    {
+        const PObj * const p = IT_HDR_to_PObj(hdr);
+        PARROT_ASSERT(contained_in_pool(pool, p));
+    }
 #  endif
 
     ++pool->num_free_objects;
@@ -1100,6 +1107,8 @@ gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
     new_arena->start_objects = (void *)(((char *)new_arena) + sizeof (Small_Object_Arena));
 
     /* insert new_arena in pool's arena linked list */
+    new_arena->next = NULL;
+    new_arena->prev = NULL;
     Parrot_append_arena_in_pool(interp, pool, new_arena,
         object_size * objects_per_alloc);
 
@@ -1147,6 +1156,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
     Gc_it_hdr       *p        = (Gc_it_hdr *)new_arena->start_objects;
     const size_t     num_objs = new_arena->total_objects;
     register size_t  i;
+    PARROT_ASSERT(new_arena == pool->last_Arena);
+    PARROT_ASSERT(contained_in_pool(pool, p));
 
     /* Here, we loop over the entire arena, finding the various object
        headers and attaching them to the pool's free list. Each object
@@ -1159,11 +1170,8 @@ gc_it_add_arena_to_free_list(PARROT_INTERP,
         Gc_it_hdr *next = (Gc_it_hdr *)((char*)p + pool->object_size);
 
         /* Add the current item to the free list */
-        p->next = (Gc_it_hdr *)pool->free_list;
-        pool->free_list = p;
-
-        gc_it_set_card_mark(p, GC_IT_CARD_FREE);
-
+        PARROT_ASSERT(contained_in_pool(pool, p));
+        gc_it_add_free_object(interp, pool, p);
         p->data.agg = 0;
         p = next;
     }
