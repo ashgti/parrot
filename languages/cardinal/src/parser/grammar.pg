@@ -137,14 +137,23 @@ token operation {
     <.identifier> ('!'|'?')?
 }
 
+#XXX UGLY!  Refactor into <args> maybe?
 token call_args {
-    | '()' {*}
-    | <args> {*}
-    | '(' <.ws> <args> <.ws> ')' {*}
+    | '()' [<.ws> <do_block>]? {*}
+    | <args> [<.ws> <do_block>]? {*}
+    | '(' <.ws> <args> <.ws> ')' [<.ws> <do_block>]? {*}
 }
 
 rule do_args {
-    '|' [ <identifier> [',' <identifier>]*]?'|' {*}
+    '|' <block_signature> '|'
+}
+
+rule block_signature {
+    [
+    | <identifier> [',' <identifier>]* [',' <slurpy_param>]? [',' <block_param>]?
+    | <slurpy_param> [',' <block_param>]?
+    | <block_param>?
+    ] {*}
 }
 
 token variable {
@@ -186,6 +195,7 @@ token basic_primary {
     | <literal> {*}                         #= literal
     | <funcall> {*}                         #= funcall
     | <variable> {*}                        #= variable
+    | <do_block> {*}                        #= do_block
     | <array> {*}                           #= array
     | <ahash> {*}                           #= ahash
     | <pcomp_stmt> {*}                      #= pcomp_stmt
@@ -290,12 +300,8 @@ rule bodystmt {
 
 rule argdecl {
     ['('
-    [ <identifier> [',' <identifier>]* [',' <slurpy_param>]? [',' <block_param>]?
-    | <slurpy_param> [',' <block_param>]?
-    | <block_param>?
-    ]
+    <block_signature>
     ')']?
-    {*}
 }
 
 token slurpy_param {
