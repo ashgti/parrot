@@ -273,18 +273,23 @@ Parrot_oo_get_class_str(PARROT_INTERP, ARGIN(STRING *name))
     PMC * const ns     = Parrot_get_namespace_keyed_str(interp, hll_ns, name);
     PMC * const _class = PMC_IS_NULL(ns)
                        ? PMCNULL : VTABLE_get_class(interp, ns);
-
+    fprintf(stderr, "Creating %s _class %p\n", _class == PMCNULL ? "null":"non null", _class);
     /* Look up a low-level class and create a proxy */
     if (PMC_IS_NULL(_class)) {
         const INTVAL type = pmc_type(interp, name);
 
         /* Reject invalid type numbers */
-        if (type > interp->n_vtable_max || type <= 0)
+        if (type > interp->n_vtable_max || type <= 0) {
+            fprintf(stderr, "Creating NULL pmc class\n");
             return PMCNULL;
+        }
         else {
             PMC * const type_num = pmc_new(interp, enum_class_Integer);
+            PMC * c;
             VTABLE_set_integer_native(interp, type_num, type);
-            return pmc_new_init(interp, enum_class_PMCProxy, type_num);
+            c = pmc_new_init(interp, enum_class_PMCProxy, type_num);
+            fprintf(stderr, "Creating class %p from type %d\n", c, enum_class_PMCProxy);
+            return c;
         }
     }
 
