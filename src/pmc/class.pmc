@@ -173,6 +173,11 @@ init_class_from_hash(PARROT_INTERP, PMC *self, PMC *info)
     INTVAL        type_num;
 
     /* Ensure we actually have some initialization info. */
+#  if GC_IT_DEBUG
+    if (gc_it_pmc_dead(self)) {
+        fprintf(stderr, "init_class_from_hash from dead PMC %p\n", self);
+    }
+# endif
     if (PMC_IS_NULL(info))
         return;
 

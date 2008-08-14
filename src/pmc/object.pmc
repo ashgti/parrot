@@ -731,6 +731,12 @@ Used to mark a PMC as read-only shared.
         PARROT_ASSERT(master->vtables[type_num]->pmc_class);
         /* don't want the referenced class disappearing on us */
         LOCK_INTERPRETER(master);
+#  if GC_IT_DEBUG
+        if (gc_it_pmc_dead(master->vtables[type_num]->pmc_class)) {
+            fprintf(stderr, "object->share_ro uses dead pmc class %p\n",
+                master->vtables[type_num]->pmc_class);
+        }
+#  endif
         SELF->vtable->pmc_class = master->vtables[type_num]->pmc_class;
         UNLOCK_INTERPRETER(master);
 

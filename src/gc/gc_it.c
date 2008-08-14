@@ -1341,9 +1341,9 @@ Determines whether a given PMC has been prematurely swept.
 UINTVAL
 gc_it_pmc_dead(ARGIN(PMC * p))
 {
-    return(p->pmc_ext    == (PMC *)0xdeadbeef ||
-        p->vtable        == (PMC *)0xdeadbeef ||
-        PMC_pmc_val(pmc) == (PMC *)0xdeadbeef);
+    return(p->pmc_ext    == (PMC_EXT *)0xdeadbeef ||
+        p->vtable        == (void *)0xdeadbeef ||
+        PMC_pmc_val(p)   == (PMC *)0xdeadbeef);
 }
 
 #  endif
