@@ -1326,6 +1326,28 @@ gc_it_ptr_get_aggregate(ARGIN(void * const ptr))
     return (UINTVAL)hdr->data.agg;
 }
 
+/*
+
+=item C<gc_it_pmc_dead>
+
+Determines whether a given PMC has been prematurely swept.
+
+=cut
+
+*/
+
+# if GC_IT_DEBUG
+
+UINTVAL
+gc_it_pmc_dead(ARGIN(PMC * p))
+{
+    return(p->pmc_ext    == (PMC *)0xdeadbeef ||
+        p->vtable        == (PMC *)0xdeadbeef ||
+        PMC_pmc_val(pmc) == (PMC *)0xdeadbeef);
+}
+
+#  endif
+
 #endif  /* PARROT_GC_IT */
 
 /*

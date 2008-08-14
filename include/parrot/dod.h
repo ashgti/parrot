@@ -309,6 +309,9 @@ void gc_it_trace_normal(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 void gc_it_trace_threaded(SHIM_INTERP);
+
+UINTVAL gc_it_pmc_dead(ARGIN(PMC *p))
+        __attribute__nonnull__(1);
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/gc_it.c */
 #endif
