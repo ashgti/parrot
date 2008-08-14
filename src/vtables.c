@@ -67,7 +67,6 @@ Parrot_clone_vtable(PARROT_INTERP, ARGIN(const VTABLE *base_vtable))
         parrot_hash_clone(interp, base_vtable->isa_hash, new_vtable->isa_hash);
     }
 
-
     return new_vtable;
 }
 
@@ -210,8 +209,12 @@ mark_vtables(PARROT_INTERP)
             pobject_lives(interp, (PObj *)vtable->whoami);
         if (vtable->provides_str)
             pobject_lives(interp, (PObj *)vtable->provides_str);
-        if (vtable->pmc_class)
+        if (vtable->pmc_class) {
+            fprintf(stderr, "Marking class pmc %p\n", vtable->pmc_class);
             pobject_lives(interp, (PObj *)vtable->pmc_class);
+        } else {
+            fprintf(stderr, "vtable has no class pmc!\n");
+        }
     }
 }
 

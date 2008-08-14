@@ -264,8 +264,8 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
         return;
     }
 #  if GC_IT_DEBUG
-    fprintf(stderr, "GC Run. items total: %d, flags: %x, state: %d\n",
-            (int)gc_priv_data->total_count, flags, gc_priv_data->state);
+    //fprintf(stderr, "GC Run. items total: %d, flags: %x, state: %d\n",
+    //        (int)gc_priv_data->total_count, flags, gc_priv_data->state);
 #  endif
 
     /* items scanned this run */
@@ -588,14 +588,15 @@ gc_it_sweep_PMC_arenas(PARROT_INTERP, ARGMOD(Gc_it_data *gc_priv_data),
                   these function calls.
             */
             mark = gc_it_get_card_mark(hdr);
-
             if (mark == GC_IT_CARD_WHITE) {
                 PObj * pobj = IT_HDR_to_PObj(hdr);
                 if (PObj_needs_early_DOD_TEST(pobj))
                     --interp->arena_base->num_early_DOD_PMCs;
-                gc_it_add_free_header(interp, pool, hdr);
-                Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
-                ++pool->num_free_objects;
+                if (!PObj_constant_TEST(pobj)) {
+                    gc_it_add_free_header(interp, pool, hdr);
+                    Parrot_dod_free_pmc(interp, pool, IT_HDR_to_PObj(hdr));
+                    ++pool->num_free_objects;
+                }
             }
             else if (mark == GC_IT_CARD_BLACK) {
                 gc_it_set_card_mark(hdr, GC_IT_CARD_WHITE);
@@ -730,13 +731,16 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
     /* If the queue is not currently empty, trace through it real quick so
        we don't lose anything. This is probably not the right way to go, but
        it should work. */
-    if (gc_priv_data->queue)
+    if (gc_priv_data->queue) {
+        fprintf(stderr, "Objects on queue before root queue. Tracing.\n");
         gc_it_trace_normal(interp);
+    }
 
     PARROT_ASSERT(!gc_priv_data->queue);
     /* Move the entire root queue to the queue */
     gc_priv_data->queue       = gc_priv_data->root_queue;
     gc_priv_data->root_queue  = NULL;
+    fprintf(stderr, "Root queue added to queue\n");
 }
 #  endif
 
