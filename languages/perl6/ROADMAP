@@ -1,72 +1,158 @@
-Updated: 2008-04-28
+Updated: 2008-08-16
 
 Milestones
 ----------
 
 This is a rough list of some of the major components to be added to Rakudo.
-
-* list context, list assignment
-* multi-argument return and control exceptions
-* class, role, objects
-* regex, token, rule, grammar
-* selected libraries written in Perl 6
-* modules
-* I/O
-* junction auto-threading
-* hyper, reduction and cross meta-operators
-* lazy lists, gather and take
-* slices and slice context
-* captures and signature handling
-* multi sub & multi-method dispatch
-* currying
-* operator overloading
-* other S09 features (typed arrays, sized types)
-* heredocs
-* macros
-* module versioning
-
-The list above also gives a sense of the rough prioritization
+This list also gives a sense of the rough prioritization
 of things -- i.e., getting return and control exceptions to work
 is a higher priority than heredocs or macros.  But it's also
 not intended to be rigid nor strictly sequential -- it's okay
 for people to work on some of the later milestones even if the
 earlier ones aren't complete.
 
-In addition to the above list of major features, the following list contains
-various smaller tasks that we should accomplish to get the number of tests in
-spectest_regression that we are currently skipping down somewhat. Some of
-them are probably good if you are looking for a more gentle entry point to
-Rakudo development than some of the bigger items listed above.
+ON ESTIMATES: All hourly estimates in milestones B-W are rough first-cust estimates
+IDEAL PROGRAMMER HOURS. Nobody should depend on them for anything other than relative
+estimates of difficulty
 
-* Implement whatever (*) in array indexing: @foo[*-1]
-* Implement Rat data type
-* Implement infinite ranges
-* Implement return type coercion ("as") and constraint ("of")
-* Fix issues with Int type constraint when we get an Integer PMC back, and
-  similar
-* Implement prefix:<\> operator
-* Finish implementing radix notation (see S02-literals/radix.t for details)
-* Implement eqv and === operators
-* Implement .perl on code objects
-* Investigate various issues with .perl on recursive data structures (see
-  S02-names_and_variables/perl.t)
-* Make junctions in boolean context return a junction of True/False
-* Investigate junction of code object failures (S03-junctions/misc.t)
-* Implement missing infix:<xx=> operator
-* Fix modulo bugs and MMD-related bugs for += and -= (S03-operators\arith.t)
-* Implement NaN and Inf
-* Empty contextualizer @() should be same as @($/)
-* Fix MMD-related bugs in S03-operators\range.t
-* Implement inifx:<orelse>
-* Fix bugs with nested ?? !!
-* Implement state variables
-* Implement last/redo/next/continue control exceptions
-* Fix .{"key"} parsefail when (hash index into $_)
-* Finish implementing given and check/fix tests in S04-statements\given.t
-* Implement CATCH blocks
-* Implement loops and conditionals taking pointy blocks
-* Make m/.../ syntax for constructing a regex work
-* Fix problem with using Str as a type constraint or in MMD
-* Fix lambda expression parse bug when used as rvalue
-* Implement ::?CLASS
-* Implement/fix adverbial blocks
+
+A PGE needs to be refactored and updated to handle protoregexes and
+  longest token matching so we can use the STD grammar
+    Sub-milestones - each is 1 calendar month:
+    Not expected to fully block other milestones, except as indicated below
+
+
+	 M1. PGE internal refactors and initial protoregex implementation (D1),
+	     selected protoregex constructs added to Rakudo's grammar (D2),
+	     interface design for pre-compilation and external libraries (D3, D4).
+	
+	 M2. Completed protoregex implementation (D1),
+	     initial implementation of longest token matching in PGE (D1),
+	     completed Rakudo grammar migration to protoregexes (D2),
+	     beginning of P6-based "Prelude" implementation for Rakudo (D3),
+	     initial implementations of external HLL library support (D4).
+	
+	 M3. Substantially complete longest token matching in PGE (D1),
+	     Rakudo using protoregexes and longest token matching in grammar (D2),
+	     full protoregex and LTM support in Rakudo (D3),
+	     integrate P6-based Prelude into Rakudo implementation (D3),
+	     continued improvement of HLL library support (D4).
+	
+	 M4. Completed PGE protoregex and longest token matching implementation (D1),
+	     update Rakudo bottom-up parser to align with STD.pm (D2),
+	     Rakudo and/or compiler tools able to parse STD.pm directly (D2),
+	     substantial implementation of a P6-based Prelude for Rakudo (D3),
+	     substantially complete external HLL libraries support (D4).
+	     updated documentation and tests for all work performed, final report.
+
+B signature handling
+    pm estimate: 8h
+    (jonathan implementing)
+
+C list assignment [depends on A, B]
+    PM Estimate: 2h  
+
+D control exceptions
+    Can be done now
+    Requires adding exception types to PCT
+        pm estimate: 6h
+    Writing exception throwers in Rakudo
+        pm estimate: 0.5h 
+
+E regex, token, rule, grammar (50% done)
+    We have an initial implementation
+    Implementaiton needs tweaking
+    Depends on grammar improvements
+    Some advanced bits depend on PGE improvements
+
+    grammar improvements
+        2h
+    advanced bits (depends on pge improvements)
+        2h
+
+F Allow Perl 6 precompiled sources - write libraries in Perl 6
+    PM Estimate 8h
+    
+G modules
+    50% done
+    subtask: better handling of namespaces 
+    depends on a refactoring of namespaces in p6object  (a MOP implementation) in parrot.
+
+    pm estimate: 12h (including refactoring)
+
+H lazy lists
+    jw estimate: 8h
+
+I gather and take
+    depends on resumable exceptions from pir
+    pm estimate: 4h
+
+J I/O
+
+    * Depends on an IO spec
+    * Depends on lazy lists 
+
+    Small matter of writing wrapper methods to implement spec.
+
+K junction auto-threading
+    writing dispatch operators  
+        jw estimate: 8h
+    auto-threading
+        jw estimate: 24h
+
+L hyper, reduction and cross meta-operators
+    [depends on parser improvements]
+    pm estimate: 6h for hyper
+                 1h for reduction
+                 4h for cross
+
+M slices 
+    * tests need writing
+    pm estimate: 
+                    8h study S09
+                    24h implement  (VERY rough)
+
+N slice context
+    pm estimate: 
+                    32h implement  (VERY rough)
+    
+O captures
+    PM needs to send mail to p6l. - current tests don't seem to match pm's understanding of the spec
+    
+    pm estimate:
+                4h study spec
+                6h implement            
+
+P multi-argument return - return into named arguments [depends on captures]
+    PCT side
+       pm estimate: 8h     
+    Rakudo side
+        pm estimate: 4h
+
+Q multi sub & multi-method dispatch
+    JW implementing
+    Depends on parrot implementation of MMD (implemented)
+    Depends on P6 Object update [Depends on G]
+    JW estimate: 16h
+
+R currying
+    PM estimate: 8h
+
+S operator overloading
+    Depends on the parser
+
+    PM Estimate: 6h
+
+T heredocs including pod heredocs
+    Depends on the parser
+    PM Estimate: 2h
+
+U macros
+    Depends on the parser
+    PM Estimate: 6h
+
+V module versioning
+    (estimate for start: christmas)
+     
+W other S09 features (typed arrays, sized types)
+    (estimate for start: christmas)
