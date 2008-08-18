@@ -86,10 +86,8 @@ op new(out PMC, in STR) {
     STRING * const classname = $2;
     PMC * const classobj = Parrot_oo_get_class_str(interp, classname);
 
-    if (!PMC_IS_NULL(classobj)) {
-        fprintf(stderr, "Instantiating class from %p\n", classobj);
+    if (!PMC_IS_NULL(classobj))
         $1 = VTABLE_instantiate(interp, classobj, PMCNULL);
-    }
     else {
         const INTVAL type = pmc_type(interp, classname);
         if (type <= 0)
