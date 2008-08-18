@@ -170,6 +170,7 @@ typedef struct PDB {
     Interp                  *debugee;
     Interp                  *debugger;
     unsigned long           tracing;
+    FILE                    *script_file;
 } PDB_t;
 
 
@@ -200,6 +201,11 @@ void Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 
 PARROT_API
 void PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_API
+void PDB_script_file(PARROT_INTERP, ARGIN(const char *command))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -324,10 +330,6 @@ char PDB_program_end(PARROT_INTERP)
 
 PARROT_IGNORABLE_RESULT
 int PDB_run_command(PARROT_INTERP, ARGIN(const char *command))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-void PDB_script_file(PARROT_INTERP, ARGIN(const char *command))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

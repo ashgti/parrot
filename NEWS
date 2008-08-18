@@ -1,6 +1,10 @@
 # $Id$
 
 New in 0.7.0 [r29473 through r30270]
+- Implementation
+  + new concurrency implementation (see PDD25)
+  + Exception PMC now captures a return continuation
+  + improved PMC encapsulation (Iterator, Key, Pair)
 - Specification
   + PDD27: add multisub lookup
 - Languages
@@ -10,6 +14,10 @@ New in 0.7.0 [r29473 through r30270]
     - refactor all libraries (namespace, method registration)
     - add a OpenGL binding (still incomplete)
   + Pipp (PHP):
+    - Add support for while- and for-loops
+    - Add support for increment and decrement
+    - Designate PHP 5.3 as the reference implementation 
+    - Improve support for string literals
   + Pugs (Perl 6):
     - removed due to bit rot
   + Rakudo (Perl 6):
@@ -19,7 +27,11 @@ New in 0.7.0 [r29473 through r30270]
     - class attributes ("my $.x")
     - now up to 2196 passing tests
   + Tcl:
-    - [lots]
+    - implement [lreverse], [lsort -command]
+    - allow [incr] to autovivify
+    - Update tclsh spec target to 8.5.3
+    - Fix bug in TclDict PMC, allowing ~200 more [dict] spec tests to pass
+    - Update 'make spectest' fudging, using TODO instead of SKIP if possible
 - Compilers
   + PCT:
     - :scope('register') for PAST::Var nodes
@@ -27,11 +39,22 @@ New in 0.7.0 [r29473 through r30270]
     - PIR registers now use the vanilla register allocator
     - all PASM output now uses PASM registers
     - all .locals and $registers are mapped
+    - clean-up of grammar, back-end and documentation
+    - implemented constant folding
+    - implemented instruction selection
 - Configuration
   + tests now clean up after themselves
   + improved parallel test support
   + ports/cygwin added
   + Darwin problems fixed
+- Tools
+  + parrot_debugger renamed from pdb, numerous tweaks
+- Miscellaneous
+  + IMCC cleanups
+  + :vtable implies self in PIR
+  + modest core speed improvements
+  + Cygwin support improved
+  + "say" now an opcode (was dispatched to a method; see Deprecations)
 - Deprecations
   + ".pragma n_operators" is deprecated
   + old PASM register syntax (without "$") is deprecated
@@ -40,14 +63,9 @@ New in 0.7.0 [r29473 through r30270]
   + ".HLL_map" syntax will change
   + ".loadlib" is now separate from ".HLL"
   + mmdvtregister and mmdvtablefind opcodes are deprecated
-  + removed getfd, getclass opcodes, plus numeric get_attr and set_attr
-- Implementation
-  + new concurrency implementation (see PDD25)
-  + new "say" opcode
-  + Exception PMC now captures a return continuation
-- Tools
-  + parrot_debugger renamed from pdb, numerous tweaks
-- Miscellaneous
+  + removed getfd, getclass opcodes
+  + removed IMCC syntax that treated some methods as builtins
+  + removed numeric get_attr and set_attr vtable entries
 
 New in 0.6.4
 - Documentation

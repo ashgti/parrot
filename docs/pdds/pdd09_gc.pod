@@ -427,10 +427,6 @@ and perform a sweep in the PMC header pool, so that destructors and finalizers
 get called. PMCs which have custom destructors rely on this behavior for
 proper operation.
 
-=item GC_no_trace_volatile_roots
-
-Trace root set except volatile roots. That is skip e.g. registers.
-
 =back
 
 =item C<void (*finalize_gc_system) (Interp *)>
@@ -455,9 +451,10 @@ basic behaviors for the pool.
 =item C<PObj * (*get_free_object) (Interp *, Small_Object_Pool*)>
 
 Get a free object from the pool. This function returns one free object from
-the given pool and removes that object from the pool's free list. PObject flags
-are returned clear, except flags that are used by the garbage collector itself,
-if any. If the pool is a buffer header pool all other object memory is zeroed.
+the given pool and removes that object from the pool's free list. PObject
+flags are returned clear, except flags that are used by the garbage collector
+itself, if any. If the pool is a buffer header pool all other object memory
+is zeroed.
 
 =item C<void (*add_free_object) (Interp *, Small_Object_Pool *, PObj *);>
 
