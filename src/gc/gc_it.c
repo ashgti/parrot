@@ -1095,18 +1095,17 @@ PARROT_API
 void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
-    const size_t object_size = pool->object_size;
+    const size_t object_size       = pool->object_size;
     const size_t objects_per_alloc = pool->objects_per_alloc;
+
     /* The size of the allocated arena. This is the size of the
        Small_Object_Arena structure, which goes at the front, the card, and
        the objects. */
     const size_t arena_size = (object_size * objects_per_alloc)
                             + sizeof (Small_Object_Arena);
     Small_Object_Arena * const new_arena =
-        (Small_Object_Arena *)mem_internal_allocate(arena_size);
+        (Small_Object_Arena *)mem_internal_allocate_zeroed(arena_size);
 
-    /* The objects are packed in after the cards (and any alignment space that
-       we've added). */
     new_arena->total_objects = objects_per_alloc;
     new_arena->start_objects = (void *)(((char *)new_arena) + sizeof (Small_Object_Arena));
 
