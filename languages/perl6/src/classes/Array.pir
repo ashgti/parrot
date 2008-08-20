@@ -173,6 +173,11 @@ Shift the first item off the array and return it.
     .return ($I0)
 .end
 
+.sub '' :vtable('shift_float')
+    $N0 = self.'shift'()
+    .return ($N0)
+.end
+
 
 .sub '' :vtable('delete_keyed_int')
     .param int index
@@ -193,6 +198,41 @@ Shift the first item off the array and return it.
 .sub '' :vtable('delete_keyed_str')
     .param int index
     delete self[index]
+.end
+
+
+=item unshift(args :slurpy)
+
+Adds C<args> to the beginning of the Array.
+
+=cut
+
+.sub 'unshift' :method :multi(Perl6Array)
+    .param pmc args :slurpy
+    args.'!flatten'()
+    $P0 = getattribute self, "@!evaluated"
+    splice $P0, args, 0, 0
+    .return self.'elems'()
+.end
+
+.sub '' :vtable('unshift_pmc')
+    .param pmc arg
+    self.'unshift'(arg)
+.end
+
+.sub '' :vtable('unshift_string')
+    .param pmc arg
+    self.'unshift'(arg)
+.end
+
+.sub '' :vtable('unshift_integer')
+    .param pmc arg
+    self.'unshift'(arg)
+.end
+
+.sub '' :vtable('unshift_float')
+    .param pmc arg
+    self.'unshift'(arg)
 .end
 
 
@@ -274,20 +314,6 @@ Remove the last item from the array and return it.
     x = new 'Failure'
   done:
     .return (x)
-.end
-
-
-=item unshift(args :slurpy)
-
-Adds C<args> to the beginning of the Array.
-
-=cut
-
-.sub 'unshift' :method :multi(Perl6Array)
-    .param pmc args :slurpy
-    args.'!flatten'()
-    splice self, args, 0, 0
-    .return self.'elems'()
 .end
 
 
