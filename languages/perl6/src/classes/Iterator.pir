@@ -15,24 +15,28 @@ XXX Needs cleanup and probably fixes/changes before moving to trunk.
 .sub 'onload' :anon :load :init
     .local pmc p6meta
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    p6meta.'new_class'('Perl6Iterator', 'name'=>'Iterator', 'parent'=>'Any', 'attributes'=>'@!list $!position')
+    p6meta.'new_class'('Perl6Iterator', 'name'=>'Iterator', 'parent'=>'Any', 'attr'=>'@!list $!position')
 .end
 
+.namespace [ 'Perl6Iterator' ]
 
 .sub 'get_bool' :vtable
-    .local pmc list, evaluated, unevaluated
+    .local pmc list, evaluated, unevaluated, position
     .local int elems
 
     # Check evaluated part.
     list = getattribute self, "@!list"
+    position = getattribute self, "$!position"
     evaluated = getattribute list, "@!evaluated"
     elems = elements evaluated
-    if elems goto true
+    if position < 0 goto unevaluated_check
+    if position < elems goto true
 
     # Check unevaluated part; if we just have iterators, we need to make sure
     # they have values (that is, if we have a list of ten exhausted iterators,
     # we want to be sure that we return a false value here, since there are no
     # more values to be obtained).
+  unevaluated_check:
     unevaluated = getattribute list, "@!unevaluated"
     elems = elements unevaluated
     unless elems goto false
