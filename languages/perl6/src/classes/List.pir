@@ -391,8 +391,22 @@ not know how many elements they have without evaluating themselves first.
 
     # We have lazy bits - need to evaluate them and work out how many elements
     # are in there.
-    # XXX hack
-    total += uneval_count
+    .local pmc it, check
+    it = iter unevaluated
+  it_loop:
+    unless it goto it_loop_end
+    check = shift it
+    $I0 = isa check, 'Range'
+    if $I0 goto is_iter
+    $I0 = isa check, 'IOIterator'
+    if $I0 goto is_iter
+    inc total
+    goto it_loop
+  is_iter:
+    $I0 = check.'elems'()
+    total += $I0
+    goto it_loop
+  it_loop_end:
 
   done:
     .return (total)

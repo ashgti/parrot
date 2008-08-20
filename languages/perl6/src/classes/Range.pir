@@ -119,6 +119,36 @@ Gets the beginning or end of the range.
 .end
 
 
+=item elems
+
+Gets the number of elements we'd have if we iterated this iterator.
+
+=cut
+
+.sub 'elems' :method
+    .local pmc from, fromexc, toexc, to
+    from = getattribute self, '$!from'
+    fromexc = getattribute self, '$!from_exclusive'
+    toexc = getattribute self, '$!to_exclusive'
+    to = getattribute self, '$!to'
+    
+    # XXX Bad: assuming it's an Int range; needs fixing before merge.
+    .local int total
+    $I0 = to
+    $I1 = from
+    total = $I0 - $I1
+    inc total            # assume inclusive first
+    unless fromexc goto not_fromexc
+    dec total
+  not_fromexc:
+    unless toexc goto not_toexc
+    dec total
+  not_toexc:
+    
+    .return (total)
+.end
+
+
 =item iterator()  (vtable method)
 
 Return an iterator for the Range.  Since Ranges are already

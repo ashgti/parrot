@@ -23,9 +23,10 @@ src/classes/Array.pir - Perl 6 Array class and related functions
     .param pmc source
     $P0 = get_hll_global 'list'
     $P0 = $P0(source)
-    setattribute self, "@!unevaluated", $P0
-    $P0 = new 'ResizablePMCArray'
-    setattribute self, "@!evaluated", $P0
+    $P1 = getattribute $P0, "@!unevaluated"
+    setattribute self, "@!unevaluated", $P1
+    $P1 = getattribute $P0, "@!evaluated"
+    setattribute self, "@!evaluated", $P1
     .return (self)
 .end
 
@@ -64,7 +65,7 @@ the set_pmc_keyed_int).
     evaluated = getattribute self, "@!evaluated"
     $I0 = elements evaluated
     if $I0 < index goto use_unevaluated
-    evaluated[index] = $P0
+    evaluated[index] = value
     .return ()
 
     # Need to use the unevaluated portion of the list.
@@ -72,8 +73,7 @@ the set_pmc_keyed_int).
     .local int upto
     upto = index - 1
     self.'!evaluate_upto'(upto)
-    $P0 = evaluated[index]
-    .return ($P0)
+    evaluated[index] = value
 .end
 
 
@@ -285,6 +285,48 @@ Remove the last item from the array and return it.
 .end
 
 
+=item values()
+
+Return the values of the Array as a List.
+
+=cut
+
+.sub 'values' :method
+    $P0 = new 'List'
+    $P1 = getattribute self, "@!unevaluated"
+    setattribute $P0, "@!unevaluated", $P1
+    $P1 = getattribute self, "@!evaluated"
+    setattribute $P0, "@!evaluated", $P1
+    .return ($P0)
+.end
+
+
+=item exists(indices :slurpy)
+
+Return true if the elements at C<indices> have been assigned to.
+
+=cut
+
+.sub 'exists' :method :multi(Perl6Array)
+    .param pmc indices :slurpy
+    .local int test
+
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+
+    test = 0
+  indices_loop:
+    unless indices goto indices_end
+    $I0 = shift indices
+    self.'!evaluate_upto'($I0)
+    test = exists evaluated[$I0]
+    if test goto indices_loop
+  indices_end:
+    .return 'prefix:?'(test)
+.end
+
+
+
 ############### Below here still to review after lazy changes. ###############
 
 
@@ -325,40 +367,6 @@ to the length of the last non-null (existing) element.
 
   indices_end:
     .return (result)
-.end
-
-
-=item exists(indices :slurpy)
-
-Return true if the elements at C<indices> have been assigned to.
-
-=cut
-
-.sub 'exists' :method :multi(Perl6Array)
-    .param pmc indices :slurpy
-    .local int test
-
-    test = 0
-  indices_loop:
-    unless indices goto indices_end
-    $I0 = shift indices
-    test = exists self[$I0]
-    if test goto indices_loop
-  indices_end:
-    .return 'prefix:?'(test)
-.end
-
-
-=item values()
-
-Return the values of the Array as a List.
-
-=cut
-
-.sub 'values' :method
-    $P0 = new 'List'
-    splice $P0, self, 0, 0
-    .return ($P0)
 .end
 
 

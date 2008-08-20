@@ -122,9 +122,9 @@ objects, we create a List containing the invocant.
 =cut
 
 .sub 'list' :method
-    $P0 = new 'List'
-    push $P0, self
-    .return ($P0)
+    $P0 = get_hll_global 'list'
+    $P1 = $P0(self)
+    .return ($P1)
 .end
 
 
