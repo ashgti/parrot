@@ -198,6 +198,10 @@ Gets the next value when we are iterating the List.
     .return (value)
 .end
 
+.sub 'shift_string' :vtable
+    $P0 = shift self
+    .return ($P0)
+.end
 
 
 =item C<list()>
