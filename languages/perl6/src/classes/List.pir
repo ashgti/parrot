@@ -152,7 +152,7 @@ Gets the next value when we are iterating the List.
 .sub 'shift_pmc' :vtable
     .local pmc value
     .local int elems_available
-say "in shift_pmc"
+
     # See if we have anything in the evaluated part.
     .local pmc evaluated
     evaluated = getattribute self, "@!evaluated"
@@ -310,7 +310,7 @@ index.
 
 .sub '!evaluate_upto' :method
     .param int required
-    
+
     # Get the parts of the list and see what we have and what's available.
     .local pmc evaluated, unevaluated
     .local int have, available
@@ -325,7 +325,9 @@ index.
     if have > required goto loop_end
     .local pmc try
     try = unevaluated[0]
-    $I0 = isa try, 'Perl6Iterator'
+    $I0 = isa try, 'Range'
+    if $I0 goto have_iter
+    $I0 = isa try, 'IOIterator'
     if $I0 goto have_iter
     try = shift unevaluated
     push evaluated, try
@@ -383,6 +385,18 @@ not know how many elements they have without evaluating themselves first.
 .sub '' :vtable('get_number')
     $N0 = self.'elems'()
     .return ($N0)
+.end
+
+
+=item get_string()    (vtable method)
+
+Return the elements of the list joined by spaces.
+
+=cut
+
+.sub 'get_string' :vtable :method
+    $S0 = join ' ', self
+    .return ($S0)
 .end
 
 
@@ -474,7 +488,7 @@ Build a List from its arguments.
 .namespace []
 .sub 'list'
     .param pmc values          :slurpy
-    values = values.'!flatten'()
+    values.'!flatten'()
     .local pmc list
     list = new 'List'
     setattribute list, "@!unevaluated", values
@@ -490,7 +504,8 @@ Operator form for building a list from its arguments.
 
 .sub 'infix:,'
     .param pmc args            :slurpy
-    args = args.'!flatten'()
+    $I0 = elements args
+    args.'!flatten'()
     .local pmc list
     list = new 'List'
     setattribute list, "@!unevaluated", args
@@ -499,18 +514,6 @@ Operator form for building a list from its arguments.
 
 
 ################# Below here to review for lazy conversion. #################
-
-
-=item get_string()    (vtable method)
-
-Return the elements of the list joined by spaces.
-
-=cut
-
-.sub 'get_string' :vtable :method
-    $S0 = join ' ', self
-    .return ($S0)
-.end
 
 
 =item hash()

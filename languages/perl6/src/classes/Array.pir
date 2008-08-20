@@ -23,7 +23,9 @@ src/classes/Array.pir - Perl 6 Array class and related functions
     .param pmc source
     $P0 = get_hll_global 'list'
     $P0 = $P0(source)
-    setattribute $P0, "@!unevaluated", $P0
+    setattribute self, "@!unevaluated", $P0
+    $P0 = new 'ResizablePMCArray'
+    setattribute self, "@!evaluated", $P0
     .return (self)
 .end
 
