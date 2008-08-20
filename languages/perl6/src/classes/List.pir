@@ -42,22 +42,162 @@ Will operate with constant memory consumption.
 .end
 
 
+=item clone()    (vtable method)
+
+Return a clone of this list.  (Clones its elements also.)
+
+=cut
+
+.namespace ['List']
+.sub 'clone' :method
+    .local pmc result, it, evaluated, unevaluated, new_evaluated, new_unevaluated
+
+    # Clone evaluated.
+    evaluated = getattribute self, '@!evaluated'
+    new_evaluated = new 'ResizablePMCArray'
+    it = iter evaluated
+  iter_loop_ev:
+    unless it goto iter_end_ev
+    $P0 = shift it
+    $P0 = clone $P0
+    push new_evaluated, $P0
+    goto iter_loop_ev
+  iter_end_ev:
+
+    # Clone unevaluated.
+    unevaluated = getattribute self, '@!unevaluated'
+    new_unevaluated = new 'ResizablePMCArray'
+    it = iter unevaluated
+  iter_loop_u:
+    unless it goto iter_end_u
+    $P0 = shift it
+    $P0 = clone $P0
+    push new_unevaluated, $P0
+    goto iter_loop_u
+  iter_end_u:
+
+    # Build result.
+    $P0 = typeof self
+    result = new $P0
+    setattribute result, '@!evaluated', new_evaluated
+    setattribute result, '@!unevaluated', new_unevaluated
+    .return (result)
+.end
+
+.sub '' :vtable('clone')
+    $P0 = self.'clone'()
+    .return ($P0)
+.end
+
+
 =item C<iterator> (vtable get_iter)
 
 Gets an iterator for the list.
 
 =cut
 
-.namespace ['List']
 .sub 'iterator' :vtable('get_iter')
-    .local pmc new_iter
-    new_iter = new 'Perl6Iterator'
-    setattribute new_iter, "@!list", self
-    $P0 = new 'Int'
-    $P0 = 0
-    setattribute new_iter, "$!position", $P0
-    .return (new_iter)
+    $P0 = self.'clone'()
+    .return ($P0)
 .end
+
+
+=item C<get_bool>
+
+Returns true if there are items in the list.
+
+=cut
+
+.sub 'get_bool' :vtable
+    .local pmc evaluated, unevaluated
+    .local int elems
+
+    # Check evaluated part.
+    evaluated = getattribute self, "@!evaluated"
+    elems = elements evaluated
+    if elems goto true
+
+    # Check unevaluated part; if we just have iterators, we need to make sure
+    # they have values (that is, if we have a list of ten exhausted iterators,
+    # we want to be sure that we return a false value here, since there are no
+    # more values to be obtained).
+  unevaluated_check:
+    unevaluated = getattribute self, "@!unevaluated"
+    elems = elements unevaluated
+    unless elems goto false
+    .local int cur_check
+    cur_check = 0
+  try_loop:
+    $P0 = unevaluated[cur_check]
+    $I0 = isa $P0, 'Perl6Iterator'
+    unless $I0 goto true
+    if $P0 goto true
+    inc cur_check
+    if cur_check >= elems goto false
+    goto try_loop
+
+  true:
+    .return (1)
+  false:
+    .return (0)
+.end
+
+
+=item C<shift_pmc>
+
+Gets the next value when we are iterating the List.
+
+=cut
+
+.sub 'shift_pmc' :vtable
+    .local pmc value
+    .local int elems_available
+say "in shift_pmc"
+    # See if we have anything in the evaluated part.
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+    elems_available = elements evaluated
+    if elems_available == 0 goto use_unevaluated
+
+    # We have things available in the evaluated portion. Get a value, then
+    # increment our position, and we're done.
+    value = shift evaluated
+    .return (value)
+
+    # Here we take values from the unevaluated part of the list.
+  use_unevaluated:
+    .local pmc unevaluated, try
+    unevaluated = getattribute self, "@!unevaluated"
+  try_loop:
+    elems_available = elements unevaluated
+    if elems_available == 0 goto failure
+
+    # See if it's an iterator at the head of the list or not.
+    try = unevaluated[0]
+    $I0 = isa try, 'Perl6Iterator'
+    if $I0 goto get_from_iter
+    
+    # Not an iterator, so just pull this value off the head of the unevaluated
+    # part and hand it back.
+    value = unshift unevaluated
+    .return (value)
+
+    # We have an iterator. Make sure it's not exhausted, and if not get a value
+    # from it. If it is, then we need to remove it and try the next iterator.
+  get_from_iter:
+    unless try goto empty_iter
+    value = shift try
+    .return (value)
+  empty_iter:
+    $P0 = unshift unevaluated
+    goto try_loop
+
+    # If there's no elements available, we fail.
+  failure:
+    value = new 'Undef'
+    .return (value)
+.end
+
 
 
 =item C<list()>
@@ -71,20 +211,18 @@ Gets this value in list context (since it is already a List, just returns itself
 .end
 
 
+=item C<init>
+
+On initilization, create evaluated and unevaluated parts just as normal Parrot
+resizable arrays. This provides our storage.
+
+=cut
+
 .sub 'init' :vtable
     $P0 = new 'ResizablePMCArray'
     setattribute self, "@!unevaluated", $P0
     $P0 = new 'ResizablePMCArray'
     setattribute self, "@!evaluated", $P0
-.end
-
-.sub 'does' :vtable
-    .local string check
-    say "called"
-    if check == 'array' goto true
-    .return (0)
-  true:
-    .return (1)
 .end
 
 
@@ -248,17 +386,6 @@ not know how many elements they have without evaluating themselves first.
 .end
 
 
-.sub '' :vtable('get_bool')
-    # XXX Can be optimized - we just need to know there is an element, not how
-    # many.
-    $I0 = self.'elems'()
-    if $I0 goto true
-    .return (0)
-  true:
-    .return (1)
-.end
-
-
 =back
 
 =head2 Methods added to ResizablePMCArray
@@ -282,10 +409,6 @@ Return the List as a list.
     .return (list)
 .end
 
-
-=head2 List methods
-
-=over 4
 
 =item !flatten()
 
@@ -376,29 +499,6 @@ Operator form for building a list from its arguments.
 
 
 ################# Below here to review for lazy conversion. #################
-
-
-=item clone()    (vtable method)
-
-Return a clone of this list.  (Clones its elements also.)
-
-=cut
-
-.namespace ['List']
-.sub 'clone' :vtable :method
-    .local pmc p6meta, result, iter
-    $P0 = typeof self
-    result = new $P0
-    iter = self.'iterator'()
-  iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
-    $P0 = clone $P0
-    push result, $P0
-    goto iter_loop
-  iter_end:
-    .return (result)
-.end
 
 
 =item get_string()    (vtable method)
