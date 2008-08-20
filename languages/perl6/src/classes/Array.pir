@@ -143,7 +143,9 @@ Shift the first item off the array and return it.
     unless $I0 goto empty
     .local pmc try
     try = unevaluated[0]
-    $I0 = isa try, 'Perl6Iterator'
+    $I0 = isa try, 'Range'
+    if $I0 goto is_iter
+    $I0 = isa try, 'IOIterator'
     if $I0 goto is_iter
     try = shift unevaluated
     .return (try)

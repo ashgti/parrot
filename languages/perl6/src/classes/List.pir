@@ -96,7 +96,12 @@ Gets an iterator for the list.
 
 =cut
 
-.sub 'iterator' :vtable('get_iter')
+.sub 'iterator' :method
+    $P0 = self.'clone'()
+    .return ($P0)
+.end
+
+.sub '' :vtable('get_iter')
     $P0 = self.'clone'()
     .return ($P0)
 .end
@@ -129,8 +134,12 @@ Returns true if there are items in the list.
     cur_check = 0
   try_loop:
     $P0 = unevaluated[cur_check]
-    $I0 = isa $P0, 'Perl6Iterator'
-    unless $I0 goto true
+    $I0 = isa $P0, 'Range'
+    if $I0 goto check_iter
+    $I0 = isa $P0, 'IOIterator'
+    if $I0 goto check_iter
+    goto true
+  check_iter:
     if $P0 goto true
     inc cur_check
     if cur_check >= elems goto false
@@ -174,7 +183,9 @@ Gets the next value when we are iterating the List.
 
     # See if it's an iterator at the head of the list or not.
     try = unevaluated[0]
-    $I0 = isa try, 'Perl6Iterator'
+    $I0 = isa try, 'Range'
+    if $I0 goto get_from_iter
+    $I0 = isa try, 'IOIterator'
     if $I0 goto get_from_iter
 
     # Not an iterator, so just pull this value off the head of the unevaluated
@@ -415,6 +426,69 @@ Return the elements of the list joined by spaces.
 .end
 
 
+=item hash()
+
+Return the List invocant as a Hash.
+
+=cut
+
+.sub 'hash' :method
+    .local pmc result, iter
+    result = new 'Perl6Hash'
+    iter = self.'iterator'()
+  iter_loop:
+    unless iter goto iter_end
+    .local pmc elem, key, value
+    elem = shift iter
+    $I0 = does elem, 'hash'
+    if $I0 goto iter_hash
+    $I0 = isa elem, 'Perl6Pair'
+    if $I0 goto iter_pair
+    unless iter goto err_odd_list
+    value = shift iter
+    value = clone value
+    result[elem] = value
+    goto iter_loop
+  iter_hash:
+    .local pmc hashiter
+    hashiter = elem.'keys'()
+  hashiter_loop:
+    unless hashiter goto hashiter_end
+    $S0 = shift hashiter
+    value = elem[$S0]
+    result[$S0] = value
+    goto hashiter_loop
+  hashiter_end:
+    goto iter_loop
+  iter_pair:
+    key = elem.'key'()
+    value = elem.'value'()
+    result[key] = value
+    goto iter_loop
+  iter_end:
+    .return (result)
+
+  err_odd_list:
+    die "Odd number of elements found where hash expected"
+.end
+
+
+=item item()
+
+Return the List invocant in scalar context (i.e., an Array).
+
+=cut
+
+.sub 'item' :method
+    $P0 = new 'Perl6Array'
+    $P1 = getattribute self, "@!evaluated"
+    setattribute $P0, "@!evaluated", $P1
+    $P1 = getattribute self, "@!unevaluated"
+    setattribute $P0, "@!unevaluated", $P1
+    .return ($P0)
+.end
+
+
 =back
 
 =head2 Methods added to ResizablePMCArray
@@ -487,6 +561,7 @@ any Lists encountered.
     splice self, $P0, i, 1
     $P0 = getattribute elem, "@!evaluated"
     splice self, $P0, i, 0
+    len = elements self
     goto flat_loop
   check_array:
     $I0 = does elem, 'array'
@@ -544,65 +619,7 @@ Operator form for building a list from its arguments.
 
 ################# Below here to review for lazy conversion. #################
 
-
-=item hash()
-
-Return the List invocant as a Hash.
-
-=cut
-
-.sub 'hash' :method
-    .local pmc result, iter
-    result = new 'Perl6Hash'
-    iter = self.'iterator'()
-  iter_loop:
-    unless iter goto iter_end
-    .local pmc elem, key, value
-    elem = shift iter
-    $I0 = does elem, 'hash'
-    if $I0 goto iter_hash
-    $I0 = isa elem, 'Perl6Pair'
-    if $I0 goto iter_pair
-    unless iter goto err_odd_list
-    value = shift iter
-    value = clone value
-    result[elem] = value
-    goto iter_loop
-  iter_hash:
-    .local pmc hashiter
-    hashiter = elem.'keys'()
-  hashiter_loop:
-    unless hashiter goto hashiter_end
-    $S0 = shift hashiter
-    value = elem[$S0]
-    result[$S0] = value
-    goto hashiter_loop
-  hashiter_end:
-    goto iter_loop
-  iter_pair:
-    key = elem.'key'()
-    value = elem.'value'()
-    result[key] = value
-    goto iter_loop
-  iter_end:
-    .return (result)
-
-  err_odd_list:
-    die "Odd number of elements found where hash expected"
-.end
-
-
-=item item()
-
-Return the List invocant in scalar context (i.e., an Array).
-
-=cut
-
-.sub 'item' :method
-    $P0 = new 'Perl6Array'
-    splice $P0, self, 0, 0
-    .return ($P0)
-.end
+.namespace [ "TODO" ]
 
 
 =item perl()
@@ -719,19 +736,6 @@ Return the number of elements in the list.
     .param pmc test
     .param pmc values          :slurpy
     .return values.'grep'(test)
-.end
-
-
-=item iterator()
-
-Returns an iterator for the list.
-
-=cut
-
-.sub 'iterator' :method
-    self.'!flatten'()
-    $P0 = iter self
-    .return ($P0)
 .end
 
 
