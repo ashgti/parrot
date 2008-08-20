@@ -63,7 +63,6 @@ the size of that file down and to emphasize their generic,
     sep = ' '
   have_sep:
     $P0 = self.'list'()
-    $P0.'!flatten'()
     $S0 = join sep, $P0
     .return ($S0)
 .end
@@ -250,7 +249,7 @@ the size of that file down and to emphasize their generic,
 .namespace ['Any']
 .sub 'reverse' :method :multi(_)
     .local pmc result, it
-    result = new 'List'
+    result = new 'ResizablePMCArray'
     $P0 = self.'list'()
     it = $P0.'iterator'()
   loop:
@@ -259,12 +258,15 @@ the size of that file down and to emphasize their generic,
     unshift result, $P0
     goto loop
   done:
+    $P0 = get_hll_global 'list'
+    result = $P0(result)
     .return (result)
 .end
 
 .namespace []
 .sub 'reverse' :multi()
     .param pmc values          :slurpy
+    values = 'list'(values)
     .return values.'reverse'()
 .end
 
