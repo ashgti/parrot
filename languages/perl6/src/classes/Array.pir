@@ -77,6 +77,19 @@ the set_pmc_keyed_int).
 .end
 
 
+=item new
+
+Instantiates a new array. (Overridden as default .new method does the wrong
+thing with our attributes.)
+
+=cut
+
+.sub 'new' :method
+    $P0 = new 'Perl6Array'
+    .return ($P0)
+.end
+
+
 =item item()
 
 Return Array in item context (i.e., self)

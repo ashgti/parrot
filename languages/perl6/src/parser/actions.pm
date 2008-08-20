@@ -3127,7 +3127,7 @@ sub sig_extract_declarables($/, $sig_setup) {
     }
 
     # Now go through what signature and extract what to declare.
-    my @result := list();
+    my @result := Array.new();
     my $first := 1;
     for @($sig_setup) {
         if $first {

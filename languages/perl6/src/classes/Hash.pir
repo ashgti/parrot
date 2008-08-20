@@ -22,11 +22,13 @@ src/classes/Hash.pir - Perl 6 Hash class and related functions
 .sub 'hash'
     .param pmc args            :slurpy
     .param pmc hash            :slurpy :named
-    args.'!flatten'()
+    .local pmc result
+    $P0 = get_hll_global 'list'
+    result = $P0(args)
     unless hash goto hash_done
-    unshift args, hash
+    unshift result, hash
   hash_done:
-    .return args.'hash'()
+    .return result.'hash'()
 .end
 
 

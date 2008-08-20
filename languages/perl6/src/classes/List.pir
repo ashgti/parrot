@@ -38,7 +38,21 @@ Will operate with constant memory consumption.
     listproto = p6meta.'register'($P0, 'parent'=>'Any')
 
     $P0 = get_hll_namespace ['List']
+    '!EXPORT'('keys values', $P0)
     #'!EXPORT'('first grep keys kv map pairs reduce values', $P0)
+.end
+
+
+=item new
+
+Instantiates a new array. (Overridden as default .new method does the wrong
+thing with our attributes.)
+
+=cut
+
+.sub 'new' :method
+    $P0 = new 'Perl6Array'
+    .return ($P0)
 .end
 
 
@@ -435,7 +449,14 @@ Return the elements of the list joined by spaces.
 =cut
 
 .sub 'get_string' :vtable :method
-    $S0 = join ' ', self
+    # Need to evaluate all of the list.
+    $I0 = self.'elems'()
+    dec $I0
+    self.'!evaluate_upto'($I0)
+
+    # Now join fully evaluated part.
+    $P0 = getattribute self, "@!evaluated"
+    $S0 = join ' ', $P0
     .return ($S0)
 .end
 
@@ -503,6 +524,25 @@ Return the List invocant in scalar context (i.e., an Array).
 .end
 
 
+=item keys()
+
+Returns a List containing the keys of the invocant.
+
+=cut
+
+.sub 'keys' :method :multi(ResizablePMCArray)
+    $I0 = self.'elems'()
+    dec $I0
+    $P0 = 'infix:..'(0, $I0)
+    .return $P0.'list'()
+.end
+
+.sub 'keys' :multi()
+    .param pmc values          :slurpy
+    .return values.'keys'()
+.end
+
+
 =back
 
 =head2 Methods added to ResizablePMCArray
@@ -538,6 +578,20 @@ an Array.
     $P0 = new 'Perl6Array'
     setattribute $P0, '@!unevaluated', self
     .return ($P0)
+.end
+
+
+=item keys()
+
+Returns a List containing the keys of the invocant.
+
+=cut
+
+.sub 'keys' :method
+    $I0 = elements self
+    dec $I0
+    $P0 = 'infix:..'(0, $I0)
+    .return $P0.'list'()
 .end
 
 
@@ -750,25 +804,6 @@ Return the number of elements in the list.
     .param pmc test
     .param pmc values          :slurpy
     .return values.'grep'(test)
-.end
-
-
-=item keys()
-
-Returns a List containing the keys of the invocant.
-
-=cut
-
-.sub 'keys' :method :multi(ResizablePMCArray)
-    $I0 = self.'elems'()
-    dec $I0
-    $P0 = 'infix:..'(0, $I0)
-    .return $P0.'list'()
-.end
-
-.sub 'keys' :multi()
-    .param pmc values          :slurpy
-    .return values.'keys'()
 .end
 
 

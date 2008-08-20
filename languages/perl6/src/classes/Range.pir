@@ -164,22 +164,14 @@ iterators, we can just return a clone.
 
 =item list()
 
-Generate the Range in list context.  Currently we generate all
-of the elements in the range; when we have lazy lists we can
-just return a clone of the Range.
+Generate the Range in list context (a list containing the range).
 
 =cut
 
 .sub 'list' :method
-    .local pmc range_it, result
-    range_it = self.'iterator'()
-    result = new 'List'
-  range_loop:
-    unless range_it goto range_end
-    $P0 = shift range_it
-    push result, $P0
-    goto range_loop
-  range_end:
+    $P0 = get_hll_global 'list'
+    .local pmc result
+    result = $P0(self)
     .return (result)
 .end
 
