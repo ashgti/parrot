@@ -89,28 +89,28 @@ USAGE
     setattribute self, '$version', $P0
 
     ##  create a list for holding the stack of nested blocks
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6';'Grammar';'Actions'], '@?BLOCK', $P0
 
     ## create a list for holding the stack of nested packages
     ## (that may be roles, modules, classes or grammars).
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6';'Grammar';'Actions'], '@?PACKAGE', $P0
 
     ## create a list for holding the stack of nested classes
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6';'Grammar';'Actions'], '@?CLASS', $P0
 
     ## create a list for holding the stack of nested roles
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6';'Grammar';'Actions'], '@?ROLE', $P0
 
     ## create a list for holding the stack of nested grammars
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6';'Grammar';'Actions'], '@?GRAMMAR', $P0
 
     ##  create a list of END blocks to be run
-    $P0 = new 'List'
+    $P0 = new 'Perl6Array'
     set_hll_global ['Perl6'], '@?END_BLOCKS', $P0
 
     ##  tell PAST::Var how to encode Perl6Str and Str values
@@ -158,7 +158,7 @@ to the Perl 6 compiler.
     ##  it as a ResizableStringArray and we need Undefs for
     ##  non-existent elements (RSA gives empty strings).
     .local pmc args, iter
-    args = new 'List'
+    args = new 'Perl6Array'
     iter = new 'Iterator', args_str
   args_loop:
     unless iter goto args_end

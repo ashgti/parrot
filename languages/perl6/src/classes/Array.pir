@@ -23,8 +23,7 @@ src/classes/Array.pir - Perl 6 Array class and related functions
     .param pmc source
     $P0 = get_hll_global 'list'
     $P0 = $P0(source)
-    $I0 = elements self
-    splice self, $P0, 0, $I0
+    setattribute $P0, "@!unevaluated", $P0
     .return (self)
 .end
 
@@ -32,10 +31,9 @@ src/classes/Array.pir - Perl 6 Array class and related functions
 .namespace []
 .sub 'circumfix:[ ]'
     .param pmc values          :slurpy
+    values.'!flatten'()
     $P0 = new 'Perl6Array'
-    $I0 = elements values
-    splice $P0, values, 0, $I0
-    $P0.'!flatten'()
+    setattribute $P0, "@!unevaluated", values
     $P1 = new 'Perl6Scalar'
     assign $P1, $P0
     .return ($P1)
@@ -46,6 +44,160 @@ src/classes/Array.pir - Perl 6 Array class and related functions
 
 =over 4
 
+=item set_pmc_keyed_int (vtable)
+
+Sets the element at the specified index. (Also catch other vtables that want
+to provide keys or set values in different forms and just delegate them to
+the set_pmc_keyed_int).
+
+=cut
+
+.namespace ['Perl6Array']
+.sub 'set_pmc_keyed_int' :vtable
+    .param int index
+    .param pmc value
+
+    # Are we evaluated up to the point before this element yet?
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+    $I0 = elements evaluated
+    if $I0 < index goto use_unevaluated
+    evaluated[index] = $P0
+    .return ()
+
+    # Need to use the unevaluated portion of the list.
+  use_unevaluated:
+    .local int upto
+    upto = index - 1
+    self.'!evaluate_upto'(upto)
+    $P0 = evaluated[index]
+    .return ($P0)
+.end
+
+
+=item item()
+
+Return Array in item context (i.e., self)
+
+=cut
+
+.sub 'item' :method
+    .return (self)
+.end
+
+
+=item push(args :slurpy)
+
+Add C<args> to the end of the Array.
+
+=cut
+
+.sub 'push' :method :multi(Perl6Array)
+    .param pmc args :slurpy
+    args.'!flatten'()
+    $P0 = getattribute self, "@!unevaluated"
+    $I0 = elements $P0
+    splice $P0, args, $I0, 0
+    .return self.'elems'()
+.end
+
+.sub '' :vtable('push_pmc')
+    .param pmc arg
+    self.'push'(arg)
+.end
+
+.sub '' :vtable('push_string')
+    .param pmc arg
+    self.'push'(arg)
+.end
+
+.sub '' :vtable('push_integer')
+    .param pmc arg
+    self.'push'(arg)
+.end
+
+
+=item shift()
+
+Shift the first item off the array and return it.
+
+=cut
+
+.sub 'shift' :method :multi(Perl6Array)
+    # First, try and shift from the evaluated part.
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+    $I0 = elements evaluated
+    unless $I0 goto use_unevaluated
+    $P0 = shift evaluated
+    .return ($P0)
+
+    # Failed, try the unevaluated part.
+  use_unevaluated:
+    .local pmc unevaluated
+    unevaluated = getattribute self, "@!unevaluated"
+  try_loop:
+    $I0 = elements unevaluated
+    unless $I0 goto empty
+    .local pmc try
+    try = unevaluated[0]
+    $I0 = isa try, 'Perl6Iterator'
+    if $I0 goto is_iter
+    try = shift unevaluated
+    .return (try)
+  is_iter:
+    unless try goto iter_out_of_values
+    try = shift try
+    .return (try)
+  iter_out_of_values:
+    try = shift unevaluated
+    goto try_loop
+
+  empty:
+    $P0 = new 'Failure'
+    .return ($P0)
+.end
+
+.sub '' :vtable('shift_pmc')
+    $P0 = self.'shift'()
+    .return ($P0)
+.end
+
+.sub '' :vtable('shift_string')
+    $S0 = self.'shift'()
+    .return ($S0)
+.end
+
+.sub '' :vtable('shift_integer')
+    $I0 = self.'shift'()
+    .return ($I0)
+.end
+
+
+.sub '' :vtable('delete_keyed_int')
+    .param int index
+    
+    # Make sure we have evaluated up to this index, then delete from the
+    # evaluated part.
+    self.'!evaluate_upto'(index)
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+    delete evaluated[index]
+.end
+
+.sub '' :vtable('delete_keyed')
+    .param int index
+    delete self[index]
+.end
+
+.sub '' :vtable('delete_keyed_str')
+    .param int index
+    delete self[index]
+.end
+
+
+############### Below here still to review after lazy changes. ###############
+
 =item delete(indices :slurpy)
 
 Delete the elements specified by C<indices> from the array
@@ -53,8 +205,6 @@ Delete the elements specified by C<indices> from the array
 to the length of the last non-null (existing) element.
 
 =cut
-
-.namespace ['Perl6Array']
 
 .sub 'delete' :method :multi(Perl6Array)
     .param pmc indices :slurpy
@@ -109,17 +259,6 @@ Return true if the elements at C<indices> have been assigned to.
 .end
 
 
-=item item()
-
-Return Array in item context (i.e., self)
-
-=cut
-
-.sub 'item' :method
-    .return (self)
-.end
-
-
 =item pop()
 
 Remove the last item from the array and return it.
@@ -130,39 +269,6 @@ Remove the last item from the array and return it.
     .local pmc x
     unless self goto empty
     x = pop self
-    goto done
-  empty:
-    x = new 'Failure'
-  done:
-    .return (x)
-.end
-
-
-=item push(args :slurpy)
-
-Add C<args> to the end of the Array.
-
-=cut
-
-.sub 'push' :method :multi(Perl6Array)
-    .param pmc args :slurpy
-    args.'!flatten'()
-    $I0 = elements self
-    splice self, args, $I0, 0
-    .return self.'elems'()
-.end
-
-
-=item shift()
-
-Shift the first item off the array and return it.
-
-=cut
-
-.sub 'shift' :method :multi(Perl6Array)
-    .local pmc x
-    unless self goto empty
-    x = shift self
     goto done
   empty:
     x = new 'Failure'

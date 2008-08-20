@@ -4,6 +4,21 @@
 
 src/classes/List.pir - Perl 6 List class and related functions
 
+The List class implements a lazy list. It has two attributes, one that
+contains the currently unevaluated parts of the list and one that contains
+the fully evaluated parts. Both of these are Parrot ResizablePMCArrays.
+When a list is created, we flatten out any sublists within it to get a
+list of just values and iterators and put it into the unevaluated portion.
+Then, if we index into a certain position in the list, we generate all
+values up to that positioin if we have not done so already and hand them back.
+
+For iterating, we do not save any of the generated values. This means that
+things like:
+
+  for =$fh1, =$fh2 -> $x { ... }
+
+Will operate with constant memory consumption.
+
 =head2 Object Methods
 
 =over 4
@@ -13,12 +28,355 @@ src/classes/List.pir - Perl 6 List class and related functions
 .sub 'onload' :anon :load :init
     .local pmc p6meta, listproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    listproto = p6meta.'new_class'('List', 'parent'=>'ResizablePMCArray Any')
-    p6meta.'register'('ResizablePMCArray', 'parent'=>listproto, 'protoobject'=>listproto)
+    $P0 = newclass 'List'
+    addattribute $P0, '@!unevaluated'
+    addattribute $P0, '@!evaluated'
+    $P1 = new 'Hash'
+    $P1['name'] = 'array'
+    $P1 = new Role, $P1
+    addrole $P0, $P1
+    listproto = p6meta.'register'($P0, 'parent'=>'Any')
 
     $P0 = get_hll_namespace ['List']
-    '!EXPORT'('first grep keys kv map pairs reduce values', $P0)
+    #'!EXPORT'('first grep keys kv map pairs reduce values', $P0)
 .end
+
+
+=item C<iterator> (vtable get_iter)
+
+Gets an iterator for the list.
+
+=cut
+
+.namespace ['List']
+.sub 'iterator' :vtable('get_iter')
+    .local pmc new_iter
+    new_iter = new 'Perl6Iterator'
+    setattribute new_iter, "@!list", self
+    $P0 = new 'Int'
+    $P0 = 0
+    setattribute new_iter, "$!position", $P0
+    .return (new_iter)
+.end
+
+
+=item C<list()>
+
+Gets this value in list context (since it is already a List, just returns itself).
+
+=cut
+
+.sub 'list' :method
+    .return (self)
+.end
+
+
+.sub 'init' :vtable
+    $P0 = new 'ResizablePMCArray'
+    setattribute self, "@!unevaluated", $P0
+    $P0 = new 'ResizablePMCArray'
+    setattribute self, "@!evaluated", $P0
+.end
+
+.sub 'does' :vtable
+    .local string check
+    say "called"
+    if check == 'array' goto true
+    .return (0)
+  true:
+    .return (1)
+.end
+
+
+=item get_pmc_keyed (vtable)
+
+Gets an element at the specified index. (Also catch other vtables that want
+to provide keys or get values in different forms and just delegate them to
+the get_pmc_keyed_int).
+
+=cut
+
+.sub 'get_pmc_keyed_int' :vtable
+    .param int index
+
+    # Are we evaluated up to this point yet?
+    .local pmc evaluated
+    evaluated = getattribute self, "@!evaluated"
+    $I0 = elements evaluated
+    if $I0 <= index goto use_unevaluated
+    $P0 = evaluated[index]
+    .return ($P0)
+
+    # Need to use the unevaluated portion of the list.
+  use_unevaluated:
+    self.'!evaluate_upto'(index)
+    $P0 = evaluated[index]
+    .return ($P0)
+.end
+
+.sub 'get_pmc_keyed' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_pmc_keyed_str' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_string_keyed' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_string_keyed_int' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_string_keyed_str' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_integer_keyed' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_integer_keyed_int' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+.sub 'get_integer_keyed_str' :vtable
+    .param int index
+    $P0 = self[index]
+    .return ($P0)
+.end
+
+
+=item C<!evaluate_upto(index)>
+
+Takes the PMC that has lazy parts and lazily evaluates it up to the required
+index.
+
+=cut
+
+.sub '!evaluate_upto' :method
+    .param int required
+    
+    # Get the parts of the list and see what we have and what's available.
+    .local pmc evaluated, unevaluated
+    .local int have, available
+    evaluated = getattribute self, "@!evaluated"
+    unevaluated = getattribute self, "@!unevaluated"
+    have = elements evaluated
+    available = elements unevaluated
+    if available == 0 goto loop_end
+
+    # Loop while we need more values.
+  loop:
+    if have > required goto loop_end
+    .local pmc try
+    try = unevaluated[0]
+    $I0 = isa try, 'Perl6Iterator'
+    if $I0 goto have_iter
+    try = shift unevaluated
+    push evaluated, try
+    inc have
+    goto loop
+
+  have_iter:
+    unless try goto iter_no_values
+    try = shift try
+    push evaluated, try
+    goto loop
+
+  iter_no_values:
+    try = unshift unevaluated
+    goto loop
+  loop_end:
+.end
+
+
+=item elems (vtable elements)
+
+Get the number of elements in the list. May cause evaluation of things that do
+not know how many elements they have without evaluating themselves first.
+
+=cut
+
+.sub 'elems' :method
+    .local pmc evaluated, unevaluated
+    .local int total, uneval_count
+    evaluated = getattribute self, "@!evaluated"
+    unevaluated = getattribute self, "@!unevaluated"
+    total = elements evaluated
+    uneval_count = elements unevaluated
+    if uneval_count == 0 goto done
+
+    # We have lazy bits - need to evaluate them and work out how many elements
+    # are in there.
+    # XXX hack
+    total += uneval_count
+
+  done:
+    .return (total)
+.end
+
+.sub '' :vtable('elements')
+    $I0 = self.'elems'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('get_integer')
+    $I0 = self.'elems'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('get_number')
+    $N0 = self.'elems'()
+    .return ($N0)
+.end
+
+
+.sub '' :vtable('get_bool')
+    # XXX Can be optimized - we just need to know there is an element, not how
+    # many.
+    $I0 = self.'elems'()
+    if $I0 goto true
+    .return (0)
+  true:
+    .return (1)
+.end
+
+
+=back
+
+=head2 Methods added to ResizablePMCArray
+
+=over 4
+
+=item list()
+
+Return the List as a list.
+
+=cut
+
+.namespace ['ResizablePMCArray']
+.sub 'list' :method
+    # Produces a new lazy list with the ResizablePMCArray set to the
+    # unevaluated portion at this point.
+    .local pmc list
+    list = new 'List'
+    self.'!flatten'()
+    setattribute list, "@!unevaluated", self
+    .return (list)
+.end
+
+
+=head2 List methods
+
+=over 4
+
+=item !flatten()
+
+Flatten the invocant, as in list context.  This doesn't make the list eager,
+it just brings any nested Lists to the top layer. Since we want to return a
+ResizablePMCArray, we splice in the evaluated and unevaluated portions of
+any Lists encountered.
+
+=cut
+
+.sub '!flatten' :method
+    .param int size            :optional
+    .param int has_size        :opt_flag
+
+    ##  we use the 'elements' opcode here because we want the true length
+    .local int len, i
+    len = elements self
+    i = 0
+  flat_loop:
+    if i >= len goto flat_end
+    unless has_size goto flat_loop_1
+    if i >= size goto flat_end
+  flat_loop_1:
+    .local pmc elem
+    elem = self[i]
+    $I0 = defined elem
+    unless $I0 goto flat_next
+    $I0 = isa elem, 'Perl6Scalar'
+    if $I0 goto flat_next
+    $I0 = isa elem, 'List'
+    unless $I0 goto check_array
+    $P0 = getattribute elem, "@!unevaluated"
+    splice self, $P0, i, 1
+    $P0 = getattribute elem, "@!evaluated"
+    splice self, $P0, i, 0
+    goto flat_loop
+  check_array:
+    $I0 = does elem, 'array'
+    unless $I0 goto flat_next
+    splice self, elem, i, 1
+    len = elements self
+    goto flat_loop
+  flat_next:
+    inc i
+    goto flat_loop
+  flat_end:
+    .return (self)
+.end
+
+
+=back
+
+=head1 Functions
+
+=over 4
+
+=item C<list(...)>
+
+Build a List from its arguments.
+
+=cut
+
+.namespace []
+.sub 'list'
+    .param pmc values          :slurpy
+    values = values.'!flatten'()
+    .local pmc list
+    list = new 'List'
+    setattribute list, "@!unevaluated", values
+    .return (list)
+.end
+
+
+=item C<infix:,(...)>
+
+Operator form for building a list from its arguments.
+
+=cut
+
+.sub 'infix:,'
+    .param pmc args            :slurpy
+    args = args.'!flatten'()
+    .local pmc list
+    list = new 'List'
+    setattribute list, "@!unevaluated", args
+    .return (list)
+.end
+
+
+################# Below here to review for lazy conversion. #################
+
 
 =item clone()    (vtable method)
 
@@ -115,30 +473,6 @@ Return the List invocant in scalar context (i.e., an Array).
 .end
 
 
-=item list()
-
-Return the List as a list.
-
-=cut
-
-.namespace ['ResizablePMCArray']
-.sub 'list' :method
-    ##  this code morphs a ResizablePMCArray into a List
-    ##  without causing a clone of any of the elements
-    $P0 = new 'ResizablePMCArray'
-    splice $P0, self, 0, 0
-    $P1 = new 'List'
-    copy self, $P1
-    splice self, $P0, 0, 0
-    .return (self)
-.end
-
-.namespace ['List']
-.sub 'list' :method
-    .return (self)
-.end
-
-
 =item perl()
 
 Returns a Perl representation of a List.
@@ -165,58 +499,9 @@ Returns a Perl representation of a List.
 .end
 
 
+.namespace [ 'ResizablePMCArray' ]
+
 =back
-
-=head2 List methods
-
-=over 4
-
-=item !flatten()
-
-Flatten the invocant, as in list context.  This doesn't necessarily
-make the list eager, it just brings any nested Lists to the top
-layer.  It will likely change substantially when we have lazy lists.
-
-=cut
-
-.sub '!flatten' :method
-    .param int size            :optional
-    .param int has_size        :opt_flag
-
-    ##  we use the 'elements' opcode here because we want the true length
-    .local int len, i
-    len = elements self
-    i = 0
-  flat_loop:
-    if i >= len goto flat_end
-    unless has_size goto flat_loop_1
-    if i >= size goto flat_end
-  flat_loop_1:
-    .local pmc elem
-    elem = self[i]
-    $I0 = defined elem
-    unless $I0 goto flat_next
-    $I0 = isa elem, 'Perl6Scalar'
-    if $I0 goto flat_next
-    $I0 = isa elem, 'Range'
-    unless $I0 goto not_range
-    elem = elem.'list'()
-  not_range:
-    $I0 = does elem, 'array'
-    unless $I0 goto flat_next
-    splice self, elem, i, 1
-    len = elements self
-    goto flat_loop
-  flat_next:
-    inc i
-    goto flat_loop
-  flat_end:
-    $I0 = isa self, 'List'
-    if $I0 goto end
-    self.'list'()
-  end:
-    .return (self)
-.end
 
 
 =item elems()
@@ -582,34 +867,7 @@ Returns a List containing the values of the invocant.
 .end
 
 
-=back
 
-=head1 Functions
-
-=over 4
-
-=item C<list(...)>
-
-Build a List from its arguments.
-
-=cut
-
-.namespace []
-.sub 'list'
-    .param pmc values          :slurpy
-    .return values.'!flatten'()
-.end
-
-=item C<infix:,(...)>
-
-Operator form for building a list from its arguments.
-
-=cut
-
-.sub 'infix:,'
-    .param pmc args            :slurpy
-    .return args.'!flatten'()
-.end
 
 
 =item C<infix:Z(...)>
@@ -832,6 +1090,7 @@ find_max_loop_end:
 .end
 
 ## TODO: zip
+
 
 =back
 
