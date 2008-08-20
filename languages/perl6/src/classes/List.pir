@@ -176,7 +176,7 @@ Gets the next value when we are iterating the List.
     try = unevaluated[0]
     $I0 = isa try, 'Perl6Iterator'
     if $I0 goto get_from_iter
-    
+
     # Not an iterator, so just pull this value off the head of the unevaluated
     # part and hand it back.
     value = shift unevaluated

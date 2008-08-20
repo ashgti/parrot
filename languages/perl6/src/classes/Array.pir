@@ -183,7 +183,7 @@ Shift the first item off the array and return it.
 
 .sub '' :vtable('delete_keyed_int')
     .param int index
-    
+
     # Make sure we have evaluated up to this index, then delete from the
     # evaluated part.
     self.'!evaluate_upto'(index)
