@@ -179,7 +179,7 @@ Gets the next value when we are iterating the List.
     
     # Not an iterator, so just pull this value off the head of the unevaluated
     # part and hand it back.
-    value = unshift unevaluated
+    value = shift unevaluated
     .return (value)
 
     # We have an iterator. Make sure it's not exhausted, and if not get a value
@@ -189,7 +189,7 @@ Gets the next value when we are iterating the List.
     value = shift try
     .return (value)
   empty_iter:
-    $P0 = unshift unevaluated
+    $P0 = shift unevaluated
     goto try_loop
 
     # If there's no elements available, we fail.
