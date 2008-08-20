@@ -237,9 +237,20 @@ the get_pmc_keyed_int).
 .sub 'get_pmc_keyed_int' :vtable
     .param int index
 
-    # Are we evaluated up to this point yet?
     .local pmc evaluated
     evaluated = getattribute self, "@!evaluated"
+
+    # Handle negative indexes - require us to evaluate the whole list.
+    .local int evaluate_upto
+    if index < 0 goto negative
+    evaluate_upto = index
+    goto try_evaluated
+  negative:
+    evaluate_upto = self.'elems'()
+    goto use_unevaluated
+
+    # Are we evaluated up to this point yet?
+  try_evaluated:
     $I0 = elements evaluated
     if $I0 <= index goto use_unevaluated
     $P0 = evaluated[index]
@@ -247,7 +258,7 @@ the get_pmc_keyed_int).
 
     # Need to use the unevaluated portion of the list.
   use_unevaluated:
-    self.'!evaluate_upto'(index)
+    self.'!evaluate_upto'(evaluate_upto)
     $P0 = evaluated[index]
     .return ($P0)
 .end
@@ -317,13 +328,13 @@ index.
     evaluated = getattribute self, "@!evaluated"
     unevaluated = getattribute self, "@!unevaluated"
     have = elements evaluated
-    available = elements unevaluated
-    if available == 0 goto loop_end
 
     # Loop while we need more values.
   loop:
     if have > required goto loop_end
     .local pmc try
+    available = elements unevaluated
+    if available == 0 goto loop_end
     try = unevaluated[0]
     $I0 = isa try, 'Range'
     if $I0 goto have_iter
