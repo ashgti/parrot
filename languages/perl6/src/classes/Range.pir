@@ -208,7 +208,7 @@ Generate the next element at the front of the Range.
 
 =cut
 
-.sub 'shift' :method :vtable('shift_pmc')
+.sub 'shift' :method
     .local pmc from, fromexc, value
     from = getattribute self, '$!from'
     fromexc = getattribute self, '$!from_exclusive'
@@ -221,6 +221,26 @@ Generate the next element at the front of the Range.
     value = new 'Failure'
   success:
     .return (value)
+.end
+
+.sub '' :vtable('shift_pmc')
+    $P0 = self.'shift'()
+    .return ($P0)
+.end
+
+.sub '' :vtable('shift_string')
+    $S0 = self.'shift'()
+    .return ($S0)
+.end
+
+.sub '' :vtable('shift_integer')
+    $I0 = self.'shift'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('shift_float')
+    $N0 = self.'shift'()
+    .return ($N0)
 .end
 
 

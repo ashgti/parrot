@@ -238,7 +238,53 @@ Adds C<args> to the beginning of the Array.
 .end
 
 
+=item pop()
+
+Remove the last item from the array and return it.
+
+=cut
+
+.sub 'pop' :method :multi(Perl6Array)
+    # Need to have the array fully evaluated first.
+    $I0 = self.'elems'()
+    if $I0 == 0 goto empty
+    dec $I0
+    self.'!evaluate_upto'($I0)
+
+    # Then pop from end of evaluated list - we should be fully evaluated now.
+    .local pmc evaluated, x
+    evaluated = getattribute self, '@!evaluated'
+    x = pop evaluated
+    goto done
+  empty:
+    x = new 'Failure'
+  done:
+    .return (x)
+.end
+
+.sub '' :vtable('pop_pmc')
+    $P0 = self.'pop'()
+    .return ($P0)
+.end
+
+.sub '' :vtable('pop_string')
+    $S0 = self.'pop'()
+    .return ($S0)
+.end
+
+.sub '' :vtable('pop_integer')
+    $I0 = self.'pop'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('pop_float')
+    $N0 = self.'pop'()
+    .return ($N0)
+.end
+
+
 ############### Below here still to review after lazy changes. ###############
+
 
 =item delete(indices :slurpy)
 
@@ -298,24 +344,6 @@ Return true if the elements at C<indices> have been assigned to.
     if test goto indices_loop
   indices_end:
     .return 'prefix:?'(test)
-.end
-
-
-=item pop()
-
-Remove the last item from the array and return it.
-
-=cut
-
-.sub 'pop' :method :multi(Perl6Array)
-    .local pmc x
-    unless self goto empty
-    x = pop self
-    goto done
-  empty:
-    x = new 'Failure'
-  done:
-    .return (x)
 .end
 
 

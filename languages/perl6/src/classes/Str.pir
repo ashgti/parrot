@@ -55,7 +55,7 @@ as the Perl 6 C<Str> class.
     .local int len
     .local int i
 
-    retv = new 'List'
+    retv = new 'Perl6Array'
 
     objst = self
     split pieces, delim, objst

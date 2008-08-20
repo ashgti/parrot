@@ -352,7 +352,7 @@ index.
     goto loop
 
   iter_no_values:
-    try = unshift unevaluated
+    try = shift unevaluated
     goto loop
   loop_end:
 .end
@@ -432,6 +432,20 @@ Return the List as a list.
     self.'!flatten'()
     setattribute list, "@!unevaluated", self
     .return (list)
+.end
+
+
+=item clone()
+
+Clones the ResizablePMCArray will all its elements. Actually returns it as
+an Array.
+
+=cut
+
+.sub 'clone' :method
+    $P0 = new 'Perl6Array'
+    setattribute $P0, '@!unevaluated', self
+    .return ($P0)
 .end
 
 
