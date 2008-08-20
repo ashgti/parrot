@@ -99,7 +99,7 @@ Returns elements of hash as array of C<Pair(key, value)>
     .local pmc iter
     .local pmc rv
     iter = new 'Iterator', self
-    rv   = new 'List'
+    rv   = new 'ResizablePMCArray'
   loop:
     unless iter goto end
     $S1 = shift iter
@@ -108,6 +108,8 @@ Returns elements of hash as array of C<Pair(key, value)>
     push rv, $S1
     goto loop
   end:
+    $P0 = get_hll_global 'list'
+    rv = $P0(rv)
     .return (rv)
 .end
 
@@ -117,13 +119,15 @@ Returns elements of hash as array of C<Pair(key, value)>
     .local pmc iter
     .local pmc rv
     iter = new 'Iterator', self
-    rv   = new 'List'
+    rv   = new 'ResizablePMCArray'
   loop:
     unless iter goto end
     $S1 = shift iter
     push rv, $S1
     goto loop
   end:
+    $P0 = get_hll_global 'list'
+    rv = $P0(rv)
     .return (rv)
 .end
 
@@ -132,7 +136,7 @@ Returns elements of hash as array of C<Pair(key, value)>
     .local pmc iter
     .local pmc rv
     iter = new 'Iterator', self
-    rv   = new 'List'
+    rv   = new 'ResizablePMCArray'
   loop:
     unless iter goto end
     $S1 = shift iter
@@ -140,6 +144,8 @@ Returns elements of hash as array of C<Pair(key, value)>
     push rv, $S1
     goto loop
   end:
+    $P0 = get_hll_global 'list'
+    rv = $P0(rv)
     .return (rv)
 .end
 

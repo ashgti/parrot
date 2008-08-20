@@ -1451,7 +1451,7 @@ loop_end:
     type = j.'!type'()
     new_junc.'!type'(type)
 
-    new_values = new 'List'
+    new_values = new 'ResizablePMCArray'
     iterator = iter ResultHash
 nv_loop:
     unless iterator goto nv_loop_end
@@ -1563,7 +1563,7 @@ loop_end:
     type = j.'!type'()
     new_junc.'!type'(type)
 
-    new_values = new 'List'
+    new_values = new 'ResizablePMCArray'
     iterator = iter ResultHash
 nv_loop:
     unless iterator goto nv_loop_end

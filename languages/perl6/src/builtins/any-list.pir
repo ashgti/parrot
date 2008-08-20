@@ -83,6 +83,8 @@ the size of that file down and to emphasize their generic,
     unless $I0 goto have_by
     by = shift values
   have_by:
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
     .return values.'min'(by)
 .end
 
@@ -125,6 +127,8 @@ the size of that file down and to emphasize their generic,
     unless $I0 goto have_by
     by = shift values
   have_by:
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
     .return values.'max'(by)
 .end
 

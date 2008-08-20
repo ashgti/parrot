@@ -38,7 +38,7 @@ Will operate with constant memory consumption.
     listproto = p6meta.'register'($P0, 'parent'=>'Any')
 
     $P0 = get_hll_namespace ['List']
-    '!EXPORT'('keys values', $P0)
+    '!EXPORT'('first grep keys map values', $P0)
     #'!EXPORT'('first grep keys kv map pairs reduce values', $P0)
 .end
 
@@ -543,6 +543,144 @@ Returns a List containing the keys of the invocant.
 .end
 
 
+=item map()
+
+Map.
+
+=cut
+
+.sub 'map' :method :multi('List', 'Sub')
+    .param pmc expression
+    .local pmc res, elem, block, mapres, iter, args
+    .local int i, arity
+
+    arity = expression.'arity'()
+    if arity > 0 goto body
+    arity = 1
+  body:
+    res = new 'ResizablePMCArray'
+    iter = self.'iterator'()
+  map_loop:
+    unless iter goto done
+
+    # Creates arguments for closure
+    args = new 'ResizablePMCArray'
+
+    i = 0
+  args_loop:
+    if i == arity goto invoke
+    unless iter goto elem_undef
+    elem = shift iter
+    goto push_elem
+  elem_undef:
+    elem = new 'Failure'
+  push_elem:
+    push args, elem
+    inc i
+    goto args_loop
+
+  invoke:
+    (mapres :slurpy) = expression(args :flat)
+    unless mapres goto map_loop
+    mapres.'!flatten'()
+    $I0 = elements res
+    splice res, mapres, $I0, 0
+    goto map_loop
+
+  done:
+    $P0 = get_hll_global 'list'
+    res = $P0(res)
+    .return(res)
+.end
+
+
+.sub 'map' :multi('Sub')
+    .param pmc expression
+    .param pmc values          :slurpy
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
+    .return values.'map'(expression)
+.end
+
+
+=item first(...)
+
+=cut
+
+.sub 'first' :method :multi('List', 'Sub')
+    .param pmc test
+    .local pmc retv
+    .local pmc iter
+    .local pmc block_res
+    .local pmc block_arg
+
+    iter = self.'iterator'()
+  loop:
+    unless iter goto nomatch
+    block_arg = shift iter
+    block_res = test(block_arg)
+    if block_res goto matched
+    goto loop
+
+  matched:
+    retv = block_arg
+    goto done
+
+  nomatch:
+    retv = new 'Failure'
+    goto done
+
+  done:
+    .return(retv)
+.end
+
+
+.sub 'first' :multi('Sub')
+    .param pmc test
+    .param pmc values :slurpy
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
+    .return values.'first'(test)
+.end
+
+
+=item grep(...)
+
+=cut
+
+.sub 'grep' :method :multi('List', 'Sub')
+    .param pmc test
+    .local pmc retv
+    .local pmc iter
+    .local pmc block_res
+    .local pmc block_arg
+
+    retv = new 'ResizablePMCArray'
+    iter = self.'iterator'()
+  loop:
+    unless iter goto done
+    block_arg = shift iter
+    block_res = test(block_arg)
+
+    unless block_res goto loop
+    retv.'push'(block_arg)
+    goto loop
+
+  done:
+    $P0 = get_hll_global 'list'
+    retv = $P0(retv)
+    .return(retv)
+.end
+
+.sub 'grep' :multi('Sub')
+    .param pmc test
+    .param pmc values          :slurpy
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
+    .return values.'grep'(test)
+.end
+
+
 =back
 
 =head2 Methods added to ResizablePMCArray
@@ -690,6 +828,40 @@ Operator form for building a list from its arguments.
 .namespace [ "TODO" ]
 
 
+=item kv()
+
+Return items in invocant as 2-element (index, value) lists.
+
+=cut
+
+.sub 'kv' :method :multi(ResizablePMCArray)
+    .local pmc result, iter
+    .local int i
+
+    result = new 'ResizablePMCArray'
+    iter = self.'iterator'()
+    i = 0
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    push result, i
+    push result, $P0
+    inc i
+    goto iter_loop
+  iter_end:
+    $P0 = get_hll_global 'list'
+    result = $P0(result)
+    .return (result)
+.end
+
+.sub 'kv' :multi()
+    .param pmc values          :slurpy
+    $P0 = get_hll_global 'list'
+    values = $P0(values)
+    .return values.'kv'()
+.end
+
+
 =item perl()
 
 Returns a Perl representation of a List.
@@ -731,165 +903,6 @@ Return the number of elements in the list.
     self.'!flatten'()
     $I0 = elements self
     .return ($I0)
-.end
-
-
-=item first(...)
-
-=cut
-
-.sub 'first' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc test
-    .local pmc retv
-    .local pmc iter
-    .local pmc block_res
-    .local pmc block_arg
-
-    iter = self.'iterator'()
-  loop:
-    unless iter goto nomatch
-    block_arg = shift iter
-    block_res = test(block_arg)
-    if block_res goto matched
-    goto loop
-
-  matched:
-    retv = block_arg
-    goto done
-
-  nomatch:
-    retv = new 'Failure'
-    goto done
-
-  done:
-    .return(retv)
-.end
-
-
-.sub 'first' :multi('Sub')
-    .param pmc test
-    .param pmc values :slurpy
-
-    .return values.'first'(test)
-.end
-
-
-=item grep(...)
-
-=cut
-
-.sub 'grep' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc test
-    .local pmc retv
-    .local pmc iter
-    .local pmc block_res
-    .local pmc block_arg
-
-    retv = new 'List'
-    iter = self.'iterator'()
-  loop:
-    unless iter goto done
-    block_arg = shift iter
-    block_res = test(block_arg)
-
-    unless block_res goto loop
-    retv.'push'(block_arg)
-    goto loop
-
-  done:
-    .return(retv)
-.end
-
-.sub 'grep' :multi('Sub')
-    .param pmc test
-    .param pmc values          :slurpy
-    .return values.'grep'(test)
-.end
-
-
-=item kv()
-
-Return items in invocant as 2-element (index, value) lists.
-
-=cut
-
-.sub 'kv' :method :multi(ResizablePMCArray)
-    .local pmc result, iter
-    .local int i
-
-    result = new 'List'
-    iter = self.'iterator'()
-    i = 0
-  iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
-    push result, i
-    push result, $P0
-    inc i
-    goto iter_loop
-  iter_end:
-    .return (result)
-.end
-
-.sub 'kv' :multi()
-    .param pmc values          :slurpy
-    .return values.'kv'()
-.end
-
-
-=item map()
-
-Map.
-
-=cut
-
-.sub 'map' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc expression
-    .local pmc res, elem, block, mapres, iter, args
-    .local int i, arity
-
-    arity = expression.'arity'()
-    if arity > 0 goto body
-    arity = 1
-  body:
-    res = new 'List'
-    iter = self.'iterator'()
-  map_loop:
-    unless iter goto done
-
-    # Creates arguments for closure
-    args = new 'ResizablePMCArray'
-
-    i = 0
-  args_loop:
-    if i == arity goto invoke
-    unless iter goto elem_undef
-    elem = shift iter
-    goto push_elem
-  elem_undef:
-    elem = new 'Failure'
-  push_elem:
-    push args, elem
-    inc i
-    goto args_loop
-
-  invoke:
-    (mapres :slurpy) = expression(args :flat)
-    unless mapres goto map_loop
-    mapres.'!flatten'()
-    $I0 = elements res
-    splice res, mapres, $I0, 0
-    goto map_loop
-
-  done:
-    .return(res)
-.end
-
-
-.sub 'map' :multi('Sub')
-    .param pmc expression
-    .param pmc values          :slurpy
-    .return values.'map'(expression)
 .end
 
 
