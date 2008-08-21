@@ -24,7 +24,7 @@ use Parrot::Configure::Utils ':auto';
 sub _init {
     my $self = shift;
     my %data;
-    $data{description} = q{Determining some sizes};
+    $data{description} = q{Determine some sizes};
     $data{result}      = q{};
     return \%data;
 }
@@ -221,23 +221,12 @@ sub _handle_hugeintvalsize {
 
 sub _probe_for_hugefloatval {
     my $conf = shift;
-    my $size = q{};
-    $size = eval {
-        open( my $TEST, ">", "test.c" ) or die "Can't open test.c: $!";
-        print {$TEST} <<'END';
-#include <stdio.h>
-
-int main() {
-    long double foo;
-    printf("%u", sizeof(foo));
-    return 0;
-}
-END
-        close $TEST;
-
-        $conf->cc_build();
-        $conf->cc_run();
-    };
+    my $size;
+    $conf->cc_gen('config/auto/sizes/test3_c.in');
+    $conf->cc_build();
+    $size = eval $conf->cc_run();
+    $conf->cc_clean();
+    return $size;
 }
 
 sub _set_hugefloatval {

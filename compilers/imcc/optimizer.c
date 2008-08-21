@@ -1154,7 +1154,7 @@ PARROT_WARN_UNUSED_RESULT
 static int
 branch_reorg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i;
+    unsigned int i;
     int changed = 0;
 
     IMCC_info(interp, 2, "\tbranch_reorg\n");
@@ -1394,7 +1394,8 @@ PARROT_WARN_UNUSED_RESULT
 static int
 unused_label(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i, used;
+    unsigned int i;
+    int used;
     int changed = 0;
 
     IMCC_info(interp, 2, "\tunused_label\n");

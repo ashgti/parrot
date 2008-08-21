@@ -120,4 +120,6 @@ the strings?).
 
  smash     0.6.3          2008-Jun-17     "Beautiful Parrot"
 
+ Bob       0.7.0          2008-Aug-19     "Severe Macaw"
+
 =cut
