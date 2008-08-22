@@ -174,6 +174,10 @@ void Parrot_process_args(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*st);
 
+PARROT_API
+int Parrot_store_arg(SHIM_INTERP, ARGIN(const call_state *st))
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 opcode_t * parrot_pass_args_fromc(PARROT_INTERP,
@@ -186,9 +190,6 @@ opcode_t * parrot_pass_args_fromc(PARROT_INTERP,
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*dest);
-
-int Parrot_store_arg(SHIM_INTERP, ARGIN(const call_state *st))
-        __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL

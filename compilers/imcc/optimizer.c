@@ -1466,7 +1466,7 @@ RT #48260: Not yet documented!!!
 static int
 dead_code_remove(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i;
+    unsigned int i;
     int changed = 0;
     Instruction *ins, *last;
 
