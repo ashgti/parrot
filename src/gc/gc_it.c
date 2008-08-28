@@ -8,23 +8,159 @@ src/gc/gc_it.c - Incremental Tricolor Garbage Collector
 
 =head1 DESCRIPTION
 
-This garbage collector, as described in PDD09, will use a tricolor
-incremental marking scheme. More details to be fleshed out later.
+This file implements the majority of the incremental tri-color garbage
+collector for Parrot. The interface for this and all collectors is
+specified in F<docs/pdds/pdd09_gc.pod>.
 
-=head1 NOTES
+=head2 Tricolor Mark
 
-This file is under heavy manipulation, and it isn't going to be the
-prettiest or most standards-compliant code for now. We can add
-spit and polish later.
+This collector uses a stack-based implementation of a tricolor mark
+and sweep algorithm. Objects can have one of three states, called
+"colors":
 
-=head1 Open Questions
+=over 4
 
-1) Should GC headers exist in the small object pools, or should they be
-   separate? I could create a separate pool for GC headers, managed manually
-   by the GC.
-2) Should the Arenas object have a fourth pointer for an initialization
-   function? Alternatively, reuse the current deinit function pointer
-   with an optional init/deinit flag. This makes the GC more dynamic.
+=item* White
+
+White objects are unmarked and are presumed dead. After the mark phase,
+all objects which are still white are swept and recycled for later use.
+Objects are marked white using the special bit flag C<GC_IT_FLAG_WHITE>.
+
+=item* Black
+
+Black objects are actively used, and are pointed to by one or more active
+data objects. They are considered to be "alive" and are not swept or
+recycled. The mark phase turns objects black when they are linked to
+from another live object. Black items are marked as being black with the
+special bit flag C<GC_IT_FLAG_BLACK>. During the sweep phase, black objects
+are also pushed onto a stack to prevent them from being marked multiple
+times and creating infinite loops out of circular data structures.
+
+=item* Grey
+
+Grey items are living objects whose children are not fully marked. When
+the sweep phase finds a new unmarked object, it is colored grey. Once all
+the children of the grey object are marked (by turning them grey), the
+object is turned black. Objects are marked grey not by having a particular
+bit flag in it's flag field, but by it's location: on the grey item queue.
+
+=item* Free
+
+Memory storage locations which are not currently in use do not have a
+specific color and are marked free. Objects which are free should never be
+used anywhere in Parrot, and items which are not free should never end up on
+the free list.
+
+=back
+
+Using this tricolor scheme, we can stop the GC in mid-mark and resume later
+without losing any information or losing track of any objects. All objects
+start out White at the beginning of a GC run. Starting with a set of
+persistant globals (such as the interpreter structure) we mark items grey by
+putting them onto the queue. In the mark loop, we pop a grey item off the
+queue, mark all it's children (by pushing them onto the queue), marking the
+object black, and putting it for safe keeping on the "already marked" list.
+We then repeat for each of the children and all the objects that were also
+on the queue.
+
+All objects are appended to a header structure in memory. The header
+structure contains a pointer to another header, for use in constructing
+the queue, the marked items list, and the free list. All of these "lists"
+(which I will also call "queues", "stacks" or "stores" interchangably,
+depending on my mood) are all linked lists constructed in this manner. The
+object header also contains a field for the object's flag. We cannot reuse
+the C<flags> field of PObj and isometric data types, because we manage a
+few types of items which are not properly isomorphic and therefore do not
+have a C<flags> field. The third and final data field in the header is
+a flag to determine whether the object is an aggregate (PMC, PObj, etc) or
+a simple buffer.
+
+=head2 Basic Memory Layout
+
+Objects and headers are concatenated in memory as shown:
+
+    +--------------+--------------------------------------------+
+    |     HDR      |                    OBJ                     |
+    +--------------+--------------------------------------------+
+
+Several HDR/OBJ structures are stored end-to-end in an arena:
+
+    +-------+-------+-------+-------+-------+-------+-------+ ...
+    |  HDR  |  OBJ  |  HDR  |  OBJ  |  HDR  |  OBJ  |  HDR    ...
+    +-------+-------+-------+-------+-------+-------+-------+ ...
+
+Unfortunately, we can't easily use array indexing to get to these objects
+from the start of the arena because the OBJs are all different sizes
+depending on the particular pool we are in. Pools hold objects all of a
+single size, and it's very rare that any two pools contain objects of the
+same size. We can use basic pointer arithmetic to get from one to the other:
+
+    HDR2 = (HDR1 + 1) + ((char+)sizeof(OBJ))
+
+The "(HDR1 + 1)", which can equivalently be written in array form as
+"HDR[1]" moves the pointer to where a second HDR would be (if we were in
+a regular array), which happens to be the start of the OBJ. From there, we
+add ((char*)sizeof(OBJ)), which moves the pointer forward by the size of the
+object, which should be the location of the next header. The cast to (char*)
+is necessary for the pointer arithmetic. The statement "HDR + sizeof(OBJ)" in
+pointer arithmetic is equivalent mathematically to
+"(int)HDR + (int)(sizeof(OBJ) * sizeof(HDR))", which is very bad (and causes
+segfaults like crazy, I tried).
+
+=head2 Marking Process
+
+marking is handled in the C<pobject_lives> function currently, which isn't
+even located in this file. pobject_lives takes an object and marks it grey
+by adding it to the queue. So long as there are objects on the queue, we
+don't do any sweeping. Parrot calls <pobject_lives> throughtout the codebase
+to mark objects as being alive. We also do a deep search at the beginning of
+the mark phase, where we find the so-called "root" objects.
+
+The root objects are found first, and added to yet another queue, the root
+queue. The root queue is a tool that we can use to force incremental behavior,
+when we are in an interactive mode. In basic mode, we move the entire root
+queue onto the regular queue and then continue with the mark phase from there.
+in incremental mode (which can be activated using a compiler macro, discussed
+later). We move one item from the root queue and scan it and it's children
+tree entirely. This is being called tree-at-a-time marking.
+
+Once the root objects are found and the queue is populated with it's initial
+objects, we enter the main mark loop. In the main mark loop, we pop one
+object at a time off the queue, mark it's children, mark the object black,
+and add it onto a list for objects which have already been marked. If we have
+a circular datastructure, we can enter an infinite loop if we do not find a
+way to separate objects which have already been completely marked.
+
+Once the queue and the root queue are both empty, the mark phase is complete
+and we move to the sweep phase.
+
+=head2 Sweep Phase
+
+The sweep phase does not use any queues. We enter each pool, one at a time,
+and we enter each arena in that pool, one at a time. In the arenas, we
+traverse through the list of objects and examine the flag of each. If the
+object is marked black, we mark it white and move to the next. If the object
+is white, we free it by marking it with the free flag, performing any
+finalization required (for PMCs), and putting it onto the pool's free list.
+If the object is grey, we're in big trouble because all the grey items should
+have been marked black in the mark phase.
+
+=head2 Allocations
+
+The GC manages memory objects, and is in charge of handling allocations for
+them. The GC allocates large memory chunks called arenas from the operating
+system, cuts those chunks into objects, and adds those objects to a large
+linked list called the free list. Each pool has it's own free list for objects
+in that pool.
+
+When Parrot needs a new object, it calls the pools allocation function, which
+is a pointer to a function here in the GC. The first object is popped off
+the free list and returned. If there are no objects on the free list, we have
+two options: (1) Allocate a new arena with new objects, and add all of them
+to the free list, or (2) perform a GC run in the hopes that we find some
+objects to free up. If we gamble and perform a GC run, and it doesnt return
+any objects, then we have to allocate a new arena too. This combination can
+be relatively expensive, so we try not to do it too often.
 
 */
 
@@ -1202,6 +1338,19 @@ PARROT_INLINE
 void
 gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
 {
+    /* I'm going to try to mirror the GC flags in the PMC flags field, for
+       objects which are marked as being aggregates (and are therefore
+       isomorphic with Buffer *.
+    */
+    /*
+    if(hdr->agg)
+        switch (flag) {
+            case GC_IT_FLAG_BLACK:
+            case GC_IT_FLAG_WHITE:
+            case GC_IT_FLAG_GREY:
+            case CG_IT_FLAG_FREE:
+        }
+    */
     hdr->data.flag = flag;
 
 }
