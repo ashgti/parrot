@@ -217,7 +217,17 @@ method indexed($/) {
 }
 
 method variable($/, $key) {
-    make $( $/{$key} );
+    my $past;
+    if $key eq 'varname' {
+        $past := $( $/<varname> );
+    }
+    elsif $key eq 'self' {
+        $past := PAST::Op.new(:inline('%r = self'));
+    }
+    elsif $key eq 'nil' {
+        $past := PAST::Var.new(:scope('package'), :name('nil'));
+    }
+    make $past;
 }
 
 method varname($/, $key) {

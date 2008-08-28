@@ -51,7 +51,7 @@ describe the properties (possibly an enumeration of symbol types).
 
 /*
 
-=item C<static int
+=item C<int
 next_register(struct lexer_state *lexer)>
 
 Returns a new register of the specified type.
@@ -60,8 +60,9 @@ This is the vanilla register allocator.
 =cut
 
 */
-static int
+int
 next_register(struct lexer_state * const lexer, pir_type type) {
+    lexer->subs->regs_used[type]++; /* count number of registers used */
     return lexer->curregister[type]++;
 }
 
@@ -83,7 +84,7 @@ new_symbol(char * const name, pir_type type) {
     sym->name   = name;
     sym->type   = type;
     sym->next   = NULL;
-    sym->used   = 0;
+    sym->color  = -1; /* -1 means no PASM reg has been allocated yet for this symbol */
     return sym;
 }
 
@@ -108,10 +109,16 @@ declare_local(struct lexer_state * const lexer, pir_type type, symbol *list) {
 
     /* bad implementation, but best i can come up with now. */
 
-    /* set the type on each symbol, and allocate a new register for each symbol */
+    /* set the type on each symbol */
     while (iter != NULL) {
         iter->type  = type;
-        iter->color = next_register(lexer, type);
+
+        /* XXX do not allocate a register just yet; wait till the moment that
+         * the symbol is actually used; unused, declared symbols won't be
+         * given a PASM register.
+         */
+        /* iter->color = next_register(lexer, type); XXX test this. XXX*/
+
         iter        = iter->next;
     }
 
@@ -141,10 +148,6 @@ check_unused_symbols(struct lexer_state *lexer)>
 Check all subroutines for unused symbols. If a symbol is declared but
 never used, a warning message is printed to C<stderr>.
 
-Unused symbols should be prevented, as they I<are> assigned a PASM register.
-Effectively, this is a waste of PASM registers; the subroutine could do
-with less.
-
 =cut
 
 */
@@ -155,7 +158,7 @@ check_unused_symbols(struct lexer_state * const lexer) {
         symbol *iter = lexer->subs->symbols;
 
         while (iter) {
-            if (!iter->used) {
+            if (iter->color == -1) {
                 /* maybe only check for .locals, not .params. For now, disable this. */
                 /*
                 fprintf(stderr, "Warning: in sub '%s': symbol '%s' declared but not used\n",
@@ -199,7 +202,11 @@ find_symbol(struct lexer_state * const lexer, char * const name) {
     while (iter) {
 
         if (strcmp(iter->name, name) == 0) {
-            iter->used = 1; /* mark this symbol as used */
+
+            /* if the symbol is not yet used, allocate a new PASM register */
+            if (iter->color == -1)
+                iter->color = next_register(lexer, iter->type);
+
             return iter;
         }
 
@@ -226,6 +233,7 @@ new_pir_reg(pir_type type, int regno) {
     r->type    = type;
     r->regno   = regno;
     r->next    = NULL;
+    r->color   = -1; /* -1 means no PASM register has been allocated for this PIR register. */
     return r;
 }
 
@@ -289,7 +297,7 @@ use_register(struct lexer_state * const lexer, pir_type type, int regno) {
     /* link this register into the list of "colored" registers; each of
      * them has been assigned a unique PASM register.
      */
-    reg->next  = lexer->subs->registers[type];
+    reg->next                    = lexer->subs->registers[type];
     lexer->subs->registers[type] = reg;
 
 

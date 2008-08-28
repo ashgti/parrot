@@ -39,6 +39,26 @@ src/classes/Hash.pir - Perl 6 Hash class and related functions
     .return (self)
 .end
 
+.sub 'delete' :method
+    .param pmc keys :slurpy
+    .local pmc result
+    .local string key
+    .local pmc tmp
+    result = new 'List'
+    keys.'!flatten'()
+
+  keys_loop:
+    unless keys goto done
+    key = shift keys
+    tmp = self[key]
+    push result, tmp
+    delete self[key]
+    goto keys_loop
+
+  done:
+    .return (result)
+.end
+
 .sub 'hash' :method
     .return (self)
 .end

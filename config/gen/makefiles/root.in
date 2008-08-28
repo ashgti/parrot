@@ -139,12 +139,13 @@ NONGEN_HEADERS   = @TEMP_nongen_headers@
 GEN_MAKEFILES = \
     Makefile \
 #CONDITIONED_LINE(has_perldoc):    docs/Makefile \
+    compilers/bcg/Makefile \
+    compilers/json/Makefile \
+    compilers/ncigen/Makefile \
     compilers/nqp/Makefile \
     compilers/pct/Makefile \
     compilers/pge/Makefile \
     compilers/tge/Makefile \
-    compilers/bcg/Makefile \
-    compilers/json/Makefile \
     editor/Makefile \
     ext/Makefile \
     languages/Makefile \
@@ -1776,6 +1777,9 @@ reconfig : clean
 
 manitest :
 	$(PERL) tools/dev/manicheck.pl
+
+opsrenumber :
+	$(PERL) tools/dev/opsrenumber.pl $(OPS_FILES)
 
 ###############################################################################
 #

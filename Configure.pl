@@ -62,6 +62,7 @@ $conf->options->set( %{$args} );
 
 # Log files created by Configure.pl in MANIFEST.configure.generated
 $conf->{active_configuration} = 1;
+unlink 'MANIFEST.configure.generated';
 
 # Run the actual steps from Parrot::Configure
 $conf->runsteps or exit(1);

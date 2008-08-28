@@ -12,6 +12,21 @@
 #include "pirparser.h"
 #include "pircompiler.h"
 
+
+/* use pthreads library to test thread safety.
+   does not work currently on windows.
+*/
+#ifndef _MSC_VER
+#  define TEST_THREAD_SAFETY
+#endif
+
+
+#ifdef TEST_THREAD_SAFETY
+#  include <pthread.h>
+#  define NUM_THREADS 20
+#endif
+
+
 /* before including the lexer's header file, make sure to define this: */
 #ifndef YY_NO_UNISTD_H
 #  define YY_NO_UNISTD_H
@@ -86,6 +101,63 @@ print_data_sizes(void) {
 }
 */
 
+typedef struct parser_args {
+    int   flexdebug;
+    FILE *infile;
+    char *filename;
+    int   thr_id;
+
+} parser_args;
+
+void *
+parse_file(void *a) {
+    yyscan_t     yyscanner;
+    lexer_state *lexer     = NULL;
+    parser_args *args      = (parser_args *)a;
+    int          flexdebug = args->flexdebug;
+    FILE        *infile    = args->infile;
+    char        *filename  = args->filename;
+    int          thr_id    = args->thr_id;
+
+    /* create a yyscan_t object */
+    yylex_init(&yyscanner);
+    /* set debug flag */
+    yyset_debug(flexdebug, yyscanner);
+    /* set the input file */
+    yyset_in(infile, yyscanner);
+    /* set the extra parameter in the yyscan_t structure */
+    lexer = new_lexer(filename);
+    yyset_extra(lexer, yyscanner);
+    /* go parse */
+    yyparse(yyscanner, lexer);
+
+    if (lexer->parse_errors == 0) {
+        char outfile[20];
+        sprintf(outfile, "output_thr_%d", thr_id);
+        lexer->outfile = open_file(outfile, "w");
+        if (lexer->outfile == NULL)
+            fprintf(stderr, "Failed to open file %s\n", outfile);
+
+        fprintf(stderr, "Parse successful!\n");
+        print_subs(lexer);
+        fclose(lexer->outfile);
+
+        check_unused_symbols(lexer);
+        free_subs(lexer);
+    }
+    else
+        fprintf(stderr, "There were %d errors\n", lexer->parse_errors);
+
+
+    fclose(infile);
+
+    /* clean up after playing */
+    yylex_destroy(yyscanner);
+    free(lexer);
+
+    return NULL;
+
+}
 /*
 
 =item C<int main(int argc, char *argv[])>
@@ -96,15 +168,11 @@ Main compiler driver.
 
 */
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
     char const * const program_name = argv[0];
-    lexer_state       *lexer        = NULL;
     int                flexdebug    = 0;
     char              *filename     = NULL;
     char              *outputfile   = NULL;
-    FILE              *infile       = NULL;
-    yyscan_t           yyscanner;
 
     /* skip program name */
     argc--;
@@ -148,6 +216,50 @@ main(int argc, char *argv[])
         argc--;
     }
 
+
+
+
+#ifdef TEST_THREAD_SAFETY
+{
+    pthread_t threads[NUM_THREADS];
+    int i;
+    for (i = 0; i < NUM_THREADS; i++) {
+        FILE *infile = NULL;
+        parser_args args;
+
+
+        if (argc < 1) { /* no file specified, read from stdin */
+            infile   = stdin;
+            filename = NULL;
+        }
+        else {
+            /* done handling arguments, open the file */
+            infile   = open_file(argv[0], "r");
+            filename = argv[0];
+        }
+        if (infile == NULL) {
+            fprintf(stderr, "Failed to open file '%s'\n", argv[0]);
+            exit(EXIT_FAILURE);
+        }
+
+        args.flexdebug = flexdebug;
+        args.infile    = infile;
+        args.filename  = filename;
+        args.thr_id    = i;
+
+        pthread_create(&threads[i], NULL, parse_file, &args);
+
+    }
+
+    /* wait for all threads to finish */
+    for (i = 0; i < NUM_THREADS; i++)
+        pthread_join(threads[i], NULL);
+}
+#else
+{
+    parser_args args;
+    FILE *infile = NULL;
+
     if (argc < 1) { /* no file specified, read from stdin */
         infile   = stdin;
         filename = NULL;
@@ -157,39 +269,21 @@ main(int argc, char *argv[])
         infile   = open_file(argv[0], "r");
         filename = argv[0];
     }
-
     if (infile == NULL) {
         fprintf(stderr, "Failed to open file '%s'\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
+    args.flexdebug = flexdebug;
+    args.infile    = infile;
+    args.filename  = filename;
+    args.thr_id    = 0;
 
-    /* create a yyscan_t object */
-    yylex_init(&yyscanner);
-    /* set debug flag */
-    yyset_debug(flexdebug, yyscanner);
-    /* set the input file */
-    yyset_in(infile, yyscanner);
-    /* set the extra parameter in the yyscan_t structure */
-    lexer = new_lexer(filename);
-    yyset_extra(lexer, yyscanner);
-    /* go parse */
-    yyparse(yyscanner, lexer);
-
-    if (lexer->parse_errors == 0) {
-        fprintf(stderr, "Parse successful!\n");
-        print_subs(lexer);
-        check_unused_symbols(lexer);
-        free_subs(lexer);
-    }
-    else
-        fprintf(stderr, "There were %d errors\n", lexer->parse_errors);
+    parse_file(&args);
+}
+#endif
 
 
-
-    /* clean up after playing */
-    yylex_destroy(yyscanner);
-    free(lexer);
 
     /*print_data_sizes();*/
 

@@ -15,6 +15,7 @@ pir.y
 
 This is a complete rewrite of the parser for the PIR language.
 
+=cut
 
 TODO:
 1. [done 9/8/8]  fix argument stuff related to the :named flag.
@@ -25,8 +26,6 @@ TODO:
 6. [done 12/8/8] write vanilla register allocator
 7. generate PBC, using Parrot_PackFile (and related) data structures. This needs
    linkage to libparrot, which seems to fail.
-
-=cut
 
 */
 
@@ -135,8 +134,8 @@ static int evaluate_i_i(int a, pir_rel_operator op, int b);
 static int evaluate_n_n(double a, pir_rel_operator op, double b);
 static int evaluate_i_n(int a, pir_rel_operator op, double b);
 static int evaluate_n_i(double a, pir_rel_operator op, int b);
-static int evaluate_s_s(char *a, pir_rel_operator op, char *b);
-static int evaluate_s(char *s);
+static int evaluate_s_s(char * const a, pir_rel_operator op, char * const b);
+static int evaluate_s(char * const s);
 static char *concat_strings(char *a, char *b);
 
 
@@ -163,7 +162,7 @@ extern YY_DECL;
 #endif
 
 
-
+/* the parser aborts if there are more than 10 errors */
 #define MAX_NUM_ERRORS  10
 
 
@@ -303,6 +302,7 @@ extern YY_DECL;
              opt_paren_string
              paren_string
              local_var_name
+             special_op
 
 %type <targ> sub
              method
@@ -455,9 +455,6 @@ hll_mapping       : ".HLL_map" TK_STRINGC '=' TK_STRINGC
                             { set_hll_map($2, $4); }
                   ;
 
-
-/* Namespaces */
-
 namespace_decl    : ".namespace" '[' opt_namespace ']'
                             { set_namespace(lexer, $3); }
                   ;
@@ -477,9 +474,6 @@ namespace         : namespace_slice
 namespace_slice   : TK_STRINGC
                             { $$ = expr_from_const(new_const(STRING_TYPE, $1)); }
                   ;
-
-
-/* Sub definition */
 
 sub_def           : sub_head sub_flags "\n"
                     parameters
@@ -565,6 +559,7 @@ instructions      : /* empty */
                   | instructions instruction
                   ;
 
+/* helper rule to create a new instruction node before the instruction is parsed */
 instruction       : { new_instr(lexer); }
                     instr
                   ;
@@ -644,10 +639,10 @@ op_arg            : expression
 
 keyaccess         : target keylist
                          {
-                           if ($1->type != PMC_TYPE)
-                               yyerror(yyscanner, lexer, "indexed object is not of type PMC");
-                           else
+                           if ($1->type == PMC_TYPE) /* only PMCs can be indexed */
                               set_target_key($1, $2);
+                           else
+                              yyerror(yyscanner, lexer, "indexed object is not of type PMC");
 
                            $$ = $1;
                          }
@@ -666,6 +661,49 @@ keys              : expression
 
 assignment_stat   : assignment "\n"
                   ;
+
+/*
+
+=head1 INSTRUCTION SELECTION
+
+Instruction selection is implemented in the parser. This is done by writing
+many specific alternatives, instead of using C<general> rules that
+would match all input. This way, the parser's matching mechanism is
+used to select specific cases, for instance adding 2 integer numbers.
+
+Based on the values of the terminals, some instructions can be optimized
+by selecting more efficient equivalent instructions.
+
+The table below specifies how this is done. Terminals are numbered and
+referenced using YACC syntax ($1 for the first terminal, $2 for the
+second, etc.). This table only lists the special cases; normal cases,
+such as C<$I0 = $I1 + 2>, where each of the operands is different are
+not listed.
+
+
+ rule              | instruction         | condition
+ =============================================================
+ T = 0             | null $1             |
+                   |                     |
+ T = T             | set $1, $3          | $1 != $3
+                   | noop                | $1 == $3
+                   |                     |
+ T = T * 0         | null $1             | $1 == $3
+ T = T / 1         | noop                | $1 == $3
+ T = T / 0         | error: divide by 0  | $1 == $3
+                   |                     |
+ T = T + 1         | inc $1              | $1 == $3
+ T = T + {I,N}     | add $1, $5          | $1 == $3
+ T = T + 0         | noop                | $1 == $3
+                   |                     |
+                   |                     |
+
+C<T> means C<target>, C<I> means C<integer constant>, C<N> means C<numeric constant>,
+and C<S> means C<string literal>.
+
+=cut
+
+*/
 
 assignment        : set_instruction
                   | target '=' TK_INTC
@@ -801,6 +839,30 @@ augmentive_expr   : augm_add_op TK_INTC
                   ;
 
 
+/*
+
+=head1 CONSTANT FOLDING
+
+A binary expression consists of two expressions, separated by a binary
+operator. An expression can be a C<target> or a literal value. Such a
+value can be an C<integer>, C<floating-point> or C<string> literal.
+
+In the case that both operands are constants, we can pre-evaluate
+the result of these constants, effectively preventing any calculation
+during runtime. For instance:
+
+ $I0 = 42 + 1
+
+can be pre-evaluated as
+
+ $I0 = 43
+
+which will be assembled using the C<set> opcode. Likewise, concatenation
+of two strings is done during compile time.
+
+=cut
+
+*/
 binary_expr       : TK_INTC binop target
                          { set_instrf(lexer, opnames[$2], "%i%T", $1, $3); }
                   | TK_NUMC binop target
@@ -819,7 +881,7 @@ binary_expr       : TK_INTC binop target
                          { set_instrf(lexer, "set", "%C", fold_n_i(yyscanner, $1, $2, $3)); }
                   ;
 
-
+/* all variants of the "set" opcode */
 set_instruction   : "set" target ',' keyaccess
                         { set_instrf(lexer, "set", "%T%T", $2, $4); }
                   | "set" keyaccess ',' expression
@@ -1102,6 +1164,15 @@ math_instruction  : math_op target ',' TK_INTC
                         }
                   ;
 
+/* Because instruction selection is implemented in the parser, some instructions are
+ * handled in a special way: these are some math. operators and the C<set> opcode.
+ * These tokens must therefore be handled as separate tokens, which also means they
+ * must be handled as a possible alternative for identifiers (as opcode names are
+ * allowed as identifiers).
+ * Whenever a certain opcode is handled specially in the parser, it must be added
+ * to the C<special_op> rule.
+ */
+
 math_op           : "add"    { $$ = OP_ADD; }
                   | "sub"    { $$ = OP_SUB; }
                   | "mul"    { $$ = OP_MUL; }
@@ -1109,6 +1180,9 @@ math_op           : "add"    { $$ = OP_ADD; }
                   | "fdiv"   { $$ = OP_FDIV; }
                   ;
 
+special_op        : math_op  { $$ = opnames[$1]; }
+                  | "set"    { $$ = "set"; }
+                  ;
 
 conditional_stat  : conditional_instr "\n"
                   ;
@@ -1210,9 +1284,9 @@ local_id          : local_var_name has_unique_reg
 local_var_name    : identifier
                         { $$ = $1; }
                   | TK_SYMBOL
-                        {
+                        { /* if a symbol was found, that means it was already declared */
                           yyerror(yyscanner, lexer, "local symbol already declared!");
-                          $$ = $1->name;
+                          $$ = $1->name; /* always return something to prevent seg. faults. */
                         }
                   ;
 
@@ -1222,7 +1296,7 @@ has_unique_reg    : /* empty */     { $$ = 0; }
 
 lex_decl          : ".lex" TK_STRINGC ',' target "\n"
                         {
-                          if ($4->type == PMC_TYPE)
+                          if ($4->type == PMC_TYPE) /* only PMCs can be stored as lexicals */
                               set_lex_flag($4, $2);
                           else
                               yyerror(yyscanner, lexer,
@@ -1575,7 +1649,6 @@ const_tail            : "int" identifier '=' TK_INTC
 
 
 
-
 /* Expressions, variables and operators */
 
 expression  : target         { $$ = expr_from_target($1); }
@@ -1626,6 +1699,7 @@ symbol      : TK_PREG    { $$ = reg(lexer, PMC_TYPE, $1);    }
 
 identifier  : TK_IDENT
             | TK_PARROT_OP
+            | special_op
             ;
 
 unop        : '-'            { $$ = "neg"; }
@@ -1686,7 +1760,7 @@ augm_add_op : "+="         { $$ = OP_ADD; }
 
 /*
 
-=head1 Constant folding routines.
+=head1 FUNCTIONS
 
 =over 4
 
@@ -2092,16 +2166,49 @@ fold_s_s(yyscan_t yyscanner, char *a, pir_math_operator op, char *b) {
     return NULL;
 }
 
+/*
+
+=item C<static int
+evaluate_i_i(int a, pir_rel_operator op, double b)>
+
+Compare C<a> with C<b> according to the relational operator C<op>.
+Wrapper for C<evaluate_n_n>, which takes arguments of type double.
+
+=cut
+
+*/
 static int
 evaluate_i_i(int a, pir_rel_operator op, int b) {
     return evaluate_n_n(a, op, b);
 }
 
+/*
+
+=item C<static int
+evaluate_n_i(int a, pir_rel_operator op, double b)>
+
+Compare C<a> with C<b> according to the relational operator C<op>.
+Wrapper for C<evaluate_n_n>, which takes arguments of type double.
+
+=cut
+
+*/
 static int
 evaluate_n_i(double a, pir_rel_operator op, int b) {
     return evaluate_n_n(a, op, b);
 }
 
+/*
+
+=item C<static int
+evaluate_i_n(int a, pir_rel_operator op, double b)>
+
+Compare C<a> with C<b> according to the relational operator C<op>.
+Wrapper for C<evaluate_n_n>, which takes arguments of type double.
+
+=cut
+
+*/
 static int
 evaluate_i_n(int a, pir_rel_operator op, double b) {
     return evaluate_n_n(a, op, b);
@@ -2138,8 +2245,21 @@ evaluate_n_n(double a, pir_rel_operator op, double b) {
     }
 }
 
+/*
+
+=item C<static int
+evaluate_s_s(char *a, pir_rel_operator op, char *b)>
+
+Compare string C<a> with string C<b> using the operator C<op>.
+The function uses C's C<strcmp> function. Based on that result,
+which can be -1 (smaller), 0 (equal) or 1 (larger), a boolean
+result is returned.
+
+=cut
+
+*/
 static int
-evaluate_s_s(char *a, pir_rel_operator op, char *b) {
+evaluate_s_s(char * const a, pir_rel_operator op, char * const b) {
     int result = strcmp(a, b);
 
     switch (op) {
@@ -2173,7 +2293,7 @@ Otherwise, it's true.
 
 */
 static int
-evaluate_s(char *s) {
+evaluate_s(char * const s) {
     int strlen_s = strlen(s);
 
     if (strlen_s > 0) {

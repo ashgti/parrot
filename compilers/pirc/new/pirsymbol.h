@@ -25,9 +25,9 @@
 typedef struct symbol {
     char          *name;  /* name of this symbol */
     pir_type       type;  /* type of this symbol */
-    int            color; /* allocated PASM register for this symbol */
+    int            color; /* allocated PASM register for this symbol, -1 if not allocated. */
     int            flags;
-    int            used;  /* flag to keep track whether the symbol is actually used */
+
     struct symbol *next;
 
 } symbol;
@@ -37,7 +37,7 @@ typedef struct symbol {
 typedef struct pir_reg {
     int             regno; /* symbolic (PIR) register number */
     pir_type        type;  /* type of ths register */
-    int             color; /* register assigned by register allocator */
+    int             color; /* register assigned by register allocator, -1 if not allocated. */
 
     struct pir_reg *next;
 
@@ -54,23 +54,35 @@ typedef struct global_ident {
 } global_ident;
 
 
+/* symbol constructor */
 symbol *new_symbol(char * const name, pir_type type);
 
+/* to enter a symbol in the symbol table */
 void declare_local(struct lexer_state * const lexer, pir_type type, symbol *list);
 
+/* to find a symbol in the symbol table */
 symbol *find_symbol(struct lexer_state * const lexer, char * const name);
 
+/* to find declared symbols that are never referenced */
 void check_unused_symbols(struct lexer_state * const lexer);
 
+/* find specified register; if it was not used yet, assign a PASM register to it */
 int color_reg(struct lexer_state * const lexer, pir_type type, int regno);
 
+/* store a global identifier (label) */
 void store_global_ident(struct lexer_state * const lexer, char * const name);
 
+/* find a global identifier */
 global_ident *find_global_ident(struct lexer_state * const lexer, char * const name);
 
+/* store a global .const symbol */
 void store_global_const(struct lexer_state * const lexer, constant * const c);
 
+/* find a global .const symbol */
 constant *find_constant(struct lexer_state * const lexer, char * const name);
+
+/* get a new PASM register of the specified type */
+int next_register(struct lexer_state * const lexer, pir_type type);
 
 #endif /* PARROT_PIR_PIRSYMBOL_H_GUARD */
 
