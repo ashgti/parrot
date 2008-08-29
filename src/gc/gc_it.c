@@ -1342,16 +1342,38 @@ gc_it_set_card_mark(ARGMOD(Gc_it_hdr *hdr), UINTVAL flag)
        objects which are marked as being aggregates (and are therefore
        isomorphic with Buffer *.
     */
-    /*
-    if(hdr->agg)
+#  ifdef GC_IT_USE_POBJ_FLAGS
+    if(hdr->agg) {
+        PObj * const p = IT_HDR_to_PObj(hdr);
         switch (flag) {
+            /* This is relatively inefficient. I should be able to create
+               constant bitmaps for each condition and perform a logical
+               AND or OR to set them in a single operation. That's an
+               optimization to pursue later. */
             case GC_IT_FLAG_BLACK:
+                PObj_live_SET(p);
+                PObj_is_fully_live_SET(p);
+                PObj_on_free_list_CLEAR(p);
+                break;
             case GC_IT_FLAG_WHITE:
+                PObj_live_CLEAR(p);
+                PObj_is_fully_live_CLEAR(p);
+                PObj_on_free_list_CLEAR(p);
+                break;
             case GC_IT_FLAG_GREY:
+                PObj_live_SET(p);
+                PObj_is_fully_live_CLEAR(p);
+                PObj_on_free_list_CLEAR(p);
+                break;
             case CG_IT_FLAG_FREE:
+                PObj_live_CLEAR(p);
+                PObj_is_fully_live_CLEAR(p);
+                PObj_on_free_list_SET(p);
         }
-    */
+    }
+#  else
     hdr->data.flag = flag;
+#  endif
 
 }
 
@@ -1370,6 +1392,12 @@ PARROT_INLINE
 UINTVAL
 gc_it_get_card_mark(ARGMOD(Gc_it_hdr *hdr))
 {
+#  ifdef GC_IT_USE_POBJ_FLAGS
+    /* Add the stuff here to check the PObj flags in the object, if it's an
+       aggregate. Get the data from the hdr->data.flag, and compare values
+       to make sure we have a sensical result (PARROR_ASSERT it). Return
+       the value if it's good. */
+#  endif
     return hdr->data.flag;
 }
 
