@@ -1,5 +1,22 @@
 # $Id$
 
+New in [placeholder 0.7.1]
+
+- Compilers
+  + PIRC:
+    - major refactoring to allow all PIR keywords as identifiers
+    - links to libparrot now, so all Parrot ops are recognized as such
+    - implemented .loadlib, .HLL_map, .HLL
+- Languages
+  + Rakudo (Perl 6)
+    - Precompiled modules
+    - Precompiled scripts
+    - Support for @*INC and %*INC varialbes
+    - additional builtin methods and subs
+    - added 'fail' function
+    - m/.../ regexes
+    - run tests in parallel
+
 New in 0.7.0
 - Specification
   + PDD27: add multisub lookup

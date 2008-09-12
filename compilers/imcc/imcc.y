@@ -901,7 +901,14 @@ class_namespace:
    ;
 
 maybe_ns:
-     '[' keylist ']'           { $$ = $2; }
+     '[' keylist ']'
+        {
+            if (IMCC_INFO(interp)->in_slice)
+                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
+                    "Slice not allowed in namespace.");
+
+            $$ = $2;
+        }
    | '[' ']'                   { $$ = NULL; }
    |                           { $$ = NULL; }
    ;
@@ -1508,10 +1515,10 @@ assignment:
             { $$ = iNEW(interp, IMCC_INFO(interp)->cur_unit, $1, $4, NULL, 1); }
    | target '=' NEW var
             { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $4); }
-   | target '=' NEW '[' keylist ']'
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $5); }
-   | target '=' NEW '[' keylist ']' COMMA var
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $5, $8); }
+   | target '=' NEW maybe_ns
+            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $4); }
+   | target '=' NEW maybe_ns COMMA var
+            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $4, $6); }
    | target '=' NEW var COMMA var
             { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $4, $6); }
    | target '=' NEW var '[' keylist ']'

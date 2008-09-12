@@ -21,7 +21,7 @@ the size of that file down and to emphasize their generic,
 .namespace []
 .sub 'onload' :anon :init :load
     $P0 = get_hll_namespace ['Any']
-    '!EXPORT'('chars index substr', 'from'=>$P0)
+    '!EXPORT'('chars index rindex substr', 'from'=>$P0)
 .end
 
 
@@ -63,6 +63,57 @@ the size of that file down and to emphasize their generic,
 
   substring_search:
     pos = index s, substring, pos
+    if pos < 0 goto fail
+
+  done:
+    $P0 = new 'Int'
+    $P0 = pos
+    .return ($P0)
+
+  fail:
+    $P0 = new 'Failure'
+    .return ($P0)
+.end
+
+=item rindex()
+
+=cut
+
+.namespace ['Any']
+.sub 'rindex' :method :multi(_, _)
+    .param string substring
+    .param int pos             :optional
+    .param int has_pos         :opt_flag
+    .local pmc retv
+
+  check_substring:
+    if substring goto substring_search
+
+    # we do not have substring return pos or length
+
+    .local string s
+    s = self
+    $I0 = length s
+
+    if has_pos goto have_pos
+    pos = $I0
+    goto done
+  have_pos:
+    if pos < $I0 goto done
+    pos = $I0
+    goto done
+
+  substring_search:
+    $I0 = self.'isa'('String')
+    if $I0 goto self_string
+    $P0 = new 'String'
+    $S0 = self
+    $P0 = $S0
+    goto do_search
+  self_string:
+    $P0 = self
+  do_search:
+    pos = $P0.'reverse_index'(substring, pos)
     if pos < 0 goto fail
 
   done:
@@ -323,6 +374,99 @@ the size of that file down and to emphasize their generic,
 
   pair_exception:
     die "Must pass a List of Pairs for transliteration"
+.end
+
+=item subst
+
+ our Str method Str::subst ( Any $string: Any $substring, Any $replacement )
+ our Str method Str::subst ( Any $string: Code $regexp,   Any $replacement )
+
+Replaces the first occurrence of a given substring or a regular expression
+match with some other substring.
+
+Partial implementation. The :g modifier on regexps doesn't work, for example.
+
+=cut
+
+.sub subst :method :multi(_, _, _)
+    .param string substring
+    .param string replacement
+    .local int pos
+    .local int pos_after
+    .local pmc retv
+
+    retv = new 'Perl6Str'
+
+    $S0 = self
+    pos = index $S0, substring
+    if pos < 0 goto no_match
+
+    pos_after = pos
+    $I0 = length substring
+    add pos_after, $I0
+
+    $S1 = substr $S0, 0, pos
+    $S2 = substr $S0, pos_after
+    concat retv, $S1
+    concat retv, replacement
+    concat retv, $S2
+
+    goto done
+
+  no_match:
+    retv = self
+
+  done:
+    .return(retv)
+.end
+
+.sub subst :method :lex :multi(_, 'Sub', _)
+    .param pmc regexp
+    .param pmc replacement
+    .local int pos
+    .local int pos_after
+    .local pmc retv
+    .local pmc match
+
+    retv = new 'Perl6Str'
+
+    new $P14, "Perl6Scalar"
+    .lex "$/", $P14
+
+    match = regexp.'ACCEPTS'(self)
+    unless match goto no_match
+    pos = match.'from'()
+    pos_after = match.'to'()
+
+    $S0 = self
+    $S1 = substr $S0, 0, pos
+    $S2 = substr $S0, pos_after
+    # pre-match
+    concat retv, $S1
+
+    # match
+    $I0 = isa replacement, 'Sub'
+    unless $I0 goto is_string
+
+    $S3 = match.'text'()
+    $S3 = replacement($S3)
+    concat retv, $S3
+    goto repl_done
+
+  is_string:
+    concat retv, replacement
+
+  repl_done:
+    # post-match
+    concat retv, $S2
+
+    goto done
+
+  no_match:
+    retv = self
+
+  done:
+    .return(retv)
 .end
 
 # Local Variables:

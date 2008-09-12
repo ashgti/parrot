@@ -969,14 +969,16 @@ IMCC_subst_constants(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *na
         /*
          * abs_i_ic ...
          */
-        if (n == 3 &&
-                r[1]->type & (VTCONST|VT_CONSTP) &&
-                STREQ(name, ops2[i])) {
-            found = 3;
-            snprintf(op, sizeof (op), "%s_%c_%c", name, tolower((unsigned char)r[0]->set),
-                    tolower((unsigned char)r[1]->set));
-            debug_fmt = "opt %s_x_xc => ";
-            break;
+        if (n == 3) {
+            PARROT_ASSERT(r[1]);
+            if (r[1]->type & (VTCONST|VT_CONSTP) &&
+                    STREQ(name, ops2[i])) {
+                found = 3;
+                snprintf(op, sizeof (op), "%s_%c_%c", name, tolower((unsigned char)r[0]->set),
+                        tolower((unsigned char)r[1]->set));
+                debug_fmt = "opt %s_x_xc => ";
+                break;
+            }
         }
     }
     for (i = 0; !found && i < N_ELEMENTS(ops3); i++) {
@@ -1154,7 +1156,7 @@ PARROT_WARN_UNUSED_RESULT
 static int
 branch_reorg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i;
+    unsigned int i;
     int changed = 0;
 
     IMCC_info(interp, 2, "\tbranch_reorg\n");
@@ -1394,7 +1396,8 @@ PARROT_WARN_UNUSED_RESULT
 static int
 unused_label(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i, used;
+    unsigned int i;
+    int used;
     int changed = 0;
 
     IMCC_info(interp, 2, "\tunused_label\n");
@@ -1465,7 +1468,7 @@ RT #48260: Not yet documented!!!
 static int
 dead_code_remove(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i;
+    unsigned int i;
     int changed = 0;
     Instruction *ins, *last;
 

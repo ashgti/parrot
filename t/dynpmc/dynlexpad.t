@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 6;
+use Parrot::Test tests => 7;
 use Parrot::Config;
 
 =head1 NAME
@@ -46,7 +46,7 @@ my $loadlib = <<'EOC';
 .loadlib "dynlexpad"
 
 .HLL "Some", "dynlexpad"
-.HLL_map "LexPad", "DynLexPad"
+.HLL_map "LexPad" = "DynLexPad"
 
 EOC
 
@@ -180,7 +180,7 @@ pir_output_is( $loadlib . << 'CODE', << 'OUTPUT', "dynlexpad - lexpad interop" )
     foo()
 .end
 .sub foo
-    .lex 'a', $P0               # statix lexical
+    .lex 'a', $P0               # static lexical
     $P0 = new 'String'
     $P0 = "ok 1\n"
     $P1 = find_lex 'a'
@@ -201,6 +201,48 @@ ok 2
 ok 3
 OUTPUT
 
+TODO:{
+    local $TODO = "iterator not implemented for DynLexPads";
+pir_output_is( $loadlib . << 'CODE', << 'OUTPUT', "dynlexpad - iterator" );
+
+.sub 'test' :main
+    .local pmc dlp, str1, str2, str3, it, key, interp
+
+    .lex 'a', str1
+    .lex 'b', str2
+    .lex 'c', str3
+
+    str1 = new 'String'
+    str1 = 'happy pants'
+
+    str2 = new 'String'
+    str2 = 'content pants'
+
+    str3 = new 'String'
+    str3 = 'sad pants'
+
+    interp = getinterp
+    dlp = interp['lexpad']
+
+    it = new 'Iterator', dlp
+iter_loop:
+    unless it goto iter_done
+    key = shift it
+    $S0 = key
+    print key
+    print ":"
+    key = dlp[key]
+    $S0 = key
+    say key
+    goto iter_loop
+iter_done:
+.end
+CODE
+a:happy pants
+b:content pants
+c:sad pants
+OUTPUT
+}
 # Local Variables:
 #   mode: cperl
 #   cperl-indent-level: 4

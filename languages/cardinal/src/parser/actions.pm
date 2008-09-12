@@ -20,6 +20,7 @@ class cardinal::Grammar::Actions;
 method TOP($/) {
     my $past := $( $<comp_stmt> );
     $past.blocktype('declaration');
+    $past.pirflags(':load');
 
     our $?INIT;
         if defined( $?INIT ) {
@@ -100,7 +101,7 @@ method stmt_mod($/) {
 method expr($/) {
     my $past := $( $<arg> );
     if +$<not> {
-        $past := PAST::Op.new( $past, :pirop('not'), :node($/) );
+        $past := PAST::Op.new( $past, :pirop('n_not'), :node($/) );
     }
     if $<expr> {
         my $op;
@@ -241,7 +242,7 @@ method variable($/, $key) {
         $past := PAST::Op.new(:inline('%r = self'));
     }
     elsif $key eq 'nil' {
-        $/.panic('nil is not yet implemented');
+        $past := PAST::Var.new(:scope('package'), :name('nil'));
     }
     make $past;
 }
@@ -255,7 +256,11 @@ method varname($/, $key) {
 }
 
 method global($/) {
-    make PAST::Var.new( :name(~$/), :scope('package'), :viviself('Undef'), :node($/) );
+    my @namespace;
+    our @?BLOCK;
+    my $toplevel := @?BLOCK[0];
+    $toplevel.symbol(~$/, :scope('package'), :namespace(@namespace));
+    make PAST::Var.new( :name(~$/), :scope('package'), :namespace(@namespace), :viviself('Undef'), :node($/) );
 }
 
 method instance_variable($/) {
@@ -335,7 +340,10 @@ method funcall($/) {
 
 method constant_variable($/) {
     my @a;
-    my $past := PAST::Var.new( :name(~$/), :scope('package'), :node($/), :viviself('Undef'), :namespace( @a ) );
+    my $name := ~$/;
+    if $name eq 'Array' { $name := "CardinalArray"; }
+    elsif $name eq 'Hash' { $name := "CardinalHash"; }
+    my $past := PAST::Var.new( :name($name), :scope('package'), :node($/), :viviself('Undef'), :namespace( @a ) );
     make $past;
 }
 
@@ -403,6 +411,10 @@ method for_stmt($/) {
     $var.isdecl(0);
     $body[0].push($var);
     make PAST::Op.new( $list, $body, :pasttype('for'), :node($/) );
+}
+
+method control_command($/,$key) {
+    $/.panic("next, break, and redo aren't implemented yet");
 }
 
 method module($/) {
@@ -512,17 +524,27 @@ method functiondef($/) {
     make $past;
 }
 
+method sig_identifier($/) {
+    my $past := $($<identifier>);
+    if +$<default> == 1 {
+        $past.viviself( $( $<default>[0] ) );
+    }
+    make $past;
+}
+
 method block_signature($/) {
     my $params := PAST::Stmts.new( :node($/) );
     my $past := PAST::Block.new($params, :blocktype('declaration'));
-    for $<identifier> {
+    for $<sig_identifier> {
         my $parameter := $( $_ );
         $past.symbol($parameter.name(), :scope('lexical'));
         $parameter.scope('parameter');
         $params.push($parameter);
     }
     if $<slurpy_param> {
-        $params.push( $( $<slurpy_param>[0] ) );
+        my $slurp := $( $<slurpy_param>[0] || $<slurpy_param> );
+        $past.symbol($slurp.name(), :scope('lexical'));
+        $params.push( $slurp );
     }
 
     if $<block_param> {
@@ -530,7 +552,7 @@ method block_signature($/) {
         $past.symbol($block.name(), :scope('lexical'));
         $params.push($block);
     }
-    $params.arity( +$<identifier> + +$<block_param> );
+    $params.arity( +$<sig_identifier> + +$<block_param> );
     our $?BLOCK_SIGNATURED := $past;
     make $past;
 }
@@ -651,6 +673,10 @@ method pcomp_stmt($/) {
     make $( $<comp_stmt> );
 }
 
+method warray($/) {
+    make $( $<quote_expression> );
+}
+
 method array($/) {
     my $list;
     if $<args> {
@@ -665,27 +691,30 @@ method array($/) {
 }
 
 method ahash($/) {
-    my $hash;
-    if $<args> {
-        $hash := $( $<args>[0] );
-        $hash.name('hash');
+    my $hash := PAST::Op.new( :name('hash'), :node($/) );
+    if $<assocs> {
+        my $items := $( $<assocs>[0] );
+        for @($items) {
+            $hash.push( $_ );
+        }
     }
-    else {
-        $hash := PAST::Op.new( :name('hash'), :node($/) );
-    }
-
     make $hash;
 }
 
 method assocs($/) {
+    my $assoc := PAST::Stmts.new(:node($/));
     for $<assoc> {
-
+        my $item := $( $_ );
+        $assoc.push($item);
     }
-    # XXX
+    make $assoc;
 }
 
 method assoc($/) {
-    # XXX
+    my $past := PAST::Op.new(:name('list'), :node($/));
+    $past.push( $( $<arg>[0] ) );
+    $past.push( $( $<arg>[1] ) );
+    make $past;
 }
 
 method float($/) {
@@ -700,6 +729,77 @@ method string($/) {
     make PAST::Val.new( :value( ~$<string_literal> ), :returns('CardinalString'), :node($/) );
 }
 
+method regex($/) {
+    make $($<quote_expression>);
+}
+
+method quote_expression($/, $key) {
+    my $past;
+    if $key eq 'quote_regex' {
+        our $?NS;
+        $past := PAST::Block.new(
+            $<quote_regex>,
+            :compiler('PGE::Perl6Regex'),
+            :namespace($?NS),
+            :blocktype('declaration'),
+            :node( $/ )
+        );
+    }
+    elsif $key eq 'quote_concat' {
+        if +$<quote_concat> == 1 {
+            $past := $( $<quote_concat>[0] );
+        }
+        else {
+            $past := PAST::Op.new(
+                :name('list'),
+                :pasttype('call'),
+                :node( $/ )
+            );
+            for $<quote_concat> {
+                $past.push( $($_) );
+            }
+        }
+    }
+    make $past;
+}
+
+
+method quote_concat($/) {
+    my $terms := +$<quote_term>;
+    my $count := 1;
+    my $past := $( $<quote_term>[0] );
+    while ($count != $terms) {
+        $past := PAST::Op.new(
+            $past,
+            $( $<quote_term>[$count] ),
+            :pirop('n_concat'),
+            :pasttype('pirop')
+        );
+        $count := $count + 1;
+    }
+    make $past;
+}
+
+
+method quote_term($/, $key) {
+    my $past;
+    if ($key eq 'literal') {
+        $past := PAST::Val.new(
+            :value( ~$<quote_literal> ),
+            :returns('CardinalString'), :node($/)
+        );
+    }
+    elsif ($key eq 'variable') {
+        $past := $( $<variable> );
+    }
+    elsif ($key eq 'circumfix') {
+        $past := $( $<circumfix> );
+        if $past.WHAT() eq 'Block' {
+            $past.blocktype('immediate');
+        }
+    }
+    make $past;
+}
 
 method arg($/, $key) {
     ## Handle the operator table

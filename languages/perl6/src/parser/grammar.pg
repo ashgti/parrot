@@ -272,9 +272,9 @@ rule loop_statement {
     $<sym>=[loop]
     $<eee>=[
         '('
-            <e1=EXPR> ';'
-            <e2=EXPR> ';'
-            <e3=EXPR>
+            <e1=EXPR>? ';'
+            <e2=EXPR>? ';'
+            <e3=EXPR>?
         ')'
     ]?
     <block>
@@ -550,12 +550,14 @@ token term {
         | :: {*}                                 #= listop noarg
         ]
     | <sigil> \s <arglist> {*}                   #= sigil
+    | '...' {*}                                  #= ...
     ]
 }
 
 ##  XXX: cheat until we get term:pi, term:rand, term:undef, etc.
 token named_0ary {
-    [pi|rand|undef|nothing|time] >>
+    | [pi|rand|undef|nothing|time] >>
+    | ['...'|'???'|'!!!']
 }
 
 rule package_declarator {
@@ -682,6 +684,12 @@ token quote {
     | <.before '<' > <quote_expression: :w :q>
     # | <.before '«' > <quote_expression: :ww :qq>  FIXME: unicode
     | <.before '/'>  <quote_expression: :regex>
+    | m   <.ws>      <quote_expression: :regex>
+    | q 
+        [ q <.ws>      <quote_expression: :qq>
+        | w <.ws>      <quote_expression: :q :w>
+        |   <.ws>      <quote_expression: :q>
+        ]
     ]
     {*}
 }

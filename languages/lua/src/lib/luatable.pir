@@ -61,8 +61,6 @@ C<sep> is the empty string, the default for C<i> is 1, and the default for
 C<j> is the length of the table. If C<i> is greater than C<j>, returns the
 empty string.
 
-Returns C<table[i]..sep..table[i+1] ... sep..table[j]>. The default value for
-
 =cut
 
 .sub 'concat'
@@ -71,8 +69,6 @@ Returns C<table[i]..sep..table[i+1] ... sep..table[j]>. The default value for
     .param pmc i :optional
     .param pmc j :optional
     .param pmc extra :slurpy
-    .local pmc idx
-    .local pmc value
     .local string res
     .local int last
     $S2 = lua_optstring(2, sep, '')
@@ -81,30 +77,41 @@ Returns C<table[i]..sep..table[i+1] ... sep..table[j]>. The default value for
     $I0 = table.'len'()
     last = lua_optint(4, j, $I0)
     res = ''
-    new idx, 'LuaNumber'
   L1:
-    unless $I3 <= last goto L2
-    set idx, $I3
-    value = table.'rawget'(idx)
-    $I0 = isa value, 'LuaString'
-    if $I0 goto L3
-    $I0 = isa value, 'LuaNumber'
-    if $I0 goto L3
-    lua_argerror(1, "table contains non-strings")
-  L3:
-    $S0 = value
-    concat res, $S0
-    unless $I3 != last goto L4
+    unless $I3 < last goto L2
+    res = addfield(res, table, $I3)
     concat res, $S2
-  L4:
     inc $I3
     goto L1
   L2:
+    unless $I3 == last goto L3
+    res = addfield(res, table, $I3)
+  L3:
     new $P0, 'LuaString'
     set $P0, res
     .return ($P0)
 .end
 
+.sub 'addfield' :anon
+    .param string b
+    .param pmc table
+    .param int i
+    .local pmc idx
+    new idx, 'LuaNumber'
+    set idx, i
+    .local pmc value
+    value = table.'rawget'(idx)
+    $I0 = isa value, 'LuaString'
+    if $I0 goto L1
+    $I0 = isa value, 'LuaNumber'
+    if $I0 goto L1
+    $S0 = typeof value
+    lua_error("invalid value (", $S0, ") at index ",i," in table for 'concat'")
+  L1:
+    $S0 = value
+    concat b, $S0
+    .return (b)
+.end
 
 =item C<table.foreach (table, f)>
 

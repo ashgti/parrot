@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 47;
+use Parrot::Test tests => 48;
 
 =head1 NAME
 
@@ -22,7 +22,6 @@ Tests the C<String> PMC.
 
 =cut
 
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<CODE, <<OUTPUT, "Set/get strings" );
         new P0, 'String'
@@ -116,7 +115,7 @@ CODE
 OUTPUT
 
 pasm_output_is( <<"CODE", <<OUTPUT, "Setting numbers" );
-@{[ $fp_equality_macro ]}
+        .include 'include/fp_equality.pasm'
         new P0, 'String'
         set P0, "1"
         set N0, P0
@@ -1307,6 +1306,51 @@ pir_output_is( <<'CODE', <<'OUTPUT', "elements gives length of string" );
 CODE
 9
 OUTPUT
+
++pir_output_is( <<'CODE', <<OUTPUT, 'String."reverse_index"' );
+.sub main :main
+  $P0 = new 'String'
+  $I0 = $P0.'reverse_index'('hello', 0)
+  print 'main empty '
+  print $I0
+  say ''
+  
+  $P0 = "Hello world"
+  $I0 = $P0.'reverse_index'('', 0)
+  print 'search empty '
+  print $I0
+  say ''
+  
+  $I0 = $P0.'reverse_index'('o', -1)
+  print 'negative start '
+  print $I0
+  say ''
+
+  $I0 = $P0.'reverse_index'('o', 999)
+  print 'far far away '
+  print $I0
+  say ''
+
+  $I0 = $P0.'reverse_index'('l', 0)
+  print 'search1 '
+  print $I0
+  say ''
+
+  $I0 = $P0.'reverse_index'('l', 8)
+  print 'search2 '
+  print $I0
+  say ''
+
+.end
+CODE
+main empty -1
+search empty -1
+negative start -1
+far far away -1
+search1 9
+search2 3
+OUTPUT
+
 
 # Local Variables:
 #   mode: cperl

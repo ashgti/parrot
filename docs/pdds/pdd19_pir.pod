@@ -62,6 +62,18 @@ identifiers.
 
 Opcode names are not reserved words in PIR, and may be used as variable names.
 For example, you can define a local variable named C<print>.  [See RT #24251]
+Note that by using an opcode name as a local variable name, the variable will
+I<hide> the opcode name, effectively making the opcode unusable.
+
+In contrast to opcode names, PIR keywords I<are> reserved, and cannot be used
+as identifiers. Some opcode names are, in fact, PIR keywords, which therefore
+cannot be used as identifiers.
+
+The following are PIR keywords, and cannot be used as identifiers:
+
+ goto      if       int         null
+ num       pmc      string      unless
+
 
 {{ NOTE: The use of C<::> in identifiers is deprecated. [See RT #48735] }}
 
@@ -510,6 +522,13 @@ referring to a particular subroutine with C<:outer>, even though several
 subroutines in the file may have the same name (because they are multi, or in
 different namespaces).
 
+=item :instanceof( <string_constant> )
+
+The C<:instanceof> pragma is an experimental pragma that creates a sub as a
+PMC type other than 'Sub'.  However, as currently implemented it doesn't
+work well with C<:outer> or existing PMC types such as C<Closure>,
+C<Coroutine>, etc.
+
 =back
 
 
@@ -797,6 +816,9 @@ function or method call return values.
 
 Internally, the call stack doesn't increase because of a tail call, so
 you can write recursive functions and not have stack overflows.
+
+Whitespace surrounding the dot ('.') that separates the object from the
+method is not allowed.
 
 =back
 
@@ -1262,7 +1284,7 @@ N/A
 
 =head1 REFERENCES
 
-See C<docs/imcc/macros.pod>
+N/A
 
 =cut
 

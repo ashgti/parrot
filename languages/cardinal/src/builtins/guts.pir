@@ -222,8 +222,38 @@ Adds an attribute with the given name to the class.
 .sub 'lookup_class'
     .param pmc item
     $P0 = class item
+    if_null $P0, null_class
+    .return($P0)
+  null_class:
+    $P0 = new 'Undef'
     .return($P0)
 .end
+
+.sub 'die'
+    .param pmc list :slurpy
+    .local pmc iter
+    .local string message
+
+    message = ''
+    iter = new 'Iterator', list
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    $S0 = $P0
+    message .= $S0
+    goto iter_loop
+  iter_end:
+    if message > '' goto have_message
+    message = "Died\n"
+  have_message:
+    $P0 = new 'Exception'
+    $P0 = message
+    set_global '$!', $P0
+    throw $P0
+    .return ()
+.end
+
+
 # Local Variables:
 #   mode: pir
 #   fill-column: 100

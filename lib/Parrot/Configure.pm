@@ -147,10 +147,9 @@ Accepts no arguments and returns a list in list context or an arrayref in
 scalar context.
 
 B<Note:> The list of step names returned by C<get_list_of_steps()> will be the
-same as that returned by C<Parrot::Configure::Step::List::get_steps_list()>
-B<provided> that you have not used C<add_step()> or C<add_steps()> to add any
-configuration tasks other than those named in
-C<Parrot::Configure::Step::List::get_steps_list()>.
+same as that in the second argument returned by
+C<Parrot::Configure::Options::process_options()> B<provided> that you have not
+used C<add_step()> or C<add_steps()> to add any configuration steps.
 
 =cut
 
@@ -238,8 +237,13 @@ sub runsteps {
     # We make certain that argument to --fatal-step is a comma-delimited
     # string of configuration steps, each of which is a string delimited by
     # two colons, the first half of which is one of init|inter|auto|gen
+#<<<<<<< .working
     elsif ( defined ( $fatal_step_str ) ) {
         %steps_to_die_for = _handle_fatal_step_option( $fatal_step_str );
+#=======
+#    elsif ( defined ( $fatal_step ) ) {
+#        %steps_to_die_for = $conf->_handle_fatal_step_option( $fatal_step );
+#>>>>>>> .merge-right.r30499
     }
     else {
         # No action needed; this is the default case where no step is fatal
@@ -529,6 +533,8 @@ sub option_or_data {
 
 sub pcfreeze {
     my $conf = shift;
+    local $Storable::Deparse = 1;
+    local $Storable::Eval = 1;
     return nfreeze($conf);
 }
 
@@ -538,6 +544,8 @@ sub replenish {
     foreach my $k (keys %$conf) {
         delete $conf->{$k};
     }
+    local $Storable::Deparse = 1;
+    local $Storable::Eval = 1;
     my %gut = %{ thaw($serialized) };
     while ( my ($k, $v) = each %gut ) {
         $conf->{$k} = $v;

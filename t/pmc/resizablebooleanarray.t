@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 21;
+use Parrot::Test tests => 23;
 
 =head1 NAME
 
@@ -22,8 +22,6 @@ Tests C<ResizableBooleanArray> PMC. Checks size, sets various elements, includin
 out-of-bounds test. Checks INT and PMC keys.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'ResizableBooleanArray'
@@ -123,10 +121,35 @@ ok 2
 ok 3
 OUTPUT
 
-# RT#46823: Rewrite these properly when we have exceptions
+pasm_output_is( <<'CODE', <<'OUTPUT', "Setting negatively indexed elements" );
+    new P0, 'ResizableBooleanArray'
+
+    push_eh caught
+    set P0[-1], 1
+    pop_eh
+    print "no exception"
+    end
+caught:
+    say "caught an exception"
+    end    
+CODE
+caught an exception
+OUTPUT
+
+pasm_output_is( <<'CODE', <<'OUTPUT', "Getting negatively indexed elements" );
+    new P0, 'ResizableBooleanArray'
+    set P0, 1
+
+    set I0, P0[-1]
+    print "got "
+    say I0
+    end
+CODE
+got 0
+OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting out-of-bounds elements" );
-        new P0, 'ResizableBooleanArray'
+    new P0, 'ResizableBooleanArray'
 
     set P0[1], -7
     set I0, P0[1]
@@ -165,7 +188,7 @@ ok 1
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableBooleanArray'
      new P1, 'Key'
 
@@ -201,7 +224,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableBooleanArray'
      set P0, 1
 

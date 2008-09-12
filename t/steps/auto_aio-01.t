@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More qw(no_plan); # tests => 31;
+use Test::More tests => 31;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
@@ -21,7 +21,7 @@ use IO::CaptureOutput qw( capture );
 
 ########### regular ###########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -38,6 +38,11 @@ my $serialized = $conf->pcfreeze();
 
 $conf->options->set( %{$args} );
 my $step = test_step_constructor_and_description($conf);
+
+#SKIP: {
+#    skip 'Config step auto::aio under revision',
+#    21;
+
 my $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
 like(
@@ -50,7 +55,7 @@ $conf->replenish($serialized);
 
 ########### --verbose  ###########
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ q{--verbose} ],
         mode => q{configure},
@@ -78,7 +83,7 @@ $conf->replenish($serialized);
 
 ########### _handle_error_case() ###########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -96,7 +101,7 @@ $conf->replenish($serialized);
 
 ########### _handle_error_case(); --verbose ###########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -115,6 +120,15 @@ $verbose = 1;
     is($step->result, q{no}, "Got expected 'no' result");
     like($stdout, qr/no/, "Got expected verbose output");
 }
+
+#} # END SKIP BLOCK
+
+# Problem:  With no usage of config::init::defaults and with next line test_*
+# files created by probe are correctly cleaned up -- but at same time
+# uninitialized value warnings are generated pointing to line 184 of
+# lib/Parrot/Configure/Compiler.pm.  Problem does not occur if init::defaults
+# is used.
+
 $conf->cc_clean();
 
 pass("Completed all tests in $0");

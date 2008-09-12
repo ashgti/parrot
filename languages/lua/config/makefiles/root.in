@@ -109,9 +109,11 @@ all: \
  $(LIBPATH)/gl_binding.pbc \
  $(LIBPATH)/glut.pbc \
  $(LIBPATH)/lfs.pbc \
+ $(LIBPATH)/lpeg.pbc \
  $(LIBPATH)/md5.pbc \
  $(LIBPATH)/random.pbc \
  $(LIBPATH)/sha1.pbc \
+ $(LIBPATH)/struct.pbc \
  $(LIBPATH)/uuid.pbc \
  $(GEN_PIR) \
  $(GEN_PBC) \
@@ -220,6 +222,9 @@ $(LIBPATH)/glut.pbc: $(LIBPATH)/glut.pir
 $(LIBPATH)/lfs.pbc: $(LIBPATH)/lfs.pir
 	-$(PARROT) --output=$(LIBPATH)/lfs.pbc $(LIBPATH)/lfs.pir
 
+$(LIBPATH)/lpeg.pbc: $(LIBPATH)/lpeg.pir
+	-$(PARROT) --output=$(LIBPATH)/lpeg.pbc $(LIBPATH)/lpeg.pir
+
 $(LIBPATH)/md5.pbc: $(LIBPATH)/md5.pir
 	-$(PARROT) --output=$(LIBPATH)/md5.pbc $(LIBPATH)/md5.pir
 
@@ -229,6 +234,9 @@ $(LIBPATH)/random.pbc: $(LIBPATH)/random.pir
 $(LIBPATH)/sha1.pbc: $(LIBPATH)/md5.pir
 	$(PERL) -pe "s|md5|sha1|g; s|MD5|SHA1|g" $(LIBPATH)/md5.pir > $(LIBPATH)/sha1.pir
 	-$(PARROT) --output=$(LIBPATH)/sha1.pbc $(LIBPATH)/sha1.pir
+
+$(LIBPATH)/struct.pbc: $(LIBPATH)/struct.pir
+	-$(PARROT) --output=$(LIBPATH)/struct.pbc $(LIBPATH)/struct.pir
 
 $(LIBPATH)/uuid.pbc: $(LIBPATH)/uuid.pir
 	-$(PARROT) --output=$(LIBPATH)/uuid.pbc $(LIBPATH)/uuid.pir

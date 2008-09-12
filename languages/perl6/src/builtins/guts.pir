@@ -88,21 +88,19 @@ not found, C<!OUTER> returns null.
     .local int depth
     depth = min + 1
     .local pmc lexpad, value
-    push_eh outer_err
+    $P0 = getinterp
     null value
   loop:
-    unless max >= min goto done
-    $P0 = getinterp
-    lexpad = $P0['outer', depth]
-    unless lexpad goto next
+    lexpad = $P0['lexpad', depth]
+    if null lexpad goto next
     value = lexpad[name]
     unless null value goto done
   next:
+    # depth goes from min + 1 to max + 1
+    if depth > max goto done
     inc depth
-    dec max
     goto loop
   done:
-    pop_eh
   outer_err:
     .return (value)
 .end
@@ -432,35 +430,6 @@ Constructs a Mapping, based upon the values list.
   values_loop_end:
     .return (result)
 .end
-
-
-=item !find_file_in_path(path, filename)
-
-Searches a standard colon-separated path for a filename.
-
-=cut
-
-.sub '!find_file_in_path'
-    .param string search_path
-    .param string filename
-    .local string path
-    .local pmc iter
-
-    $P0 = split ':', search_path
-    iter = new 'Iterator', $P0
-  iter_start:
-    path = filename
-    unless iter goto return_path
-    $S0 = shift iter
-    path = concat $S0, '/'
-    path .= filename
-    $I0 = stat path, 0
-    unless $I0 goto iter_start
-
-  return_path:
-    .return(path)
-.end
-
 
 =back
 

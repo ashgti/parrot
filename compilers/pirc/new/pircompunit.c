@@ -24,6 +24,29 @@ data structure can be printed, which results in a PASM representation
 of the parsed PIR code. Through the symbol management, which is done
 in F<pirsymbol.c>, a vanilla register allocator is implemented.
 
+
+=head1 OPTIMIZATION
+
+Although at this point not as important as bytecode generation,
+PIRC might need an optimizing register allocator. For this to work,
+the following is needed:
+
+=over 4
+
+=item * an easy way to decide whether an instruction can jump; in that
+case this instruction marks the end of a C<basic block>. Such
+instructions are: C<invokecc>, C<branch>, C<get_results> etc.
+Labeled instructions must also be marked as such, as they can be jumped
+to, and indicate the start of a C<basic block>. Can this flow
+information be retrieved through a Parrot function?
+
+=item * once we know what the basic blocks are, a linear scan register
+allocation implementation can be implemented. This is more efficient than
+a graph coloring algorithm. (See C<Linear Scan Register Allocation> by
+Poletto and Sarkar).
+
+=back
+
 =cut
 
 */
@@ -37,10 +60,18 @@ in F<pirsymbol.c>, a vanilla register allocator is implemented.
 #include <stdarg.h>
 #include <string.h>
 
+#include "parrot/string_funcs.h"
+#include "parrot/dynext.h"
 
 
-
+/*
 #define out stderr
+*/
+/*
+#define out lexer->outfile
+*/
+
+#define out stdout
 
 /* the order of these letters match with the pir_type enumeration.
  * These are used for human-readable PASM output.
@@ -59,34 +90,22 @@ static const char type_codes[5] = {'i', 'n', 's', 'p', '?'};
 
 =over 4
 
-=cut
-
-*/
-
-void *
-panic(char *msg) {
-    printf("Uh oh! %s\n", msg);
-    return NULL;
-}
-
-/*
 
 =item C<void
-parse_error(struct lexer_state *lexer, int linenr, char const * const message, ...)>
+panic(char * const message)>
+
+Function to emit a final last cry that something's wrong and exit.
+XXX Needs to free resources.
 
 =cut
 
 */
 void
-parse_error(struct lexer_state *lexer, int linenr, char const * const message, ...) {
-    va_list arg_ptr;
-    va_start(arg_ptr, message);
-    /*fprintf(stderr, "Parse error (line %d): ", linenr);*/
-    fprintf(stderr, "Parse error: ");
-    vfprintf(stderr, message, arg_ptr);
-    va_end(arg_ptr);
-    ++lexer->parse_errors;
+panic(char * const message) {
+    fprintf(stderr, "Fatal: %s\n", message);
+    exit(EXIT_FAILURE);
 }
+
 
 /*
 
@@ -114,7 +133,7 @@ reset_register_allocator(struct lexer_state * const lexer) {
 /*
 
 =item C<void
-set_namespace(struct lexer_state *lexer, key *ns)>
+set_namespace(struct lexer_state * const lexer, key * const ns)>
 
 Set the current namespace in the lexer state, so that it is
 available when needed, i.e. when a new subroutine node is
@@ -131,7 +150,7 @@ set_namespace(struct lexer_state * const lexer, key * const ns) {
 /*
 
 =item C<void
-set_sub_outer(struct lexer_state *lexer, char *outersub)>
+set_sub_outer(struct lexer_state * const lexer, char * const outersub)>
 
 Set the lexically enclosing sub for the current sub.
 Thus, set the :outer() argument to the current subroutine.
@@ -140,23 +159,43 @@ Thus, set the :outer() argument to the current subroutine.
 
 */
 void
-set_sub_outer(struct lexer_state *lexer, char * const outersub) {
+set_sub_outer(struct lexer_state * const lexer, char * const outersub) {
     lexer->subs->outer_sub = outersub;
     SET_FLAG(lexer->subs->flags, SUB_FLAG_OUTER);
 }
 
+
 /*
 
 =item C<void
-set_sub_vtable(struct lexer_state *lexer, char *vtablename)>
+set_sub_vtable(struct lexer_state * const lexer, char *vtablename)>
 
-Set the :vtable() flag argument to the current subroutine.
+Set the :vtable() flag argument to the current subroutine. If C<vtablename>
+is NULL, the name of the current sub is taken to be the vtable method name.
+If the vtable method name (either specified or the current sub's name) is
+in fact not a vtable method, an error message is emitted.
 
 =cut
 
 */
 void
-set_sub_vtable(struct lexer_state *lexer, char * const vtablename) {
+set_sub_vtable(struct lexer_state * const lexer, char *vtablename) {
+    int vtable_index;
+
+    if (vtablename == NULL)  /* the sub's name I<is> the vtablename */
+        /* lexer->subs always points to the I<current> subroutine object */
+        vtablename = lexer->subs->sub_name;
+
+    /* get the index number of this vtable method */
+    vtable_index = Parrot_get_vtable_index(lexer->interp,
+                                           string_from_cstring(lexer->interp, vtablename,
+                                                               strlen(vtablename)));
+
+    /* now check whether the method name actually a vtable method */
+    if (vtable_index == -1)
+        pirerror(lexer, "'%s' is not a vtable method but was used with :vtable flag", vtablename);
+
+
     lexer->subs->vtable_method = vtablename;
     SET_FLAG(lexer->subs->flags, SUB_FLAG_VTABLE);
 }
@@ -170,7 +209,7 @@ set_sub_lexid(struct lexer_state *lexer, char *lexid)>
 
 */
 void
-set_sub_lexid(struct lexer_state *lexer, char * const lexid) {
+set_sub_lexid(struct lexer_state * const lexer, char * const lexid) {
     lexer->subs->lex_id = lexid;
     SET_FLAG(lexer->subs->flags, SUB_FLAG_LEXID);
 }
@@ -184,7 +223,7 @@ set_sub_instanceof(struct lexer_state *lexer, char * const classname)>
 
 */
 void
-set_sub_instanceof(struct lexer_state *lexer, char * const classname) {
+set_sub_instanceof(struct lexer_state * const lexer, char * const classname) {
     lexer->subs->instanceof = classname;
 }
 
@@ -234,6 +273,7 @@ new_subr(struct lexer_state *lexer, char * const subname) {
     /* set default lexid */
     newsub->lex_id     = subname;
 
+    /* take namespace of this sub of the lexer, which keeps track of that */
     newsub->name_space = lexer->current_ns;
 
     newsub->parameters = NULL;
@@ -241,20 +281,22 @@ new_subr(struct lexer_state *lexer, char * const subname) {
     newsub->symbols    = NULL;
     newsub->flags      = 0;
 
-    /* set all "register" tables to NULL */
-    for (index = 0; index < 4; index++)
-        newsub->registers[index] = NULL;
+    for (index = 0; index < 4; index++) {
+        newsub->registers[index] = NULL; /* set all "register" tables to NULL */
+        newsub->regs_used[index] = 0;    /* set all register counts to 0 */
+    }
 
     /* link the new sub node into the list of subroutines */
-    if (lexer->subs == NULL) { /* no subroutine yet */
+    if (lexer->subs == NULL) { /* no subroutine yet, this is the first one */
         lexer->subs  = newsub;
         newsub->next = newsub; /* set next field to itself, to make the list circular linked */
     }
     else { /* there is at least 1 other subroutine */
+
         /* lexer->subs points to "end of list", to the last added one */
         newsub->next      = lexer->subs->next; /* set newsub's next to the first item in the list */
         lexer->subs->next = newsub;    /* set current sub's next to the new sub. */
-        lexer->subs       = newsub; /* set pointer to current sub to this last added one */
+        lexer->subs       = newsub;    /* set pointer to current sub to this last added one */
     }
 
     /* store the subroutine identifier as a global label */
@@ -267,15 +309,15 @@ new_subr(struct lexer_state *lexer, char * const subname) {
 /*
 
 =item C<void
-new_instr(struct lexer_state *lexer)>
+new_statement(struct lexer_state *lexer)>
 
-constructor for an instruction
+constructor for a statement.
 
 =cut
 
 */
 void
-new_instr(struct lexer_state *lexer) {
+new_statement(struct lexer_state *lexer) {
     statement *instr = (statement *)calloc(1, sizeof (statement));
 
     if (lexer->subs->statements == NULL) {
@@ -410,7 +452,7 @@ set_target_key(target * const t, key * const k) {
 /*
 
 =item C<target *
-target_from_symbol(symbol *sym)>
+target_from_symbol(symbol * const sym)>
 
 Convert a symbol node into a target node.
 
@@ -428,7 +470,7 @@ target_from_symbol(symbol * const sym) {
 /*
 
 =item C<target *
-add_target(struct lexer_state *lexer, target *last, target *t)>
+add_target(struct lexer_state * const lexer, target *last, target * const t)>
 
 Add a new target to the list pointed to by C<list>. C<list> points to
 the last element, C<<last->next>> points to the first. The list is
@@ -438,7 +480,7 @@ circular linked.
 
 */
 target *
-add_target(struct lexer_state *lexer, target *last, target * const t) {
+add_target(struct lexer_state * const lexer, target *last, target * const t) {
     assert(last);
     assert(t);
 
@@ -452,7 +494,7 @@ add_target(struct lexer_state *lexer, target *last, target * const t) {
 /*
 
 =item C<target *
-add_param(struct lexer_state *lexer, pir_type type, char * const name)>
+add_param(struct lexer_state * const lexer, pir_type type, char * const name)>
 
 Add a parameter of type C<type> and named C<name> to the current
 subroutine. The parameter will be declared as a local symbol in the
@@ -463,32 +505,34 @@ current subroutine, and a new register is allocated for it.
 */
 target *
 add_param(struct lexer_state * const lexer, pir_type type, char * const name) {
-    target *t = new_target(type, name);
-    symbol *s = new_symbol(name, type);
+    target *targ = new_target(type, name);
+    symbol *sym  = new_symbol(name, type);
 
     assert(lexer->subs);
 
     if (lexer->subs->parameters == NULL) {
-        lexer->subs->parameters = t;
-        t->next = t;
+        lexer->subs->parameters = targ;
+        targ->next = targ;
     }
     else {
-        t->next                       = lexer->subs->parameters->next;
-        lexer->subs->parameters->next = t;
-        lexer->subs->parameters       = t;
+        targ->next                    = lexer->subs->parameters->next;
+        lexer->subs->parameters->next = targ;
+        lexer->subs->parameters       = targ;
     }
 
     /* set the parameter just added as curtarget */
-    lexer->curtarget = t;
+    lexer->curtarget = targ;
 
-    /* add the parameter as a local symbol; note that s is an in-out parameter;
-     * it will be assigned a register (color) which is then set to the target
-     * node that we will return.
+    /* parameters are just special .locals; enter them into the symbol table */
+    declare_local(lexer, type, sym);
+    /* parameters must always get a PASM register, even if they're not
+     * "used"; in the generated PASM instructions, they're always used
+     * (to store the incoming values). Therefore, allocate a new register
+     * at this point, not in symbol.c::find_symbol().
      */
-    declare_local(lexer, type, s);
-    t->color = s->color;
+    targ->color = next_register(lexer, type);
 
-    return t;
+    return targ;
 
 }
 
@@ -517,7 +561,7 @@ set_param_alias(struct lexer_state * const lexer, char * const alias) {
 /*
 
 =item C<void
-set_param_flag(target *param, target_flag flag)>
+set_param_flag(target * const param, target_flag flag)>
 
 Set the flag C<flag> on parameter C<param>. The actual value
 of C<flag> may encode several flags at a time. Returns C<param>.
@@ -534,7 +578,7 @@ set_param_flag(target * const param, target_flag flag) {
 /*
 
 =item C<argument *
-new_argument(expression *expr)>
+new_argument(expression * const expr)>
 
 Create a new argument node which wraps C<expr>.
 
@@ -556,7 +600,7 @@ new_argument(expression * const expr) {
 /*
 
 =item C<argument *
-add_arg(argument *arg1, argument *arg2)>
+add_arg(argument *arg1, argument * const arg2)>
 
 Add argument C<arg2> at the end of the list pointed to by C<arg1>.
 The list is circular linked, and C<arg1> points to the last item.
@@ -618,14 +662,23 @@ set_arg_alias(struct lexer_state * const lexer, char * const alias) {
     return lexer->curarg;
 }
 
+/*
 
+=item C<void
+load_library(struct lexer_state * const lexer, char * const library)>
 
+Load the library indicated by C<library>.
+
+=cut
+
+*/
 void
 load_library(struct lexer_state * const lexer, char * const library) {
     /* see imcc.y:600 */
-    /* Parrot_load_lib(interp, library, NULL);
-       Parrot_register_HLL_lib(interp, library);
-    */
+    STRING *libname       = string_from_cstring(lexer->interp, library, strlen(library));
+    PMC    *ignored_value = Parrot_load_lib(lexer->interp, libname, NULL);
+    Parrot_register_HLL_lib(lexer->interp, libname);
+    printf("load_lib() done\n");
 }
 
 
@@ -648,7 +701,7 @@ set_label(struct lexer_state * const lexer, char * const label) {
 /*
 
 =item C<static instruction *
-new_instruction(char const *opname)>
+new_instruction(char * const opname)>
 
 Create a new instruction node and set C<opname> as the instruction.
 
@@ -656,7 +709,7 @@ Create a new instruction node and set C<opname> as the instruction.
 
 */
 static instruction *
-new_instruction(char const *opname) {
+new_instruction(char * const opname) {
     instruction *ins = (instruction *)calloc(1, sizeof (instruction));
     assert(ins != NULL);
     ins->opname = opname;
@@ -666,7 +719,7 @@ new_instruction(char const *opname) {
 /*
 
 =item C<void
-set_instr(struct lexer_state *lexer, char *opname)>
+set_instr(struct lexer_state * const lexer, char * const opname)>
 
 Sets the opname to the current instruction. No operands.
 
@@ -674,8 +727,24 @@ Sets the opname to the current instruction. No operands.
 
 */
 void
-set_instr(struct lexer_state * const lexer, char const * const opname) {
+set_instr(struct lexer_state * const lexer, char * const opname) {
     set_instrf(lexer, opname, "");
+}
+
+/*
+
+=item C<void
+update_instr(struct lexer_state * const lexer, char * const newop)>
+
+Update the current instruction.
+
+=cut
+
+*/
+void
+update_instr(struct lexer_state * const lexer, char * const newop) {
+    assert(lexer->subs->statements->instr.ins);
+    lexer->subs->statements->instr.ins->opname = newop;
 }
 
 /*
@@ -718,20 +787,19 @@ refer to the (non-)terminals used in a Yacc/Bison specification.
 
 */
 void
-set_instrf(struct lexer_state * const lexer,
-           char const * const opname,
-           char const * const format, ...)
-{
-    va_list arg_ptr;
-    int i;
-    size_t format_length = strlen(format);
+set_instrf(struct lexer_state * const lexer, char * const opname, char const * const format, ...) {
+    va_list  arg_ptr;
+    unsigned i;
+    size_t   format_length;
+
+    assert(format);
+    format_length = strlen(format);
 
     lexer->subs->statements->instr.ins = new_instruction(opname);
     lexer->subs->statements->type      = STAT_TYPE_INSTRUCTION;
 
     va_start(arg_ptr, format);
 
-    /* XXX is this printf's % symbol really useful? */
     assert(format_length % 2 == 0);
 
     for (i = 0; i < format_length; i++) {
@@ -761,7 +829,7 @@ set_instrf(struct lexer_state * const lexer,
                 expr = expr_from_const(new_const(STRING_TYPE, va_arg(arg_ptr, char *)));
                 break;
             default:
-                fprintf(stderr, "Fatal: unknown format specifier in set_instrf()");
+                panic("unknown format specifier in set_instrf()");
                 break;
         }
         push_operand(lexer, expr);
@@ -780,8 +848,8 @@ C<if> becomes C<unless>, C<greater-than> becomes C<less-or-equals>.
 =cut
 
 */
-char const *
-get_inverse(char const * const instr) {
+char *
+get_inverse(char * const instr) {
          if (strcmp(instr, "if") == 0) return "unless";
     else if (strcmp(instr, "gt") == 0) return "le";
     else if (strcmp(instr, "ge") == 0) return "lt";
@@ -789,7 +857,9 @@ get_inverse(char const * const instr) {
     else if (strcmp(instr, "lt") == 0) return "ge";
     else if (strcmp(instr, "ne") == 0) return "eq";
     else if (strcmp(instr, "eq") == 0) return "ne";
-    return "Invalid instruction in get_inverse()!";
+
+    assert(0); /* this should never happen */
+    return NULL;
 }
 
 /*
@@ -797,23 +867,148 @@ get_inverse(char const * const instr) {
 =item C<void
 invert_instr(struct lexer_state *lexer)>
 
-Invert the current instruction.
+Invert the current instruction. This function assumes there is an instruction
+already in place.
 
 =cut
 
 */
 void
 invert_instr(struct lexer_state * const lexer) {
-    char const *instr = lexer->subs->statements->instr.ins->opname;
-    instr       = get_inverse(instr);
+    instruction *ins = lexer->subs->statements->instr.ins;
+    char *instr;
+    assert(ins);
+
+    instr = ins->opname;
+    instr = get_inverse(instr);
     /* and set the new instruction */
-    lexer->subs->statements->instr.ins->opname = instr;
+    ins->opname = instr;
+}
+
+/*
+
+=item C<char *
+get_instr(struct lexer_state * const lexer)>
+
+Retrieve the current operation. If no current instruction is in place,
+then NULL is returned.
+
+=cut
+
+*/
+char *
+get_instr(struct lexer_state * const lexer) {
+    instruction *ins = lexer->subs->statements->instr.ins;
+    /* make sure there's an instruction in place. */
+    if (ins == NULL)
+        return NULL;
+
+    return ins->opname;
+}
+
+/*
+
+=item C<expression *
+get_operand(struct lexer_state * const lexer, unsigned n)>
+
+Get the C<n>th operand from the current instruction. If there are no
+operands, NULL is returned. Because the operands are stored in a
+circular linked list, it is impossible to "run out"; for instance, if
+there are 4 operands, and you request the 5th, then it will return
+5 % 4 = the first operand.
+
+=cut
+
+*/
+expression *
+get_operand(struct lexer_state * const lexer, unsigned n) {
+    expression *operand = lexer->subs->statements->instr.ins->operands;
+
+    if (operand == NULL)
+        return NULL;
+
+    /* initialize the iterator */
+    operand = operand->next;
+
+    while (--n)
+        operand = operand->next;
+
+    return operand;
+}
+
+/*
+
+=item C<void
+get_operands(struct lexer_state * const lexer, unsigned n, ...)>
+
+Get the first C<n> operands of the current instruction. Retrieval
+is done by reference (pointers) through I<out> parameters.
+
+=cut
+
+*/
+void
+get_operands(struct lexer_state * const lexer, unsigned n, ...) {
+    unsigned    i;
+    va_list     arg_ptr;
+    expression *iter = lexer->subs->statements->instr.ins->operands;
+
+    /* make sure there are operands */
+    if (iter == NULL)
+        return;
+
+    /* set the iterator to the first one operand */
+    iter = lexer->subs->statements->instr.ins->operands->next;
+
+    va_start(arg_ptr, n);
+
+    for (i = 0; i < n; i++) {
+        /* get the pointer to the passed in pointer */
+        expression **eptr = va_arg(arg_ptr, expression **);
+        /* set operand to the passed in pointer */
+        *eptr = iter;
+        /* go to the next operand */
+        iter = iter->next;
+    }
+    va_end(arg_ptr);
+}
+
+/*
+
+=item C<int
+get_operand_count(struct lexer_state * const lexer)>
+
+Returns the number of operands of the I<current> instruction.
+
+=cut
+
+*/
+unsigned
+get_operand_count(struct lexer_state * const lexer) {
+    unsigned count = 0;
+    expression *first, *operand;
+
+    /* if no operands, return 0 */
+    if (lexer->subs->statements->instr.ins->operands == NULL)
+        return 0;
+
+    /* initialize the first and the iterator */
+    first = operand = lexer->subs->statements->instr.ins->operands->next;
+
+    /* count the number of operands */
+    do {
+        count++;
+        operand = operand->next;
+    }
+    while (operand != first);
+
+    return count;
 }
 
 /*
 
 =item C<static constant *
-create_const(pir_type type, char *name, va_list arg_ptr)>
+create_const(pir_type type, char * const name, va_list arg_ptr)>
 
 Constant constructor; based on C<type>, retrieve a value of the
 appropriate type from C<arg_ptr>.
@@ -852,7 +1047,7 @@ create_const(pir_type type, char * const name, va_list arg_ptr) {
 
 
 =item C<constant *
-new_named_const(pir_type type, char *name, ...)>
+new_named_const(pir_type type, char * const name, ...)>
 
 Creates a new constant node of the given type, by the given name.
 Wrapper function for C<create_const>.
@@ -919,7 +1114,7 @@ new_invocation(void) {
 /*
 
 =item C<void
-set_invocation(struct lexer_state *lexer)>
+set_invocation(struct lexer_state * const lexer)>
 
 =cut
 
@@ -933,26 +1128,31 @@ set_invocation(struct lexer_state * const lexer) {
 /*
 
 =item C<void
-set_invocation_sub(struct lexer_state *lexer, target *sub)>
+set_invocation_sub(struct lexer_state * const lexer, target * const sub)>
 
 =cut
 
 */
 void
 set_invocation_sub(struct lexer_state * const lexer, target * const sub) {
+    assert(lexer->subs->statements->instr.inv);
     lexer->subs->statements->instr.inv->sub = sub;
 }
 
 /*
 
 =item C<void
-set_invocation_object(struct lexer_state *lexer, target *object)>
+set_invocation_object(struct lexer_state * const lexer, target * const object)>
+
+Set the invocation object C<object> in the current invocation structure.
+This function assumes there is an invocation struct object in place.
 
 =cut
 
 */
 void
 set_invocation_object(struct lexer_state * const lexer, target * const object) {
+    assert(lexer->subs->statements->instr.inv);
     lexer->subs->statements->instr.inv->object = object;
 }
 
@@ -971,6 +1171,7 @@ expression node is returned.
 static expression *
 new_expr(expr_type type) {
     expression *expr = (expression *)calloc(1, sizeof (expression));
+    assert(expr);
     expr->type       = type;
     expr->next       = expr;
     return expr;
@@ -991,6 +1192,7 @@ reg(struct lexer_state * const lexer, pir_type type, int regno) {
     target *t       = new_target(type, NULL); /* no identifier */
     target_regno(t) = regno;
     t->color        = color_reg(lexer, type, regno);
+    SET_FLAG(t->flags, TARGET_FLAG_IS_REG);
     return t;
 }
 
@@ -1064,6 +1266,8 @@ set_invocation_args(invocation * const inv, argument * const args) {
 =item C<void
 set_invocation_results(invocation * const inv, target * const results)>
 
+Set the invocation results on the invocation object C<inv>.
+
 =cut
 
 */
@@ -1076,6 +1280,8 @@ set_invocation_results(invocation * const inv, target * const results) {
 
 =item C<void
 set_invocation_type(invocation * const inv, invoke_type type)>
+
+Set the invocation type on the invocation object C<inv>.
 
 =cut
 
@@ -1126,8 +1332,7 @@ invoke(struct lexer_state * const lexer, invoke_type type, ...) {
         case CALL_METHOD_TAILCALL:
             break;
         default:
-            fprintf(stderr, "Fatal error: unknown invoke_type\n");
-            exit(EXIT_FAILURE);
+            panic("unknown invoke_type");
     }
     va_end(arg_ptr);
 
@@ -1185,19 +1390,63 @@ set_lex_flag(target * const t, char * const name) {
     t->lex_name = name;
 }
 
+/*
+
+=item C<void
+set_hll(lexer_state * const lexer, char * const hll)>
+
+Set the current HLL as specified in C<hll>.
+
+Code taken from imcc.y; needs testing.
+
+=cut
+
+*/
 void
-set_pragma(int flag, int value) {
-    /* TODO */
+set_hll(lexer_state * const lexer, char * const hll) {
+    STRING * const hll_name             = string_from_cstring(lexer->interp, hll, strlen(hll));
+    CONTEXT(lexer->interp)->current_HLL = Parrot_register_HLL(lexer->interp, hll_name);
 }
 
-void
-set_hll(char * const hll) {
-    /* TODO */
-}
 
+/*
+
+=item C<void
+set_hll_map(lexer_state * const lexer, char * const stdtype, char * const maptype)>
+
+Set a HLL PMC data type mapping; whenever Parrot needs to create a PMC object of
+a type that is mapped to a user type, user type will be instantiated. For instance,
+after the mapping:
+
+ .HLL_map "Integer" = "Perl6Int"
+
+whenever Parrot needs to create a Integer PMC, a Perl6Int is created instead.
+
+Code taken from imcc.y; needs testing.
+
+=cut
+
+*/
 void
-set_hll_map(char * const stdtype, char * const maptype) {
-    /* TODO */
+set_hll_map(lexer_state * const lexer, char * const stdtype, char * const maptype) {
+    Parrot_Context *ctx = CONTEXT(lexer->interp);
+    int built_in_type,
+        language_type;
+
+    STRING * const built_in_name = string_from_cstring(lexer->interp, stdtype, strlen(stdtype));
+    STRING * const language_name = string_from_cstring(lexer->interp, maptype, strlen(maptype));
+
+    built_in_type = pmc_type(lexer->interp, built_in_name);
+    language_type = pmc_type(lexer->interp, language_name);
+
+    /* XXX does this check make sense? */
+    if (built_in_type <= 0)
+        pirerror(lexer, "type '%s' is not a built-in type", stdtype);
+
+    if (language_type <= 0)
+        pirerror(lexer, "user type '%s' cannot be found", maptype);
+
+    Parrot_register_HLL_type(lexer->interp, ctx->current_HLL, built_in_type, language_type);
 }
 
 
@@ -1252,12 +1501,52 @@ push_operand(struct lexer_state * const lexer, expression * const operand) {
 
 }
 
+/*
+
+=item C<void
+remove_operand(struct lexer_state * const lexer, unsigned index)>
+
+Remove the operand in position C<index>.
+
+=cut
+
+*/
+void
+remove_operand(struct lexer_state * const lexer, unsigned index) {
+    if (lexer->subs->statements->instr.ins->operands == NULL)
+        panic("tried to remove non-existing operand");
+    else {
+        expression *first = lexer->subs->statements->instr.ins->operands->next;
+
+        while (--index) {
+            /* XXX check this algorithm better. I felt adventurous...*/
+            first->next = first->next->next;
+        }
+        lexer->subs->statements->instr.ins->operands = first;
+    }
+}
+
+/*
+
+=item C<void
+remove_all_operands(struct lexer_state * const lexer)>
+
+Remove all operands of the current instruction.
+
+=cut
+
+*/
+void
+remove_all_operands(struct lexer_state * const lexer) {
+    /* XXX free memory of operands */
+    lexer->subs->statements->instr.ins->operands = NULL;
+}
 
 
 /*
 
 =item C<expression *
-expr_from_key(key *k)>
+expr_from_key(key * const k)>
 
 Wraps the key C<k> in an C<expression> node and returns that.
 
@@ -1274,7 +1563,7 @@ expr_from_key(key * const k) {
 /*
 
 =item C<key *
-new_key(expression *expr)>
+new_key(expression * const expr)>
 
 Wraps the expression C<expr> in a key node and returns that.
 
@@ -1291,10 +1580,12 @@ new_key(expression * const expr) {
 }
 
 
-void print_key(key *k);
+void print_key(lexer_state *lexer, key *k);
+
+
 /*
 
-=item C<add_key(key *keylist, expression *exprkey)>
+=item C<add_key(key *keylist, expression * const exprkey)>
 
 Adds a new, nested key (in C<exprkey>) to the current key,
 pointed to by C<keylist>.
@@ -1360,7 +1651,7 @@ new_local(char * const name, int has_unique_reg){
 /*
 
 =item C<int
-get_signature_length(expression *e)>
+get_signature_length(expression * const e)>
 
 Calculate the length of the signature for one operand; an operand is separated
 from the instruction name or another operand through '_', which must also
@@ -1399,7 +1690,7 @@ get_signature_length(expression * const e) {
 /*
 
 =item C<char *
-write_signature(expression *iter, char *instr_writer)>
+write_signature(expression * const iter, char *instr_writer)>
 
 Write the signature for the operand C<iter>, using the character
 pointer C<instr_writer>. When the operand is an indexed target node
@@ -1454,7 +1745,7 @@ write_signature(expression * const iter, char *instr_writer) {
 /*
 
 =item C<char *
-get_signatured_opname>
+get_signatured_opname(instruction * const instr)>
 
 Returns the full opname of the instruction C<name>; the signature
 of the opname is based on the operands, some examples are shown
@@ -1468,13 +1759,13 @@ For each operand, an underscore is added; then for the types
 int, num, string or pmc, an 'i', 'n', 's' or 'p' is added
 respectively. If the operand is a constant, a 'c' suffic is added.
 
-If the operand is a key of someting, a 'k' prefix is added.
+If the operand is a key of something, a 'k' prefix is added.
 
 =cut
 
 */
 char *
-get_signatured_opname(instruction *instr) {
+get_signatured_opname(instruction * const instr) {
     size_t      fullname_length;
     char       *fullname;
     char       *instr_writer;
@@ -1523,13 +1814,52 @@ get_signatured_opname(instruction *instr) {
     return fullname;
 }
 
+/*
+
+=item C<int
+is_parrot_op(lexer_state * const lexer, char * const name)>
+
+Check whether C<name> is a parrot opcode. C<name> can be either the short
+or fullname of the opcode; for instance, C<print> is the short name, which
+has several full names, such as C<print_i>, C<print_s>, etc., depending on
+the arity and types of operands.
+
+=cut
+
+*/
+int
+is_parrot_op(lexer_state * const lexer, char * const name) {
+    return (lexer->interp->op_lib->op_code(name, 0) >= 0) /* check short name */
+           || (lexer->interp->op_lib->op_code(name, 1) >= 0); /* check long name */
+}
+
+/*
+
+=item C<int
+get_instr_opcode(lexer_state * const lexer, char * const fullname)>
+
+Get the opcode number for the instruction C<fullname>, which contains
+the signatured (full) name of the operation. For instance: print_ic
+is a signatured op; the C<_ic> is the signature indicating it will print
+an integer constant.
+
+This function assumes that C<fullname> is a valid instruction.
+(this function could be a macro for optimization)
+
+=cut
+
+*/
+int
+get_instr_opcode(lexer_state * const lexer, char * const fullname) {
+    return lexer->interp->op_lib->op_code(fullname, 1);
+}
 
 
 
 /* debug functions */
 
 /* prototype declaration */
-void print_expr(expression *e);
+void print_expr(lexer_state *lexer, expression *e);
 
 /*
 
@@ -1541,23 +1871,25 @@ and different key elements are separated by semicolons. Example:
 
  ["hi";42]
 
+has two elements: C<"hi"> and C<42>.
+
 =cut
 
 */
 void
-print_key(key *k) {
-    printf("[");
+print_key(lexer_state *lexer, key *k) {
+    fprintf(out, "[");
 
     if (k && k->expr) {
-        print_expr(k->expr);
+        print_expr(lexer, k->expr);
 
         while (k->next) {
             k = k->next;
-            printf(";");
-            print_expr(k->expr);
+            fprintf(out, ";");
+            print_expr(lexer, k->expr);
         }
     }
-    printf("]");
+    fprintf(out, "]");
 }
 
 /*
@@ -1574,12 +1906,12 @@ printed as well. Examples:
 
 */
 void
-print_target(target * const t) {
-    printf("%c%d", pir_register_types[t->type], t->color);
+print_target(lexer_state *lexer, target * const t) {
+    fprintf(out, "%c%d", pir_register_types[t->type], t->color);
 
     /* if the target has a key, print that too */
     if (t->key)
-        print_key(t->key);
+        print_key(lexer, t->key);
 }
 
 /*
@@ -1591,22 +1923,22 @@ print_constant(constant *c)>
 
 */
 void
-print_constant(constant *c) {
+print_constant(lexer_state *lexer, constant *c) {
     switch (c->type) {
         case INT_TYPE:
-            printf("%d", c->val.ival);
+            fprintf(out, "%d", c->val.ival);
             break;
         case NUM_TYPE:
-            printf("%f", c->val.nval);
+            fprintf(out, "%f", c->val.nval);
             break;
         case STRING_TYPE:
-            printf("\"%s\"", c->val.sval);
+            fprintf(out, "\"%s\"", c->val.sval);
             break;
         case PMC_TYPE:
-            printf("\"%s\"", c->val.pval);
+            fprintf(out, "\"%s\"", c->val.pval);
             break;
         case UNKNOWN_TYPE:
-            printf("Unknown type detected! This is a bug!");
+            panic("Unknown type detected in print_constant()");
             break;
     }
 }
@@ -1620,19 +1952,19 @@ print_expr(expression *expr)>
 
 */
 void
-print_expr(expression *expr) {
+print_expr(lexer_state *lexer, expression *expr) {
     switch (expr->type) {
         case EXPR_TARGET:
-            print_target(expr->expr.t);
+            print_target(lexer, expr->expr.t);
             break;
         case EXPR_CONSTANT:
-            print_constant(expr->expr.c);
+            print_constant(lexer, expr->expr.c);
             break;
         case EXPR_IDENT:
-            printf("%s", expr->expr.id);
+            fprintf(out, "%s", expr->expr.id);
             break;
         case EXPR_KEY:
-            print_key(expr->expr.k);
+            print_key(lexer, expr->expr.k);
             break;
     }
 }
@@ -1649,14 +1981,14 @@ if C<expr> is not NULL. Expressions are separated by commas.
 
 */
 void
-print_expressions(expression * const expr) {
+print_expressions(lexer_state *lexer, expression * const expr) {
     if (expr) {
         expression *iter = expr->next;
 
         do {
-            print_expr(iter);
+            print_expr(lexer, iter);
             iter = iter->next;
-            if (iter != expr->next) printf(", ");
+            if (iter != expr->next) fprintf(out, ", ");
         }
         while (iter != expr->next);
     }
@@ -1672,62 +2004,79 @@ print_arguments(char *opname, argument *args)>
 
 */
 void
-print_arguments(char *opname, argument *args) {
+print_arguments(lexer_state *lexer, char *opname, argument *args) {
     if (args != NULL) {
         argument *iter = args->next;
         if (opname) {
-            printf("   %s '", opname);
+            fprintf(out, "   %s '", opname);
 
             do {
-                printf("%d", iter->flags);
+                fprintf(out, "%d", iter->flags);
                 if (iter->flags & ARG_FLAG_NAMED)
                     printf("[%s]", iter->alias);
 
                 iter = iter->next;
-                if (iter != args->next) printf(",");
-                else printf("', ");
+                if (iter != args->next) fprintf(out, ",");
+                else fprintf(out, "', ");
             }
             while (iter != args->next);
         }
 
         iter = args->next;
         do {
-            print_expr(iter->value);
+            print_expr(lexer, iter->value);
             iter = iter->next;
-            if (iter != args->next) printf(", ");
-            else printf("\n");
+            if (iter != args->next) fprintf(out, ", ");
+            else fprintf(out, "\n");
         }
         while (iter != args->next);
     }
     else
         /* printf("   %s_pc PMC_CONST(X)\n", opname); */
-        printf("   %s ''\n", opname);
+        fprintf(out, "   %s ''\n", opname);
 
 }
 
+
 void
-print_instruction(instruction *ins) {
+print_instruction(lexer_state *lexer, instruction *ins) {
     assert(ins != NULL);
     if (ins->opname) {
-        if (strcmp(ins->opname, "nop") ==0 )
+        char *fullname;
+
+        if (strcmp(ins->opname, "noop") ==0 )
             return;
-        /*
-        printf("   %s ", ins->opname);
-        */
-        printf("   %s ", get_signatured_opname(ins));
-        print_expressions(ins->operands);
-        printf("\n");
+
+        fullname = get_signatured_opname(ins);
+
+        if (!is_parrot_op(lexer, fullname)) {
+            pirerror(lexer, "'%s' is not a parrot opcode! "
+                     "Check the operands of this op.", fullname);
+        }
+        else {
+            int opcode;
+
+            /* fprintf(stderr, "   %s ", ins->opname);
+             */
+            fprintf(stderr, "   %s ", fullname);
+            opcode = get_instr_opcode(lexer, fullname);
+            print_expressions(lexer, ins->operands);
+            fprintf(stderr, " # op %d", opcode);
+        }
+
+
+        fprintf(out, "\n");
     }
 }
 
 void
-print_targets(char *opname, target *parameters) {
+print_targets(lexer_state *lexer, char *opname, target *parameters) {
     if (parameters != NULL) {
         /* get the first parameter: */
         target *iter = parameters->next;
-        printf("   %s '", opname);
+        fprintf(out, "   %s '", opname);
         do {
-            printf("%d", iter->flags);
+            fprintf(out, "%d", iter->flags);
 
             /*
             if (iter->flags & TARGET_FLAG_NAMED)
@@ -1742,10 +2091,10 @@ print_targets(char *opname, target *parameters) {
 
         iter = parameters->next;
         do {
-            print_target(iter);
+            print_target(lexer, iter);
             iter = iter->next;
-            if (iter != parameters->next) printf(", ");
-            else printf("\n");
+            if (iter != parameters->next) fprintf(out, ", ");
+            else fprintf(out, "\n");
         }
         while (iter != parameters->next);
     }
@@ -1754,6 +2103,33 @@ print_targets(char *opname, target *parameters) {
         /* printf("   %s_pc PMC_CONST(0)", opname); */
     }
 }
+
+
+/*
+
+part of inv->instr conversion.
+
+Add arguments as operands on the current instruction.
+
+*/
+static void
+arguments_to_operands(lexer_state * const lexer, argument *args) {
+    argument *argiter;
+
+    if (args == NULL)
+        return;
+
+    argiter = args;
+
+    do {
+        argiter = argiter->next;
+        /* how to handle named args? */
+        push_operand(lexer, argiter->value);
+    }
+    while (argiter != args);
+
+}
+
 
 /*
 
@@ -1768,12 +2144,44 @@ convert_inv_to_instr(lexer_state * const lexer, invocation * const inv) {
     */
     switch (inv->type) {
         case CALL_PCC:
-            new_instr(lexer);
+            new_statement(lexer);
             set_instr(lexer, "set_args");
-            new_instr(lexer);
+            new_statement(lexer);
             set_instr(lexer, "get_results");
-            new_instr(lexer);
+            new_statement(lexer);
             set_instr(lexer, "invokecc");
+            break;
+        case CALL_RETURN:
+            new_statement(lexer);
+            set_instr(lexer, "set_returns");
+            new_statement(lexer);
+            set_instr(lexer, "returncc");
+            break;
+        case CALL_NCI:
+            new_statement(lexer);
+            set_instr(lexer, "invokecc");
+            break;
+        case CALL_YIELD:
+            break;
+        case CALL_TAILCALL:
+            new_statement(lexer);
+            set_instr(lexer, "setargs");
+            new_statement(lexer);
+            set_instr(lexer, "tailcall");
+            break;
+        case CALL_METHOD:
+            new_statement(lexer);
+            set_instr(lexer, "set_args");
+            new_statement(lexer);
+            set_instr(lexer, "get_results");
+            new_statement(lexer);
+            set_instr(lexer, "callmethodcc");
+            break;
+        case CALL_METHOD_TAILCALL:
+            new_statement(lexer);
+            set_instr(lexer, "set_args");
+            new_statement(lexer);
+            set_instr(lexer, "tailcallmethod");
             break;
         default:
             break;
@@ -1786,58 +2194,64 @@ print_invocation(lexer_state * const lexer, invocation *inv) {
     switch (inv->type) {
 
         case CALL_PCC:
-            print_arguments("set_args", inv->arguments);
-            print_targets("get_results", inv->results);
+            print_arguments(lexer, "set_args", inv->arguments);
+            print_targets(lexer, "get_results", inv->results);
 
 
             if ((inv->sub->color == -1) && (target_name(inv->sub) != NULL)) {
-
+                /* XXX! this is a problem: a new register is allocated HERE,
+                but therefore it is counted too late for the sub's register usage
+                statistics (which is printed /before/ the sub is printed. If
+                the "print" functions are replaced by "emit" functions (to emit
+                bytecode), this register allocation should be done /before/ the
+                emit phase starts.
+                */
+                int reg            = next_register(lexer, PMC_TYPE);
                 global_ident *glob = find_global_ident(lexer, target_name(inv->sub));
 
                 if (glob) {
-                    printf("   set_p_pc P%d, PMC_CONST(%d)\n", 99, glob->const_nr);
-                    printf("   invokecc_p P%d", 99);
+                    fprintf(out, "   set_p_pc P%d, PMC_CONST(%d)\n", reg, glob->const_nr);
+                    fprintf(out, "   invokecc_p P%d", reg);
                 }
                 else {
-                    printf("   find_sub_not_null_p_sc P%d, '%s'\n", 99, target_name(inv->sub));
-                    printf("   invokecc_p P%d", 99);
+                    fprintf(out, "   find_sub_not_null_p_sc P%d, '%s'\n", reg, target_name(inv->sub));
+                    fprintf(out, "   invokecc_p P%d", reg);
                 }
             }
             else /* $P42() */
-                printf("   invokecc P%d", inv->sub->color);
+                fprintf(out, "   invokecc P%d", inv->sub->color);
 
 
             break;
         case CALL_RETURN:
-            print_arguments("set_returns", inv->arguments);
-            printf("   returncc");
+            print_arguments(lexer, "set_returns", inv->arguments);
+            fprintf(out, "   returncc");
             break;
         case CALL_NCI:
-            printf("   invokecc P%d", 99);
+            fprintf(out, "   invokecc P%d", 99);
             break;
         case CALL_YIELD:
-            print_arguments("set_returns", inv->arguments);
-            printf("   yield");
+            print_arguments(lexer, "set_returns", inv->arguments);
+            fprintf(out, "   yield");
             break;
         case CALL_TAILCALL:
-            print_arguments("set_args", inv->arguments);
-            printf("   tailcall");
+            print_arguments(lexer, "set_args", inv->arguments);
+            fprintf(out, "   tailcall");
             break;
         case CALL_METHOD:
-            print_arguments("set_args", inv->arguments);
-            print_targets("get_results", inv->results);
-            printf("   callmethodcc");
+            print_arguments(lexer, "set_args", inv->arguments);
+            print_targets(lexer, "get_results", inv->results);
+            fprintf(out, "   callmethodcc");
             break;
         case CALL_METHOD_TAILCALL:
-            print_arguments("set_args", inv->arguments);
-            printf("   tailcallmethod");
+            print_arguments(lexer, "set_args", inv->arguments);
+            fprintf(out, "   tailcallmethod");
             break;
         default:
-            fprintf(stderr, "Unknown invocation type (%d)\n", inv->type);
-            exit(EXIT_FAILURE);
+            panic("Unknown invocation type in print_invocation()");
     }
 
-    puts("");
+    fprintf(out, "\n");
 
 }
 
@@ -1849,20 +2263,19 @@ print_statement(lexer_state *lexer, subroutine *sub) {
         do {
             /* print label if there is one */
             if (statiter->label) {
-                printf(" %s:\n", statiter->label);
+                fprintf(out, " %s:\n", statiter->label);
             }
             switch (statiter->type) {
                 case STAT_TYPE_INSTRUCTION:
-                    if (statiter->instr.ins) /* XXX when is this false? */
-                        print_instruction(statiter->instr.ins);
+                    if (statiter->instr.ins) /* only a label, no instr. */
+                        print_instruction(lexer, statiter->instr.ins);
                     break;
                 case STAT_TYPE_INVOCATION:
-                    if (statiter->instr.inv) /* XXX is this ever false? */
+                    if (statiter->instr.inv) /* only a label */
                         print_invocation(lexer, statiter->instr.inv);
                     break;
                 default:
-                    fprintf(stderr, "Fatal error: unknown statement type\n");
-                    exit(EXIT_FAILURE);
+                    panic("Fatal error: unknown statement type\n");
             }
             statiter = statiter->next;
         }
@@ -1873,10 +2286,10 @@ print_statement(lexer_state *lexer, subroutine *sub) {
      * flagged as :main, which has an "end" instruction at the end.
      */
     if (sub->flags & SUB_FLAG_MAIN)
-        printf("   end\n");
+        fprintf(out, "   end\n");
     else {
-        printf("   set_returns ''\n");
-        printf("   returncc\n");
+        fprintf(out, "   set_returns ''\n");
+        fprintf(out, "   returncc\n");
     }
 }
 
@@ -1913,23 +2326,29 @@ print_subs(struct lexer_state * const lexer) {
 
         do {
 
-            printf(".namespace ");
-            print_key(subiter->name_space);
-            puts("");
+            fprintf(out, "# subroutine '%s' register usage\n", subiter->sub_name);
+            fprintf(out, "#   int   : %d\n", subiter->regs_used[INT_TYPE]);
+            fprintf(out, "#   num   : %d\n", subiter->regs_used[NUM_TYPE]);
+            fprintf(out, "#   string: %d\n", subiter->regs_used[STRING_TYPE]);
+            fprintf(out, "#   pmc   : %d\n", subiter->regs_used[PMC_TYPE]);
+
+            fprintf(out, ".namespace ");
+            print_key(lexer, subiter->name_space);
+            fprintf(out, "\n");
 
             if (subiter->flags) {
-                printf("\n.pcc_sub ");
+                fprintf(out, "\n.pcc_sub ");
 
                 if (subiter->flags & SUB_FLAG_MAIN)
-                    printf(":main ");
+                    fprintf(out, ":main ");
                 if (subiter->flags & SUB_FLAG_METHOD)
-                    printf(":method ");
+                    fprintf(out, ":method ");
                     /* XXX and so on; check which ones are available in PASM mode. */
 
             }
 
-            printf("%s:\n", subiter->sub_name);
-            print_targets("get_params", subiter->parameters);
+            fprintf(out, "%s:\n", subiter->sub_name);
+            print_targets(lexer, "get_params", subiter->parameters);
             print_statement(lexer, subiter);
             subiter = subiter->next;
         }

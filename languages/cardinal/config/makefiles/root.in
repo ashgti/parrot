@@ -30,11 +30,12 @@ PCT           = $(BUILD_DIR)/runtime/parrot/library/PCT.pbc
 
 PMC_DIR       = src/pmc
 
-all: cardinal.pbc
+all: cardinal.pbc test.pir
 
 CARDINAL_GROUP = $(PMC_DIR)/cardinal_group$(LOAD_EXT)
 
 SOURCES = cardinal.pir \
+  src/parser/quote_expression.pir \
   src/gen_grammar.pir \
   src/gen_actions.pir \
   src/gen_builtins.pir \
@@ -44,11 +45,16 @@ BUILTINS_PIR = \
   src/builtins/guts.pir \
   src/builtins/say.pir \
   src/builtins/cmp.pir \
+  src/builtins/op.pir \
   src/classes/Object.pir \
+  src/classes/NilClass.pir \
   src/classes/String.pir \
   src/classes/Integer.pir \
   src/classes/Array.pir \
   src/classes/Hash.pir \
+  src/classes/Bool.pir \
+  src/builtins/globals.pir \
+  src/builtins/eval.pir \
 
 # PMCS = cardinal
 # PMC_SOURCES = $(PMC_DIR)/cardinal.pmc
@@ -56,6 +62,9 @@ BUILTINS_PIR = \
 # the default target
 cardinal.pbc: $(PARROT) $(SOURCES)
 	$(PARROT) $(PARROT_ARGS) -o cardinal.pbc cardinal.pir
+
+test.pir: $(PARROT) test.rb cardinal.pbc
+	$(PARROT) $(PARROT_ARGS) cardinal.pbc --target=pir --output=test.pir test.rb
 
 src/gen_grammar.pir: $(PERL6GRAMMAR) src/parser/grammar.pg
 	$(PARROT) $(PARROT_ARGS) $(PERL6GRAMMAR) \
@@ -101,6 +110,12 @@ help:
 
 test: all
 	$(PERL) t/harness
+
+arraytest: all
+	$(PERL) t/harness --tests-from-dir=array
+
+hashtest: all
+	$(PERL) t/harness --tests-from-dir=hash
 
 # this target has nothing to do
 testclean:

@@ -26,8 +26,18 @@ method TOP($/) {
         $?INIT := PAST::Block.new(); # For the next eval.
     }
 
-    # Make sure we have the interpinfo constants.
+    #  Make sure we have the interpinfo constants.
     $past.unshift( PAST::Op.new( :inline('.include "interpinfo.pasm"') ) );
+
+    #  Add code to load perl6.pbc if it's not already present
+    my $loadinit := $past.loadinit();
+    $loadinit.unshift(
+        PAST::Op.new( :inline('$P0 = compreg "Perl6"',
+                              'unless null $P0 goto have_perl6',
+                              'load_bytecode "perl6.pbc"',
+                              'have_perl6:')
+        )
+    );
 
     #  convert the last operation of the block into a .return op
     #  so that :load block below isn't used as return value
@@ -199,6 +209,7 @@ method unless_statement($/) {
 method while_statement($/) {
     my $cond  := $( $<EXPR> );
     my $block := $( $<block> );
+    declare_implicit_immediate_vars($block);
     $block.blocktype('immediate');
     make PAST::Op.new( $cond, $block, :pasttype(~$<sym>), :node($/) );
 }
@@ -258,31 +269,17 @@ method default_statement($/) {
 }
 
 method loop_statement($/) {
-    if $<eee> ne "" {
-        my $init := $( $<e1>[0] );
-        my $cond := $( $<e2>[0] );
-        my $tail := $( $<e3>[0] );
-        my $block := $( $<block> );
-        $block.blocktype('immediate');
-
-        my $loop := PAST::Stmts.new(
-            $init,
-            PAST::Op.new(
-                $cond,
-                PAST::Stmts.new($block, $tail),
-                :pasttype('while'),
-                :node($/)
-            ),
-            :node($/)
-        );
-        make $loop;
+    my $block := $( $<block> );
+    $block.blocktype('immediate');
+    my $cond  := $<e2> ?? $( $<e2>[0] ) !! PAST::Val.new( :value( 1 ) );
+    if $<e3> {
+        $block := PAST::Stmts.new( $block, $( $<e3>[0] ) );
     }
-    else {
-        my $cond  := PAST::Val.new( :value( 1 ) );
-        my $block := $( $<block> );
-        $block.blocktype('immediate');
-        make PAST::Op.new( $cond, $block, :pasttype('while'), :node($/) );
+    my $loop := PAST::Op.new( $cond, $block, :pasttype('while'), :node($/) );
+    if $<e1> {
+        $loop := PAST::Stmts.new( $( $<e1>[0] ), $loop, :node($/) );
     }
+    make $loop;
 }
 
 method for_statement($/) {
@@ -512,6 +509,16 @@ method routine_declarator($/, $key) {
     }
     elsif $key eq 'method' {
         $past := $($<method_def>);
+
+        # If it's got a name, only valid inside a class, role or grammar.
+        if $past.name() {
+            our @?CLASS;
+            our @?GRAMMAR;
+            our @?ROLE;
+            unless +@?CLASS || +@?GRAMMAR || +@?ROLE {
+                $/.panic("Named methods cannot appear outside of a class, grammar or role.");
+            }
+        }
 
         # Add declaration of leixcal self.
         $past[0].unshift(PAST::Op.new(
@@ -1623,6 +1630,9 @@ method package_def($/, $key) {
                 $?INIT := PAST::Block.new();
             }
             $?INIT.push( $?GRAMMAR );
+
+            # Clear namespace.
+            $?NS := '';
         }
 
         make $past;
@@ -1679,6 +1689,9 @@ method role_def($/, $key) {
                 $?INIT.push( $_ );
             }
         }
+
+        # Clear namespace.
+        $?NS := '';
 
         make $past;
     }
@@ -2287,11 +2300,18 @@ method circumfix($/, $key) {
     }
     elsif $key eq '$( )' {
         my $method := contextualizer_name($/, $<sigil>);
+        my $call_on := $( $<semilist> );
+        if $call_on.name() eq 'infix:,' && +@($call_on) == 0 {
+            $call_on := PAST::Var.new(
+                :name('$/'),
+                :scope('lexical')
+            );
+        }
         $past := PAST::Op.new(
             :pasttype('callmethod'),
             :name($method),
             :node($/),
-            $( $<semilist> )
+            $call_on
         );
     }
     make $past;
@@ -3034,70 +3054,31 @@ sub create_sub($/, $past) {
 }
 
 
-# Get's the :immediate setup sub for a block; if it doesn't have one, adds it.
-sub get_block_setup_sub($block) {
-    my $init := $block[0];
-    my $found;
-    for @($init) {
-        if $_.WHAT() eq 'Block' && $_.pirflags() eq ':immediate' {
-            $found := $_;
-        }
-    }
-    unless $found {
-        $found := PAST::Block.new(
-            :blocktype('declaration'),
-            :pirflags(':immediate'),
-
-            # For block type; defaults to Block
-            PAST::Stmts.new(
-                PAST::Op.new(
-                    :inline(
-                        '    .local pmc desc',
-                        '    $P0 = interpinfo .INTERPINFO_CURRENT_SUB',
-                        '    $P0 = $P0."get_outer"()',
-                        '    setprop $P0, "$!proto", %0'
-                    ),
-                    PAST::Var.new(
-                        :name('Block'),
-                        :scope('package')
-                    )
-                )
-            ),
-
-            # For signature setup - default to empty signature object.
-            PAST::Stmts.new(
-                PAST::Op.new(
-                    :inline('    setprop $P0, "$!signature", %0'),
-                    PAST::Op.new(
-                        :pasttype('callmethod'),
-                        :name('!create'),
-                        PAST::Var.new(
-                            :name('Signature'),
-                            :scope('package'),
-                            :namespace(list())
-                        )
-                    )
-                )
-            )
-        );
-        $init.push($found);
-    }
-    $found
-}
-
-
 # Set the proto object type of a block.
 sub set_block_proto($block, $type) {
-    my $setup_sub := get_block_setup_sub($block);
-    $setup_sub[0][0][0].name($type);
+    my $loadinit := $block.loadinit();
+    $loadinit.push(
+        PAST::Op.new(
+            :inline('setprop %0, "$!proto", %1'),
+            PAST::Var.new( :name('block'), :scope('register') ),
+            PAST::Var.new( :name($type), :scope('package') )
+        )
+    );
 }
 
 
 # Associate a signature object with a block.
 sub set_block_sig($block, $sig_obj) {
-    my $setup_sub := get_block_setup_sub($block);
-    $setup_sub[1][0][0] := $sig_obj;
+    my $loadinit := $block.loadinit();
+    $loadinit.push(
+        PAST::Op.new(
+            :inline('setprop %0, "$!signature", %1'),
+            PAST::Var.new( :name('block'), :scope('register') ),
+            $sig_obj
+        )
+    );
 }
+
 
 # Creates a signature descriptor (for now, just a hash).
 sub sig_descriptor_create() {

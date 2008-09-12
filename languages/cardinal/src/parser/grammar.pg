@@ -26,7 +26,7 @@ token comp_stmt {
 }
 
 rule stmts {
-    <.term>?[ <stmt> [<.term>+ | <.before <end_block>> | $] ]* {*}
+    <.term>?[ <stmt> [<.term>+ | <.before <end_block>> | $ | <panic: unterminated statement>] ]* {*}
 }
 
 token term { \n | ';' }
@@ -71,7 +71,7 @@ token stmt_mod {
 }
 
 rule expr {
-    $<not>=['not']? <arg> [$<op>=['and'|'or'] <expr>]?
+    [$<not>=['!'|'not']]? <arg> [$<op>=['and'|'or'] <expr>]?
     {*}
 }
 
@@ -126,8 +126,8 @@ token methodcall {
 }
 
 rule do_block {
-    | 'do' <do_args> <.term>? <comp_stmt> 'end' {*}
-    | '{' <do_args> <.term>? <comp_stmt> '}' {*}
+    | 'do' <do_args>? <.term>? <.before <stmt>><comp_stmt> 'end' {*}
+    | '{' <do_args>? <.term>? <.before <stmt>><comp_stmt> '}' {*}
 }
 
 rule super_call {
@@ -142,7 +142,7 @@ token operation {
 #XXX UGLY!  Refactor into <args> maybe?
 token call_args {
     | '()' [<.ws> <do_block>]? {*}
-    | <args> [<.ws> <do_block>]? {*}
+    | [ <.after \s|\)> | <.before \s> ] <args> [<.ws> <do_block>]? {*}
     | '(' <.ws> <args> <.ws> ')' [<.ws> <do_block>]? {*}
 }
 
@@ -150,9 +150,14 @@ rule do_args {
     '|' <block_signature> '|'
 }
 
+rule sig_identifier {
+                      #XXX Should this be basic_primary or expr or what?
+    <identifier>[ '=' <default=basic_primary>]? {*}
+}
+
 rule block_signature {
     [
-    | <identifier> [',' <identifier>]* [',' <slurpy_param>]? [',' <block_param>]?
+    | <sig_identifier> [',' <sig_identifier>]* [',' <slurpy_param>]? [',' <block_param>]?
     | <slurpy_param> [',' <block_param>]?
     | <block_param>?
     ] {*}
@@ -197,11 +202,14 @@ token basic_primary {
     | <literal> {*}                         #= literal
     | <funcall> {*}                         #= funcall
     | <variable> {*}                        #= variable
-    | <do_block> {*}                        #= do_block
-    | <array> {*}                           #= array
     | <ahash> {*}                           #= ahash
+    | <regex> {*}                           #= regex
+    | <do_block> {*}                        #= do_block
+    | <warray> {*}                          #= warray
+    | <array> {*}                           #= array
     | <pcomp_stmt> {*}                      #= pcomp_stmt
     | <scope_identifier> {*}                #= scope_identifier
+    | <control_command> {*}                 #= control_command
 }
 
 token primary {
@@ -230,11 +238,12 @@ token pcomp_stmt {
 
 rule if_stmt {
     'if' <expr> <.then>
-    <comp_stmt>
+    [<comp_stmt>
     ['elsif' <expr> <.then>
     <comp_stmt>]*
     <else>?
     'end'
+    |<panic: syntax error in if statement>]
     {*}
 }
 
@@ -277,6 +286,12 @@ rule rescue {
     # XXX check <args>
     ['rescue' <args> <.then> <comp_stmt>]+
     {*}
+}
+
+token control_command {
+    | 'next'  {*}                   #= next
+    | 'break' {*}                   #= break
+    | 'redo'  {*}                   #= redo
 }
 
 rule module {
@@ -336,13 +351,18 @@ token fname {
     <.identifier> <[=!?]>?
 }
 
+token warray {
+    '%w' <.before <[<[({]>> <quote_expression: :w :q>
+    {*}
+}
+
 rule array {
     '[' [ <args> [',']? ]? ']'
     {*}
 }
 
 rule ahash {
-    '{' [ [ <args> | <assocs> ] [',']? ]? '}'
+    '{' [ <assocs> [',']? ]? '}'
     {*}
 }
 
@@ -397,17 +417,23 @@ token literal {
 }
 
 token float {
-    \d* '.' \d+
+    '-'? \d* '.' \d+
     {*}
 }
 
 token integer {
-    \d+
+    '-'? \d+
     {*}
 }
 
 token string {
     [ \' <string_literal: "'"> \' | \" <string_literal: '"'> \" ]
+    {*}
+}
+
+token regex {
+    <.before '/'> [<quote_expression: :regex> $<modifiers>=[<alpha>]*
+                  |<panic: problem parsing regex>]
     {*}
 }
 
@@ -433,7 +459,7 @@ proto 'infix:=' is precedence('1') is pasttype('copy') is lvalue(1)     { ... }
 proto 'prefix:defined?' is looser('infix:=') { ... }
 
 proto 'infix:+=' is equiv('infix:=')
-                 is pirop('add')        { ... }
+                 { ... }
 
 proto 'infix:-=' is equiv('infix:=')
                  is pirop('sub')        { ... }
@@ -488,12 +514,12 @@ proto 'infix:==='     is equiv('infix:==') { ... }
 proto infix:«<=>» is equiv('infix:==') { ... }
 
 
-proto 'infix:«<=»' is tighter('infix:===') { ... }
-proto infix:«=>» is tighter('infix:===') { ... }
 proto infix:«>»  is tighter('infix:===') { ... }
 proto infix:«<»  is tighter('infix:===') { ... }
+proto infix:«<=»  is tighter('infix:===') { ... }
+proto infix:«>=» is tighter('infix:===') { ... }
 
-proto 'infix:|' is tighter('infix:«<=»')  { ... }
+proto 'infix:|' is tighter('infix:<=')  { ... }
 proto 'infix:^' is equiv('infix:|')  { ... }
 
 proto 'infix:&' is tighter('infix:|')  { ... }
@@ -501,8 +527,7 @@ proto 'infix:&' is tighter('infix:|')  { ... }
 proto infix:«<<»  is tighter('infix:&') { ... }
 proto infix:«>>»  is equiv(infix:«<<») { ... }
 
-proto 'infix:+' is tighter(infix:«<<»)
-                is pirop('n_add')       { ... }
+proto 'infix:+' is tighter(infix:«<<»)  { ... }
 
 proto 'infix:-' is equiv('infix:+')
                 is pirop('n_sub')       { ... }

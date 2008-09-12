@@ -3,15 +3,58 @@
 
 =head1 NAME
 
-README.txt - Readme file for PIRC compiler, a fresh implementation of
-the PIR language using Bison and Flex.
+README.txt - Readme file for PIRC compiler.
 
 =head1 DESCRIPTION
 
-PIRC is a fresh implementation of the PIR language. Maintaining the
-current default implementation (IMCC) is a bit of a pain, and it contains
-a lot of "XXX" and "TODO" and other kludge alerts. Furthermore, IMCC is
-not re-entrant, as it has a number of global variables.
+PIRC is a fresh implementation of the PIR language using Bison and Flex.
+Its main features are:
+
+=over 4
+
+=item * thread-safety, so it is reentrant.
+
+=item * instruction selection, implemented in the parser.
+
+=item * constant folding, implemented in the parser.
+
+=back
+
+=head2 Compiling and Running
+
+=head3 Windows using Microsoft Visual Studio
+
+ cl /c /I..\..\..\include *.c
+
+ link /nodefaultlib main.obj pircompunit.obj pirlexer.obj pirparser.obj \
+   pirsymbol.obj pircompiler.obj kernel32.lib msvcrt.lib ..\..\..\libparrot.lib
+
+When running PIRC, it needs the shared library C<libparrot>; an easy way to do
+this is copy C<libparrot.dll> in the Parrot root directory to C<compilers/pirc/new>.
+
+Running PIRC is as easy as:
+
+ pirc test.pir
+
+=head3 Linux using GCC
+
+ cc -c -I../../../include *.c
+
+ cc main.o pircompiler.o pircompunit.o pirlexer.o pirparser.o \
+     pirsymbol.o ../../../blib/lib/libparrot.so.X.Y.Z -o pirc
+
+where C<X>, C<Y> and C<Z> together represent the version of Parrot
+(for instance, at the time of writing this, the version is 0.7.0,
+so that X=0, Y=7 and Z=0.)
+
+When running PIRC, it needs the shared library C<libparrot>; in order to let
+PIRC find it, set the path as follows:
+
+ export LD_LIBRARY_PATH=<path to parrot>/parrot/blib/lib
+
+Running is as easy as:
+
+ ./pirc test.pir
 
 =head2 Overview
 
@@ -358,19 +401,6 @@ when replacing IMCC with PIRC:
 
 =over 4
 
-=item * is_op
-
-PIRC needs a function to decide whether an identifier is an instruction. IMCC
-uses a function is_op that does this. For this to work, libparrot must be
-linked in, and I'm having trouble doing this.
-
-=item * instruction code
-
-The PIR compiler can already decide what variant of an instruction must be used;
-for instance, for C<set $I0, 42> the C<set_i_ic> variant must be selected.
-However, the actual opcode for an instruction must be retrieved, because these
-must be written to a PBC file.
-
 =item * PIR sub storage
 
 PIR subs are stored as PMC constants in the constant table, but it is not clear
@@ -384,6 +414,36 @@ There must be a proper bytecode API for PIRC to use.
 
 Flags such as C<:immediate> must be implemented; a sub that is marked with the
 C<:immediate> flag must be run immediately after compilation.
+
+=back
+
+At this moment, the following things are unclear to me; if anybody can answer these,
+that'd be helpful:
+
+=over 4
+
+=item * how are labels represented, as addresses/offsets (just plain integers)?
+
+=item * related: how is a jump/goto/branch instruction implemented?
+Will this take a integer operand?
+
+=item * how are named args/params handled/represented in bytecode?
+
+=back
+
+The following are some ideas for the near future:
+
+=over 4
+
+=item * simplify the instruction struct by removing the union, so that invocation struct objects
+are no longer stored there. Once completely parsed, a invocation struct should be converted into
+a stream of normal instructions. This way, they will also participate in the vanilla register
+allocator.
+
+=item * when parsing is done, we know the total number of instructions (or we can easily count this,
+by incrementing a counter in the instruction constructor). Then we can create an array, and convert
+the linked list of instructions into an array of instructions. This would allow to easily index
+this array and calculate offsets (labels etc.) and such.
 
 =back
 

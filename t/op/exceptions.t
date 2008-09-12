@@ -10,11 +10,11 @@ use Parrot::Test tests => 30;
 
 =head1 NAME
 
-t/pmc/exception.t - Exception Handling
+t/op/exceptions.t - Exception Handling
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/exception.t
+    % prove t/op/exceptions.t
 
 =head1 DESCRIPTION
 
@@ -622,7 +622,7 @@ _handler:
     .local pmc c
     .get_results (e, s)
     say 'In the exception handler'
-    c = e['retcont']
+    c = e['resume']
     c()
 .end
 CODE

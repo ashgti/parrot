@@ -14,10 +14,16 @@ Stolen from Rakudo
 .namespace ['CardinalArray']
 
 .sub 'onload' :anon :load :init
-    .local pmc cardinalmeta, arrayproto
+    .local pmc cardinalmeta, arrayproto, interp, core_type, hll_type
     cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
     arrayproto = cardinalmeta.'new_class'('CardinalArray', 'parent'=>'ResizablePMCArray CardinalObject')
     cardinalmeta.'register'('ResizablePMCArray', 'parent'=>'CardinalObject', 'protoobject'=>arrayproto)
+    core_type = get_class 'ResizablePMCArray'
+    hll_type = get_class 'CardinalArray'
+
+    interp = getinterp
+    interp.'hll_map'(core_type, hll_type)
+
 .end
 
 
@@ -41,7 +47,7 @@ Return a CardinalString representing the Array.
 =cut
 
 .sub 'to_s' :method
-    $S0 = self.get_string()
+    $S0 = join '', self
     $P0 = new 'CardinalString'
     $P0 = $S0
     .return($P0)
@@ -56,6 +62,16 @@ Clones the list.
 .sub 'clone' :vtable :method
     $P0 = 'list'(self)
     .return ($P0)
+.end
+
+=item clear()    (method)
+
+Removes all elements from the array.
+
+=cut
+
+.sub 'clear' :method
+    self = 0
 .end
 
 
@@ -111,6 +127,129 @@ Return the number of elements in the list.
     $I0 = elements self
     .return ($I0)
 .end
+
+=item sort()
+
+Return a sorted copy of the list
+
+=cut
+
+.sub 'sort' :method
+    .param pmc by              :optional
+    .param int has_by          :opt_flag
+    if has_by goto have_by
+    by = get_hll_global 'infix:cmp'
+  have_by:
+
+    .local pmc list, fpa
+    .local int elems
+
+    list = self
+    elems = list.'elems'()
+    fpa = new 'FixedPMCArray'
+    fpa = elems
+
+    .local int i
+    i = 0
+  fpa_loop:
+    unless i < elems goto fpa_end
+    $P0 = list[i]
+    fpa[i] = $P0
+    inc i
+    goto fpa_loop
+  fpa_end:
+    fpa.'sort'(by)
+    .return 'list'(fpa :flat)
+.end
+
+.sub 'sort!' :method
+    .param pmc by              :optional
+    .param int has_by          :opt_flag
+    if has_by goto have_by
+    by = get_hll_global 'infix:cmp'
+  have_by:
+    $P0 = self.sort()
+    self = 0
+    self.append($P0)
+.end
+
+=item uniq(...)
+
+=cut
+
+# TODO Rewrite it. It's too naive.
+
+.sub uniq :method
+    .local pmc ulist
+    .local pmc key
+    .local pmc val
+    .local pmc uval
+    .local int len
+    .local int i
+    .local int ulen
+    .local int ui
+
+    ulist = new 'CardinalArray'
+    len = self.'elems'()
+    i = 0
+
+  loop:
+    if i == len goto done
+
+    val = self[i]
+
+    ui = 0
+    ulen = ulist.'elems'()
+    inner_loop:
+        if ui == ulen goto inner_loop_done
+
+        uval = ulist[ui]
+        if uval == val goto found
+
+        inc ui
+        goto inner_loop
+    inner_loop_done:
+
+    ulist.'push'(val)
+
+    found:
+
+    inc i
+    goto loop
+
+  done:
+    .return(ulist)
+.end
+
+.sub 'uniq!' :method
+    $P0 = self.uniq()
+    self = 0
+    self.append($P0)
+.end
+
+
+=item include?(ELEMENT)
+
+Return true if self contains ELEMENT
+
+=cut
+.sub 'include?' :method
+    .param pmc args
+    .local pmc iter
+    iter = new 'Iterator', self
+  iter_loop:
+    unless iter goto done_f
+    $P0 = shift iter
+    eq $P0, args, done_t
+    goto iter_loop
+   done_f:
+        $P0 = get_hll_global ['Bool'], 'False'
+        .return($P0)
+   done_t:
+        $P0 = get_hll_global ['Bool'], 'True'
+        .return($P0)
+.end
+
 
 =item unshift(ELEMENTS)
 
@@ -260,12 +399,12 @@ Treats the list as a stack, pushing ELEMENTS onto the end of the list.  Returns 
 
 =item join(SEPARATOR)
 
-Returns a string comprised of all of the list, separated by the string SEPARATOR.  Given an empty list, join returns the empty string.
+Returns a string comprised of all of the list, separated by the string SEPARATOR.  Given an empty list, join returns the empty string. SEPARATOR is an optional parameter
 
 =cut
 
 .sub 'join' :method
-    .param string sep
+    .param string sep :optional
     .local string res
     .local string tmp
     .local int len
@@ -329,59 +468,86 @@ done:
     .return(res)
 .end
 
+=item reverse!()
+
+Reverses a list in place.  Destructive update.
+Returns self.
+
+=cut
+
+.sub 'reverse!' :method
+    .local int pos
+    .local int len
+    .local pmc tmp1
+    .local pmc tmp2
+    pos = elements self
+    len = pos
+    dec len
+    pos = pos / 2
+  loop:
+    if pos == 0 goto done
+    dec pos
+    tmp1 = self[pos]
+    $I0 = len-pos
+    tmp2 = self[$I0]
+    self[pos] = tmp2
+    self[$I0] = tmp1
+    goto loop
+  done:
+    .return(self)
+.end
+
 =item delete()
 
-Deletes the given elements from the CardinalArray, replacing them with Undef.  Returns a CardinalArray of removed elements.
+Deletes the given element from the CardinalArray, replacing them with Undef.
+Returns the item if found, otherwise returns the result of running the block
+if passed, otherwise returns nil.
 
 =cut
 
 .sub delete :method
-    .param pmc indices :slurpy
-    .local pmc newelem
+    .param pmc item
+    .param pmc block :optional
+    .param int block_flag :opt_flag
+    .local pmc nil
     .local pmc elem
-    .local int last
-    .local pmc res
-    .local int ind
     .local int len
     .local int i
+    .local pmc return
+    .local pmc nil
 
-    newelem = undef()
-    res = new 'CardinalArray'
+    nil = new 'NilClass'
+    return = nil
 
-    # Index of the last element in the array
-    last = elements self
-    dec last
-
-    len = elements indices
+    len = elements self
     i = 0
 
   loop:
     if i == len goto done
 
-    ind = indices[i]
+    elem = self[i]
 
-    if ind == -1 goto endofarray
-    if ind == last goto endofarray
-    goto restofarray
 
-  endofarray:
-    # If we're at the end of the array, remove the element entirely
-    elem = pop self
-    res.push(elem)
-    goto next
-
-  restofarray:
-    # Replace the element with undef.
-    elem = self[ind]
-    res.push(elem)
-
-    self[ind] = newelem
-
-  next:
+    $I0 = elem == item
+    if $I0, found
     inc i
+
+    goto loop
+  found:
+    return = item
+    delete self[i]
+    dec len
     goto loop
   done:
-    .return(res)
+    $I0 = return == nil
+    if $I0, not_found
+    .return(return)
+  not_found:
+    if block_flag, have_block
+    .return(return)
+  have_block:
+    $P0 = block()
+    .return($P0)
 .end
 
 =item exists(INDEX)
@@ -630,6 +796,117 @@ Run C<block> once for each item in C<self>, with the item passed as an arg.
   each_loop_end:
 .end
 
+.sub 'each_with_index' :method
+    .param pmc block
+    .local int len
+    len = elements self
+    $I0 = 0
+  each_loop:
+    if $I0 == len goto each_loop_end
+    $P0 = self[$I0]
+    block($P0,$I0)
+    inc $I0
+    goto each_loop
+  each_loop_end:
+.end
+
+=item collect(block)
+
+Run C<block> once for each item in C<self>, with the item passed as an arg.
+Creates a new Array containing the results and returns it.
+
+=cut
+
+.sub 'collect' :method
+    .param pmc block
+    .local pmc result
+    result = new 'CardinalArray'
+    $P0 = new 'Iterator', self
+  each_loop:
+    unless $P0 goto each_loop_end
+    $P1 = shift $P0
+    $P2 = block($P1)
+    result.push($P2)
+    goto each_loop
+  each_loop_end:
+    .return (result)
+.end
+
+.sub 'each_with_index' :method
+    .param pmc block
+    .local int len
+    len = elements self
+    $I0 = 0
+  each_loop:
+    if $I0 == len goto each_loop_end
+    $P0 = self[$I0]
+    block($P0,$I0)
+    inc $I0
+    goto each_loop
+  each_loop_end:
+.end
+
+=item flatten
+
+ recursively flatten any inner arrays into a single outer array
+
+=cut
+.sub 'flatten' :method
+    .local pmc returnMe
+    .local pmc iterator
+    returnMe = new 'CardinalArray'
+    iterator = new 'Iterator', self
+  each_loop:
+    unless iterator goto each_loop_end
+    $P1 = shift iterator
+    #if $P1 is an array call flatten
+    $I0 = isa $P1, 'CardinalArray'
+    if $I0 goto inner_flatten
+    push returnMe, $P1
+    goto each_loop
+  inner_flatten:
+    $P2 = $P1.'flatten'()
+    $P3 = new 'Iterator', $P2
+    inner_loop:
+        unless $P3 goto each_loop
+        $P4 = shift $P3
+        push returnMe, $P4
+        goto inner_loop
+    goto each_loop
+  each_loop_end:
+  .return(returnMe)
+.end
+
+=item size
+
+Retrieve the number of elements in C<self>
+
+=cut
+.sub 'size' :method
+     $I0 = self
+     .return($I0)
+.end
+
+=item length
+
+Retrieve the number of elements in C<self>
+
+=cut
+.sub 'length' :method
+     $I0 = self
+     .return($I0)
+.end
+
+=item at(index)
+
+    Retrieve element from position C<index>.
+
+=cut
+.sub 'at' :method
+    .param pmc i
+    $P0 = self[i]
+    .return($P0)
+.end
 
 .sub '[]' :method
     .param pmc i
@@ -645,6 +922,70 @@ Run C<block> once for each item in C<self>, with the item passed as an arg.
 .end
 
 
+=item slice
+
+Retrieve the number of elements in C<self>
+
+=cut
+.sub 'slice' :method
+    .param int start
+    .param int end
+    .local pmc returnMe
+    returnMe = new 'CardinalArray'
+    $I0 = start
+  each_loop:
+    unless $I0 <= end goto each_loop_end
+    $P0 = self[$I0]
+    inc $I0
+    push returnMe, $P0
+    goto each_loop
+  each_loop_end:
+  .return(returnMe)
+.end
+
+=item zip
+
+The zip operator.
+
+=cut
+
+.sub 'zip' :method
+    .param pmc args :slurpy
+    .local int num_args
+    .local pmc zipped
+    num_args = elements args
+
+    zipped = new 'CardinalArray'
+
+    # Get minimum element count - what we'll zip to.
+    .local pmc iterator, args_iter, arg, item
+    .local int i
+    iterator = new 'Iterator', self
+    i = 0
+
+  setup_loop:
+    unless iterator, setup_loop_done
+    args_iter = new 'Iterator', args
+    item = new 'CardinalArray'
+    $P0 = shift iterator
+    item.push($P0)
+  inner_loop:
+    unless args_iter, inner_loop_done
+    arg = shift args_iter
+    $P0 = arg[i]
+    unless null $P0 goto arg_not_null
+    $P0 = get_hll_global 'nil'
+  arg_not_null:
+    item.push($P0)
+    goto inner_loop
+  inner_loop_done:
+    inc i
+    zipped.push(item)
+    goto setup_loop
+  setup_loop_done:
+
+    .return (zipped)
+.end
 
 
 =back
@@ -1018,6 +1359,13 @@ Returns the elements of LIST in the opposite order.
     .param pmc list :slurpy
 
     .return list.'first'(test)
+.end
+
+.sub 'infix:<<' :multi('CardinalArray',_)
+    .param pmc array
+    .param pmc item
+    push array, item
+    .return(array)
 .end
 
 ## TODO: join map reduce sort zip

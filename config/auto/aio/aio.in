@@ -23,7 +23,7 @@ sighandler(const int s, siginfo_t *i, void *x)
 {
     if (s == my_sig) {
 	flag = s;
-	retval =  *(int*)i->si_ptr;
+	retval =  *(int*)i->si_value.sival_ptr;
     }
 }
 
@@ -34,9 +34,9 @@ main(int argc, char *argv[])
     struct sigaction sa;
     int fd;
     int i = 42;
+    int cnt = 4;
 
-    my_sig = atoi(argv[1]);
-    printf("SIGRTMIN=%d SIGRTMAX=%d\n", SIGRTMIN, SIGRTMAX);
+    my_sig = SIGUSR1;
 
     fd = open("MANIFEST", O_RDONLY);
     if (fd < 0)
@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 	die("sigaction err");
     if (aio_read(&a) < 0)
 	die("aio_read err");
-    while (!flag) {
+    while (--cnt && !flag) {
 	sleep(1);
     }
     if (flag != my_sig)

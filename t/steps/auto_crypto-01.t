@@ -4,10 +4,9 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  41;
+use Test::More tests =>  36;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::crypto');
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
@@ -20,7 +19,7 @@ use IO::CaptureOutput qw( capture );
 
 ########## --without-crypto ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ q{--without-crypto} ],
         mode => q{configure},
@@ -28,8 +27,6 @@ my $args = process_options(
 );
 
 my $conf = Parrot::Configure->new;
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
 
 my $pkg = q{auto::crypto};
 
@@ -49,7 +46,7 @@ $conf->replenish($serialized);
 
 ########## _add_to_libs() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -148,7 +145,7 @@ $conf->replenish($serialized);
 
 ########## --without-crypto; _evaluate_cc_run() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--without-crypto} ],
     mode => q{configure},
 } );

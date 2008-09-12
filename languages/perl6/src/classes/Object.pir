@@ -128,6 +128,23 @@ objects, we create a List containing the invocant.
 .end
 
 
+=item defined()
+
+Return true if the object is defined.
+
+=cut
+
+.sub 'defined' :method
+    $P0 = get_hll_global ['Bool'], 'True'
+    .return ($P0)
+.end
+
+.sub '' :method :vtable('defined')
+    $I0 = self.'defined'()
+    .return ($I0)
+.end
+
+
 =item new()
 
 Create a new object having the same class as the invocant.
@@ -171,6 +188,12 @@ Create a new object having the same class as the invocant.
     unless class_iter goto class_iter_loop_end
     .local pmc cur_class
     cur_class = shift class_iter
+
+    # If it's PMCProxy, then skip over it, since it's attribute is the delegate
+    # instance of a parent PMC class, which we should not change to Undef.
+    .local int is_pmc_proxy
+    is_pmc_proxy = isa cur_class, "PMCProxy"
+    if is_pmc_proxy goto class_iter_loop_end
 
     # If this the current class?
     .local pmc init_attribs
@@ -520,6 +543,38 @@ Returns the protoobject's autovivification closure.
   ret_undef:
     whence = new 'Undef'
     .return (whence)
+.end
+
+
+=item defined()
+
+=cut
+
+.sub 'defined' :method
+    $P0 = get_hll_global ['Bool'], 'False'
+    .return ($P0)
+.end
+
+
+=item item()
+
+Returns itself in item context.
+
+=cut
+
+.sub 'item' :method
+    .return (self)
+.end
+
+
+=item list()
+
+Returns a list containing itself in list context.
+
+=cut
+
+.sub 'list' :method
+    .return 'list'(self)
 .end
 
 
