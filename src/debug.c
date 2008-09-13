@@ -855,29 +855,6 @@ close_script_file(PARROT_INTERP)
 
 /*
 
-=item C<static void close_script_file>
-
-Close the script file, returning to command prompt mode.
-
-=cut
-
-*/
-
-static void
-close_script_file(PARROT_INTERP)
-{
-    TRACEDEB_MSG("Closing debugger script file");
-    if (interp->pdb->script_file) {
-        fclose(interp->pdb->script_file);
-        interp->pdb->script_file = NULL;
-        interp->pdb->state|= PDB_STOPPED;
-        interp->pdb->last_command[0] = '\0';
-        interp->pdb->cur_command[0] = '\0';
-    }
-}
-
-/*
-
 =item C<void Parrot_debugger_init>
 
 Initializes the Parrot debugger, if it's not already initialized.
