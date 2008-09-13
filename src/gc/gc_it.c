@@ -371,9 +371,7 @@ Parrot_gc_it_run(PARROT_INTERP, int flags)
     Gc_it_data   * const gc_priv_data = (Gc_it_data *)(arena_base->gc_private);
     const UINTVAL gc_trace    = flags & (GC_trace_normal | GC_trace_stack_FLAG);
     const UINTVAL gc_lazy     = flags & GC_lazy_FLAG;
-    const UINTVAL gc_volatile = flags & GC_no_trace_volatile_roots;
-    const UINTVAL gc_stack    = (gc_lazy || gc_volatile) ? (0)
-                              : (flags & GC_trace_stack_FLAG);
+    const UINTVAL gc_stack    = (gc_lazy) ? (0) : (flags & GC_trace_stack_FLAG);
     const UINTVAL gc_finish   = flags & GC_finish_FLAG;
     const UINTVAL gc_force    = gc_lazy && interp->arena_base->num_early_DOD_PMCs;
 
