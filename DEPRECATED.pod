@@ -147,6 +147,20 @@ the more descriptive C<.get_result>.
 
 See RT #58978.
 
+=item * C<:lexid> will become C<:subid> [post 0.8.1]
+
+C<:lexid> will be renamed to C<:subid>.
+
+See RT #60592 #60588.
+
+=item * C<:vtable> and C<:method> will not place the sub in a namespace by default. [post 0.8.1]
+
+See RT #60586.
+
+=item * Bytecode packfile segment will use subid not sub name [post 0.8.1]
+
+See RT #60590.
+
 =back
 
 =head1 Functions

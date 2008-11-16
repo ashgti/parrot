@@ -225,7 +225,12 @@ really a public API.
             }
 
             if (sub->comp_flags & SUB_COMP_FLAG_METHOD) {
-              add_to_class(INTERP, nsinfo, classobj, key, value);
+                STRING *method_name = key;
+
+                if (0 != string_equal(interp, sub->method_name, CONST_STRING(interp, "")))
+                    method_name = sub->method_name;
+
+                add_to_class(INTERP, nsinfo, classobj, method_name, value);
             }
 
             /* If it's anonymous, we're done. */
@@ -237,9 +242,7 @@ really a public API.
         if (value->vtable->base_type == enum_class_NCI) {
             Parrot_NameSpace_attributes * const nsinfo   = PARROT_NAMESPACE(SELF);
             PMC              * const classobj = VTABLE_get_class(interp, SELF);
-
-            /* Insert it in class, if there is a class */
-              add_to_class(INTERP, nsinfo, classobj, key, value);
+            add_to_class(INTERP, nsinfo, classobj, key, value);
         }
 
         /* If it's a multi-sub... */
@@ -253,7 +256,12 @@ really a public API.
                 Parrot_sub * const sub = PMC_sub(VTABLE_get_pmc_keyed_int(interp, value, 0));
 
                 if (sub->comp_flags & SUB_COMP_FLAG_METHOD) {
-                    add_to_class(INTERP, nsinfo, classobj, key, value);
+                    STRING *method_name = key;
+
+                    if (0 != string_equal(interp, sub->method_name, CONST_STRING(interp, "")))
+                        method_name = sub->method_name;
+
+                    add_to_class(INTERP, nsinfo, classobj, method_name, value);
 
                     SUPER(key, value);
                 }
