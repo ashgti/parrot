@@ -115,7 +115,7 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "PMC const 1 - Sub" );
 .sub 'main' :main
-    .const .Sub $P0 = "foo"
+    .const 'Sub' $P0 = "foo"
     print "ok 1\n"
     $P0()
     print "ok 3\n"
@@ -131,7 +131,7 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "PMC const 2 - Sub ident" );
 .sub 'main' :main
-    .const .Sub func = "foo"
+    .const 'Sub' func = "foo"
     print "ok 1\n"
     func()
     print "ok 3\n"
@@ -155,7 +155,7 @@ pasm_output_is( <<'CODE', <<'OUT', "const I/N mismatch" );
     end
 CODE
 2
-2.000000
+2
 ok
 OUT
 
@@ -172,7 +172,7 @@ pir_output_is( <<'CODE', <<'OUT', "const I/N mismatch 2" );
 .end
 CODE
 2
-2.000000
+2
 ok
 ok 2
 OUT
@@ -571,7 +571,7 @@ pir_output_is( <<'CODE', <<'OUT', ".const in mixed opcodes" );
     print "\n"
 .end
 CODE
-10.000000
+10
 OUT
 
 pir_output_is( <<'CODE', <<'OUT', "RT # 34991" );
@@ -588,7 +588,7 @@ pir_output_is( <<'CODE', <<'OUT', "RT # 34991" );
     end
 .end
 CODE
-108.000000
+108
 12
 OUT
 

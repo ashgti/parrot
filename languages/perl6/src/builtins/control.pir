@@ -24,13 +24,14 @@ the moment -- we'll do more complex handling a bit later.)
 =cut
 
 .include 'except_types.pasm'
+.include 'except_severity.pasm'
 
 .sub 'return'
-    .param pmc value     :optional
-    .param int has_value :opt_flag
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
 
     if has_value goto have_value
-    value = 'list'()
+    value = new 'Nil'
   have_value:
     $P0         = new 'Exception'
     $P0['type'] = .CONTROL_RETURN
@@ -40,31 +41,151 @@ the moment -- we'll do more complex handling a bit later.)
 .end
 
 
+=item fail
+
+=cut
+
+.sub '!FAIL'
+    .param string value        :optional
+    .param int has_value       :opt_flag
+    if has_value goto have_value
+    value = 'Use of uninitialized value'
+  have_value:
+    $P0 = new 'Exception'
+    $P0['message'] = value
+    $P1 = new 'Failure'
+    setattribute $P1, '$!exception', $P0
+    .return ($P1)
+.end
+
+.sub 'fail'
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .local pmc result
+    if has_value goto have_value
+    result = '!FAIL'()
+    goto done
+  have_value:
+    result = '!FAIL'(value)
+  done:
+    'return'(result)
+    .return(result)
+.end
+
+=item take
+
+=cut
+
+.sub 'take'
+    .param pmc value
+
+    $P0         = new 'Exception'
+    $P0['type'] = .CONTROL_TAKE
+    $P0['severity'] = .EXCEPT_NORMAL
+    setattribute $P0, 'payload', value
+    throw $P0
+    .return (value)
+.end
+
+=item gather
+
+=cut
+
+.sub 'gather'
+    .param pmc block
+    .local pmc list
+    .local pmc eh
+    list = 'list'()
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.CONTROL_TAKE)
+    set_addr eh, handler
+    push_eh eh
+    block()
+    pop_eh
+    .return (list)
+  handler:
+    .local pmc exception, continuation
+    .local string message
+    .get_results(exception)
+    message = exception['message']
+    continuation = exception['resume']
+    $P0 = exception['payload']
+    list.'push'($P0)
+    continuation()
+.end
+
+=item next
+
+=cut
+
+.sub 'next'
+    .local pmc e
+    e = new 'Exception'
+    e['severity'] = .EXCEPT_NORMAL
+    e['type'] = .CONTROL_LOOP_NEXT
+    throw e
+.end
+
+.sub 'continue'
+    .local pmc e
+    e = new 'Exception'
+    e['severity'] = .EXCEPT_NORMAL
+    e['type'] = .CONTROL_CONTINUE
+    throw e
+.end
+
+.sub 'break'
+    .param pmc arg :optional
+    .param int has_arg :opt_flag
+    .local pmc e
+    e = new 'Exception'
+    e['severity'] = .EXCEPT_NORMAL
+    e['type'] = .CONTROL_BREAK
+    unless has_arg, no_arg
+    e['payload'] = arg
+  no_arg:
+    throw e
+.end
+
+=item term:...
+
+=cut
+
+.sub '...'
+    .param pmc message        :optional
+    .param int have_message   :opt_flag
+    if have_message goto message_done
+    message = new 'Str'
+    message = "Attempt to execute stub code (...)"
+  message_done:
+    'fail'(message)
+.end
+
+
 =item die
 
 =cut
 
-.sub 'die'
-    .param pmc list            :slurpy
-    .local pmc iter
-    .local string message
+.sub 'die' :multi('Exception')
+    .param pmc ex
+    set_global '$!', ex
+    throw ex
+    .return ()
+.end
 
-    message = ''
-    iter = new 'Iterator', list
-  iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
-    $S0 = $P0
-    message .= $S0
-    goto iter_loop
-  iter_end:
+.sub 'die' :multi(_)
+    .param pmc list            :slurpy
+    .local string message
+    .local pmc ex
+
+    message = list.'join'('')
     if message > '' goto have_message
     message = "Died\n"
   have_message:
-    $P0 = new 'Exception'
-    $P0 = message
-    set_global '$!', $P0
-    throw $P0
+    ex = new 'Exception'
+    ex = message
+    set_global '$!', ex
+    throw ex
     .return ()
 .end
 
@@ -161,6 +282,9 @@ on error.
     .param pmc lang            :named('lang') :optional
     .param int have_lang       :opt_flag
 
+    $P0 = get_hll_global 'Str'
+    '!TYPECHECKPARAM'($P0, code)
+
     unless have_lang goto no_lang
     'die'('Lanuage parameter to eval unimplemented.')
   no_lang:
@@ -177,7 +301,7 @@ on error.
     goto done
 
   catch:
-    .get_results (exception, $S0)
+    .get_results (exception)
     goto done
 
   done:
@@ -186,6 +310,32 @@ on error.
     $P0 = $P0['lexpad';1]
     $P0['$!'] = exception
     .return (res)
+.end
+
+=item warn
+
+=cut
+
+.sub 'warn'
+    .param pmc list            :slurpy
+    .local pmc ex
+    .local string message
+
+    message = list.'join'('')
+    if message > '' goto have_message
+    message = "Warning!  Something's wrong\n"
+  have_message:
+    ## count_eh is broken
+    # $I0 = count_eh
+    # eq $I0, 0, no_eh
+    ex = new 'Exception'
+    ex['severity'] = .EXCEPT_WARNING
+    ex['message'] = message
+    throw ex
+    .return ()
+  no_eh:
+    printerr message
+    .return ()
 .end
 
 
@@ -206,6 +356,12 @@ support.
 =item fail
 
 B<TODO>: Research the exception handling system.
+
+=item warn
+
+B<TODO>: Throw a resumable exception when Rakudo supports top-level exception
+handlers.  Note that the default exception handler should print the message of
+this exception to standard error.
 
 
 =back

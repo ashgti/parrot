@@ -528,7 +528,7 @@ PIR
         format => 'ABC',
         synopsis => 'return R(A)(R(A+1), ... , R(A+B-1))',
         pir => <<'PIR',
-    ${INS} = concat "  .return ${REG}"
+    ${INS} = concat "  .tailcall ${REG}"
     $S1 = ${A}
     ${INS} = concat $S1
     ${INS} = concat "("
@@ -986,8 +986,7 @@ PIR
         format => 'ABC',
         synopsis => 'R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B',
         pir => <<'PIR',
-    ${INS} = concat "  new ${PTEMP}0, 'LuaNumber'\n"
-    ${INS} = concat "  set ${PTEMP}0, "
+    ${INS} = concat "  box ${PTEMP}0, "
     $I0 = ${C} - 1
     $I0 *= ${FPF}
     inc $I0
@@ -1042,7 +1041,7 @@ PIR
         format => 'ABx',
         synopsis => 'R(A) := closure(KPROTO[Bx], R(A), ... , R(A+n))',
         pir => <<'PIR',
-    ${INS} = concat "  .const .Sub ${PROTO}"
+    ${INS} = concat "  .const 'Sub' ${PROTO}"
     $S2 = ${B}
     ${INS} = concat $S2
     ${INS} = concat " = '"
@@ -1062,7 +1061,7 @@ PIR
     ${CLOSURE} = $P0[${B}]
     $P0 = getattribute ${CLOSURE}, 'nups'
     ${NUPS} = $P0
-    ${UPVAL} = 0 
+    ${UPVAL} = 0
 PIR
     },
 };

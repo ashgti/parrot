@@ -23,6 +23,12 @@ NCI function setup, compiler registration, C<interpinfo>, and C<sysinfo> opcodes
 #include "inter_misc.str"
 #include "../compilers/imcc/imc.h"
 
+#include "parrot/has_header.h"
+
+#ifdef PARROT_HAS_HEADER_SYSUTSNAME
+#  include <sys/utsname.h>
+#endif
+
 /* HEADERIZER HFILE: include/parrot/interpreter.h */
 
 /*
@@ -36,7 +42,7 @@ class C<type>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 register_nci_method(PARROT_INTERP, const int type, ARGIN(void *func),
                     ARGIN(const char *name), ARGIN(const char *proto))
@@ -67,7 +73,7 @@ of PMC class C<type>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 register_raw_nci_method_in_ns(PARROT_INTERP, const int type, ARGIN(void *func),
         ARGIN(const char *name))
@@ -94,7 +100,7 @@ Mark the method C<name> on PMC type C<type> as one that modifies the PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_mark_method_writes(PARROT_INTERP, int type, ARGIN(const char *name))
 {
@@ -116,7 +122,7 @@ Register a parser/compiler function.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_compreg(PARROT_INTERP, ARGIN(STRING *type),
                     NOTNULL(Parrot_compiler_func_t func))
@@ -150,7 +156,7 @@ Compile code string.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
@@ -177,7 +183,7 @@ Compile code file.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void *
 Parrot_compile_file(PARROT_INTERP, ARGIN(const char *fullname), ARGOUT(STRING **error))
@@ -215,7 +221,7 @@ interpreter.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 interpinfo(PARROT_INTERP, INTVAL what)
 {
@@ -303,7 +309,7 @@ interpreter.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
@@ -345,7 +351,7 @@ and RUNTIME_PREFIX.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 STRING*
@@ -353,44 +359,48 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
 {
     switch (what) {
         case EXECUTABLE_FULLNAME:
-            return VTABLE_get_string(interp,
-                VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
-                    IGLOBALS_EXECUTABLE));
+        {
+            PMC *exe_name = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
+                    IGLOBALS_EXECUTABLE);
+            if (PMC_IS_NULL(exe_name))
+                return string_from_literal(interp, "");
+            return VTABLE_get_string(interp, exe_name);
+        }
         case EXECUTABLE_BASENAME:
-            {
-            char   *fullname_c;
-            STRING *fullname;
+        {
             STRING *basename;
-            int     pos;
+            PMC    *exe_name = VTABLE_get_pmc_keyed_int(interp,
+                                interp->iglobals, IGLOBALS_EXECUTABLE);
 
-            /* Need to strip back to what follows the final / or \. */
-            fullname = VTABLE_get_string(interp,
-                VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
-                    IGLOBALS_EXECUTABLE));
-            fullname_c = string_to_cstring(interp, fullname);
-            pos = strlen(fullname_c) - 1;
-            while (pos > 0 && fullname_c[pos] != '/' && fullname_c[pos] != '\\')
-                pos--;
-            if (pos > 0)
-                pos++;
-            basename = string_from_cstring(interp, fullname_c + pos, 0);
-            mem_sys_free(fullname_c);
-            return basename;
+            if (PMC_IS_NULL(exe_name))
+                return string_from_literal(interp, "");
+
+            else {
+                /* Need to strip back to what follows the final / or \. */
+                STRING *fullname   = VTABLE_get_string(interp, exe_name);
+                char   *fullname_c = string_to_cstring(interp, fullname);
+                int     pos        = strlen(fullname_c) - 1;
+
+                while (pos              >  0
+                &&     fullname_c[pos] != '/'
+                &&     fullname_c[pos] != '\\')
+                    pos--;
+
+                if (pos > 0)
+                    pos++;
+
+                basename = string_from_cstring(interp, fullname_c + pos, 0);
+                mem_sys_free(fullname_c);
+
+                return basename;
             }
-
+        }
         case RUNTIME_PREFIX:
-            {
-            char   * const fullname_c = Parrot_get_runtime_prefix(interp);
-            STRING * const fullname   = string_from_cstring(interp, fullname_c, 0);
-
-            mem_sys_free(fullname_c);
-            return fullname;
-            }
-
+            return Parrot_get_runtime_path(interp);
         default:
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");
-    } /* switch */
+    }
 }
 
 /*
@@ -404,6 +414,8 @@ C<info_wanted> is one of:
     PARROT_INTSIZE
     PARROT_FLOATSIZE
     PARROT_POINTERSIZE
+    PARROT_INTMAX
+    PARROT_INTMIN
 
 In unknown info is requested then -1 is returned.
 
@@ -422,6 +434,10 @@ sysinfo_i(SHIM_INTERP, INTVAL info_wanted)
             return sizeof (FLOATVAL);
         case PARROT_POINTERSIZE:
             return sizeof (void *);
+        case PARROT_INTMIN:
+            return PARROT_INTVAL_MIN;
+        case PARROT_INTMAX:
+            return PARROT_INTVAL_MAX;
         default:
             return -1;
     }
@@ -441,7 +457,7 @@ C<info_wanted> is one of:
     CPU_ARCH
     CPU_TYPE
 
-If unknown info is requested then and empty string is returned.
+If unknown info is requested then an empty string is returned.
 
 =cut
 
@@ -456,12 +472,32 @@ sysinfo_s(PARROT_INTERP, INTVAL info_wanted)
         case PARROT_OS:
             return const_string(interp, BUILD_OS_NAME);
         case PARROT_OS_VERSION:
+#ifdef PARROT_HAS_HEADER_SYSUTSNAME
+            {
+                struct utsname info;
+                if (uname(&info) == 0) {
+                    return string_make(interp, info.version, strlen(info.version), "ascii", 0);
+                }
+            }
+#endif
+            break;
         case PARROT_OS_VERSION_NUMBER:
+#ifdef PARROT_HAS_HEADER_SYSUTSNAME
+            {
+                struct utsname info;
+                if (uname(&info) == 0) {
+                    return string_make(interp, info.release, strlen(info.version), "ascii", 0);
+                }
+            }
+#endif
+            break;
         case CPU_ARCH:
+            return string_make(interp, PARROT_CPU_ARCH, sizeof (PARROT_CPU_ARCH) - 1, "ascii", 0);
         case CPU_TYPE:
         default:
-            return CONST_STRING(interp, "");
+            break;
     }
+    return string_from_literal(interp, "");
 }
 
 /*

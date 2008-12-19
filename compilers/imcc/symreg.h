@@ -60,11 +60,13 @@ enum USAGE {
     U_GLOBAL        = 1 << 3,       /* symbol is global (fixup) */
     U_LEXICAL       = 1 << 4,       /* symbol is lexical */
     U_FIXUP         = 1 << 5,       /* maybe not global, force fixup */
-    U_NON_VOLATILE  = 1 << 6        /* needs preserving */
+    U_NON_VOLATILE  = 1 << 6,       /* needs preserving */
+    U_SUBID_LOOKUP  = 1 << 7        /* .const 'Sub' lookup is done by subid */
 };
 
 typedef struct _SymReg {
     char                *name;
+    char                *subid;
     INTVAL               type;          /* Variable type */
     INTVAL               usage;         /* s. USAGE above */
     int                  set;           /* parent register set/file */
@@ -88,8 +90,8 @@ typedef struct _SymReg {
 
 typedef struct _SymHash {
     SymReg **data;
-    int      size;
-    int      entries;
+    unsigned int size;
+    unsigned int entries;
 } SymHash;
 
 /* namespaces */
@@ -157,7 +159,7 @@ void _store_symreg(ARGMOD(SymHash *hsh), ARGMOD(SymReg *r))
         FUNC_MODIFIES(*hsh)
         FUNC_MODIFIES(*r);
 
-void add_namespace(PARROT_INTERP, ARGMOD(struct _IMC_Unit *unit))
+void add_namespace(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
@@ -191,7 +193,7 @@ void add_pcc_sub(ARGMOD(SymReg *r), ARGIN(SymReg *arg))
 void clear_globals(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void clear_locals(ARGIN_NULLOK(struct _IMC_Unit *unit));
+void clear_locals(ARGIN_NULLOK(IMC_Unit *unit));
 void clear_sym_hash(ARGMOD(SymHash *hsh))
         __attribute__nonnull__(1)
         FUNC_MODIFIES(*hsh);

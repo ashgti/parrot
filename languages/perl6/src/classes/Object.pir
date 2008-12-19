@@ -12,87 +12,102 @@ object model and the Perl 6 model means we have to do a little
 name and method trickery here and there, and this file takes
 care of much of that.
 
-=head2 Functions
-
-=over
-
-=item onload()
-
-Perform initializations and create the base classes.
-
 =cut
 
 .namespace []
-.sub 'onload' :anon :init :load
+.sub '' :anon :init :load
     .local pmc p6meta
-    load_bytecode 'P6object.pbc'
+    load_bytecode 'PCT.pbc'
     $P0 = get_root_global ['parrot'], 'P6metaclass'
     $P0.'new_class'('Perl6Object', 'name'=>'Object')
     p6meta = $P0.'HOW'()
     set_hll_global ['Perl6Object'], '$!P6META', p6meta
 .end
 
-=item infix:=(source)  (assignment method)
-
-Assigns C<source> to C<target>.  We use the 'item' method to allow Lists
-and Mappings to be converted into Array(ref) and Hash(ref).
-
-=cut
-
-.namespace ['Perl6Object']
-.sub 'infix:=' :method
-    .param pmc source
-    $I0 = can source, 'item'
-    unless $I0 goto have_source
-    source = source.'item'()
-  have_source:
-
-    $I0 = isa self, 'Mutable'
-    unless $I0 goto copy
-    assign self, source
-    goto end
-
-  copy:
-    .local pmc type
-    getprop type, 'type', self
-    if null type goto do_assign
-    $I0 = type.'ACCEPTS'(source)
-    if $I0 goto do_assign
-    die "Type mismatch in assignment."
-
-  do_assign:
-    eq_addr self, source, end
-    copy self, source
-  end:
-    .return (self)
-.end
-
-
-=back
-
-=head2 Object methods
+=head2 Methods
 
 =over 4
 
-=item hash()
+=item clone()
 
-Return the scalar as a Hash.
+Returns a copy of the object.
+
+NOTE: Don't copy what this method does; it's a tad inside-out. We should be
+overriding the clone vtable method to call .clone() really. But if we do that,
+we can't current get at the Object PMC's clone method, so for now we do it
+like this.
 
 =cut
 
 .namespace ['Perl6Object']
+.sub 'clone' :method
+    .param pmc new_attrs :slurpy :named
 
-.sub 'hash' :method
-    $P0 = self.'list'()
-    .return $P0.'hash'()
+    # Make a clone.
+    .local pmc result
+    $I0 = isa self, 'ObjectRef'
+    unless $I0 goto do_clone
+    self = deref self
+  do_clone:
+    result = clone self
+
+    # Set any new attributes.
+    .local pmc it
+    it = iter new_attrs
+  it_loop:
+    unless it goto it_loop_end
+    $S0 = shift it
+    $P0 = new_attrs[$S0]
+    $S0 = concat '!', $S0
+    $P1 = result.$S0()
+    'infix:='($P1, $P0)
+    goto it_loop
+  it_loop_end:
+
+    .return (result)
 .end
 
-=item item()
 
-Return the scalar component of the invocant.  For most objects,
-this is simply the invocant itself.
+=item defined()
+
+Return true if the object is defined.
 
 =cut
+
+.namespace ['Perl6Object']
+.sub 'defined' :method
+    $P0 = get_hll_global ['Bool'], 'True'
+    .return ($P0)
+.end
+
+
+=item hash
+
+Return invocant in hash context.
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'hash' :method
+    .tailcall self.'Hash'()
+.end
+
+.namespace []
+.sub 'hash'
+    .param pmc values :slurpy
+    .tailcall values.'Hash'()
+.end
+
+=item item
+
+Return invocant in item context.  Default is to return self.
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'item' :method
+    .return (self)
+.end
 
 .namespace []
 .sub 'item'
@@ -108,25 +123,147 @@ this is simply the invocant itself.
     .return (x)
 .end
 
-.namespace ['Perl6Object']
-.sub 'item' :method
-    .return (self)
-.end
 
+=item list
 
-=item list()
-
-Return the list component of the invocant.  For most (Scalar)
-objects, we create a List containing the invocant.
+Return invocant in list context.  Default is to return a List containing self.
 
 =cut
 
+.namespace ['Perl6Object']
 .sub 'list' :method
     $P0 = new 'List'
     push $P0, self
     .return ($P0)
 .end
 
+=item print()
+
+Print the object.
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'print' :method
+    $P0 = get_hll_global 'print'
+    .tailcall $P0(self)
+.end
+
+=item say()
+
+Print the object, followed by a newline.
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'say' :method
+    $P0 = get_hll_global 'say'
+    .tailcall $P0(self)
+.end
+
+=item true()
+
+Boolean value of object -- defaults to C<.defined> (S02).
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'true' :method
+    .tailcall self.'defined'()
+.end
+
+=back
+
+=head2 Coercion methods
+
+=over 4
+
+=item Array()
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'Array' :method
+    $P0 = new 'Perl6Array'
+    $P0.'!STORE'(self)
+    .return ($P0)
+.end
+
+=item Hash()
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'Hash' :method
+    $P0 = new 'Perl6Hash'
+    $P0.'!STORE'(self)
+    .return ($P0)
+.end
+
+=item Iterator()
+
+=cut
+
+.sub 'Iterator' :method
+    $P0 = self.'list'()
+    .tailcall $P0.'Iterator'()
+.end
+
+=item Scalar()
+
+Default Scalar() gives reference type semantics, returning
+an object reference (unless the invocant already is one).
+
+=cut
+
+.namespace ['Perl6Object']
+.sub '' :method('Scalar') :anon
+    $I0 = isa self, 'ObjectRef'
+    unless $I0 goto not_ref
+    .return (self)
+  not_ref:
+    $P0 = new 'ObjectRef', self
+    .return ($P0)
+.end
+
+.namespace []
+.sub 'Scalar'
+    .param pmc source
+    $I0 = isa source, 'ObjectRef'
+    if $I0 goto done
+    $I0 = can source, 'Scalar'
+    if $I0 goto can_scalar
+    $I0 = does source, 'scalar'
+    source = new 'ObjectRef', source
+  done:
+    .return (source)
+  can_scalar:
+    .tailcall source.'Scalar'()
+.end
+
+=item Str()
+
+Return a string representation of the invocant.  Default is
+the object's type and address.
+
+=cut
+
+.namespace ['Perl6Object']
+.sub 'Str' :method
+    $P0 = new 'ResizableStringArray'
+    $P1 = self.'WHAT'()
+    push $P0, $P1
+    $I0 = get_addr self
+    push $P0, $I0
+    $S0 = sprintf "%s<0x%x>", $P0
+    .return ($S0)
+.end
+
+=back
+
+=head2 Special methods
+
+=over 4
 
 =item new()
 
@@ -134,6 +271,7 @@ Create a new object having the same class as the invocant.
 
 =cut
 
+.namespace ['Perl6Object']
 .sub 'new' :method
     .param pmc init_parents :slurpy
     .param pmc init_this    :named :slurpy
@@ -141,7 +279,7 @@ Create a new object having the same class as the invocant.
     # Instantiate.
     .local pmc p6meta
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    $P0 = p6meta.get_parrotclass(self)
+    $P0 = p6meta.'get_parrotclass'(self)
     $P1 = new $P0
 
     # If this proto object has a WHENCE auto-vivification, we should use
@@ -150,7 +288,7 @@ Create a new object having the same class as the invocant.
     whence = self.'WHENCE'()
     unless whence goto no_whence
     .local pmc this_whence_iter
-    this_whence_iter = new 'Iterator', whence
+    this_whence_iter = iter whence
   this_whence_iter_loop:
     unless this_whence_iter goto no_whence
     $S0 = shift this_whence_iter
@@ -166,11 +304,17 @@ Create a new object having the same class as the invocant.
     # the all_parents list includes ourself.
     .local pmc all_parents, class_iter
     all_parents = inspect $P0, "all_parents"
-    class_iter = new 'Iterator', all_parents
+    class_iter = iter all_parents
   class_iter_loop:
     unless class_iter goto class_iter_loop_end
     .local pmc cur_class
     cur_class = shift class_iter
+
+    # If it's PMCProxy, then skip over it, since it's attribute is the delegate
+    # instance of a parent PMC class, which we should not change to Undef.
+    .local int is_pmc_proxy
+    is_pmc_proxy = isa cur_class, "PMCProxy"
+    if is_pmc_proxy goto class_iter_loop_end
 
     # If this the current class?
     .local pmc init_attribs
@@ -180,7 +324,7 @@ Create a new object having the same class as the invocant.
     # Go through the provided init_parents to see if we have anything that
     # matches.
     .local pmc ip_iter, cur_ip
-    ip_iter = new 'Iterator', init_parents
+    ip_iter = iter init_parents
   ip_iter_loop:
     unless ip_iter goto ip_iter_loop_end
     cur_ip = shift ip_iter
@@ -198,7 +342,7 @@ Create a new object having the same class as the invocant.
 
     # We found some parent init data, potentially.
   found_parent_init:
-    init_attribs = cur_ip.WHENCE()
+    init_attribs = cur_ip.'WHENCE'()
     $I0 = 'defined'(init_attribs)
     if $I0 goto parent_init_search_done
     init_attribs = new 'Hash'
@@ -211,12 +355,12 @@ Create a new object having the same class as the invocant.
   found_init_attribs:
 
     # Now go through attributes of the current class and iternate over them.
-    .local pmc attribs, iter
+    .local pmc attribs, it
     attribs = inspect cur_class, "attributes"
-    iter = new 'Iterator', attribs
+    it = iter attribs
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
+    unless it goto iter_end
+    $S0 = shift it
 
     # See if we have an init value; use Undef if not.
     .local int got_init_value
@@ -251,13 +395,27 @@ Create a new object having the same class as the invocant.
 
     # Is it an array? If so, initialize to Perl6Array.
     if sigil != '@' goto no_array
-    $P2 = new 'Perl6Array'
+    $P3 = new 'Perl6Array'
+    $I0 = defined $P2
+    if $I0 goto have_array_value
+    set $P2, $P3
+    goto set_attrib
+  have_array_value:
+    'infix:='($P3, $P2)
+    set $P2, $P3
     goto set_attrib
   no_array:
 
     # Is it a Hash? If so, initialize to Perl6Hash.
     if sigil != '%' goto no_hash
-    $P2 = new 'Perl6Hash'
+    $P3 = new 'Perl6Hash'
+    $I0 = defined $P2
+    if $I0 goto have_hash_value
+    set $P2, $P3
+    goto set_attrib
+  have_hash_value:
+    'infix:='($P3, $P2)
+    set $P2, $P3
     goto set_attrib
   no_hash:
 
@@ -265,6 +423,7 @@ Create a new object having the same class as the invocant.
     push_eh set_attrib_eh
     setattribute $P1, cur_class, $S0, $P2
   set_attrib_eh:
+    pop_eh
     goto iter_loop
   iter_end:
 
@@ -281,17 +440,28 @@ Create a new object having the same class as the invocant.
     .return ($P1)
 .end
 
-=item WHENCE()
+=item 'PARROT'
 
-Return the invocant's auto-vivification closure.
+Report the object's true nature.
 
 =cut
 
-.sub 'WHENCE' :method
-    $P0 = self.'WHAT'()
-    $P1 = $P0.'WHENCE'()
-    .return ($P1)
+.sub 'PARROT' :method
+    .local pmc obj
+    .local string result
+    obj = self
+    result = ''
+    $I0 = isa obj, 'ObjectRef'
+    unless $I0 goto have_obj
+    result = 'ObjectRef->'
+    obj = deref obj
+  have_obj:
+    $P0 = typeof obj
+    $S0 = $P0
+    result .= $S0
+    .return (result)
 .end
+
 
 =item REJECTS(topic)
 
@@ -308,44 +478,19 @@ until we get roles).
     .return ($P0)
 .end
 
-=item true()
 
-Defines the .true method on all objects via C<prefix:?>.
+=item WHENCE()
 
-=cut
-
-.sub 'true' :method
- .return 'prefix:?'(self)
-.end
-
-=item get_bool (vtable)
-
-Returns true if the object is defined, false otherwise.
+Return the invocant's auto-vivification closure.
 
 =cut
 
-.sub '' :vtable('get_bool')
-    $I0 = 'defined'(self)
-    .return ($I0)
+.sub 'WHENCE' :method
+    $P0 = self.'WHAT'()
+    $P1 = $P0.'WHENCE'()
+    .return ($P1)
 .end
 
-=item print()
-
-=item say()
-
-Print the object
-
-=cut
-
-.sub 'print' :method
-    $P0 = get_hll_global 'print'
-    .return $P0(self)
-.end
-
-.sub 'say' :method
-    $P0 = get_hll_global 'say'
-    .return $P0(self)
-.end
 
 =item WHERE
 
@@ -358,6 +503,7 @@ Gets the memory address of the object.
     .return ($I0)
 .end
 
+
 =item WHICH
 
 Gets the object's identity value
@@ -366,7 +512,7 @@ Gets the object's identity value
 
 .sub 'WHICH' :method
     # For normal objects, this can just be the memory address.
-    .return self.'WHERE'()
+    .tailcall self.'WHERE'()
 .end
 
 =back
@@ -381,6 +527,7 @@ Create a clone of self, also cloning the attributes given by attrlist.
 
 =cut
 
+.namespace ['Perl6Object']
 .sub '!cloneattr' :method
     .param string attrlist
     .local pmc p6meta, result
@@ -395,63 +542,128 @@ Create a clone of self, also cloning the attributes given by attrlist.
     $S0 = shift attr_it
     unless $S0 goto attr_loop
     $P1 = getattribute self, $S0
+    if null $P1 goto null_attr
     $P1 = clone $P1
+  null_attr:
     setattribute result, $S0, $P1
     goto attr_loop
   attr_end:
     .return (result)
 .end
 
+=item !.?
+
+Helper method for implementing the .? operator. Calls at most one matching
+method, and returns undef if there are none.
+
+=cut
 
 .sub '!.?' :method
     .param string method_name
     .param pmc pos_args     :slurpy
     .param pmc named_args   :slurpy :named
 
-    # For now we won't worry about signature, just if a method exists.
-    $I0 = can self, method_name
+    # Get all possible methods.
+    .local pmc methods
+    methods = self.'!MANY_DISPATCH_HELPER'(method_name, pos_args, named_args)
+
+    # Do we have any?
+    $I0 = elements methods
     if $I0 goto invoke
-    $P0 = get_hll_global 'Failure'
-    .return ($P0)
+    .tailcall '!FAIL'('Undefined value returned by invocation of undefined method')
 
     # If we do have a method, call it.
   invoke:
-    .return self.method_name(pos_args :flat, named_args :named :flat)
+    $P0 = methods[0]
+    .tailcall self.$P0(pos_args :flat, named_args :named :flat)
 .end
 
+=item !.*
+
+Helper method for implementing the .* operator. Calls one or more matching
+methods.
+
+=cut
 
 .sub '!.*' :method
     .param string method_name
     .param pmc pos_args     :slurpy
     .param pmc named_args   :slurpy :named
 
-    # Return an empty list if no methods exist at all.
-    $I0 = can self, method_name
-    if $I0 goto invoke
-    .return 'list'()
+    # Get all possible methods.
+    .local pmc methods
+    methods = self.'!MANY_DISPATCH_HELPER'(method_name, pos_args, named_args)
 
-    # Now find all methods and call them - since we know there are methods,
-    # we just pass on to infix:.+.
-  invoke:
-    .return self.'!.+'(method_name, pos_args :flat, named_args :named :flat)
+    # Build result capture list.
+    .local pmc pos_res, named_res, cap, result_list, it, cur_meth
+    $P0 = get_hll_global 'list'
+    result_list = $P0()
+    it = iter methods
+  it_loop:
+    unless it goto it_loop_end
+    cur_meth = shift it
+    (pos_res :slurpy, named_res :named :slurpy) = cur_meth(self, pos_args :flat, named_args :named :flat)
+    cap = 'prefix:\\'(pos_res :flat, named_res :flat :named)
+    push result_list, cap
+    goto it_loop
+  it_loop_end:
+
+    .return (result_list)
 .end
 
+
+=item !.+
+
+Helper method for implementing the .+ operator. Calls one or more matching
+methods, dies if there are none.
+
+=cut
 
 .sub '!.+' :method
     .param string method_name
     .param pmc pos_args     :slurpy
     .param pmc named_args   :slurpy :named
 
+    # Use !.* to produce a (possibly empty) list of result captures.
+    .local pmc result_list
+    result_list = self.'!.*'(method_name, pos_args :flat, named_args :flat :named)
+
+    # If we got no elements at this point, we must die.
+    $I0 = elements result_list
+    if $I0 == 0 goto failure
+    .return (result_list)
+  failure:
+    $S0 = "Could not invoke method '"
+    concat $S0, method_name
+    concat $S0, "' on invocant of type '"
+    $S1 = self.'WHAT'()
+    concat $S0, $S1
+    concat $S0, "'"
+    'die'($S0)
+.end
+
+
+=item !MANY_DISPATCH_HELPER
+
+This is a helper for implementing .+, .? and .*. In the future, it may well be
+the basis of WALK also. It returns all methods we could possible call.
+
+=cut
+
+.sub '!MANY_DISPATCH_HELPER' :method
+    .param string method_name
+    .param pmc pos_args
+    .param pmc named_args
+
     # We need to find all methods we could call with the right name.
-    .local pmc p6meta, result_list, class, mro, it, cap_class, failure_class
-    result_list = 'list'()
+    .local pmc p6meta, result_list, class, mro, it
+    $P0 = get_hll_global 'list'
+    result_list = $P0()
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    class = self.'HOW'()
-    class = p6meta.get_parrotclass(class)
+    class = self.'WHAT'()
+    class = p6meta.'get_parrotclass'(class)
     mro = inspect class, 'all_parents'
     it = iter mro
-    cap_class = get_hll_global 'Capture'
-    failure_class = get_hll_global 'Failure'
   mro_loop:
     unless it goto mro_loop_end
     .local pmc cur_class, meths, cur_meth
@@ -460,29 +672,36 @@ Create a clone of self, also cloning the attributes given by attrlist.
     cur_meth = meths[method_name]
     if null cur_meth goto mro_loop
 
-    # If we're here, found a method. Invoke it and add capture of the results
-    # to the result list.
-    .local pmc pos_res, named_res, cap
-    (pos_res :slurpy, named_res :named :slurpy) = cur_meth(self, pos_args :flat, named_args :named :flat)
-    cap = 'prefix:\\'(pos_res :flat, named_res :flat :named)
-    push result_list, cap
+    # If we're here, found a method. But is it a multi?
+    $I0 = isa cur_meth, "Perl6MultiSub"
+    if $I0 goto multi_dispatch
+
+    # Single dispatch - add to the result list.
+    push result_list, cur_meth
+    goto mro_loop
+
+    # Multiple dispatch; get all applicable candidates.
+  multi_dispatch:
+    .local pmc possibles, possibles_it
+    possibles = cur_meth.'find_possible_candidates'(self, pos_args :flat)
+    possibles_it = iter possibles
+  possibles_it_loop:
+    unless possibles_it goto possibles_it_loop_end
+    cur_meth = shift possibles_it
+    push result_list, cur_meth
+    goto possibles_it_loop
+  possibles_it_loop_end:
     goto mro_loop
   mro_loop_end:
 
-    # Make sure we got some elements, or we have to die.
-    $I0 = elements result_list
-    if $I0 == 0 goto failure
     .return (result_list)
-  failure:
-    $S0 = "Could not invoke method '"
-    concat $S0, method_name
-    concat $S0, "' on invocant of type '"
-    $S1 = self.WHAT()
-    concat $S0, $S1
-    concat $S0, "'"
-    'die'($S0)
 .end
 
+=item !.^
+
+Helper for doing calls on the metaclass.
+
+=cut
 
 .sub '!.^' :method
     .param string method_name
@@ -492,95 +711,46 @@ Create a clone of self, also cloning the attributes given by attrlist.
     # Get the HOW or the object and do the call on that.
     .local pmc how
     how = self.'HOW'()
-    .return how.method_name(self, pos_args :flat, named_args :flat :named)
-.end
-
-
-.namespace ['P6protoobject']
-
-=back
-
-=head2 Methods on P6protoobject
-
-=over
-
-=item WHENCE()
-
-Returns the protoobject's autovivification closure.
-
-=cut
-
-.sub 'WHENCE' :method
-    .local pmc props, whence
-    props = getattribute self, '%!properties'
-    if null props goto ret_undef
-    whence = props['WHENCE']
-    if null whence goto ret_undef
-    .return (whence)
-  ret_undef:
-    whence = new 'Undef'
-    .return (whence)
-.end
-
-
-=item get_pmc_keyed(key)    (vtable method)
-
-Returns a proto-object with an autovivification closure attached to it.
-
-=cut
-
-.sub get_pmc_keyed :vtable :method
-    .param pmc what
-
-    # We'll build auto-vivification hash of values.
-    .local pmc WHENCE, key, val
-    WHENCE = new 'Hash'
-
-    # What is it?
-    $S0 = what.'WHAT'()
-    if $S0 == 'Pair' goto from_pair
-    if $S0 == 'List' goto from_list
-    'die'("Auto-vivification closure did not contain a Pair")
-
-  from_pair:
-    # Just a pair.
-    key = what.'key'()
-    val = what.'value'()
-    WHENCE[key] = val
-    goto done_whence
-
-  from_list:
-    # List.
-    .local pmc list_iter, cur_pair
-    list_iter = new 'Iterator', what
-  list_iter_loop:
-    unless list_iter goto done_whence
-    cur_pair = shift list_iter
-    key = cur_pair.'key'()
-    val = cur_pair.'value'()
-    WHENCE[key] = val
-    goto list_iter_loop
-  done_whence:
-
-    # Now create a clone of the protoobject.
-    .local pmc protoclass, res, props, tmp
-    protoclass = class self
-    res = new protoclass
-
-    # Attach the WHENCE property.
-    props = getattribute self, '%!properties'
-    unless null props goto have_props
-    props = new 'Hash'
-  have_props:
-    props['WHENCE'] = WHENCE
-    setattribute res, '%!properties', props
-
-    .return (res)
+    .tailcall how.method_name(self, pos_args :flat, named_args :flat :named)
 .end
 
 =back
 
+=head2 Vtable functions
+
 =cut
+
+.namespace ['Perl6Object']
+.sub '' :vtable('decrement') :method
+    $P0 = self.'pred'()
+    'infix:='(self, $P0)
+    .return(self)
+.end
+
+.sub '' :vtable('defined') :method
+    $I0 = self.'defined'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('get_bool') :method
+    $I0 = self.'true'()
+    .return ($I0)
+.end
+
+.sub '' :vtable('get_iter') :method
+    .tailcall self.'Iterator'()
+.end
+
+.sub '' :vtable('get_string') :method
+    $S0 = self.'Str'()
+    .return ($S0)
+.end
+
+.sub '' :vtable('increment') :method
+    $P0 = self.'succ'()
+    'infix:='(self, $P0)
+    .return(self)
+.end
 
 # Local Variables:
 #   mode: pir

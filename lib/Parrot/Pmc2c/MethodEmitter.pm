@@ -49,7 +49,7 @@ sub generate_body {
         $self->rewrite_nci_method($pmc);
     }
 
-    $emit->( ( $pmc->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_API ') . $self->decl( $pmc, 'CFILE' ) );
+    $emit->( ( $pmc->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT ') . $self->decl( $pmc, 'CFILE' ) );
     $emit->("{\n");
     $emit->($body);
     $emit->("}\n");
@@ -105,7 +105,7 @@ sub decl {
     my ( $decorators, $export, $extern, $newl, $semi, $interp, $pmcvar );
     $decorators = join($/, @$decs, '');
     if ( $for_header eq 'HEADER' ) {
-        $export = $pmc->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_API ';
+        $export = $pmc->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT ';
         $extern = "";
         $newl   = " ";
         $semi   = ";";
@@ -195,16 +195,6 @@ sub rewrite_nci_method {
     my ( $self, $pmc ) = @_;
     my $pmcname = $pmc->name;
     my $body    = $self->body;
-
-    # Rewrite SELF.other_method(args...)
-    $body->subst(
-        qr{
-    \bSELF\b         # Macro: SELF
-      \.(\w+)        # other_method
-      \(\s*(.*?)\)   # capture argument list
-      }x,
-        sub { "pmc->real_self->vtable->$1(" . full_arguments( $2, 'pmc->real_self' ) . ')' }
-    );
 
     # Rewrite SELF.other_method(args...)
     $body->subst(

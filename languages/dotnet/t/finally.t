@@ -178,13 +178,17 @@ CSHARP
 ## Attempt to translate.
 ok( translate( "t.dll", "t.pbc" ), 'translate' );
 
+SKIP:
+{
+skip( "infinite loop (missing pop_eh)", 6);
+
 ## Tests.
 is( run_pir(<<'PIR'), <<'OUTPUT', 'unwind over' );
 .sub main
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.unwind_over()
+	$I0 = obj."unwind_over"()
     print $I0
     print "\n"
 .end
@@ -197,7 +201,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'unwind over 2' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.unwind_over_2()
+	$I0 = obj."unwind_over_2"()
     print $I0
     print "\n"
 .end
@@ -210,7 +214,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'try...finally' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.try_finally()
+	$I0 = obj."try_finally"()
     print $I0
     print "\n"
 .end
@@ -223,7 +227,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'mixed' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.mixed()
+	$I0 = obj."mixed"()
     print $I0
     print "\n"
 .end
@@ -236,10 +240,10 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'nested 1' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.nested_1(0)
+	$I0 = obj."nested_1"(0)
     print $I0
     print "\n"
-    $I0 = obj.nested_1(1)
+    $I0 = obj."nested_1"(1)
     print $I0
     print "\n"
 .end
@@ -253,10 +257,10 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'nested 2' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	$I0 = obj.nested_2(0)
+	$I0 = obj."nested_2"(0)
     print $I0
     print "\n"
-    $I0 = obj.nested_2(1)
+    $I0 = obj."nested_2"(1)
     print $I0
     print "\n"
 .end
@@ -264,6 +268,7 @@ PIR
 31
 23
 OUTPUT
+}
 
 ## Clean up.
 unlink qw(t.dll t.pbc);

@@ -1,5 +1,5 @@
 
-.HLL 'Forth', ''
+.HLL 'Forth'
 .namespace ['VariableStack']
 
 .sub init :anon :load
@@ -12,7 +12,7 @@
 
 .sub init :vtable :method
     .local pmc stack, cell
-    stack = new .ResizableIntegerArray
+    stack = new 'ResizableIntegerArray'
     cell  = new 'Integer'
     cell  = 0
 

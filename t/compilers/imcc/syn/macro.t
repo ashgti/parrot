@@ -43,8 +43,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one unused parameter, register term
 .macro answer(A)
     print    42
 .endm
-    set    I0, 43
-    .answer(I0)
+    set    $I0, 43
+    .answer($I0)
     print    "\n"
     end
 .end
@@ -70,8 +70,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one used parameter, register' );
 .macro answer(A)
     print    .A
 .endm
-    set    I0,42
-    .answer(I0)
+    set    $I0,42
+    .answer($I0)
     print    "\n"
     end
 .end
@@ -86,9 +86,9 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one used parameter, called twice' )
     print    "\n"
     inc    .A
 .endm
-    set    I0,42
-    .answer(I0)
-    .answer(I0)
+    set    $I0,42
+    .answer($I0)
+    .answer($I0)
     end
 .end
 CODE
@@ -99,13 +99,13 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one used parameter, label' );
 .sub test :main
 .macro answer(A)
-    ne    I0,42,.$done
+    ne    $I0,42,.$done
     print    .A
     print    "\n"
 .label $done:
 .endm
-    set    I0,42
-    .answer(I0)
+    set    $I0,42
+    .answer($I0)
     end
 .end
 CODE
@@ -115,16 +115,16 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one used parameter run thrice, label' );
 .sub test :main
 .macro answer(A)
-    ne    I0,42,.$done
+    ne    $I0,42,.$done
     print    .A
     print    "\n"
 .label $done:
 .endm
-    set    I0,42
-    .answer(I0)
-    .answer(I0)
-    inc I0
-    .answer(I0)
+    set    $I0,42
+    .answer($I0)
+    .answer($I0)
+    inc $I0
+    .answer($I0)
 .end
 CODE
 42
@@ -173,7 +173,7 @@ pir_output_is( <<'CODE', 'Hello', 'macro_const string in PIR' );
 CODE
 
 pir_output_is( <<'CODE', 'Hello', 'macro_const register in PIR' );
-.macro_const firstreg S0
+.macro_const firstreg $S0
 .sub main :main
     .firstreg = "Hello"
     print .firstreg
@@ -188,18 +188,18 @@ pir_output_like( <<'CODE', '/3\.14/', 'macro_const num in PIR' );
 .end
 CODE
 
-open my $FOO, '>', 'macro.tempfile';
+open my $FOO, '>', "macro.tempfile_$$";
 print $FOO <<'ENDF';
   set S0, "Betelgeuse\n"
 ENDF
 close $FOO;
 
-pasm_output_is( <<'CODE', <<'OUTPUT', 'basic include macro' );
-.include "macro.tempfile"
+pasm_output_is( <<"CODE", <<'OUTPUT', 'basic include macro' );
+.include "macro.tempfile_$$"
   print S0
 
   set S0, "Rigel"
-.include "macro.tempfile"
+.include "macro.tempfile_$$"
   print S0
   end
 CODE
@@ -207,7 +207,7 @@ Betelgeuse
 Betelgeuse
 OUTPUT
 
-open $FOO, '>', 'macro.tempfile';    # Clobber previous
+open $FOO, '>', "macro.tempfile_$$";    # Clobber previous
 print $FOO <<'ENDF';
 .macro multiply(A,B)
     new P0, 'Float'
@@ -220,17 +220,17 @@ print $FOO <<'ENDF';
 ENDF
 close $FOO;
 
-pasm_output_is( <<'CODE', <<'OUTPUT', 'include a file defining a macro' );
-.include "macro.tempfile"
+pasm_output_is( <<"CODE", <<'OUTPUT', 'include a file defining a macro' );
+.include "macro.tempfile_$$"
  .multiply(12,13)
  print P2
- print "\n"
+ print "\\n"
  end
 CODE
 156
 OUTPUT
 
-unlink('macro.tempfile');
+unlink("macro.tempfile_$$");
 
 pir_output_is( <<'CODE', <<'OUTPUT', '.newid' );
 .sub test :main
@@ -326,7 +326,8 @@ CODE
 /End of file reached/
 OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', 'unterminated macro 2' );
+my @todo = (($^O =~ /darwin/i) ? (todo => 'Darwin segfault -- RT #60926') : ());
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'unterminated macro 2', @todo );
 .sub test :main
 .macro M(A, B)
   print .A
@@ -389,7 +390,7 @@ OUTPUT
 pir_error_output_like( <<'CODE', <<'OUTPUT', 'unknown macro' );
 .sub test :main
 .macro M(A)
-    .arg .A
+    .set_arg .A
 .endm
     .M(a)
     end
@@ -466,7 +467,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'test that macros labels names can have the
 CODE
 OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', 'invalid label syntax', todo => 'RT#47978, RT#51104');
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'invalid label syntax' );
 .sub test :main
     .macro m()
         .local $iter_loop:
@@ -506,7 +507,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'set a sub as an attribute, in a macro' );
 .macro create_inst(inst_name,M)
     print "entering macro create_inst\n"
     .inst_name = new 'MyClass'
-    .const .Sub c3 = .M
+    .const 'Sub' c3 = .M
     setattribute .inst_name, 'MyFuncInMyClass', c3
     print "leaving macro create_inst\n"
 .endm

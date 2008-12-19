@@ -9,22 +9,16 @@ and opcode syntax tree (POST) nodes in the Parrot Compiler Toolkit.
 
 =cut
 
-.namespace [ 'PCT::Node' ]
+.namespace [ 'PCT';'Node' ]
 
 .sub 'onload' :anon :load :init
     ##   create the PCT::Node base class
-    ##   FIXME: Eventually we want this to be a subclass of
-    ##   Capture, but as of now Capture isn't working so we
-    ##   use the Capture_PIR class for now.
-    load_bytecode 'Parrot/Capture_PIR.pbc'
-
     .local pmc p6meta
     p6meta = new 'P6metaclass'
-    p6meta.'new_class'('PCT::Node', 'parent'=>'Capture_PIR')
+    p6meta.'new_class'('PCT::Node', 'parent'=>'Capture')
 
-    $P0 = new 'Integer'
-    $P0 = 10
-    set_hll_global ['PCT::Node'], '$!serno', $P0
+    $P0 = box 10
+    set_hll_global ['PCT';'Node'], '$!serno', $P0
 
     .return ()
 .end
@@ -103,37 +97,6 @@ children and attributes.  Returns the newly created node.
 .end
 
 
-=item clone
-
-Create and returns a clone of a PAST node.
-
-=cut
-
-.sub 'clone' :vtable :method
-    .local pmc res
-    $S0 = typeof self
-    res = new $S0
-    .local pmc iter
-    iter = self.'iterator'()
-  iter_child_loop:
-    unless iter goto iter_child_end
-    $P0 = shift iter
-    $P1 = clone $P0
-    res.'push'($P1)
-    goto iter_child_loop
-  iter_child_end:
-    iter = new 'Iterator', self
-  iter_attr_loop:
-    unless iter goto iter_attr_end
-    $S0 = shift iter
-    $P0 = iter[$S0]
-    res[$S0] = $P0
-    goto iter_attr_loop
-  iter_attr_end:
-    .return (res)
-.end
-
-
 =item unshift(child)
 
 Add C<child> to the beginning of the invocant's list of children.
@@ -187,7 +150,8 @@ array of children.  Returns the newly created node.
     .param string class
     .param pmc children        :slurpy
     .param pmc adverbs         :slurpy :named
-    $P0 = new class
+    $P0 = split '::', class
+    $P0 = new $P0
     $P0.'init'(children :flat, adverbs :flat :named)
     push self, $P0
     .return ($P0)
@@ -221,19 +185,9 @@ a C<Match> object and obtains source/position information from that.
 
 .sub 'node' :method
     .param pmc node
-    $I0 = isa node, 'PAST::Node'
-    if $I0 goto clone_past
-  clone_pge:
-    $S0 = node
-    $I0 = node.'from'()
-    self['source'] = $S0
-    self['pos'] = $I0
-    .return ()
-  clone_past:
-    $P0 = node['source']
-    $P1 = node['pos']
-    self['source'] = $P0
-    self['pos'] = $P1
+     ## Do nothing for now.  When we're in a better position to
+     ## handle source line information (RT #43269 and others)
+     ## we'll figure out what to do here.
     .return ()
 .end
 
@@ -247,7 +201,7 @@ Accessor method -- sets/returns the C<name> attribute of the invocant.
 .sub 'name' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('name', value, has_value)
+    .tailcall self.'attr'('name', value, has_value)
 .end
 
 
@@ -300,6 +254,32 @@ unique number.
     $S0 = concat fmt, $S0
     inc $P0
     .return ($S0)
+.end
+
+
+=item isa([type])
+
+Ask the current object's metaclass if C<self> is a C<type>, through its C<isa>
+method. If so, return 1, else return 0.
+
+=cut
+
+.sub 'isa' :method
+    .param pmc type
+    $P0 = self.'HOW'()
+    $I0 = $P0.'isa'(self, type)
+    .return ($I0)
+.end
+
+
+=item VTABLE get_bool()
+
+Return true since the node is defined.
+
+=cut
+
+.sub '' :vtable('get_bool') :method
+    .return (1)
 .end
 
 

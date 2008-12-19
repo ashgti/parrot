@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 133;
+use Test::More tests => 123;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
@@ -22,7 +22,7 @@ use IO::CaptureOutput qw | capture |;
 
 ########## regular  ##########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -77,7 +77,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc(); --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ q{--verbose} ],
     mode            => q{configure},
 } );
@@ -102,7 +102,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -123,7 +123,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc(); --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ q{--verbose} ],
     mode            => q{configure},
 } );
@@ -172,7 +172,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -199,7 +199,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc(); --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ q{--verbose} ],
     mode            => q{configure},
 } );
@@ -227,7 +227,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ ],
     mode            => q{configure},
 } );
@@ -247,7 +247,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_gcc(); maintaiiner; cage ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ q{--maintainer}, q{--cage} ],
     mode            => q{configure},
 } );
@@ -267,32 +267,9 @@ is($step->result(), q{yes}, "Got expected result");
 
 $conf->replenish($serialized);
 
-########## _evaluate_gcc(); --miniparrot ##########
-
-$args = process_options( {
-    argv            => [ q{--miniparrot} ],
-    mode            => q{configure},
-} );
-rerun_defaults_for_testing($conf, $args );
-$conf->add_steps($pkg);
-$conf->options->set(%{$args});
-$step = test_step_constructor_and_description($conf);
-$gnucref = {};
-$gnucref->{__GNUC__} = q{3};
-$gnucref->{__GNUC_MINOR__} = q{1};
-ok($step->_evaluate_gcc($conf, $gnucref),
-    "_evaluate_gcc() returned true value");
-ok(! defined $conf->data->get( 'gccversion' ),
-    "gccversion undefined as expected");
-is($conf->data->get( 'ccwarn' ), q{-ansi -pedantic},
-    "ccwarn set as expected for miniparrot");
-is($step->result(), q{yes}, "Got expected result");
-
-$conf->replenish($serialized);
-
 ########## _evaluate_gcc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ ],
     mode            => q{configure},
 } );

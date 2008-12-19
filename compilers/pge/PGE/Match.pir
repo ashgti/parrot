@@ -8,15 +8,14 @@ This file implements match objects returned by the Parrot Grammar Engine.
 
 =cut
 
-.namespace [ 'PGE::Match' ]
+.namespace [ 'PGE';'Match' ]
 
-.sub '__onload' :load
+.sub '' :load
     load_bytecode 'P6object.pbc'
-    load_bytecode 'Parrot/Capture_PIR.pbc'
     load_bytecode 'PGE/Dumper.pir'                 # FIXME, XXX, etc.
     .local pmc p6meta
     p6meta = new 'P6metaclass'
-    p6meta.'new_class'('PGE::Match', 'parent'=>'Capture_PIR', 'attr'=>'$.target $.from $.pos &!corou')
+    p6meta.'new_class'('PGE::Match', 'parent'=>'Capture', 'attr'=>'$.target $.from $.pos &!corou $!item')
     .return ()
 .end
 
@@ -57,23 +56,24 @@ is set or implied.
 
     ##   set values based on src param
     .local int issrcmatch, pos, iscont
-    .local string grammar
-    .local pmc target
-    issrcmatch = isa src, 'PGE::Match'
+    .local pmc grammar
+    .local pmc target, grammar_class
+    issrcmatch = isa src, ['PGE';'Match']
     if issrcmatch goto target_from_src
     .local pmc target
     target = new 'String'
     target = src
     pos = 0
     iscont = 1
-    grammar = typeof self
+    $P0 = self.'HOW'()
+    grammar_class = getattribute $P0, 'parrotclass'
     goto adverb_pos
   target_from_src:
     target = getattribute src, '$.target'
     $P0 = getattribute src, '$.pos'
     pos = $P0
     iscont = 0
-    grammar = typeof src
+    grammar_class = typeof src
     if pos >= 0 goto adverb_pos
     pos = 0
 
@@ -108,18 +108,24 @@ is set or implied.
     $I0 = exists adverbs['grammar']
     unless $I0 goto with_grammar
     grammar = adverbs['grammar']
+    $S0 = typeof grammar
+    eq $S0, 'NameSpace', grammar_namespace
+    $S0 = grammar
+    $P0 = split '::', $S0
+    grammar_class = get_class $P0
+    goto with_grammar
+  grammar_namespace:
+    grammar_class = grammar
   with_grammar:
   with_adverbs:
 
     ##   create the new match object
     .local pmc mob, mfrom, mpos
-    mob = new grammar
+    mob = new grammar_class
     setattribute mob, '$.target', target
-    mfrom = new 'Integer'
-    mfrom = pos
+    mfrom = box pos
     setattribute mob, '$.from', mfrom
-    mpos = new 'Integer'
-    mpos = -1
+    mpos = box -1
     setattribute mob, '$.pos', mpos
 
     .return (mob, pos, target, mfrom, mpos, iscont)
@@ -233,13 +239,7 @@ object.
 =cut
 
 .sub 'item' :method
-    .return self.'result_object'()
-.end
-
-
-# deprecated RT#54000
-.sub 'get_scalar' :method
-    .return self.'item'()
+    .tailcall self.'result_object'()
 .end
 
 
@@ -261,7 +261,7 @@ Returns or sets the "result object" for the match object.
     if null obj goto ret_null
     .return (obj)
   ret_null:
-    .return self.'text'()
+    .tailcall self.'text'()
 .end
 
 
@@ -310,21 +310,13 @@ the position of the match object to C<cutvalue>.
     null $P0
     setattribute self, '$.target', $P0
     setattribute self, '&!corou', $P0
-    setattribute self, '@!list', $P0
     setattribute self, '$!item', $P0
-    .local pmc iter
-    iter = new 'Iterator', self
-  iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
-    delete self[$S0]
-    goto iter_loop
-  iter_end:
+    setref self, $P0
     .return ()
 .end
 
 
-=item C<__get_bool()>
+=item C<get_bool()>
 
 Returns 1 if this object successfully matched the target string,
 0 otherwise.
@@ -338,7 +330,7 @@ Returns 1 if this object successfully matched the target string,
     .return ($I1)
 .end
 
-=item C<__get_integer()>
+=item C<get_integer()>
 
 Returns the integer value of this match.
 
@@ -349,7 +341,7 @@ Returns the integer value of this match.
     .return ($I0)
 .end
 
-=item C<__get_number()>
+=item C<get_number()>
 
 Returns the numeric value of this match.
 
@@ -360,7 +352,7 @@ Returns the numeric value of this match.
     .return ($N0)
 .end
 
-=item C<__get_string()>
+=item C<get_string()>
 
 Returns the portion of the target string matched by this object.
 

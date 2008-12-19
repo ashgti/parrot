@@ -35,7 +35,7 @@ Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -85,7 +85,7 @@ Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -134,7 +134,7 @@ Passes all tests. Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -183,7 +183,7 @@ Minimal class hierarchy.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -206,7 +206,7 @@ Everything else is nonexistant.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -259,7 +259,7 @@ Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -284,7 +284,7 @@ has been commented out.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -332,7 +332,7 @@ Planned.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.1
 
 =item Location
 
@@ -351,11 +351,11 @@ Implementation of ECMAScript 3 (a JavaScript standard)
 =item Status
 
 Parser is complete. Simple arithmetic and function calls work.
-Much work needed on parse actions and data types (PMCs or classes.
+Much work needed on parse actions and data types (PMCs or classes).
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -397,11 +397,11 @@ A joke language. See L<http://www.cliff.biffle.org/esoterica/hq9plus.html>
 =item Status
 
 Works and is mostly complete.
-Based on PCT.
+Based on the Parrot Compiler Toolkit, PCT.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.1
 
 =item Location
 
@@ -439,7 +439,7 @@ Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -517,10 +517,11 @@ See also L<http://homepages.cwi.nl/~tromp/cl/lazy-k.html>
 =item Status
 
 Working, but not complete. Part of languages smoke testing.
+A new maintainer is sought.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.1
 
 =item Location
 
@@ -544,7 +545,7 @@ VISIBLE and BTW "work"
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -572,7 +573,7 @@ L<http://www.parrotcode.org/talks/LuaOnParrot.pdf>.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -634,11 +635,38 @@ Development is stalled. Takers are welcome.  Some tests fail.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.0
 
 =item Location
 
 C<languages/m4>
+
+=back
+
+
+=head2 Markdown
+
+=over 4
+
+=item Description
+
+Port of Markdown, see L<http://daringfireball.net/projects/markdown/>.
+
+=item Status
+
+Early stage.
+
+Based on PCT/NQP/PGE.
+
+Part of languages smoke testing.
+
+=item Last verified with parrot version
+
+0.7.1
+
+=item Location
+
+C<languages/markdown>
 
 =back
 
@@ -681,7 +709,7 @@ In progress.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -696,16 +724,17 @@ C<compilers/nqp>
 
 =item Description
 
-Functioning compiler targeting PASM.
+Another joke language implemented with a compiler targeting PASM.
 
 =item Status
 
 Samples working, README explain how to build/use.
 Part of languages smoke testing.
+A new maintainer is sought.
 
 =item Last verified with parrot version
 
-0.6.4
+0.8.1
 
 =item Location
 
@@ -728,7 +757,7 @@ Working. Part of languages smoke testing.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -753,7 +782,7 @@ Part of languages smoke testing.
 
 =item Last verified with Parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -781,7 +810,7 @@ builtins.
 
 =item Last verified with Parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -798,17 +827,15 @@ C<languages/pheme>
 
 Pipp is Parrot's PHP.
 
-One idea of Pipp is to have side by side comparison of different parsing
-and tree transformation strategies. Currently there are three variants:
-phc, PGE and ANTLR3.
+Implemented with PCT.
 
 =item Status
 
-Started.
+Very incomplete.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.1
 
 =item Location
 
@@ -890,7 +917,7 @@ Parser is 90% complete; waiting for more PAST support.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -905,7 +932,7 @@ C<languages/punie>
 
 =item Description
 
-A Python compiler for Parrot implemented with PCT
+A Python compiler for Parrot implemented with PCT.
 
 =item Status
 
@@ -932,8 +959,9 @@ python
 
 =item Status
 
-Mostly working except for classes/exec/import. For licensing reasons, not in
-parrot's svn tree.
+This project is stalled. 
+It used to be mostly working except for classes/exec/import.
+For licensing reasons, not in parrot's svn tree.
 
 =item Last verified with parrot version
 
@@ -961,7 +989,7 @@ Part of languages smoke testing. Almost all tests are succeeding.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -1009,7 +1037,7 @@ An example languages from the PCT tutorial.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -1026,23 +1054,9 @@ C<languages/squaak>
 
 A from scratch implementation of a Tcl 8.5 compiler in parrot.
 
-=item Status
-
-Passes nearly 25% of tcl's (lightly converted) test suite, using a
-Test::More like harness. (Doesn't run quite enough of tcl yet to simply
-use tcltest.tcl)
-
-=item Last verified with parrot version
-
-0.7.0
-
 =item Location
 
-C<languages/tcl>.
-
-=item Issues
-
-L<http://code.google.com/p/partcl/issues/list>
+L<http://code.google.com/p/partcl/>
 
 =back
 
@@ -1061,10 +1075,11 @@ See also L<http://www.madore.org/~david/programs/unlambda/>
 =item Status
 
 Working. Part of languages smoke testing.
+A new maintainer is sought.
 
 =item Last verified with parrot version
 
-0.7.0
+0.8.1
 
 =item Location
 
@@ -1116,7 +1131,7 @@ See details in F<languages/WMLScript/doc/status.pod>.
 
 =item Last verified with parrot version
 
-0.7.0
+0.7.1
 
 =item Location
 
@@ -1207,7 +1222,7 @@ located in C<languages/ruby>.
 
 Simple functional language.
 A quickly abandoned attempt.
-See L<http://www.acooke.org/andrew/writing/parrot/sfl.html>
+See L<http://web.archive.org/web/20070911102734/http://www.acooke.org/andrew/writing/parrot/sfl.html>
 
 =head2 Span
 

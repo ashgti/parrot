@@ -4,7 +4,7 @@ PGE::Exp - base class for expressions
 
 =cut
 
-.namespace [ "PGE::Exp" ]
+.namespace [ 'PGE';'Exp' ]
 
 .include "interpinfo.pasm"
 .include "cclass.pasm"
@@ -22,7 +22,7 @@ PGE::Exp - base class for expressions
     .local pmc term
 
     .local pmc p6meta, expproto
-    p6meta = new 'P6metaclass'
+    p6meta = get_hll_global 'P6metaclass'
     expproto = p6meta.'new_class'('PGE::Exp', 'parent'=>'PGE::Match')
     p6meta.'new_class'('PGE::Exp::Literal',      'parent'=>expproto)
     p6meta.'new_class'('PGE::Exp::Scalar',       'parent'=>expproto)
@@ -76,10 +76,12 @@ C<target> adverbs.
     .local string grammar
     grammar = adverbs['grammar']
     if grammar == '' goto ns_root
-    code.'emit'(".namespace [ '%0' ]", grammar)
+    $P0 = split '::', grammar
+    $P0 = code.'key'($P0 :flat)
+    code.'emit'(".namespace %0", $P0)
     goto ns_done
   ns_root:
-    code.'emit'('.namespace')
+    code.'emit'('.namespace []')
   ns_done:
 
     $P0 = self.'root_pir'(adverbs :flat :named)
@@ -91,10 +93,10 @@ C<target> adverbs.
     $P0 = compreg 'PIR'
     $P1 = $P0(code)
   make_grammar:
+    if grammar == '' goto end
     push_eh end
-    $P0 = new 'P6metaclass'
+    $P0 = get_hll_global 'P6metaclass'
     $P0.'new_class'(grammar, 'parent'=>'PGE::Grammar')
-    pop_eh
   end:
     .return ($P1)
 
@@ -126,13 +128,22 @@ tree as a PIR code object that can be compiled.
     name = code.'escape'(name)
     namecorou = code.'escape'(namecorou)
 
+    .local string subid
+    subid = ''
+    $P0 = adverbs['subid']
+    if null $P0 goto have_subid
+    $S0 = code.'escape'($P0)
+    subid = concat ':subid(', $S0
+    concat subid, ')'
+  have_subid:
+
     ##   Perform reduction/optimization on the
     ##   expression tree before generating PIR.
     .local pmc exp
     .local string explabel
     exp = self
-    set_hll_global ['PGE::Exp'], '$!group', exp
-    exp = exp.reduce(self)
+    set_hll_global ['PGE';'Exp'], '$!group', exp
+    exp = exp.'reduce'(self)
 
     ##   we don't need a coroutine if :ratchet is set
     .local int cutrule
@@ -143,23 +154,23 @@ tree as a PIR code object that can be compiled.
     .local pmc expcode
     expcode = new 'CodeString'
     explabel = 'R'
-    exp.pir(expcode, explabel, 'succeed')
+    exp.'pir'(expcode, explabel, 'succeed')
 
     if cutrule goto code_cutrule
     ##   Generate the initial PIR code for a backtracking (uncut) rule.
     .local string returnop
     returnop = '.yield'
-    code.emit(<<"        CODE", name, namecorou, .INTERPINFO_CURRENT_SUB)
-      .sub %0 :method
+    code.'emit'(<<"        CODE", name, subid, namecorou, .INTERPINFO_CURRENT_SUB)
+      .sub %0 :method %1
           .param pmc adverbs   :slurpy :named
           .local pmc mob
-          .const .Sub corou = %1
+          .const 'Sub' corou = %2
           $P0 = corou
           $P0 = clone $P0
           mob = $P0(self, adverbs)
           .return (mob)
       .end
-      .sub %1
+      .sub '' :subid(%2)
           .param pmc mob       :unique_reg
           .param pmc adverbs   :unique_reg
           .local string target :unique_reg
@@ -167,7 +178,7 @@ tree as a PIR code object that can be compiled.
           .local int cpos, iscont :unique_reg
           $P0 = get_hll_global ['PGE'], 'Match'
           (mob, cpos, target, mfrom, mpos, iscont) = $P0.'new'(mob, adverbs :flat :named)
-          $P0 = interpinfo %2
+          $P0 = interpinfo %3
           setattribute mob, '&!corou', $P0
           .local int lastpos
           lastpos = length target
@@ -178,8 +189,8 @@ tree as a PIR code object that can be compiled.
   code_cutrule:
     ##   Initial code for a rule that cannot be backtracked into.
     returnop = '.return'
-    code.emit(<<"        CODE", name)
-      .sub %0 :method
+    code.'emit'(<<"        CODE", name, subid)
+      .sub %0 :method %1
           .param pmc adverbs      :unique_reg :slurpy :named
           .local pmc mob
           .local string target    :unique_reg
@@ -196,27 +207,27 @@ tree as a PIR code object that can be compiled.
     ##   generate the ustack only if we need it
     .local string expstr
     expstr = expcode
-    code.emit("          .local pmc cstack :unique_reg")
-    code.emit("          cstack = new 'ResizableIntegerArray'")
+    code.'emit'("          .local pmc cstack :unique_reg")
+    code.'emit'("          cstack = new 'ResizableIntegerArray'")
     $I0 = index expstr, 'ustack'
     if $I0 < 0 goto code_body_1
-    code.emit("          .local pmc ustack :unique_reg")
-    code.emit("          ustack = new 'ResizablePMCArray'")
+    code.'emit'("          .local pmc ustack :unique_reg")
+    code.'emit'("          ustack = new 'ResizablePMCArray'")
   code_body_1:
     ##   generate the gpad only if we need it
     $I0 = index expstr, 'gpad'
     if $I0 < 0 goto code_body_2
-    code.emit("          .local pmc gpad :unique_reg")
-    code.emit("          gpad = new 'ResizablePMCArray'")
+    code.'emit'("          .local pmc gpad :unique_reg")
+    code.'emit'("          gpad = new 'ResizablePMCArray'")
   code_body_2:
     ##   set the captscope if we need it
     $I0 = index expstr, 'captscope'
     if $I0 < 0 goto code_body_3
-    code.emit("          .local pmc captscope, captob :unique_reg")
-    code.emit("          captscope = mob")
+    code.'emit'("          .local pmc captscope, captob :unique_reg")
+    code.'emit'("          captscope = mob")
   code_body_3:
 
-    code.emit(<<"        CODE", PGE_CUT_RULE, returnop)
+    code.'emit'(<<"        CODE", PGE_CUT_RULE, returnop)
           .local int pos, rep, cutmark :unique_reg
         try_match:
           if cpos > lastpos goto fail_rule
@@ -243,7 +254,7 @@ tree as a PIR code object that can be compiled.
     ##   add the "fail_match" target if we need it
     $I0 = index expstr, 'fail_match'
     if $I0 < 0 goto add_expcode
-    code.emit(<<"        CODE", PGE_CUT_MATCH)
+    code.'emit'(<<"        CODE", PGE_CUT_MATCH)
         fail_match:
           cutmark = %0
           goto fail_cut
@@ -252,7 +263,7 @@ tree as a PIR code object that can be compiled.
   add_expcode:
     ##   add the expression code, then close off the sub
     code .= expcode
-    code.emit("      .end")
+    code.'emit'("      .end")
     .return (code)
 .end
 
@@ -306,13 +317,13 @@ tree as a PIR code object that can be compiled.
     captback = new 'CodeString'
     if iscapture == 0 goto end
     if isarray != 0 goto capt_array
-    captsave.emit("captscope[%0] = captob", cname)
-    captback.emit("delete captscope[%0]", cname)
+    captsave.'emit'("captscope[%0] = captob", cname)
+    captback.'emit'("delete captscope[%0]", cname)
     goto end
   capt_array:
-    captsave.emit("$P2 = captscope[%0]\n          push $P2, captob", cname)
-    captback.emit("$P2 = captscope[%0]\n          $P2 = pop $P2", cname)
-    captgen.emit(<<"        CODE", cname, label)
+    captsave.'emit'("$P2 = captscope[%0]\n          push $P2, captob", cname)
+    captback.'emit'("$P2 = captscope[%0]\n          $P2 = pop $P2", cname)
+    captgen.'emit'(<<"        CODE", cname, label)
           $I0 = defined captscope[%0]
           if $I0 goto %1_cgen
           $P0 = new 'ResizablePMCArray'
@@ -327,7 +338,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Literal' ]
+.namespace [ 'PGE';'Exp';'Literal' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -353,9 +364,9 @@ tree as a PIR code object that can be compiled.
     literal = downcase literal
   ignorecase_end:
 
-    literal = code.escape(literal)
+    literal = code.'escape'(literal)
 
-    code.emit(<<"        CODE", litlen, literal, args :named :flat)
+    code.'emit'(<<"        CODE", litlen, literal, args :named :flat)
         %L: # literal
           $I0 = pos + %0
           if $I0 > lastpos goto fail
@@ -369,7 +380,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Concat' ]
+.namespace [ 'PGE';'Exp';'Concat' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -382,7 +393,7 @@ tree as a PIR code object that can be compiled.
     if n <= 0 goto reduce_end
     dec n
     exp = self[n]
-    exp = exp.reduce(next)
+    exp = exp.'reduce'(next)
     self[n] = exp
     next = exp
     goto reduce_loop
@@ -396,10 +407,10 @@ tree as a PIR code object that can be compiled.
     inc i
     if i >= n goto concat_lit_end
     exp1 = children[i]
-    $I1 = isa exp1, 'PGE::Exp::Literal'
+    $I1 = isa exp1, ['PGE';'Exp';'Literal']
     if $I1 == 0 goto concat_lit_shift
     exp0 = children[j]
-    $I0 = isa exp0, 'PGE::Exp::Literal'
+    $I0 = isa exp0, ['PGE';'Exp';'Literal']
     if $I0 == 0 goto concat_lit_shift
     $I0 = exp0['ignorecase']
     $I1 = exp1['ignorecase']
@@ -431,26 +442,26 @@ tree as a PIR code object that can be compiled.
     .param string next
 
     .local pmc iter, exp
-    code.emit('        %0: # concat', label)
+    code.'emit'('        %0: # concat', label)
     $P0 = self.'list'()
     iter = new 'Iterator', $P0
     exp = shift iter
-    $S0 = code.unique('R')
+    $S0 = code.'unique'('R')
   iter_loop:
     unless iter goto iter_end
     $P1 = shift iter
-    $S1 = code.unique('R')
-    exp.pir(code, $S0, $S1)
+    $S1 = code.'unique'('R')
+    exp.'pir'(code, $S0, $S1)
     exp = $P1
     $S0 = $S1
     goto iter_loop
   iter_end:
-    exp.pir(code, $S0, next)
+    exp.'pir'(code, $S0, next)
     .return ()
 .end
 
 
-.namespace [ 'PGE::Exp::Quant' ]
+.namespace [ 'PGE';'Exp';'Quant' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -464,7 +475,7 @@ tree as a PIR code object that can be compiled.
     if max != 1 goto reduce_exp0
     if min != max goto reduce_max1
     exp0['backtrack'] = backtrack
-    exp0 = exp0.reduce(next)
+    exp0 = exp0.'reduce'(next)
     .return (exp0)
 
   reduce_max1:
@@ -475,7 +486,7 @@ tree as a PIR code object that can be compiled.
     exp0['backtrack'] = backtrack
 
   reduce_exp0:
-    exp0 = exp0.reduce(next)
+    exp0 = exp0.'reduce'(next)
     self[0] = exp0
     .return (self)
 .end
@@ -502,7 +513,7 @@ tree as a PIR code object that can be compiled.
     .local int backtrack
     backtrack = self['backtrack']
 
-    explabel = code.unique('R')
+    explabel = code.'unique'('R')
     replabel = concat label, '_repeat'
 
     if backtrack == PGE_BACKTRACK_EAGER goto bt_eager
@@ -516,7 +527,7 @@ tree as a PIR code object that can be compiled.
     if $I0 != 0 goto bt_greedy_none
     $I0 = self['max']
     if $I0 != PGE_INF goto bt_greedy_none
-    code.emit(<<"        CODE", replabel, explabel, args :flat :named)
+    code.'emit'(<<"        CODE", replabel, explabel, args :flat :named)
         %L:  # quant 0..Inf greedy
         %0:
           push ustack, pos
@@ -528,7 +539,7 @@ tree as a PIR code object that can be compiled.
     goto end
 
   bt_none:
-    $S0 = code.unique()
+    $S0 = code.'unique'()
     args['c'] = $S0
     args['C'] = ''
     ##   handle 0..Inf as a special case
@@ -536,7 +547,7 @@ tree as a PIR code object that can be compiled.
     if $I0 != 0 goto bt_greedy_none
     $I0 = self['max']
     if $I0 != PGE_INF goto bt_greedy_none
-    code.emit(<<"        CODE", replabel, explabel, args :flat :named)
+    code.'emit'(<<"        CODE", replabel, explabel, args :flat :named)
         %L:  # quant 0..Inf none
           local_branch cstack, %0
           if cutmark != %c goto fail
@@ -556,7 +567,7 @@ tree as a PIR code object that can be compiled.
 
   bt_greedy_none:
     ##   handle greedy or none
-    code.emit(<<"        CODE", replabel, explabel, args :flat :named)
+    code.'emit'(<<"        CODE", replabel, explabel, args :flat :named)
         %L:  # quant %Q greedy/none
           push gpad, 0
           local_branch cstack, %0
@@ -591,7 +602,7 @@ tree as a PIR code object that can be compiled.
 
   bt_eager:
     ##   handle eager backtracking
-    code.emit(<<"        CODE", replabel, explabel, args :flat :named)
+    code.'emit'(<<"        CODE", replabel, explabel, args :flat :named)
         %L:  # quant %Q eager
           push gpad, 0
           local_branch cstack, %0
@@ -615,12 +626,12 @@ tree as a PIR code object that can be compiled.
         CODE
 
   end:
-    exp.pir(code, explabel, replabel)
+    exp.'pir'(code, explabel, replabel)
     .return ()
 .end
 
 
-.namespace [ 'PGE::Exp::Group' ]
+.namespace [ 'PGE';'Exp';'Group' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -631,9 +642,9 @@ tree as a PIR code object that can be compiled.
     ##   This group is non-backtracking, so concatenate a "cut group"
     ##   node (PGE::Exp::Cut) to its child.
     exp = self[0]
-    $P0 = new 'PGE::Exp::Concat'
+    $P0 = new ['PGE';'Exp';'Concat']
     $P0[0] = exp
-    $P1 = new 'PGE::Exp::Cut'
+    $P1 = new ['PGE';'Exp';'Cut']
     $P0[1] = $P1
     self[0] = $P0
 
@@ -641,11 +652,11 @@ tree as a PIR code object that can be compiled.
     .local pmc group
     ##   Temporarily store this group as the current group.  Any
     ##   cut nodes we encounter will set a cutmark into this group.
-    group = get_hll_global ['PGE::Exp'], '$!group'
-    set_hll_global ['PGE::Exp'], '$!group', self
+    group = get_hll_global ['PGE';'Exp'], '$!group'
+    set_hll_global ['PGE';'Exp'], '$!group', self
     exp = self[0]
-    exp = exp.reduce(next)
-    set_hll_global ['PGE::Exp'], '$!group', group
+    exp = exp.'reduce'(next)
+    set_hll_global ['PGE';'Exp'], '$!group', group
     $I0 = self['cutmark']
     if $I0 > 0 goto keep_group
     $I0 = self['iscapture']
@@ -671,8 +682,8 @@ tree as a PIR code object that can be compiled.
 
   has_cutmark:
     .local string exp0label
-    exp0label = code.unique('R')
-    code.emit(<<"        CODE", label, exp0label, cutmark)
+    exp0label = code.'unique'('R')
+    code.'emit'(<<"        CODE", label, exp0label, cutmark)
         %0:  # group %2
           local_branch cstack, %1
           if cutmark != %2 goto fail
@@ -683,7 +694,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::CGroup' ]
+.namespace [ 'PGE';'Exp';'CGroup' ]
 
 .sub 'pir' :method
     .param pmc code
@@ -691,11 +702,11 @@ tree as a PIR code object that can be compiled.
     .param string next
 
     .local string explabel, expnext
-    explabel = code.unique('R')
+    explabel = code.'unique'('R')
     expnext = concat label, '_close'
 
     .local pmc args
-    args = self.getargs(label, next)
+    args = self.'getargs'(label, next)
 
     .local string captgen, captsave, captback
     (captgen, captsave, captback) = self.'gencapture'(label)
@@ -715,7 +726,7 @@ tree as a PIR code object that can be compiled.
     args['X'] = '### '
   isscope_end:
 
-    code.emit(<<"        CODE", captgen, captsave, captback, 'E'=>explabel, args :flat :named)
+    code.'emit'(<<"        CODE", captgen, captsave, captback, 'E'=>explabel, args :flat :named)
         %L: # capture
           %0
           captob = captscope.'new'(captscope, 'pos'=>pos)
@@ -746,12 +757,12 @@ tree as a PIR code object that can be compiled.
         CODE
     .local pmc exp
     exp = self[0]
-    exp.pir(code, explabel, expnext)
+    exp.'pir'(code, explabel, expnext)
     .return ()
 .end
 
 
-.namespace [ 'PGE::Exp::Subrule' ]
+.namespace [ 'PGE';'Exp';'Subrule' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -764,20 +775,20 @@ tree as a PIR code object that can be compiled.
     .param string next
 
     .local pmc args
-    args = self.getargs(label, next)
+    args = self.'getargs'(label, next)
 
     .local string subarg
     subarg = ''
     $I0 = exists self['arg']
     if $I0 == 0 goto subarg_end
     subarg = self['arg']
-    subarg = code.escape(subarg)
+    subarg = code.'escape'(subarg)
     subarg = concat ', ', subarg
     args['A'] = $S0
   subarg_end:
 
     .local string cname, captgen, captsave, captback
-    (captgen, captsave, captback) = self.gencapture(label)
+    (captgen, captsave, captback) = self.'gencapture'(label)
 
     .local string subname
     subname = self['subname']
@@ -796,11 +807,13 @@ tree as a PIR code object that can be compiled.
     rname = substr subname, $I0
     $I0 -= 2
     grammar = substr subname, 0, $I0
-    code.emit(<<"        CODE", grammar, rname, args :flat :named)
+    $P0 = split '::', grammar
+    $P0 = code.'key'($P0)
+    code.'emit'(<<"        CODE", grammar, rname, $P0, args :flat :named)
         %L: # grammar subrule %0::%1
           captob = captscope.'new'(captscope, 'grammar'=>'%0')
           captob.'to'(pos)
-          $P0 = get_hll_global ['%0'], '%1'
+          $P0 = get_hll_global %2, '%1'
         CODE
     goto subrule_match
 
@@ -808,7 +821,7 @@ tree as a PIR code object that can be compiled.
     ##   The subrule is of the form <rule>, which means we first look
     ##   for a method on the current match object, otherwise we do a
     ##   normal name lookup.
-    code.emit(<<"        CODE", subname, args :flat :named)
+    code.'emit'(<<"        CODE", subname, args :flat :named)
         %L: # subrule %0
           captob = captscope
           $P0 = getattribute captob, '$.pos'
@@ -836,7 +849,7 @@ tree as a PIR code object that can be compiled.
     ##   We either branch directly to the next node (PGE_BACKTRACK_NONE)
     ##   or to a small subroutine below that will keep backtracking into
     ##   the subrule until it no longer produces a match.
-    code.emit(<<"        CODE", PGE_CUT_MATCH, $S0, captgen, captsave, captback, subarg)
+    code.'emit'(<<"        CODE", PGE_CUT_MATCH, $S0, captgen, captsave, captback, subarg)
           $P2 = adverbs['action']
           captob = $P0(captob%5, 'action'=>$P2)
           $P1 = getattribute captob, '$.pos'
@@ -851,7 +864,7 @@ tree as a PIR code object that can be compiled.
         CODE
     if $I0 == PGE_BACKTRACK_NONE goto end
     ##   Repeatedly backtrack into the subrule until there are no matches.
-    code.emit(<<"        CODE", PGE_CUT_MATCH, $S0, next)
+    code.'emit'(<<"        CODE", PGE_CUT_MATCH, $S0, next)
         %1:
           pos = $P1
           $P1 = getattribute captob, '&!corou'
@@ -860,7 +873,7 @@ tree as a PIR code object that can be compiled.
           local_branch cstack, %2
           captob = pop ustack
           if cutmark != 0 goto fail
-          captob.next()
+          captob.'next'()
           $P1 = getattribute captob, '$.pos'
           if $P1 >= 0 goto %1
           if $P1 <= %0 goto fail_match
@@ -878,7 +891,7 @@ tree as a PIR code object that can be compiled.
     unless $I0 goto have_test
     test = 'unless'
   have_test:
-    code.emit(<<"        CODE", PGE_CUT_MATCH, test, next, subarg)
+    code.'emit'(<<"        CODE", PGE_CUT_MATCH, test, next, subarg)
           captob = $P0(captob%3)
           $P1 = getattribute captob, '$.pos'
           if $P1 <= %0 goto fail_match
@@ -893,16 +906,16 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Alt' ]
+.namespace [ 'PGE';'Exp';'Alt' ]
 
 .sub 'reduce' :method
     .param pmc next
     .local pmc exp0, exp1
     exp0 = self[0]
-    exp0 = exp0.reduce(next)
+    exp0 = exp0.'reduce'(next)
     self[0] = exp0
     exp1 = self[1]
-    exp1 = exp1.reduce(next)
+    exp1 = exp1.'reduce'(next)
     self[1] = exp1
     .return (self)
 .end
@@ -914,9 +927,9 @@ tree as a PIR code object that can be compiled.
     .param string next
     .local pmc exp0, exp1
     .local string exp0label, exp1label
-    exp0label = code.unique('R')
-    exp1label = code.unique('R')
-    code.emit(<<"        CODE", label, exp0label, exp1label)
+    exp0label = code.'unique'('R')
+    exp1label = code.'unique'('R')
+    code.'emit'(<<"        CODE", label, exp0label, exp1label)
         %0:  # alt %1, %2
           push ustack, pos
           local_branch cstack, %1
@@ -925,14 +938,14 @@ tree as a PIR code object that can be compiled.
           goto %2\n
         CODE
     exp0 = self[0]
-    exp0.pir(code, exp0label, next)
+    exp0.'pir'(code, exp0label, next)
     exp1 = self[1]
-    exp1.pir(code, exp1label, next)
+    exp1.'pir'(code, exp1label, next)
     .return ()
 .end
 
 
-.namespace [ 'PGE::Exp::Anchor' ]
+.namespace [ 'PGE';'Exp';'Anchor' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -961,19 +974,19 @@ tree as a PIR code object that can be compiled.
 
 
   anchor_bos:
-    code.emit("        %0: # anchor bos", label)
-    code.emit("          if pos == 0 goto %0", next)
-    code.emit("          goto fail")
+    code.'emit'("        %0: # anchor bos", label)
+    code.'emit'("          if pos == 0 goto %0", next)
+    code.'emit'("          goto fail")
     .return ()
 
   anchor_eos:
-    code.emit("        %0: # anchor eos", label)
-    code.emit("          if pos == lastpos goto %0", next)
-    code.emit("          goto fail")
+    code.'emit'("        %0: # anchor eos", label)
+    code.'emit'("          if pos == lastpos goto %0", next)
+    code.'emit'("          goto fail")
     .return ()
 
   anchor_bol:
-    code.emit(<<"        CODE", label, next, .CCLASS_NEWLINE)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_NEWLINE)
         %0: # anchor bol
           if pos == 0 goto %1
           if pos == lastpos goto fail
@@ -985,7 +998,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 
   anchor_eol:
-    code.emit(<<"        CODE", label, next, .CCLASS_NEWLINE)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_NEWLINE)
         %0: # anchor eol
           $I1 = is_cclass %2, target, pos
           if $I1 goto %1
@@ -999,7 +1012,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 
   anchor_word:
-    code.emit(<<"        CODE", label, next, .CCLASS_WORD, test)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_WORD, test)
         %0: # anchor word
           $I0 = 0
           if pos == 0 goto %0_1
@@ -1016,7 +1029,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 
   anchor_word_left:
-    code.emit(<<"        CODE", label, next, .CCLASS_WORD)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_WORD)
         %0: # left word boundary
           if pos >= lastpos goto fail
           $I0 = is_cclass %2, target, pos
@@ -1030,7 +1043,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 
   anchor_word_right:
-    code.emit(<<"        CODE", label, next, .CCLASS_WORD)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_WORD)
         %0: # right word boundary
           if pos == 0 goto fail
           $I0 = pos - 1
@@ -1046,7 +1059,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::CCShortcut' ]
+.namespace [ 'PGE';'Exp';'CCShortcut' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1088,16 +1101,16 @@ tree as a PIR code object that can be compiled.
     .local int cclass, negate
 
     $S0 = self
-    code.emit("        %0: # cclass %1", label, $S0)
-    code.emit("          if pos >= lastpos goto fail")
+    code.'emit'("        %0: # cclass %1", label, $S0)
+    code.'emit'("          if pos >= lastpos goto fail")
     cclass = self['cclass']
     negate = self['negate']
     if cclass == .CCLASS_ANY goto end
-    code.emit("          $I0 = is_cclass %0, target, pos", cclass)
-    code.emit("          if $I0 == %0 goto fail", negate)
+    code.'emit'("          $I0 = is_cclass %0, target, pos", cclass)
+    code.'emit'("          if $I0 == %0 goto fail", negate)
   end:
-    code.emit("          inc pos")
-    code.emit("          goto %0", next)
+    code.'emit'("          inc pos")
+    code.'emit'("          goto %0", next)
     .return ()
 .end
 
@@ -1127,16 +1140,16 @@ tree as a PIR code object that can be compiled.
     if negate == 0 goto emit_find
     negstr = ''
   emit_find:
-    code.emit(<<"        CODE", negstr, cclass)
+    code.'emit'(<<"        CODE", negstr, cclass)
           $I0 = find%0_cclass %1, target, pos, lastpos
           rep = $I0 - pos
         CODE
     goto emit_pir
   emit_dot:
-    code.emit("          rep = lastpos - pos")
+    code.'emit'("          rep = lastpos - pos")
 
   emit_pir:
-    code.emit(<<"        CODE", args :flat :named)
+    code.'emit'(<<"        CODE", args :flat :named)
           %Mif rep < %m goto fail
           %Nif rep <= %n goto %L_1
           %Nrep = %n
@@ -1147,7 +1160,7 @@ tree as a PIR code object that can be compiled.
     if backtrack == PGE_BACKTRACK_EAGER goto bt_eager
 
   bt_greedy:
-    code.emit(<<"        CODE", args :flat :named)
+    code.'emit'(<<"        CODE", args :flat :named)
           pos += rep
         %L_2:
           if rep <= %m goto %S
@@ -1164,11 +1177,11 @@ tree as a PIR code object that can be compiled.
     .return (1)
 
   bt_none:
-    code.emit("          pos += rep\n          goto %0\n", next)
+    code.'emit'("          pos += rep\n          goto %0\n", next)
     .return (1)
 
   bt_eager:
-    code.emit(<<"        CODE", args :flat :named)
+    code.'emit'(<<"        CODE", args :flat :named)
           %Mpos += %m
           %Mrep -= %m
         %L_2:
@@ -1186,7 +1199,7 @@ tree as a PIR code object that can be compiled.
 
 .end
 
-.namespace [ 'PGE::Exp::Cut' ]
+.namespace [ 'PGE';'Exp';'Cut' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1198,11 +1211,11 @@ tree as a PIR code object that can be compiled.
     ##   This node is cutting a group.  We need to
     ##   get the current group's cutmark, or set
     ##   one if it doesn't already have one.
-    group = get_hll_global ['PGE::Exp'], '$!group'
+    group = get_hll_global ['PGE';'Exp'], '$!group'
     cutmark = group['cutmark']
     if cutmark > 0 goto has_cutmark
     $P1 = new 'CodeString'
-    cutmark = $P1.unique()
+    cutmark = $P1.'unique'()
     group['cutmark'] = cutmark
   has_cutmark:
     self['cutmark'] = cutmark
@@ -1219,7 +1232,7 @@ tree as a PIR code object that can be compiled.
     cutmark = self['cutmark']
 
     if cutmark > 0 goto group_cutmark
-    code.emit(<<"        CODE", label, next, cutmark)
+    code.'emit'(<<"        CODE", label, next, cutmark)
         %0: # cut rule or match
           local_branch cstack, %1
           cutmark = %2
@@ -1228,7 +1241,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 
   group_cutmark:
-    code.emit(<<"        CODE", label, next, cutmark)
+    code.'emit'(<<"        CODE", label, next, cutmark)
         %0: # cut %2
           local_branch cstack, %1
           cutmark = %2
@@ -1238,7 +1251,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Scalar' ]
+.namespace [ 'PGE';'Exp';'Scalar' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1252,7 +1265,7 @@ tree as a PIR code object that can be compiled.
 
     .local string cname
     cname = self['cname']
-    code.emit(<<"        CODE", label, next, cname)
+    code.'emit'(<<"        CODE", label, next, cname)
         %0: # scalar %2
           $P0 = mob[%2]
           $I0 = does $P0, 'array'
@@ -1272,7 +1285,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::EnumCharList' ]
+.namespace [ 'PGE';'Exp';'EnumCharList' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1286,7 +1299,7 @@ tree as a PIR code object that can be compiled.
 
     .local string charlist
     $S0 = self
-    charlist = code.escape($S0)
+    charlist = code.'escape'($S0)
 
     .local string test
     test = '<'
@@ -1301,7 +1314,7 @@ tree as a PIR code object that can be compiled.
     incpos = '###   zero width'
   zerowidth_end:
 
-    code.emit(<<"        CODE", label, charlist, test, incpos, next)
+    code.'emit'(<<"        CODE", label, charlist, test, incpos, next)
         %0: # enumcharlist %1
           if pos >= lastpos goto fail
           $S0 = substr target, pos, 1
@@ -1314,7 +1327,7 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Newline' ]
+.namespace [ 'PGE';'Exp';'Newline' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1325,7 +1338,7 @@ tree as a PIR code object that can be compiled.
     .param pmc code
     .param string label
     .param string next
-    code.emit(<<"        CODE", label, next, .CCLASS_NEWLINE)
+    code.'emit'(<<"        CODE", label, next, .CCLASS_NEWLINE)
         %0: # newline
           $I0 = is_cclass %2, target, pos
           if $I0 == 0 goto fail
@@ -1339,16 +1352,16 @@ tree as a PIR code object that can be compiled.
 .end
 
 
-.namespace [ 'PGE::Exp::Conj' ]
+.namespace [ 'PGE';'Exp';'Conj' ]
 
 .sub 'reduce' :method
     .param pmc next
     .local pmc exp0, exp1
     exp0 = self[0]
-    exp0 = exp0.reduce(next)
+    exp0 = exp0.'reduce'(next)
     self[0] = exp0
     exp1 = self[1]
-    exp1 = exp1.reduce(next)
+    exp1 = exp1.'reduce'(next)
     self[1] = exp1
     .return (self)
 .end
@@ -1359,11 +1372,11 @@ tree as a PIR code object that can be compiled.
     .param string next
 
     .local string exp0label, exp1label, chk0label, chk1label
-    exp0label = code.unique('R')
-    exp1label = code.unique('R')
+    exp0label = code.'unique'('R')
+    exp1label = code.'unique'('R')
     chk0label = concat label, '_chk0'
     chk1label = concat label, '_chk1'
-    code.emit(<<"        CODE", label, next, exp0label, chk0label, exp1label, chk1label)
+    code.'emit'(<<"        CODE", label, next, exp0label, chk0label, exp1label, chk1label)
         %0: # conj %2, %4
           push gpad, pos
           push gpad, pos
@@ -1397,7 +1410,7 @@ tree as a PIR code object that can be compiled.
     .return ()
 .end
 
-.namespace [ "PGE::Exp::Closure" ]
+.namespace [ 'PGE';'Exp';'Closure' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1419,19 +1432,23 @@ tree as a PIR code object that can be compiled.
     ##  two different compilers.  Also, if the sources can be lengthy
     ##  we might be well served to use a hashed representation of
     ##  the source.
-    code.emit(<<"        CODE", label, next, lang, value)
+    code.'emit'(<<"        CODE", label, lang, value)
         %0: # closure
-          $S1 = %3
-          $P0 = get_hll_global ['PGE::Match'], '%!cache'
+          $S1 = %2
+          $P0 = get_hll_global ['PGE';'Match'], '%!cache'
           $P1 = $P0[$S1]
           unless null $P1 goto %0_1
-          $P1 = compreg %2
+          $P1 = compreg %1
           $P1 = $P1($S1)
           $P0[$S1] = $P1
         %0_1:
+        CODE
+    $I0 = self['iszerowidth']
+    if $I0 goto closure_zerowidth
+    code.'emit'(<<"        CODE", next)
           mpos = pos
           ($P0 :optional, $I0 :opt_flag) = $P1(mob)
-          if $I0 == 0 goto %1
+          if $I0 == 0 goto %0
           mob.'result_object'($P0)
           push ustack, pos
           local_branch cstack, succeed
@@ -1441,9 +1458,24 @@ tree as a PIR code object that can be compiled.
           goto fail
         CODE
     .return ()
+  closure_zerowidth:
+    ##  we're doing a <?{{ or <!{{ assertion.
+    .local string test
+    test = 'if'
+    $I0 = self['isnegated']
+    unless $I0 goto have_test
+    test = 'unless'
+  have_test:
+    code.'emit'(<<"        CODE", test, next)
+          mpos = pos
+          $P0 = $P1(mob)
+          %0 $P0 goto %1
+          goto fail
+        CODE
+    .return ()
 .end
 
-.namespace [ "PGE::Exp::Action" ]
+.namespace [ 'PGE';'Exp';'Action' ]
 
 .sub 'reduce' :method
     .param pmc next
@@ -1455,7 +1487,7 @@ tree as a PIR code object that can be compiled.
     .param string label
     .param string next
     .local string actionname, actionkey
-    code.emit("        %0: # action", label)
+    code.'emit'("        %0: # action", label)
     actionname = self['actionname']
     if actionname == '' goto end
     actionname = code.'escape'(actionname)
@@ -1464,7 +1496,7 @@ tree as a PIR code object that can be compiled.
     actionkey = code.'escape'(actionkey)
     actionkey = concat ', ', actionkey
   have_actionkey:
-    code.emit(<<"        CODE", label, next, actionname, actionkey)
+    code.'emit'(<<"        CODE", label, next, actionname, actionkey)
           $P1 = adverbs['action']
           if null $P1 goto %1
           $I1 = can $P1, %2

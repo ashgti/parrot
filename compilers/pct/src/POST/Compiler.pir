@@ -13,7 +13,7 @@ PIR or an Eval PMC (bytecode).
 
 =cut
 
-.namespace [ 'POST::Compiler' ]
+.namespace [ 'POST';'Compiler' ]
 
 .sub '__onload' :load :init
     .local pmc p6meta, cproto
@@ -26,7 +26,7 @@ PIR or an Eval PMC (bytecode).
     $P0 = new 'ResizablePMCArray'
     set_global '@!subcode', $P0
 
-    $P0 = new 'String'
+    $P0 = box '[]'
     set_global '$?NAMESPACE', $P0
     .return ()
 .end
@@ -37,7 +37,7 @@ PIR or an Eval PMC (bytecode).
     .param pmc adverbs         :slurpy :named
 
     .local pmc newself
-    newself = new 'POST::Compiler'
+    newself = new ['POST';'Compiler']
 
     ##  start with empty code
     .local pmc subcode, code
@@ -46,7 +46,7 @@ PIR or an Eval PMC (bytecode).
     push subcode, code
 
     ##  if the root node isn't a Sub, wrap it
-    $I0 = isa post, 'POST::Sub'
+    $I0 = isa post, ['POST';'Sub']
     if $I0 goto have_sub
     $P0 = get_hll_global ['POST'], 'Sub'
     post = $P0.'new'(post, 'name'=>'anon')
@@ -93,7 +93,7 @@ the generated pir of C<node>'s children.
 
 .sub 'pir' :method :multi(_,_)
     .param pmc node
-    .return self.'pir_children'(node)
+    .tailcall self.'pir_children'(node)
 .end
 
 
@@ -103,7 +103,7 @@ Return pir for an operation node.
 
 =cut
 
-.sub 'pir' :method :multi(_,['POST::Op'])
+.sub 'pir' :method :multi(_,['POST';'Op'])
     .param pmc node
 
     ##  determine the type of operation
@@ -151,7 +151,7 @@ Return pir for an operation node.
 
   pirop_tailcall:
     name = shift arglist
-    fmt = '    .return %n(%,)'
+    fmt = '    .tailcall %n(%,)'
     goto pirop_emit
 
   pirop_inline:
@@ -173,7 +173,7 @@ Generate a label.
 
 =cut
 
-.sub 'pir' :method :multi(_, ['POST::Label'])
+.sub 'pir' :method :multi(_, ['POST';'Label'])
     .param pmc node
     .local string code, value
     value = node.'result'()
@@ -192,7 +192,7 @@ the sub.
 
 =cut
 
-.sub 'pir' :method :multi(_, ['POST::Sub'])
+.sub 'pir' :method :multi(_, ['POST';'Sub'])
     .param pmc node
 
     .local pmc subcode
@@ -207,16 +207,15 @@ the sub.
     name = node.'name'()
     pirflags = node.'pirflags'()
 
-  pirflags_lexid:
-    $I0 = index pirflags, ':lexid('
-    if $I0 >= 0 goto pirflags_lexid_done
-    .local string lexid
-    lexid = code.'unique'()
-    node.'lexid'(lexid)
-    pirflags = concat pirflags, ' :lexid("'
-    pirflags .= lexid
+  pirflags_subid:
+    $I0 = index pirflags, ':subid('
+    if $I0 >= 0 goto pirflags_subid_done
+    .local string subid
+    subid = node.'subid'()
+    pirflags = concat pirflags, ' :subid("'
+    pirflags .= subid
     pirflags .= '")'
-  pirflags_lexid_done:
+  pirflags_subid_done:
 
   pirflags_method:
     $I0 = index pirflags, ':method'
@@ -231,15 +230,7 @@ the sub.
     outerpost = node.'outer'()
     if null outerpost goto pirflags_done
     unless outerpost goto pirflags_done
-    ##  FIXME: RT#47956
-    ##  PIR doesn't compile properly if :outer points to a sub
-    ##  with :init flags on it.
-    $I0 = index pirflags, ':init'
-    if $I0 >= 0 goto pirflags_done
-    $S0 = outerpost.'pirflags'()
-    $I0 = index $S0, ':init'
-    if $I0 >= 0 goto pirflags_done
-    outername = outerpost.'lexid'()
+    outername = outerpost.'subid'()
     $S0 = code.'escape'(outername)
     pirflags = concat pirflags, ' :outer('
     concat pirflags, $S0
@@ -307,15 +298,17 @@ the sub.
 
     options['target'] = 'pir'
     options['grammar'] = ''
+    $P0 = node.'subid'()
+    options['subid'] = $P0
     .local pmc source, compiler, pir
     source = node[0]
     $S0 = node.'compiler'()
     compiler = compreg $S0
     $I0 = isa compiler, 'Sub'
     if $I0 goto compiler_sub
-    .return compiler.'compile'(source, options :flat :named)
+    .tailcall compiler.'compile'(source, options :flat :named)
   compiler_sub:
-    .return compiler(source, options :flat :named)
+    .tailcall compiler(source, options :flat :named)
 .end
 
 =back

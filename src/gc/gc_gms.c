@@ -288,7 +288,7 @@ static int init_mark_cb(PARROT_INTERP,
 static void parrot_gc_gms_deinit(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-static void parrot_gc_gms_run(PARROT_INTERP, int flags)
+static void parrot_gc_gms_run(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
@@ -456,7 +456,7 @@ creation of memory pools.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_gc_gms_init(PARROT_INTERP)
 {
@@ -1344,7 +1344,7 @@ Set the object live - called by the pobject_lives macro
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 parrot_gc_gms_pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
 {
@@ -1721,7 +1721,7 @@ Interface to C<Parrot_do_dod_run>. C<flags> is one of:
 */
 
 static void
-parrot_gc_gms_run(PARROT_INTERP, int flags)
+parrot_gc_gms_run(PARROT_INTERP, UINTVAL flags)
 {
     Arenas * const arena_base = interp->arena_base;
     Gc_gms_private *g_gms;

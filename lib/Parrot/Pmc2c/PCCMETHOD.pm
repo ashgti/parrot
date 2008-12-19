@@ -282,7 +282,7 @@ sub parse_p_args_string {
         die "invalid PCC arg '$x': did you forget to specify a type?\n"
              unless defined $name;
 
-        if ($name =~ /[\**]?(\"?\w+\"?)/) {
+        if ($name =~ /\**([a-zA-Z_]\w*)/) {
             $name = $1;
         }
 
@@ -400,9 +400,9 @@ sub rewrite_pccmethod {
     PMC      *_param_sig          = pmc_new(interp, enum_class_FixedIntegerArray);
     PMC      *_return_sig         = PMCNULL;
 
-    parrot_context_t *_caller_ctx = CONTEXT(interp);
+    Parrot_Context *_caller_ctx   = CONTEXT(interp);
     PMC *_ret_cont                = new_ret_continuation_pmc(interp, NULL);
-    parrot_context_t *_ctx        = Parrot_push_context(interp, _n_regs_used);
+    Parrot_Context *_ctx          = Parrot_push_context(interp, _n_regs_used);
     PMC *_ccont                   = PMCNULL;
 
 $set_params
@@ -437,7 +437,7 @@ END
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
         --_ctx->recursion_depth;
         _ctx->caller_ctx      = _caller_ctx->caller_ctx;
-        Parrot_free_context(interp, _caller_ctx, 0);
+        Parrot_free_context(interp, _caller_ctx, 1);
         interp->current_args = NULL;
     }
     /* BEGIN PARMS SCOPE */

@@ -55,7 +55,7 @@ Unlike in Perl 5, the newline before the delimiter is not part of the string.
 
 =cut
 
-.namespace ['Pipp::Grammar']
+.namespace ['Pipp';'Grammar']
 
 ## called from code in grammar.pg
 .sub 'quote_expression' :method
@@ -392,7 +392,7 @@ Unlike in Perl 5, the newline before the delimiter is not part of the string.
     mob.'to'(pos)
     .return (mob)
   fail_backchar_digit:
-    self.panic('encountered invalid octal digit')
+    self.'panic'('encountered invalid octal digit')
   fail:
     mob.'to'(-1)
     .return (mob)

@@ -25,7 +25,7 @@ use IO::CaptureOutput qw( capture );
 
 ########## --without-icu ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ q{--without-icu}  ],
         mode => q{configure},
@@ -291,7 +291,7 @@ my $die = auto::icu::_die_message();
 like($die, qr/Something is wrong with your ICU installation/s,
     "Got expected die message");
 
-{   
+{
     my $phony = q{/path/to/icu-config};
     my ($stdout, $stderr);
     capture(
@@ -304,7 +304,7 @@ like($die, qr/Something is wrong with your ICU installation/s,
     );
 }
 
-{   
+{
     my $phony = q{-lalpha};
     my ($stdout, $stderr);
     capture(
@@ -317,7 +317,7 @@ like($die, qr/Something is wrong with your ICU installation/s,
     );
 }
 
-{   
+{
     my $phony = q{alpha/include};
     my ($stdout, $stderr);
     capture(
@@ -330,7 +330,7 @@ like($die, qr/Something is wrong with your ICU installation/s,
     );
 }
 
-{   
+{
     my ($stdout, $stderr);
     capture(
         sub { auto::icu::_verbose_report(0, 'alpha', 'beta', 'gamma'); },
@@ -459,7 +459,7 @@ $conf->replenish($serialized);
 
 ########## --without-icu; --icu-config=none ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--without-icu}, q{--icu-config=none}  ],
     mode => q{configure},
 } );
@@ -488,7 +488,7 @@ $conf->replenish($serialized);
         capture_output( qw| icu-config --exists | ); };
     SKIP: {
         skip "icu-config not available", 9 if $stderr;
-        $args = process_options( {
+        ($args, $step_list_ref) = process_options( {
             argv => [
                 q{--icu-config=1},
                 q{--icuheaders=alpha},
@@ -520,7 +520,7 @@ $conf->replenish($serialized);
 
 ########## --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--verbose} ],
     mode => q{configure},
 } );
@@ -580,18 +580,18 @@ $conf->replenish($serialized);
         capture_output( qw| icu-config --exists | ); };
     SKIP: {
         skip "icu-config not available", 10 if $stderr;
-        $args = process_options(
+        ($args, $step_list_ref) = process_options(
             {
                 argv => [ q{--icuheaders=alpha}, ],
                 mode => q{configure},
             }
         );
-        
+
         rerun_defaults_for_testing($conf, $args );
         $conf->add_steps($pkg);
         $conf->options->set( %{$args} );
         $step = test_step_constructor_and_description($conf);
-        
+
         {
             my ($stdout, $stderr, $ret);
             capture(
@@ -620,7 +620,7 @@ $conf->replenish($serialized);
         capture_output( qw| icu-config --exists | ); };
     SKIP: {
         skip "icu-config not available", 12 if $stderr;
-        $args = process_options( {
+        ($args, $step_list_ref) = process_options( {
             argv => [ q{--verbose}, ],
             mode => q{configure},
         } );
@@ -658,7 +658,7 @@ $conf->replenish($serialized);
                 "Got expected verbose output re --prefix");
             like($stdout, qr/icuheaders:  captured/s,
                 "Got expected verbose output re icuheaders");
-            like($stdout, qr/For icuheaders, found $icuheaders and $without/s,
+            like($stdout, qr/For icuheaders, found \Q$icuheaders\E and $without/s,
                 "Got expected verbose output re icuheaders");
         }
     }

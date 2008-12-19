@@ -34,7 +34,7 @@ PBC_TO_EXE    = $(BUILD_DIR)/pbc_to_exe$(EXE)
 #CONDITIONED_LINE(darwin):# MACOSX_DEPLOYMENT_TARGET must be defined for OS X compilation/linking
 #CONDITIONED_LINE(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
 
-all: perl6.pbc Test.pir
+all: perl6.pbc
 
 xmas: perl6$(EXE)
 
@@ -42,6 +42,8 @@ SOURCES = perl6.pir \
   src/gen_grammar.pir \
   src/gen_actions.pir \
   src/gen_builtins.pir \
+  src/gen_metaop.pir \
+  src/gen_junction.pir \
   src/parser/expression.pir \
   src/parser/quote_expression.pir \
   $(PERL6_GROUP) \
@@ -49,8 +51,12 @@ SOURCES = perl6.pir \
 
 BUILTINS_PIR = \
   src/classes/Object.pir \
+  src/classes/Abstraction.pir \
+  src/classes/Protoobject.pir \
+  src/classes/Positional.pir \
+  src/classes/Associative.pir \
+  src/classes/Callable.pir \
   src/classes/Any.pir \
-  src/classes/Scalar.pir \
   src/classes/Bool.pir \
   src/classes/Str.pir \
   src/classes/Num.pir \
@@ -70,12 +76,14 @@ BUILTINS_PIR = \
   src/classes/Method.pir \
   src/classes/Junction.pir \
   src/classes/Failure.pir \
+  src/classes/Exception.pir \
+  src/classes/Nil.pir \
   src/classes/Role.pir \
   src/classes/Pair.pir \
   src/classes/Whatever.pir \
   src/classes/Capture.pir \
+  src/classes/Match.pir \
   src/classes/Signature.pir \
-  src/classes/Subset.pir \
   src/classes/Grammar.pir \
   src/classes/Module.pir \
   src/builtins/globals.pir \
@@ -98,12 +106,12 @@ BUILTINS_PIR = \
   src/builtins/system.pir \
   src/builtins/traits.pir \
 
-$(PMC_DIR)/mutable.pmc : $(PMC_DIR)/mutable_pmc.template build/gen_mutable_pmc.pl
-	$(PERL) build/gen_mutable_pmc.pl $(PMC_DIR)/mutable_pmc.template \
-		$(PMC_DIR)/mutable.pmc
+$(PMC_DIR)/objectref.pmc : $(PMC_DIR)/objectref_pmc.template build/gen_objectref_pmc.pl
+	$(PERL) build/gen_objectref_pmc.pl $(PMC_DIR)/objectref_pmc.template \
+		$(PMC_DIR)/objectref.pmc
 
-PMCS        = perl6str mutable perl6scalar mutablevar perl6multisub
-PMC_SOURCES = $(PMC_DIR)/perl6str.pmc $(PMC_DIR)/mutable.pmc $(PMC_DIR)/perl6scalar.pmc \
+PMCS        = perl6str objectref perl6scalar mutablevar perl6multisub
+PMC_SOURCES = $(PMC_DIR)/perl6str.pmc $(PMC_DIR)/objectref.pmc $(PMC_DIR)/perl6scalar.pmc \
               $(PMC_DIR)/mutablevar.pmc $(PMC_DIR)/perl6multisub.pmc
 PERL6_GROUP = $(PMC_DIR)/perl6_group$(LOAD_EXT)
 
@@ -113,7 +121,7 @@ perl6$(EXE): perl6.pbc
 	$(PBC_TO_EXE) perl6.pbc
 
 # the default target
-perl6.pbc: $(PARROT) $(SOURCES)
+perl6.pbc: $(PARROT) $(SOURCES) $(BUILTINS_PIR)
 	$(PARROT) $(PARROT_ARGS) -o perl6.pbc perl6.pir
 
 installable_perl6$(EXE): perl6.pbc
@@ -131,8 +139,14 @@ src/gen_actions.pir: $(NQP) $(PCT) src/parser/actions.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=src/gen_actions.pir \
 	    --encoding=fixed_8 --target=pir src/parser/actions.pm
 
-src/gen_builtins.pir: $(BUILTINS_PIR)
-	$(CAT) $(BUILTINS_PIR) >src/gen_builtins.pir
+src/gen_builtins.pir: build/gen_builtins_pir.pl Makefile
+	$(PERL) build/gen_builtins_pir.pl $(BUILTINS_PIR) > src/gen_builtins.pir
+
+src/gen_metaop.pir: build/gen_metaop_pir.pl
+	$(PERL) build/gen_metaop_pir.pl > src/gen_metaop.pir
+
+src/gen_junction.pir: build/gen_junction_pir.pl
+	$(PERL) build/gen_junction_pir.pl src/gen_junction.pir
 
 $(PERL6_GROUP): $(PARROT) $(PMC_SOURCES)
 	cd $(PMC_DIR) && $(BUILD_DYNPMC) generate $(PMCS)
@@ -165,8 +179,8 @@ help:
 	@echo "  coretest:          Run rakudo's core tests."
 	@echo "  codetest:          Run Parrot's code tests."
 	@echo "  testclean:         Clean up test results."
-	@echo "  spectest:          Run the official Perl 6 tests."
-	@echo "  spectest_regression:  Run the tests of the official test suite that are known to pass."
+	@echo "  spectest:          Run the tests of the official test suite that are known to pass."
+	@echo "  spectest_full:     Run all tests of the official test suite"
 	@echo "  localtest:         Run the official tests given in t/localtest.data."
 	@echo "  fulltest:          Run coretest, spectest_regression, and codetest."
 	@echo ""
@@ -179,11 +193,11 @@ help:
 	@echo "  help:              Print this help message."
 	@echo ""
 
-test    : coretest codetest
+test    : coretest 
 
 coretest: all
-	$(PERL) t/harness t/00-parrot t/01-sanity
 	prove t/pmc
+	$(PERL) t/harness t/00-parrot t/01-sanity
 
 codetest:
 	$(MAKE) $(BUILD_DIR) codetest
@@ -191,27 +205,26 @@ codetest:
 # this target has nothing to do
 testclean:
 
-testtest: all test
-	$(PERL) t/harness t/02-test-pm
-
 # NOTE: eventually, we should remove --keep-exit-code and --fudge
 #       as the goal is that all tests must pass without fudge
 HARNESS_WITH_FUDGE = $(PERL) t/harness --fudge --keep-exit-code
+HARNESS_WITH_FUDGE_JOBS = $(HARNESS_WITH_FUDGE) --jobs
 
-spectest: all t/spec
+spectest_full: all Test.pir t/spec
 	-cd t/spec && svn up
-	$(HARNESS_WITH_FUDGE) t/spec
+	$(HARNESS_WITH_FUDGE_JOBS) t/spec
 
 # Run the spectests that we know work.
-spectest_regression: all t/spec t/spectest_regression.data
+spectest_regression: spectest
+spectest: all Test.pir t/spec t/spectest.data
 	-cd t/spec && svn up
-	$(HARNESS_WITH_FUDGE) --tests-from-file=t/spectest_regression.data
+	$(HARNESS_WITH_FUDGE_JOBS) --tests-from-file=t/spectest.data
 
-fulltest: coretest spectest_regression codetest
+fulltest: coretest spectest codetest
 
 # Run the tests in t/localtest.data
 localtest: all t/spec t/localtest.data
-	@$(HARNESS_WITH_FUDGE) --tests-from-file=t/localtest.data
+	@$(HARNESS_WITH_FUDGE_JOBS) --tests-from-file=t/localtest.data
 
 # Run the tests in t/localtest.data with a higher verbosity
 localtest_loud: all t/spec t/localtest.data
@@ -220,11 +233,11 @@ localtest_loud: all t/spec t/localtest.data
 # Run many tests of your choise.
 # make somtests TESTFILES=t/foo/bar
 sometests: all
-	@$(HARNESS_WITH_FUDGE) $(TESTFILES)
+	@$(HARNESS_WITH_FUDGE_JOBS) $(TESTFILES)
 
 # Run a single test
-t/*.t t/*/*.t t/*/*/*.t: all
-	@$(HARNESS_WITH_FUDGE) $@
+t/*.t t/*/*.t t/*/*/*.t: all Test.pir
+	@$(HARNESS_WITH_FUDGE) --verbosity=1 $@
 
 t/localtest.data:
 	$(PERL) -MExtUtils::Command -e test_f $@
@@ -235,13 +248,13 @@ t/spec:
 CLEANUPS = \
   perl6.pbc \
   perl6.c \
+  *.manifest \
+  *.pdb \
   perl6$(O) \
   perl6$(EXE) \
   installable_perl6$(EXE) \
   Test.pir \
-  src/gen_grammar.pir \
-  src/gen_actions.pir \
-  src/gen_builtins.pir \
+  src/gen_*.pir \
   $(PMC_DIR)/*.h \
   $(PMC_DIR)/*.c \
   $(PMC_DIR)/*.dump \
@@ -252,7 +265,7 @@ CLEANUPS = \
   $(PMC_DIR)/*.manifest \
   $(PMC_DIR)/*.pdb \
   $(PMC_DIR)/*.lib \
-  $(PMC_DIR)/mutable.pmc \
+  $(PMC_DIR)/objectref.pmc \
   $(OPSDIR)/*.h \
   $(OPSDIR)/*.c \
   $(OPSDIR)/*$(O) \

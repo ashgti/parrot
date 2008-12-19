@@ -21,7 +21,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
 
-use Parrot::Test tests => 7;
+use Parrot::Test tests => 8;
 use Test::More;
 
 language_output_is( 'lua', <<'CODE', <<'OUT', 'hello world' );
@@ -84,9 +84,6 @@ CODE
 5040
 OUT
 
-TODO: {
-    local $TODO = 'once time ago, this test pass';
-
 language_output_is( 'lua', <<'CODE', <<'OUT', 'with args', params => "abc def"  );
 print(#arg)
 print(...)
@@ -94,7 +91,37 @@ CODE
 2
 abc	def
 OUT
-}
+
+language_output_is( 'lua', <<'CODE', <<'OUT', 'man or boy' );
+--[[
+
+  Knuth's "man or boy" test.
+  See http://en.wikipedia.org/wiki/Man_or_boy_test
+
+]]
+
+local function A (k, x1, x2, x3, x4, x5)
+    local function B ()
+        k = k - 1
+        return A(k, B, x1, x2, x3, x4)
+    end
+    if k <= 0 then
+        return x4() + x5()
+    else
+        return B()
+    end
+end
+
+print(A(10, --> -67
+        function () return 1 end,
+        function () return -1 end,
+        function () return -1 end,
+        function () return 1 end,
+        function () return 0 end)
+)
+CODE
+-67
+OUT
 
 # Local Variables:
 #   mode: cperl

@@ -20,12 +20,13 @@ that can be used in bitwise operations, and the following functions:
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'bitlib' ]
 
 .sub '__onload' :anon :load
 #    print "__onload bitlib\n"
-    .const .Sub entry = 'luaopen_bitlib'
+    .const 'Sub' entry = 'luaopen_bitlib'
     set_hll_global 'luaopen_bitlib', entry
 .end
 

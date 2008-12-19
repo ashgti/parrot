@@ -165,7 +165,7 @@ static void vanilla_reg_alloc(SHIM_INTERP, ARGMOD(IMC_Unit *unit))
 
 =item C<static unsigned int* ig_get_word>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -186,7 +186,7 @@ ig_get_word(int i, int j, int N, ARGIN(unsigned int *graph),
 
 =item C<static void ig_set>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -204,7 +204,7 @@ ig_set(int i, int j, int N, ARGIN(unsigned int *graph))
 
 =item C<unsigned int ig_test>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -222,7 +222,7 @@ ig_test(int i, int j, int N, ARGIN(unsigned int *graph))
 
 =item C<static unsigned int* ig_allocate>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -350,7 +350,7 @@ imc_reg_alloc(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
 
 =item C<void free_reglist>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -368,7 +368,8 @@ free_reglist(ARGMOD(IMC_Unit *unit))
     }
 
     if (unit->reglist) {
-        int i;
+        unsigned int i;
+
         for (i = 0; i < unit->n_symbols; i++)
             free_life_info(unit, unit->reglist[i]);
 
@@ -382,7 +383,7 @@ free_reglist(ARGMOD(IMC_Unit *unit))
 
 =item C<void graph_coloring_reg_alloc>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -413,7 +414,7 @@ make_stat(ARGMOD(IMC_Unit *unit), ARGMOD_NULLOK(int *sets), ARGMOD_NULLOK(int *c
 {
     /* register usage summary */
     SymHash * const hsh = &unit->hash;
-    int             i;
+    unsigned int    i;
 
     for (i = 0; i < hsh->size; i++) {
         SymReg *r;
@@ -552,7 +553,7 @@ reg_sort_f(ARGIN(const void *a), ARGIN(const void *b))
 
 =item C<static void sort_reglist>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -586,10 +587,11 @@ Run through them and allocate all that don't overlap in one bunch.
 static void
 build_reglist(Parrot_Interp interp, ARGMOD(IMC_Unit *unit))
 {
-    int i, count, unused, n_symbols;
     SymHash  const *hsh = &unit->hash;
+    unsigned int    i, count, unused, n_symbols;
 
     IMCC_info(interp, 2, "build_reglist\n");
+
     /* count symbols */
     if (unit->reglist)
         free_reglist(unit);
@@ -647,7 +649,7 @@ significantly
 static void
 rebuild_reglist(ARGMOD(IMC_Unit *unit))
 {
-    int i, count, unused;
+    unsigned int i, count, unused;
     static const char types[] = "INSP";
 
     for (i = count = unused = 0; i < unit->n_symbols; i++) {
@@ -748,7 +750,7 @@ compute_du_chain(ARGMOD(IMC_Unit *unit))
 {
     Instruction *ins        = unit->instructions;
     Instruction *lastbranch = NULL;
-    int i;
+    unsigned int i;
 
     /* Compute last branch in this procedure, update instruction index */
     for (i = 0; ins; ins = ins->next) {
@@ -775,7 +777,7 @@ compute_du_chain(ARGMOD(IMC_Unit *unit))
 
 =item C<static void compute_one_du_chain>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -923,7 +925,7 @@ find available color for register #x in available colors
 static int
 ig_find_color(ARGIN(const IMC_Unit *unit), ARGIN(const char *avail))
 {
-    int c;
+    unsigned int c;
 
     for (c = 0; c < unit->n_symbols; c++)
         if (avail[c])
@@ -950,15 +952,15 @@ If we run out of colors, then we need to spill the top node.
 static int
 try_allocate(PARROT_INTERP, ARGIN(IMC_Unit *unit))
 {
-    int             x;
+    unsigned int    i;
     char           *avail;
     unsigned int   *graph   = unit->interference_graph;
     SymReg ** const reglist = unit->reglist;
 
     /* unit->n_symbols should be an upper limit of needed colors */
-    int n = unit->n_symbols;
+    unsigned int n = unit->n_symbols;
 
-    if (unit->max_color >= n)
+    if (unit->max_color >= (int)n)
         n = unit->max_color + 1;
 
     if (!n)
@@ -966,9 +968,9 @@ try_allocate(PARROT_INTERP, ARGIN(IMC_Unit *unit))
 
     avail = mem_allocate_n_typed(n, char);
 
-    for (x = 0; x < unit->n_symbols; ++x) {
+    for (i = 0; i < unit->n_symbols; ++i) {
         int     already_allocated, color;
-        SymReg *r = reglist[x];
+        SymReg *r = reglist[i];
         int     t = -1;
 
         if (r->color >= 0)
@@ -989,7 +991,7 @@ try_allocate(PARROT_INTERP, ARGIN(IMC_Unit *unit))
 
         /* don't even consider these regs */
         memset(avail, 1, n);
-        map_colors(unit, x, graph, avail, r->set, already_allocated);
+        map_colors(unit, i, graph, avail, r->set, already_allocated);
         color = ig_find_color(unit, avail);
 
         if (color == -1)
@@ -1050,14 +1052,14 @@ find first available register of the given reg_set
 static int
 first_avail(ARGIN(const IMC_Unit *unit), int reg_set, ARGOUT_NULLOK(Set **avail))
 {
-    int      n                = unit->n_symbols > unit->max_color
-                              ? unit->n_symbols
+    int n                     = (int)unit->n_symbols > unit->max_color
+                              ? (int)unit->n_symbols
                               : unit->max_color;
-    Set     *allocated        = set_make(n + 1);
+    Set         *allocated    = set_make((unsigned int)n + 1);
 
     const SymHash * const hsh = &unit->hash;
 
-    int i, first;
+    unsigned int i, first;
 
     /* find allocated registers */
     for (i = 0; i < hsh->size; i++) {
@@ -1065,8 +1067,8 @@ first_avail(ARGIN(const IMC_Unit *unit), int reg_set, ARGOUT_NULLOK(Set **avail)
         for (r = hsh->data[i]; r; r = r->next) {
             if (r->set == reg_set)
                 if (REG_NEEDS_ALLOC(r))
-                    if (r->color >= 0)
-                        set_add(allocated, r->color);
+                    if (r->color >= (int)0)
+                        set_add(allocated, (unsigned int)r->color);
         }
     }
 
@@ -1094,11 +1096,10 @@ allocate lexicals or non-volatile in ascending order
 static void
 allocate_uniq(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int usage)
 {
-    SymHash *hsh     = &unit->hash;
-    Set     *sets[4] = { NULL, NULL, NULL, NULL };
-    SymReg  *r;
-
-    int i;
+    SymHash     *hsh     = &unit->hash;
+    Set         *sets[4] = { NULL, NULL, NULL, NULL };
+    SymReg      *r;
+    unsigned int i;
 
     for (i = 0; i < hsh->size; i++) {
         for (r = hsh->data[i]; r; r = r->next) {
@@ -1148,7 +1149,7 @@ allocate_uniq(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int usage)
 
 =item C<static void vanilla_reg_alloc>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1157,11 +1158,12 @@ RT#48260: Not yet documented!!!
 static void
 vanilla_reg_alloc(SHIM_INTERP, ARGMOD(IMC_Unit *unit))
 {
-    int i, j, reg_set, first_reg;
-    char     type[] = "INSP";
-    Set     *avail;
-    SymReg  *r;
-    SymHash *hsh = &unit->hash;
+    char         type[] = "INSP";
+    SymHash     *hsh    = &unit->hash;
+    Set         *avail;
+    SymReg      *r;
+    unsigned int i, j;
+    int          reg_set, first_reg;
 
     /* Clear the pre-assigned colors. */
     for (i = 0; i < hsh->size; i++) {
@@ -1200,7 +1202,7 @@ vanilla_reg_alloc(SHIM_INTERP, ARGMOD(IMC_Unit *unit))
 
 =item C<static void allocate_lexicals>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1217,7 +1219,7 @@ allocate_lexicals(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
 =item C<static void allocate_non_volatile>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 

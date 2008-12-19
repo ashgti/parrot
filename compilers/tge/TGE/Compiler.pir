@@ -8,13 +8,13 @@ TGE::Compiler - A compiler for the grammar syntax of TGE.
 
 =cut
 
-.namespace [ 'TGE::Compiler' ]
+.namespace [ 'TGE'; 'Compiler' ]
 
 .sub __onload :load
     load_bytecode 'TGE.pbc'
 
-    $P0 = get_class 'TGE::Grammar'
-    $P1 = subclass $P0, 'TGE::Compiler'
+    $P0 = get_class [ 'TGE'; 'Grammar' ]
+    $P1 = subclass $P0, [ 'TGE'; 'Compiler' ]
 .end
 
 =head2 parse_grammar
@@ -30,7 +30,7 @@ structure.
     # Parse the source string and build a match tree
     .local pmc match
     .local pmc start_rule
-    start_rule = find_global "TGE::Parser", "start"
+    start_rule = get_hll_global ['TGE';'Parser'], "start"
     match = start_rule(source, 'grammar'=>'TGE::Parser')
     # Verify the parse
     unless match goto err_parse    # if parse fails, stop
@@ -42,8 +42,8 @@ structure.
 
     # Transform the parse tree and return the result
     .local pmc tree_match
-    tree_match = self.apply(match)
-    $P5 = tree_match.get('result')
+    tree_match = self.'apply'(match)
+    $P5 = tree_match.'get'('result')
 #        say 'Data structure dump:'
 #        '_dumper'($P5, "syntax tree")
     .return($P5)
@@ -55,17 +55,17 @@ structure.
 .end
 
 .sub init :vtable :method
-    self.add_rule("ROOT",       "result", ".", "ROOT_result")
-    self.add_rule("statements", "result", ".", "statements_result")
-    self.add_rule("statement",  "result", ".", "statement_result")
-    self.add_rule("transrule",  "result", ".", "transrule_result")
-    self.add_rule("grammardec", "result", ".", "grammardec_result")
-    self.add_rule("type",       "value",  ".", "type_value")
-    self.add_rule("inherit",    "value",  ".", "inherit_value")
-    self.add_rule("name",       "value",  ".", "name_value")
-    self.add_rule("parent",     "value",  ".", "parent_value")
-    self.add_rule("action",     "value",  ".", "action_value")
-    self.add_rule("language",   "value",  ".", "language_value")
+    self.'add_rule'("ROOT",       "result", ".", "ROOT_result")
+    self.'add_rule'("statements", "result", ".", "statements_result")
+    self.'add_rule'("statement",  "result", ".", "statement_result")
+    self.'add_rule'("transrule",  "result", ".", "transrule_result")
+    self.'add_rule'("grammardec", "result", ".", "grammardec_result")
+    self.'add_rule'("type",       "value",  ".", "type_value")
+    self.'add_rule'("inherit",    "value",  ".", "inherit_value")
+    self.'add_rule'("name",       "value",  ".", "name_value")
+    self.'add_rule'("parent",     "value",  ".", "parent_value")
+    self.'add_rule'("action",     "value",  ".", "action_value")
+    self.'add_rule'("language",   "value",  ".", "language_value")
 .end
 
 .sub ROOT_result :method
@@ -74,7 +74,7 @@ structure.
     $I0 = exists node["TGE::Parser::statements"]
     unless $I0 goto err_no_tree
     $P0 = node["TGE::Parser::statements"]
-    $P2 = tree.get('result', $P0, 'statements')
+    $P2 = tree.'get'('result', $P0, 'statements')
     .return ($P2)
 
 err_no_tree:
@@ -96,7 +96,7 @@ err_no_tree:
 loop_start:
     unless iter goto loop_end
     $P1 = shift iter
-    $P2 = tree.get('result', $P1, 'statement')
+    $P2 = tree.'get'('result', $P1, 'statement')
     push statements, $P2
     goto loop_start
 loop_end:
@@ -113,14 +113,15 @@ err_no_tree:
     .local pmc result
 
     .local pmc iter
-    iter = new 'Iterator', node    # setup iterator for node
+    $P0 = node.'hash'()
+    iter = new 'Iterator', $P0    # setup iterator for node
     iter = 0
   iter_loop:
     unless iter, iter_end         # while (entries) ...
       shift $S1, iter           # get the key of the iterator
       $P2 = iter[$S1]
 
-      result = tree.get('result', $P2, $S1)
+      result = tree.'get'('result', $P2, $S1)
 
       goto iter_loop
   iter_end:
@@ -135,7 +136,8 @@ err_no_tree:
     rule = new 'Hash'
 
     .local pmc iter
-    iter = new 'Iterator', node    # setup iterator for node
+    $P0 = node.'hash'()
+    iter = new 'Iterator', $P0    # setup iterator for node
     iter = 0
   iter_loop:
     unless iter, iter_end         # while (entries) ...
@@ -143,7 +145,7 @@ err_no_tree:
       shift $S1, iter           # get the key of the iterator
       $P2 = iter[$S1]
 
-      $P3 = tree.get('value', $P2, $S1)
+      $P3 = tree.'get'('value', $P2, $S1)
 
       rule[$S1] = $P3
       goto iter_loop
@@ -169,7 +171,8 @@ err_no_rule:
     decl = new 'Hash'
 
     .local pmc iter
-    iter = new 'Iterator', node    # setup iterator for node
+    $P0 = node.'hash'()
+    iter = new 'Iterator', $P0    # setup iterator for node
     iter = 0
   iter_loop:
     unless iter, iter_end         # while (entries) ...
@@ -177,7 +180,7 @@ err_no_rule:
       shift $S1, iter           # get the key of the iterator
       $P2 = iter[$S1]
 
-      $P3 = tree.get('value', $P2, $S1)
+      $P3 = tree.'get'('value', $P2, $S1)
 
       decl[$S1] = $P3
       goto iter_loop
@@ -193,7 +196,7 @@ err_no_rule:
     $P1 = node[0]
     $P2 = $P1['type']
     .local pmc value
-    value = tree.get('value', $P2, 'type')
+    value = tree.'get'('value', $P2, 'type')
     .return (value)
 .end
 
@@ -357,7 +360,7 @@ loop_end:
     type = rule["type"]
     name = rule["name"]
     parent = rule["parent"]
-    output = "    self.add_rule('"
+    output = "    self.'add_rule'('"
     output .= type
     output .= "', '"
     output .= name
@@ -397,34 +400,48 @@ loop_end:
     .local string code
     .local string type
     .local string inherit
-    type = grammar["type"]
+    type    = grammar["type"]
     inherit = grammar["inherit"]
-    code = "\n.namespace"
-    if type == '' goto no_type
-    code .= " [ '"
-    code .= type
-    code .= "' ]"
+    .local string inherit_key, type_key
+    inherit_key = self.'classname_key'(inherit)
+    type_key    = self.'classname_key'(type)
+
+    code  = "\n.namespace"
+    code .= type_key
   no_type:
     code .= "\n\n"
     code .= ".sub '__onload' :load :init\n"
     code .= "    load_bytecode 'TGE.pbc'\n"
     code .= "    push_eh class_loaded\n"
-    code .= "    $P1 = subclass '"
-    code .= inherit
-    code .= "', '"
-    code .= type
-    code .= "'\n"
-    code .= "    pop_eh\n"
+    code .= "    $P1 = subclass "
+    code .= inherit_key
+    code .= ", "
+    code .= type_key
+    code .= "\n"
     code .= "  class_loaded:\n"
+    code .= "    pop_eh\n"
     code .= "\n.end\n\n"
     .return (code)
 .end
 
-=head1 AUTHOR
+.sub 'classname_key' :method
+    .param string name
+    .local string key
+    .local pmc parts
+    parts = split '::', name
 
-Allison Randal <allison@perl.org>
+    # If splitting on '::' doesn't break down name, try splitting on ';'.
+    $I0 = elements parts
+    if $I0 > 1 goto build_key
+    parts = split ';', name
 
-=cut
+  build_key:
+    key = " [ '"
+    $S0  = join "'; '", parts
+    key .= $S0
+    key .= "' ]"
+    .return (key)
+.end
 
 # Local Variables:
 #   mode: pir

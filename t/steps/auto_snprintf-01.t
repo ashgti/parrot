@@ -5,13 +5,12 @@
 
 use strict;
 use warnings;
-use Test::More tests => 38;
+use Test::More tests => 33;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
 use_ok('config::init::hints');
 use_ok('config::auto::attributes');
-use_ok('config::auto::aio');
 use_ok('config::auto::snprintf');
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
@@ -24,7 +23,7 @@ use IO::CaptureOutput qw| capture |;
 
 ########## regular ##########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -34,7 +33,6 @@ my $conf = Parrot::Configure->new();
 test_step_thru_runstep($conf, q{init::defaults}, $args);
 test_step_thru_runstep($conf, q{init::hints}, $args);
 test_step_thru_runstep($conf, q{auto::attributes}, $args);
-test_step_thru_runstep($conf, q{auto::aio}, $args);
 
 my $pkg = q{auto::snprintf};
 
@@ -67,7 +65,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_snprintf() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -93,7 +91,7 @@ $conf->replenish($serialized);
 
 ########## --verbose; _evaluate_snprintf() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [ q{--verbose} ],
     mode            => q{configure},
 } );

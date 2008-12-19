@@ -15,10 +15,13 @@ value of the comment is passed as the second argument to the method.
 
 =end comments
 
+=cut
+
 class Pipp::Grammar::Actions;
 
 method TOP($/) {
-    my $past  := PAST::Stmts.new( :node($/) );
+    my $past := PAST::Stmts.new( :node($/) );
+
     for $<sea_or_code> {
         $past.push( $($_) );
     }
@@ -30,7 +33,7 @@ method sea_or_code($/,$key) {
     make $( $/{$key} );
 }
 
-# The sea, HTML, surrounding the island, code, is printed out
+# The sea, text, surrounding the island, code, is printed out
 method SEA($/) {
     make PAST::Op.new(
              PAST::Val.new(
@@ -42,7 +45,7 @@ method SEA($/) {
          );
 }
 
-method code_tp1($/) {
+method code_short_tag($/) {
     my $past := PAST::Stmts.new( :node($/) );
     for $<statement> {
         $past.push( $($_) );
@@ -51,7 +54,21 @@ method code_tp1($/) {
     make $past;
 }
 
-method code_tp2($/) {
+method code_echo_tag($/) {
+    my $past := PAST::Stmts.new( :node($/) );
+
+    my $echo := $( $<arguments> );
+    $echo.name( 'echo' );
+    $past.push( $echo );
+
+    for $<statement> {
+        $past.push( $($_) );
+    }
+
+    make $past;
+}
+
+method code_script_tag($/) {
     my $past := PAST::Stmts.new( :node($/) );
     for $<statement> {
         $past.push( $($_) );
@@ -73,7 +90,7 @@ method statement($/,$key) {
     make $( $/{$key} );
 }
 
-method inline_sea_tp1($/) {
+method inline_sea_short_tag($/) {
    make PAST::Op.new(
             PAST::Val.new(
                 :value(~$<SEA_empty_allowed>),
@@ -82,6 +99,42 @@ method inline_sea_tp1($/) {
             :name('echo'),
             :node($/)
         );
+}
+
+method namespace_statement($/) {
+    our $?NS := ~$<NAMESPACE_NAME>; 
+    my $past := PAST::Op.new(
+                    :pasttype('call'),
+                    :name('echo'),
+                    :node($/),
+                    PAST::Val.new(
+                        :value('Encountered namespace: ' ~ $?NS ~ "\n"),
+                        :returns('PhpString'),
+                    ),
+                );
+    make $past;
+}
+
+method return_statement($/) {
+    my $past := PAST::Op.new(
+                   :name('return'),
+                   :pasttype('call'),
+                   :node( $/ ),
+                   $( $/<expression> )
+               );
+
+    make $past;
+}
+
+method require_once_statement($/) {
+    my $past := PAST::Op.new(
+                   :name('require'),
+                   :pasttype('call'),
+                   :node( $/ ),
+                   $( $/<quote> )
+               );
+
+    make $past;
 }
 
 method echo_statement($/) {
@@ -136,6 +189,37 @@ method constant($/) {
          );
 }
 
+# can be mergerd with constant
+method class_constant($/) {
+    make PAST::Op.new(
+             :name('constant'),
+             PAST::Val.new(
+                 :returns('PhpString'),
+                 :value( ~$/ ),
+             )
+         );
+}
+
+# class constants could probably also be set in a class init block
+method class_constant_definition($/) {
+    my $past := PAST::Block.new( :name( 'class_constant_definition' ) );
+    my $loadinit := $past.loadinit();
+    $loadinit.unshift(
+       PAST::Op.new(
+           :pasttype('call'),
+           :name('define'),
+           :node( $/ ),
+           PAST::Val.new(
+               :value( 'Foo::' ~ ~$<CONSTANT_NAME> ),
+               :returns('PhpString'),
+           ),
+           $( $<literal> ),
+       )
+    );
+
+    make $past;
+}
+
 method arguments($/) {
     my $past := PAST::Op.new(
                     :pasttype('call'),
@@ -179,7 +263,7 @@ method array_elem($/) {
              $past_var_name,
              $( $<expression> ),
              :scope('keyed'),
-             :viviself('Undef'),
+             :viviself('PhpNull'),
              :lvalue(1)
          );
 }
@@ -189,15 +273,23 @@ method var($/,$key) {
 }
 
 method VAR_NAME($/) {
+    our $?PIPP_CURRENT_SCOPE;
+
     make PAST::Var.new(
-             :scope('package'),
+             :scope( $?PIPP_CURRENT_SCOPE ?? $?PIPP_CURRENT_SCOPE !! 'package' ),
              :name(~$/),
-             :viviself('Undef'),
-             :lvalue(1)
+             :viviself('PhpNull'),
+             :lvalue(1),
          );
 }
 
 method this($/) {
+    make PAST::Op.new(
+             :inline( "%r = self" )
+         );
+}
+
+method member($/) {
     make PAST::Op.new(
              :inline( "%r = self" )
          );
@@ -279,7 +371,7 @@ method FALSE($/) {
 method NULL($/) {
     make PAST::Val.new(
              :value( 0 ),
-             :returns('PhpUndef'),
+             :returns('PhpNull'),
              :node($/)
          );
 }
@@ -302,6 +394,9 @@ method NUMBER($/) {
 
 method function_definition($/) {
 
+    # PHP has two scopes: local to functions and global
+    our $?PIPP_CURRENT_SCOPE := 'lexical';
+
     # note that $<param_list> creates a new PAST::Block.
     my $past := $( $<param_list> );
 
@@ -309,18 +404,22 @@ method function_definition($/) {
     $past.control('return_pir');
     $past.push( $( $<block> ) );
 
+    $?PIPP_CURRENT_SCOPE := '';
+
     make $past;
 }
 
-method member_definition($/) {
-    make PAST::Op.new(
-             $( $<var> ),
-             $( $<literal> ),
-             :pasttype('bind'),
-         );
+# nested functions are not supported yet
+method ENTER_FUNCTION_DEF($/) {
+    our $?PIPP_CURRENT_SCOPE;
+    $?PIPP_CURRENT_SCOPE := 'lexical';
+}
+method EXIT_FUNCTION_DEF($/) {
+    our $?PIPP_CURRENT_SCOPE;
+    $?PIPP_CURRENT_SCOPE := 'package';
 }
 
-method method_definition($/) {
+method class_method_definition($/) {
 
     # note that $<param_list> creates a new PAST::Block.
     my $past := $( $<param_list> );
@@ -339,6 +438,7 @@ method param_list($/) {
                     :blocktype('declaration'),
                     :node($/)
                 );
+    my $arity := 0;
     for $<VAR_NAME> {
         my $param := $( $_ );
         $param.scope('parameter');
@@ -349,7 +449,9 @@ method param_list($/) {
              :scope('lexical'),
              $param.name()
         );
+        $arity++;
     }
+    $past.arity( $arity );
 
     make $past;
 }
@@ -357,22 +459,35 @@ method param_list($/) {
 method class_definition($/) {
     my $past := PAST::Block.new(
                     :node($/),
-                    :blocktype('declaration'),
                     :namespace( $<CLASS_NAME><ident> ),
+                    :blocktype('declaration'),
                     :pirflags( ':init :load' ),
-                    :lexical( 0 ),
                     PAST::Stmts.new(
                         PAST::Op.new(
-                            :inline(   "$P0 = get_hll_global 'P6metaclass'\n $P1 = split '::', '"
-                                     ~ $<CLASS_NAME>
-                                     ~ "'\n push_eh subclass_done\n $P2 = $P0.'new_class'($P1)\n pop_eh\n subclass_done:\n" ),
+                            :inline(   "$P0 = get_hll_global 'P6metaclass'\n"
+                                     ~ "$P2 = $P0.'new_class'('" ~ $<CLASS_NAME> ~ "')\n" ),
                             :pasttype( 'inline' )
                         )
                     )
                 );
-    for $<method_definition> {
-        $past.push( $($_) );
+
+    # nothing to do for $<const_definition,
+    # setup of class constants is done in the 'loadinit' node
+    for $<class_constant_definition> {
+       $past.push($($_));
     }
+
+    my $methods_block
+        := PAST::Block.new(
+                    :blocktype('immediate'),
+           );
+    for $<class_member_definition> {
+        $methods_block.symbol( ~$_<VAR_NAME><ident>, :scope('attribute') );
+    }
+    for $<class_method_definition> {
+        $methods_block.push( $($_) );
+    }
+    $past.push( $methods_block );
 
     make $past;
 }
@@ -420,7 +535,7 @@ method quote_concat($/) {
         $past := PAST::Op.new(
             $past,
             $( $<quote_term>[$count] ),
-            :pirop('n_concat'),
+            :pirop('concat'),
             :pasttype('pirop')
         );
         $count := $count + 1;

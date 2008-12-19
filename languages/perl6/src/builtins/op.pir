@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-src/builtins/op.pir - Perl6 builtin operators
+src/builtins/op.pir - Perl 6 builtin operators
 
 =head1 Functions
 
@@ -31,6 +31,10 @@ src/builtins/op.pir - Perl6 builtin operators
 .sub 'postfix:++' :multi(_)
     .param pmc a
     $P0 = clone a
+    $I0 = defined a
+    if $I0 goto have_a
+    'infix:='(a, 0)
+  have_a:
     inc a
     .return ($P0)
 .end
@@ -38,6 +42,10 @@ src/builtins/op.pir - Perl6 builtin operators
 .sub 'postfix:--' :multi(_)
     .param pmc a
     $P0 = clone a
+    $I0 = defined a
+    if $I0 goto have_a
+    'infix:='(a, 0)
+  have_a:
     dec a
     .return ($P0)
 .end
@@ -45,6 +53,10 @@ src/builtins/op.pir - Perl6 builtin operators
 
 .sub 'prefix:++' :multi(_)
     .param pmc a
+    $I0 = defined a
+    if $I0 goto have_a
+    'infix:='(a, 0)
+  have_a:
     inc a
     .return (a)
 .end
@@ -52,6 +64,10 @@ src/builtins/op.pir - Perl6 builtin operators
 
 .sub 'prefix:--' :multi(_)
     .param pmc a
+    $I0 = defined a
+    if $I0 goto have_a
+    'infix:='(a, 0)
+  have_a:
     dec a
     .return (a)
 .end
@@ -70,7 +86,7 @@ src/builtins/op.pir - Perl6 builtin operators
     .param num base
     .param num exp
     $N0 = pow base, exp
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -88,7 +104,7 @@ src/builtins/op.pir - Perl6 builtin operators
 
 .sub 'prefix:^?' :multi(_)
     .param pmc a
-    .return 'prefix:!'(a)
+    .tailcall 'prefix:!'(a)
 .end
 
 
@@ -99,8 +115,8 @@ src/builtins/op.pir - Perl6 builtin operators
 
 
 .sub 'prefix:+' :multi('Integer')
-    .param int a
-    .return (a)
+    .param num a
+    .tailcall '!upgrade_to_num_if_needed'(a)
 .end
 
 
@@ -112,9 +128,9 @@ src/builtins/op.pir - Perl6 builtin operators
 
 
 .sub 'prefix:-' :multi('Integer')
-    .param int a
-    $I0 = neg a
-    .return ($I0)
+    .param num a
+    $N0 = neg a
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -151,7 +167,7 @@ src/builtins/op.pir - Perl6 builtin operators
     .param num a
     .param num b
     $N0 = a * b
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -170,7 +186,7 @@ src/builtins/op.pir - Perl6 builtin operators
     $I0 = floor $N0
     $N1 = $N0 - $I0
     if $N1 != 0 goto upgrade
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
   upgrade:
     .return ($N0)
 .end
@@ -188,7 +204,7 @@ src/builtins/op.pir - Perl6 builtin operators
     .param num a
     .param num b
     $N0 = mod a, b
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -267,7 +283,7 @@ src/builtins/op.pir - Perl6 builtin operators
     .param num a
     .param num b
     $N0 = a + b
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -283,7 +299,7 @@ src/builtins/op.pir - Perl6 builtin operators
     .param num a
     .param num b
     $N0 = a - b
-    .return '!upgrade_to_num_if_needed'($N0)
+    .tailcall '!upgrade_to_num_if_needed'($N0)
 .end
 
 
@@ -356,13 +372,13 @@ src/builtins/op.pir - Perl6 builtin operators
 
 .sub 'true' :multi(_)
     .param pmc a
-    .return 'prefix:?'(a)
+    .tailcall 'prefix:?'(a)
 .end
 
 
 .sub 'not' :multi(_)
     .param pmc a
-    .return 'prefix:!'(a)
+    .tailcall 'prefix:!'(a)
 .end
 
 
@@ -384,7 +400,7 @@ src/builtins/op.pir - Perl6 builtin operators
     if $I0 goto one_role
     $I0 = isa role, 'List'
     if $I0 goto many_roles
-    'die'("'does' expcts a role or a list of roles")
+    'die'("'does' expects a role or a list of roles")
 
   one_role:
     '!keyword_does'(derived, role)
@@ -401,15 +417,14 @@ src/builtins/op.pir - Perl6 builtin operators
   roles_loop_end:
   added_roles:
 
-    # We need to make a dummy instance of the class, to force it to internally
-    # construct itself.
-    $P0 = new derived
-
     # Register proto-object.
     .local pmc p6meta, proto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     proto = var.'WHAT'()
-    p6meta.register(derived, 'protoobject'=>proto)
+    p6meta.'register'(derived, 'protoobject'=>proto)
+
+    # Instantiate the class to make it form itself.
+    $P0 = new derived
 
     # Re-bless the object into the subclass.
     rebless_subclass var, derived
@@ -460,6 +475,7 @@ attr_error:
     role_list = inspect the_class, 'roles'
     value = role
     role = role_list[0]
+    pop_eh
     goto have_role
 
     # Did anything go wrong?

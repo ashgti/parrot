@@ -28,7 +28,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.9>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'debug' ]
 
 .sub 'luaopen_debug'
@@ -95,11 +96,13 @@ function, and so have no direct access to local variables.
   L3:
     push_eh _handler
     $P0()
+    pop_eh
     goto L1
   _handler:
     .local pmc e
     .local string msg
-    .get_results (e, msg)
+    .get_results (e)
+    msg = e
     printerr msg
     printerr "\n"
     goto L1
@@ -116,7 +119,7 @@ Returns the environment of object C<o>.
 .sub 'getfenv'
     .param pmc o :optional
     .param pmc extra :slurpy
-    .return lua_getfenv(o)
+    .tailcall lua_getfenv(o)
 .end
 
 

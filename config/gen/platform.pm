@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2007, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
@@ -15,7 +15,6 @@ package gen::platform;
 
 use strict;
 use warnings;
-
 
 use base qw(Parrot::Configure::Step);
 
@@ -58,6 +57,8 @@ sub runstep {
     copy_if_diff( $self->{platform_interface},
         "include/parrot/platform_interface.h" );
 
+    $self->_set_limits($conf, $verbose, $platform);
+
     return 1;
 }
 
@@ -66,7 +67,6 @@ sub _get_platform {
     my ($conf, $verbose) = @_;
     my $platform = lc ( $conf->data->get_p5('OSNAME') );
 
-    $platform = "ansi"  if $conf->options->get('miniparrot');
     $platform = "win32" if $platform =~ /^msys/;
     $platform = "win32" if $platform =~ /^mingw/;
     $platform =~ s/^ms//;
@@ -195,6 +195,19 @@ END_HERE
     return 1;
 }
 
+sub _set_limits {
+    my $self = shift;
+    my ($conf, $verbose, $platform) = @_;
+
+    my $limits = "config/gen/platform/generic/platform_limits.h";
+    if ( -e "config/gen/platform/$platform/platform_limits.h" ) {
+        $limits = "config/gen/platform/$platform/platform_limits.h";
+    }
+    copy_if_diff( $limits, "include/parrot/platform_limits.h" );
+
+    return;
+}
+
 sub _set_implementations {
     my $self = shift;
     my ($conf, $verbose, $platform, $generated) = @_;
@@ -317,6 +330,8 @@ END_HERE
         print {$PLATFORM_C} $in_c, "\n\n";
         close $IN_C;
     }
+
+    return;
 }
 
 sub _handle_asm {
@@ -328,6 +343,8 @@ sub _handle_asm {
             copy_if_diff( $asm_file, "src/platform_asm.s" );
         }
     }
+
+    return;
 }
 
 1;

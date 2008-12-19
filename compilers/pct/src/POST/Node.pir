@@ -29,7 +29,7 @@ for compiling programs in Parrot.
     $P0[4] = "    .param pmc %0 :named(%1)"
     $P0[5] = "    .param pmc %0 :optional :named(%1)\n    .param int has_%0 :opt_flag"
     $P0[6] = "    .param pmc %0 :slurpy :named"
-    set_hll_global ['POST::Sub'], '%!paramfmt', $P0
+    set_hll_global ['POST';'Sub'], '%!paramfmt', $P0
     .return ()
 .end
 
@@ -49,7 +49,7 @@ Get/set
 
 =cut
 
-.namespace [ 'POST::Node' ]
+.namespace [ 'POST';'Node' ]
 
 =item result([value])
 
@@ -66,11 +66,11 @@ as the result of the current node.
     if has_value == 1 goto set_value
     value = self['result']
     if null value goto result_null
-    $I0 = isa value, 'POST::Node'
+    $I0 = isa value, ['POST';'Node']
     if $I0 goto result_node
     .return (value)
   result_node:
-    .return value.'result'()
+    .tailcall value.'result'()
   result_null:
     .return ('')
   set_value:
@@ -138,22 +138,22 @@ Get/set the opcode type for this node.
 
 =cut
 
-.namespace [ 'POST::Op' ]
+.namespace [ 'POST';'Op' ]
 
 .sub 'pirop' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('pirop', value, has_value)
+    .tailcall self.'attr'('pirop', value, has_value)
 .end
 
 .sub 'inline' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('inline', value, has_value)
+    .tailcall self.'attr'('inline', value, has_value)
 .end
 
 
-.namespace [ 'POST::Label' ]
+.namespace [ 'POST';'Label' ]
 
 .sub 'result' :method
     .param pmc value           :optional
@@ -171,54 +171,60 @@ Get/set the opcode type for this node.
 .end
 
 
-.namespace [ 'POST::Sub' ]
+.namespace [ 'POST';'Sub' ]
 
 .sub 'blocktype' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('blocktype', value, has_value)
+    .tailcall self.'attr'('blocktype', value, has_value)
 .end
 
 
 .sub 'namespace' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('namespace', value, has_value)
+    .tailcall self.'attr'('namespace', value, has_value)
 .end
 
 
 .sub 'outer' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('outer', value, has_value)
+    .tailcall self.'attr'('outer', value, has_value)
 .end
 
 
-.sub 'lexid' :method
+.sub 'subid' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('lexid', value, has_value)
+    if has_value goto getset_value
+    $I0 = exists self['subid']
+    if $I0 goto getset_value
+    value = self.'unique'()
+    has_value = 1
+  getset_value:
+    .tailcall self.'attr'('subid', value, has_value)
 .end
 
 
 .sub 'pirflags' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('pirflags', value, has_value)
+    .tailcall self.'attr'('pirflags', value, has_value)
 .end
 
 
 .sub 'compiler' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('compiler', value, has_value)
+    .tailcall self.'attr'('compiler', value, has_value)
 .end
 
 
 .sub 'compiler_args' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .return self.'attr'('compiler_args', value, has_value)
+    .tailcall self.'attr'('compiler_args', value, has_value)
 .end
 
 
@@ -256,7 +262,7 @@ Get/set the opcode type for this node.
   have_code:
 
     .local pmc paramfmt
-    paramfmt = get_hll_global ['POST::Sub'], '%!paramfmt'
+    paramfmt = get_hll_global ['POST';'Sub'], '%!paramfmt'
     $S0 = paramfmt[paramseq]
     named = code.'escape'(named)
     code.'emit'($S0, pname, named)

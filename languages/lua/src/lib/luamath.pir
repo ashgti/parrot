@@ -47,7 +47,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.6>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'math' ]
 
 .sub 'luaopen_math'
@@ -99,7 +100,7 @@ LIST
 
     new $P0, 'LuaNumber'
     set $P0, 3.14159265358979323846
-    $P1 = 'pi'
+    set $P1, 'pi'
     _math[$P1] = $P0
 
     new $P0, 'LuaNumber'
@@ -107,7 +108,7 @@ LIST
     new $P2, 'LuaNumber'
     set $P2, 0.0
     div $P0, $P2
-    $P1 = 'huge'
+    set $P1, 'huge'
     _math[$P1] = $P0
 
 .end
@@ -255,8 +256,7 @@ LIST
     .param pmc extra :slurpy
     .local pmc res
     lua_checknumber(1, x)
-    new $P0, 'Lua'
-    res = $P0.'frexp'(x)
+    res = x.'frexp'()
     .return (res :flat)
 .end
 
@@ -268,8 +268,7 @@ LIST
     .local pmc res
     lua_checknumber(1, x)
     lua_checknumber(2, nexp)
-    new $P0, 'Lua'
-    res = $P0.'ldexp'(x, nexp)
+    res = x.'ldexp'(nexp)
     .return (res)
 .end
 
@@ -355,8 +354,7 @@ LIST
     .param pmc extra :slurpy
     .local pmc res
     lua_checknumber(1, x)
-    new $P0, 'Lua'
-    res = $P0.'modf'(x)
+    res = x.'modf'()
     .return (res :flat)
 .end
 

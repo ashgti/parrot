@@ -25,7 +25,7 @@ Tests the C<Coroutine> PMC.
 pasm_output_is( <<'CODE', <<'OUTPUT', "Coroutine 1" );
 .include "interpinfo.pasm"
 .pcc_sub _main:
-    .const .Sub P0 = "_coro"
+    .const 'Sub' P0 = "_coro"
     new P10, 'Integer'
     set P10, 2
     set_global "i", P10
@@ -54,7 +54,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Coroutines - M. Wallace yield example" );
 .sub __main__
     .local pmc return
     .local pmc counter
-    .const .Sub itr = "_iterator"
+    .const 'Sub' itr = "_iterator"
 
     .local pmc zero
     zero = new 'Integer'
@@ -65,7 +65,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Coroutines - M. Wallace yield example" );
     loop:
         .begin_call
             .call itr, return
-            .result counter
+            .get_result counter
         .end_call
 
         print counter
@@ -86,7 +86,7 @@ return_here:
     x = 0
     iloop:
         .begin_yield
-        .return x
+        .set_yield x
         .end_yield
         x = x + 1
     if x <= 10 goto iloop
@@ -109,7 +109,7 @@ OUTPUT
 pasm_output_is( <<'CODE', <<'OUTPUT', "Coroutine - exception in main" );
 .include "interpinfo.pasm"
 _main:
-    .const .Sub P0 = "_coro"
+    .const 'Sub' P0 = "_coro"
     push_eh _catchm
     new P16, 'Integer'
     set P16, 2
@@ -125,7 +125,7 @@ lp:
     print "done\n"
     end
 _catchm:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch main\n"
     end
 
@@ -137,7 +137,7 @@ corolp:
     yield
     branch corolp
 _catchc:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch coro\n"
     end
 CODE
@@ -148,7 +148,7 @@ OUTPUT
 pasm_output_is( <<'CODE', <<'OUTPUT', "Coroutine - exception in coro" );
 .include "interpinfo.pasm"
 _main:
-    .const .Sub P0 = "_coro"
+    .const 'Sub' P0 = "_coro"
     push_eh _catchm
     new P16, 'Integer'
     set P16, 2
@@ -162,7 +162,7 @@ lp:
     print "done\n"
     end
 _catchm:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch main\n"
     end
 
@@ -176,7 +176,7 @@ corolp:
     get_global P17, S0
     branch corolp
 _catchc:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch coro\n"
     end
 CODE
@@ -187,7 +187,7 @@ OUTPUT
 pasm_output_is( <<'CODE', <<'OUTPUT', "Coroutine - exception in coro no handler" );
 .include "interpinfo.pasm"
 _main:
-    .const .Sub P0 = "_coro"
+    .const 'Sub' P0 = "_coro"
     push_eh _catchm
     new P16, 'Integer'
     set P16, 2
@@ -201,7 +201,7 @@ lp:
     print "done\n"
     end
 _catchm:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch main\n"
     end
 .pcc_sub _coro:
@@ -223,7 +223,7 @@ OUTPUT
 pasm_output_is( <<'CODE', <<'OUTPUT', "Coroutine - exception in coro rethrow" );
 .include "interpinfo.pasm"
 _main:
-    .const .Sub P0 = "_coro"
+    .const 'Sub' P0 = "_coro"
     push_eh _catchm
     new P16, 'Integer'
     set P16, 2
@@ -237,7 +237,7 @@ lp:
     print "done\n"
     end
 _catchm:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch main\n"
     end
 
@@ -251,7 +251,7 @@ corolp:
     get_global P17, S0
     branch corolp
 _catchc:
-    get_results '0, 0' , P5, S0
+    get_results '0', P5
     print "catch coro\n"
     rethrow P5
     end
@@ -265,9 +265,9 @@ pir_output_is( <<'CODE', 'Coroutine', "Coro new - type" );
 
 .sub main :main
     .local pmc c
-    c = global "coro"
-    typeof S0, c
-    print S0
+    c = get_global "coro"
+    typeof $S0, c
+    print $S0
 .end
 .sub coro
     .local pmc x
@@ -284,12 +284,12 @@ pir_output_is( <<'CODE', '01234', "Coro new - yield" );
 
 .sub main :main
     .local pmc c
-    c = global "coro"
+    c = get_global "coro"
 loop:
     .begin_call
     .call c
-    .result   $P0 :optional
-    .result   $I0 :opt_flag
+    .get_result   $P0 :optional
+    .get_result   $I0 :opt_flag
     .end_call
     unless $I0,  ex
     print $P0
@@ -311,7 +311,7 @@ pir_output_like(
     <<'CODE', <<'OUTPUT', "Call an exited coroutine", todo => 'goes one iteration too far.' );
 .sub main :main
     .local pmc c
-    c = global "coro"
+    c = get_global "coro"
 loop:
     $P0 = c()
     print $P0
@@ -353,7 +353,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "re-entering coro from another sub" );
 
 .sub main :main
     .local int z
-    .const .Sub corou = "_coroufn"
+    .const 'Sub' corou = "_coroufn"
     corou("from main")
     z = 0
   loop:

@@ -28,7 +28,7 @@ so we use :multi as a temporary workaround.)
 
 =cut
 
-.namespace [ "Perl6::Grammar" ]
+.namespace [ "Perl6";"Grammar" ]
 
 .include "cclass.pasm"
 
@@ -36,8 +36,8 @@ so we use :multi as a temporary workaround.)
     .param pmc adverbs         :slurpy :named
     .local pmc optable
 
-    optable = get_hll_global ['Perl6::Grammar'], "$optable"
-    .return optable."parse"(self, 'rulename'=>'EXPR', adverbs :named :flat)
+    optable = get_hll_global ['Perl6';'Grammar'], "$optable"
+    .tailcall optable."parse"(self, 'rulename'=>'EXPR', adverbs :named :flat)
 .end
 
 .sub "EXPR" :method :multi(_,_)
@@ -45,8 +45,8 @@ so we use :multi as a temporary workaround.)
     .param pmc adverbs         :slurpy :named
     .local pmc optable
 
-    optable = get_hll_global ['Perl6::Grammar'], "$optable"
-    .return optable."parse"(self, 'rulename'=>'EXPR', 'tighter'=>tighter, adverbs :named :flat)
+    optable = get_hll_global ['Perl6';'Grammar'], "$optable"
+    .tailcall optable."parse"(self, 'rulename'=>'EXPR', 'tighter'=>tighter, adverbs :named :flat)
 .end
 
 =back

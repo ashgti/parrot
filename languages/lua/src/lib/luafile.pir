@@ -15,7 +15,8 @@ See F<languages/lua/lib/luaio.pir>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'io'; 'file' ]
 
 .sub 'createmeta'
@@ -23,7 +24,7 @@ See F<languages/lua/lib/luaio.pir>.
     _lua__GLOBAL = get_hll_global '_G'
 
     .local pmc _file
-    _file = lua_newmetatable('ParrotIO')
+    _file = lua_newmetatable('FileHandle')
 
     new $P1, 'LuaString'
     set $P1, '__index'
@@ -106,7 +107,7 @@ does not close the file when the loop ends.)
 .sub 'lines' :method
     .param pmc extra :slurpy
     tofile(self)
-    .return aux_lines(self, 0)
+    .tailcall aux_lines(self, 0)
 .end
 
 
@@ -154,7 +155,7 @@ empty string, or B<nil> on end of file.
     tofile(self)
     f = getattribute self, 'data'
     if formats goto L1
-    .return read_line(f)
+    .tailcall read_line(f)
   L1:
     .local int narg
     .local int i
@@ -289,8 +290,6 @@ or there is any input from some special files (such as a terminal device).
 For the last two cases, sizes specifies the size of the buffer, in bytes.
 The default is an appropriate size.
 
-NOT YET IMPLEMENTED.
-
 =cut
 
 .sub 'setvbuf' :method
@@ -304,15 +303,10 @@ NOT YET IMPLEMENTED.
     $S1 = lua_checkstring(1, mode)
     $I1 = lua_checkoption(1, $S1, 'no full line')
     $I2 = lua_optint(2, size, 512)     # LUAL_BUFFERSIZE
-    new mode, 'FixedIntegerArray'
-    set mode, 3
-    mode[0] = 0     # PIO_NONBUF
-    mode[1] = 2     # PIO_FULLBUF
-    mode[2] = 1     # PIO_LINEBUF
+    mode = split ' ', 'unbuffered full-buffered line-buffered'
+    $S0 = mode[$I1]
     f = getattribute self, 'data'
-    $I0 = mode[$I1]
-    # not_implemented
-    f.'buffer_type'($I0)
+    f.'buffer_type'($S0)
     if $I1 == 0 goto L1
     f.'buffer_size'($I2)
   L1:

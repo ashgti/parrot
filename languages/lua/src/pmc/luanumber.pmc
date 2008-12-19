@@ -32,6 +32,7 @@ pmclass LuaNumber
     dynpmc
     group    lua_group
     hll      Lua
+    maps     Integer
     maps     Float {
 
 /*
@@ -43,7 +44,7 @@ Initializes the number to zero.
 =cut
 
 */
-    void init() {
+    VTABLE void init() {
         PMC_num_val(SELF) = 0.0;
     }
 
@@ -61,7 +62,7 @@ Allow :
 =cut
 
 */
-    PMC *new_from_string(STRING *rep, INTVAL flags) {
+    VTABLE PMC *new_from_string(STRING *rep, INTVAL flags) {
         PMC *res;
         INTVAL type = PMC_type(SELF);
         if (flags & PObj_constant_FLAG)
@@ -81,7 +82,7 @@ Return the string "number".
 =cut
 
 */
-    STRING* name() {
+    VTABLE STRING* name() {
         return const_string(INTERP, "number");
     }
 
@@ -94,7 +95,7 @@ Creates and returns a clone of the scalar.
 =cut
 
 */
-    PMC *clone() {
+    VTABLE PMC *clone() {
         PMC *dest = pmc_new(INTERP, PMC_type(SELF));
         STRUCT_COPY(&PMC_union(dest), &PMC_union(SELF));
         return dest;
@@ -109,7 +110,7 @@ Returns an integer representation of the number (by casting).
 =cut
 
 */
-   INTVAL get_integer() {
+   VTABLE INTVAL get_integer() {
         return (INTVAL)PMC_num_val(SELF);
    }
 
@@ -122,7 +123,7 @@ Returns the value of the number.
 =cut
 
 */
-    FLOATVAL get_number() {
+    VTABLE FLOATVAL get_number() {
         return PMC_num_val(SELF);
     }
 
@@ -135,7 +136,7 @@ Returns a Parrot string representation of the number.
 =cut
 
 */
-    STRING* get_string() {
+    VTABLE STRING* get_string() {
         FLOATVAL f = PMC_num_val(SELF);
         return Parrot_sprintf_c(INTERP, LUA_NUMBER_FMT, f);
     }
@@ -147,7 +148,7 @@ Returns a Parrot string representation of the number.
 =cut
 
 */
-    void set_integer_native(INTVAL value) {
+    VTABLE void set_integer_native(INTVAL value) {
         PMC_num_val(SELF) = (FLOATVAL)value;
     }
 
@@ -158,7 +159,7 @@ Returns a Parrot string representation of the number.
 =cut
 
 */
-    void set_number_native(FLOATVAL value) {
+    VTABLE void set_number_native(FLOATVAL value) {
         PMC_num_val(SELF) = value;
     }
 
@@ -169,7 +170,7 @@ Returns a Parrot string representation of the number.
 =cut
 
 */
-    void set_string_native(STRING *value) {
+    VTABLE void set_string_native(STRING *value) {
         SELF.morph(dynpmc_LuaString);
         SELF.set_string_native(value);
     }
@@ -183,7 +184,7 @@ Sets the value of the number to the value in C<*value>.
 =cut
 
 */
-    void set_pmc(PMC *value) {
+    VTABLE void set_pmc(PMC *value) {
         PMC_num_val(SELF) = VTABLE_get_number(INTERP, value);
     }
 
@@ -196,7 +197,7 @@ Increments the number.
 =cut
 
 */
-    void increment() {
+    VTABLE void increment() {
         PMC_num_val(SELF)++;
     }
 
@@ -209,7 +210,7 @@ Decrements the number.
 =cut
 
 */
-    void decrement() {
+    VTABLE void decrement() {
         PMC_num_val(SELF)--;
     }
 
@@ -220,7 +221,7 @@ Decrements the number.
 =cut
 
 */
-    PMC *neg(PMC *dest) {
+    VTABLE PMC *neg(PMC *dest) {
         FLOATVAL a = -SELF.get_number();
         dest = pmc_new(INTERP, dynpmc_LuaNumber);
         VTABLE_set_number_native(INTERP, dest, a);
@@ -234,7 +235,7 @@ Decrements the number.
 =cut
 
 */
-    void i_neg() {
+    VTABLE void i_neg() {
         FLOATVAL a = -SELF.get_number();
         SELF.set_number_native(a);
     }
@@ -252,41 +253,41 @@ Decrements the number.
 =cut
 
 */
-    PMC *add(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_number_native(INTERP, dest,
-                    SELF.get_number() + VTABLE_get_number(INTERP, value));
+
+    MULTI PMC *add(LuaNumber value, PMC *dest) {
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, dest,
+                SELF.get_number() + VTABLE_get_number(INTERP, value));
+        return dest;
+    }
+
+    MULTI PMC *add(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_add_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+              "attempt to perform arithmetic on a %Ss value",
+                  VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *add(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__add");
+
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
+
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_add_LuaNumber(INTERP, SELF, n, dest);
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__add");
-
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                  "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+              "attempt to perform arithmetic on a %Ss value",
+                  VTABLE_name(INTERP, value));
     }
 
 /*
@@ -296,39 +297,38 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_add(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL n = SELF.get_number() + VTABLE_get_number(INTERP, value);
-            SELF.set_number_native(n);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+    MULTI void i_add(LuaNumber value) {
+        FLOATVAL n = SELF.get_number() + VTABLE_get_number(INTERP, value);
+        SELF.set_number_native(n);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_add_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                    "attempt to perform arithmetic on a %Ss value",
-                        VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__add");
+    MULTI void i_add(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (!SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_add_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_add(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__add");
+
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (!SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -338,43 +338,43 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *subtract(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
+    MULTI PMC *subtract(LuaNumber value, PMC *dest) {
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
 
-            VTABLE_set_number_native(INTERP, dest,
-                    SELF.get_number() - VTABLE_get_number(INTERP, value));
+        VTABLE_set_number_native(INTERP, dest,
+                SELF.get_number() - VTABLE_get_number(INTERP, value));
+
+        return dest;
+    }
+
+    MULTI PMC *subtract(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_subtract_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *subtract(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__sub");
+
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest)) {
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
+            }
 
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_subtract_LuaNumber(INTERP, SELF, n, dest);
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__sub");
-
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest)) {
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-                }
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -384,38 +384,37 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_subtract(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL n = SELF.get_number() - VTABLE_get_number(INTERP, value);
-            SELF.set_number_native(n);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+    MULTI void i_subtract(LuaNumber value) {
+        FLOATVAL n = SELF.get_number() - VTABLE_get_number(INTERP, value);
+        SELF.set_number_native(n);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_subtract_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                    "attempt to perform arithmetic on a %Ss value",
-                        VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__sub");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_subtract(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_subtract_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_subtract(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__sub");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -425,40 +424,39 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *multiply(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_number_native(INTERP, dest,
-                    SELF.get_number() * VTABLE_get_number(INTERP, value));
+    MULTI PMC *multiply(LuaNumber value, PMC *dest) {
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, dest,
+                SELF.get_number() * VTABLE_get_number(INTERP, value));
+        return dest;
+    }
+
+    MULTI PMC *multiply(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_multiply_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *multiply(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__mul");
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
+
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_multiply_LuaNumber(INTERP, SELF,
-                                                           n, dest);
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__mul");
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -468,38 +466,37 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_multiply(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL n = SELF.get_number() * VTABLE_get_number(INTERP, value);
-            SELF.set_number_native(n);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+    MULTI void i_multiply(LuaNumber value) {
+        FLOATVAL n = SELF.get_number() * VTABLE_get_number(INTERP, value);
+        SELF.set_number_native(n);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_multiply_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                    "attempt to perform arithmetic on a %Ss value",
-                        VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__mul");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_multiply(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_multiply_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_multiply(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__mul");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -509,40 +506,39 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *divide(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_number_native(INTERP, dest,
-                    SELF.get_number() / VTABLE_get_number(INTERP, value));
+    MULTI PMC *divide(LuaNumber value, PMC *dest) {
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, dest,
+                SELF.get_number() / VTABLE_get_number(INTERP, value));
+        return dest;
+    }
+
+    MULTI PMC *divide(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_divide_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *divide(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__div");
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
+
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_divide_LuaNumber(INTERP, SELF,
-                                                         n, dest);
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__div");
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -552,39 +548,38 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_divide(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL n = SELF.get_number()
-                         / VTABLE_get_number(INTERP, value);
-            SELF.set_number_native(n);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+    MULTI void i_divide(LuaNumber value) {
+        FLOATVAL n = SELF.get_number()
+                    / VTABLE_get_number(INTERP, value);
+        SELF.set_number_native(n);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_divide_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                    "attempt to perform arithmetic on a %Ss value",
-                        VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__div");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_divide(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_divide_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_divide(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__div");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -594,43 +589,42 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *modulus(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            FLOATVAL a = SELF.get_number();
-            FLOATVAL b = VTABLE_get_number(INTERP, value);
-            dest       = pmc_new(INTERP, dynpmc_LuaNumber);
+    MULTI PMC *modulus(LuaNumber value, PMC *dest) {
+        FLOATVAL a = SELF.get_number();
+        FLOATVAL b = VTABLE_get_number(INTERP, value);
+        dest       = pmc_new(INTERP, dynpmc_LuaNumber);
 
-            VTABLE_set_number_native(INTERP, dest, a - floor(a/b)*b);
+        VTABLE_set_number_native(INTERP, dest, a - floor(a/b)*b);
+
+        return dest;
+    }
+
+    MULTI PMC *modulus(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+               "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_modulus_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *modulus(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__mod");
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
 
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_modulus_LuaNumber(INTERP, SELF,
-                                                          n, dest);
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__mod");
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -640,40 +634,39 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_modulus(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL a = SELF.get_number();
-            FLOATVAL b = VTABLE_get_number(INTERP, value);
+    MULTI void i_modulus(LuaNumber value) {
+        FLOATVAL a = SELF.get_number();
+        FLOATVAL b = VTABLE_get_number(INTERP, value);
 
-            SELF.set_number_native(a - floor(a/b)*b);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+        SELF.set_number_native(a - floor(a/b)*b);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_modulus_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                      "attempt to perform arithmetic on a %Ss value",
-                      VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__mod");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_modulus(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_modulus_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_modulus(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__mod");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -683,40 +676,39 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *pow(PMC *value, PMC *dest) {
-MMD_LuaNumber: {
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_number_native(INTERP, dest,
-                  pow(SELF.get_number(), VTABLE_get_number(INTERP, value)));
+    MULTI PMC *pow(LuaNumber value, PMC *dest) {
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, dest,
+              pow(SELF.get_number(), VTABLE_get_number(INTERP, value)));
+        return dest;
+    }
+
+    MULTI PMC *pow(LuaString value, PMC *dest) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
+
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            return Parrot_LuaNumber_multi_pow_LuaNumber_PMC(INTERP, SELF, n, dest);
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
+    }
+
+    MULTI PMC *pow(DEFAULT value, PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__pow");
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
+
             return dest;
         }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                return Parrot_LuaNumber_pow_LuaNumber(INTERP, SELF, n, dest);
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__pow");
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to perform arithmetic on a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -726,39 +718,38 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_pow(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL n = pow(SELF.get_number(),
-                             VTABLE_get_number(INTERP, value));
-            SELF.set_number_native(n);
-        }
-MMD_LuaString: {
-            PMC *n;
-            Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
-                    "->P", &n);
+    MULTI void i_pow(LuaNumber value) {
+        FLOATVAL n = pow(SELF.get_number(),
+                        VTABLE_get_number(INTERP, value));
+        SELF.set_number_native(n);
+    }
 
-            if (PMC_type(n) == dynpmc_LuaNumber)
-                Parrot_LuaNumber_i_pow_LuaNumber(INTERP, SELF, n);
-            else
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                    "attempt to perform arithmetic on a %Ss value",
-                        VTABLE_name(INTERP, value));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__pow");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_pow(LuaString value) {
+        PMC *n;
+        Parrot_PCCINVOKE(interp, value, const_string(interp, "tonumber"),
+                "->P", &n);
 
-                return;
-            }
-
+        if (PMC_type(n) == dynpmc_LuaNumber)
+            Parrot_LuaNumber_multi_i_pow_LuaNumber(INTERP, SELF, n);
+        else
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to perform arithmetic on a %Ss value",
                     VTABLE_name(INTERP, value));
+    }
+
+    MULTI void i_pow(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__pow");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to perform arithmetic on a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -768,13 +759,12 @@ MMD_DEFAULT: {
 =cut
 
 */
-    INTVAL is_equal(PMC *value) {
-MMD_LuaNumber: {
-            return (INTVAL)(PMC_num_val(SELF) == PMC_num_val(value));
-        }
-MMD_DEFAULT: {
-            return (INTVAL)0;
-        }
+    MULTI INTVAL is_equal(LuaNumber value) {
+        return (INTVAL)(PMC_num_val(SELF) == PMC_num_val(value));
+    }
+
+    MULTI INTVAL is_equal(DEFAULT value) {
+        return (INTVAL)0;
     }
 
 /*
@@ -784,18 +774,17 @@ MMD_DEFAULT: {
 =cut
 
 */
-    INTVAL cmp(PMC *value) {
-MMD_LuaNumber: {
-            FLOATVAL diff = PMC_num_val(SELF)
-                - VTABLE_get_number(INTERP, value);
+    MULTI INTVAL cmp(LuaNumber value) {
+        FLOATVAL diff = PMC_num_val(SELF)
+            - VTABLE_get_number(INTERP, value);
 
-            return diff > 0 ? (INTVAL)1 : diff < 0 ? (INTVAL)-1 : (INTVAL)0;
-        }
-MMD_DEFAULT: {
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to compare number with %Ss",
-                    VTABLE_name(INTERP, value));
-        }
+        return diff > 0 ? (INTVAL)1 : diff < 0 ? (INTVAL)-1 : (INTVAL)0;
+    }
+
+    MULTI INTVAL cmp(DEFAULT value) {
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to compare number with %Ss",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -805,42 +794,41 @@ MMD_DEFAULT: {
 =cut
 
 */
-    PMC *concatenate(PMC *value,  PMC *dest) {
-MMD_LuaNumber: {
-            STRING *s = string_concat(INTERP, SELF.get_string(),
-                LuaNumber.value.get_string(), 0);
+    MULTI PMC *concatenate(LuaNumber value,  PMC *dest) {
+        STRING *s = string_concat(INTERP, SELF.get_string(),
+            VTABLE_get_string(INTERP, value), 0);
 
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_string_native(INTERP, dest, s);
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_string_native(INTERP, dest, s);
+
+        return dest;
+    }
+
+    MULTI PMC *concatenate(LuaString value,  PMC *dest) {
+        STRING *s = string_concat(INTERP, SELF.get_string(),
+            VTABLE_get_string(INTERP, value), 0);
+
+        dest = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_string_native(INTERP, dest, s);
+
+        return dest;
+    }
+
+    MULTI PMC *concatenate(DEFAULT value,  PMC *dest) {
+        PMC *meth = find_meth(INTERP, value, "__concat");
+
+        if (meth) {
+            dest = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
+
+            if (PMC_IS_NULL(dest))
+                dest = pmc_new(INTERP, dynpmc_LuaNil);
 
             return dest;
         }
-MMD_LuaString: {
-            STRING *s = string_concat(INTERP, SELF.get_string(),
-                LuaString.value.get_string(), 0);
 
-            dest = pmc_new(INTERP, dynpmc_LuaNumber);
-            VTABLE_set_string_native(INTERP, dest, s);
-
-            return dest;
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__concat");
-
-            if (meth) {
-                dest = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
-
-                if (PMC_IS_NULL(dest))
-                    dest = pmc_new(INTERP, dynpmc_LuaNil);
-
-                return dest;
-            }
-
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to concatenate a %Ss value",
-                    VTABLE_name(INTERP, value));
-        }
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to concatenate a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -850,33 +838,32 @@ MMD_DEFAULT: {
 =cut
 
 */
-    void i_concatenate(PMC *value) {
-MMD_LuaNumber: {
-            STRING *s = SELF.get_string();
-            STRING *v = LuaNumber.value.get_string();
-            SELF.set_string_native(string_append(INTERP, s, v));
-        }
-MMD_LuaString: {
-            STRING *s = SELF.get_string();
-            STRING *v = LuaString.value.get_string();
-            SELF.set_string_native(string_append(INTERP, s, v));
-        }
-MMD_DEFAULT: {
-            PMC *meth = find_meth(INTERP, value, "__concat");
-            if (meth) {
-                SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP",
-                                                SELF, value);
+    MULTI void i_concatenate(LuaNumber value) {
+        STRING *s = SELF.get_string();
+        STRING *v = VTABLE_get_string(INTERP, value);
+        SELF.set_string_native(string_append(INTERP, s, v));
+    }
 
-                if (! SELF)
-                    SELF = pmc_new(INTERP, dynpmc_LuaNil);
+    MULTI void i_concatenate(LuaString value) {
+        STRING *s = SELF.get_string();
+        STRING *v = VTABLE_get_string(INTERP, value);
+        SELF.set_string_native(string_append(INTERP, s, v));
+    }
 
-                return;
-            }
+    MULTI void i_concatenate(DEFAULT value) {
+        PMC *meth = find_meth(INTERP, value, "__concat");
+        if (meth) {
+            SELF = Parrot_runops_fromc_args(INTERP, meth, "PPP", SELF, value);
 
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
-                "attempt to concatenate a %Ss value",
-                    VTABLE_name(INTERP, value));
+            if (! SELF)
+                SELF = pmc_new(INTERP, dynpmc_LuaNil);
+
+            return;
         }
+
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
+            "attempt to concatenate a %Ss value",
+                VTABLE_name(INTERP, value));
     }
 
 /*
@@ -886,6 +873,464 @@ MMD_DEFAULT: {
 =head2 Specific Methods
 
 =over 4
+
+=item C<PMC* acosh()>
+
+=cut
+
+*/
+    METHOD PMC* acosh() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 acosh(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* asinh()>
+
+=cut
+
+*/
+    METHOD PMC* asinh() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 asinh(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* atanh()>
+
+=cut
+
+*/
+    METHOD PMC* atanh() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 atanh(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* cbrt()>
+
+=cut
+
+*/
+    METHOD PMC* cbrt() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 cbrt(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* copysign(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* copysign(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 copysign(VTABLE_get_number(INTERP, SELF),
+                                          VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* erf()>
+
+=cut
+
+*/
+    METHOD PMC* erf() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 erf(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* erfc()>
+
+=cut
+
+*/
+    METHOD PMC* erfc() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 erfc(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* exp2()>
+
+=cut
+
+*/
+    METHOD PMC* exp2() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 exp2(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* expm1()>
+
+=cut
+
+*/
+    METHOD PMC* expm1() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 expm1(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* fdim(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* fdim(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 fdim(VTABLE_get_number(INTERP, SELF),
+                                      VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* fma(PMC* y, PMC* z)>
+
+=cut
+
+*/
+    METHOD PMC* fma(PMC* y, PMC* z) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 fma(VTABLE_get_number(INTERP, SELF),
+                                     VTABLE_get_number(INTERP, y),
+                                     VTABLE_get_number(INTERP, z)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* fmax(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* fmax(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 fmax(VTABLE_get_number(INTERP, SELF),
+                                      VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* fmin(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* fmin(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 fmin(VTABLE_get_number(INTERP, SELF),
+                                      VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* fpclassify()>
+
+=cut
+
+*/
+    METHOD PMC* fpclassify() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaString);
+        const char *p;
+        switch (fpclassify(VTABLE_get_number(INTERP, SELF))) {
+        case FP_INFINITE:       p = "inf";              break;
+        case FP_NAN:            p = "nan";              break;
+        case FP_NORMAL:         p = "normal";           break;
+        case FP_SUBNORMAL:      p = "subnormal";        break;
+        case FP_ZERO:           p = "zero";             break;
+        default:                p = "bad fpclassify";
+        }
+        VTABLE_set_string_native(INTERP, retval,
+                                 const_string(INTERP, p));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* frexp()>
+
+=cut
+
+*/
+    METHOD PMC* frexp() {
+        PMC *y      = pmc_new(INTERP, dynpmc_LuaNumber);
+        PMC *expn   = pmc_new(INTERP, dynpmc_LuaNumber);
+        PMC *retval = pmc_new(INTERP, enum_class_Array);
+        int  e;
+
+        VTABLE_set_number_native(INTERP, y,
+                                 frexp(VTABLE_get_number(INTERP, SELF), &e));
+        VTABLE_set_integer_native(INTERP, expn, e);
+        VTABLE_set_integer_native(INTERP, retval, 2);
+        VTABLE_set_pmc_keyed_int(INTERP, retval, 0, y);
+        VTABLE_set_pmc_keyed_int(INTERP, retval, 1, expn);
+
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* hypot(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* hypot(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 hypot(VTABLE_get_number(INTERP, SELF),
+                                       VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* ilogb()>
+
+=cut
+
+*/
+    METHOD PMC* ilogb() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 ilogb(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* isfinite()>
+
+=cut
+
+*/
+    METHOD PMC* isfinite() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaBoolean);
+        VTABLE_set_bool(INTERP, retval,
+                        isfinite(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* isinf()>
+
+=cut
+
+*/
+    METHOD PMC* isinf() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaBoolean);
+        VTABLE_set_bool(INTERP, retval,
+                        isinf(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* isnan()>
+
+=cut
+
+*/
+    METHOD PMC* isnan() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaBoolean);
+        VTABLE_set_bool(INTERP, retval,
+                        isnan(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* isnormal()>
+
+=cut
+
+*/
+    METHOD PMC* isnormal() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaBoolean);
+        VTABLE_set_bool(INTERP, retval,
+                        isnormal(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* ldexp(PMC *x, PMC *expn)>
+
+=cut
+
+*/
+    METHOD PMC* ldexp(PMC *expn) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+
+        VTABLE_set_number_native(INTERP, retval,
+                                 ldexp(VTABLE_get_number(INTERP, SELF),
+                                       VTABLE_get_integer(INTERP, expn)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* lgamma()>
+
+=cut
+
+*/
+    METHOD PMC* lgamma() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 lgamma(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* log1p()>
+
+=cut
+
+*/
+    METHOD PMC* log1p() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 log1p(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* log2()>
+
+=cut
+
+*/
+    METHOD PMC* log2() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 log2(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* logb()>
+
+=cut
+
+*/
+    METHOD PMC* logb() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 logb(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* modf()>
+
+=cut
+
+*/
+    METHOD PMC* modf() {
+        PMC     *y      = pmc_new(INTERP, dynpmc_LuaNumber);
+        PMC     *d      = pmc_new(INTERP, dynpmc_LuaNumber);
+        PMC     *retval = pmc_new(INTERP, enum_class_Array);
+        FLOATVAL _d;
+
+        VTABLE_set_number_native(INTERP, y,
+                                 modf(VTABLE_get_number(INTERP, SELF), &_d));
+        VTABLE_set_number_native(INTERP, d, _d);
+        VTABLE_set_integer_native(INTERP, retval, 2);
+        VTABLE_set_pmc_keyed_int(INTERP, retval, 0, d);
+        VTABLE_set_pmc_keyed_int(INTERP, retval, 1, y);
+
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* nearbyint()>
+
+=cut
+
+*/
+    METHOD PMC* nearbyint() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 nearbyint(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* nextafter(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* nextafter(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 nextafter(VTABLE_get_number(INTERP, SELF),
+                                           VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* nexttoward(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* nexttoward(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 nexttoward(VTABLE_get_number(INTERP, SELF),
+                                            VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
 
 =item C<PMC *rawequal(PMC *value)>
 
@@ -901,6 +1346,106 @@ MMD_DEFAULT: {
         else
             VTABLE_set_integer_native(INTERP, retval, 0);
 
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* remainder(PMC* y)>
+
+=cut
+
+*/
+    METHOD PMC* remainder(PMC* y) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 remainder(VTABLE_get_number(INTERP, SELF),
+                                           VTABLE_get_number(INTERP, y)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* rint()>
+
+=cut
+
+*/
+    METHOD PMC* rint() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 rint(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* round()>
+
+=cut
+
+*/
+    METHOD PMC* round() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 round(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* scalbn(PMC* ex)>
+
+=cut
+
+*/
+    METHOD PMC* scalbn(PMC* ex) {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 scalbn(VTABLE_get_number(INTERP, SELF),
+                                        VTABLE_get_number(INTERP, ex)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* signbit()>
+
+=cut
+
+*/
+    METHOD PMC* signbit() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 signbit(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* tgamma()>
+
+=cut
+
+*/
+    METHOD PMC* tgamma() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 tgamma(VTABLE_get_number(INTERP, SELF)));
+        RETURN(PMC *retval);
+    }
+
+/*
+
+=item C<PMC* trunc()>
+
+=cut
+
+*/
+    METHOD PMC* trunc() {
+        PMC *retval = pmc_new(INTERP, dynpmc_LuaNumber);
+        VTABLE_set_number_native(INTERP, retval,
+                                 trunc(VTABLE_get_number(INTERP, SELF)));
         RETURN(PMC *retval);
     }
 

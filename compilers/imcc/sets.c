@@ -160,8 +160,8 @@ Raises a fatal error if the two Sets have different lengths.
 int
 set_equal(ARGIN(const Set *s1), ARGIN(const Set *s2))
 {
-    int mask;
-    const int bytes = s1->length / 8;
+    int          mask;
+    const size_t bytes = s1->length / 8;
 
     if (s1->length != s2->length)
         fatal(1, "set_equal", "Sets don't have the same length\n");
@@ -233,7 +233,8 @@ set_first_zero(ARGIN(const Set *s))
             continue;
 
         for (j = 0; j < 8; ++j) {
-            int element = i * 8 + j;
+            unsigned int element = i * 8 + j;
+
             if (!set_contains(s, element))
                 return element;
         }
@@ -321,8 +322,8 @@ PARROT_CANNOT_RETURN_NULL
 Set *
 set_intersec(ARGIN(const Set *s1), ARGIN(const Set *s2))
 {
+    Set * const  s = set_make(s1->length);
     unsigned int i;
-    Set * const s = set_make(s1->length);
 
     if (s1->length != s2->length)
         fatal(1, "set_intersec", "Sets don't have the same length\n");

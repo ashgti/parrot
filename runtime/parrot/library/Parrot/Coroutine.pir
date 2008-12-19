@@ -58,7 +58,7 @@ Parrot::Coroutine - A pure PIR implementation of coroutines
 
         .local int coro_class, idx
         .local pmc coro
-        .const .Sub coro_sub = "enumerate_tree"
+        .const 'Sub' coro_sub = "enumerate_tree"
         coro = new 'Parrot::Coroutine', coro_sub
         ($P0 :optional, $I0 :opt_flag) = coro.'resume'(coro, tree)
         idx = 0
@@ -105,7 +105,7 @@ END:
 This method is normally called via the C<new> op:
 
     .local pmc coro
-    .const .Sub coro_sub = "enumerate_tree"
+    .const 'Sub' coro_sub = "enumerate_tree"
     coro_class = get_class 'Parrot::Coroutine'
     coro = coro_class.'new'('initial_sub' => coro_sub)
 
@@ -176,7 +176,7 @@ doit:
     ## changed magically behind our backs by a subsequent yield/resume, so
     ## we can't just return directly.
     cc = getattribute self, 'yield_cont'
-    .return cc(result :flat)
+    .tailcall cc(result :flat)
 
 dead:
     ## Complain about attempted zombie creation.
@@ -207,7 +207,7 @@ passed to C<resume> are returned as the values from C<yield>.
 
     ## Return to the coro caller.
     cc = getattribute self, 'yield_cont'
-    .return cc(args :flat)
+    .tailcall cc(args :flat)
 .end
 
 =head1 BUGS

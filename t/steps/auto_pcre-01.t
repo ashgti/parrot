@@ -21,7 +21,7 @@ use IO::CaptureOutput qw| capture |;
 
 ########## --without-pcre ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ q{--without-pcre} ],
         mode => q{configure},
@@ -41,14 +41,14 @@ $conf->options->set( %{$args} );
 my $step = test_step_constructor_and_description($conf);
 ok( $step->runstep($conf), "runstep() returned true value");
 is( $step->result(), 'no', "Got expected result" );
-is( $conf->data->get( 'has_pcre' ), 0,
-    "Got expected value for 'has_pre'");
+is( $conf->data->get( 'HAS_PCRE' ), 0,
+    "Got expected value for 'HAS_PCRE'");
 
 $conf->replenish($serialized);
 
 ########## _add_to_libs() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -116,7 +116,7 @@ my $verbose = $conf->options->get('verbose');
 
 $test = q{pcre foobar};
 ok(! $step->_evaluate_cc_run($test, $verbose),
-    "Got expected setting for has_pcre");
+    "Got expected setting for HAS_PCRE");
 
 $test = q{pcre 4.1};
 ok($step->_evaluate_cc_run($test, $verbose),
@@ -142,7 +142,7 @@ $conf->replenish($serialized);
 
 ########## --verbose; _evaluate_cc_run() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--verbose} ],
     mode => q{configure},
 } );

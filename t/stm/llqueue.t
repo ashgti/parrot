@@ -59,7 +59,7 @@ OUTPUT
 SKIP: {
     skip( 'known segfault; needs GC/STM hackery', 1 );
 
-    pir_output_is( <<'CODE', <<'OUTPUT', "Add, remove, several threads", todo => 'RT#41892' );
+    pir_output_is( <<'CODE', <<'OUTPUT', "Add, remove, several threads", todo => 'RT #41892' );
 .sub add_thread
     .param pmc queue
     .param int start
@@ -98,8 +98,8 @@ loop:
 .sub main :main
     .local pmc threads
 
-    .const .Sub add_thread = 'add_thread'
-    .const .Sub remove_thread = 'remove_thread'
+    .const 'Sub' add_thread = 'add_thread'
+    .const 'Sub' remove_thread = 'remove_thread'
 
     .local pmc queue
 
@@ -188,11 +188,11 @@ __DATA__
 .end
 
 .sub get_next :method
-    .return _do_get(self, 'next')
+    .tailcall _do_get(self, 'next')
 .end
 
 .sub get_prev :method
-    .return _do_get(self, 'prev')
+    .tailcall _do_get(self, 'prev')
 .end
 
 .sub get_value :method
@@ -215,12 +215,12 @@ __DATA__
 
 .sub set_next :method
     .param pmc new_next
-    .return _do_set(self, 'next', new_next)
+    .tailcall _do_set(self, 'next', new_next)
 .end
 
 .sub set_prev :method
     .param pmc new_prev
-    .return _do_set(self, 'prev', new_prev)
+    .tailcall _do_set(self, 'prev', new_prev)
 .end
 
 .namespace [ 'STMLLQueue' ]
@@ -268,7 +268,7 @@ got_head:
 
 .sub add_head :method
     .param pmc value
-    .const .Sub _add_head = '_add_head'
+    .const 'Sub' _add_head = '_add_head'
     $P1 = get_hll_global ['STM'], 'transaction'
     $P1(_add_head, self, value)
 .end
@@ -295,14 +295,14 @@ skip_head:
     $P3 = new 'Undef'
     tail_tail_node.'set_next'($P3)
 do_return:
-    .return tail_node.'get_value'()
+    .tailcall tail_node.'get_value'()
 no_tail:
     $P0 = get_hll_global ['STM'], 'retry'
     $P0()
 .end
 
 .sub remove_tail :method
-    .const .Sub _remove_tail = '_remove_tail'
+    .const 'Sub' _remove_tail = '_remove_tail'
     $P1 = get_hll_global ['STM'], 'transaction'
     $P2 = $P1(_remove_tail, self)
     .return ($P2)

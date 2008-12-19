@@ -128,9 +128,8 @@ Invokes the closure.
                 &&  outer->start_offs   == PMC_sub(current)->start_offs))) {
                     PMC *cont      = caller->current_cont;
                     cont->vtable   = interp->vtables[enum_class_Continuation];
-                    sub->outer_ctx = sub->ctx->outer_ctx = caller;
-
-                    caller->ref_count++;
+                    sub->outer_ctx = sub->ctx->outer_ctx
+                                   = Parrot_context_ref(interp, caller);
                     return next;
                 }
                 caller = caller->caller_ctx;
@@ -149,8 +148,8 @@ Invokes the closure.
                 caller               = CONTEXT(interp);
                 cont                 = caller->current_cont;
                 cont->vtable         = interp->vtables[enum_class_Continuation];
-                sub->outer_ctx       = sub->ctx->outer_ctx = caller;
-                caller->ref_count++;
+                sub->outer_ctx       = sub->ctx->outer_ctx
+                                     = Parrot_context_ref(interp, caller);
 
                 (void)VTABLE_invoke(INTERP, cont, next);
             }
@@ -209,8 +208,8 @@ Invokes the closure.
                 if (PMC_IS_NULL(outer))
                     continue;
 
-                if (0 == string_equal(INTERP, PMC_sub(outer)->lexid,
-                            PMC_sub(sub->outer_sub)->lexid)) {
+                if (0 == string_equal(INTERP, PMC_sub(outer)->subid,
+                            PMC_sub(sub->outer_sub)->subid)) {
                     sub->outer_sub = outer;
                     break;
                 }
@@ -240,7 +239,7 @@ Destroys the closure.  This is necessary in order to reclaim the context.
 #endif
 
         if (sub->outer_ctx) {
-            Parrot_free_context(interp, sub->outer_ctx, 0);
+            Parrot_free_context(interp, sub->outer_ctx, 1);
             sub->outer_ctx = NULL;
         }
 

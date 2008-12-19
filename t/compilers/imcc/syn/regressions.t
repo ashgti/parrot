@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 7;
+use Parrot::Test tests => 9;
 
 pir_error_output_like( <<'CODE', <<'OUT', 'invalid get_results syntax');
 .sub main :main
@@ -37,7 +37,7 @@ ok 1 - caught div_i_ic_ic exception
 ok 2 - caught div_n_nc_nc exception
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'comments before .param(RT#46499)');
+pir_output_is( <<'CODE', <<'OUT', 'comments before .param(RT #46499)');
 .sub main :main
   comments(1,2)
 .end
@@ -51,7 +51,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'comments between .param(RT#46499)', todo => 'broken');
+pir_output_is( <<'CODE', <<'OUT', 'comments between .param(RT #46499)', todo => 'broken');
 .sub main :main
   comments(1,2)
 .end
@@ -65,7 +65,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'whitespace before .param(RT#46499)');
+pir_output_is( <<'CODE', <<'OUT', 'whitespace before .param(RT #46499)');
 .sub main :main
   comments(1,2)
 .end
@@ -79,7 +79,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'whitespace between .param(RT#46499)', todo => 'broken');
+pir_output_is( <<'CODE', <<'OUT', 'whitespace between .param(RT #46499)', todo => 'broken');
 .sub main :main
   comments(1,2)
 .end
@@ -93,7 +93,7 @@ CODE
 hello
 OUT
 
-pir_error_output_like( <<'CODE', <<'OUT', 'off by one error message (RT#40204)', todo=>'broken');
+pir_error_output_like( <<'CODE', <<'OUT', 'off by one error message (RT #40204)', todo=>'broken');
 .sub foo :main
   $P0 = new 'Hash'
   $P1 = $P0['x']
@@ -103,6 +103,27 @@ no:
 .end
 CODE
 /(?s:Null PMC access in get_bool.*current instr.*:4\))/
+OUT
+
+pir_error_output_like( <<'CODE', <<'OUT', 'bare method names not allowed (RT #45859)');
+.sub foo :main
+  $P0 = new 'String'
+  $P0 = 'HI'
+  $P0.lower()
+  say $P0
+.end
+CODE
+/Bareword method name 'lower' not allowed/
+OUT
+
+pir_error_output_like( <<'CODE', <<'OUT', ':: not allowed in identifiers (RT #48735)');
+.sub foo :main
+  .local string a::b
+  a::b = 'HI' 
+  say a::b
+.end
+CODE
+/syntax error/
 OUT
 
 # Local Variables:

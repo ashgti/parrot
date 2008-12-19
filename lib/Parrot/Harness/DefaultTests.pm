@@ -86,13 +86,20 @@ our @EXPORT_OK = qw(
 @developing_tests = ( 't/distro/file_metadata.t' );
 # Add in all t/codingstd except for a few skips.
 push @developing_tests,
-  grep { ! m/(c_function_docs|fixme|pdd_format|pod_todo)\.t$/ }
+  grep { ! m/(c_function_docs|fixme|pod_todo)\.t$/ }
   glob 't/codingstd/*.t';
 
 sub get_default_tests {
     my ($core_tests_only, $runcore_tests_only) = @_;
 
-    # add metadata.t and coding standards tests only if we're DEVELOPING
+    # Add metadata.t and coding standards tests only if we're DEVELOPING
+
+    # Note:  As of 2008-10-21, we're no longer including @standard_tests in
+    # @default_tests -- which means they're not included in 'make test'.
+    # But, for the time being, at least, we are still making
+    # it an exportable variable.  So we'll test for it in
+    # t/pharness/01-default_tests.t.
+
     if ( -e "DEVELOPING" ) {
         push @standard_tests, @developing_tests;
     }
@@ -103,7 +110,6 @@ sub get_default_tests {
        push @default_tests, @core_tests;
        unless ($core_tests_only) {
            unshift @default_tests, @configure_tests;
-           push @default_tests, @standard_tests;
        }
     }
     wantarray

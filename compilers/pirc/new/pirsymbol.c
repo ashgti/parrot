@@ -5,9 +5,9 @@
 #include "pircompiler.h"
 #include "pirsymbol.h"
 #include "pircompunit.h"
+#include "piryy.h"
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <stdio.h>
 
 
@@ -22,7 +22,10 @@ compilers/pirc/new/pirsymbol.c
 Functions for symbol management. The symbol data structure is used I<only> for
 keeping track of declared .local/.param identifiers, and for PIR registers.
 As such, a vanilla register allocator is implemented; for each declared identifier
-or PIR register, a new PASM register is allocated.
+or PIR register, a new PASM register is allocated. This happens immediately on
+declaring a C<.param> (as a parameter will I<always> be used for receiving arguments)
+and C<.local> symbols will be assigned a PASM register as soon as they're used for
+the first time.
 
 =head1 IMPLEMENTATION
 
@@ -35,10 +38,6 @@ Global identifiers, representing subroutine names are stored in a separate list.
 
 Globally defined constants are stored in yet another separate list.
 
-It might be worthwhile to investigate the possibility to store all symbols in
-one data structure (for instance, a hashtable), using one C structure to
-describe the properties (possibly an enumeration of symbol types).
-
 
 =head1 FUNCTIONS
 
@@ -49,10 +48,12 @@ describe the properties (possibly an enumeration of symbol types).
 */
 
 
+#define NO_REG_ALLOCATED    -1
+
 /*
 
-=item C<int
-next_register(struct lexer_state *lexer)>
+=item C<static int
+next_register(struct lexer_state * const lexer, pir_type type)>
 
 Returns a new register of the specified type.
 This is the vanilla register allocator.
@@ -60,38 +61,125 @@ This is the vanilla register allocator.
 =cut
 
 */
-int
-next_register(struct lexer_state * const lexer, pir_type type) {
-    lexer->subs->regs_used[type]++; /* count number of registers used */
+static int
+next_register(NOTNULL(lexer_state * const lexer), pir_type type) {
+    CURRENT_SUB(lexer)->regs_used[type]++; /* count number of registers used */
     return lexer->curregister[type]++;
 }
 
 
 /*
 
+=item C<void
+assign_vanilla_register(lexer_state * const lexer, symbol * const sym)>
+
+Assign a new register to symbol C<sym>, and create a new live interval for C<sym>.
+
+=cut
+
+*/
+void
+assign_vanilla_register(NOTNULL(lexer_state * const lexer), symbol * const sym) {
+    sym->info.color    = next_register(lexer, sym->info.type);
+
+    sym->info.interval = new_live_interval(lexer->lsr, lexer->stmt_counter, sym->info.type);
+
+    /* set the reference of the interval to the symbol's color */
+    sym->info.interval->color = &sym->info.color;
+
+    /* mark the interval, so that its register is not reused, if the :unique_reg
+     * flag was set.
+     */
+    if (TEST_FLAG(sym->flags, TARGET_FLAG_UNIQUE_REG))
+        SET_FLAG(sym->info.interval->flags, INTERVAL_FLAG_UNIQUE_REG);
+}
+
+
+/*
+
+=item C<static unsigned
+get_hashcode(char const * const str, unsigned num_buckets)>
+
+Calculate the hash code for the string C<str>.
+This code is taken from IMCC.
+
+=cut
+
+*/
+PARROT_PURE_FUNCTION
+PARROT_WARN_UNUSED_RESULT
+unsigned
+get_hashcode(NOTNULL(char const * const str), unsigned num_buckets) {
+    unsigned long  key = 0;
+    char const    *s;
+
+    for (s = str; *s ; s++)
+        key = key * 65599 + *s;
+
+    return key % num_buckets;
+}
+
+/*
+
+=item C<void
+store_bucket(hashtable * const table, bucket * const buck, unsigned long hash)>
+
+Store the bucket C<buck> in the hashtable C<table> at index C<hash>.
+
+=cut
+
+*/
+void
+store_bucket(NOTNULL(hashtable * const table), NOTNULL(bucket * const buck), unsigned long hash) {
+    buck->next = table->contents[hash];
+    table->contents[hash] = buck;
+}
+
+/*
+
+=item C<bucket *
+get_bucket(hashtable * const table, unsigned long hash)>
+
+Return the bucket at hash index C<hash> from the hashtable C<table>.
+
+=cut
+
+*/
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+bucket *
+get_bucket(NOTNULL(hashtable * const table), unsigned long hash) {
+    return table->contents[hash];
+}
+
+/*
+
 =item C<symbol *
-new_symbol(char *name)>
+new_symbol(lexer_state * const lexer, char const * const name, pir_type type)>
 
 Create a new symbol node, returns it after initialization.
 
 =cut
 
 */
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 symbol *
-new_symbol(char * const name, pir_type type) {
-    symbol *sym = (symbol *)malloc(sizeof (symbol));
-    assert(sym != NULL);
-    sym->name   = name;
-    sym->type   = type;
+new_symbol(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name), pir_type type) {
+    symbol *sym = pir_mem_allocate_zeroed_typed(lexer, symbol);
+
+    sym->info.id.name = name;
+    sym->info.type    = type;
+    sym->info.color   = NO_REG_ALLOCATED;
+
     sym->next   = NULL;
-    sym->color  = -1; /* -1 means no PASM reg has been allocated yet for this symbol */
     return sym;
 }
 
 /*
 
 =item C<void
-declare_local(struct lexer_state *lexer, pir_type type, target *list)>
+declare_local(lexer_state * const lexer, pir_type type, symbol * const list)>
 
 Declare the local variables in the list pointed to by C<list>, all of which
 are of the type C<type>. The variables are entered into the symbol table for
@@ -104,38 +192,43 @@ will have been given a PASM register.
 
 */
 void
-declare_local(struct lexer_state * const lexer, pir_type type, symbol *list) {
-    symbol *iter = list;
+declare_local(NOTNULL(lexer_state * const lexer), pir_type type,
+              NOTNULL(symbol * const list))
+{
+    symbol    *iter  = list;
+    hashtable *table = &CURRENT_SUB(lexer)->symbols;
 
-    /* bad implementation, but best i can come up with now. */
-
-    /* set the type on each symbol */
+    /* store all symbols in the list and set the type on each symbol. */
     while (iter != NULL) {
-        iter->type  = type;
 
-        /* XXX do not allocate a register just yet; wait till the moment that
-         * the symbol is actually used; unused, declared symbols won't be
-         * given a PASM register.
+        unsigned long hash = get_hashcode(iter->info.id.name, table->size);
+
+        /* look up this symbol; if it exists already, that's an error.
+         * don't use find_symbol, as that will update the live_interval of the symbol.
+         * also, we already have the hash value now, and find_symbol() would only
+         * recalculate that.
          */
-        /* iter->color = next_register(lexer, type); XXX test this. XXX*/
+        bucket *b = get_bucket(table, hash);
+        while (b) {
+            symbol *s = bucket_symbol(b);
+            if (STREQ(s->info.id.name, iter->info.id.name)) {
+                yypirerror(lexer->yyscanner, lexer, "symbol '%s' already declared",
+                iter->info.id.name);
+                break; /* out of the loop */
+            }
+            b = b->next;
+        }
 
-        iter        = iter->next;
-    }
 
-    /* add the symbol to the symbol table, which is currently implemented
-     * as a linked list.
-     */
-    if (lexer->subs->symbols == NULL) /* no symbols yet */
-        lexer->subs->symbols = list;
-    else {
-        /* go to end of list */
-        iter = list;
-        while (iter->next != NULL)
-            iter = iter->next;
+        if (b == NULL) { /* loop was broken because b == NULL, so it wasnt found; */
+            b = new_bucket(lexer);
+            bucket_symbol(b) = iter;
+            store_bucket(table, b, hash);
+            iter->info.type  = type;
+        }
 
-        /* link existing list on list->next, and set symbols list to this list */
-        iter->next           = lexer->subs->symbols;
-        lexer->subs->symbols = list;
+
+        iter = iter->next;
     }
 
 }
@@ -143,7 +236,7 @@ declare_local(struct lexer_state * const lexer, pir_type type, symbol *list) {
 /*
 
 =item C<void
-check_unused_symbols(struct lexer_state *lexer)>
+check_unused_symbols(lexer_state * const lexer)>
 
 Check all subroutines for unused symbols. If a symbol is declared but
 never used, a warning message is printed to C<stderr>.
@@ -152,65 +245,71 @@ never used, a warning message is printed to C<stderr>.
 
 */
 void
-check_unused_symbols(struct lexer_state * const lexer) {
-    subroutine *subiter = lexer->subs->next;
-    do {
-        symbol *iter = lexer->subs->symbols;
+check_unused_symbols(NOTNULL(lexer_state * const lexer)) {
+    subroutine *subiter = lexer->subs->next; /* start at first sub. */
 
-        while (iter) {
-            if (iter->color == -1) {
-                /* maybe only check for .locals, not .params. For now, disable this. */
-                /*
-                fprintf(stderr, "Warning: in sub '%s': symbol '%s' declared but not used\n",
-                        subiter->sub_name, iter->name);
-                */
+    puts("");
+
+    do {
+        hashtable *symbols = &CURRENT_SUB(lexer)->symbols;
+
+        unsigned i;
+        for (i = 0; i < symbols->size; i++) {
+            bucket *b = get_bucket(symbols, i);
+            while (b) {
+                if (bucket_symbol(b)->info.color == NO_REG_ALLOCATED)
+                    fprintf(stderr, "Warning: in sub '%s': symbol '%s' declared but not used\n",
+                                    subiter->sub_name, bucket_symbol(b)->info.id.name);
+
+                b = b->next;
             }
 
-            iter = iter->next;
         }
-
         subiter = subiter->next;
     }
-    while (subiter != lexer->subs);
+    while (subiter != lexer->subs->next); /* iterate over all subs */
 }
 
 /*
 
 =item C<symbol *
-find_symbol(struct lexer_state *lexer, char * const name)>
+find_symbol(lexer_state * const lexer, char const * const name)>
 
 Return the node for the symbol or NULL if the symbol
 is not defined. If an attempt is made to find a symbol,
-we assume it is because the symbol will be I<used>; therefore,
-the C<used> flag is set.
+we assume it is because the symbol will be used; therefore,
+allocate a PASM register for it.
 
 =cut
 
 */
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
 symbol *
-find_symbol(struct lexer_state * const lexer, char * const name) {
-    symbol *iter;
-    /* check whether there's a subroutine in place; if not, the
-     * specified name is an identifier being parsed outside of a .sub;
-     * in that case, NULL is returned.
-     */
-    if (lexer->subs) /* then initialize iterator */
-        iter = lexer->subs->symbols;
-    else
-        return NULL;
+find_symbol(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name)) {
+    hashtable    *table    = &CURRENT_SUB(lexer)->symbols;
+    unsigned long hashcode = get_hashcode(name, table->size);
+    bucket       *buck     = get_bucket(table, hashcode);
 
-    while (iter) {
+    while (buck) {
+        symbol *sym = bucket_symbol(buck);
 
-        if (strcmp(iter->name, name) == 0) {
+        if (STREQ(sym->info.id.name, name)) {
+            if (sym->info.color == NO_REG_ALLOCATED)  /* no PASM register assigned yet */
+                /* get a new reg from vanilla reg. allocator */
+                assign_vanilla_register(lexer, sym);
+            else  /* update end point of interval */
+                sym->info.interval->endpoint = lexer->stmt_counter;
 
-            /* if the symbol is not yet used, allocate a new PASM register */
-            if (iter->color == -1)
-                iter->color = next_register(lexer, iter->type);
 
-            return iter;
+            if (TEST_FLAG(lexer->flags, LEXER_FLAG_VERBOSE))
+                fprintf(stderr, "live range of variable %s: (%d, %d)\n", sym->info.id.name,
+                        sym->info.interval->startpoint, sym->info.interval->endpoint);
+
+            return sym;
         }
 
-        iter = iter->next;
+        buck = buck->next;
     }
     return NULL;
 }
@@ -218,7 +317,7 @@ find_symbol(struct lexer_state * const lexer, char * const name) {
 /*
 
 =item C<static pir_reg *
-new_pir_reg(pir_type type, int regno)>
+new_pir_reg(lexer_state * const lexer, pir_type type, int regno)>
 
 Create a new PIR register node representing PIR/symbolic register
 identified by C<regno> and of type C<type>.
@@ -226,21 +325,25 @@ identified by C<regno> and of type C<type>.
 =cut
 
 */
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 static pir_reg *
-new_pir_reg(pir_type type, int regno) {
-    pir_reg *r = (pir_reg *)malloc(sizeof (pir_reg));
-    assert(r != NULL);
-    r->type    = type;
-    r->regno   = regno;
+new_pir_reg(NOTNULL(lexer_state * const lexer), pir_type type, int regno) {
+    pir_reg *r = pir_mem_allocate_zeroed_typed(lexer, pir_reg);
+
+    r->info.type     = type;
+    r->info.color    = NO_REG_ALLOCATED;
+    r->info.id.regno = regno;
+
     r->next    = NULL;
-    r->color   = -1; /* -1 means no PASM register has been allocated for this PIR register. */
+
     return r;
 }
 
 /*
 
 =item C<pir_reg *
-find_register(struct lexer_state *lexer, pir_type type, int regno)>
+find_register(lexer_state * const lexer, pir_type type, int regno)>
 
 Find (symbolic) register no. C<regno> of type C<type>. If it's found,
 a pointer to it is returned, if not, NULL is returned.
@@ -248,14 +351,24 @@ a pointer to it is returned, if not, NULL is returned.
 =cut
 
 */
-static pir_reg *
-find_register(struct lexer_state * const lexer, pir_type type, int regno) {
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+pir_reg *
+find_register(NOTNULL(lexer_state * const lexer), pir_type type, int regno) {
     /* should do a binary search. fix later.
      */
-    pir_reg *iter = lexer->subs->registers[type];
+    pir_reg *iter = CURRENT_SUB(lexer)->registers[type];
     while (iter != NULL) {
-        if (iter->regno == regno)
+        if (iter->info.id.regno == regno) {
+            /* update the end point of this register's live interval */
+            iter->info.interval->endpoint = lexer->stmt_counter;
             return iter;
+        }
+
+        /*
+        if (iter->regno > regno)
+            return NULL;
+        */
 
         iter = iter->next;
     }
@@ -267,10 +380,10 @@ find_register(struct lexer_state * const lexer, pir_type type, int regno) {
 /*
 
 =item C<static int
-use_register(struct lexer_state *lexer, pir_type type, int regno)>
+use_register(lexer_state * const lexer, pir_type type, int regno, int pasmregno)>
 
 This function registers (no pun intended) register C<regno> of type
-C<type>; a new (PASM) register is allocated to it; each subsequent
+C<type>; it uses register C<pasmregno>; each subsequent
 reference to register C<regno> of type C<type> can then find this
 register (and its allocated PASM register) through the C<find_register>
 function.
@@ -281,35 +394,55 @@ The function returns the allocated PASM register.
 
 */
 static int
-use_register(struct lexer_state * const lexer, pir_type type, int regno) {
-    pir_reg *reg, *iter;
+use_register(NOTNULL(lexer_state * const lexer), pir_type type, int regno, int pasmregno) {
+    pir_reg *reg;
 
     /* create a new node representing this PIR register */
-    reg        = new_pir_reg(type, regno);
+    reg = new_pir_reg(lexer, type, regno);
     /* get a new PASM register for this PIR register. */
-    reg->color = next_register(lexer, type);
+    reg->info.color = pasmregno;
 
-    /* insert, as registers only increase, just insert at the beginning.
-     * searching must therefore look from high to low reg. numbers
-     */
-    iter       = lexer->subs->registers[type];
+    /* create a new live interval for this symbolic register */
+    reg->info.interval = new_live_interval(lexer->lsr, lexer->stmt_counter, type);
+    /* let the interval have a pointer to this symbolic register */
+    reg->info.interval->color = &reg->info.color;
+
 
     /* link this register into the list of "colored" registers; each of
      * them has been assigned a unique PASM register.
      */
-    reg->next                    = lexer->subs->registers[type];
-    lexer->subs->registers[type] = reg;
 
+    reg->next = CURRENT_SUB(lexer)->registers[type];
+    CURRENT_SUB(lexer)->registers[type] = reg;
+
+    /* test this better: sort pir_regs on descending regno */
+    /**
+    do {
+        pir_reg *iter;
+        iter = CURRENT_SUB(lexer)->registers[type];
+        if (iter) {
+            while (iter->next && iter->regno > reg->regno)
+                iter = iter->next;
+
+            reg->next = iter->next;
+            iter->next = reg;
+        }
+        else {
+            CURRENT_SUB(lexer)->registers[type] = reg;
+        }
+    }
+    while (0);
+    **/
 
     /* return newly allocated register */
-    return reg->color;
+    return reg->info.color;
 }
 
 
 /*
 
 =item C<int
-color_reg(struct lexer_state *lexer, pir_type type, int regno)>
+color_reg(struct lexer_state * const lexer, pir_type type, int regno)>
 
 Find register C<regno> of type C<type>; if it was used before in the
 current subroutine, a (pasm) register was already assigned to it, which
@@ -322,67 +455,80 @@ and a new (pasm) register is allocated to it, which is returned.
 
 */
 int
-color_reg(struct lexer_state * const lexer, pir_type type, int regno) {
+color_reg(NOTNULL(lexer_state * const lexer), pir_type type, int regno) {
     pir_reg *reg = find_register(lexer, type, regno);
 
     /* was the register already used, then it was already colored by
-     * the register allocator.
+     * the register allocator; in that case that PASM register is returned.
+     * Furthermore, as the register is referenced again, its live interval
+     * endpoint must be updated.
      */
-    if (reg)
-        return reg->color;
+    if (reg) {
+        /* update end point of interval */
+        reg->info.interval->endpoint = lexer->stmt_counter;
+        return reg->info.color;
+    }
 
-    /* we're still here, so the register was not used yet; do that now. */
-    return use_register(lexer, type, regno);
+    if (TEST_FLAG(lexer->flags, LEXER_FLAG_PASMFILE)) { /* PASM mode */
+        /* In PASM mode, the user-specified regno is also the final PASM
+         * register, so don't use the vanilla register allocator here.
+         */
+        return use_register(lexer, type, regno, regno);
+    }
+    else {
+        /* we're still here, so the register was not used yet; allocate
+         * a new PASM register through the vanilla reg. allocator and
+         * store the register as "used".
+         */
+        return use_register(lexer, type, regno, next_register(lexer, type));
+    }
 }
 
 
 /*
 
-=item C<static global_ident *
-new_global_ident(char * const name)>
+=item C<static global_label *
+new_global_label(char * const name)>
 
-Constructor to create a new global_ident object.
+Constructor to create a new global_label object.
 
 =cut
 
 */
-static global_ident *
-new_global_ident(char * const name) {
-    global_ident *glob = (global_ident *)malloc(sizeof (global_ident));
-    assert(glob);
-    glob->name     = name;
-    glob->next     = NULL;
-    glob->const_nr = 0;
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+static global_label *
+new_global_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name)) {
+    global_label *glob = pir_mem_allocate_zeroed_typed(lexer, global_label);
+    glob->name         = name;
+    glob->const_nr     = 0;
     return glob;
 }
 
 /*
 
 =item C<void
-store_global_ident(struct lexer_state *lexer, char * const name)>
+store_global_label(struct lexer_state * const lexer, char * const name)>
 
-Store the global identifier C<name>.
+Store the global identifier C<name> in C<lexer>'s global label table.
 
 =cut
 
 */
 void
-store_global_ident(struct lexer_state * const lexer, char * const name) {
-    global_ident *glob = new_global_ident(name);
-
-    /* store the global in the lexer */
-    if (lexer->globals) {
-        glob->next     = lexer->globals;
-        lexer->globals = glob;
-    }
-    else
-        lexer->globals = glob;
+store_global_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name)) {
+    hashtable    *table = &lexer->globals;
+    unsigned long hash  = get_hashcode(name, table->size);
+    bucket *b           = new_bucket(lexer);
+    bucket_global(b)    = new_global_label(lexer, name);
+    store_bucket(table, b, hash);
 }
+
 
 /*
 
-=item C<global_ident *
-find_global_ident(struct lexer_state *lexer, char * const name)>
+=item C<global_label *
+find_global_label(struct lexer_state * const lexer, char const * const name)>
 
 Find the global identifier C<name>. If no such identifier was found,
 then NULL is returned.
@@ -390,13 +536,19 @@ then NULL is returned.
 =cut
 
 */
-global_ident *
-find_global_ident(struct lexer_state * const lexer, char * const name) {
-    global_ident *iter = lexer->globals;
-    while (iter) {
-        if (strcmp(iter->name, name) == 0)
-            return iter;
-        iter = iter->next;
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+global_label *
+find_global_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name)) {
+    hashtable    *table    = &lexer->globals;
+    unsigned long hashcode = get_hashcode(name, table->size);
+    bucket *b              = get_bucket(table, hashcode);
+
+    while (b) {
+        if (STREQ(bucket_global(b)->name, name))
+            return bucket_global(b);
+
+        b = b->next;
     }
     return NULL;
 }
@@ -404,7 +556,7 @@ find_global_ident(struct lexer_state * const lexer, char * const name) {
 /*
 
 =item C<void
-store_global_const(struct lexer_state *lexer, constant * const c)>
+store_global_constant(lexer_state *lexer, constant * const c)>
 
 Store the globally defined constant C<c> in the constant table.
 
@@ -412,21 +564,18 @@ Store the globally defined constant C<c> in the constant table.
 
 */
 void
-store_global_const(struct lexer_state * const lexer, constant * const c) {
-    if (lexer->constants) {
-        c->next = lexer->constants;
-        lexer->constants = c;
-    }
-    else {
-        lexer->constants = c;
-    }
-
+store_global_constant(NOTNULL(lexer_state * const lexer), NOTNULL(constant * const c)) {
+    hashtable    *table = &lexer->constants;
+    unsigned long hash  = get_hashcode(c->name, table->size);
+    bucket *b           = new_bucket(lexer);
+    bucket_constant(b)  = c;
+    store_bucket(table, b, hash);
 }
 
 /*
 
 =item C<constant *
-find_constant(struct lexer_state *lexer, char * const name)>
+find_global_constant(lexer_state *lexer, char * const name)>
 
 Find a constant defined as C<name>. If no constant was defined by
 that name, then NULL is returned.
@@ -434,16 +583,107 @@ that name, then NULL is returned.
 =cut
 
 */
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
 constant *
-find_constant(struct lexer_state * const lexer, char * const name) {
-    constant *iter = lexer->constants;
-    while (iter) {
-        if (strcmp(iter->name, name) == 0)
-            return iter;
-        iter = iter->next;
+find_global_constant(NOTNULL(lexer_state * const lexer), NOTNULL(char * const name)) {
+    hashtable    *table    = &lexer->constants;
+    unsigned long hashcode = get_hashcode(name, table->size);
+    bucket *b              = get_bucket(table, hashcode);
+
+    while (b) {
+        if (STREQ(bucket_constant(b)->name, name))
+            return bucket_constant(b);
+
+        b = b->next;
     }
+
     return NULL;
 }
+
+/*
+
+=item C<static label *
+new_label(char * const name, unsigned offset)>
+
+Constructor for a label. Create a new label structure, fill out the details
+and return it. C<name> is the name of the label; C<offset> is its current
+location in the source to which any branching instruction can jump to.
+
+=cut
+
+*/
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+static local_label *
+new_local_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const name),
+                unsigned offset)
+{
+    local_label *l = pir_mem_allocate_zeroed_typed(lexer, local_label);
+    l->name        = name;
+    l->offset      = offset;
+    return l;
+}
+
+/*
+
+=item C<void
+store_local_label(lexer_state * const lexer, char const * const labelname, unsigned offset)>
+
+Store the (sub-)local label C<labelname>, having I<address> C<offset> in the current
+subroutine structure.
+
+=cut
+
+*/
+void
+store_local_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const labelname),
+                  unsigned offset)
+{
+    local_label  *l     = new_local_label(lexer, labelname, offset);
+    hashtable    *table = &CURRENT_SUB(lexer)->labels;
+    unsigned long hash  = get_hashcode(labelname, table->size);
+    bucket *b           = new_bucket(lexer);
+    bucket_local(b)     = l;
+    store_bucket(table, b, hash);
+}
+
+/*
+
+=item C<unsigned
+find_local_label(lexer_state * const lexer, char const * const labelname)>
+
+Find the offset for label C<labelname>. If C<labelname> was not defined as
+a label, an error is emitted, otherwise, the offset of that label is returned.
+
+=cut
+
+*/
+PARROT_WARN_UNUSED_RESULT
+unsigned
+find_local_label(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const labelname)) {
+    hashtable    *table    = &CURRENT_SUB(lexer)->labels;
+    unsigned long hashcode = get_hashcode(labelname, table->size);
+    bucket *b              = get_bucket(table, hashcode);
+
+    while (b) {
+        if (STREQ(bucket_local(b)->name, labelname)) {
+            /*
+            fprintf(stderr, "found offset for label %s (%d)\n", labelname, bucket_local(b)->offset);
+            */
+            return bucket_local(b)->offset;
+        }
+        b = b->next;
+    }
+
+    /* no label found, emit an error message. */
+    yypirerror(lexer->yyscanner, lexer, "in sub '%s': cannot find offset for label '%s'",
+             CURRENT_SUB(lexer)->sub_name, labelname);
+
+    return 0;
+}
+
+
 
 /*
 

@@ -47,7 +47,7 @@ the Parrot debugger, and the C<debug> ops.
 #define DEBUG_CMD_BUFFER_LENGTH 255
 
 /* Not sure how we want to handle this sort of cross-project header */
-PARROT_API
+PARROT_EXPORT
 void
 IMCC_warning(PARROT_INTERP, ARGIN(const char *fmt), ...);
 
@@ -469,7 +469,7 @@ the -t option.\n"
 "Add a watchpoint"
     };
 
-static const DebuggerCmd * get_command(long cmdhash) /* HEADERIZER SKIP */
+static const DebuggerCmd * get_command(unsigned long cmdhash) /* HEADERIZER SKIP */
 {
     switch ((enum DebugCmd)cmdhash) {
         case debug_cmd_break:
@@ -698,7 +698,8 @@ parse_string(PARROT_INTERP, ARGIN(const char *str), ARGOUT(STRING **strP))
     }
 
     /* create the output STRING */
-    *strP = string_make(interp, string_start, str - string_start, NULL, 0);
+    *strP = string_make(interp, string_start, (UINTVAL)(str - string_start),
+        NULL, 0);
 
     /* skip the closing quote */
     if (*str)
@@ -805,7 +806,7 @@ parse_command(ARGIN(const char *command), ARGOUT(unsigned long *cmdP))
 Debugger command line.
 
 Gets and executes commands, looping until the debugger state
-is chnaged, either to exit or to start executing code.
+is changed, either to exit or to start executing code.
 
 =cut
 
@@ -863,7 +864,7 @@ Initializes the Parrot debugger, if it's not already initialized.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_debugger_init(PARROT_INTERP)
 {
@@ -897,7 +898,7 @@ Destroy the current Parrot debugger instance.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_debugger_destroy(PARROT_INTERP)
 {
@@ -928,7 +929,7 @@ Loads a Parrot source file for the current program.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_debugger_load(PARROT_INTERP, ARGIN_NULLOK(STRING *filename))
 {
@@ -954,7 +955,7 @@ Start debugger.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 {
@@ -978,8 +979,11 @@ Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 
     debugger_cmdline(interp);
 
-    if (interp->pdb->state & PDB_EXIT)
+    if (interp->pdb->state & PDB_EXIT) {
+        TRACEDEB_MSG("Parrot_debugger_start Parrot_exit");
         Parrot_exit(interp, 0);
+    }
+    TRACEDEB_MSG("Parrot_debugger_start ends");
 }
 
 /*
@@ -999,7 +1003,7 @@ debugger and then continue the normal execution of the program.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_debugger_break(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
 {
@@ -1112,7 +1116,7 @@ PDB_get_command(PARROT_INTERP)
 
         c = pdb->cur_command;
 
-        PIO_eprintf(pdb->debugger, "\n(pdb) ");
+        Parrot_io_eprintf(pdb->debugger, "\n(pdb) ");
 
         /* skip leading whitespace */
         do {
@@ -1142,7 +1146,7 @@ Interprets the contents of a file as user input commands
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 PDB_script_file(PARROT_INTERP, ARGIN(const char *command))
 {
@@ -1193,7 +1197,8 @@ PDB_run_command(PARROT_INTERP, ARGIN(const char *command))
 
     TRACEDEB_MSG("PDB_run_command");
 
-    cmd= get_command(c);
+    cmd = get_command(c);
+
     if (cmd) {
         (* cmd->func)(pdb, cmdline);
         return 0;
@@ -1207,11 +1212,11 @@ PDB_run_command(PARROT_INTERP, ARGIN(const char *command))
             return 0;
         }
         else {
-            PIO_eprintf(pdb->debugger,
+            Parrot_io_eprintf(pdb->debugger,
                         "Undefined command: \"%s\"", command);
             if (pdb->script_file)
-                PIO_eprintf(pdb->debugger, " in line %lu", pdb->script_line);
-            PIO_eprintf(pdb->debugger, ".  Try \"help\".");
+                Parrot_io_eprintf(pdb->debugger, " in line %lu", pdb->script_line);
+            Parrot_io_eprintf(pdb->debugger, ".  Try \"help\".");
 #if TRACE_DEBUGGER
             fprintf(stderr, " (parse_command result: %li)", c);
 #endif
@@ -1386,7 +1391,7 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
 
     /* Return if no more arguments */
     if (!(command && *command)) {
-        PIO_eprintf(interp->pdb->debugger, "No condition specified\n");
+        Parrot_io_eprintf(interp->pdb->debugger, "No condition specified\n");
         return NULL;
     }
 
@@ -1401,7 +1406,7 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
     auxcmd = ++command;
     regleft = (unsigned char)get_uint(&command, 0);
     if (auxcmd == command) {
-        PIO_eprintf(interp->pdb->debugger, "Invalid register\n");
+        Parrot_io_eprintf(interp->pdb->debugger, "Invalid register\n");
             return NULL;
     }
 
@@ -1434,13 +1439,13 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
             break;
         case '\0':
             if (cond_argleft != PDB_cond_str && cond_argleft != PDB_cond_pmc) {
-                PIO_eprintf(interp->pdb->debugger, "Invalid null condition\n");
+                Parrot_io_eprintf(interp->pdb->debugger, "Invalid null condition\n");
                 return NULL;
             }
             cond_type = PDB_cond_notnull;
             break;
         default:
-INV_COND:   PIO_eprintf(interp->pdb->debugger, "Invalid condition\n");
+INV_COND:   Parrot_io_eprintf(interp->pdb->debugger, "Invalid condition\n");
             return NULL;
     }
 
@@ -1454,7 +1459,7 @@ INV_COND:   PIO_eprintf(interp->pdb->debugger, "Invalid condition\n");
 
     /* return if no notnull condition and no more arguments */
     if (!(command && *command) && (cond_type != PDB_cond_notnull)) {
-        PIO_eprintf(interp->pdb->debugger, "Can't compare a register with nothing\n");
+        Parrot_io_eprintf(interp->pdb->debugger, "Can't compare a register with nothing\n");
         return NULL;
     }
 
@@ -1471,7 +1476,7 @@ INV_COND:   PIO_eprintf(interp->pdb->debugger, "Invalid condition\n");
             unsigned short cond_argright = condition_regtype(command);
 
             if (cond_argright != cond_argleft) {
-                PIO_eprintf(interp->pdb->debugger, "Register types don't agree\n");
+                Parrot_io_eprintf(interp->pdb->debugger, "Register types don't agree\n");
                 mem_sys_free(condition);
                 return NULL;
             }
@@ -1480,13 +1485,13 @@ INV_COND:   PIO_eprintf(interp->pdb->debugger, "Invalid condition\n");
             auxcmd = ++command;
             reg_number = (int)get_uint(&command, 0);
             if (auxcmd == command) {
-                PIO_eprintf(interp->pdb->debugger, "Invalid register\n");
+                Parrot_io_eprintf(interp->pdb->debugger, "Invalid register\n");
                     mem_sys_free(condition);
                     return NULL;
             }
 
             if (reg_number < 0) {
-                PIO_eprintf(interp->pdb->debugger, "Out-of-bounds register\n");
+                Parrot_io_eprintf(interp->pdb->debugger, "Out-of-bounds register\n");
                 mem_sys_free(condition);
                 return NULL;
             }
@@ -1513,14 +1518,15 @@ INV_COND:   PIO_eprintf(interp->pdb->debugger, "Invalid condition\n");
 #if TRACE_DEBUGGER
             fprintf(stderr, "PDB_break: '%s'\n", str);
 #endif
-            condition->value = string_make(interp,
-                str, i - 1, NULL, 0);
+            condition->value = string_make(interp, str, (UINTVAL)(i - 1),
+                NULL, 0);
+
             condition->type |= PDB_cond_const;
         }
         else if (condition->type & PDB_cond_pmc) {
             /* RT #46123 Need to figure out what to do in this case.
              * For the time being, we just bail. */
-            PIO_eprintf(interp->pdb->debugger, "Can't compare PMC with constant\n");
+            Parrot_io_eprintf(interp->pdb->debugger, "Can't compare PMC with constant\n");
             mem_sys_free(condition);
             return NULL;
         }
@@ -1596,7 +1602,7 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 
             /* Abort if the line number provided doesn't exist */
             if (!line->next) {
-                PIO_eprintf(pdb->debugger,
+                Parrot_io_eprintf(pdb->debugger,
                     "Can't set a breakpoint at line number %li\n", ln);
                 return;
             }
@@ -1608,7 +1614,7 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
             while (line->opcode != pdb->cur_opcode) {
                 line = line->next;
                 if (!line) {
-                    PIO_eprintf(pdb->debugger,
+                    Parrot_io_eprintf(pdb->debugger,
                        "No current line found and no line number specified\n");
                     return;
                 }
@@ -1619,7 +1625,7 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
             line = line->next;
         /* Abort if the line number provided doesn't exist */
         if (!line) {
-            PIO_eprintf(pdb->debugger,
+            Parrot_io_eprintf(pdb->debugger,
                 "Can't set a breakpoint at line number %li\n", ln);
             return;
         }
@@ -1673,10 +1679,10 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 
     /* Show breakpoint position */
 
-    PIO_eprintf(pdb->debugger, "Breakpoint %li at", newbreak->id);
+    Parrot_io_eprintf(pdb->debugger, "Breakpoint %li at", newbreak->id);
     if (line)
-        PIO_eprintf(pdb->debugger, " line %li", line->number);
-    PIO_eprintf(pdb->debugger, " pos %li\n", newbreak->pc - interp->code->base.data);
+        Parrot_io_eprintf(pdb->debugger, " line %li", line->number);
+    Parrot_io_eprintf(pdb->debugger, " pos %li\n", newbreak->pc - interp->code->base.data);
 }
 
 /*
@@ -1696,7 +1702,7 @@ PDB_init(PARROT_INTERP, SHIM(const char *command))
 
     /* Restart if we are already running */
     if (pdb->state & PDB_RUNNING)
-        PIO_eprintf(pdb->debugger, "Restarting\n");
+        Parrot_io_eprintf(pdb->debugger, "Restarting\n");
 
     /* Add the RUNNING state */
     pdb->state |= PDB_RUNNING;
@@ -1724,11 +1730,13 @@ PDB_continue(PARROT_INTERP, ARGIN_NULLOK(const char *command))
     /* Skip any breakpoint? */
     if (command)
         ln = get_ulong(& command, 0);
+
     if (ln != 0) {
         if (!pdb->breakpoint) {
-            PIO_eprintf(pdb->debugger, "No breakpoints to skip\n");
+            Parrot_io_eprintf(pdb->debugger, "No breakpoints to skip\n");
             return;
         }
+
         PDB_skip_breakpoint(interp, ln);
     }
 
@@ -1781,7 +1789,7 @@ PDB_find_breakpoint(PARROT_INTERP, ARGIN(const char *command))
             breakpoint = breakpoint->next;
 
         if (!breakpoint) {
-            PIO_eprintf(interp->pdb->debugger, "No breakpoint number %ld", n);
+            Parrot_io_eprintf(interp->pdb->debugger, "No breakpoint number %ld", n);
             return NULL;
         }
 
@@ -1790,9 +1798,9 @@ PDB_find_breakpoint(PARROT_INTERP, ARGIN(const char *command))
     else {
         /* Report an appropriate error */
         if (*command)
-            PIO_eprintf(interp->pdb->debugger, "Not a valid breakpoint");
+            Parrot_io_eprintf(interp->pdb->debugger, "Not a valid breakpoint");
         else
-            PIO_eprintf(interp->pdb->debugger, "No breakpoint specified");
+            Parrot_io_eprintf(interp->pdb->debugger, "No breakpoint specified");
 
         return NULL;
     }
@@ -1930,7 +1938,7 @@ Skip C<i> times all breakpoints.
 */
 
 void
-PDB_skip_breakpoint(PARROT_INTERP, long i)
+PDB_skip_breakpoint(PARROT_INTERP, unsigned long i)
 {
 #if TRACE_DEBUGGER
         fprintf(stderr, "PDB_skip_breakpoint: %li\n", i);
@@ -1954,10 +1962,12 @@ PDB_program_end(PARROT_INTERP)
 {
     PDB_t * const pdb = interp->pdb;
 
+    TRACEDEB_MSG("PDB_program_end");
+
     /* Remove the RUNNING state */
     pdb->state &= ~PDB_RUNNING;
 
-    PIO_eprintf(pdb->debugger, "Program exited.\n");
+    Parrot_io_eprintf(pdb->debugger, "Program exited.\n");
     return 1;
 }
 
@@ -2175,7 +2185,7 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PARROT_MALLOC
 char *
-PDB_escape(ARGIN(const char *string), INTVAL length)
+PDB_escape(ARGIN(const char *string), UINTVAL length)
 {
     const char *end;
     char       *_new, *fill;
@@ -2295,13 +2305,13 @@ Disassembles C<op>.
 */
 
 size_t
-PDB_disassemble_op(PARROT_INTERP, ARGOUT(char *dest), int space,
+PDB_disassemble_op(PARROT_INTERP, ARGOUT(char *dest), size_t space,
         ARGIN(const op_info_t *info), ARGIN(const opcode_t *op),
         ARGMOD_NULLOK(PDB_file_t *file), ARGIN_NULLOK(const opcode_t *code_start),
         int full_name)
 {
     int         j;
-    int         size = 0;
+    size_t     size = 0;
 
     /* Write the opcode name */
     const char * p = full_name ? info->full_name : info->name;
@@ -2612,8 +2622,10 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
     pline = mem_allocate_zeroed_typed(PDB_line_t);
 
     /* If we already got a source, free it */
-    if (pdb->file)
-        PDB_free_file(interp);
+    if (pdb->file) {
+        PDB_free_file(interp, pdb->file);
+        pdb->file = NULL;
+    }
 
     pfile->line   = pline;
     pline->number = 1;
@@ -2664,9 +2676,10 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
             pline = pline->next;
 
         if (!pline) {
-            PIO_eprintf(pdb->debugger,
+            Parrot_io_eprintf(pdb->debugger,
                         "Label number %li out of bounds.\n", label->number);
-            /* RT #46127: free allocated memory */
+
+            PDB_free_file(interp, pfile);
             return;
         }
 
@@ -2735,10 +2748,8 @@ Frees any allocated source files.
 */
 
 void
-PDB_free_file(PARROT_INTERP)
+PDB_free_file(PARROT_INTERP, ARGIN_NULLOK(PDB_file_t *file))
 {
-    PDB_file_t *file = interp->pdb->file;
-
     while (file) {
         /* Free all of the allocated line structures */
         PDB_line_t  *line = file->line;
@@ -2772,9 +2783,6 @@ PDB_free_file(PARROT_INTERP)
         mem_sys_free(file);
         file  = nfile;
     }
-
-    /* Make sure we don't end up pointing at garbage memory */
-    interp->pdb->file = NULL;
 }
 
 /*
@@ -2787,7 +2795,7 @@ Load a source code file.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
 {
@@ -2805,8 +2813,10 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
 
     /* If there was a file already loaded or the bytecode was
        disassembled, free it */
-    if (pdb->file)
-        PDB_free_file(interp->pdb->debugee);
+    if (pdb->file) {
+        PDB_free_file(interp->pdb->debugee, interp->pdb->debugee->pdb->file);
+        interp->pdb->debugee->pdb->file = NULL;
+    }
 
     /* Get the name of the file */
     for (j = 0; command[j] == ' '; ++j)
@@ -2821,7 +2831,7 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
 
     /* abort if fopen failed */
     if (!file) {
-        PIO_eprintf(pdb->debugger, "Unable to load '%s'\n", f);
+        Parrot_io_eprintf(pdb->debugger, "Unable to load '%s'\n", f);
         return;
     }
 
@@ -2870,6 +2880,8 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
             pline->label         = NULL;
         }
     }
+
+    fclose(file);
 
     pdb->state |= PDB_SRC_LOADED;
     pdb->file   = pfile;
@@ -2944,7 +2956,7 @@ PDB_list(PARROT_INTERP, ARGIN(const char *command))
     unsigned long  n   = 10;
 
     if (!pdb->file) {
-        PIO_eprintf(pdb->debugger, "No source file loaded\n");
+        Parrot_io_eprintf(pdb->debugger, "No source file loaded\n");
         return;
     }
 
@@ -2966,17 +2978,17 @@ PDB_list(PARROT_INTERP, ARGIN(const char *command))
 
     i = 1;
     while (line->next) {
-        PIO_eprintf(pdb->debugger, "%li  ", pdb->file->list_line + i);
+        Parrot_io_eprintf(pdb->debugger, "%li  ", pdb->file->list_line + i);
         /* If it has a label print it */
         if (line->label)
-            PIO_eprintf(pdb->debugger, "L%li:\t", line->label->number);
+            Parrot_io_eprintf(pdb->debugger, "L%li:\t", line->label->number);
 
         c = pdb->file->source + line->source_offset;
 
         while (*c != '\n')
-            PIO_eprintf(pdb->debugger, "%c", *(c++));
+            Parrot_io_eprintf(pdb->debugger, "%c", *(c++));
 
-        PIO_eprintf(pdb->debugger, "\n");
+        Parrot_io_eprintf(pdb->debugger, "\n");
 
         line = line->next;
 
@@ -3063,13 +3075,13 @@ dump_string(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
     if (!s)
         return;
 
-    PIO_eprintf(interp, "\tBuflen  =\t%12ld\n", PObj_buflen(s));
-    PIO_eprintf(interp, "\tFlags   =\t%12ld\n", PObj_get_FLAGS(s));
-    PIO_eprintf(interp, "\tBufused =\t%12ld\n", s->bufused);
-    PIO_eprintf(interp, "\tStrlen  =\t%12ld\n", s->strlen);
-    PIO_eprintf(interp, "\tOffset  =\t%12ld\n",
+    Parrot_io_eprintf(interp, "\tBuflen  =\t%12ld\n", PObj_buflen(s));
+    Parrot_io_eprintf(interp, "\tFlags   =\t%12ld\n", PObj_get_FLAGS(s));
+    Parrot_io_eprintf(interp, "\tBufused =\t%12ld\n", s->bufused);
+    Parrot_io_eprintf(interp, "\tStrlen  =\t%12ld\n", s->strlen);
+    Parrot_io_eprintf(interp, "\tOffset  =\t%12ld\n",
                     (char*) s->strstart - (char*) PObj_bufstart(s));
-    PIO_eprintf(interp, "\tString  =\t%S\n", s);
+    Parrot_io_eprintf(interp, "\tString  =\t%S\n", s);
 }
 
 /*
@@ -3086,7 +3098,7 @@ void
 PDB_print(PARROT_INTERP, ARGIN(const char *command))
 {
     const char * const s = GDB_P(interp->pdb->debugee, command);
-    PIO_eprintf(interp, "%s\n", s);
+    Parrot_io_eprintf(interp, "%s\n", s);
 }
 
 
@@ -3103,31 +3115,31 @@ Print the interpreter info.
 void
 PDB_info(PARROT_INTERP)
 {
-    PIO_eprintf(interp, "Total memory allocated = %ld\n",
+    Parrot_io_eprintf(interp, "Total memory allocated = %ld\n",
             interpinfo(interp, TOTAL_MEM_ALLOC));
-    PIO_eprintf(interp, "DOD runs = %ld\n",
+    Parrot_io_eprintf(interp, "DOD runs = %ld\n",
             interpinfo(interp, DOD_RUNS));
-    PIO_eprintf(interp, "Lazy DOD runs = %ld\n",
+    Parrot_io_eprintf(interp, "Lazy DOD runs = %ld\n",
             interpinfo(interp, LAZY_DOD_RUNS));
-    PIO_eprintf(interp, "Collect runs = %ld\n",
+    Parrot_io_eprintf(interp, "Collect runs = %ld\n",
             interpinfo(interp, COLLECT_RUNS));
-    PIO_eprintf(interp, "Collect memory = %ld\n",
+    Parrot_io_eprintf(interp, "Collect memory = %ld\n",
             interpinfo(interp, TOTAL_COPIED));
-    PIO_eprintf(interp, "Active PMCs = %ld\n",
+    Parrot_io_eprintf(interp, "Active PMCs = %ld\n",
             interpinfo(interp, ACTIVE_PMCS));
-    PIO_eprintf(interp, "Extended PMCs = %ld\n",
+    Parrot_io_eprintf(interp, "Extended PMCs = %ld\n",
             interpinfo(interp, EXTENDED_PMCS));
-    PIO_eprintf(interp, "Timely DOD PMCs = %ld\n",
+    Parrot_io_eprintf(interp, "Timely DOD PMCs = %ld\n",
             interpinfo(interp, IMPATIENT_PMCS));
-    PIO_eprintf(interp, "Total PMCs = %ld\n",
+    Parrot_io_eprintf(interp, "Total PMCs = %ld\n",
             interpinfo(interp, TOTAL_PMCS));
-    PIO_eprintf(interp, "Active buffers = %ld\n",
+    Parrot_io_eprintf(interp, "Active buffers = %ld\n",
             interpinfo(interp, ACTIVE_BUFFERS));
-    PIO_eprintf(interp, "Total buffers = %ld\n",
+    Parrot_io_eprintf(interp, "Total buffers = %ld\n",
             interpinfo(interp, TOTAL_BUFFERS));
-    PIO_eprintf(interp, "Header allocations since last collect = %ld\n",
+    Parrot_io_eprintf(interp, "Header allocations since last collect = %ld\n",
             interpinfo(interp, HEADER_ALLOCS_SINCE_COLLECT));
-    PIO_eprintf(interp, "Memory allocations since last collect = %ld\n",
+    Parrot_io_eprintf(interp, "Memory allocations since last collect = %ld\n",
             interpinfo(interp, MEM_ALLOCS_SINCE_COLLECT));
 }
 
@@ -3153,13 +3165,14 @@ PDB_help(PARROT_INTERP, ARGIN(const char *command))
     parse_command(cmdline, &c);
 
     cmd = get_command(c);
+
     if (cmd) {
-        PIO_eprintf(interp->pdb->debugger, "%s\n", cmd->help);
+        Parrot_io_eprintf(interp->pdb->debugger, "%s\n", cmd->help);
     }
     else {
         if (c == 0) {
             /* C89: strings need to be 509 chars or less */
-            PIO_eprintf(interp->pdb->debugger, "\
+            Parrot_io_eprintf(interp->pdb->debugger, "\
 List of commands:\n\
     disassemble  -- disassemble the bytecode\n\
     load         -- load a source code file\n\
@@ -3173,7 +3186,7 @@ List of commands:\n\
     disable      -- disable a breakpoint\n\
     enable       -- reenable a disabled breakpoint\n\
     continue (c) -- continue the program execution\n");
-            PIO_eprintf(interp->pdb->debugger, "\
+            Parrot_io_eprintf(interp->pdb->debugger, "\
     next     (n) -- run the next instruction\n\
     eval     (e) -- run an instruction\n\
     trace    (t) -- trace the next instruction\n\
@@ -3186,7 +3199,7 @@ List of commands:\n\
 Type \"help\" followed by a command name for full documentation.\n\n");
         }
         else {
-            PIO_eprintf(interp->pdb->debugger, "Unknown command: %s\n", command);
+            Parrot_io_eprintf(interp->pdb->debugger, "Unknown command: %s\n", command);
         }
     }
 }
@@ -3210,12 +3223,12 @@ PDB_backtrace(PARROT_INTERP)
 
     /* information about the current sub */
     PMC              *sub = interpinfo_p(interp, CURRENT_SUB);
-    parrot_context_t *ctx = CONTEXT(interp);
+    Parrot_Context   *ctx = CONTEXT(interp);
 
     if (!PMC_IS_NULL(sub)) {
         str = Parrot_Context_infostr(interp, ctx);
         if (str)
-            PIO_eprintf(interp, "%Ss\n", str);
+            Parrot_io_eprintf(interp, "%Ss\n", str);
     }
 
     /* backtrace: follow the continuation chain */
@@ -3245,13 +3258,13 @@ PDB_backtrace(PARROT_INTERP)
                 ++rec_level;
         }
         else if (rec_level != 0) {
-            PIO_eprintf(interp, "... call repeated %d times\n", rec_level);
+            Parrot_io_eprintf(interp, "... call repeated %d times\n", rec_level);
             rec_level = 0;
         }
 
         /* print the context description */
         if (rec_level == 0)
-            PIO_eprintf(interp, "%Ss\n", str);
+            Parrot_io_eprintf(interp, "%Ss\n", str);
 
         /* get the next Continuation */
         ctx = PMC_cont(sub)->to_ctx;
@@ -3262,7 +3275,7 @@ PDB_backtrace(PARROT_INTERP)
     }
 
     if (rec_level != 0)
-        PIO_eprintf(interp, "... call repeated %d times\n", rec_level);
+        Parrot_io_eprintf(interp, "... call repeated %d times\n", rec_level);
 }
 
 /*
@@ -3352,8 +3365,8 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
 
         for (n = 0; n < max_reg; n++) {
             /* this must be done in two chunks because PMC's print directly. */
-            PIO_eprintf(interp, "\n  %c%d = ", reg_type, n);
-            PIO_eprintf(interp, "%s", GDB_print_reg(interp, t, n));
+            Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
+            Parrot_io_eprintf(interp, "%s", GDB_print_reg(interp, t, n));
         }
         return "";
     }
@@ -3376,7 +3389,7 @@ static PDB_breakpoint_t *gdb_bps;
  * RT #46143 We can't remove the breakpoint yet, executing the next ins
  * most likely fails, as the length of the debug-brk stmt doesn't
  * match the old opcode
- * Setting a breakpoint will also fail, if the bytecode os r/o
+ * Setting a breakpoint will also fail, if the bytecode is r/o
  *
  */
 /*

@@ -44,7 +44,7 @@ to the Pynie compiler.
     .param pmc args
     load_bytecode 'PGE/Dumper.pbc'
     $P0 = compreg 'Pynie'
-    .return $P0.'command_line'(args)
+    .tailcall $P0.'command_line'(args)
 .end
 
 
@@ -52,6 +52,7 @@ to the Pynie compiler.
 .include 'src/gen_actions.pir'
 .include 'src/parser/indent.pir'
 
+.include 'src/builtins/funcs.pir'
 .include 'src/builtins/io.pir'
 .include 'src/builtins/lists.pir'
 .include 'src/builtins/oper.pir'

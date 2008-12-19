@@ -356,7 +356,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "methods: self w arg and ret" );
     B."blah"()
     self."blah"()
     .begin_return
-    .return B
+    .set_return B
     .end_return
 
 .end
@@ -727,7 +727,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "method cache invalidation" );
     subclass cl, cl, "Bar"
     o = new "Bar"
     print o
-    $P0 = global "ok2"
+    $P0 = find_global "ok2"
     cl.'add_method'('get_string', $P0, 'vtable' => 1)
     print o
 .end
@@ -757,8 +757,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', "callmethod - method name" );
 .namespace ["Foo"]
 .sub meth :method
     print "in meth\n"
-    getinterp P0
-    $P1 = P0["sub"]
+    getinterp $P0
+    $P1 = $P0["sub"]
     print $P1
     print "\n"
     .return ()
@@ -799,7 +799,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "tailcallmeth" );
     n = new 'Integer'
     n = 2000
     setattribute o, [ "Foo" ], "n", n
-    o.go()
+    o.'go'()
     n = getattribute o, [ "Foo" ], "n"
     print n
     print "\n"
@@ -811,7 +811,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "tailcallmeth" );
     n = getattribute self, [ "Foo" ], "n"
     dec n
     unless n goto done
-    .return self."go"()
+    .tailcall self."go"()
 done:
 .end
 CODE
@@ -985,7 +985,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "addmethod op" );
 .sub main :main
     .local pmc c
     c = newclass ['whatever']
-    .const .Sub foo = "whatever_foo"
+    .const 'Sub' foo = "whatever_foo"
     addmethod c, "foo", foo
     $P0 = new ['whatever']
     $P0.'foo'()

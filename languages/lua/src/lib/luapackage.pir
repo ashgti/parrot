@@ -17,7 +17,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.3>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'package' ]
 
 .sub 'luaopen_package'
@@ -49,24 +50,24 @@ LIST
     _package[$P1] = _loaders
     new $P2, 'LuaNumber'
 
-    .const .Sub loader_preload = 'loader_preload'
+    .const 'Sub' loader_preload = 'loader_preload'
     set $P2, 1
     _loaders[$P2] = loader_preload
 
-    .const .Sub loader_Lua = 'loader_Lua'
+    .const 'Sub' loader_Lua = 'loader_Lua'
     inc $P2
     _loaders[$P2] = loader_Lua
 
-    .const .Sub loader_PBC = 'loader_PBC'
+    .const 'Sub' loader_PBC = 'loader_PBC'
     inc $P2
     _loaders[$P2] = loader_PBC
 
-    .const .Sub loader_PBCroot = 'loader_PBCroot'
+    .const 'Sub' loader_PBCroot = 'loader_PBCroot'
     inc $P2
     _loaders[$P2] = loader_PBCroot
 
     setpath(_package, 'path', 'LUA_PATH', './?.lua;languages/lua/src/lib/?.lua')
-    setpath(_package, 'pbcpath', 'LUA_PBCPATH', './?.pbc;./?.pir;languages/lua/src/lib/?.pbc')
+    setpath(_package, 'pbcpath', 'LUA_PBCPATH', './?.pbc;./?.pir;languages/lua/?.pbc')
 
     .local pmc _lua__REGISTRY
     _lua__REGISTRY = get_hll_global '_REGISTRY'
@@ -438,8 +439,6 @@ any loader for the module, then C<require> signals an error.
   L4:
     new $P1, 'LuaNil'
     $P1 = $P0(modname)  # call it
-    $I0 = isa $P1 , 'LuaClosure'
-    if $I0 goto L5
     $I0 = isa $P1 , 'LuaFunction'
     if $I0 goto L5
     $I0 = isa $P1 , 'LuaString'

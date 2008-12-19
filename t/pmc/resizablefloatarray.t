@@ -1,12 +1,12 @@
 #! perl
-# Copyright (C) 2001-2007, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 19;
+use Parrot::Test tests => 21;
 
 =head1 NAME
 
@@ -22,8 +22,6 @@ Tests C<ResizableFloatArray> PMC. Checks size, sets various elements, including
 out-of-bounds test. Checks INT and PMC keys.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<'CODE', <<'OUTPUT', 'creation' );
     new P0, 'ResizableFloatArray'
@@ -139,7 +137,37 @@ ok 2
 ok 3
 OUTPUT
 
-# RT#46823: Rewrite these properly when we have exceptions
+pasm_output_is( <<'CODE', <<'OUTPUT', "Setting negatively indeded elements" );
+    new P0, 'ResizableFloatArray'
+    set P0, 1
+
+    push_eh caught
+    set P0[-1], -7
+    pop_eh
+    print "no exception\n"
+    end
+caught:
+    say "caught something"
+    end
+CODE
+caught something
+OUTPUT
+
+pasm_output_is( <<'CODE', <<'OUTPUT', "Getting negatively indeded elements" );
+    new P0, 'ResizableFloatArray'
+    set P0, 1
+
+    push_eh caught
+    set I0, P0[-1]
+    pop_eh
+    say "no exception"
+    end
+caught:
+    say "caught an exception"
+    end
+CODE
+caught an exception
+OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting out-of-bounds elements" );
     new P0, 'ResizableFloatArray'
@@ -165,7 +193,7 @@ ok 1
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      new P1, 'Key'
 
@@ -184,7 +212,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 2.5, OK2)
+     .fp_eq_pasm(N0, 2.5, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -201,7 +229,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      set P0, 1
 
@@ -221,7 +249,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, 10.2, OK2)
+     .fp_eq_pasm(N0, 10.2, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -247,23 +275,23 @@ ok 4
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', 'basic push' );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      push P0, 1.0
      push P0, 2.0
      push P0, 3.0
      set N0, P0[0]
-     .fp_eq(N0, 1.0, OK1)
+     .fp_eq_pasm(N0, 1.0, OK1)
      print "not "
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 2.0, OK2)
+     .fp_eq_pasm(N0, 2.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
      set N0, P0[2]
-     .fp_eq(N0, 3.0, OK3)
+     .fp_eq_pasm(N0, 3.0, OK3)
      print "not "
 OK3: print "ok 3\\n"
      end
@@ -274,7 +302,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', 'push many values' );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      set I0, 0
 L1:  set N0, I0
@@ -283,7 +311,7 @@ L1:  set N0, I0
      lt I0, 100000, L1
 
      set N0, P0[99999]
-     .fp_eq(N0, 99999.0, OK1)
+     .fp_eq_pasm(N0, 99999.0, OK1)
      print N0
      print "not "
 OK1: print "ok 1\\n"
@@ -293,23 +321,23 @@ ok 1
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', 'basic pop' );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      set P0[0], 1.0
      set P0[1], 2.0
      set P0[2], 3.0
      pop N0, P0
-     .fp_eq(N0, 3.0, OK1)
+     .fp_eq_pasm(N0, 3.0, OK1)
      print "not "
 OK1: print "ok 1\\n"
 
      pop N0, P0
-     .fp_eq(N0, 2.0, OK2)
+     .fp_eq_pasm(N0, 2.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
      pop N0, P0
-     .fp_eq(N0, 1.0, OK3)
+     .fp_eq_pasm(N0, 1.0, OK3)
      print "not "
 OK3: print "ok 3\\n"
      end
@@ -320,7 +348,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', 'pop many values' );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      set I0, 0
 L1:  set N0, I0
@@ -331,7 +359,7 @@ L1:  set N0, I0
 L2:  dec I0
      set N1, I0
      pop N0, P0
-     .fp_eq(N0, N1, OK)
+     .fp_eq_pasm(N0, N1, OK)
      branch NOT_OK
 OK:  gt I0, 0, L2
      print "ok\\n"
@@ -348,13 +376,13 @@ ok
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', 'push/pop' );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableFloatArray'
      push P0, 1.0
      push P0, 2.0
      push P0, 3.0
      pop N0, P0
-     .fp_eq(N0, 3.0, OK1)
+     .fp_eq_pasm(N0, 3.0, OK1)
      print "not "
 OK1: print "ok 1\\n"
      end
@@ -438,7 +466,7 @@ pir_output_is( << 'CODE', << 'OUTPUT', "shift float" );
     print "\n"
 .end
 CODE
-2 10.100000 1 20.200000 0
+2 10.1 1 20.2 0
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', "unshift float" );
@@ -458,7 +486,7 @@ pir_output_is( << 'CODE', << 'OUTPUT', "unshift float" );
     print "\n"
 .end
 CODE
-2 20.200000 10.100000
+2 20.2 10.1
 OUTPUT
 
 # Local Variables:

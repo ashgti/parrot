@@ -49,16 +49,16 @@ Free hash structure.
 
     VTABLE void init() {
         Hash                       *registry;
-        Parrot_AddrRegistry * const addr_registry =
-            mem_allocate_zeroed_typed(Parrot_AddrRegistry);
+        Parrot_AddrRegistry_attributes * const addr_registry =
+            mem_allocate_zeroed_typed(Parrot_AddrRegistry_attributes);
 
         PMC_data(SELF)      = addr_registry;
         PObj_custom_mark_destroy_SETALL(SELF);
 
-        parrot_new_pmc_hash_x(SELF, enum_type_int, Hash_key_type_PMC,
+        parrot_new_pmc_hash_x(INTERP, SELF, enum_type_int, Hash_key_type_PMC,
                               int_compare, key_hash_int);
 
-        registry            = (Hash*)PMC_struct_val(SELF);
+        registry            = (Hash *)PMC_struct_val(SELF);
 
         /* this hack can go away when parrot_new_pmc_hash_x behaves */
         addr_registry->hash = registry;
@@ -67,9 +67,10 @@ Free hash structure.
 
     VTABLE void destroy() {
         if (PMC_data(SELF)) {
-            Parrot_AddrRegistry * const registry = PARROT_ADDRREGISTRY(SELF);
+            Parrot_AddrRegistry_attributes * const registry = PARROT_ADDRREGISTRY(SELF);
 
             parrot_hash_destroy(INTERP, registry->hash);
+            mem_sys_free(registry);
             PMC_data(SELF) = NULL;
         }
     }

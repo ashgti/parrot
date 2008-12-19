@@ -45,12 +45,6 @@ static void debug_trace_find_meth(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-static void do_initcall(PARROT_INTERP,
-    ARGIN_NULLOK(PMC* _class),
-    ARGIN_NULLOK(PMC *object),
-    ARGIN_NULLOK(PMC *init))
-        __attribute__nonnull__(1);
-
 static void fail_if_type_exists(PARROT_INTERP, ARGIN(PMC *name))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -63,33 +57,6 @@ static PMC * find_method_direct_1(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC* find_vtable_meth_ns(PARROT_INTERP,
-    ARGIN(PMC *ns),
-    INTVAL vtable_index)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC* get_init_meth(PARROT_INTERP,
-    ARGIN(PMC *_class),
-    ARGIN(STRING *prop_str),
-    ARGOUT(STRING **meth_str))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*meth_str);
-
-static void instantiate_object(PARROT_INTERP,
-    ARGMOD(PMC *object),
-    ARGIN_NULLOK(PMC *init))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*object);
 
 static void invalidate_all_caches(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -179,7 +146,7 @@ PARROT_WARN_UNUSED_RESULT
 PMC *
 Parrot_oo_get_namespace(SHIM_INTERP, ARGIN(const PMC *classobj))
 {
-    Parrot_Class * const _class     = PARROT_CLASS(classobj);
+    Parrot_Class_attributes * const _class     = PARROT_CLASS(classobj);
     PMC          * const _namespace = _class->_namespace;
 
     if (PMC_IS_NULL(_namespace))
@@ -199,7 +166,7 @@ Lookup a class object from a namespace, string, or key PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -262,7 +229,7 @@ Lookup a class object from a builtin string.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -339,7 +306,7 @@ PMC *
 Parrot_oo_find_vtable_override_for_class(PARROT_INTERP,
         ARGIN(PMC *classobj), ARGIN(STRING *name))
 {
-    Parrot_Class *class_info;
+    Parrot_Class_attributes *class_info;
     PARROT_ASSERT(PObj_is_class_TEST(classobj));
 
     class_info = PARROT_CLASS(classobj);
@@ -364,7 +331,7 @@ PMC *
 Parrot_oo_find_vtable_override(PARROT_INTERP,
         ARGIN(PMC *classobj), ARGIN(STRING *name))
 {
-    Parrot_Class * const _class = PARROT_CLASS(classobj);
+    Parrot_Class_attributes * const _class = PARROT_CLASS(classobj);
 
     if (VTABLE_exists_keyed_str(interp, _class->parent_overrides, name))
         return VTABLE_get_pmc_keyed_str(interp, _class->parent_overrides, name);
@@ -403,7 +370,7 @@ Return index if C<name> is a valid vtable slot name.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
 {
@@ -417,8 +384,7 @@ Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
         const INTVAL       mid    = (low + high) / 2;
         const char * const meth_c = Parrot_vtable_slot_names[mid];
 
-        /* RT#45965 slot_names still have __ in front */
-        const INTVAL cmp = strcmp(name_c, meth_c + 2);
+        const INTVAL cmp = strcmp(name_c, meth_c);
 
         if (cmp == 0) {
             string_cstring_free(name_c);
@@ -438,71 +404,17 @@ Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
 
 /*
 
-=item C<static PMC* find_vtable_meth_ns>
-
-Return Sub PMC if a method with the vtable name exists in ns
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC*
-find_vtable_meth_ns(PARROT_INTERP, ARGIN(PMC *ns), INTVAL vtable_index)
-{
-    return VTABLE_get_pmc_keyed_int(interp, ns, vtable_index);
-}
-
-
-/*
-
-=item C<STRING* readable_name>
-
-Given a String or Key PMC return the STRING* representation
-
-RT#45967 this function, key_set_to_string, and the key PMC get_repr should be
-consolidated
-
-=cut
-
-*/
-
-PARROT_API
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-STRING*
-readable_name(PARROT_INTERP, ARGIN(PMC *name))
-{
-    PMC    *array;
-
-    if (name->vtable->base_type == enum_class_String)
-        return VTABLE_get_string(interp, name);
-
-    array   = pmc_new(interp, enum_class_ResizableStringArray);
-
-    PARROT_ASSERT(name->vtable->base_type == enum_class_Key);
-
-    while (name) {
-        VTABLE_push_string(interp, array, key_string(interp, name));
-        name = key_next(interp, name);
-    }
-
-    return string_join(interp, CONST_STRING(interp, ";"), array);
-}
-
-
-/*
-
 =item C<const char* Parrot_MMD_method_name>
 
 Return the method name for the given MMD enum.
 
+{{**DEPRECATE**}}
+
 =cut
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_PURE_FUNCTION
 PARROT_CAN_RETURN_NULL
 const char*
@@ -519,34 +431,6 @@ Parrot_MMD_method_name(SHIM_INTERP, INTVAL idx)
 
 /*
 
-=item C<INTVAL Parrot_MMD_method_idx>
-
-Return the MMD function number for method name or -1 on failure.
-
-RT#45973 allow dynamic expansion at runtime.
-
-=cut
-
-*/
-
-PARROT_API
-PARROT_PURE_FUNCTION
-INTVAL
-Parrot_MMD_method_idx(SHIM_INTERP, ARGIN(const char *name))
-{
-    INTVAL i;
-
-    for (i = 0; i < MMD_USER_FIRST; ++i) {
-        if (STREQ(Parrot_mmd_func_names[i], name))
-            return i;
-    }
-
-    return -1;
-}
-
-
-/*
-
 =item C<PMC * Parrot_class_lookup>
 
 Looks for the class named C<class_name> and returns it if it exists.
@@ -556,7 +440,7 @@ Otherwise it returns C<PMCNULL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -630,10 +514,28 @@ fail_if_type_exists(PARROT_INTERP, ARGIN(PMC *name))
     else
         type = VTABLE_get_integer(interp, type_pmc);
 
-    if (type > enum_type_undef)
+    if (type > enum_type_undef) {
+        STRING *classname;
+
+        if (VTABLE_isa(interp, name, CONST_STRING(interp, "ResizableStringArray"))) {
+            PMC * const base_ns = VTABLE_get_pmc_keyed_int(interp,
+                                    interp->HLL_namespace,
+                                    CONTEXT(interp)->current_HLL);
+            PMC             *ns = Parrot_get_namespace_keyed(interp,
+                                    base_ns, name);
+
+            if (!PMC_IS_NULL(ns))
+                classname = VTABLE_get_string(interp, ns);
+            else
+                classname = CONST_STRING(interp, "");
+        }
+        else
+            classname = VTABLE_get_string(interp, name);
+
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
             "Class %Ss already registered!\n",
-            string_escape_string(interp, VTABLE_get_string(interp, name)));
+            string_escape_string(interp, classname));
+    }
 
     if (type < enum_type_undef)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -684,262 +586,18 @@ Parrot_oo_register_type(PARROT_INTERP, ARGIN(PMC *name))
     return type;
 }
 
-
-/*
-
-=item C<static PMC* get_init_meth>
-
-RT#48260: Not yet documented!!!
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC*
-get_init_meth(PARROT_INTERP, ARGIN(PMC *_class),
-        ARGIN(STRING *prop_str), ARGOUT(STRING **meth_str))
-{
-    STRING     *meth;
-    HashBucket *b;
-    PMC        *props, *ns, *method;
-
-    *meth_str = NULL;
-#if 0
-    PMC * const prop = VTABLE_getprop(interp, _class, prop_str);
-    if (!VTABLE_defined(interp, prop))
-        return PMCNULL;
-    meth = VTABLE_get_string(interp, prop);
-#else
-    props = PMC_metadata(_class);
-    if (!props)
-        return PMCNULL;
-
-    b = parrot_hash_get_bucket(interp,
-                (Hash*) PMC_struct_val(props), prop_str);
-    if (!b)
-        return PMCNULL;
-
-    meth = PMC_str_val((PMC*) b->value);
-#endif
-
-    *meth_str = meth;
-    ns        = VTABLE_get_namespace(interp, _class);
-    method    = VTABLE_get_pmc_keyed_str(interp, ns, meth);
-
-    return method;
-}
-
-
-/*
-
-=item C<static void do_initcall>
-
-RT#48260: Not yet documented!!!
-
-=cut
-
-*/
-
-static void
-do_initcall(PARROT_INTERP, ARGIN_NULLOK(PMC* _class), ARGIN_NULLOK(PMC *object),
-        ARGIN_NULLOK(PMC *init))
-{
-    PMC * const classsearch_array = _class->vtable->mro;
-    INTVAL      i, nparents;
-
-    /*
-     * 1) if class has a CONSTRUCT property run it on the object
-     *    no redispatch
-     *
-     * RT#45985 isn't CONSTRUCT for creating new objects?
-     */
-    STRING *meth_str;
-    PMC    *meth = get_init_meth(interp, _class,
-            CONST_STRING(interp, "CONSTRUCT"), &meth_str);
-    int     default_meth;
-
-    if (!PMC_IS_NULL(meth)) {
-        if (init)
-            Parrot_run_meth_fromc_args(interp, meth,
-                    object, meth_str, "vP", init);
-        else
-            Parrot_run_meth_fromc_args(interp, meth,
-                    object, meth_str, "v");
-    }
-    /*
-     * 2. if class has a BUILD property call it for all classes
-     *    in reverse search order - this class last.
-     *
-     *    Note: mro contains this class as first element
-     */
-    nparents = VTABLE_elements(interp, classsearch_array);
-
-    for (i = nparents - 1; i >= 0; --i) {
-        PMC * const parent_class =
-            VTABLE_get_pmc_keyed_int(interp, classsearch_array, i);
-
-        /* if it's a PMC, we put one PMC of that type into
-         * the attribute slot #0 and call init() on that PMC */
-        if (!PObj_is_class_TEST(parent_class)) {
-            PMC *attr, *next_parent;
-            SLOTTYPE *obj_data;
-
-            /* but only if init isn't inherited
-             * or rather just on the last non-class parent */
-            PARROT_ASSERT(i >= 1);
-            next_parent = VTABLE_get_pmc_keyed_int(interp,
-                    classsearch_array, i - 1);
-
-            if (!PObj_is_class_TEST(next_parent))
-                continue;
-
-            attr     = pmc_new_noinit(interp, parent_class->vtable->base_type);
-            obj_data = PMC_data_typed(object, SLOTTYPE *);
-            set_attrib_num(object, obj_data, 0, attr);
-            VTABLE_init(interp, attr);
-            continue;
-        }
-
-        meth = get_init_meth(interp, parent_class,
-                CONST_STRING(interp, "BUILD"), &meth_str);
-
-        /* no method found and no BUILD property set? */
-        if (PMC_IS_NULL(meth) && meth_str == NULL) {
-            PMC   *ns;
-            INTVAL vtable_index;
-
-            /* use __init or __init_pmc (depending on if an argument was passed)
-             * as fallback constructor method, if it exists */
-            if (init)
-                meth_str = CONST_STRING(interp, "init_pmc");
-            else
-                meth_str = CONST_STRING(interp, "init");
-
-            ns   = VTABLE_get_namespace(interp, parent_class);
-
-            /* can't use find_method, it walks mro */
-            vtable_index = Parrot_get_vtable_index(interp, meth_str);
-            meth         = find_vtable_meth_ns(interp, ns, vtable_index);
-            default_meth = 1;
-        }
-        else
-            default_meth = 0;
-
-        if (!PMC_IS_NULL(meth)) {
-            if (init)
-                Parrot_run_meth_fromc_args(interp, meth,
-                        object, meth_str, "vP", init);
-            else
-                Parrot_run_meth_fromc_args(interp, meth,
-                        object, meth_str, "v");
-        }
-        else if (meth_str != NULL && string_length(interp, meth_str) != 0
-             && !default_meth)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_METH_NOT_FOUND,
-                "Class BUILD method ('%Ss') not found", meth_str);
-    }
-}
-
-
-/*
-
-=item C<void Parrot_instantiate_object_init>
-
-Creates a Parrot object. Takes a passed-in class PMC that has sufficient
-information to describe the layout of the object and makes the object.
-
-=cut
-
-*/
-
-PARROT_API
-void
-Parrot_instantiate_object_init(PARROT_INTERP, ARGIN(PMC *object), ARGIN(PMC *init))
-{
-    instantiate_object(interp, object, init);
-}
-
-
-/*
-
-=item C<void Parrot_instantiate_object>
-
-Wrapper for instantiate_object, passing NULL as initialization.
-Returns a new Parrot object.
-
-=cut
-
-*/
-
-PARROT_API
-void
-Parrot_instantiate_object(PARROT_INTERP, ARGMOD(PMC *object))
-{
-    instantiate_object(interp, object, NULL);
-}
-
-
-/*
-
-=item C<static void instantiate_object>
-
-RT#48260: Not yet documented!!!
-
-=cut
-
-*/
-
-static void
-instantiate_object(PARROT_INTERP, ARGMOD(PMC *object), ARGIN_NULLOK(PMC *init))
-{
-    SLOTTYPE *new_object_array;
-    INTVAL    attrib_count, i;
-
-    PMC * const _class = object->vtable->pmc_class;
-
-    /* put in the real vtable */
-    PMC * const vtable_pmc = get_attrib_num((SLOTTYPE *)PMC_data(_class),
-                                            PCD_OBJECT_VTABLE);
-    object->vtable         = (VTABLE *)PMC_struct_val(vtable_pmc);
-
-    /* Grab the attribute count from the class */
-    attrib_count = CLASS_ATTRIB_COUNT(_class);
-
-    /* Build the array that hangs off the new object */
-    /* First presize it */
-    set_attrib_array_size(object, attrib_count);
-    new_object_array = PMC_data_typed(object, SLOTTYPE *);
-
-    /* fill with PMCNULL, so that access doesn't segfault */
-    for (i = 0; i < attrib_count; ++i)
-        set_attrib_num(object, new_object_array, i, PMCNULL);
-
-    /* turn marking on */
-    set_attrib_flags(object);
-
-    /* We are an object now */
-    PObj_is_object_SET(object);
-
-    /* We really ought to call the class init routines here...
-     * this assumes that an object isa delegate */
-    do_initcall(interp, _class, object, init);
-}
-
-
 /*
 
 =item C<PMC * Parrot_remove_parent>
 
 This currently does nothing but return C<PMCNULL>.
-RT#50646
+RT #50646
 
 =cut
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
@@ -1015,7 +673,7 @@ init_object_cache(PARROT_INTERP)
 
 =item C<void destroy_object_cache>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1042,7 +700,7 @@ destroy_object_cache(PARROT_INTERP)
 
 =item C<static void invalidate_type_caches>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1079,7 +737,7 @@ invalidate_type_caches(PARROT_INTERP, UINTVAL type)
 
 =item C<static void invalidate_all_caches>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1105,7 +763,7 @@ all classes are invalidated.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_invalidate_method_cache(PARROT_INTERP, ARGIN_NULLOK(STRING *_class), ARGIN(STRING *meth))
 {
@@ -1135,7 +793,7 @@ Parrot_invalidate_method_cache(PARROT_INTERP, ARGIN_NULLOK(STRING *_class), ARGI
 
 /*
  * quick'n'dirty method cache
- * RT#45987: use a hash if method_name is not constant
+ * RT #45987: use a hash if method_name is not constant
  *       i.e. from obj.$Sreg(args)
  *       If this hash is implemented mark it during DOD
  */
@@ -1151,7 +809,7 @@ interpreter, and name of the method. Don't use a possible method cache.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -1187,7 +845,7 @@ the name in the global stash.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -1259,7 +917,7 @@ Parrot_find_method_with_cache(PARROT_INTERP, ARGIN(PMC *_class), ARGIN(STRING *m
 
 =item C<static void debug_trace_find_meth>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1300,7 +958,7 @@ debug_trace_find_meth(PARROT_INTERP, ARGIN(const PMC *_class),
         result = "no";
 
     tracer = interp->debugger ? interp->debugger : interp;
-    PIO_eprintf(tracer, "# find_method class '%Ss' method '%Ss': %s\n",
+    Parrot_io_eprintf(tracer, "# find_method class '%Ss' method '%Ss': %s\n",
             class_name, name, result);
 }
 
@@ -1311,7 +969,7 @@ debug_trace_find_meth(PARROT_INTERP, ARGIN(const PMC *_class),
 
 =item C<static PMC * find_method_direct_1>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1354,7 +1012,7 @@ find_method_direct_1(PARROT_INTERP, ARGIN(PMC *_class),
 
 =item C<static PMC* C3_merge>
 
-RT#48260: Not yet documented!!!
+RT #48260: Not yet documented!!!
 
 =cut
 
@@ -1456,7 +1114,7 @@ Computes the C3 linearization for the given class.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
@@ -1530,7 +1188,7 @@ the default implementation.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
                         ARGIN(PMC *exclude), int got_exclude,
@@ -1590,7 +1248,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
         /* If we weren't excluded... */
         if (!excluded) {
             /* Is there a method with this name already in the class?
-             * RT#45999 multi-method handling. */
+             * RT #45999 multi-method handling. */
 
             if (VTABLE_exists_keyed_str(interp, methods_hash, method_name))
                 /* Conflicts with something already in the class. */
@@ -1622,7 +1280,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
                 alias, method_name);
 
             /* Is there a method with this name already in the class?
-             * RT#45999: multi-method handling. */
+             * RT #45999: multi-method handling. */
             if (VTABLE_exists_keyed_str(interp, methods_hash, alias_name))
                 /* Conflicts with something already in the class. */
                 Parrot_ex_throw_from_c_args(interp, NULL,

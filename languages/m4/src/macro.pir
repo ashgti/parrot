@@ -132,7 +132,7 @@ NESTING_LIMIT_NOT_REACHED_YET:
   state['expansion_level'] = expansion_level
 
   .local pmc arguments
-  arguments = new .ResizablePMCArray
+  arguments = new 'ResizablePMCArray'
   collect_arguments( state, arguments )
 
   .local string text
@@ -178,14 +178,7 @@ NO_TOKEN_TEXT:
 TOKEN_FUNC:
   .local pmc func
   func = symbol['func']
-  # indirect call of subs, seems to need elaborate PIR syntax
-  .begin_call
-    .arg state
-    .arg arguments
-  .call func
-    ret_func_1:
-    .result text
-  .end_call
+  (text) = func( state, arguments )
 
 FINISH_CALL_MACRO:
   .return ( text )

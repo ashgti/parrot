@@ -1,5 +1,5 @@
 
-.HLL 'Forth', ''
+.HLL 'Forth'
 .namespace ['TokenStream']
 
 .sub init :anon :load
@@ -11,23 +11,19 @@
 .end
 
 
-.sub '__new_from_string'
-    .param pmc class
-    .param pmc str
-    .param int flags
+.sub 'set_string_native' :vtable :method
+    .param string str
 
-    .local pmc self
-    $I0  = typeof class
-    self = new $I0
+    .local pmc code
+    code = new 'String'
+    code = str
 
     .local pmc pos
     pos = new 'Integer'
     pos = 0
 
-    setattribute self, '$code', str
-    setattribute self, '$pos',  pos
-
-    .return(self)
+    setattribute self, '$code', code
+    setattribute self, '$pos', pos
 .end
 
 
@@ -79,7 +75,7 @@ false:
     $I1 = find_not_cclass .CCLASS_NUMERIC, str, 0, $I0
     if $I1 == $I0 goto numeric
 
-    token = new .String
+    token = new 'String'
     token = str
     goto return
 

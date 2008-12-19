@@ -52,14 +52,16 @@ Bernhard Schmalhofer - L<Bernhard.Schmalhofer@gmx.de>
 =cut
 
 
-.namespace [ 'PAST::Compiler' ]
+.namespace [ 'PAST';'Compiler' ]
 
 .sub '__onload' :anon :load :init
+
+    # Pipp uses the Parrot Compiler Toolkit
     load_bytecode 'PCT.pbc'
 
-    ##  %valflags specifies when PAST::Val nodes are allowed to
-    ##  be used as a constant.  The 'e' flag indicates that the
-    ##  value must be quoted+escaped in PIR code.
+    #  %valflags specifies when PAST::Val nodes are allowed to
+    #  be used as a constant.  The 'e' flag indicates that the
+    #  value must be quoted+escaped in PIR code.
     .local pmc valflags
     valflags = get_global '%valflags'
     valflags['PhpString']   = 's~*e'
@@ -73,7 +75,6 @@ Bernhard Schmalhofer - L<Bernhard.Schmalhofer@gmx.de>
 
     load_bytecode 'config.pbc'
 
-    load_bytecode 'config.pbc'
     load_bytecode 'PGE.pbc'
     load_bytecode 'PGE/Text.pbc'
     load_bytecode 'PGE/Util.pbc'
@@ -102,11 +103,12 @@ Bernhard Schmalhofer - L<Bernhard.Schmalhofer@gmx.de>
     load_bytecode 'Getopt/Obj.pbc'
 
     # import PGE::Util::die into Pipp::Grammar
-    $P0 = get_hll_global ['PGE::Util'], 'die'
-    set_hll_global ['Pipp::Grammar'], 'die', $P0
+    $P0 = get_hll_global ['PGE';'Util'], 'die'
+    set_hll_global ['Pipp';'Grammar'], 'die', $P0
+    set_hll_global ['Pipp'], 'die', $P0
 
     # register and set up the the HLLCompiler
-    $P1 = new [ 'PCT::HLLCompiler' ]
+    $P1 = new [ 'PCT';'HLLCompiler' ]
     $P1.'language'('Pipp')
     $P1.'parsegrammar'('Pipp::Grammar')
     $P1.'parseactions'('Pipp::Grammar::Actions')
@@ -116,9 +118,9 @@ Bernhard Schmalhofer - L<Bernhard.Schmalhofer@gmx.de>
 .sub pipp :main
     .param pmc argv
 
-    .local string rest
+    .local string prog, rest
     .local pmc    opt
-    ( opt, rest ) = parse_options(argv)
+    (prog, opt, rest) = parse_options(argv)
 
     # Find the name of the input file
     .local string source_fn
@@ -131,7 +133,8 @@ GOT_NO_F_OPTION:
         source_fn = rest
         goto GOT_PHP_SOURCE_FN
 GOT_NO_FILE_ON_COMMAND_LINE:
-    printerr 'Got no PHP file.'
+        #XXX: should do REPL or read from stdin
+        printerr "No input file specified.\n"
     exit -1
 
 GOT_PHP_SOURCE_FN:
@@ -152,6 +155,10 @@ GOT_PHP_SOURCE_FN:
     # target of compilation
     .local string target
     target = opt['target']
+
+    # output file
+    .local string output
+    output = opt['output']
 
     # look at commandline and decide what to do
     .local string cmd, err_msg, variant
@@ -196,7 +203,12 @@ VARIANT_PCT:
     .local pmc pipp_compiler
     pipp_compiler = compreg 'Pipp'
 
-    .return pipp_compiler.'evalfiles'( source_fn, 'target' => target )
+    .local pmc args
+    args = new 'ResizableStringArray'
+    push args, prog
+    push args, rest
+
+    .tailcall pipp_compiler.'command_line'( args, 'target' => target, 'output' => output )
 
 VARIANT_PHC:
     .local string phc_src_dir
@@ -224,7 +236,7 @@ VARIANT_PHC:
     ret = spawnw cmd
     if ret goto ERROR
 
-    .return run_nqp( 'pipp_phc_past.nqp', target )
+    .tailcall run_nqp( 'pipp_phc_past.nqp', target )
 
 
 VARIANT_ANTLR3:
@@ -236,10 +248,10 @@ VARIANT_ANTLR3:
     ret = spawnw cmd
     if ret goto ERROR
 
-    .return run_nqp( 'pipp_antlr_past.nqp', target )
+    .tailcall run_nqp( 'pipp_antlr_past.nqp', target )
 
 RUN_NQP:
-    .return run_nqp( source_fn, target )
+    .tailcall run_nqp( source_fn, target )
 
 
 ERROR:
@@ -295,7 +307,7 @@ ERROR:
 
     # compile and evaluate the PAST returned from scheme_entry()
     .local pmc past_compiler
-    past_compiler = new [ 'PCT::HLLCompiler' ]
+    past_compiler = new [ 'PCT';'HLLCompiler' ]
     $P0 = split ' ', 'post pir evalpmc'
     past_compiler.'stages'( $P0 )
     past_compiler.'eval'(stmts)
@@ -318,6 +330,7 @@ ERROR:
     push getopts, 'variant=s'          # switch between variants
     push getopts, 'target=s'           # compilation target, used during development
     push getopts, 'run-nqp'            # run PAST set up in NQP
+    push getopts, 'output|o=s'
 
     # standard PHP options
     push getopts, 'version'
@@ -359,7 +372,7 @@ n_help:
     rest = argv[argc]
 NO_REST:
 
-    .return (opt, rest )
+    .return (prog, opt, rest)
 .end
 
 # keep arguments from the command line and from ini-file
@@ -369,12 +382,23 @@ NO_REST:
     set_hll_global 'pipp_ini', pipp_ini
 .end
 
-# there is a distinction between predifined vars and superglobals
+# there is a distinction between predefined variables and superglobals
 .sub set_predefined_variables
+
     .local pmc php_errormsg
     php_errormsg = new 'PhpString'
     php_errormsg = ''
     set_hll_global '$php_errormsg', php_errormsg
+
+    .local pmc included_files
+    included_files = new 'PhpArray'
+    set_hll_global '$INC', included_files
+
+    .local string default_include_path
+    default_include_path = constant('DEFAULT_INCLUDE_PATH')
+    $P0 = split ':', default_include_path
+    set_hll_global '$INCLUDE_PATH', $P0
+
 .end
 
 # Most of the superglobals are not initialized yet

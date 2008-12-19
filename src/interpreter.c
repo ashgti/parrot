@@ -660,6 +660,7 @@ prepare_for_run(PARROT_INTERP)
         case PARROT_SWITCH_JIT_CORE:
         case PARROT_CGP_CORE:
         case PARROT_CGP_JIT_CORE:
+        case PARROT_DEBUGGER_CORE:
             init_prederef(interp, interp->run_core);
             break;
         default:
@@ -793,7 +794,7 @@ runops_cgp(PARROT_INTERP, ARGIN(opcode_t *pc))
 
 #else
     UNUSED(pc);
-    PIO_eprintf(interp,
+    Parrot_io_eprintf(interp,
             "Computed goto unavailable in this configuration.\n");
     Parrot_exit(interp, 1);
 #endif
@@ -1263,6 +1264,7 @@ notify_func_table(PARROT_INTERP, ARGIN(op_func_t* table), int on)
         case PARROT_SLOW_CORE:      /* normal func core */
         case PARROT_FAST_CORE:      /* normal func core */
         case PARROT_CGOTO_CORE:     /* cgoto address list  */
+        case PARROT_DEBUGGER_CORE:
             PARROT_ASSERT(table);
             interp->op_func_table = table;
             break;
@@ -1288,7 +1290,7 @@ XXX This is only implemented for the function core at present.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 disable_event_checking(PARROT_INTERP)
 {
@@ -1313,7 +1315,7 @@ XXX This is only implemented for the function core at present.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 enable_event_checking(PARROT_INTERP)
 {

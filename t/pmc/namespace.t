@@ -518,7 +518,7 @@ END {
 
 open my $S, '>', "$temp_a.pir" or die "Can't write $temp_a.pir";
 print $S <<'EOF';
-.HLL "Foo", ""
+.HLL "Foo"
 .namespace ["Foo_A"]
 .sub loada :load
     $P0 = get_global ["Foo_A"], "A"
@@ -562,7 +562,7 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', "HLL and vars" );
 # initial storage of _tcl global variable...
 
-.HLL '_Tcl', ''
+.HLL '_Tcl'
 
 .sub huh
   $P0 = new 'Integer'
@@ -571,7 +571,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "HLL and vars" );
 .end
 
 # start running HLL language
-.HLL 'Tcl', ''
+.HLL 'Tcl'
 
 .sub foo :main
   huh()
@@ -585,10 +585,10 @@ CODE
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "HLL and namespace directives" );
-.HLL '_Tcl', ''
+.HLL '_Tcl'
 .namespace ['Foo'; 'Bar']
 
-.HLL 'Tcl', ''
+.HLL 'Tcl'
 
 .sub main :main
   $P0 = get_namespace
@@ -611,7 +611,7 @@ OUTPUT
 
     open $S, '>', $temp_a or die "Can't write $temp_a";
     print $S <<'EOF';
-.HLL 'eek', ''
+.HLL 'eek'
 
 .sub foo :load :anon
   $P1 = new 'String'
@@ -627,7 +627,7 @@ EOF
     close $S;
 
     pir_output_is( <<'CODE', <<'OUTPUT', ":anon subs still get default namespace" );
-.HLL 'cromulent', ''
+.HLL 'cromulent'
 
 .sub what
    load_bytecode 'temp_a.pir'
@@ -649,7 +649,7 @@ SKIP:
         if ( exists $ENV{TEST_PROG_ARGS} and $ENV{TEST_PROG_ARGS} =~ m/-r/ );
 
     pir_output_is( <<'CODE', <<'OUTPUT', "get_global in current" );
-.HLL 'bork', ''
+.HLL 'bork'
 .namespace []
 
 .sub a :immediate
@@ -671,7 +671,7 @@ OUTPUT
 
 open $S, '>', "$temp_b.pir" or die "Can't write $temp_b.pir";
 print $S <<'EOF';
-.HLL 'B', ''
+.HLL 'B'
 .sub b_foo
     print "b_foo\n"
 .end
@@ -751,7 +751,7 @@ CODE
 OUTPUT
 
 pir_output_is( <<"CODE", <<'OUTPUT', "export_to -- success with array" );
-.HLL 'A', ''
+.HLL 'A'
 .sub main :main
     a_foo()
     load_bytecode "$temp_b.pir"
@@ -774,7 +774,7 @@ b_foo
 OUTPUT
 
 pir_output_is( <<"CODE", <<'OUTPUT', "export_to -- success with hash (empty value)" );
-.HLL 'A', ''
+.HLL 'A'
 .sub main :main
     a_foo()
     load_bytecode "$temp_b.pir"
@@ -797,7 +797,7 @@ b_foo
 OUTPUT
 
 pir_output_is( <<"CODE", <<'OUTPUT', "export_to -- success with hash (null value)" );
-.HLL 'A', ''
+.HLL 'A'
 .sub main :main
     a_foo()
     load_bytecode "$temp_b.pir"
@@ -821,7 +821,7 @@ b_foo
 OUTPUT
 
 pir_error_output_like( <<"CODE", <<'OUTPUT', "export_to -- success with hash (and value)" );
-.HLL 'A', ''
+.HLL 'A'
 .sub main :main
     a_foo()
     load_bytecode "$temp_b.pir"
@@ -972,14 +972,14 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Nested namespace introspection" );
     print "\n"
 
     .local pmc bar_ns
-    bar_ns = foo_ns.find_namespace( 'Bar' )
+    bar_ns = foo_ns.'find_namespace'( 'Bar' )
     $S0    = bar_ns
     print "Found nested namespace: "
     print $S0
     print "\n"
 
     .local pmc baz_ns
-    baz_ns    = bar_ns.find_namespace( 'Baz' )
+    baz_ns    = bar_ns.'find_namespace'( 'Baz' )
     no_symbol = 'Baz'
 
     .local int is_defined
@@ -995,7 +995,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Nested namespace introspection" );
 
   find_symbols:
     .local pmc a_sub
-    a_sub = bar_ns.find_sub( 'a_sub' )
+    a_sub = bar_ns.'find_sub'( 'a_sub' )
     $S0   = a_sub
     a_sub()
     print "Found sub: "
@@ -1003,20 +1003,20 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Nested namespace introspection" );
     print "\n"
 
     .local pmc some_sub
-    some_sub  = bar_ns.find_sub( 'some_sub' )
+    some_sub  = bar_ns.'find_sub'( 'some_sub' )
     no_symbol = 'some_sub'
 
     is_defined = defined some_sub
     if is_defined goto oops
 
     .local pmc a_var
-    a_var    = bar_ns.find_var( 'a_var' )
+    a_var    = bar_ns.'find_var'( 'a_var' )
     print "Found var: "
     print a_var
     print "\n"
 
     .local pmc some_var
-    some_var    = bar_ns.find_var( 'some_var' )
+    some_var    = bar_ns.'find_var'( 'some_var' )
     no_symbol = 'some_var'
 
     is_defined = defined some_var
@@ -1082,7 +1082,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_root_namespace "Foo"' );
         print "Found root namespace 'foo'.\n"
     NO_NAMESPACE_FOUND:
 .end
-.HLL 'Foo', ''
+.HLL 'Foo'
 .sub dummy
 .end
 CODE
@@ -1268,8 +1268,9 @@ pir_output_like( <<'CODE', <<'OUTPUT', 'add_namespace() with error' );
 _invalid_ns:
     .local pmc exception
     .local string message
-    .get_results( exception, message )
+    .get_results( exception )
 
+    message = exception
     print message
     print "\n"
 .end
@@ -1375,8 +1376,9 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', 'add_sub() with error', todo => 'ne
 _invalid_sub:
     .local pmc exception
     .local string message
-    .get_results( exception, message )
+    .get_results( exception )
 
+    message = exception
     print message
     print "\n"
 .end
@@ -1538,8 +1540,9 @@ pir_output_like( <<'CODE', <<'OUTPUT', 'del_namespace() with error' );
 _invalid_ns:
     .local pmc exception
     .local string message
-    .get_results( exception, message )
+    .get_results( exception )
 
+    message = exception
     print message
     print "\n"
     .return()
@@ -1622,8 +1625,9 @@ pir_output_like( <<'CODE', <<'OUTPUT', 'del_sub() with error' );
 _invalid_sub:
     .local pmc exception
     .local string message
-    .get_results( exception, message )
+    .get_results( exception )
 
+    message = exception
     print message
     print "\n"
     .return()

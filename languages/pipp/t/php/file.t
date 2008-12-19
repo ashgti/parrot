@@ -1,4 +1,3 @@
-#! perl
 # Copyright (C) 2008, The Perl Foundation.
 # $Id$
 
@@ -8,7 +7,7 @@ t/php/file.t - Standard Library file
 
 =head1 SYNOPSIS
 
-    % perl -I../lib pipp/t/php/file.t
+    perl t/harness t/php/file.t
 
 =head1 DESCRIPTION
 
@@ -23,33 +22,35 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../../lib";
+use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
 use Test::More     tests => 10;
 use Parrot::Test;
 
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'constants' );
-<?php
-  echo SEEK_SET, "\n";
-  echo SEEK_CUR, "\n";
-  echo SEEK_END, "\n";
-?>
-CODE
-0
-1
-2
-OUTPUT
-
-unlink 'pipp/file.txt' if -f 'pipp/file.txt';
-open my $X, '>', 'pipp/file.txt';
+unlink 'file.txt' if -f 'file.txt';
+open my $X, '>', 'file.txt';
 binmode $X, ':raw';
 print {$X} "line 1\n";
 print {$X} "line 2\n";
 print {$X} "line 3\n";
 close $X;
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'file_get_contents(file)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'basename' );
+<?php
+  echo basename('def.html'), "\n";
+  echo basename('abc/def.html'), "\n";
+  echo basename('abc/def.html', '.html'), "\n";
+  echo basename('abc/def.html.html', '.html'), "\n";
+?>
+CODE
+def.html
+def.html
+def
+def.html
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'file_get_contents(file)' );
 <?php
   echo file_get_contents('file.txt'), "\n";
 ?>
@@ -58,26 +59,26 @@ line 1
 line 2
 line 3
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'file_get_contents(nofile)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'file_get_contents(nofile)' );
 <?php
   echo file_get_contents('nofile.txt'), "\n";
 ?>
 CODE
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'fopen(file)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'fopen(file)' );
 <?php
   $fp = fopen('file.txt', 'r');
   echo gettype($fp), "\n";
 ?>
 CODE
 resource
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'fopen(nofile)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'fopen(nofile)', todo => 'currently broken' );
 <?php
   $fp = fopen('nofile.txt', 'r');
   echo gettype($fp), "\n";
@@ -86,26 +87,26 @@ language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'fopen(nofile)' );
 CODE
 boolean
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'fopen(file) & fclose' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'fopen(file) & fclose' );
 <?php
   $fp = fopen('file.txt', 'r');
   echo fclose($fp), "\n";
 ?>
 CODE
 1
-OUTPUT
+OUT
 
-language_output_like( 'Pipp', <<'CODE', <<'OUTPUT', 'fclose() bad arg' );
+language_output_like( 'Pipp', <<'CODE', <<'OUT', 'fclose() bad arg', todo => 'currently broken' );
 <?php
   fclose('bad');
 ?>
 CODE
-/fclose\(\): supplied argument is not a valid (stream|ParrotIO) resource/
-OUTPUT
+/fclose\(\): supplied argument is not a valid (stream|FileHandle) resource/
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'fpassthru()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'fpassthru()', todo => 'currently broken' );
 <?php
   $fp = fopen('file.txt', 'r');
   fpassthru($fp);
@@ -115,9 +116,9 @@ CODE
 line 1
 line 2
 line 3
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'readfile(file)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'readfile(file)', todo => 'currently broken' );
 <?php
   echo readfile('file.txt'), "\n";
 ?>
@@ -126,17 +127,17 @@ line 1
 line 2
 line 3
 21
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'readfile(nofile)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'readfile(nofile)' );
 <?php
   echo readfile('nofile.txt'), "\n";
 ?>
 CODE
 
-OUTPUT
+OUT
 
-unlink 'pipp/file.txt' if -f 'pipp/file.txt';
+unlink 'file.txt' if -f 'file.txt';
 
 
 # Local Variables:

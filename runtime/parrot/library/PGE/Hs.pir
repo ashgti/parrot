@@ -9,7 +9,7 @@ PGE::Hs - Match and display PGE rules as Haskell expressions
     .sub _main
         load_bytecode "PGE.pbc"
         load_bytecode "PGE/Hs.pir"
-        $P0 = find_global "PGE::Hs", "match"
+        $P0 = find_global ["PGE";"Hs"], "match"
         $S0 = $P0("Hello", "(...)*$")
         print $S0   # PGE_Match 2 5 [PGE_Array [PGE_Match 2 5 [] []]] []
     .end
@@ -48,16 +48,14 @@ whole thing may be taken out or refactored away at any moment.
 
 =cut
 
-.namespace [ "PGE::Hs" ]
+.namespace [ "PGE";"Hs" ]
 
 .const string PGE_FAIL = "PGE_Fail"
-.const string PGE_SUB_POS = "@!list"
-.const string PGE_SUB_NAMED = "%!hash"
 
 .sub "__onload" :load
     .local pmc load
     load_bytecode "Data/Escape.pir"
-    $P0 = get_class 'PGE::Match'
+    $P0 = get_class ['PGE';'Match']
 .end
 
 .sub "add_rule"
@@ -75,7 +73,7 @@ whole thing may be taken out or refactored away at any moment.
 
     $I0 = exists adverbs["grammar"]
     if $I0 goto done
-    $P0 = get_class "PGE::Grammar"
+    $P0 = get_class ["PGE";"Grammar"]
     if null $P0 goto done
     addmethod $P0, name, rulesub
 
@@ -156,7 +154,7 @@ END:
     .return(ret)
 .end
 
-.namespace [ "PGE::Match" ]
+.namespace [ "PGE";"Match" ]
 
 .sub "dump_hs" :method
     .local string out
@@ -167,7 +165,7 @@ END:
     .local pmc capt, iter, subelm, elm, escape
 
     out = ""
-    escape = find_global "Data::Escape", "String"
+    escape = get_hll_global ["Data::Escape"], "String"
 
   start:
     out .= "PGE_Match "
@@ -181,8 +179,8 @@ END:
     out .= " ["
 
   subpats:
-    capt = getattribute self, PGE_SUB_POS
-    if_null capt, subrules
+    capt = self.'list'()
+    unless capt goto subrules
     spi = 0
     spc = elements capt
     goto subpats_body

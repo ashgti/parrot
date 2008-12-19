@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2006-2007, The Perl Foundation.
+# Copyright (C) 2006-2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
@@ -28,27 +28,31 @@ L<docs/pdds/pdd07_codingstd.pod>
 
 use strict;
 use warnings;
-
-my $num_col_limit = 100;
-
 use lib qw( . lib ../lib ../../lib );
 
 use File::Spec;
 use Test::More tests => 1;
-use Parrot::Config;
 use ExtUtils::Manifest qw( maniread );
 
-# a list of languages where we want to test line length
+use Parrot::Config qw/ %PConfig /;
+
+my $num_col_limit = 100;
+
+# a list of high level languages where we want to test line length
 my %lang_is_checked = map { $_ => 1 } qw{
     APL
-    WMLScript
     cardinal
     dotnet
+    eclectus
+    hq9plus
+    lazy-k
     lua
+    m4
+    ook
     perl6
-    python
-    plumhead
-    tcl
+    pipp
+    unlambda
+    WMLScript
 };
 
 # RT #44437 this should really be using src_dir instead of build_dir but it
@@ -92,6 +96,8 @@ sub info_for_first_long_line {
         $line =~ s/\t/' ' x (1 + length($`) % 8)/eg;  # expand \t
         next if $line =~ m/https?:\/\//;              # skip long web addresses
         next if $line =~ m/\$Id:/;
+        next if $line =~ m/CONST_STRING\(/;           # see RT#60616, no line splits with CONST_STRING
+
         return sprintf '%s:%d: %d cols', $file, $., length($line)
             if length($line) > $num_col_limit;
     }
@@ -139,10 +145,7 @@ compilers/pirc/macro/macrolexer.c
 compilers/pirc/macro/macrolexer.h
 compilers/pirc/macro/macroparser.c
 compilers/pirc/macro/macroparser.h
-compilers/pirc/heredoc/hdocprep.l
-compilers/pirc/heredoc/hdocprep.c
-languages/plumhead/src/yacc/plumhead_lexer.c
-languages/plumhead/src/yacc/plumhead_parser.c
-languages/plumhead/src/yacc/plumhead_parser.h
+compilers/pirc/new/hdocprep.l
+compilers/pirc/new/hdocprep.c
 # these ones include long POD
 docs/embed.pod

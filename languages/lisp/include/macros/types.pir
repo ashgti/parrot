@@ -43,7 +43,7 @@ Create a new stream object from ParrotIO object S, placing the result in R.
 
 .macro STREAM(R,S)
   .R = new "LispStream"
-  .R._set_io(.S)
+  .R.'_set_io'(.S)
 .endm
 
 =head2 .READTABLE(R)
@@ -121,7 +121,7 @@ Create a new function object with label L, placing the result in F.
     # VALID_IN_PARROT_0_2_0 setattribute .F, "LispFunction\0body", .L
 
     .local pmc _func
-    .const .Sub _func = .L
+    .const 'Sub' _func = .L
     setattribute .F, "body", _func
 
 .endm

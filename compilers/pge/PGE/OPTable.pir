@@ -10,7 +10,7 @@ PGE::OPTable - PGE operator precedence table and parser
 
 =cut
 
-.namespace [ "PGE::OPTable" ]
+.namespace [ 'PGE';'OPTable' ]
 
 .const int PGE_OPTABLE_EXPECT_TERM   = 0x01
 .const int PGE_OPTABLE_EXPECT_OPER   = 0x02
@@ -91,7 +91,7 @@ Adds (or replaces) a syntactic category's defaults.
     key = substr name, $I0
 
     .local pmc sctable, token
-    sctable = get_hll_global ["PGE::OPTable"], "%!sctable"
+    sctable = get_hll_global ['PGE';'OPTable'], '%!sctable'
     $I0 = exists sctable[syncat]
     if $I0 == 0 goto token_hash
     token = sctable[syncat]
@@ -112,9 +112,9 @@ Adds (or replaces) a syntactic category's defaults.
     $P0 = new 'Iterator', args
   args_loop:
     unless $P0 goto args_end
-    $P1 = shift $P0
-    $P2 = $P0[$P1]
-    token[$P1] = $P2
+    $S1 = shift $P0
+    $P2 = $P0[$S1]
+    token[$S1] = $P2
     goto args_loop
   args_end:
 
@@ -316,7 +316,7 @@ Adds (or replaces) a syntactic category's defaults.
     mpos = pos
     $P0 = ws(mob)
     unless $P0 goto token_next_1
-    pos = $P0.to()
+    pos = $P0.'to'()
     goto token_next_1
   token_next_ws:
     pos = find_not_cclass .CCLASS_WHITESPACE, target, pos, lastpos
@@ -453,7 +453,7 @@ Adds (or replaces) a syntactic category's defaults.
     ##   shift operator onto the operator stack
     push tokenstack, token
     push operstack, oper
-    pos = oper.to()
+    pos = oper.'to'()
     ##   for circumfix ops, increase the circumfix nesting level
     $I0 = isgt tokencat, PGE_OPTABLE_POSTCIRCUMFIX
     circumnest += $I0
@@ -463,7 +463,7 @@ Adds (or replaces) a syntactic category's defaults.
 
   term_shift:
     push termstack, oper
-    pos = oper.to()
+    pos = oper.'to'()
     expect = token['expect']
     expect = shr expect, 8
     goto token_next
@@ -553,7 +553,7 @@ Adds (or replaces) a syntactic category's defaults.
     mpos = $I0
     oper = $P0(mob, 'action'=>action)
     delete mob['KEY']
-    $P0 = oper.from()
+    $P0 = oper.'from'()
     $P0 = pos
   token_match_success:
     $P0 = token["name"]
@@ -583,14 +583,14 @@ Adds (or replaces) a syntactic category's defaults.
     ##   somewhere we encountered an error that caused us to backtrack
     ##   find the "real" ending position here
   end_1a:
-    $I0 = $P0.to()
+    $I0 = $P0.'to'()
     if $I0 <= wspos goto end_1b
     wspos = $I0
     mpos = $I0
   end_1b:
     $P0 = $P0[-1]
     if null $P0 goto end_2
-    $I0 = isa $P0, 'PGE::Match'
+    $I0 = isa $P0, ['PGE';'Match']
     if $I0 goto end_1a
   end_2:
     unless rulename goto end_all

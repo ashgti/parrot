@@ -66,11 +66,11 @@ LOOP:
     branch LOOP
 END:
     .begin_return
-    .return 0
+    .set_return 0
     .end_return
 IS:
     .begin_return
-    .return 1
+    .set_return 1
     .end_return
 .end
 
@@ -134,8 +134,8 @@ LOOP:
     ne_addr val, oldVal, SKIP
     where[i] = newVal
 SKIP:
-    I0 = __in_cache( val, cache )
-    if I0 goto LOOP
+    $I0 = __in_cache( val, cache )
+    if $I0 goto LOOP
 
     push cache, val
     __do_replace( val, oldVal, newVal, cache )
@@ -167,8 +167,8 @@ LOOP:
     ne_addr val, oldVal, SKIP
     where[key] = newVal
 SKIP:
-    I0 = __in_cache( val, cache )
-    if I0 goto LOOP
+    $I0 = __in_cache( val, cache )
+    if $I0 goto LOOP
 
     push cache, val
     __do_replace( val, oldVal, newVal, cache )
@@ -201,8 +201,8 @@ LOOP:
     ne_addr val, oldVal, SKIP
     where[key] = newVal
 SKIP:
-    I0 = __in_cache( val, cache )
-    if I0 goto LOOP
+    $I0 = __in_cache( val, cache )
+    if $I0 goto LOOP
 
     push cache, val
     __do_replace( val, oldVal, newVal, cache )

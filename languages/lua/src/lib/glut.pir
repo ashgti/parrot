@@ -18,12 +18,13 @@ see F<runtime/parrot/library/OpenGL.pir>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'glut' ]
 
 .sub '__onload' :anon :load
 #    print "__onload glut\n"
-    .const .Sub entry = 'luaopen_glut'
+    .const 'Sub' entry = 'luaopen_glut'
     set_hll_global 'luaopen_glut', entry
 .end
 
@@ -117,7 +118,7 @@ not LuaGL
     lua_error("incorrect argument to function 'glut.DisplayFunc'")
   L1:
     set_hll_global 'displayFunc.name', funcname
-    .const .Sub display = 'display'
+    .const 'Sub' display = 'display'
     glutDisplayFunc(display)
 .end
 
@@ -134,11 +135,13 @@ not LuaGL
   L2:
     push_eh _handler
     $P0()
+    pop_eh
     .return ()
   _handler:
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     printerr "Error running lua script:\n\n  "
     printerr s
     printerr " \n\n"
@@ -157,7 +160,7 @@ not LuaGL
     lua_error("incorrect argument to function 'glut.IdleFunc'")
   L1:
     set_hll_global 'idleFunc.name', funcname
-    .const .Sub idle = 'idle'
+    .const 'Sub' idle = 'idle'
     glutIdleFunc(idle)
 .end
 
@@ -174,11 +177,13 @@ not LuaGL
   L2:
     push_eh _handler
     $P0()
+    pop_eh
     .return ()
   _handler:
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     printerr "Error running lua script:\n\n  "
     printerr s
     printerr " \n\n"
@@ -193,7 +198,7 @@ not LuaGL
     .param pmc extra :slurpy
     .local pmc argv
     new argv, 'ResizableStringArray'
-    .const .Sub glutInit = 'glutInit'
+    .const 'Sub' glutInit = 'glutInit'
     $P0 = get_hll_global ['NCI'], 'call_toolkit_init'
     $P0(glutInit, argv)
 .end
@@ -244,7 +249,7 @@ not LuaGL
     lua_error("incorrect argument to function 'glut.KeyboardFunc'")
   L1:
     set_hll_global 'keyboardFunc.name', funcname
-    .const .Sub keyboard = 'keyboard'
+    .const 'Sub' keyboard = 'keyboard'
     glutKeyboardFunc(keyboard)
 .end
 
@@ -270,11 +275,13 @@ not LuaGL
     set $P3, y
     push_eh _handler
     $P0($P1, $P2, $P3)
+    pop_eh
     .return ()
   _handler:
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     printerr "Error running lua script:\n\n  "
     printerr s
     printerr " \n\n"
@@ -313,7 +320,7 @@ not LuaGL
     lua_error("incorrect argument to function 'glut.ReshapeFunc'")
   L1:
     set_hll_global 'reshapeFunc.name', funcname
-    .const .Sub reshape = 'reshape'
+    .const 'Sub' reshape = 'reshape'
     glutReshapeFunc(reshape)
 .end
 
@@ -336,11 +343,13 @@ not LuaGL
     set $P2, height
     push_eh _handler
     $P0($P1, $P2)
+    pop_eh
     .return ()
   _handler:
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     printerr "Error running lua script:\n\n  "
     printerr s
     printerr " \n\n"

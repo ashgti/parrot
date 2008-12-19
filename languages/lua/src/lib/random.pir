@@ -18,12 +18,13 @@ see F<runtime/parrot/library/Math/Random/mt19937ar.pir>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'random' ]
 
 .sub '__onload' :anon :load
 #    print "__onload random\n"
-    .const .Sub entry = 'luaopen_random'
+    .const 'Sub' entry = 'luaopen_random'
     set_hll_global 'luaopen_random', entry
 .end
 

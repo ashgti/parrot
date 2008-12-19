@@ -122,8 +122,8 @@ clone_interpreter(Parrot_Interp d, Parrot_Interp s, INTVAL flags)
                  * to be sufficient to instantiate the class.  */
                  PMC          *source       = s->vtables[i]->pmc_class;
                  PMC          *dest         = Parrot_clone(d, source);
-                 Parrot_Class *source_class = PARROT_CLASS(source);
-                 Parrot_Class *dest_class   = PARROT_CLASS(dest);
+                 Parrot_Class_attributes *source_class = PARROT_CLASS(source);
+                 Parrot_Class_attributes *dest_class   = PARROT_CLASS(dest);
                  dest_class->name           = string_copy(d, source_class->name);
                  dest_class->_namespace     = VTABLE_clone(d, source_class->_namespace);
             }
@@ -160,7 +160,7 @@ create_interp(PMC *self, Parrot_Interp parent)
     if (self->vtable->base_type == enum_class_ParrotThread)
         flag = PARROT_IS_THREAD;
 
-    new_interp     = make_interpreter(parent, flag);
+    new_interp     = make_interpreter(parent, (INTVAL)flag);
     PMC_data(self) = new_interp;
 
     VTABLE_set_pmc_keyed_int(new_interp, new_interp->iglobals,
@@ -318,8 +318,8 @@ Runs the interpreter's byte code.
          * possibly clone of share the arguments r/o args can be passed as is */
 
         /* calculate offset and run */
-        runops(new_interp, (opcode_t *)PMC_struct_val(SELF) -
-            (opcode_t *)interp->code->base.data);
+        runops(new_interp, (size_t)((opcode_t *)PMC_struct_val(SELF) -
+            (opcode_t *)interp->code->base.data));
 
         return (opcode_t *)next;
     }
@@ -375,7 +375,7 @@ Introspection interface. C<key> can be:
         STRING *s     = CONST_STRING(interp, "globals");
         int     level = 0;
 
-        parrot_context_t *ctx;
+        Parrot_Context *ctx;
 
         if (string_equal(interp, item, s) == 0)
             return interp->root_namespace;
@@ -388,7 +388,7 @@ Introspection interface. C<key> can be:
 
             if (nextkey && (PObj_get_FLAGS(nextkey) & KEY_string_FLAG)) {
                 key  = nextkey;
-                item = key_string(interp, key);
+                item = VTABLE_get_string(interp, key);
             }
         }
 
@@ -677,6 +677,24 @@ Finish thawing.
     METHOD run_gc() {
         Parrot_do_dod_run(PMC_data_typed(SELF, Parrot_Interp), 0);
     }
+/*
+
+=item METHOD hll_map(PMC core_type,PMC hll_type)
+
+Finish thawing.
+
+=cut
+
+*/
+
+    METHOD hll_map(PMC *core_type, PMC *hll_type) {
+        INTVAL core_type_id = VTABLE_type(INTERP, core_type);
+        INTVAL hll_type_id  = VTABLE_type(INTERP, hll_type);
+        INTVAL hll_id       = CONTEXT(interp)->current_HLL;
+        Parrot_register_HLL_type(INTERP, hll_id, core_type_id, hll_type_id);
+    }
+
+
 }
 
 /*

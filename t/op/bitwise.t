@@ -508,7 +508,8 @@ SKIP: {
 
     my @todo;
     @todo = ( todo => 'broken with JIT (RT #43245)' )
-        if $ENV{TEST_PROG_ARGS} =~ /-j/;
+        if ( defined $ENV{TEST_PROG_ARGS} and 
+            $ENV{TEST_PROG_ARGS} =~ /-j/ );
 
     pir_output_is( <<'CODE', <<'OUT', "I-reg shl and PMC shl are consistent", @todo );
 ## The PMC shl op will promote Integer to Bigint when needed.  We can't stuff a
@@ -552,11 +553,11 @@ SKIP: {
 loop:
     if $P1 > 100 goto done
     ## shift number and i_number into $P2 and $I2.
-    n_shl $P2, number, $P1
+    shl $P2, number, $P1
     $I1 = $P1
     shl $I2, i_number, $I1
     ## compare in I registers.
-    $P3 = n_mod $P2, integer_modulus
+    $P3 = mod $P2, integer_modulus
     $I3 = $P3
     if $I2 >= 0 goto pos_check
     ## The register op gave a negative result, but the modulus will always be

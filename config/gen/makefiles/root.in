@@ -139,7 +139,6 @@ NONGEN_HEADERS   = @TEMP_nongen_headers@
 GEN_MAKEFILES = \
     Makefile \
 #CONDITIONED_LINE(has_perldoc):    docs/Makefile \
-    compilers/bcg/Makefile \
     compilers/json/Makefile \
     compilers/ncigen/Makefile \
     compilers/nqp/Makefile \
@@ -155,6 +154,7 @@ GEN_CONFIGS = \
     $(INC_DIR)/config.h \
     $(INC_DIR)/platform.h \
     $(INC_DIR)/platform_interface.h \
+    $(INC_DIR)/platform_limits.h \
     $(INC_DIR)/has_header.h \
     $(INC_DIR)/feature.h \
     $(INC_DIR)/core_pmcs.h \
@@ -353,16 +353,14 @@ ENCODING_O_FILES  = @TEMP_encoding_o@
 
 
 IO_O_FILES = \
-    $(IO_DIR)/io$(O) \
-    $(IO_DIR)/io_buf$(O) \
-    $(IO_DIR)/io_layers$(O) \
-    $(IO_DIR)/io_unix$(O) \
-    $(IO_DIR)/io_utf8$(O) \
-    $(IO_DIR)/io_mmap$(O) \
-    $(IO_DIR)/io_win32$(O) \
-    $(IO_DIR)/io_stdio$(O) \
-    $(IO_DIR)/io_string$(O) \
-    $(IO_DIR)/io_passdown$(O)
+    $(IO_DIR)/core$(O) \
+    $(IO_DIR)/api$(O) \
+    $(IO_DIR)/utf8$(O) \
+    $(IO_DIR)/buffer$(O) \
+    $(IO_DIR)/unix$(O) \
+    $(IO_DIR)/win32$(O) \
+    $(IO_DIR)/portable$(O) \
+    $(SRC_DIR)/io$(O)
 
 INTERP_O_FILES = \
     $(SRC_DIR)/string$(O) \
@@ -409,7 +407,7 @@ INTERP_O_FILES = \
     $(SRC_DIR)/list$(O) \
     $(SRC_DIR)/longopt$(O) \
     $(SRC_DIR)/misc$(O) \
-    $(SRC_DIR)/mmd$(O) \
+    $(SRC_DIR)/multidispatch$(O) \
     $(SRC_DIR)/nci$(O) \
     $(SRC_DIR)/oo$(O) \
     $(SRC_DIR)/packfile$(O) \
@@ -470,7 +468,7 @@ PINFO               = $(CUR_DIR)/pbc_info$(EXE)
 PBCMERGE            = $(CUR_DIR)/pbc_merge$(EXE)
 PDB                 = $(CUR_DIR)/parrot_debugger$(EXE)
 PBC_TO_EXE          = $(CUR_DIR)/pbc_to_exe$(EXE)
-PARROT_CONFIG       = $(CUR_DIR)/parrot-config$(EXE)
+PARROT_CONFIG       = $(CUR_DIR)/parrot_config$(EXE)
 
 # HLL Executables
 PERL6               = $(CUR_DIR)/perl6$(EXE)
@@ -482,6 +480,7 @@ INSTALLABLEPDUMP    = $(CUR_DIR)/installable_pdump$(EXE)
 INSTALLABLEPINFO    = $(CUR_DIR)/installable_pbc_info$(EXE)
 INSTALLABLEPBCMERGE = $(CUR_DIR)/installable_pbc_merge$(EXE)
 INSTALLABLEPDB      = $(CUR_DIR)/installable_parrot_debugger$(EXE)
+INSTALLABLECONFIG   = $(CUR_DIR)/installable_parrot_config$(EXE)
 
 # Libraries
 LIBPARROT_STATIC    = @blib_dir@/@libparrot_static@
@@ -583,10 +582,10 @@ STR_FILES = \
     $(SRC_DIR)/inter_cb.str \
     $(SRC_DIR)/inter_create.str \
     $(SRC_DIR)/inter_misc.str \
-    $(SRC_DIR)/io/io.str \
+    $(SRC_DIR)/io/api.str \
     $(SRC_DIR)/key.str \
     $(SRC_DIR)/library.str \
-    $(SRC_DIR)/mmd.str \
+    $(SRC_DIR)/multidispatch.str \
     $(SRC_DIR)/nci.str \
     $(SRC_DIR)/packfile.str \
     $(SRC_DIR)/pmc.str \
@@ -683,6 +682,7 @@ help :
 	@echo "  codingstd_tests:   Test pdd07_codingstd."
 	@echo "  testexec:          Testing the exec runcore."
 	@echo "  benchmark_tests:   Run all benchmarks."
+	@echo "  warnings_tests:    Run standard test suite with warnings enabled."
 	@echo "  manitest:          Check for new and missing files."
 	@echo "  doc_tests:         Check POD syntax of all files containing POD."
 	@echo "  buildtools_tests:  Test build tool pmc2c.pl."
@@ -691,7 +691,7 @@ help :
 	@echo ""
 	@echo "Smoke Testing:"
 	@echo "  smoke:             Run the test suite and send smoke.html to "
-	@echo "                     http:////smoke.parrotcode.org/"
+	@echo "                     http:////smoke.parrotcode.org//"
 	@echo "  smokej:            Same as smoke, but with JIT runcore"
 	@echo "  smokeexec:         Same as smoke, but generate first executables"
 	@echo "                     with the exec runcore"
@@ -740,7 +740,7 @@ help :
 	@echo "  sunlint:           Code checking with Sun Studio's sunlint."
 	@echo "  splint:            Code checking with splint."
 	@echo "  headerizer:        Recreate header files for C-source files"
-	@echo "  apilist:           Show list of PARROT_API functions"
+	@echo "  apilist:           Show list of PARROT_EXPORT functions"
 	@echo "  malloclist:        Show list of PARROT_MALLOC functions"
 	@echo "  cover:             Run test suite coverage analysis."
 	@echo "  tags-vi:           Create tags for the vi editor."
@@ -759,7 +759,7 @@ world : all parrot_utils
 
 parrot_utils : $(PDUMP) $(DIS) $(PINFO) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
 
-installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPINFO) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE)
+installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPINFO) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLECONFIG)
 
 
 flags_dummy :
@@ -790,9 +790,9 @@ $(PBC_TO_EXE) : pbc_to_exe.pir $(PARROT)
 	$(PARROT) -o pbc_to_exe.pbc pbc_to_exe.pir
 	$(PARROT) pbc_to_exe.pir pbc_to_exe.pbc
 
-$(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT)
+$(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT) $(PBC_TO_EXE)
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
-	$(PARROT) pbc_to_exe.pir parrot_config.pbc
+	$(PARROT) pbc_to_exe.pbc parrot_config.pbc
 
 # HLL Executable targets
 #CONDITIONED_LINE(win32):perl6 : $(PERL6)
@@ -803,8 +803,6 @@ $(PERL6) : compilers $(PBC_TO_EXE)
 	$(CHMOD) 0755 $(PERL6)
 	$(PERL6) -e"say 'Hello, world.'"
 
-
-# TODO build the real miniparrot
 $(MINIPARROT) : $(SRC_DIR)/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
     lib/Parrot/OpLib/core.pm $(SRC_DIR)/null_config$(O)
 	$(LINK) @ld_out@$@ $(SRC_DIR)/main$(O) $(SRC_DIR)/null_config$(O) \
@@ -893,6 +891,10 @@ $(LIBPARROT_SHARED) : $(O_FILES)
 #CONDITIONED_LINE(libparrot_shared_alias):	( cd @blib_dir@ ; ln -sf @libparrot_shared@ @libparrot_shared_alias@ )
 
 
+$(INSTALLABLECONFIG) : $(SRC_DIR)/install_config$(O) $(PARROT_CONFIG) $(PBC_TO_EXE)
+	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
+	$(PBC_TO_EXE) parrot_config.pbc --install
+
 #
 # Parrot Debugger
 #
@@ -906,7 +908,7 @@ $(PDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT)
     @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
 #CONDITIONED_LINE(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
-$(INSTALLABLEPDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT)
+$(INSTALLABLEPDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT) $(SRC_DIR)/parrot_config$(O)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/parrot_debugger$(O) \
     $(SRC_DIR)/parrot_config$(O) \
@@ -976,7 +978,7 @@ $(PBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT) $(SRC_DIR)/parrot_config$(O)
     @rpath_blib@ $(ALL_PARROT_LIBS) $(LINK_DYNAMIC) $(LINKFLAGS)
 #CONDITIONED_LINE(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
-$(INSTALLABLEPBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT)
+$(INSTALLABLEPBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT) $(INSTALLABLECONFIG)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/pbc_merge$(O) \
     $(SRC_DIR)/install_config$(O) \
@@ -1128,7 +1130,8 @@ $(SRC_DIR)/inter_cb$(O) : $(SRC_DIR)/inter_cb.c $(GENERAL_H_FILES) \
 $(SRC_DIR)/inter_misc$(O) : $(SRC_DIR)/inter_misc.c $(GENERAL_H_FILES) \
     $(SRC_DIR)/inter_misc.str
 
-$(SRC_DIR)/inter_create$(O) : $(SRC_DIR)/inter_create.c $(GENERAL_H_FILES)
+$(SRC_DIR)/inter_create$(O) : $(SRC_DIR)/inter_create.c $(GENERAL_H_FILES) \
+    $(SRC_DIR)/inter_create.str
 
 $(SRC_DIR)/inter_run$(O) : $(SRC_DIR)/inter_run.c $(GENERAL_H_FILES)
 
@@ -1160,7 +1163,7 @@ $(SRC_DIR)/pic$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/pic_jit$(O) : $(GENERAL_H_FILES)
 
-$(SRC_DIR)/mmd$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/mmd.str
+$(SRC_DIR)/multidispatch$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/multidispatch.str
 
 $(SRC_DIR)/packfile$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/packfile.str
 
@@ -1208,6 +1211,8 @@ $(SRC_DIR)/encoding$(O) : $(SRC_DIR)/encoding.c $(GENERAL_H_FILES)
 $(SRC_DIR)/charset$(O) : $(SRC_DIR)/charset.c $(GENERAL_H_FILES)
 
 $(SRC_DIR)/pbc_merge$(O) : $(SRC_DIR)/pbc_merge.c $(GENERAL_H_FILES)
+
+$(SRC_DIR)/io$(O) : $(SRC_DIR)/pmc/pmc_filehandle.h $(SRC_DIR)/io/io_private.h
 
 $(OPS_DIR)/core_ops$(O) : $(GENERAL_H_FILES) $(OPS_DIR)/core_ops.c
 
@@ -1479,22 +1484,22 @@ check : test
 # 'testC', 'testg' and 'testj' are tested only
 # when the needed runcores are available
 fulltest :
-	-@make@ testb
-#CONDITIONED_LINE(cg_flag):	-@make@ testC
-	-@make@ testf
-#CONDITIONED_LINE(cg_flag):	-@make@ testg
-#CONDITIONED_LINE(cg_flag):	-@make@ testj
-	-@make@ testr
-	-@make@ testS
-	-@make@ src_tests
-	-@make@ run_tests
-	-@make@ perl_tests
-	-@make@ codetest
-	-@make@ benchmark_tests
-	-@make@ doc_tests
-	-@make@ distro_tests
-	-@make@ manifest_tests
-	-@make@ examples_tests
+	-@make@ testb \
+#CONDITIONED_LINE(cg_flag):	testC \
+	testf \
+#CONDITIONED_LINE(cg_flag):	testg \
+#CONDITIONED_LINE(cg_flag):	testj \
+	testr \
+	testS \
+	src_tests \
+	run_tests \
+	perl_tests \
+	codetest \
+	benchmark_tests \
+	doc_tests \
+	manifest_tests \
+	examples_tests \
+	distro_tests
 
 # bounds checking, slow core
 testb : test_prep
@@ -1554,6 +1559,10 @@ codetest :
 # Test pdd07_codingstd
 codingstd_tests :
 	$(PERL) t/harness $(CODINGSTD_TEST_FILES)
+
+# Run standard test suite with warnings enabled.
+warnings_tests:
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) -w $(RUNCORE_TEST_FILES)
 
 buildtools_tests :
 	$(PERL) t/harness $(BUILDTOOLS_TEST_FILES)
@@ -1661,6 +1670,7 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(INSTALLABLEPINFO) \
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPDB) \
+    $(INSTALLABLECONFIG) \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pdump$(O) $(SRC_DIR)/packdump$(O) \
     $(SRC_DIR)/pbc_info$(O) $(PINFO) \
@@ -1718,8 +1728,6 @@ test-clean :
     "t/compilers/*/*/*_pbcexe*" \
     "t/compilers/*/*/*.pir" \
     "t/compilers/*/*/*.stabs.s"
-	$(RM_F) \
-    "t/examples/*.past"
 	$(RM_F) \
     "t/*/*$(O)" \
     "t/*/*.out" \
@@ -1832,7 +1840,7 @@ SUNLINT_HUSH_OPTS = \
 
 SUNLINT_OPTS_FOR_THE_FUTURE = -b -m -Xc
 
-# Lint options at: http://docs.sun.com/app/docs/doc/819-5265/6n7c29cli?a=view
+# Lint options at: http:////docs.sun.com//app//docs//doc//819-5265//6n7c29cli?a=view
 SUNLINTOPTS = \
     -b \
     -p \
@@ -1869,14 +1877,15 @@ bsdlint : $(PARROT)
 	rm -f *.ln
 	$(LINT) $(CC_INC) "-Isrc/pmc" $(BSD_LINT_FLAGS) $(BSD_LINT_EXCLUSIONS) $(LINTABLE_CFILES)
 
-# Splint: http://splint.org
+# For checking with splint see also http:////www.perlfoundation.org//parrot//index.cgi?splint
+# Splint: http:////splint.org
 SPLINT = splint
 
 # Temp directory for splint.  Add +keep to splintflags if you want work files
 # kept in there after completion.
 SPLINT_TMP = $(TMP)/splint
 
-# Splint flags: http://splint.org/manual/html/appB.html
+# Splint flags: http:////splint.org//manual//html//appB.html
 # The dashes in the names don't make any difference to Splint, but I've
 # made them match how they are in the manual.  Otherwise, you might be
 # looking for "declundef", except that it's "decl-undef" in the docs.
@@ -2174,9 +2183,11 @@ release : MANIFEST MANIFEST.generated
 	rm parrot-$(VERSION)
 
 rpms : release
-	sudo cp parrot-$(VERSION).tar.gz /usr/src/*/SOURCES
-	sudo cp parrot.spec /usr/src/*/SPECS
-	cd /usr/src/*/SPECS @make_and@ sudo rpmbuild -ba parrot.spec
+	mkdir -p rpmbuild/SOURCES rpmbuild/SPEC rpmbuild/BUILD rpmbuild/RPMS rpmbuild/SRPMS
+	cp parrot-$(VERSION).tar.gz rpmbuild/SOURCES
+	cp parrot.spec rpmbuild/SPEC
+	echo '%_topdir '`pwd`'/rpmbuild' > .rpmmacros
+	HOME=`pwd`; rpmbuild -ba parrot.spec
 
 win32-inno-installer : world installable
 	$(PERL) tools/dev/mk_inno.pl
@@ -2242,7 +2253,7 @@ tags.vi.dummy:
 
 # This target will eventually create all the headers automatically.  If you are
 # having problems with linkage in Win32 (or elsewhere), because something is
-# not PARROT_API but should be, then put PARROT_API in the C file and run "make
+# not PARROT_EXPORT but should be, then put PARROT_EXPORT in the C file and run "make
 # headerizer".  The .h file will get updated.
 
 HEADERIZER_O_FILES = \
@@ -2254,7 +2265,7 @@ headerizer : $(SRC_DIR)/core_pmcs.c
 	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl $(HEADERIZER_O_FILES) $(IMCC_DIR)/imcc.y
 
 apilist: $(SRC_DIR)/core_pmcs.c
-	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_API $(HEADERIZER_O_FILES)
+	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_EXPORT $(HEADERIZER_O_FILES)
 
 malloclist: $(SRC_DIR)/core_pmcs.c
 	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_MALLOC $(HEADERIZER_O_FILES)

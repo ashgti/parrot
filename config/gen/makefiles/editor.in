@@ -1,7 +1,8 @@
 # $Id$
 
 OPS_DIR     = ../src/ops
-VIM_DIR     = $(HOME)/.vim
+#CONDITIONED_LINE(win32):VIM_DIR     = $(USERPROFILE)/vimfiles
+#INVERSE_CONDITIONED_LINE(win32):VIM_DIR     = $(HOME)/.vim
 VIM_FT_DIR  = $(VIM_DIR)/plugin
 VIM_IN_DIR  = $(VIM_DIR)/indent
 VIM_SYN_DIR = $(VIM_DIR)/syntax
@@ -31,7 +32,7 @@ help :
 	@echo "  realclean:         clean up local files including Makefile"
 	@echo ""
 
-pir.vim: pir_vim.in $(OPS_DIR)/*.ops ops2vim.pl
+pir.vim: pir_vim.in $(OPS_DIR)//*.ops ops2vim.pl
 	$(CP) pir_vim.in pir.vim
 	$(PERL) ops2vim.pl $(OPS_DIR)/*.ops >> pir.vim
 

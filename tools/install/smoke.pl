@@ -4,6 +4,10 @@
 
 use strict;
 use warnings;
+use 5.008;
+
+use Getopt::Long;
+use File::Spec::Functions;
 
 use Test::More tests => 28;
 
@@ -13,39 +17,76 @@ tools/install/smoke.pl - checks parrot in install directory
 
 =head1 SYNOPSIS
 
+parrot in bin
+
     % cd /usr/local/parrot-$version
     % perl tools/install/smoke.pl
+
+parrot in .
+
+    % perl tools/install/smoke.pl --bindir=.
+
+test installation in DESTDIR:
+
+    % cd /usr/src/parrot
+    % mkdir .inst
+    % make install DESTDIR=.inst
+    % perl tools/install/smoke.pl DESTDIR=.inst
 
 =head1 DESCRIPTION
 
 Checks that most of things run (or just start) into the install directory,
-try to detect missing part.
+try to detect missing parts.
+
+=head1 OPTIONS
+
+=over
+
+=item --bindir=/usr/bin
+
+Override default value : 'bin'
+
+=item --libdir=/usr/lib
+
+Override default value : 'lib'
+
+=back
 
 =cut
 
-use File::Spec::Functions;
+my ($bindir, $libdir, $DESTDIR);
+my $opts = GetOptions(
+    'bindir=s'  => \$bindir,
+    'libdir=s'  => \$libdir,
+    'DESTDIR=s' => \$DESTDIR,
+);
+
+$bindir = 'bin' unless $bindir;
+$libdir = 'lib' unless $libdir;
+
+chdir $DESTDIR if ($DESTDIR);
 
 my $filename;
 my $exe;
 my $out;
 my $FH;
-my $parrot = catfile('bin', 'parrot');
+my $parrot = catfile($bindir, 'parrot');
 
 #
 # parrot executable
 #
 
-$exe = catfile('bin', 'pbc_merge');
+$exe = catfile($bindir, 'pbc_merge');
 $out = `$exe`;
 ok($out =~ /^pbc_merge/, "check pbc_merge");
 
-$exe = catfile('bin', 'pdump');
+$exe = catfile($bindir, 'pdump');
 $out = `$exe`;
 ok($out =~ /^pdump/, "check pdump");
 
 ok(system("$parrot -V") == 0, "display parrot version");
 
-$exe = catfile('bin', 'perl6');
+$exe = catfile($bindir, 'perl6');
 $out = `$exe -v`;
 ok($out =~ /Rakudo/, "check rakudo");
 
@@ -58,10 +99,11 @@ open $FH, '>', $filename
         or die "Can't open $filename ($!).\n";
 print $FH "token TOP { \\s* }\n";
 close $FH;
-$out = `$parrot lib/parrot/library/PGE/Perl6Grammar.pir $filename`;
+$out = `$parrot $libdir/parrot/library/PGE/Perl6Grammar.pir $filename`;
 ok($out =~ /^\n## <::TOP>/, "check PGE");
 unlink($filename);
 
+# compilers/tge is typically not installed
 $filename = 'test.tg';
 open $FH, '>', $filename
         or die "Can't open $filename ($!).\n";
@@ -71,6 +113,7 @@ $out = `$parrot compilers/tge/tgc.pir $filename`;
 ok($out =~ /^\n\.sub '_ROOT_past'/, "check TGE");
 unlink($filename);
 
+# compilers/nqp is typically not installed
 $filename = 'test.nqp';
 open $FH, '>', $filename
         or die "Can't open $filename ($!).\n";
@@ -129,7 +172,7 @@ open $FH, '>', $filename
         or die "Can't open $filename ($!).\n";
 print $FH "H";
 close $FH;
-$out = `$parrot languages/HQ9Plus/HQ9Plus.pbc $filename`;
+$out = `$parrot languages/hq9plus/hq9plus.pbc $filename`;
 ok($out eq "Hello, world!\n", "check HQ9Plus");
 unlink($filename);
 
@@ -160,6 +203,15 @@ ok($out eq "nil\n", "check lua");
 
 $out = `$parrot languages/m4/m4.pbc`;
 ok($out =~ /^Usage/, "check m4");
+
+$filename = 'test.text';
+open $FH, '>', $filename
+        or die "Can't open $filename ($!).\n";
+print $FH "Hello, World!\n\n";
+close $FH;
+$out = `$parrot languages/markdown/markdown.pbc $filename`;
+ok($out eq "<p>Hello, World!</p>\n\n", "check markdown");
+unlink($filename);
 
 $out = `$parrot languages/ook/ook.pbc`;
 ok($out eq q{}, "check ook");
@@ -211,19 +263,6 @@ close $FH;
 $out = `$parrot languages/squaak/squaak.pbc $filename`;
 ok($out eq "Hello, World!\n", "check squaak");
 unlink($filename);
-
-TODO: {
-    local $TODO = 'missing file ?';
-
-$filename = 'test.tcl';
-open $FH, '>', $filename
-        or die "Can't open $filename ($!).\n";
-print $FH "puts {hello world!}\n";
-close $FH;
-$out = `$parrot languages/tcl/tcl.pbc $filename`;
-ok($out eq "hello world!\n", "check tcl");
-unlink($filename);
-}
 
 # Local Variables:
 #   mode: cperl

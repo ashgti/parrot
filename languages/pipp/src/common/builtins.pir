@@ -3,6 +3,8 @@
 .loadlib 'php_group'
 
 .include 'languages/pipp/src/common/php_MACRO.pir'
+.include 'languages/pipp/src/common/guts.pir'
+.include 'languages/pipp/src/common/eval.pir'
 
 # steal builtins from Perl6
 .sub 'print'
@@ -66,12 +68,12 @@
 
 
 ## symbolic unary
-.sub 'prefix:-'
-    .param pmc a
-    $P1 = a.'to_number'()
-    neg $P1
+.sub 'prefix:-' :multi(_)
+    .param num a
 
-    .return ($P1)
+    neg a
+
+    .return (a)
 .end
 
 .sub 'prefix:+'
@@ -101,22 +103,22 @@
 
 
 ## multiplicative
-.sub 'infix:*'
-    .param pmc a
-    .param pmc b
-    $P1 = a.'to_number'()
-    $P2 = b.'to_number'()
-    $P0 = mul $P1, $P2
-    .return ($P0)
+.sub 'infix:*' :multi(_,_)
+    .param num a
+    .param num b
+
+    $N0 = mul a, b
+
+    .return ($N0)
 .end
 
-.sub 'infix:/'
-    .param pmc a
-    .param pmc b
-    $P1 = a.'to_number'()
-    $P2 = b.'to_number'()
-    $P0 = div $P1, $P2
-    .return ($P0)
+.sub 'infix:/' :multi(_,_)
+    .param num a
+    .param num b
+
+    $N0 = div a, b
+
+    .return ($N0)
 .end
 
 .sub 'infix:%'
@@ -159,21 +161,17 @@
 
 ## additive
 .sub 'infix:+'
-    .param pmc a
-    .param pmc b
-    $P1 = a.'to_number'()
-    $P2 = b.'to_number'()
-    $P0 = add $P1, $P2
-    .return ($P0)
+    .param num a
+    .param num b
+    $N0 = add a, b
+    .return ($N0)
 .end
 
 .sub 'infix:-'
-    .param pmc a
-    .param pmc b
-    $P1 = a.'to_number'()
-    $P2 = b.'to_number'()
-    $P0 = sub $P1, $P2
-    .return ($P0)
+    .param num a
+    .param num b
+    $N0 = sub a, b
+    .return ($N0)
 .end
 
 .sub 'infix:.'

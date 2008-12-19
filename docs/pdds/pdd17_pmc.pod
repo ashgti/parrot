@@ -230,8 +230,9 @@ of a C<pmclass> or C<prole> declaration.
 
   ATTR <type> <name> [ :<modifier> ... ];
 
-This declaration is used to generate the data struct for the PMC (named
-"Parrot_<pmcname>_Data"). The data struct incorporates any attributes declared
+This declaration is used to generate the data struct for the PMC
+(named "Parrot_<pmcname>_attributes").
+The data struct incorporates any attributes declared
 in a composed role or inherited class. Composed attributes are inserted at the
 end of the generated struct. Inherited attributes are inserted at the top of
 the generated struct, so the struct members shared by the parent and child are
@@ -922,15 +923,6 @@ copying the value of another PMC.
   void set_pointer_keyed_str(INTERP, PMC* self, STRING* key, void* value)
 
 Set the pointer value of the element indexed by a PMC, integer, or string key.
-
-=item type_keyed [deprecated: see individual tickets below]
-
-  INTVAL type_keyed(INTERP, PMC* self, PMC* key) [RT #48577]
-  INTVAL type_keyed_int(INTERP, PMC* self, INTVAL key) [RT #48579]
-  INTVAL type_keyed_str(INTERP, PMC* self, STRING* key) [RT #48581]
-
-Return the type number of the PMC indexed by a PMC, integer, or string key.
-The I<key> parameter is guaranteed not to be null for this method.
 
 =item pop_integer
 

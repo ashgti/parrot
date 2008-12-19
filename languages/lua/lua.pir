@@ -93,7 +93,8 @@ show version information.
 .include 'languages/lua/src/lib/luaregex.pir'
 
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 
 .sub 'main' :anon :main
     .param pmc args
@@ -153,9 +154,9 @@ show version information.
     $S1 = substr $S0, 0, 1
     unless $S1 == '@' goto L2
     $S0 = substr $S0, 1
-    .return dofile($S0)
+    .tailcall dofile($S0)
   L2:
-    .return dostring($S0, '=LUA_INIT')
+    .tailcall dostring($S0, '=LUA_INIT')
 .end
 
 
@@ -274,7 +275,7 @@ show version information.
     (narg, $P0) = getargs(args, n)  # collect arguments
     .local pmc env
     env = get_hll_global '_G'
-    .const .LuaString k_arg = 'arg'
+    .const 'LuaString' k_arg = 'arg'
     env.'rawset'(k_arg, $P0)
     .local string fname
     fname = args[n]
@@ -301,9 +302,9 @@ show version information.
     goto L3
   L4:
     ($P0 :slurpy) = docall($P0, vararg :flat)
-    .return report($P0 :flat)
+    .tailcall report($P0 :flat)
   L2:
-    .return report(1, $S0)
+    .tailcall report(1, $S0)
 .end
 
 
@@ -339,9 +340,9 @@ show version information.
     ($P0, $S0) = lua_loadfile(name)
     if null $P0 goto L1
     ($P0 :slurpy) = docall($P0)
-    .return report($P0 :flat)
+    .tailcall report($P0 :flat)
   L1:
-    .return report(1, $S0)
+    .tailcall report(1, $S0)
 .end
 
 
@@ -351,9 +352,9 @@ show version information.
     ($P0, $S0) = lua_loadbuffer(buf, name)
     if null $P0 goto L1
     ($P0 :slurpy) = docall($P0)
-    .return report($P0 :flat)
+    .tailcall report($P0 :flat)
   L1:
-    .return report(1, $S0)
+    .tailcall report(1, $S0)
 .end
 
 
@@ -361,19 +362,19 @@ show version information.
     .param string name
     .local pmc env
     env = get_hll_global '_G'
-    .const .LuaString k_require = 'require'
+    .const 'LuaString' k_require = 'require'
     $P0 = env.'rawget'(k_require)
     new $P1, 'LuaString'
     set $P1, name
     ($P0 :slurpy) = docall($P0, $P1)
-    .return report($P0 :flat)
+    .tailcall report($P0 :flat)
 .end
 
 
 .sub 'dotty' :anon
     .local pmc env
     env = get_hll_global '_G'
-    .const .LuaString k_print = 'print'
+    .const 'LuaString' k_print = 'print'
     .local int has_readline
     .local pmc stdin
     stdin = getstdin

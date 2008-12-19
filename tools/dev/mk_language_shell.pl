@@ -287,7 +287,7 @@ object.
 
 =cut
 
-.namespace [ '@lang@::Compiler' ]
+.namespace [ '@lang@';'Compiler' ]
 
 .loadlib '@lclang@_group'
 
@@ -364,9 +364,9 @@ rule value {
     | <quote> {*}                                #= quote
 }
 
-rule integer { \d+ {*} }
+token integer { \d+ {*} }
 
-rule quote {
+token quote {
     [ \' <string_literal: '\'' > \' | \" <string_literal: '"' > \" ]
     {*}
 }
@@ -385,12 +385,12 @@ __src/parser/grammar-oper.pg__
 proto 'term:'     is precedence('=')     is parsed(&term)      { ... }
 
 ## multiplicative operators
-proto infix:<*>   is looser(term:)       is pirop('n_mul')     { ... }
-proto infix:</>   is equiv(infix:<*>)    is pirop('n_div')     { ... }
+proto infix:<*>   is looser(term:)       is pirop('mul')     { ... }
+proto infix:</>   is equiv(infix:<*>)    is pirop('div')     { ... }
 
 ## additive operators
-proto infix:<+>   is looser(infix:<*>)   is pirop('n_add')     { ... }
-proto infix:<->   is equiv(infix:<+>)    is pirop('n_sub')     { ... }
+proto infix:<+>   is looser(infix:<*>)   is pirop('add')     { ... }
+proto infix:<->   is equiv(infix:<+>)    is pirop('sub')     { ... }
 
 __src/parser/actions.pm__
 # @Id@
@@ -535,10 +535,11 @@ use Parrot::Test::Harness language => '@lang@',
 
 __t/00-sanity.t__
 # This just checks that the basic parsing and call to builtin say() works.
-say '1..3';
+say '1..4';
 say 'ok 1';
 say 'ok ', 2;
 say 'ok ', 2 + 1;
+say 'ok', ' ', 4;
 
 __DATA__
 

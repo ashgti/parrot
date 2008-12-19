@@ -29,7 +29,7 @@ tree transformations using the Parrot compiler toolkit.
 .sub 'onload' :load :init :anon
     load_bytecode 'PCT.pbc'
 
-    $P0 = new [ 'PCT::HLLCompiler' ]
+    $P0 = new [ 'PCT';'HLLCompiler' ]
     $P0.'language'('Punie')
     $P0.'parsegrammar'('Punie::Grammar')
     $P1 = split '::', 'Punie::Grammar::Actions'
@@ -39,7 +39,7 @@ tree transformations using the Parrot compiler toolkit.
 .sub 'main' :main
     .param pmc args
     $P0 = compreg 'Punie'
-    .return $P0.'command_line'(args)
+    .tailcall $P0.'command_line'(args)
 .end
 
 .include 'src/builtins/builtins.pir'

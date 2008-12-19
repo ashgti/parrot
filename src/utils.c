@@ -49,8 +49,14 @@ static long _lrand48(void);
 static long _mrand48(void);
 static long _nrand48(_rand_buf buf);
 static void _srand48(long seed);
-static INTVAL COMPARE(PARROT_INTERP, void *a, void *b, PMC *cmp)
-        __attribute__nonnull__(1);
+static INTVAL COMPARE(PARROT_INTERP,
+    ARGIN(void *a),
+    ARGIN(void *b),
+    ARGIN(PMC *cmp))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4);
 
 static void next_rand(_rand_buf X);
 static void process_cycle_without_exit(
@@ -63,7 +69,12 @@ static void rec_climb_back_and_mark(
     ARGIN(parrot_prm_context* c))
         __attribute__nonnull__(2);
 
-static void swap(void **x, void **y);
+static void swap(ARGMOD(void **x), ARGMOD(void **y))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*x)
+        FUNC_MODIFIES(*y);
+
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -387,7 +398,7 @@ C<how_random> is ignored.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 FLOATVAL
 Parrot_float_rand(INTVAL how_random)
 {
@@ -408,7 +419,7 @@ C<how_random> is ignored.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_uint_rand(INTVAL how_random)
 {
@@ -429,7 +440,7 @@ C<how_random> is ignored.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_int_rand(INTVAL how_random)
 {
@@ -450,7 +461,7 @@ C<how_random> is ignored.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_range_rand(INTVAL from, INTVAL to, INTVAL how_random)
 {
@@ -468,7 +479,7 @@ Seeds the random number generator with C<seed>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_srand(INTVAL seed)
 {
@@ -537,7 +548,7 @@ Returns an offset value if it is found, or -1 if no match.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_byte_index(SHIM_INTERP, ARGIN(const STRING *base),
         ARGIN(const STRING *search), UINTVAL start_offset)
@@ -583,7 +594,7 @@ Returns offset value or -1 (if no match).
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL
 Parrot_byte_rindex(SHIM_INTERP, ARGIN(const STRING *base),
@@ -748,7 +759,7 @@ TODO: Add tests for the above conditions.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_register_move(PARROT_INTERP,
         int n_regs,
@@ -840,20 +851,20 @@ Parrot_register_move(PARROT_INTERP,
 
 /* TODO: Macroize swap and COMPARE */
 static void
-swap(void **x, void **y)
+swap(ARGMOD(void **x), ARGMOD(void **y))
 {
     void *t = *x;
     *x      = *y;
     *y      =  t;
 }
 
-typedef INTVAL (*sort_func_t)(PARROT_INTERP, void*, void*);
+typedef INTVAL (*sort_func_t)(PARROT_INTERP, void *, void *);
 
 static INTVAL
-COMPARE(PARROT_INTERP, void *a, void *b, PMC *cmp)
+COMPARE(PARROT_INTERP, ARGIN(void *a), ARGIN(void *b), ARGIN(PMC *cmp))
 {
     if (PMC_IS_NULL(cmp))
-        return mmd_dispatch_i_pp(interp, (PMC *)a, (PMC *)b, MMD_CMP);
+        return VTABLE_cmp(interp, (PMC *)a, (PMC *)b);
 
     if (cmp->vtable->base_type == enum_class_NCI) {
         const sort_func_t f = (sort_func_t)D2FPTR(PMC_struct_val(cmp));
@@ -865,12 +876,12 @@ COMPARE(PARROT_INTERP, void *a, void *b, PMC *cmp)
 
 
 void
-Parrot_quicksort(PARROT_INTERP, void **data, UINTVAL n, PMC *cmp)
+Parrot_quicksort(PARROT_INTERP, ARGMOD(void **data), UINTVAL n, ARGIN(PMC *cmp))
 {
     while (n > 1) {
         UINTVAL i, j, ln, rn;
 
-        swap(&data[0], &data[n/2]);
+        swap(&data[0], &data[n / 2]);
 
         for (i = 0, j = n; ;) {
             do

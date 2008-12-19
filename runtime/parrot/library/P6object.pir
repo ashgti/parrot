@@ -109,7 +109,7 @@ Return the C<P6protoobject> for the invocant.
 .sub 'WHAT' :method
     .local pmc how, what
     how = self.'HOW'()
-    .return how.'WHAT'()
+    .tailcall how.'WHAT'()
 .end
 
 
@@ -219,9 +219,10 @@ Return a true value if the invocant 'can' C<x>.
   method_loop:
     unless methoditer goto mro_loop
     $S0 = shift methoditer
-    push_eh method_loop
+    push_eh method_next
     $P0 = methods[$S0]
     parrotclassns.'add_sub'($S0, $P0)
+  method_next:
     pop_eh
     goto method_loop
   mro_end:
@@ -230,7 +231,48 @@ Return a true value if the invocant 'can' C<x>.
 .end
 
 
-=item register(parrotclass [, 'name'=>name] [, 'protoobject'=>proto] [, 'parent'=>parentclass])
+=item add_method(name, method, [, 'to'=>parrotclass])
+
+Add C<method> with C<name> to C<parrotclass>.
+
+=cut
+
+.sub 'add_method' :method
+    .param string name
+    .param pmc method
+    .param pmc options         :slurpy :named
+
+    $P0 = options['to']
+    unless null $P0 goto have_to
+    $P0 = self
+  have_to:
+    .local pmc parrotclass
+    parrotclass = self.'get_parrotclass'($P0)
+    parrotclass.'add_method'(name, method)
+.end
+
+
+=item add_role(role, [, 'to'=>parrotclass])
+
+Add C<role> to C<parrotclass>.
+
+=cut
+
+.sub 'add_role' :method
+    .param pmc role
+    .param pmc options         :slurpy :named
+
+    $P0 = options['to']
+    unless null $P0 goto have_to
+    $P0 = self
+  have_to:
+    .local pmc parrotclass
+    parrotclass = self.'get_parrotclass'($P0)
+    parrotclass.'add_role'(role)
+.end
+
+
+=item register(parrotclass [, 'name'=>name] [, 'protoobject'=>proto] [, 'parent'=>parentclass] [, 'hll'=>hll])
 
 Sets objects of type C<parrotclass> to use C<protoobject>,
 and verifies that C<parrotclass> has P6object methods defined
@@ -254,6 +296,18 @@ or 'Object').
     if $I0 goto have_parrotclass
     parrotclass = self.'get_parrotclass'(parrotclass)
   have_parrotclass:
+
+    ## get the hll, either from options or the caller's namespace
+    .local pmc hll
+    hll = options['hll']
+    $I0 = defined $P0
+    if $I0, have_hll
+    $P0 = getinterp
+    $P0 = $P0['namespace';1]
+    $P0 = $P0.'get_name'()
+    hll = shift $P0
+    options['hll'] = hll
+  have_hll:
 
     ##  add any needed parent classes
     .local pmc parentclass
@@ -357,8 +411,13 @@ or 'Object').
     setattribute how, 'shortname', shortname
 
     ##  store the protoobject in appropriate namespace
+    unshift ns, hll
     $S0 = pop ns
-    set_hll_global ns, $S0, protoobject
+    set_root_global ns, $S0, protoobject
+    ##  store the protoobject in the default export namespace
+    push ns, 'EXPORT'
+    push ns, 'ALL'
+    set_root_global ns, $S0, protoobject
     goto have_how
 
     ##  anonymous classes have empty strings for shortname and longname
@@ -377,9 +436,10 @@ or 'Object').
 .end
 
 
-=item new_class(name [, 'parent'=>parentclass] [, 'attr'=>attr])
+=item new_class(name [, 'parent'=>parentclass] [, 'attr'=>attr] [, 'hll'=>hll])
 
 Create a new class called C<name> as a subclass of C<parentclass>.
+When C<name> is a string, then double-colons will be treated as separators.
 If C<parentclass> isn't supplied, defaults to using C<P6object>
 as the parent.  The C<attr> parameter is a list of attribute names
 to be added to the class, specified as either an array or a string
@@ -391,8 +451,40 @@ of names separated by spaces.
     .param pmc name
     .param pmc options         :slurpy :named
 
-    .local pmc parrotclass
+    .local pmc parrotclass, hll
+
+    hll = options['hll']
+    $I0 = defined hll
+    if $I0, have_hll
+    $P0 = getinterp
+    $P0 = $P0['namespace';1]
+    $P0 = $P0.'get_name'()
+    hll = shift $P0
+    options['hll'] = hll
+  have_hll:
+
+    $I0 = isa name, 'String'
+    if $I0, parrotclass_string
     parrotclass = newclass name
+    goto have_parrotclass
+  parrotclass_string:
+    $S0 = name
+    .local pmc class_ns, lookup
+    class_ns = split '::', $S0
+    unshift class_ns, hll
+    lookup = get_root_namespace class_ns
+    $I0 = defined lookup
+    unless $I0, parrotclass_no_namespace
+    parrotclass = newclass lookup
+    goto have_parrotclass
+  parrotclass_no_namespace:
+    # The namespace doesn't exist, so we need to create it
+    .local pmc ns
+    ns = new 'NameSpace'
+    set_root_global class_ns, '', ns
+    ns = get_root_namespace class_ns
+    parrotclass = newclass ns
+  have_parrotclass:
 
     .local pmc attrlist, iter
     attrlist = options['attr']
@@ -411,7 +503,7 @@ of names separated by spaces.
     goto iter_loop
   iter_end:
   attr_done:
-    .return self.'register'(parrotclass, options :named :flat)
+    .tailcall self.'register'(parrotclass, options :named :flat)
 .end
 
 
@@ -439,6 +531,15 @@ Multimethod helper to return the parrotclass for C<x>.
     parrotclass = getattribute $P0, 'parrotclass'
     .return (parrotclass)
   x_string:
+    $I0 = isa x, 'P6protoobject'
+    if $I0 goto x_p6object
+    parrotclass = get_class x
+    unless null parrotclass goto done
+    $S0 = x
+    $P0 = split '::', $S0
+    x = get_hll_namespace $P0
+  x_ns:
+    if null x goto done
     parrotclass = get_class x
   done:
     .return (parrotclass)
@@ -526,6 +627,23 @@ will be used in lieu of this one.)
     $I0 = isa topicwhat, parrotclass
     if $I0 goto end
     $I0 = does topic, parrotclass
+    if $I0 goto end
+
+    # Here comes some special handling for Perl 6, that really shouldn't be in
+    # here; we'll figure out a way to let Perl 6 provide it's own ACCEPTS that
+    # does this or, better make it so we don't need to do this. The purpose is
+    # to make Any accept stuff that doesn't actually inherit from it, aside
+    # from Junction, and to make Perl6Object accept anything.
+    $S0 = parrotclass
+    if $S0 == 'Perl6Object' goto accept_anyway
+    if $S0 != 'Any' goto end
+    $S0 = topicwhat
+    if $S0 != 'Junction' goto accept_anyway
+    goto end
+
+  accept_anyway:
+    $I0 = 1
+
   end:
     .return ($I0)
 .end
@@ -537,7 +655,7 @@ will be used in lieu of this one.)
 
 Written and maintained by Patrick R. Michaud, C<< pmichaud at pobox.com >>.
 Please send patches, feedback, and suggestions to the parrot-porters
-mailing list or to C< parrotbug@perl.org >.
+mailing list or to C< parrotbug@parrotcode.org >.
 
 =head1 COPYRIGHT
 

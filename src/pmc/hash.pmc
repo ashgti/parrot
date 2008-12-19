@@ -26,7 +26,7 @@ These are the vtable functions for the Hash PMC.
 
 Lookup the PMC type which is used for storing native integers.
 
-RT#46641: PMCs extending Hash should probably register themselves.
+RT #46641: PMCs extending Hash should probably register themselves.
 
 =cut
 
@@ -43,7 +43,7 @@ static PMC *get_integer_pmc(PARROT_INTERP, INTVAL base_type) {
 
 Lookup the PMC type which is used for floating point numbers.
 
-RT#46641: PMCs extending Hash should probably register themselves.
+RT #46641: PMCs extending Hash should probably register themselves.
 
 =cut
 
@@ -59,7 +59,7 @@ static PMC *get_number_pmc(PARROT_INTERP, INTVAL base_type) {
 
 Lookup the PMC type which is used for storing strings.
 
-RT#46641: PMCs extending Hash should probably register themselves.
+RT #46641: PMCs extending Hash should probably register themselves.
 
 =cut
 
@@ -88,8 +88,14 @@ static STRING
     if (!key)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
             "Hash: Cannot use NULL key");
-
-    return key_string(interp, key);
+    else {
+        STRING *keystr = key_string(interp, key);
+        if (STRING_IS_NULL(keystr))
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_UNEXPECTED_NULL, "Hash: Cannot use NULL STRING key");
+        else
+            return keystr;
+    }
 }
 
 /* Albeit the Hash PMC doesn't use PMC_data, it needs the next_for_GC pointer
@@ -136,55 +142,6 @@ Marks the hash as live.
     VTABLE void mark() {
         if (PMC_struct_val(SELF))
             parrot_mark_hash(INTERP, (Hash *)PMC_struct_val(SELF));
-    }
-
-/*
-
-=item C<INTVAL type_keyed_str(STRING *key)>
-
-Returns the type of the element for C<*key>.
-
-=cut
-
-*/
-
-    VTABLE INTVAL type_keyed_str(STRING *key) {
-        HashBucket * const b =
-            parrot_hash_get_bucket(INTERP, (Hash *)PMC_struct_val(SELF), key);
-
-        if (!b)
-            return 0;
-
-        return VTABLE_type(INTERP, (PMC *)b->value);
-    }
-
-/*
-
-=item C<INTVAL type_keyed(PMC *key)>
-
-Returns the type of the element for C<*key>.
-
-=cut
-
-*/
-
-    VTABLE INTVAL type_keyed(PMC *key) {
-        PMC               *valpmc;
-        PMC               *nextkey;
-        STRING     * const keystr = make_hash_key(INTERP, key);
-        HashBucket * const b      = parrot_hash_get_bucket(INTERP,
-            (Hash *)PMC_struct_val(SELF), keystr);
-
-        if (!b)
-            return 0;
-
-        nextkey = key_next(INTERP, key);
-        valpmc  = (PMC *)b->value;
-
-        if (!nextkey)
-            return VTABLE_type(INTERP, valpmc);
-
-        return VTABLE_type_keyed(INTERP, valpmc, nextkey);
     }
 
 /*
@@ -392,7 +349,7 @@ Return a representation of the hash contents.
     }
 
     VTABLE STRING *get_repr() {
-        /* RT#44643 use freeze */
+        /* RT #44643 use freeze */
         PMC * const  iter = VTABLE_get_iter(INTERP, SELF);
         STRING      *res  = CONST_STRING(INTERP, "{");
         const INTVAL n    = VTABLE_elements(INTERP, SELF);
@@ -448,7 +405,7 @@ Return a representation of the hash contents.
             parrot_hash_get_bucket(INTERP, (Hash *)PMC_struct_val(SELF), key);
 
         /*
-         * RT#46647 current behaviour of $S0 = hsh['no_such_key'] in
+         * RT #46647 current behaviour of $S0 = hsh['no_such_key'] in
          *      PGE and possibly more code needs an empty STRING
          *      (--leo)
          */
@@ -494,7 +451,7 @@ Returns the string value for the element at C<*key>.
         b      = parrot_hash_get_bucket(INTERP, hash, keystr);
 
         /*
-         * RT#46647 current behaviour of $S0 = hsh['no_such_key'] in
+         * RT #46647 current behaviour of $S0 = hsh['no_such_key'] in
          *      PGE and possibly more code needs an empty STRING
          *      (--leo)
          */
@@ -684,6 +641,18 @@ Returns whether the hash is the same as C<*other>.
             box = pmc_new(INTERP, SELF.type());
 
         VTABLE_set_integer_keyed(INTERP, box, nextkey, value);
+    }
+
+    VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
+        Hash * const hash = (Hash *)PMC_struct_val(SELF);
+
+        /* check if we really have Hash_key_type_int */
+        if (hash->key_type == Hash_key_type_int) {
+            parrot_hash_put(INTERP, hash, (void *)key, (void *)value);
+        }
+        else {
+            SUPER(key, value);
+        }
     }
 
 /*
@@ -877,6 +846,7 @@ Check if two hashes hold the same keys and values.
         for (j = 0; j < n; ++j) {
             STRING * const key = VTABLE_shift_string(INTERP, iter);
             PMC           *item1, *item2;
+            INTVAL         result;
 
             if (!VTABLE_exists_keyed_str(INTERP, value, key))
                 return 0;
@@ -887,7 +857,9 @@ Check if two hashes hold the same keys and values.
             if (item1 == item2)
                 continue;
 
-            if (!mmd_dispatch_i_pp(INTERP, item1, item2, MMD_EQ))
+            Parrot_mmd_multi_dispatch_from_c_args(INTERP, "is_equal",
+                "PP->I", item1, item2, &result);
+            if (!result)
                 return 0;
         }
 
@@ -1078,7 +1050,7 @@ Used to archive the hash.
 
         SUPER(info);
         VTABLE_push_integer(INTERP, io, VTABLE_elements(INTERP, SELF));
-        VTABLE_push_integer(INTERP, io, hash->key_type);
+        VTABLE_push_integer(INTERP, io, (INTVAL)hash->key_type);
         VTABLE_push_integer(INTERP, io, hash->entry_type);
     }
 
@@ -1102,9 +1074,8 @@ Used to unarchive the hash.
             const INTVAL v_type = VTABLE_shift_integer(INTERP, io);
             Hash        *hash;
 
-            /* RT#46651 make a better interface for hash creation
-             * RT#46653 create hash with needed size in the first place
-             */
+            /* RT #46651 make a better interface for hash creation
+             * RT #46653 create hash with needed size in the first place */
             if (k_type == Hash_key_type_int && v_type == enum_hash_int) {
                 PMC * const dummy     = Parrot_new_INTVAL_hash(INTERP, 0);
 

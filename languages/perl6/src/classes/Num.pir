@@ -18,7 +18,30 @@ Num - Perl 6 numbers
     .local pmc p6meta, numproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     numproto = p6meta.'new_class'('Num', 'parent'=>'Float Any')
+    numproto.'!IMMUTABLE'()
     p6meta.'register'('Float', 'parent'=>numproto, 'protoobject'=>numproto)
+
+    # Override the proto's ACCEPT method so we also accept Ints.
+    .const 'Sub' $P0 = "Num::ACCEPTS"
+    $P1 = typeof numproto
+    $P1.'add_method'('ACCEPTS', $P0)
+.end
+
+
+.sub 'Num::ACCEPTS' :anon :method
+    .param pmc topic
+
+    ##  first, try our superclass .ACCEPTS
+    $P0 = get_hll_global 'Any'
+    $P1 = find_method $P0, 'ACCEPTS'
+    $I0 = self.$P1(topic)
+    unless $I0 goto try_int
+    .return ($I0)
+
+  try_int:
+    $P0 = get_hll_global 'Int'
+    $I0 = $P0.'ACCEPTS'(topic)
+    .return ($I0)
 .end
 
 
@@ -28,7 +51,7 @@ Num - Perl 6 numbers
 
 .sub 'ACCEPTS' :method
     .param num topic
-    .return 'infix:=='(topic, self)
+    .tailcall 'infix:=='(topic, self)
 .end
 
 
@@ -41,6 +64,25 @@ Returns a Perl representation of the Num.
 .sub 'perl' :method
     $S0 = self
     .return($S0)
+.end
+
+
+=item succ and pred
+
+Increment and Decrement Methods
+
+=cut
+
+.sub 'pred' :method
+    $P0 = clone self
+    dec $P0
+    .return ($P0)
+.end
+
+.sub 'succ' :method
+    $P0 = clone self
+    inc $P0
+    .return ($P0)
 .end
 
 
@@ -66,7 +108,7 @@ Overridden for Num.
 .sub 'infix:===' :multi(Float,Float)
     .param num a
     .param num b
-    .return 'infix:=='(a, b)
+    .tailcall 'infix:=='(a, b)
 .end
 
 

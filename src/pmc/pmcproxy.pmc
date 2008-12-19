@@ -47,6 +47,8 @@ and is populated with the current class.
 
 NOTE: No doubt we will need other things later; this is a start.
 
+=cut
+
 */
 
 #include "parrot/parrot.h"
@@ -76,10 +78,10 @@ Initializes a PMCProxy PMC.
 */
 
     VTABLE void init() {
-        Parrot_Class * const _pmc          = mem_allocate_zeroed_typed(Parrot_Class);
-        PMC          * const new_attribute = pmc_new(interp, enum_class_Hash);
-        STRING       * const name          = CONST_STRING(interp, "proxy");
-        PMC_data(SELF)                     = _pmc;
+        Parrot_Class_attributes * const _pmc = mem_allocate_zeroed_typed(Parrot_Class_attributes);
+        PMC          * const new_attribute   = pmc_new(interp, enum_class_Hash);
+        STRING       * const name            = CONST_STRING(interp, "proxy");
+        PMC_data(SELF)                       = _pmc;
 
         /* Set flags for custom DOD mark and destroy. */
         PObj_custom_mark_SET(SELF);
@@ -113,7 +115,8 @@ Initializes a PMCProxy PMC.
 
     VTABLE void init_pmc(PMC *init_data) {
         const INTVAL type_num = VTABLE_get_integer(interp, init_data);
-        Parrot_Class *proxy_info;
+        Parrot_Class_attributes *proxy_info;
+        INTVAL mro_length, i;
 
         /* Ensure that it's a valid type number. */
         if (type_num > interp->n_vtable_max || type_num <= 0)
@@ -129,7 +132,22 @@ Initializes a PMCProxy PMC.
         proxy_info->name       = interp->vtables[type_num]->whoami;
         proxy_info->_namespace = interp->vtables[type_num]->_namespace;
 
-        /* XXX Parents and MRO still todo. */
+        /* Build MRO (skip ourself). */
+        mro_length = VTABLE_elements(interp, interp->vtables[type_num]->mro);
+        for (i = 1; i < mro_length; i++) {
+            PMC    *pclass = VTABLE_get_pmc_keyed_int(interp, interp->vtables[type_num]->mro, i);
+            STRING *cname  = pclass->vtable->whoami;
+            if (string_equal(interp, cname, CONST_STRING(interp, "scalar")) != 0) {
+                PMC *pproxy = Parrot_oo_get_class_str(interp, cname);
+                VTABLE_push_pmc(interp, proxy_info->all_parents, pproxy);
+            }
+        }
+
+        /* PMCs just do single inheritance, so we'll assume that if we have a
+         * second entry in our MRO, it goes in the parents list. */
+        if (VTABLE_elements(interp, proxy_info->all_parents) >= 2)
+            VTABLE_push_pmc(interp, proxy_info->parents,
+                    VTABLE_get_pmc_keyed_int(interp, proxy_info->all_parents, 1));
 
         if (!PMC_IS_NULL(proxy_info->_namespace) &&
             PMC_IS_NULL(VTABLE_get_class(interp, proxy_info->_namespace))) {
@@ -155,7 +173,7 @@ Creates an instance of the PMC.
 
 */
     VTABLE PMC *instantiate(PMC *init) {
-        Parrot_Class * const _pmc = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const _pmc = PARROT_CLASS(SELF);
 
         if (!PMC_IS_NULL(init))
             return pmc_new_init(interp, _pmc->id, init);
@@ -188,7 +206,7 @@ Mark any referenced strings and PMCs in the structure as live.
 */
 
     VTABLE void mark() {
-        Parrot_Class * const _pmc = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const _pmc = PARROT_CLASS(SELF);
 
         if (_pmc->name)
             pobject_lives(interp, (PObj *)_pmc->name);
@@ -227,7 +245,7 @@ Returns whether the class is or inherits from C<*classname>.
 */
 
     VTABLE INTVAL isa_pmc(PMC *lookup) {
-        Parrot_Class * const _proxy = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const _proxy = PARROT_CLASS(SELF);
         INTVAL        i, num_classes;
         STRING       *classname;
         PMC          *classobj;
@@ -257,6 +275,10 @@ Returns whether the class is or inherits from C<*classname>.
         if (string_equal(interp, classname, VTABLE_get_string(interp, SELF)) == 0)
             return 1;
 
+        /* Look in the isa hash. */
+        if (parrot_hash_exists(interp, interp->vtables[_proxy->id]->isa_hash, classname))
+            return 1;
+
         /* Iterate over all the parents and check if they respond true
          * for 'isa' on the original comparison. */
         num_classes = VTABLE_elements(interp, _proxy->parents);
@@ -282,12 +304,20 @@ Returns whether the class is or inherits from C<*classname>.
 */
 
     VTABLE INTVAL isa(STRING *classname) {
+        Parrot_Class_attributes * const _proxy = PARROT_CLASS(SELF);
         const STRING * const pmc_proxy = CONST_STRING(interp, "PMCProxy");
 
         if (string_equal(INTERP, classname, pmc_proxy) == 0)
             return 1;
 
-        return SUPER(classname);
+        if (SUPER(classname))
+            return 1;
+
+        /* Look in the isa hash. */
+        if (parrot_hash_exists(interp, interp->vtables[_proxy->id]->isa_hash, classname))
+            return 1;
+
+        return 0;
     }
 
 /*
@@ -301,9 +331,9 @@ Returns whether the class does the role with the given C<*rolename>.
 */
 
     VTABLE INTVAL does(STRING *role_name) {
-        Parrot_Class *_class  = PARROT_CLASS(SELF);
-        INTVAL        id      = _class->id;
-        PMC          *proxied = pmc_new_noinit(interp, id);
+        Parrot_Class_attributes *_class  = PARROT_CLASS(SELF);
+        INTVAL                   id      = _class->id;
+        PMC                     *proxied = pmc_new(interp, id);
 
         if (VTABLE_does(interp, proxied, role_name))
             return 1;
@@ -324,7 +354,7 @@ Returns the integer type of the class.
 
 
     VTABLE INTVAL type() {
-        const Parrot_Class * const _class = PARROT_CLASS(SELF);
+        const Parrot_Class_attributes * const _class = PARROT_CLASS(SELF);
         return _class->id;
     }
 
@@ -365,7 +395,7 @@ Gets the name of the PMC.
 
 */
     METHOD name() {
-        Parrot_Class * const _pmc     = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const _pmc     = PARROT_CLASS(SELF);
         STRING       * const ret_name = _pmc->name;
         RETURN(STRING *ret_name);
     }
@@ -380,7 +410,7 @@ Gets the namespace that this class is attached to.
 
 */
     METHOD get_namespace() {
-        Parrot_Class * const _pmc          = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const _pmc          = PARROT_CLASS(SELF);
         PMC          * const ret_namespace = _pmc->_namespace;
         RETURN(PMC *ret_namespace);
     }
@@ -459,7 +489,7 @@ Return the name of the low-level class (without the HLL namespace).
 */
 
     VTABLE STRING *get_string() {
-        Parrot_Class * const proxy_info = PARROT_CLASS(SELF);
+        Parrot_Class_attributes * const proxy_info = PARROT_CLASS(SELF);
 
         /* Copy the stored string name of the proxy. */
         return string_copy(interp, proxy_info->name);

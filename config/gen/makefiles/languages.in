@@ -20,12 +20,11 @@ LANGUAGES = \
     hq9plus \
     jako json \
     lazy-k lisp lolcode lua \
-    m4 \
+    m4 markdown \
     ook \
     parrot_compiler perl6 pheme PIR pipp punie pynie \
     regex \
     scheme squaak \
-    tcl \
     unlambda urm \
     WMLScript \
     Zcode
@@ -52,7 +51,7 @@ help:
 	@echo "  help:          Print this help message."
 	@echo ""
 	@echo "  smoke:         Run the unified test suite and send smoke.html to "
-	@echo "                 http://smoke.parrotcode.org/"
+	@echo "                 http:////smoke.parrotcode.org//"
 	@echo ""
 	@echo "  smoke-clean:   clean up smoke.html"
 	@echo ""
@@ -93,7 +92,6 @@ test-separate: all \
     parrot_compiler.test perl6.test pheme.test PIR.test pipp.test punie.test pynie.test \
     regex.test \
     scheme.test squaak.test \
-    tcl.test \
     urm.test unlambda.test \
     WMLScript.test \
     Zcode.test
@@ -117,12 +115,11 @@ clean: \
     jako.clean json.clean \
     lisp.clean \
     lolcode.clean lua.clean \
-    m4.clean \
+    m4.clean markdown.clean \
     ook.clean \
     parrot_compiler.clean perl6.clean pheme.clean PIR.clean pipp.clean punie.clean pynie.clean \
     regex.clean \
     scheme.clean squaak.clean \
-    tcl.clean \
     urm.clean \
     WMLScript.clean \
     Zcode.clean \
@@ -138,12 +135,11 @@ realclean: \
     hq9plus.realclean \
     jako.realclean json.realclean \
     lazy-k.realclean lisp.realclean lolcode.realclean lua.realclean \
-    m4.realclean \
+    m4.realclean markdown.realclean \
     ook.realclean \
     parrot_compiler.realclean perl6.realclean pheme.realclean PIR.realclean pipp.realclean punie.realclean pynie.realclean \
     regex.realclean \
     scheme.realclean squaak.realclean \
-    tcl.realclean \
     urm.realclean unlambda.realclean \
     WMLScript.realclean \
     Zcode.realclean
@@ -364,6 +360,16 @@ m4.clean:
 m4.realclean:
 	- $(MAKE) m4 realclean
 
+markdown: markdown.dummy
+markdown.dummy:
+	- $(MAKE) markdown
+markdown.test:
+	- $(MAKE) markdown test
+markdown.clean:
+	- $(MAKE) markdown clean
+markdown.realclean:
+	- $(MAKE) markdown realclean
+
 ook : ook.dummy
 ook.dummy:
 	- $(MAKE) ook
@@ -473,16 +479,6 @@ squaak.clean:
 	- $(MAKE) squaak clean
 squaak.realclean:
 	- $(MAKE) squaak realclean
-
-tcl: tcl.dummy
-tcl.dummy:
-	- $(MAKE) tcl
-tcl.test:
-	- $(MAKE) tcl test
-tcl.clean:
-	- $(MAKE) tcl clean
-tcl.realclean:
-	- $(MAKE) tcl realclean
 
 unlambda: unlambda.dummy
 unlambda.dummy:

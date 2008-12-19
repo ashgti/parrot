@@ -15,7 +15,6 @@ C<LuaAny> provides an abstract base class for some Lua types.
  Class                  Parents
  -----------------------------------------------
  LuaBoolean             LuaAny, Default
- LuaClosure             Closure, LuaAny, Default
  LuaFunction            Sub, LuaAny, Default
  LuaNil                 LuaAny, Default
  LuaNumber              LuaAny, Default
@@ -32,7 +31,6 @@ C<LuaAny> provides an abstract base class for some Lua types.
      default value      nil             nil             NULL
  ------------------------------------------------------------------
  LuaBoolean             nil             -               -
- LuaClosure             nil             yes             -
  LuaFunction            nil             yes             -
  LuaNil                 nil             -               -
  LuaNumber              nil             -               -
@@ -65,7 +63,7 @@ find_meth(PARROT_INTERP, PMC *obj, const char *name) {
                                     const_string(interp, "mt_string"));
     }
 
-    if (dynpmc_LuaClosure != type && dynpmc_LuaFunction != type) {
+    if (dynpmc_LuaFunction != type) {
         if (obj->pmc_ext)
             meta = PMC_metadata(obj);
 
@@ -102,7 +100,7 @@ Changes the PMC to a PMC of a new type
 =cut
 
 */
-    void morph(INTVAL type) {
+    VTABLE void morph(INTVAL type) {
         if (PMC_type(SELF) == type)
             return;
         pmc_reuse(INTERP, SELF, type, 0);
@@ -117,7 +115,7 @@ Returns C<true>.
 =cut
 
 */
-    INTVAL get_bool() {
+    VTABLE INTVAL get_bool() {
         return (INTVAL)1;
     }
 
@@ -130,7 +128,7 @@ Returns the address of the PMC.
 =cut
 
 */
-    void* get_pointer() {
+    VTABLE void* get_pointer() {
         return SELF;
     }
 
@@ -141,7 +139,7 @@ Returns the address of the PMC.
 =cut
 
 */
-    void assign_pmc(PMC *value) {
+    VTABLE void assign_pmc(PMC *value) {
         VTABLE_morph(INTERP, SELF, PMC_type(value));
         if (PMC_type(value) != dynpmc_LuaNil)
             SELF.set_pmc(value);
@@ -156,12 +154,11 @@ Throws an exception.
 =cut
 
 */
-    PMC* get_pmc_keyed(PMC *key) {
+    VTABLE PMC* get_pmc_keyed(PMC *key) {
         PMC *meth = find_meth(INTERP, SELF, "__index");
 
         if (meth) {
-            if (dynpmc_LuaClosure  == PMC_type(meth)
-            ||  dynpmc_LuaFunction == PMC_type(meth)) {
+            if (dynpmc_LuaFunction == PMC_type(meth)) {
                 PMC *retval = Parrot_runops_fromc_args(INTERP, meth, "PPP",
                                                        SELF, key);
                 if (retval)
@@ -186,15 +183,14 @@ Throws an exception.
 =cut
 
 */
-    void set_pmc_keyed(PMC *key, PMC *value) {
+    VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
         PMC *meth = find_meth(INTERP, SELF, "__newindex");
 
         if (!meth)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
                 "attempt to index a %Ss value", SELF.name());
 
-        if (dynpmc_LuaClosure  == PMC_type(meth)
-        ||  dynpmc_LuaFunction == PMC_type(meth)) {
+        if (dynpmc_LuaFunction == PMC_type(meth)) {
             Parrot_runops_fromc_args(INTERP, meth, "vPPP",
                                      SELF, key, value);
         }
@@ -213,7 +209,7 @@ Throws an exception.
 =cut
 
 */
-    PMC* neg(PMC *dest) {
+    VTABLE PMC* neg(PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__unm");
 
         if (!meth)
@@ -228,7 +224,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_neg() {
+    VTABLE void i_neg() {
         PMC *meth = find_meth(INTERP, SELF, "__unm");
 
         if (!meth)
@@ -250,7 +246,7 @@ Common implementation
 =cut
 
 */
-    PMC* logical_not(PMC *dest) {
+    VTABLE PMC* logical_not(PMC *dest) {
         dest = pmc_new(INTERP, dynpmc_LuaBoolean);
         VTABLE_set_bool(INTERP, dest, ! SELF.get_bool());
         return dest;
@@ -265,7 +261,7 @@ Always returns true.
 =cut
 
 */
-    INTVAL defined() {
+    VTABLE INTVAL defined() {
         return (INTVAL)1;
     }
 
@@ -278,7 +274,7 @@ Throws an exception.
 =cut
 
 */
-    opcode_t* invoke(void *next) {
+    VTABLE opcode_t* invoke(void *next) {
         PMC *meth = find_meth(INTERP, SELF, "__call");
         PMC *retval;
 
@@ -338,7 +334,7 @@ Throws an exception.
 =cut
 
 */
-    PMC* add(PMC *value, PMC *dest) {
+    MULTI PMC* add(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__add");
         if (!meth)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
@@ -352,7 +348,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_add(PMC *value) {
+    MULTI void i_add(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__add");
 
         if (!meth)
@@ -364,7 +360,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* subtract(PMC *value, PMC *dest) {
+    MULTI PMC* subtract(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__sub");
         if (!meth)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
@@ -378,7 +374,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_subtract(PMC *value) {
+    MULTI void i_subtract(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__sub");
         if (!meth)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
@@ -390,7 +386,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* multiply(PMC *value, PMC *dest) {
+    MULTI PMC* multiply(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__mul");
 
         if (!meth)
@@ -405,7 +401,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_multiply(PMC *value) {
+    MULTI void i_multiply(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__mul");
 
         if (!meth)
@@ -418,7 +414,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* divide(PMC *value, PMC *dest) {
+    MULTI PMC* divide(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__div");
 
         if (!meth)
@@ -433,7 +429,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_divide(PMC *value) {
+    MULTI void i_divide(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__div");
 
         if (!meth)
@@ -446,7 +442,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* modulus(PMC *value, PMC *dest) {
+    MULTI PMC* modulus(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__mod");
 
         if (!meth)
@@ -461,7 +457,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_modulus(PMC *value) {
+    MULTI void i_modulus(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__mod");
 
         if (!meth)
@@ -474,7 +470,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* pow(PMC *value, PMC *dest) {
+    MULTI PMC* pow(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__pow");
 
         if (!meth)
@@ -489,7 +485,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_pow(PMC *value) {
+    MULTI void i_pow(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__pow");
 
         if (!meth)
@@ -502,7 +498,7 @@ Throws an exception.
             SELF = pmc_new(INTERP, dynpmc_LuaNil);
     }
 
-    PMC* concatenate(PMC *value, PMC *dest) {
+    MULTI PMC* concatenate(DEFAULT value, PMC *dest) {
         PMC *meth = find_meth(INTERP, SELF, "__concat");
 
         if (!meth)
@@ -517,7 +513,7 @@ Throws an exception.
         return dest;
     }
 
-    void i_concatenate(PMC *value) {
+    MULTI void i_concatenate(DEFAULT value) {
         PMC *meth = find_meth(INTERP, SELF, "__concat");
         if (!meth)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_ILL_INHERIT,
@@ -536,7 +532,7 @@ Throws an exception.
 =cut
 
 */
-    INTVAL is_equal(PMC *value) {
+    MULTI INTVAL is_equal(DEFAULT value) {
         return (INTVAL)0;
     }
 
@@ -544,10 +540,20 @@ Throws an exception.
 
 =item C<INTVAL cmp(PMC *value)>
 
+Performs a multiple dispatch call for 'cmp'.
+Without shortcut like in Default PMC.
+
 =cut
 
 */
-    INTVAL cmp(PMC *value) {
+    VTABLE INTVAL cmp(PMC *value) {
+        INTVAL retval;
+        Parrot_mmd_multi_dispatch_from_c_args(interp,
+                "cmp", "PP->I", SELF, value, &retval);
+        return retval;
+    }
+
+    MULTI INTVAL cmp(DEFAULT value) {
         STRING *self_name = SELF.name();
         STRING *val_name  = VTABLE_name(INTERP, value);
 

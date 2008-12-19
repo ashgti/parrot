@@ -1,9 +1,6 @@
 /*
- * $Id$
  * Copyright (C) 2003-2008, The Perl Foundation.
- *
- * pcc.c
- *
+ * $Id$
  */
 
 /*
@@ -71,7 +68,7 @@ PARROT_CANNOT_RETURN_NULL
 static Instruction * move_regs(PARROT_INTERP,
     ARGIN(IMC_Unit *unit),
     ARGIN(Instruction *ins),
-    int n,
+    size_t n,
     ARGIN(SymReg **dest),
     ARGIN(SymReg **src))
         __attribute__nonnull__(1)
@@ -208,11 +205,41 @@ pcc_get_args(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins),
         ARGIN(const char *op_name), int n,
         ARGIN_NULLOK(SymReg * const *args), ARGIN_NULLOK(const int *arg_flags))
 {
+    /* Notes:
+     * The created string is in the format "\"(0x0010,0x0220,0x0010)\"".
+     * flags always has exactly 4 hex digits.
+     * The hex number at the end of the list has no "," but we can safely
+     * ignore this.
+     */
+    static const char pref[] = {'"', '('};
+    static const char item[] = {'0', 'x', 'f', 'f', 'f', 'f', ','};
+    /* The list suffix includes the '\0' terminator */
+    static const char subf[] = {')', '"', '\0'};
+    static unsigned int lenpref = sizeof pref;
+    static unsigned int lenitem = sizeof item;
+    static unsigned int lensubf = sizeof subf;
     int i, flags;
-    char buf[1024], s[16];
-    SymReg ** const regs  = mem_allocate_n_zeroed_typed(n + 1, SymReg *);
+    char s[16];
 
-    strcpy(buf, "\"(");
+    /* Avoid allocations on frequent number of params.
+     * Arbitrary value, some fine tunning may be good.
+     */
+    #define PCC_GET_ARGS_LIMIT 15
+    SymReg *regcache[PCC_GET_ARGS_LIMIT + 1];
+    char bufcache[sizeof (pref) + sizeof (item) * PCC_GET_ARGS_LIMIT + sizeof (subf)];
+
+    SymReg ** const regs  = n < PCC_GET_ARGS_LIMIT ?
+        regcache :
+        mem_allocate_n_zeroed_typed(n + 1, SymReg *);
+
+    unsigned int  bufpos  = 0;
+    unsigned int  bufsize = lenpref + lenitem * n + lensubf;
+    char         *buf     = n < PCC_GET_ARGS_LIMIT ?
+        bufcache :
+        mem_allocate_n_typed(bufsize, char);
+
+    memcpy(buf, pref, lenpref);
+    bufpos += lenpref;
     for (i = 0; i < n; i++) {
         SymReg *arg = args[i];
 
@@ -247,20 +274,29 @@ pcc_get_args(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins),
             default :                               break;
         }
 
-        snprintf(s, sizeof (s), "0x%x", flags);
 
-        if (i < n - 1)
-            strcat(s, ",");
-        strcat(buf, s);         /* XXX check avail len */
+        snprintf(s, sizeof (s), "0x%.4x,", flags);
+        if (bufpos+lenitem >= bufsize)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERNAL_PANIC,
+                    "arg string is longer than allocated buffer");
+        memcpy(buf+bufpos, s, lenitem);
+        bufpos += lenitem;
     }
 
-    strcat(buf, ")\"");
+    /* Backtrack over the ending comma if this is a non-empty list. */
+    if (bufpos != lenpref)
+        bufpos--;
+    memcpy(buf+bufpos, subf, lensubf);
 
     regs[0] = mk_const(interp, buf, 'S');
     ins     = insINS(interp, unit, ins, op_name, regs, n + 1);
 
-    mem_sys_free(regs);
+    if (n >= PCC_GET_ARGS_LIMIT) {
+        mem_sys_free(regs);
+        mem_sys_free(buf);
+    }
     return ins;
+    #undef PCC_GET_ARGS_LIMIT
 }
 
 /*
@@ -433,7 +469,7 @@ pcc_reg_mov(PARROT_INTERP, unsigned char d, unsigned char s, ARGMOD(void *vinfo)
     move_info_t      *info    = (move_info_t *)vinfo;
     SymReg           *src     = NULL;
     SymReg           *dest    = NULL;
-    SymReg           *regs[2];
+    SymReg           *regs[3];
 
     if (d == 255) {
         int t;
@@ -500,11 +536,11 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static Instruction *
 move_regs(PARROT_INTERP, ARGIN(IMC_Unit *unit), ARGIN(Instruction *ins),
-        int n, ARGIN(SymReg **dest), ARGIN(SymReg **src))
+        size_t n, ARGIN(SymReg **dest), ARGIN(SymReg **src))
 {
     unsigned char *move_list;
     move_info_t    move_info;
-    int            i;
+    unsigned int   i;
 
     if (!n)
         return ins;
@@ -520,7 +556,8 @@ move_regs(PARROT_INTERP, ARGIN(IMC_Unit *unit), ARGIN(Instruction *ins),
 
     for (i = 0; i < 2 * n; ++i) {
         const SymReg * const ri = i < n ? dest[i] : src[i - n];
-        int j;
+        unsigned int         j;
+
         for (j = 0; j < i; ++j) {
             const SymReg * const rj = j < n ? dest[j] : src[j - n];
             if (ri == rj) {
@@ -619,7 +656,7 @@ static void
 insert_tail_call(PARROT_INTERP, ARGIN(IMC_Unit *unit), ARGMOD(Instruction *ins),
         ARGMOD(SymReg *sub), ARGIN(SymReg *meth))
 {
-    SymReg *regs[2];
+    SymReg *regs[3];
 
     if (meth) {
         regs[0] = sub->pcc_sub->object;

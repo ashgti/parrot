@@ -27,7 +27,8 @@ File stat stuff
 =item C<PMC *
 Parrot_stat_file(PARROT_INTERP, STRING *filename)>
 
-RT#48260: Not yet documented!!!
+Stat a file. On Win32 this is not yet implemented, so we return a
+C<NULL> PMC, not C<PMCNULL>.
 
 =cut
 
@@ -44,7 +45,8 @@ Parrot_stat_file(PARROT_INTERP, STRING *filename)
 =item C<PMC *
 Parrot_stat_info_pmc(PARROT_INTERP, STRING *filename, INTVAL thing)>
 
-RT#48260: Not yet documented!!!
+Return stat info on a file as a PMC. Not implemented on Win32, so we
+return C<NULL>, not C<PMCNULL>.
 
 =cut
 
@@ -97,6 +99,9 @@ stat_common(PARROT_INTERP, struct stat *statbuf, INTVAL thing, int status)
             break;
         case STAT_ISDIR:
             result = S_ISDIR(statbuf->st_mode);
+            break;
+        case STAT_ISREG:
+            result = S_ISREG(statbuf->st_mode);
             break;
         case STAT_ISDEV:
             result = S_ISCHR(statbuf->st_mode) || S_ISBLK(statbuf->st_mode);
@@ -157,7 +162,7 @@ stat_common(PARROT_INTERP, struct stat *statbuf, INTVAL thing, int status)
 =item C<INTVAL
 Parrot_stat_info_intval(PARROT_INTERP, STRING *file, INTVAL thing)>
 
-RT#48260: Not yet documented!!!
+Returns the stat field given by C<thing> of file C<file>.
 
 =cut
 
@@ -182,7 +187,7 @@ Parrot_stat_info_intval(PARROT_INTERP, STRING *file, INTVAL thing)
 =item C<INTVAL
 Parrot_fstat_info_intval(PARROT_INTERP, INTVAL file, INTVAL thing)>
 
-RT#48260: Not yet documented!!!
+Returns the fstat field given by C<thing> from file identifier C<file>.
 
 =cut
 
@@ -204,7 +209,7 @@ Parrot_fstat_info_intval(PARROT_INTERP, INTVAL file, INTVAL thing)
 =item C<FLOATVAL
 Parrot_stat_info_floatval(PARROT_INTERP, STRING *filename, INTVAL thing)>
 
-RT#48260: Not yet documented!!!
+Currently returns C<-1.0> and has no side effects.
 
 =cut
 
@@ -221,7 +226,7 @@ Parrot_stat_info_floatval(PARROT_INTERP, STRING *filename, INTVAL thing)
 =item C<STRING *
 Parrot_stat_info_string(PARROT_INTERP, STRING *filename, INTVAL thing)>
 
-RT#48260: Not yet documented!!!
+Not implemented. Returns C<NULL>.
 
 =cut
 

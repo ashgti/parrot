@@ -3,7 +3,7 @@
 
 =begin comments
 
-C99::Grammar::Actions - ast transformations for C99
+NCIGEN::Grammar::Actions - ast transformations for NCIGEN
 
 This file contains the methods that are used by the parse grammar
 to build the PAST representation of an C program.
@@ -16,13 +16,13 @@ value of the comment is passed as the second argument to the method.
 =end comments
 
 
-class C99::Grammar::Actions;
+class NCIGEN::Grammar::Actions;
 
-our $decls := c99AST::Decls.new();
-our $C99DEBUG :=0;
+our $decls := NCIGENAST::Decls.new();
+our $NCIGENDEBUG :=0;
 
 method TOP($/) {
-    if $C99DEBUG { _dumper($decls); }
+    if $NCIGENDEBUG { _dumper($decls); }
     make $decls;
 }
 
@@ -44,7 +44,7 @@ sub typedef($/) {
 }
 
 method declaration($/) {
-    my $ast := c99AST::VarDecl.new( :node($/) );
+    my $ast := NCIGENAST::VarDecl.new( :node($/) );
     my $type := "";
 
     #say("=================================================================================================");
@@ -53,19 +53,19 @@ method declaration($/) {
 #    return 1;
     my $decl_specs := $<declaration_specifiers><repeatable_declaration_specifiers>;
     if typedef($decl_specs) {
-        $ast := c99AST::TypeDef.new( :node($/) );
+        $ast := NCIGENAST::TypeDef.new( :node($/) );
         $type := "TypeDef";
     }
     elsif $/<init_declarator><init_declarator><declarator><direct_declarator><declarator_suffix><declarator_suffix><parameter_type_list> {
-        $ast := c99AST::FuncDecl.new( :node($/) );
+        $ast := NCIGENAST::FuncDecl.new( :node($/) );
         $type := "FuncDecl";
     }
 #    elsif $<declaration_specifiers><type_specifier><type> {
-#        $ast := c99AST::Struct.new( :node($/) );
+#        $ast := NCIGENAST::Struct.new( :node($/) );
 #        $type := "Struct";
 #    }
     else {
-        $ast := c99AST::VarDecl.new( :node($/) );
+        $ast := NCIGENAST::VarDecl.new( :node($/) );
         $type := "VarDecl";
     }
     parse_decl_specs( $<declaration_specifiers><repeatable_declaration_specifiers>, $ast );
@@ -81,7 +81,7 @@ method declaration($/) {
         #assert(+$<init_declarator><declarator><direct_declarator><declarator_suffix>  == 1);
         my $params := $<init_declarator><declarator><declarator><direct_declarator><declarator_suffix><parameter_type_list><parameter_type_list><parameter_list><parameter_declaration>;
         for $params {
-            my $param := c99AST::Param.new( :node( $_ ) );
+            my $param := NCIGENAST::Param.new( :node( $_ ) );
 
             settype($_<declaration_specifiers><type_specifier>, $param);
             my $param_ident := $_<declarator>;
@@ -93,7 +93,7 @@ method declaration($/) {
         my $name := setname($declarator, $ast);
         $decls{ $name } := $ast;
         ispointer($declarator, $ast);
-        if $C99DEBUG { _dumper($ast); }
+        #if $NCIGENDEBUG { _dumper($ast); }
         #say($name);
     }
     #elsif ($type eq "VarDecl") {
@@ -105,7 +105,7 @@ method declaration($/) {
             my $name := setname($_, $l_ast);
             $decls{ $name } := $l_ast;
             ispointer($_, $l_ast);
-            if $C99DEBUG { _dumper($l_ast); }
+            #if $NCIGENDEBUG { _dumper($l_ast); }
             #say($name);
         }
     }
@@ -117,40 +117,63 @@ method declaration($/) {
     make $decls;
 }
 
+sub countpointer($/) {
+    if $<pointer> {
+        return countpointer($<pointer>) + 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 sub ispointer($/, $ast) {
     if $/ {
-        if $<declarator><pointer> {
+        if ($<declarator><pointer>)  {
             $ast.pointer(1);
+            $ast.pointer_cnt(countpointer($<declarator><pointer>));
+        }
+        if ($<abstract_declarator><pointer>)  {
+            $ast.pointer(1);
+            $ast.pointer_cnt(countpointer($<abstract_declarator><pointer>));
         }
     }
 
-    my $l_ast := $ast;
+    my $lookup_ast := $ast;
     repeat {
-        if $l_ast.pointer() {
+=begin comment
+        if $lookup_ast.pointer() {
             $ast.pointer(1);
             my $pc := +$ast.pointer_cnt();
             $pc++;
             $ast.pointer_cnt($pc);
         }
-        if $l_ast.builtin_type() {
-            $ast.primitive_type(~($l_ast.type()));
-            return 1;
-        }
-        my $type_name := $l_ast.type();
-        my $l_ast_name := $l_ast.name();
+=end comment
 
-        #FIXME struct or union typedef 
-        if ($l_ast.name() eq $type_name) {
+        if $lookup_ast.builtin_type() {
+            $ast.primitive_type(~($lookup_ast.type()));
             return 1;
         }
-        
-        $l_ast := $decls{$type_name};
-        unless $l_ast {
-            #_dumper($decls);
-            say("Parent " ~~ $l_ast_name ~~ " " ~~ $type_name ~~ " not defined");
+        my $type_name := $lookup_ast.type();
+        my $lookup_ast_name := $lookup_ast.name();
+
+        #FIXME struct or union typedef
+        if ($lookup_ast.name() eq $type_name) {
             return 1;
         }
-    } while (1); 
+
+        $lookup_ast := $decls{$type_name};
+        unless $lookup_ast {
+            #say("Parent " ~~ $lookup_ast_name ~~ " " ~~ $type_name ~~ " not defined");
+            return 1;
+        }
+        if $lookup_ast.pointer() {
+            $ast.pointer(1);
+            my $pc := +$ast.pointer_cnt();
+            $pc := $pc + $lookup_ast.pointer_cnt();
+            $ast.pointer_cnt($pc);
+        }
+    } while (1);
+    #_dumper($ast);
 }
 
 sub settype($/, $ast) {
@@ -176,10 +199,10 @@ sub settype($/, $ast) {
             if $s_or_u {
                 my $su;
                 if ($struct_or_union eq "struct" ) {
-                    $su := c99AST::Struct.new( :node($/) );
+                    $su := NCIGENAST::Struct.new( :node($/) );
                 }
                 else {
-                    $su := c99AST::Union.new( :node($/) );
+                    $su := NCIGENAST::Union.new( :node($/) );
                 }
                 $su.name($ident);
                 build_struct_or_union($s_or_u, $su);
@@ -204,7 +227,7 @@ sub strip_spaces($_) {
 
 sub build_struct_or_union($/, $ast) {
     for $/ {
-        my $smt := c99AST::VarDecl.new( :node($_) );
+        my $smt := NCIGENAST::VarDecl.new( :node($_) );
         settype( $_<specifier_qualifier_list><type_specifier>, $smt );
         for $_<struct_declarator_list> {
             my $sm := $smt.clone();
@@ -213,7 +236,7 @@ sub build_struct_or_union($/, $ast) {
             ispointer($declarator, $sm);
             $ast.push($sm);
         }
-    }    
+    }
 }
 
 sub setname($/, $ast) {

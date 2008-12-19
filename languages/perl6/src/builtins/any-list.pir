@@ -21,7 +21,7 @@ the size of that file down and to emphasize their generic,
 .namespace ['Any']
 .sub 'onload' :anon :init :load
     $P0 = get_hll_namespace ['Any']
-    '!EXPORT'('abs', 'from'=>$P0)
+    '!EXPORT'('end', 'from'=>$P0)
 .end
 
 
@@ -33,7 +33,7 @@ the size of that file down and to emphasize their generic,
 .sub 'elems' :multi()
     .param pmc values          :slurpy
     $P0 = values.'!flatten'()
-    .return values.'elems'()
+    .tailcall values.'elems'()
 .end
 
 .namespace ['Any']
@@ -43,6 +43,18 @@ the size of that file down and to emphasize their generic,
     .return ($I0)
 .end
 
+=item end
+
+=cut
+
+.namespace ['Any']
+.sub 'end' :method :multi(_)
+    .local pmc list
+    list = self.'list'()
+    $I0 = list.'elems'()
+    dec $I0
+    .return ($I0)
+.end
 
 =item join
 
@@ -52,7 +64,7 @@ the size of that file down and to emphasize their generic,
 .sub 'join' :multi('String')
     .param string sep
     .param pmc values          :slurpy
-    .return values.'join'(sep)
+    .tailcall values.'join'(sep)
 .end
 
 .namespace ['Any']
@@ -84,7 +96,7 @@ the size of that file down and to emphasize their generic,
     unless $I0 goto have_by
     by = shift values
   have_by:
-    .return values.'min'(by)
+    .tailcall values.'min'(by)
 .end
 
 
@@ -126,7 +138,7 @@ the size of that file down and to emphasize their generic,
     unless $I0 goto have_by
     by = shift values
   have_by:
-    .return values.'max'(by)
+    .tailcall values.'max'(by)
 .end
 
 
@@ -171,7 +183,7 @@ the size of that file down and to emphasize their generic,
     if has_repl goto have_repl
     p_repl = get_hll_global ['Bool'], 'False'
   have_repl:
-    .return values.'pick'(p_num, 'repl'=>p_repl)
+    .tailcall values.'pick'(p_num, 'repl'=>p_repl)
 .end
 
 .sub 'pick' :multi('Whatever')
@@ -183,7 +195,7 @@ the size of that file down and to emphasize their generic,
     unless p_repl goto no_repl
     die "Infinite lazy pick not implemented"
   no_repl:
-    .return values.'pick'(whatever)
+    .tailcall values.'pick'(whatever)
 .end
 
 .namespace ['Any']
@@ -239,7 +251,7 @@ the size of that file down and to emphasize their generic,
     die "Infinite lazy pick not implemented"
   no_repl:
     $I0 = self.'elems'()
-    .return self.'pick'($I0)
+    .tailcall self.'pick'($I0)
 .end
 
 
@@ -265,7 +277,7 @@ the size of that file down and to emphasize their generic,
 .namespace []
 .sub 'reverse' :multi()
     .param pmc values          :slurpy
-    .return values.'reverse'()
+    .tailcall values.'reverse'()
 .end
 
 
@@ -280,14 +292,14 @@ Parrot's built-in sort algorithm.
 .sub 'sort' :multi()
     .param pmc values          :slurpy
     .local pmc by
-    by = get_hll_global 'infix:cmp'
+    by = find_name 'infix:cmp'
     unless values goto have_by
     $P0 = values[0]
     $I0 = isa $P0, 'Sub'
     unless $I0 goto have_by
     by = shift values
   have_by:
-    .return values.'sort'(by)
+    .tailcall values.'sort'(by)
 .end
 
 .namespace ['Any']
@@ -295,30 +307,79 @@ Parrot's built-in sort algorithm.
     .param pmc by              :optional
     .param int has_by          :opt_flag
     if has_by goto have_by
-    by = get_hll_global 'infix:cmp'
+    by = find_name 'infix:cmp'
   have_by:
 
-    .local pmc list, fpa
+    ##  prepare self for sorting
+    .local pmc list
     .local int elems
-
     list = self.'list'()
-    list.'!flatten'()
     elems = list.'elems'()
-    fpa = new 'FixedPMCArray'
-    fpa = elems
+    ##  If there are fewer than two elements, no need to sort.
+    unless elems < 2 goto do_sort
+    .return (list)
 
-    .local int i
-    i = 0
+  do_sort:
+    ##  Get the comparison function to use.  We don't use C<by>
+    ##  directly, because FPA's sort doesn't work with MultiSub
+    ##  functions and isn't stable.  !COMPARESUB expects to be
+    ##  sorting indexes into C<list>, and also handles generation
+    ##  of values for subs with arity < 2.
+    .local pmc cmp
+    cmp = '!COMPARESUB'(list, by)
+
+    ##  create a FPA of indexes to be sorted using cmp
+    .local pmc fpa
+    fpa = new 'FixedPMCArray'
+    assign fpa, elems
+    $I0 = 0
   fpa_loop:
-    unless i < elems goto fpa_end
-    $P0 = list[i]
-    fpa[i] = $P0
-    inc i
+    unless $I0 < elems goto fpa_done
+    fpa[$I0] = $I0
+    inc $I0
     goto fpa_loop
-  fpa_end:
-    fpa.'sort'(by)
-    .return 'list'(fpa)
+  fpa_done:
+    fpa.'sort'(cmp)
+    .tailcall list.'postcircumfix:[ ]'(fpa)
 .end
+
+.sub '!COMPARESUB' :anon
+    .param pmc list
+    .param pmc by
+    $I0 = can by, 'arity'
+    unless $I0 goto have_list
+    $I0 = by.'arity'()
+    unless $I0 < 2 goto have_list
+    list = list.'map'(by)
+    by = find_name 'infix:cmp'
+  have_list:
+    ##  Because of TT #56, we can't store Sub PMCs directly into
+    ##  the namespace.  So, we create an array to hold it for us.
+    set_global '@!compare', list
+    $P0 = new 'ResizablePMCArray'
+    push $P0, by
+    set_global '@!compare_by', $P0
+    .const 'Sub' $P99 = '!COMPARE_DO'
+    .return ($P99)
+.end
+
+.sub '!COMPARE_DO' :anon
+    .param int a
+    .param int b
+    .local pmc list, by
+    list = get_global '@!compare'
+    $P0  = get_global '@!compare_by'
+    by   = $P0[0]
+
+    $P0 = list[a]
+    $P1 = list[b]
+    $I0 = by($P0, $P1)
+    unless $I0 == 0 goto done
+    $I0 = cmp a, b
+  done:
+    .return ($I0)
+.end
+
 
 =back
 

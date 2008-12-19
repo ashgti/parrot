@@ -1,8 +1,14 @@
+# Copyright (C) 2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
 
-pipp/t/comments.t - tests for Pipp
+t/php/comments.t - tests for Pipp
+
+
+=head1 SYNOPSIS
+
+    perl t/harness t/php/comments.t
 
 =head1 DESCRIPTION
 
@@ -15,7 +21,7 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../../lib";
+use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
 # core Perl modules
 use Test::More     tests => 10;

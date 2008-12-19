@@ -86,6 +86,8 @@ Marks the continuation as live.
 
         if (cc->to_ctx)
             mark_context(INTERP, cc->to_ctx);
+        if (cc->from_ctx)
+            mark_context(INTERP, cc->from_ctx);
     }
 
 /*
@@ -110,7 +112,7 @@ Destroys the continuation.
 
 #endif
             if (cc->from_ctx)
-                Parrot_free_context(interp, cc->from_ctx, 0);
+                Parrot_free_context(interp, cc->from_ctx, 1);
 
             mem_sys_free(cc);
             PMC_struct_val(SELF) = NULL;
@@ -225,8 +227,8 @@ destination to continue execution.
 
     VTABLE opcode_t *invoke(void *next) {
         Parrot_cont      *cc           = PMC_cont(SELF);
-        parrot_context_t *from_ctx     = CONTEXT(interp);
-        parrot_context_t *to_ctx       = cc->to_ctx;
+        Parrot_Context   *from_ctx     = CONTEXT(interp);
+        Parrot_Context   *to_ctx       = cc->to_ctx;
         opcode_t         *pc           = cc->address;
 
         Parrot_continuation_check(interp, SELF, cc);

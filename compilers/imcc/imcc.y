@@ -25,6 +25,10 @@
 #include "parser.h"
 #include "optimizer.h"
 
+/* prevent declarations of malloc() and free() in the generated parser. */
+#define YYMALLOC
+#define YYFREE
+
 #ifndef YYENABLE_NLS
 #  define YYENABLE_NLS 0
 #endif
@@ -184,6 +188,21 @@ static Instruction* mk_pmc_const(PARROT_INTERP,
         FUNC_MODIFIES(*unit)
         FUNC_MODIFIES(*left);
 
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+static Instruction* mk_pmc_const_named(PARROT_INTERP,
+    ARGMOD(IMC_Unit *unit),
+    ARGIN(const char *name),
+    ARGMOD(SymReg *left),
+    ARGIN(const char *constant))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5)
+        FUNC_MODIFIES(*unit)
+        FUNC_MODIFIES(*left);
+
 PARROT_CANNOT_RETURN_NULL
 static SymReg * mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
         __attribute__nonnull__(1)
@@ -276,7 +295,7 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
     const int type_enum = atoi(type);
     const int ascii = (*constant == '\'' || *constant == '"');
     SymReg *rhs;
-    SymReg *r[2];
+    SymReg *r[3];
     char   *name;
 
     if (left->type == VTADDRESS) {      /* IDENTIFIER */
@@ -306,7 +325,7 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
             if (!ascii)
                 rhs->type |= VT_ENCODED;
 
-            rhs->usage    = U_FIXUP;
+            rhs->usage    = U_FIXUP | U_SUBID_LOOKUP;;
             break;
         default:
             rhs = mk_const(interp, name, 'P');
@@ -317,6 +336,63 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
     rhs->pmc_type = type_enum;
 
     mem_sys_free(name);
+
+    return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
+}
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+static Instruction*
+mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
+    ARGIN(const char *name), ARGMOD(SymReg *left), ARGIN(const char *constant))
+{
+    SymReg *rhs;
+    SymReg *r[3];
+    char   *const_name;
+    const int ascii       = (*constant == '\'' || *constant == '"');
+    char   *unquoted_name = str_dup(name + 1);
+    size_t  name_length   = strlen(unquoted_name) - 1;
+
+    unquoted_name[name_length] = '\0';
+
+    if (left->type == VTADDRESS) {      /* IDENTIFIER */
+        if (IMCC_INFO(interp)->state->pasm_file) {
+            IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
+                        "Ident as PMC constant",
+                        " %s\n", left->name);
+        }
+        left->type = VTIDENTIFIER;
+        left->set = 'P';
+    }
+    r[0] = left;
+    if (ascii) {
+        /* strip delimiters */
+        const_name                         = str_dup(constant + 1);
+        const_name[strlen(const_name) - 1] = '\0';
+    }
+    else {
+        const_name = str_dup(constant);
+    }
+
+    if ((strncmp(unquoted_name, "Sub",       name_length) == 0)
+    ||  (strncmp(unquoted_name, "Coroutine", name_length) == 0)) {
+        rhs = mk_const(interp, const_name, 'p');
+
+        if (!ascii)
+            rhs->type |= VT_ENCODED;
+
+        rhs->usage    = U_FIXUP | U_SUBID_LOOKUP;
+    }
+    else {
+        rhs = mk_const(interp, const_name, 'P');
+    }
+
+    r[1]          = rhs;
+    rhs->pmc_type = pmc_type(interp,
+        string_from_cstring(interp, unquoted_name, name_length));
+
+    mem_sys_free(unquoted_name);
+    mem_sys_free(const_name);
 
     return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
 }
@@ -399,11 +475,6 @@ static Instruction *
 iINDEXFETCH(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(SymReg *r0), ARGIN(SymReg *r1),
         ARGIN(SymReg *r2))
 {
-    if (r0->set == 'S' && r1->set == 'S' && r2->set == 'I') {
-        SymReg * const r3 = mk_const(interp, "1", 'I');
-        return MK_I(interp, unit, "substr %s, %s, %s, 1", 4, r0, r1, r2, r3);
-    }
-
     IMCC_INFO(interp) -> keyvec |= KEY_BIT(2);
     return MK_I(interp, unit, "set %s, %s[%s]", 3, r0, r1, r2);
 }
@@ -417,11 +488,7 @@ static Instruction *
 iINDEXSET(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(SymReg *r0), ARGIN(SymReg *r1),
         ARGIN(SymReg *r2))
 {
-    if (r0->set == 'S' && r1->set == 'I' && r2->set == 'S') {
-        SymReg * const r3 = mk_const(interp, "1", 'I');
-        MK_I(interp, unit, "substr %s, %s, %s, %s", 4, r0, r1, r3, r2);
-    }
-    else if (r0->set == 'P') {
+    if (r0->set == 'P') {
         IMCC_INFO(interp)->keyvec |= KEY_BIT(1);
         MK_I(interp, unit, "set %s[%s], %s", 3, r0, r1, r2);
     }
@@ -621,11 +688,11 @@ do_loadlib(PARROT_INTERP, ARGIN(const char *lib))
 %nonassoc '\n'
 %nonassoc <t> PARAM
 
-%token <t> PRAGMA N_OPERATORS HLL HLL_MAP
-%token <t> GOTO ARG IF UNLESS PNULL
+%token <t> HLL HLL_MAP TK_LINE TK_FILE
+%token <t> GOTO ARG IF UNLESS PNULL SET_RETURN SET_YIELD
 %token <t> ADV_FLAT ADV_SLURPY ADV_OPTIONAL ADV_OPT_FLAG ADV_NAMED ADV_ARROW
 %token <t> NEW ADV_INVOCANT
-%token <t> NAMESPACE ENDNAMESPACE DOT_METHOD
+%token <t> NAMESPACE DOT_METHOD
 %token <t> SUB SYM LOCAL LEXICAL CONST
 %token <t> INC DEC GLOBAL_CONST
 %token <t> PLUS_ASSIGN MINUS_ASSIGN MUL_ASSIGN DIV_ASSIGN CONCAT_ASSIGN
@@ -633,20 +700,21 @@ do_loadlib(PARROT_INTERP, ARGIN(const char *lib))
 %token <t> SHR_ASSIGN SHL_ASSIGN SHR_U_ASSIGN
 %token <t> SHIFT_LEFT SHIFT_RIGHT INTV FLOATV STRINGV PMCV LOG_XOR
 %token <t> RELOP_EQ RELOP_NE RELOP_GT RELOP_GTE RELOP_LT RELOP_LTE
-%token <t> GLOBAL GLOBALOP ADDR RESULT RETURN YIELDT GET_RESULTS
+%token <t> RESULT RETURN TAILCALL YIELDT GET_RESULTS
 %token <t> POW SHIFT_RIGHT_U LOG_AND LOG_OR
 %token <t> COMMA ESUB DOTDOT
 %token <t> PCC_BEGIN PCC_END PCC_CALL PCC_SUB PCC_BEGIN_RETURN PCC_END_RETURN
 %token <t> PCC_BEGIN_YIELD PCC_END_YIELD NCI_CALL METH_CALL INVOCANT
 %token <t> MAIN LOAD INIT IMMEDIATE POSTCOMP METHOD ANON OUTER NEED_LEX
-%token <t> MULTI VTABLE_METHOD LOADLIB SUB_INSTANCE_OF SUB_LEXID
+%token <t> MULTI VTABLE_METHOD LOADLIB SUB_INSTANCE_OF SUBID
+%token <t> NS_ENTRY
 %token <t> UNIQUE_REG
 %token <s> LABEL
 %token <t> EMIT EOM
 %token <s> IREG NREG SREG PREG IDENTIFIER REG MACRO ENDM
 %token <s> STRINGC INTC FLOATC USTRINGC
 %token <s> PARROT_OP
-%type <t> type pragma_1 hll_def return_or_yield comma_or_goto opt_unique_reg
+%type <t> type hll_def return_or_yield comma_or_goto opt_unique_reg
 %type <i> program
 %type <i> class_namespace
 %type <i> constdef sub emit pcc_ret pcc_yield
@@ -655,16 +723,17 @@ do_loadlib(PARROT_INTERP, ARGIN(const char *lib))
 %type <i> labels _labels label  statement sub_call
 %type <i> pcc_sub_call
 %type <sr> sub_param sub_params pcc_arg pcc_result pcc_args pcc_results sub_param_type_def
-%type <sr> pcc_returns pcc_return pcc_call arg arglist the_sub multi_type
+%type <sr> pcc_returns pcc_yields pcc_return pcc_call arg arglist the_sub multi_type
 %type <t> argtype_list argtype paramtype_list paramtype
 %type <t> pcc_return_many
 %type <t> proto sub_proto sub_proto_list multi multi_types outer
-%type <t> vtable instanceof lexid
+%type <t> vtable instanceof subid
+%type <t> method ns_entry_name
 %type <i> instruction assignment conditional_statement labeled_inst opt_label op_assign
 %type <i> if_statement unless_statement
 %type <i> func_assign get_results
 %type <i> opt_invocant
-%type <sr> target targetlist reg const var string result
+%type <sr> target targetlist reg const var result pcc_set_yield
 %type <sr> keylist keylist_force _keylist key maybe_ns
 %type <sr> vars _vars var_or_i _var_or_i label_op sub_label_op sub_label_op_c
 %type <i> pasmcode pasmline pasm_inst
@@ -725,12 +794,12 @@ compilation_unit:
          }
    | MACRO '\n'                { $$ = 0; }
    | pragma                    { $$ = 0; }
+   | location_directive            { $$ = 0; }
    | '\n'                      { $$ = 0; }
    ;
 
 pragma:
-     PRAGMA pragma_1 '\n'      { $$ = 0; }
-   | hll_def         '\n'      { $$ = 0; }
+     hll_def         '\n'      { $$ = 0; }
    | LOADLIB STRINGC '\n'
          {
            $$ = 0;
@@ -739,36 +808,30 @@ pragma:
          }
    ;
 
-pragma_1:
-     N_OPERATORS INTC
+location_directive:
+     TK_LINE INTC COMMA STRINGC '\n'
          {
-           if ($2)
-               IMCC_INFO(interp)->state->pragmas |= PR_N_OPERATORS;
-           else
-               IMCC_INFO(interp)->state->pragmas &= ~PR_N_OPERATORS;
+           IMCC_INFO(interp)->line = atoi($2);
+           set_filename(interp, $4);
+         }
+   | TK_FILE STRINGC '\n'
+         {
+           set_filename(interp, $2);
          }
    ;
 
 hll_def:
-     HLL STRINGC COMMA STRINGC
+
+     HLL STRINGC
          {
             STRING * const hll_name = string_unescape_cstring(interp, $2 + 1, '"', NULL);
             CONTEXT(interp)->current_HLL =
                 Parrot_register_HLL(interp, hll_name);
 
-            /* don't bother loading the library for an empty string */
-            if (strlen($4) > 2) {
-                STRING * const hll_lib =
-                    string_unescape_cstring(interp, $4 + 1, '"', NULL);
-                PMC    *ignored        = Parrot_load_lib(interp, hll_lib, NULL);
-                UNUSED(ignored);
-                Parrot_register_HLL_lib(interp, hll_lib);
-            }
-
             IMCC_INFO(interp)->cur_namespace = NULL;
             $$ = 0;
          }
-   | HLL_MAP STRINGC comma_will_be_equals STRINGC
+   | HLL_MAP STRINGC '=' STRINGC
          {
             Parrot_Context *ctx           = CONTEXT(interp);
             STRING * const  built_in_name =
@@ -785,13 +848,6 @@ hll_def:
          }
    ;
 
-/* this rule is temporary for deprecation of the .HLL_map variant using
-   a comma; the comma will be replaced by a '=' character. */
-comma_will_be_equals:
-     COMMA
-   | '='
-   ;
-
 constdef:
      CONST { is_def = 1; } type IDENTIFIER '=' const
          {
@@ -805,6 +861,12 @@ pmc_const:
      CONST { is_def=1; } INTC var_or_i '=' any_string
          {
            $$ = mk_pmc_const(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
+           is_def = 0;
+         }
+
+     | CONST { is_def=1; } STRINGC var_or_i '=' any_string
+         {
+           $$ = mk_pmc_const_named(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
            is_def = 0;
          }
    ;
@@ -901,9 +963,15 @@ class_namespace:
    ;
 
 maybe_ns:
-     '[' keylist ']'           { $$ = $2; }
+     '[' keylist ']'
+        {
+            if (IMCC_INFO(interp)->in_slice)
+                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
+                    "Slice not allowed in namespace.");
+
+            $$ = $2;
+        }
    | '[' ']'                   { $$ = NULL; }
-   |                           { $$ = NULL; }
    ;
 
 sub:
@@ -915,7 +983,14 @@ sub:
          {
            iSUBROUTINE(interp, IMCC_INFO(interp)->cur_unit, $3);
          }
-     sub_proto '\n'            { IMCC_INFO(interp)->cur_call->pcc_sub->pragma = $5; }
+     sub_proto '\n'
+        {
+          IMCC_INFO(interp)->cur_call->pcc_sub->pragma = $5;
+          if (!IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid) {
+            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = str_dup(
+            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->name);
+          }
+        }
      sub_params
      sub_body  ESUB            { $$ = 0; IMCC_INFO(interp)->cur_call = NULL; }
    ;
@@ -948,18 +1023,6 @@ sub_param_type_def:
                $$ = mk_ident(interp, $2, $1);
            $$->type |= $3;
            mem_sys_free($2);
-          }
-
-   /* don't free $2 here; adv_named_set uses the pointer directly */
-   | type STRINGC ADV_ARROW IDENTIFIER paramtype_list
-          {
-            if ($5 & VT_UNIQUE_REG)
-                $$ = mk_ident_ur(interp, $4, $1);
-            else
-                $$ = mk_ident(interp, $4, $1);
-            $$->type |= $5;
-            adv_named_set(interp, $2);
-            mem_sys_free($4);
           }
    ;
 
@@ -999,6 +1062,36 @@ vtable:
          }
    ;
 
+method:
+     METHOD
+         {
+           $$ = P_METHOD;
+           IMCC_INFO(interp)->cur_unit->method_name = NULL;
+           IMCC_INFO(interp)->cur_unit->is_method = 1;
+         }
+   | METHOD '(' any_string ')'
+         {
+           $$ = P_METHOD;
+           IMCC_INFO(interp)->cur_unit->method_name = $3;
+           IMCC_INFO(interp)->cur_unit->is_method = 1;
+         }
+   ;
+
+ns_entry_name:
+    NS_ENTRY
+         {
+           $$ = 0;
+           IMCC_INFO(interp)->cur_unit->ns_entry_name = NULL;
+           IMCC_INFO(interp)->cur_unit->has_ns_entry_name = 1;
+         }
+   | NS_ENTRY '(' any_string ')'
+         {
+           $$ = 0;
+           IMCC_INFO(interp)->cur_unit->ns_entry_name = $3;
+           IMCC_INFO(interp)->cur_unit->has_ns_entry_name = 1;
+         }
+   ;
+
 instanceof:
      SUB_INSTANCE_OF '(' STRINGC ')'
          {
@@ -1007,11 +1100,17 @@ instanceof:
          }
    ;
 
-lexid:
-     SUB_LEXID '(' STRINGC ')'
+subid:
+     SUBID
          {
            $$ = 0;
-           IMCC_INFO(interp)->cur_unit->lexid = mk_const(interp, $3, 'S');
+           IMCC_INFO(interp)->cur_unit->subid = NULL;
+         }
+   | SUBID '(' any_string ')'
+         {
+           $$ = 0;
+           IMCC_INFO(interp)->cur_unit->subid = mk_const(interp, $3, 'S');
+           IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = str_dup_remove_quotes($3);
            mem_sys_free($3);
          }
    ;
@@ -1128,13 +1227,14 @@ proto:
    | IMMEDIATE                 { $$ = P_IMMEDIATE; }
    | POSTCOMP                  { $$ = P_POSTCOMP; }
    | ANON                      { $$ = P_ANON; }
-   | METHOD                    { $$ = P_METHOD; }
    | NEED_LEX                  { $$ = P_NEED_LEX; }
    | multi
    | outer
    | vtable
+   | method
+   | ns_entry_name
    | instanceof
-   | lexid
+   | subid
    ;
 
 pcc_call:
@@ -1224,15 +1324,9 @@ paramtype:
 
 
 pcc_ret:
-     PCC_BEGIN_RETURN '\n'
-         {
-           begin_return_or_yield(interp, 0);
-         }
-     pcc_returns PCC_END_RETURN
-         {
-           $$ = 0;
-           IMCC_INFO(interp)->asm_state = AsmDefault;
-         }
+     PCC_BEGIN_RETURN '\n'     { begin_return_or_yield(interp, 0); }
+     pcc_returns
+     PCC_END_RETURN            { $$ = 0; IMCC_INFO(interp)->asm_state = AsmDefault; }
    | pcc_return_many
          {
            IMCC_INFO(interp)->asm_state = AsmDefault;
@@ -1242,7 +1336,7 @@ pcc_ret:
 
 pcc_yield:
      PCC_BEGIN_YIELD '\n'      { begin_return_or_yield(interp, 1); }
-     pcc_returns
+     pcc_yields
      PCC_END_YIELD             { $$ = 0; IMCC_INFO(interp)->asm_state = AsmDefault; }
    ;
 
@@ -1260,8 +1354,26 @@ pcc_returns:
          }
    ;
 
+pcc_yields:
+     /* empty */                { $$ = 0; }
+   | pcc_yields '\n'
+         {
+           if ($1)
+               add_pcc_result(IMCC_INFO(interp)->sr_return, $1);
+         }
+   | pcc_yields pcc_set_yield '\n'
+         {
+           if ($2)
+               add_pcc_result(IMCC_INFO(interp)->sr_return, $2);
+         }
+   ;
+
 pcc_return:
-     RETURN var argtype_list   { $$ = $2; $$->type |= $3; }
+     SET_RETURN var argtype_list   { $$ = $2; $$->type |= $3; }
+   ;
+
+pcc_set_yield:
+     SET_YIELD var argtype_list    { $$ = $2; $$->type |= $3; }
    ;
 
 pcc_return_many:
@@ -1338,6 +1450,7 @@ statement:
    | MACRO '\n'                { $$ = 0; }
    | FILECOMMENT               { $$ = 0; }
    | LINECOMMENT               { $$ = 0; }
+   | location_directive        { $$ = 0; }
    ;
 
 labels:
@@ -1406,8 +1519,6 @@ opt_unique_reg:
 labeled_inst:
      assignment
    | conditional_statement
-   | NAMESPACE IDENTIFIER      { push_namespace(interp, $2); mem_sys_free($2); }
-   | ENDNAMESPACE IDENTIFIER   { pop_namespace(interp, $2); mem_sys_free($2); }
    | LOCAL { is_def=1; } type id_list
          {
            IdList *l = $4;
@@ -1442,7 +1553,7 @@ labeled_inst:
            is_def=0;
            mem_sys_free($4);
          }
-   | RETURN  sub_call
+   | TAILCALL sub_call
          {
            $$ = NULL;
            IMCC_INFO(interp)->cur_call->pcc_sub->flags |= isTAIL_CALL;
@@ -1508,21 +1619,14 @@ assignment:
             { $$ = iNEW(interp, IMCC_INFO(interp)->cur_unit, $1, $4, NULL, 1); }
    | target '=' NEW var
             { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $4); }
-   | target '=' NEW '[' keylist ']'
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $5); }
-   | target '=' NEW '[' keylist ']' COMMA var
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $5, $8); }
+   | target '=' NEW maybe_ns
+            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 2, $1, $4); }
+   | target '=' NEW maybe_ns COMMA var
+            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $4, $6); }
    | target '=' NEW var COMMA var
             { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $4, $6); }
    | target '=' NEW var '[' keylist ']'
             { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "new", 3, $1, $4, $6); }
-   | target '=' ADDR IDENTIFIER
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "set_addr",
-                        2, $1, mk_label_address(interp, $4)); mem_sys_free($4); }
-   | target '=' GLOBALOP string
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "find_global", 2, $1, $4);}
-   | GLOBALOP string '=' var
-            { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "store_global", 2, $2, $4); }
        /* NEW is here because it is both PIR and PASM keywords so we
         * have to handle the token here (or badly hack the lexer). */
    | NEW target COMMA var
@@ -1647,11 +1751,23 @@ the_sub:
            if ($1->set != 'P')
                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "Sub isn't a PMC");
          }
-   | target DOT sub_label_op   { IMCC_INFO(interp)->cur_obj = $1; $$ = $3; }
+   | target DOT sub_label_op
+        {
+            /* disallow bareword method names; SREG name constants are fine */
+            char *name = $3->name;
+            if (!($3->type & VTREG) && (*name != '\'' || *name != '\"')) {
+                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
+                    "Bareword method name '%s' not allowed in PIR", $3->name);
+            }
+
+            IMCC_INFO(interp)->cur_obj = $1;
+            $$                         = $3;
+        }
    | target DOT STRINGC
          {
-           IMCC_INFO(interp)->cur_obj = $1; $$ = mk_const(interp, $3, 'S');
-           mem_sys_free($3);
+            IMCC_INFO(interp)->cur_obj = $1;
+            $$                         = mk_const(interp, $3, 'S');
+            mem_sys_free($3);
          }
    | target DOT target         { IMCC_INFO(interp)->cur_obj = $1; $$ = $3; }
    ;
@@ -1895,12 +2011,6 @@ _keylist:
            IMCC_INFO(interp)->keys[IMCC_INFO(interp)->nkeys++] = $3;
            $$ = IMCC_INFO(interp)->keys[0];
          }
-   | _keylist COMMA            { IMCC_INFO(interp)->in_slice = 1; }
-     key
-         {
-           IMCC_INFO(interp)->keys[IMCC_INFO(interp)->nkeys++] = $4;
-           $$ = IMCC_INFO(interp)->keys[0];
-         }
    ;
 
 key:
@@ -1910,15 +2020,6 @@ key:
                $1->type |= VT_START_SLICE | VT_END_SLICE;
            $$ = $1;
          }
-   | var DOTDOT var
-         {
-           $1->type |= VT_START_SLICE;
-           $3->type |= VT_END_SLICE;
-           IMCC_INFO(interp)->keys[IMCC_INFO(interp)->nkeys++] = $1;
-           $$ = $3;
-         }
-   | DOTDOT var                { $2->type |= VT_START_ZERO | VT_END_SLICE; $$ = $2; }
-   | var DOTDOT                { $1->type |= VT_START_SLICE | VT_END_INF; $$ = $1; }
    ;
 
 reg:
@@ -1936,10 +2037,6 @@ const:
    | USTRINGC                  { $$ = mk_const(interp, $1, 'U'); mem_sys_free($1); }
    ;
 
-string:
-     SREG                      { $$ = mk_symreg(interp, $1, 'S'); mem_sys_free($1); }
-   | STRINGC                   { $$ = mk_const(interp, $1, 'S');  mem_sys_free($1); }
-   ;
 
 
 /* The End */

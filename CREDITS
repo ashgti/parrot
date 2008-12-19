@@ -73,8 +73,9 @@ D: typo squisher
 E: yDNA@cpan.org
 
 N: Andrew Whitworth
-D: PDD09 Garbage Collector
+D: Internals development
 D: Documentation
+D: Release manager for 0.8.2
 E: wknight8111@gmail.com
 
 N: Andy Dougherty
@@ -128,6 +129,9 @@ N: Bob Wilkinson
 D: Numerous document typos.
 E: bob@fourtheye.org
 
+N: Brad Bowman
+D: pod fixes
+
 N: Brad Gilbert
 D: Add test for sysinfo op.
 E: b2gills@gmail.com
@@ -157,9 +161,16 @@ N: Chip Salzenberg
 D: Pumpking (0.4.6 - ... ) and demagogue
 E: chip@pobox.com
 
+N: Chris Davaz
+D: Rakudo builtins
+E: cdavaz@gmail.com
+
 N: Chris Dolan
-D: TAP language author, and Parrot Bug fixes
+D: TAP language author, Parrot Bug fixes and Rakudo patches
 E: cdolan@cpan.org
+
+N: Chris Fields (cjfields)
+D: Rakudo patches
 
 N: Christoph Otto a.k.a. cotto
 D: Patch for key flags in pdd08
@@ -168,9 +179,8 @@ D: Pipp
 E: christoph@mksig.org
 
 N: chromatic
-D: SDL library and examples; PIR Test::*; test suite cleanup
-D: Parrot::Embed; Pheme
-D: lead philosopher -- "Why doesn't this work?"
+D: SDL library and examples; PIR Test::*; test suite cleanup; Parrot::Embed
+D: freaky bugs; cool features; Pheme
 E: chromatic@wgz.org
 W: http://wgz.org/chromatic/
 
@@ -307,6 +317,9 @@ D: Binary GCD / LCM
 N: Ion Alexandru Morega
 D: string.pmc, complex.pmc
 
+N: isop
+D: various Pynie patches
+
 N: James E Keenan (Jim)
 D: Testing of configuration and build tools
 W: http://thenceforward.net/parrot/
@@ -346,6 +359,10 @@ N: Jerry Gay a.k.a. particle
 E: Jerry.Gay@gmail.com
 D: test suite, compiler tools, perl6, TAP language, entropy reduction, ECMAScript
 S: Seattle, WA
+
+N: Jimmy Zhuo
+E: zhuomingliang@yahoo.com.cn
+D: Bugfixes
 
 N: John J. Trammell
 E: trammell@el-swifto.com
@@ -433,8 +450,17 @@ D: Patchmonster & pumpking emeritus (0.0.13 - 0.4.5)
 E: lt@toetsch.at
 S: Herrnbaumgarten, Austria
 
+N: Luca Barbato
+D: fix to make installable
+E: lu_zero@gentoo.org
+
+
 N: Luke Palmer
 D: Many fixes
+
+N: Marcelo Serra Castilhos
+E: mhelix@terra.com.br
+D: Bug fix
 
 N: Marcus Thiesen
 D: URM language, bugfixes
@@ -544,6 +570,10 @@ D: Miscellaneous cleanup and PDD07-conformance
 N: Ovid
 D: Rename 'pbc_to_c' to 'pbc_to_exe'
 
+N: Paco Alguacil
+D: Building on various platorms
+E: paco.linux@gmail.com
+
 N: Pancake
 D: Fixes for pdb, the Parrot debugger
 
@@ -553,7 +583,7 @@ E: pat.eyler@gmail.com
 
 N: Patrick R. Michaud
 D: Parrot Grammar Engine
-D: Perl 6 pumpking
+D: Perl 6 (Rakudo Perl) pumpking
 D: NQP, PCT, PAST, POST
 D: APL
 D: Pynie

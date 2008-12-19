@@ -1,11 +1,11 @@
 Name:           parrot
-Version:        0.7.0
+Version:        0.8.2
 Release:        1%{?dist}
 Summary:        Parrot Virtual Machine
 License:        Artistic 2.0
 Group:          Development/Libraries
-URL:            http://www.parrotcode.org/
-Source0:        http://www.cpan.org/authors/id/P/PM/PMIC/parrot-%{version}.tar.gz
+URL:            http://www.parrot.org/
+Source0:        http://www.cpan.org/authors/id/P/PA/PARTICLE/parrot-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires:  readline-devel
 BuildRequires:  ncurses-devel
@@ -55,7 +55,7 @@ Parrot Virtual Machine development headers and libraries.
     --sysconfdir=%{_sysconfdir} \
     --infodir=%{_datadir}/info \
     --mandir=%{_mandir} \
-    --cc=%{__cc} \
+    --cc="%{__cc}" \
     --cxx=%{__cxx} \
     --optimize="$RPM_OPT_FLAGS -maccumulate-outgoing-args" \
     --parrot_is_shared \
@@ -110,7 +110,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc ChangeLog CREDITS NEWS PBC_COMPAT PLATFORMS README
 %doc RESPONSIBLE_PARTIES TODO
 %doc docs examples
-%exclude %{_bindir}/parrot-config
+%exclude %{_bindir}/parrot_config
 %exclude %{_bindir}/perl6
 %{_bindir}/*
 %{_libdir}/parrot
@@ -125,13 +125,28 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root,-)
-%{_bindir}/parrot-config
+%{_bindir}/parrot_config
 %{_includedir}/parrot
 %{_libdir}/libparrot.so
 %{_libdir}/libparrot.a
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Dec 16 2008 Whiteknight <wknight8111@gmail.com> 0.8.2
+- updated to 0.8.2
+
+* Tue Nov 18 2008 chromatic <chromatic@parrot.org> 0.8.1
+- updated to 0.8.1
+
+* Tue Oct 21 2008 particle <particle@parrot.org> 0.8.0
+- updated to 0.8.0
+
+* Tue Sep 16 2008 pmichaud <pmichaud@pobox.com> 0.7.1
+- updated to 0.7.1
+
+* Wed Sep  3 2008 chromatic <chromatic@wgz.org> 0.7.0
+- install parrot_config (not parrot-config)
+
 * Tue Jun 17 2008 Nuno Carvalho <smash@cpan.org> 0.6.3
 - updated to 0.6.3
 

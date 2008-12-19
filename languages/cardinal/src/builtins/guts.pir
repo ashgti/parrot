@@ -90,7 +90,7 @@ Checks the type of a parameter.
     .lex "$/", $P0
   no_match_to_copy:
 
-    $I0 = type.ACCEPTS(value)
+    $I0 = type.'ACCEPTS'(value)
     if $I0 goto ok
     'die'('Parameter type check failed')
 ok:
@@ -120,7 +120,7 @@ Internal helper method to create a class.
     push resolve_list, $P0
     goto resolve_loop
   resolve_loop_end:
-    class.resolve_method(resolve_list)
+    class.'resolve_method'(resolve_list)
 
     .return(class)
 .end
@@ -228,6 +228,31 @@ Adds an attribute with the given name to the class.
     $P0 = new 'Undef'
     .return($P0)
 .end
+
+.sub 'die'
+    .param pmc list :slurpy
+    .local pmc iter
+    .local string message
+
+    message = ''
+    iter = new 'Iterator', list
+  iter_loop:
+    unless iter goto iter_end
+    $P0 = shift iter
+    $S0 = $P0
+    message .= $S0
+    goto iter_loop
+  iter_end:
+    if message > '' goto have_message
+    message = "Died\n"
+  have_message:
+    $P0 = new 'Exception'
+    $P0 = message
+    set_global '$!', $P0
+    throw $P0
+    .return ()
+.end
+
 
 # Local Variables:
 #   mode: pir

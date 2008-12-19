@@ -34,41 +34,42 @@ and imports many definitions from the full Lua compiler
 =cut
 
 .sub '__onload' :anon :load :init
-    load_bytecode 'languages/lua/lua.pbc'
+    load_bytecode 'PCT.pbc'
 
-    new $P0, 'PCT::HLLCompiler'
+    $P0 = get_hll_global ['PCT'], 'HLLCompiler'
+    $P0 = $P0.'new'()
     $P0.'language'('LuaTestLex')
     $P0.'parsegrammar'('Lua::TestLex')
     $P0.'astgrammar'('Lua::DumpLex')
 
-    $S0 = "Lexico of Lua 5.1 on Parrot  Copyright (C) 2005-2008, The Perl Foundation.\n"
+    $S0 = "Lexico of Lua 5.1 on Parrot\nCopyright (C) 2005-2008, The Perl Foundation.\n"
     $P0.'commandline_banner'($S0)
     $P0.'commandline_prompt'('> ')
 
     # import Lua::Grammar::* into Lua::TestLex
-    $P0 = get_hll_global ['Lua::Grammar'], 'string'
-    set_hll_global ['Lua::TestLex'], 'String', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'ws'
-    set_hll_global ['Lua::TestLex'], 'ws', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'string'
+    set_hll_global ['Lua';'TestLex'], 'String', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'ws'
+    set_hll_global ['Lua';'TestLex'], 'ws', $P0
 
-    $P0 = get_hll_global ['Lua::Grammar'], 'syntaxerror'
-    set_hll_global ['Lua::TestLex'], 'die', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'Name'
-    set_hll_global ['Lua::TestLex'], 'Name', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'number'
-    set_hll_global ['Lua::TestLex'], 'Number', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'quoted_literal'
-    set_hll_global ['Lua::TestLex'], 'quoted_literal', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'long_string'
-    set_hll_global ['Lua::TestLex'], 'long_string', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'long_comment'
-    set_hll_global ['Lua::TestLex'], 'long_comment', $P0
-    $P0 = get_hll_global ['Lua::Grammar'], 'shebang'
-    set_hll_global ['Lua::TestLex'], 'shebang', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'syntaxerror'
+    set_hll_global ['Lua';'TestLex'], 'die', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'Name'
+    set_hll_global ['Lua';'TestLex'], 'Name', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'number'
+    set_hll_global ['Lua';'TestLex'], 'Number', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'quoted_literal'
+    set_hll_global ['Lua';'TestLex'], 'quoted_literal', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'long_string'
+    set_hll_global ['Lua';'TestLex'], 'long_string', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'long_comment'
+    set_hll_global ['Lua';'TestLex'], 'long_comment', $P0
+    $P0 = get_hll_global ['Lua';'Grammar'], 'shebang'
+    set_hll_global ['Lua';'TestLex'], 'shebang', $P0
 
     # import Lua::PAST::Grammar::internal_error into Lua::DumpLex
-    $P0 = get_hll_global ['Lua::PAST::Grammar'], 'internal_error'
-    set_hll_global ['Lua::DumpLex'], 'internal_error', $P0
+    $P0 = get_hll_global ['Lua';'PAST';'Grammar'], 'internal_error'
+    set_hll_global ['Lua';'DumpLex'], 'internal_error', $P0
 .end
 
 .sub 'main' :anon :main
@@ -79,6 +80,8 @@ and imports many definitions from the full Lua compiler
 
 .include 'languages/lua/src/dumplex_gen.pir'
 .include 'languages/lua/src/lua51_testlex_gen.pir'
+.include 'languages/lua/src/grammar51.pir'
+.include 'languages/lua/src/lua51_gen.pir'
 
 .namespace []
 

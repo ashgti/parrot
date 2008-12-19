@@ -1,5 +1,5 @@
 
-.HLL 'Forth', ''
+.HLL 'Forth'
 .namespace []
 
 .include 'languages/forth/words.pir'
@@ -60,10 +60,10 @@ loop:
     $S0 = readline stdin
     unless stdin goto end
 
-#    push_eh exception
+    push_eh exception
       $P0 = forth($S0)
       $P0()
-#    pop_eh
+    pop_eh
 
     print " ok\n"
     goto loop
@@ -71,8 +71,8 @@ end:
     .return()
 
 exception:
-    get_results '0, 0', $P0, $S0
-    $S0 = $P0[0]
+    .get_results ($P0)
+    $S0 = $P0
     print $S0
     print "\n"
     goto loop
@@ -80,14 +80,15 @@ exception:
 
 
 .sub ' compile'
-    .param pmc input
+    .param string input
 
     .local pmc code, stream, stack
     code   = new 'CodeString'
-    stream = new 'TokenStream', input
+    stream = new 'TokenStream'
+    set stream, input
     stack  = new 'VirtualStack'
 
-    code.emit(<<"END_PIR")
+    code.'emit'(<<"END_PIR")
 .sub code :anon
     .local pmc stack
     stack = get_hll_global " stack"
@@ -103,15 +104,15 @@ next_token:
     goto next_token
 
 done:
-    $S0 = stack.consolidate_to_cstack()
+    $S0 = stack.'consolidate_to_cstack'()
     code .= $S0
-    code.emit(<<"END_PIR")
+    code.'emit'(<<"END_PIR")
     .return(stack)
 .end
 END_PIR
 
     $P0 = compreg "PIR"
-    .return $P0(code)
+    .tailcall $P0(code)
 .end
 
 .sub ' dispatch'
@@ -139,16 +140,16 @@ END_PIR
     .return()
 
 user_word:
-    $S1 = stack.consolidate_to_cstack()
+    $S1 = stack.'consolidate_to_cstack'()
     code .= $S1
     $S0 = dict[$S0]
-    code.emit("    '%0'(stack)", $S0)
+    code.'emit'("    '%0'(stack)", $S0)
     .return()
 
 user_var:
     $I0 = vars[$S0]
-    $S0 = code.unique('$P')
-    code.emit(<<'END_PIR', $S0, $I0)
+    $S0 = code.'unique'('$P')
+    code.'emit'(<<'END_PIR', $S0, $I0)
     %0 = new 'Integer'
     %0 = %1
 END_PIR
@@ -163,8 +164,8 @@ undefined:
     throw $P0
 
 numeric:
-    $S0 = code.unique('$P')
-    code.emit(<<"END_PIR", $S0, token)
+    $S0 = code.'unique'('$P')
+    code.'emit'(<<"END_PIR", $S0, token)
     %0 = new 'Integer'
     %0 = %1
 END_PIR

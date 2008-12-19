@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 17;
+use Parrot::Test tests => 8;
 
 =head1 NAME
 
@@ -23,6 +23,7 @@ Tests automatically generated read-only PMC support.
 =cut
 
 my $library = <<'CODE';
+.include "except_types.pasm"
 .sub make_readonly
     .param pmc arg
     .local pmc one
@@ -40,19 +41,31 @@ my $library = <<'CODE';
 .end
 CODE
 
-pir_error_output_unlike( $library . <<'CODE', <<'OUTPUT', "Integer set read-only is not writable" );
+pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer set read-only is not writable" );
 .sub main :main
-    .local pmc foo
+    .local pmc foo, eh
 
     foo = new 'Integer'
     foo = 42
 
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.EXCEPTION_WRITE_TO_CONSTCLASS)
+    set_addr eh, eh_label
+
     make_readonly(foo)
+    push_eh eh
     foo = 43
-    print "NOT OKAY"
+    pop_eh
+    print "no exception caught"
+    end
+
+eh_label:
+    .get_results($P0)
+    say "RO exception caught"
+    end
 .end
 CODE
-/NOT OKAY/
+RO exception caught
 OUTPUT
 
 pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer set read-only can be read" );
@@ -79,7 +92,7 @@ pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer set read-only can be re
     print "\n"
 
     $P0 = foo
-    n_add foo, foo, foo
+    add foo, foo, foo
     print foo
     print "\n"
 
@@ -95,22 +108,6 @@ CODE
 42
 OUTPUT
 
-pir_error_output_unlike( <<"CODE", <<'OUTPUT', "PerlInteger" );
-$library
-.sub main :main
-    .local pmc foo
-
-    foo = new 'PerlInteger'
-    foo = 42
-
-    make_readonly(foo)
-    foo = 43
-    print "NOT OKAY"
-.end
-CODE
-/NOT OKAY/
-OUTPUT
-
 pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer stays Integer" );
 .sub main :main
     .local pmc foo
@@ -120,94 +117,71 @@ pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer stays Integer" );
 
     make_readonly(foo)
     typeof $S0, foo
-    print $S0
-    print "\n"
+    say $S0
 .end
 CODE
 Integer
 OUTPUT
 
-pir_error_output_unlike( $library . <<'CODE', <<'OUTPUT', "Integer add" );
+pir_output_is( $library . <<'CODE', <<'OUTPUT', "Integer add" );
 .sub main :main
-    .local pmc foo
+    .local pmc foo, eh
 
     foo = new 'Integer'
     foo = 42
 
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.EXCEPTION_WRITE_TO_CONSTCLASS)
+    set_addr eh, eh_label
+
     make_readonly(foo)
-    add foo, 16, foo
-    print "NOT OKAY\n"
+    push_eh eh
+    foo += 16
+    pop_eh
+
+    say "no exception caught"
+    end
+
+eh_label:
+    .get_results($P0)
+    say "RO exception caught"
+    end
 .end
 CODE
-/NOT OKAY/
+RO exception caught
 OUTPUT
 
-pir_error_output_unlike( $library . <<'CODE', <<'OUTPUT', "Complex i_add" );
+pir_output_is( $library . <<'CODE', <<'OUTPUT', "Complex i_add" );
 .sub main :main
-    .local pmc foo
+    .local pmc foo, eh
 
     foo = new 'Complex'
     foo[0] = 1.0
     foo[1] = 1.0
+
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.EXCEPTION_WRITE_TO_CONSTCLASS)
+    set_addr eh, eh_label
+
     make_readonly(foo)
-    add foo, foo, 4
-    print "NOT OKAY\n"
+    push_eh eh
+    add foo, 4
+    pop_eh
+    say "no exception caught"
+    end
+
+eh_label:
+    .get_results($P0)
+    say "RO exception caught"
+    end
 .end
 CODE
-/NOT OKAY/
+RO exception caught
 OUTPUT
 
-{
-
-    # The ROTest dynpmc has opposite of normal logic for set/get integer
-    # and 'reader' and 'writer' NCI methods.
-    # The values are [should work with read-only, is todo test].
-    my %tests = (
-
-        # these first two tests would test overriding of the default
-        # read-onlyness notion of vtable methods
-        q{value = 42}  => [ 1, 0 ],
-        q{$I0 = value} => [ 0, 0 ],
-
-        # these make sure NCI methods check does-write flags
-        # 'writer' is marked as writing; 'reader' is not.
-        q{$I0 = value.'reader'()} => [ 1, 0 ],
-        q{$I0 = value.'writer'(42)} => [ 0, 0 ],
-    );
-    for my $test ( keys %tests ) {
-        my $code = $library . <<"CODE";
-.loadlib 'rotest'
+pir_output_is( $library . <<'CODE', <<'OUTPUT', "ResizablePMCArray (non-recursive part)" );
 .sub main :main
-    .local pmc value
-    value = new 'ROTest'
-    #READONLYTEST
-    $test
-    print "reached end\\n"
-.end
-CODE
-        {
-            my ( $readonly, $todo ) = @{ $tests{$test} };
-
-            # first make sure it works without the make_readonly
-            pir_output_is( $code, "reached end\n", "ROTest (dry run) ($test)" );
-            local $TODO = $todo;
-            $code =~ s/#READONLYTEST/make_readonly(value)/;
-            if ($readonly) {
-                pir_output_is( $code, "reached end\n", "ROTest (read-only/okay) ($test)" );
-            }
-            else {
-                pir_error_output_isnt( $code, "reached end\n", "ROTest (read-only/fail) ($test)" );
-            }
-        }
-    }
-}
-
-pir_error_output_unlike(
-    $library . <<'CODE', <<'OUTPUT', "ResizablePMCArray (non-recursive part)" );
-.sub main :main
-    .local pmc foo
-    .local pmc three
-    .local pmc four
+    .local pmc foo, three, four, eh
 
     foo = new 'ResizablePMCArray'
     three = new 'Integer'
@@ -215,41 +189,67 @@ pir_error_output_unlike(
     four = new 'Integer'
     four = 4
 
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.EXCEPTION_WRITE_TO_CONSTCLASS)
+    set_addr eh, eh_label
+
     foo = 3
     foo[0] = three
     foo[1] = three
     foo[2] = three
     make_readonly(foo)
 
+    push_eh eh
     foo[0] = four
-    print "NOT OKAY\n"
+    pop_eh
+    say "no exception caught"
+    end
+
+eh_label:
+    .get_results($P0)
+    say "RO exception caught"
+    end
 .end
 CODE
-/NOT OKAY/
+RO exception caught
 OUTPUT
 
-pir_error_output_unlike( $library . <<'CODE', <<'OUTPUT', "Objects" );
+pir_output_is( $library . <<'CODE', <<'OUTPUT', "Objects" );
 .sub main :main
-    .local pmc fooclass
-    .local pmc foo
+    .local pmc fooclass, foo, eh, i
 
-    $P0 = new 'Integer'
-    $P0 = 1
+    i = new 'Integer'
+    i = 1
+
+    eh = new 'ExceptionHandler'
+    eh.'handle_types'(.EXCEPTION_WRITE_TO_CONSTCLASS)
+    set_addr eh, eh_label
+
 
     fooclass = newclass 'Foo'
     addattribute fooclass, 'bar'
     foo = new 'Foo'
-    setattribute foo, 'bar', $P0
+    setattribute foo, 'bar', i
     make_readonly(foo)
-    inc $P0
-    setattribute foo, 'bar', $P0
-    print "NOT OKAY\n"
+    inc i
+
+    push_eh eh
+    setattribute foo, 'bar', i
+    pop_eh
+
+    say "no exception caught"
+    end
+
+eh_label:
+    .get_results($P0)
+    say "RO exception caught"
+    end
 .end
 CODE
-/NOT OKAY/
+RO exception caught
 OUTPUT
 
-# RT#46821: should this work?
+# RT #46821: should this work?
 {
     local $TODO = 1;
     pir_output_unlike( $library . <<'CODE', <<'OUTPUT', "ResizablePMCArray -- Recursive" );

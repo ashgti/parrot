@@ -1,6 +1,6 @@
 
 
-.namespace [ "PGE::P5Regex" ]
+.namespace [ "PGE";"P5Regex" ]
 
 .sub "compile_p5regex"
     .param pmc source
@@ -36,14 +36,14 @@
     pad = new 'Hash'
     pad['subpats'] = 0
     exp = exp.'p5analyze'(pad)
-    .return exp.'compile'(adverbs :flat :named)
+    .tailcall exp.'compile'(adverbs :flat :named)
 .end
 
 
 .sub "p5regex"
     .param pmc mob
     .local pmc optable
-    optable = get_hll_global ["PGE::P5Regex"], "$optable"
+    optable = get_hll_global ["PGE";"P5Regex"], "$optable"
     $P0 = optable."parse"(mob)
     .return ($P0)
 .end
@@ -56,43 +56,43 @@
 .sub "__onload" :load
     .local pmc optable
 
-    optable = new 'PGE::OPTable'
-    set_hll_global ["PGE::P5Regex"], "$optable", optable
+    optable = new ['PGE';'OPTable']
+    set_hll_global ["PGE";"P5Regex"], "$optable", optable
 
-    $P0 = get_hll_global ["PGE::P5Regex"], "parse_lit"
-    optable.newtok('term:', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
+    $P0 = get_hll_global ["PGE";"P5Regex"], "parse_lit"
+    optable.'newtok'('term:', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
 
-    optable.newtok('term:\b', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
-    optable.newtok('term:\B', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
-    optable.newtok('term:^',   'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
-    optable.newtok('term:$',   'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:\b', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:\B', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:^',   'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:$',   'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
 
-    optable.newtok('term:\d', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
-    optable.newtok('term:\D', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
-    optable.newtok('term:\s', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
-    optable.newtok('term:\S', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
-    optable.newtok('term:\w', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
-    optable.newtok('term:\W', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\d', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\D', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\s', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\S', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\w', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
+    optable.'newtok'('term:\W', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::CCShortcut')
 
-    optable.newtok('circumfix:( )',   'equiv'=>'term:', 'nows'=>1, 'nullterm'=>1, 'match'=>'PGE::Exp::CGroup')
-    optable.newtok('circumfix:(?: )', 'equiv'=>'term:', 'nows'=>1, 'nullterm'=>1, 'match'=>'PGE::Exp::Group')
+    optable.'newtok'('circumfix:( )',   'equiv'=>'term:', 'nows'=>1, 'nullterm'=>1, 'match'=>'PGE::Exp::CGroup')
+    optable.'newtok'('circumfix:(?: )', 'equiv'=>'term:', 'nows'=>1, 'nullterm'=>1, 'match'=>'PGE::Exp::Group')
 
-    $P0 = get_hll_global ['PGE::P5Regex'], 'parse_enumclass'
-    optable.newtok('term:[', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
-    optable.newtok('term:.', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
+    $P0 = get_hll_global ['PGE';'P5Regex'], 'parse_enumclass'
+    optable.'newtok'('term:[', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:.', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
 
-    $P0 = get_hll_global ['PGE::P5Regex'], 'parse_quant'
-    optable.newtok('postfix:*', 'looser'=>'term:', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
-    optable.newtok('postfix:+', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
-    optable.newtok('postfix:?', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
-    optable.newtok('postfix:{', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
+    $P0 = get_hll_global ['PGE';'P5Regex'], 'parse_quant'
+    optable.'newtok'('postfix:*', 'looser'=>'term:', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('postfix:+', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('postfix:?', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('postfix:{', 'equiv'=>'postfix:*', 'left'=>1, 'nows'=>1, 'parsed'=>$P0)
 
-    optable.newtok('infix:',  'looser'=>'postfix:*', 'right'=>1, 'nows'=>1, 'match'=>'PGE::Exp::Concat')
-    optable.newtok('infix:|', 'looser'=>'infix:',    'left'=>1,  'nows'=>1, 'match'=>'PGE::Exp::Alt')
+    optable.'newtok'('infix:',  'looser'=>'postfix:*', 'right'=>1, 'nows'=>1, 'match'=>'PGE::Exp::Concat')
+    optable.'newtok'('infix:|', 'looser'=>'infix:',    'left'=>1,  'nows'=>1, 'match'=>'PGE::Exp::Alt')
 
-    optable.newtok('close:}', 'looser'=>'infix:|', 'nows'=>1)            # XXX: hack
+    optable.'newtok'('close:}', 'looser'=>'infix:|', 'nows'=>1)            # XXX: hack
 
-    $P0 = get_hll_global ["PGE::P5Regex"], "compile_p5regex"
+    $P0 = get_hll_global ["PGE";"P5Regex"], "compile_p5regex"
     compreg "PGE::P5Regex", $P0
 .end
 
@@ -326,7 +326,7 @@
 .end
 
 
-.namespace [ "PGE::Exp" ]
+.namespace [ "PGE";"Exp" ]
 
 .sub "p5analyze" :method
     .param pmc pad
@@ -344,7 +344,7 @@
     .return (self)
 .end
 
-.namespace [ "PGE::Exp::CGroup" ]
+.namespace [ "PGE";"Exp";"CGroup" ]
 
 .sub "p5analyze" :method
     .param pmc pad

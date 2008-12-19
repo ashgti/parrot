@@ -39,9 +39,9 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'int reg' );
     .local int tmp
 
     # Get register's value indirectly, increment it and store back indirectly.
-    tmp = ptr.load_int()
+    tmp = ptr."load_int"()
     inc tmp
-    ptr.store_int(tmp)
+    ptr."store_int"(tmp)
 .end
 PIR
 Jonathan will be 21 years old tomorrow! :-O
@@ -71,12 +71,12 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float reg' );
     .local num tmp
 
     # Get register's value indirectly, increment it and store back indirectly.
-    tmp = ptr.load_float()
+    tmp = ptr."load_float"()
     tmp = tmp * 2
-    ptr.store_float(tmp)
+    ptr."store_float"(tmp)
 .end
 PIR
-4.800000
+4.8
 OUTPUT
 
 is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc reg' );
@@ -87,7 +87,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc reg' );
     $P0 = loadlib "dotnet_runtime"
 
     # Get the pointer.
-    the_test = new Float
+    the_test = new 'Float'
     the_test = 42.2
     ptr = net_reg_ptr the_test
 
@@ -105,11 +105,11 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc reg' );
     .local int tmp2
 
     # Get register's value indirectly, increment it and store back indirectly.
-    tmp = ptr.load_pmc()
+    tmp = ptr."load_pmc"()
     tmp2 = tmp
     tmp = new 'Integer'
     tmp = tmp2
-    ptr.store_pmc(tmp)
+    ptr."store_pmc"(tmp)
 .end
 PIR
 42
@@ -123,7 +123,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'int element' );
     $P0 = loadlib "dotnet_runtime"
 
     # Set up an array.
-    arr = new FixedIntegerArray
+    arr = new 'FixedIntegerArray'
     arr = 3
     arr[0] = 40
     arr[1] = 41
@@ -133,11 +133,11 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'int element' );
     ptr = net_ldelema arr, 1
 
     # Use the pointer to get value, increment it, store it again.
-    the_test = ptr.load_int()
+    the_test = ptr."load_int"()
     print the_test
     print "\n"
     inc the_test
-    ptr.store_int(the_test)
+    ptr."store_int"(the_test)
 
     # Print array element.
     the_test = arr[1]
@@ -157,7 +157,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float element' );
     $P0 = loadlib "dotnet_runtime"
 
     # Set up an array.
-    arr = new FixedFloatArray
+    arr = new 'FixedFloatArray'
     arr = 3
     arr[0] = 14.2
     arr[1] = 5.9
@@ -167,11 +167,11 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float element' );
     ptr = net_ldelema arr, 1
 
     # Use the pointer to get value, increment it, store it again.
-    the_test = ptr.load_float()
+    the_test = ptr."load_float"()
     print the_test
     print "\n"
     the_test = the_test * 2
-    ptr.store_float(the_test)
+    ptr."store_float"(the_test)
 
     # Print array element.
     the_test = arr[1]
@@ -179,8 +179,8 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float element' );
     print "\n"
 .end
 PIR
-5.900000
-11.800000
+5.9
+11.8
 OUTPUT
 
 is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc element' );
@@ -190,15 +190,15 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc element' );
     $P0 = loadlib "dotnet_runtime"
 
     # Set up an array.
-    arr = new FixedFloatArray
+    arr = new 'FixedFloatArray'
     arr = 3
-    the_test = new Float
+    the_test = new 'Float'
     the_test = 14.2
     arr[0] = the_test
-    the_test = new Float
+    the_test = new 'Float'
     the_test = 5.9
     arr[1] = the_test
-    the_test = new Float
+    the_test = new 'Float'
     the_test = 18.7
     arr[2] = the_test
 
@@ -206,12 +206,12 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc element' );
     ptr = net_ldelema arr, 1
 
     # Use the pointer to get value, increment it, store it again.
-    the_test = ptr.load_pmc()
+    the_test = ptr."load_pmc"()
     print the_test
     print "\n"
-    the_test = new Float
+    the_test = new 'Float'
     the_test = 11.8
-    ptr.store_float(the_test)
+    ptr."store_float"(the_test)
 
     # Print array element.
     the_test = arr[1]
@@ -242,12 +242,12 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'int field' );
     ptr = net_ldflda obj, "age"
 
     # Use the pointer to get the age attribute and change it.
-    the_test = ptr.load_int()
+    the_test = ptr."load_int"()
     print "The monkey was "
     print the_test
     print " years old.\n"
     inc the_test
-    ptr.store_int(the_test)
+    ptr."store_int"(the_test)
 
     # Print attribute.
     $P1 = getattribute obj, "age"
@@ -271,7 +271,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float field' );
     $P0 = newclass "monkey"
     addattribute $P0, "height"
     obj = new "monkey"
-    $P1 = new Float
+    $P1 = new 'Float'
     $P1 = 1.79
     setattribute obj, "height", $P1
 
@@ -279,12 +279,12 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float field' );
     ptr = net_ldflda obj, "height"
 
     # Use the pointer to get the height attribute and change it.
-    the_test = ptr.load_float()
+    the_test = ptr."load_float"()
     print "The monkey was "
     print the_test
     print " meters tall.\n"
     the_test = 1.82
-    ptr.store_float(the_test)
+    ptr."store_float"(the_test)
 
     # Print attribute.
     $P1 = getattribute obj, "height"
@@ -293,7 +293,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'float field' );
     print " meters tall.\n"
 .end
 PIR
-The monkey was 1.790000 meters tall.
+The monkey was 1.79 meters tall.
 The monkey is now 1.82 meters tall.
 OUTPUT
 
@@ -307,7 +307,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc field' );
     $P0 = newclass "monkey"
     addattribute $P0, "name"
     obj = new "monkey"
-    $P1 = new String
+    $P1 = new 'String'
     $P1 = "Derek"
     setattribute obj, "name", $P1
 
@@ -315,13 +315,13 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'pmc field' );
     ptr = net_ldflda obj, "name"
 
     # Use the pointer to get the name attribute and change it.
-    the_test = ptr.load_pmc()
+    the_test = ptr."load_pmc"()
     print "The monkey was called "
     print the_test
     print ".\n"
-    $P1 = new String
+    $P1 = new 'String'
     $P1 = "Bradley"
-    ptr.store_pmc($P1)
+    ptr."store_pmc"($P1)
 
     # Print attribute.
     the_test = getattribute obj, "name"

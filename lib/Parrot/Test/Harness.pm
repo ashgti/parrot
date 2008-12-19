@@ -90,13 +90,16 @@ sub get_files {
 
 =pod
 
-The option '--files' is used for supporting unified testing of language implementations.
-It is used by F<languages/t/harness> for collecting a list testfiles from
-many language implementations.
+The option '--files' is used for supporting unified testing of language
+implementations. It is used by F<languages/t/harness> for collecting a
+list testfiles from many language implementations.
 
 When that option is passed, a list of pathes to test files is printed.
-Currently these test files need to Perl 5 scripts.
+Currently these test files need to be Perl 5 scripts.
 The file pathes are relative to a language implementation dir.
+
+When the first argument in the '--files' list is '--master', add the language
+dir as a prefix to all files args.
 
 When there is no '--files' option, then things are saner.
 Nothing is printed. An array of file pathes is returned to the caller.
@@ -166,12 +169,14 @@ sub import {
     exit unless my @files = get_files(%options);
 
     if (eval { require TAP::Harness; 1 }) {
-        my %opts =
+        my %harness_options =
               $options{exec}     ? ( exec => $options{exec} )
             : $options{compiler} ? ( exec => [ '../../parrot', './' . $options{compiler} ] )
             :                      ();
-        $opts{verbosity} = $options{verbosity} ? $options{verbosity} : 0;
-        TAP::Harness->new( \%opts )->runtests( @files );
+        $harness_options{verbosity} =                    $options{verbosity} || 0;
+        $harness_options{jobs}      = $ENV{TEST_JOBS} || $options{jobs}      || 1;
+
+        TAP::Harness->new( \%harness_options )->runtests( @files );
 
         return;
     }

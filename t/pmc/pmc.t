@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 19;
+use Parrot::Test tests => 16;
 use Parrot::PMC qw(%pmc_types);
 
 =head1 NAME
@@ -24,10 +24,6 @@ Contains a lot of PMC related tests.
 
 =cut
 
-my $max_pmc = scalar( keys(%pmc_types) ) + 1;
-
-my $fp_equality_macro = pasm_fp_equality_macro();
-
 pasm_output_is( <<'CODE', <<'OUTPUT', "newpmc" );
         print "starting\n"
         new P0, 'Integer'
@@ -38,20 +34,6 @@ starting
 ending
 OUTPUT
 
-pasm_error_output_like( <<'CODE', <<'OUTPUT', "illegal min newpmc" );
-    new P0, 0
-    end
-CODE
-/Illegal PMC enum \(0\) in new/
-OUTPUT
-
-pasm_error_output_like( <<"CODE", <<'OUTPUT', "illegal max newpmc" );
-    new P0, $max_pmc
-    end
-CODE
-/Illegal PMC enum \(\d+\) in new/
-OUTPUT
-
 pasm_output_is( <<'CODE', <<'OUTPUT', 'typeof' );
     new P0, 'Integer'
     typeof S0,P0
@@ -59,15 +41,9 @@ pasm_output_is( <<'CODE', <<'OUTPUT', 'typeof' );
     print  "not "
 OK_1:
     print  "ok 1\n"
-    typeof I0,P0
-    eq     I0, .Integer, OK_2
-    print  "not "
-OK_2:
-    print  "ok 2\n"
     end
 CODE
 ok 1
-ok 2
 OUTPUT
 
 my $checkTypes;
@@ -88,14 +64,11 @@ while ( my ( $type, $id ) = each %pmc_types ) {
     setprop P0, "_ro", P10
 EOPASM
     $checkTypes .= <<"CHECK";
-    new P0, .$type
+    new P0, '$type'
     $set_ro
     set S1, "$type"
     typeof S0, P0
     ne S0, S1, L_BadName
-    set I1, $id
-    typeof I0, P0
-    ne I0, I1, L_BadId
 CHECK
 }
 
@@ -103,7 +76,7 @@ pasm_output_like( <<"CODE", <<OUTPUT, "PMC type check" );
     new P10, 'Hash'
     new P11, 'Hash'
 $checkTypes
-    print "All names and ids ok.\\n"
+    print "All names ok.\\n"
     end
 L_BadName:
     print S1
@@ -111,16 +84,8 @@ L_BadName:
     print S0
     print "\\"\\n"
     end
-L_BadId:
-    print S1
-    print " PMCs should be type "
-    print I1
-    print " but have incorrect type "
-    print I0
-    print "\\n"
-    end
 CODE
-/All names and ids ok/
+/All names ok/
 OUTPUT
 
 pasm_error_output_like( <<'CODE', <<'OUTPUT', 'find_method' );
@@ -129,14 +94,6 @@ pasm_error_output_like( <<'CODE', <<'OUTPUT', 'find_method' );
     end
 CODE
 /Method 'no_such_meth' not found for invocant of class 'Integer'/
-OUTPUT
-
-pasm_error_output_like( <<'CODE', <<'OUTPUT', "new with a native type" );
-    new P1, .INTVAL
-    print "never\n"
-    end
-CODE
-/(unknown macro|unexpected DOT)/
 OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "eq_addr same" );
@@ -240,7 +197,7 @@ OUTPUT
 pasm_output_is( <<'CODE', <<'OUT', ".const - Sub constant" );
 .pcc_sub :main main:
     print "ok 1\n"
-    .const .Sub P0 = "foo"
+    .const 'Sub' P0 = "foo"
     invokecc P0
     print "ok 3\n"
     end
@@ -255,7 +212,7 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "pmc constant 1" );
 .sub main :main
-    .const .Integer i = "42"
+    .const 'Integer' i = "42"
     print i
     print "\n"
 .end
@@ -265,7 +222,7 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "pmc constant 2" );
 .sub main :main
-    .const .Integer i = "42"
+    .const 'Integer' i = "42"
     print i
     print "\n"
 .end
@@ -274,7 +231,7 @@ CODE
 OUT
 
 pasm_output_is( <<'CODE', <<'OUT', "pmc constant PASM" );
-    .const .Integer P0 = "42"
+    .const 'Integer' P0 = "42"
     print P0
     print "\n"
     end

@@ -80,7 +80,6 @@ Return the absolute value of the number
     .RETURN_NULL()
   L1:
     $P1 = shift args
-    $P1 = $P1.'to_number'()
     $I0 = isa $P1, 'PhpFloat'
     unless $I0 goto L2
     $N1 = $P1
@@ -93,7 +92,13 @@ Return the absolute value of the number
     $I0 = abs $I1
     .RETURN_LONG($I0)
   L3:
+    $S0 = typeof $P1
+    unless $S0 == 'array' goto L4
     .RETURN_FALSE()
+  L4:
+    $N1 = $P1
+    $N0 = abs $N1
+    .RETURN_DOUBLE($N0)
 .end
 
 =item C<float acos(float number)>
@@ -104,7 +109,7 @@ Return the arc cosine of the number in radians
 
 .sub 'acos'
     .param pmc args :slurpy
-    .TRIG1(args, acos)
+    .TRIG1(args, 'acos')
 .end
 
 =item C<float acosh(float number)>
@@ -115,7 +120,7 @@ Returns the inverse hyperbolic cosine of the number, i.e. the value whose hyperb
 
 .sub 'acosh'
     .param pmc args :slurpy
-    .TRIG1(args, acosh)
+    .TRIG1(args, 'acosh')
 .end
 
 =item C<float asin(float number)>
@@ -126,7 +131,7 @@ Returns the arc sine of the number in radians
 
 .sub 'asin'
     .param pmc args :slurpy
-    .TRIG1(args, asin)
+    .TRIG1(args, 'asin')
 .end
 
 =item C<float asinh(float number)>
@@ -137,7 +142,7 @@ Returns the inverse hyperbolic sine of the number, i.e. the value whose hyperbol
 
 .sub 'asinh'
     .param pmc args :slurpy
-    .TRIG1(args, asinh)
+    .TRIG1(args, 'asinh')
 .end
 
 =item C<float atan(float number)>
@@ -148,7 +153,7 @@ Returns the arc tangent of the number in radians
 
 .sub 'atan'
     .param pmc args :slurpy
-    .TRIG1(args, atan)
+    .TRIG1(args, 'atan')
 .end
 
 =item C<float atan2(float y, float x)>
@@ -181,7 +186,7 @@ Returns the inverse hyperbolic tangent of the number, i.e. the value whose hyper
 
 .sub 'atanh'
     .param pmc args :slurpy
-    .TRIG1(args, atanh)
+    .TRIG1(args, 'atanh')
 .end
 
 =item C<string base_convert(string number, int frombase, int tobase)>
@@ -290,7 +295,7 @@ Returns the cosine of the number in radians
 
 .sub 'cos'
     .param pmc args :slurpy
-    .TRIG1(args, cos)
+    .TRIG1(args, 'cos')
 .end
 
 =item C<float cosh(float number)>
@@ -301,7 +306,7 @@ Returns the hyperbolic cosine of the number, defined as (exp(number) + exp(-numb
 
 .sub 'cosh'
     .param pmc args :slurpy
-    .TRIG1(args, cosh)
+    .TRIG1(args, 'cosh')
 .end
 
 =item C<string decbin(int decimal_number)>
@@ -641,9 +646,8 @@ Formats a number with grouped thousands
     dec_point = '.'
     unless argc == 1 goto L1
     $P1 = shift args
-    $P1 = $P1.'to_number'()
     $N1 = $P1
-    .return _number_format($N1, 0, dec_point, thousand_sep)
+    .tailcall _number_format($N1, 0, dec_point, thousand_sep)
   L1:
     unless argc == 2 goto L2
     $P1 = shift args
@@ -651,7 +655,7 @@ Formats a number with grouped thousands
     $N1 = $P1
     $P2 = shift args
     $I2 = $P2
-    .return _number_format($N1, $I2, dec_point, thousand_sep)
+    .tailcall _number_format($N1, $I2, dec_point, thousand_sep)
   L2:
     unless argc == 4 goto L3
     $P1 = shift args
@@ -660,7 +664,7 @@ Formats a number with grouped thousands
     $P2 = shift args
     $I2 = $P2
     $P3 = shift args
-    $I0 = isa $P3, 'PhpUndef'
+    $I0 = isa $P3, 'PhpNull'
     if $I0 goto L4
     dec_point = $P3
     $I3 = length dec_point
@@ -668,14 +672,14 @@ Formats a number with grouped thousands
     dec_point =substr dec_point, 0, 1
   L4:
     $P4 = shift args
-    $I0 = isa $P4, 'PhpUndef'
+    $I0 = isa $P4, 'PhpNull'
     if $I0 goto L5
     thousand_sep = $P4
     $I4 = length thousand_sep
     unless $I4 goto L5
     thousand_sep =substr thousand_sep, 0, 1
   L5:
-    .return _number_format($N1, $I2, dec_point, thousand_sep)
+    .tailcall _number_format($N1, $I2, dec_point, thousand_sep)
   L3:
     wrong_param_count()
     .RETURN_NULL()
@@ -870,7 +874,7 @@ Returns the sine of the number in radians
 
 .sub 'sin'
     .param pmc args :slurpy
-    .TRIG1(args, sin)
+    .TRIG1(args, 'sin')
 .end
 
 =item C<float sinh(float number)>
@@ -881,7 +885,7 @@ Returns the hyperbolic sine of the number, defined as (exp(number) - exp(-number
 
 .sub 'sinh'
     .param pmc args :slurpy
-    .TRIG1(args, sinh)
+    .TRIG1(args, 'sinh')
 .end
 
 =item C<float sqrt(float number)>
@@ -912,7 +916,7 @@ Returns the tangent of the number in radians
 
 .sub 'tan'
     .param pmc args :slurpy
-    .TRIG1(args, tan)
+    .TRIG1(args, 'tan')
 .end
 
 =item C<float tanh(float number)>
@@ -923,7 +927,7 @@ Returns the hyperbolic tangent of the number, defined as sinh(number)/cosh(numbe
 
 .sub 'tanh'
     .param pmc args :slurpy
-    .TRIG1(args, tanh)
+    .TRIG1(args, 'tanh')
 .end
 
 =back

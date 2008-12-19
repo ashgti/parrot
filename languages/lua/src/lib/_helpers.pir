@@ -13,12 +13,13 @@ lib/_helpers.pir - library
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace []
 
 .sub '__onload' :anon :load
 #    print "__onload _helpers\n"
-    .const .Sub entry = 'luaopen__helpers'
+    .const 'Sub' entry = 'luaopen__helpers'
     set_hll_global 'luaopen__helpers', entry
 .end
 

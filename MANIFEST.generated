@@ -2,11 +2,11 @@
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
 # Please re-sort this file after *EVERY* modification
-blib/lib/libparrot.0.7.0.dylib                    [main]lib
+blib/lib/libparrot.0.8.2.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
 blib/lib/libparrot.so                             [main]lib
-blib/lib/libparrot.so.0.7.0                       [main]lib
+blib/lib/libparrot.so.0.8.2                       [main]lib
 compilers/imcc/imclexer.c                         [main]
 compilers/json/JSON.pbc                           [main]
 compilers/json/JSON/grammar.pbc                   [main]
@@ -62,6 +62,8 @@ installable_disassemble                           [main]bin
 installable_disassemble.exe                       [main]bin
 installable_parrot                                [main]bin
 installable_parrot.exe                            [main]bin
+installable_parrot_config                         [main]bin
+installable_parrot_config.exe                     [main]bin
 installable_parrot_debugger                       [main]bin
 installable_parrot_debugger.exe                   [main]bin
 installable_pbc_info                              [main]bin
@@ -170,10 +172,6 @@ runtime/parrot/dynext/subproxy.bundle             [library]
 runtime/parrot/dynext/subproxy.dll                [library]
 runtime/parrot/dynext/subproxy.dylib              [library]
 runtime/parrot/dynext/subproxy.so                 [library]
-runtime/parrot/dynext/tcl_group.bundle            [library]
-runtime/parrot/dynext/tcl_group.dll               [library]
-runtime/parrot/dynext/tcl_group.dylib             [library]
-runtime/parrot/dynext/tcl_group.so                [library]
 runtime/parrot/dynext/wmls_group.bundle           [library]
 runtime/parrot/dynext/wmls_group.dll              [library]
 runtime/parrot/dynext/wmls_group.dylib            [library]
@@ -280,8 +278,21 @@ languages/forth/forth.pbc                         [main]
 languages/HQ9PLus/HQ9PLus.pbc                     [main]
 languages/lisp/lisp.pbc                           [main]
 languages/lolcode/lolcode.pbc                     [main]
+languages/lua/alarm.pbc                           [main]
+languages/lua/base64.pbc                          [main]
+languages/lua/bc.pbc                              [main]
+languages/lua/bitlib.pbc                          [main]
+languages/lua/complex.pbc                         [main]
+languages/lua/lfs.pbc                             [main]
 languages/lua/lua.pbc                             [main]
+languages/lua/markdown.pbc                        [main]
+languages/lua/mathx.pbc                           [main]
+languages/lua/md5.pbc                             [main]
+languages/lua/random.pbc                          [main]
+languages/lua/sha1.pbc                            [main]
+languages/lua/uuid.pbc                            [main]
 languages/m4/m4.pbc                               [main]
+languages/markdown/markdown.pbc                   [main]
 languages/ook/ook.pbc                             [main]
 languages/perl6/perl6.pbc                         [main]
 languages/pheme/pheme.pbc                         [main]
@@ -293,8 +304,6 @@ languages/pipp/src/common/php_pcre.pbc            [main]
 languages/punie/punie.pbc                         [main]
 languages/pynie/pynie.pbc                         [main]
 languages/squaak/squaak.pbc                       [main]
-languages/tcl/tcl.pbc                             [main]
-languages/tcl/runtime/tcllib.pbc                  [main]
 src/call_list.txt                                 [devel]doc
 src/glut_callbacks.c                              [main]
 src/jit_emit.h                                    [main]include

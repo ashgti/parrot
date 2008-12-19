@@ -17,12 +17,13 @@ See original on L<http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lalarm/>
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'alarm' ]
 
 .sub '__onload' :anon :load
 #    print "__onload alarm\n"
-    .const .Sub entry = 'luaopen_alarm'
+    .const 'Sub' entry = 'luaopen_alarm'
     set_hll_global 'luaopen_alarm', entry
 .end
 
@@ -35,7 +36,7 @@ See original on L<http://www.tecgraf.puc-rio.br/~lhf/ftp/lua/#lalarm/>
 
     new $P1, 'LuaString'
 
-    .const .Sub _alarm = 'alarm'
+    .const 'Sub' _alarm = 'alarm'
     _alarm.'setfenv'(_lua__GLOBAL)
     set $P1, 'alarm'
     _lua__GLOBAL[$P1] = _alarm

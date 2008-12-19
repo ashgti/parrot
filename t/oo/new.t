@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 22;
+use Parrot::Test tests => 23;
 
 =head1 NAME
 
@@ -89,7 +89,7 @@ OUT
 pir_output_is( <<'CODE', <<'OUT', 'manually create named class object' );
 .sub main :main
     $P1 = new "Class"
-    $P1.name("Foo")
+    $P1.'name'("Foo")
     $S1 = typeof $P1
     say $S1
 
@@ -624,6 +624,14 @@ pir_output_is( <<'CODE', <<'OUT', "get_class retrieves a class object that doesn
 .end
 CODE
 Class isn't defined.
+OUT
+
+pir_error_output_like(<<'CODE', <<'OUT', 'Instantiate class from invalid key');
+.sub 'main' :main
+    $P0 = new [ 'Foo'; 'Bar'; 'Baz' ]
+.end
+CODE
+/Class '\[ 'Foo' ; 'Bar' ; 'Baz' \]' not found/
 OUT
 
 # Local Variables:

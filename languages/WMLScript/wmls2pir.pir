@@ -17,14 +17,11 @@ B<wmls2pir> translates a WMLScript bytecode file to Parrot PIR.
 
 wmlsd, wmls2pbc, wmlsi
 
-=head1 AUTHOR
-
-Francois Perrad.
-
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub 'main' :main
     .param pmc argv
@@ -43,23 +40,24 @@ Francois Perrad.
     .local pmc script
     new loader, 'WmlsBytecode'
     push_eh _handler
-    script = loader.load(content)
+    script = loader.'load'(content)
     script['filename'] = filename
     .local string gen_pir
-    gen_pir = script.translate()
+    gen_pir = script.'translate'()
     save_pir(gen_pir, filename)
-    end
-  _handler:
-    .local pmc e
-    .local string s
-    .get_results (e, s)
-    print s
-    print "\n"
+    pop_eh
   L1:
     end
   USAGE:
     printerr "Usage: parrot wmls2pir.pbc filename\n"
     exit -1
+  _handler:
+    .local pmc e
+    .local string msg
+    .get_results (e)
+    msg = e
+    say msg
+    end
 .end
 
 

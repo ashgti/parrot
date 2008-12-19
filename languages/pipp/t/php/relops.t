@@ -1,8 +1,13 @@
+# Copyright (C) 2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
 
-pipp/t/relops.t - tests for Pipp
+t/php/relops.t - tests for Pipp
+
+=head1 SYNOPSIS
+
+    perl t/harness t/php/relops.t
 
 =head1 DESCRIPTION
 
@@ -19,16 +24,16 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../../lib";
+use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
-use Parrot::Config (); 
+use Parrot::Config ();
 use Parrot::Test;
 use Test::More     tests => 13;
 
 # True tests
 my $expected = "Condition is true.\n";
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'zero is less than' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'zero is less than' );
 <?php
 if ( 0 < 2 )
 {
@@ -43,9 +48,9 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'less than' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'less than' );
 <?php
 if ( 1 < 2 )
 {
@@ -60,10 +65,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'less equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'less equal' );
 <?php
 if ( 1 <= 1 )
 {
@@ -78,10 +83,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'equal' );
 <?php
 if ( 1 == 1 )
 {
@@ -96,10 +101,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'greater equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'greater equal' );
 <?php
 if ( 1 >= 1 )
 {
@@ -114,10 +119,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'greater than' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'greater than' );
 <?php
 if ( 2 > 1 )
 {
@@ -132,10 +137,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'unequal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'unequal' );
 <?php
 if ( 1 != 2 )
 {
@@ -150,11 +155,11 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 $expected = "Condition is false.\n";
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not less than' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not less than' );
 <?php
 if ( 2 < 1 )
 {
@@ -169,10 +174,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not less equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not less equal' );
 <?php
 if ( 2 <= 1 )
 {
@@ -187,10 +192,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not equal' );
 <?php
 if ( 1 == 2 )
 {
@@ -205,10 +210,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not greater equal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not greater equal' );
 <?php
 if ( 1 >= 2 )
 {
@@ -223,10 +228,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not greater than' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not greater than' );
 <?php
 if ( 2 > 2 )
 {
@@ -241,10 +246,10 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 
 
-language_output_is( 'Pipp', <<'END_CODE', $expected, 'not unequal' );
+language_output_is( 'Pipp', <<'CODE', $expected, 'not unequal' );
 <?php
 if ( 1 != 1 )
 {
@@ -259,5 +264,5 @@ Condition is false.
 <?php
 }
 ?>
-END_CODE
+CODE
 

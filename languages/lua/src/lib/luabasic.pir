@@ -18,7 +18,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.1>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'basic' ]
 
 .sub 'luaopen_basic'
@@ -203,7 +204,7 @@ protected mode).
     $S1 = lua_optstring(1, filename, '')
     ($P0, $S0) = lua_loadfile($S1)
     if null $P0 goto L1
-    .return $P0()
+    .tailcall $P0()
   L1:
     lua_error($S0)
 .end
@@ -252,17 +253,17 @@ default for C<f> is 1.
     .param pmc extra :slurpy
     .local pmc res
     if null f goto L1
-    .const .LuaNumber zero = '0'
+    .const 'LuaNumber' zero = '0'
     if f == zero goto L2
   L1:
     f = getfunc(f, 1)
-    $I0 = isa f, 'LuaClosure'
-    if $I0 goto L3
+    $P0 = f.'get_outer'()
+    unless null $P0 goto L3
   L2:
     res = get_hll_global '_G'
     .return (res)
   L3:
-    .return lua_getfenv(f)
+    .tailcall lua_getfenv(f)
 .end
 
 .sub 'getfunc' :anon
@@ -270,8 +271,6 @@ default for C<f> is 1.
     .param int opt
     if null f goto L1
     $I0 = isa f, 'LuaFunction'
-    if $I0 goto L2
-    $I0 = isa f, 'LuaClosure'
     if $I0 goto L2
   L1:
     .local int level
@@ -288,10 +287,15 @@ default for C<f> is 1.
     inc level
     push_eh _handler
     f = $P0['sub'; level]
+    pop_eh
   L2:
     .return (f)
   _handler:
-    lua_argerror(1, "invalid level")
+    .local pmc e
+    .get_results (e)
+    $S0 = lua_x_argerror(1, "invalid level")
+    e = $S0
+    rethrow e
 .end
 
 =item C<getmetatable (object)>
@@ -312,7 +316,7 @@ Otherwise, returns the metatable of the given object.
     .return (res)
   L1:
     .local pmc prot
-    .const .LuaString mt = '__metatable'
+    .const 'LuaString' mt = '__metatable'
     prot = res.'rawget'(mt)
     unless prot goto L2
     .return (prot)
@@ -343,7 +347,7 @@ See C<next> for the caveats of modifying the table during its traversal.
     unless null i goto L1
     .local pmc _G
     _G = get_hll_global '_G'
-    .const .LuaString key_ipairs = 'ipairs'
+    .const 'LuaString' key_ipairs = 'ipairs'
     .local pmc ipairs
     ipairs = _G.'rawget'(key_ipairs)
     .local pmc zero
@@ -387,7 +391,7 @@ NOT YET IMPLEMENTED.
     lua_checktype(1, func, 'function')
     $S2 = lua_optstring(2, chunkname, '=(load)')
     not_implemented()
-    .return load_aux($P0, $S0)
+    .tailcall load_aux($P0, $S0)
 .end
 
 .sub 'load_aux' :anon
@@ -416,7 +420,7 @@ standard input, if no file name is given.
     .param pmc extra :slurpy
     $S1 = lua_optstring(1, filename, '')
     ($P0, $S0) = lua_loadfile($S1)
-    .return load_aux($P0, $S0)
+    .tailcall load_aux($P0, $S0)
 .end
 
 
@@ -437,7 +441,7 @@ To load and run a given string, use the idiom
     $S1 = lua_checkstring(1, s)
     $S2 = lua_optstring(2, chunkname, $S1)
     ($P0, $S0) = lua_loadbuffer($S1, $S2)
-    .return load_aux($P0, $S0)
+    .tailcall load_aux($P0, $S0)
 .end
 
 
@@ -496,7 +500,7 @@ See C<next> for the caveats of modifying the table during its traversal.
     lua_checktype(1, t, 'table')
     .local pmc _G
     _G = get_hll_global '_G'
-    .const .LuaString key_next = 'next'
+    .const 'LuaString' key_next = 'next'
     .local pmc next
     next = _G.'rawget'(key_next)
     .local pmc nil
@@ -525,13 +529,15 @@ In case of any error, C<pcall> returns B<false> plus the error message.
     lua_checkany(1, f)
     push_eh _handler
     (res :slurpy) = f(argv :flat)
+    pop_eh
     set status, 1
     .return (status, res :flat)
   _handler:
     .local pmc e
     .local string s
     .local pmc msg
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     set status, 0
     new msg, 'LuaString'
     set msg, s
@@ -701,7 +707,7 @@ STILL INCOMPLETE.
     .param pmc f :optional
     .param pmc table :optional
     .param pmc extra :slurpy
-    .const .LuaNumber zero = '0'
+    .const 'LuaNumber' zero = '0'
     lua_checktype(2, table, 'table')
     unless f == zero goto L1
     # change environment of current thread
@@ -709,8 +715,8 @@ STILL INCOMPLETE.
     .return ()
   L1:
     f = getfunc(f, 0)
-    $I0 = isa f, 'LuaFunction'
-    if $I0 goto L2
+    $P0 = f.'get_outer'()
+    if null $P0 goto L2
     $I0 = lua_setfenv(f, table)
     unless $I0 goto L2
     .return (f)
@@ -747,7 +753,7 @@ This function returns C<table>.
     meta = table.'get_metatable'()
     unless meta goto L3
     .local pmc prot
-    .const .LuaString mt = '__metatable'
+    .const 'LuaString' mt = '__metatable'
     prot = meta.'rawget'(mt)
     unless prot goto L3
     lua_error("cannot change a protected metatable")
@@ -912,18 +918,16 @@ error, C<xpcall> returns false plus the result from C<err>.
     lua_checkany(2, err_)
     push_eh _handler
     (res :slurpy) = f()
+    pop_eh
     set status, 1
     .return (status, res :flat)
   _handler:
     set status, 0
     $I0 = isa err_, 'LuaFunction'
-    if $I0 goto L1
-    $I0 = isa err_, 'LuaClosure'
-    unless $I0 goto L2
-  L1:
+    unless $I0 goto L1
     (res :slurpy) = err_()
     .return (status, res :flat)
-  L2:
+  L1:
     .return (status)
 .end
 

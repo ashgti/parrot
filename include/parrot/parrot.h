@@ -267,6 +267,7 @@ typedef void (*funcptr_t)(void);
 #define LOCALEDIR  "."
 
 typedef struct _hash Hash;
+typedef struct PackFile_ByteCode PackFile_ByteCode;
 
 #include "parrot/settings.h"
 #include "parrot/enums.h"
@@ -313,7 +314,7 @@ typedef struct _hash Hash;
 #include "parrot/longopt.h"
 #include "parrot/oo.h"
 #include "parrot/vtables.h"
-#include "parrot/mmd.h"
+#include "parrot/multidispatch.h"
 #include "parrot/library.h"
 #include "parrot/global.h"
 #include "parrot/stat.h"

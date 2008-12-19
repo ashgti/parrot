@@ -24,8 +24,8 @@ pir_output_is( <<'CODE', <<'OUT', 'build up a basic rule in a grammar' );
     load_bytecode 'TGE.pbc'
 
     .local pmc AG
-    AG = new 'TGE::Grammar'
-    AG.add_rule('Leaf', 'min', '.', '.return(1)')
+    AG = new ['TGE';'Grammar']
+    AG.'add_rule'('Leaf', 'min', '.', '.return(1)')
 
     $P1 = getattribute AG, 'rules'
     .local pmc rule_obj
@@ -52,7 +52,7 @@ pir_output_is( <<'CODE', <<'OUT', 'agid hash' );
 .sub _main :main
     load_bytecode 'compilers/tge/TGE/Tree.pir'
     .local pmc tree
-    tree = new 'TGE::Tree'
+    tree = new ['TGE';'Tree']
     .local int id
 
     $P0 = new 'Integer'

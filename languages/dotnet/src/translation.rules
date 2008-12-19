@@ -206,7 +206,7 @@ pop = 1
 push = 1
 instruction = net_conv_i1 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -220,7 +220,7 @@ pop = 1
 push = 1
 instruction = net_conv_i2 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -234,7 +234,7 @@ pop = 1
 push = 1
 instruction = net_conv_i4 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -248,7 +248,7 @@ pop = 1
 push = 1
 instruction = net_conv_i8 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -262,7 +262,7 @@ pop = 1
 push = 1
 instruction = net_conv_r4 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_R4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -276,7 +276,7 @@ pop = 1
 push = 1
 instruction = net_conv_r8 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_R8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -290,7 +290,7 @@ pop = 1
 push = 1
 instruction = net_conv_u1 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -304,7 +304,7 @@ pop = 1
 push = 1
 instruction = net_conv_u2 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -318,7 +318,7 @@ pop = 1
 push = 1
 instruction = net_conv_u4 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -332,7 +332,7 @@ pop = 1
 push = 1
 instruction = net_conv_u8 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -352,13 +352,13 @@ dec ${ITEMP0}
 ${PTEMP0} = ${STYPES}[${ITEMP0}]
 ${ITEMP0} = ${PTEMP0}["type"]
 if ${ITEMP0} != ELEMENT_TYPE_PTR goto conv_i_OK
-${PTEMP0} = new .Exception
+${PTEMP0} = new "Exception"
 ${PTEMP0}["_message"] = "Code does unverifiable pointer operation"
 throw ${PTEMP0}
 conv_i_OK:
 
 # Set type.
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -378,12 +378,12 @@ dec ${ITEMP0}
 ${PTEMP0} = ${STYPES}[${ITEMP0}]
 ${ITEMP0} = ${PTEMP0}["type"]
 if ${ITEMP0} != ELEMENT_TYPE_PTR goto conv_u_OK
-${PTEMP0} = new .Exception
+${PTEMP0} = new "Exception"
 ${PTEMP0}["_message"] = "Code does unverifiable pointer operation"
 throw ${PTEMP0}
 conv_u_OK:
 
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -397,7 +397,7 @@ pop = 1
 push = 1
 instruction = net_conv_r_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_R8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -414,7 +414,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i1 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -428,7 +428,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i2 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -442,7 +442,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i4 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -456,7 +456,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i8 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -470,7 +470,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u1 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -484,7 +484,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u2 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -498,7 +498,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u4 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -512,7 +512,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u8 ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -526,7 +526,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -540,7 +540,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -554,7 +554,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i1_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -568,7 +568,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i2_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -582,7 +582,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i4_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -596,7 +596,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i8_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -610,7 +610,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u1_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -624,7 +624,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u2_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -638,7 +638,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u4_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -652,7 +652,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u8_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -666,7 +666,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_i_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -680,7 +680,7 @@ pop = 1
 push = 1
 instruction = net_conv_ovf_u_un ${DEST0}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -733,7 +733,7 @@ class = op
 push = 1
 instruction = ${DEST0} = varargs
 typeinfo = <<PIR
-${PTEMP0} = new .Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_PTR
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1298,7 +1298,7 @@ ${INS} = concat ${STACK1}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1319,7 +1319,7 @@ ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1340,7 +1340,7 @@ ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1361,7 +1361,7 @@ ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1382,7 +1382,7 @@ ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -1544,11 +1544,11 @@ pir = <<PIR
 (${PTEMP0}, ${ITEMP0}) = field_info_from_token(${ASSEMBLY}, ${ARG0})
 
 # Build attribute access.
-${INS} = concat "$P1000000 = new "
+${INS} = concat "$P1000000 = new \""
 ${PTEMP1} = ${DTYPES}[0]
 ${STEMP0} = ${PTEMP1}["reg_type_pmc"]
 ${INS} = concat ${STEMP0}
-${INS} = concat "\n$P1000000 = getattribute "
+${INS} = concat "\"\n$P1000000 = getattribute "
 ${INS} = concat ${STACK0}
 ${INS} = concat ", \""
 ${STEMP0} = ${PTEMP0}
@@ -1563,7 +1563,7 @@ typeinfo = <<PIR
 
 # Get signature.
 ${PTEMP1} = new "DotNetSignature"
-${STEMP0} = ${ASSEMBLY}.get_blob(${ITEMP0})
+${STEMP0} = ${ASSEMBLY}.'get_blob'(${ITEMP0})
 ${PTEMP1} = ${STEMP0}
 
 # Parse signature, annotate it with register types and store it.
@@ -1582,11 +1582,11 @@ pir = <<PIR
 (${PTEMP0}, ${ITEMP0}, ${STEMP1}) = field_info_from_token(${ASSEMBLY}, ${ARG0})
 
 # Build attribute access.
-${INS} = concat "$P1000000 = new "
+${INS} = concat "$P1000000 = new \""
 ${PTEMP1} = ${DTYPES}[0]
 ${STEMP0} = ${PTEMP1}["reg_type_pmc"]
 ${INS} = concat ${STEMP0}
-${INS} = concat "\n$P1000000 = get_hll_global "
+${INS} = concat "\"\n$P1000000 = get_hll_global "
 ${STEMP1} = namespace_to_key(${STEMP1})
 ${INS} = concat ${STEMP1}
 ${INS} = concat ", \""
@@ -1602,7 +1602,7 @@ typeinfo = <<PIR
 
 # Get signature.
 ${PTEMP1} = new "DotNetSignature"
-${STEMP0} = ${ASSEMBLY}.get_blob(${ITEMP0})
+${STEMP0} = ${ASSEMBLY}.'get_blob'(${ITEMP0})
 ${PTEMP1} = ${STEMP0}
 
 # Parse signature, annotate it with register types and store it.
@@ -1622,13 +1622,13 @@ pir = <<PIR
 (${PTEMP0}, ${ITEMP0}) = field_info_from_token(${ASSEMBLY}, ${ARG0})
 
 # Build attribute store.
-${INS} = concat "$P1000000 = new "
+${INS} = concat "$P1000000 = new \""
 ${ITEMP0} = elements ${STYPES}
 dec ${ITEMP0}
 ${PTEMP1} = ${STYPES}[${ITEMP0}]
 ${STEMP0} = ${PTEMP1}["reg_type_pmc"]
 ${INS} = concat ${STEMP0}
-${INS} = concat "\n$P1000000 = "
+${INS} = concat "\"\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\nsetattribute "
 ${INS} = concat ${STACK1}
@@ -1650,13 +1650,13 @@ pir = <<PIR
 ${STEMP1} = namespace_to_key(${STEMP1})
 
 # Build static field store.
-${INS} = concat "$P1000000 = new "
+${INS} = concat "$P1000000 = new \""
 ${ITEMP0} = elements ${STYPES}
 dec ${ITEMP0}
 ${PTEMP1} = ${STYPES}[${ITEMP0}]
 ${STEMP0} = ${PTEMP1}["reg_type_pmc"]
 ${INS} = concat ${STEMP0}
-${INS} = concat "\n$P1000000 = "
+${INS} = concat "\"\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\nset_hll_global "
 ${INS} = concat ${STEMP1}
@@ -1719,7 +1719,7 @@ ${INS} = concat ")\n"
 PIR
 typeinfo = <<PIR
 # This is an object type.
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_OBJECT
 ${PTEMP0}["byref"] = 0
 
@@ -1738,7 +1738,7 @@ class = load
 push = 1
 instruction = ${DEST0} = null
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_OBJECT
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -1758,18 +1758,18 @@ if ${ITEMP0} goto castclass_INTERNAL_TYPE
 # External type. Get typeref token.
 ${ITEMP0} = band ${ARG0}, 0x00FFFFFF
 dec ${ITEMP0} # Array starts at 0, meta-data table starts at 1.
-${PTEMP2} = ${ASSEMBLY}.get_typerefs()
+${PTEMP2} = ${ASSEMBLY}.'get_typerefs'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_namespace()
+${STEMP1} = ${PTEMP3}.'get_namespace'()
 goto castclass_DONE_TYPE
 
 # Internal type. Get class token.
 castclass_INTERNAL_TYPE:
 ${ITEMP0} = band ${ARG0}, 0x01FFFFFF
 ${ITEMP0} -= 2
-${PTEMP2} = ${ASSEMBLY}.get_classes()
+${PTEMP2} = ${ASSEMBLY}.'get_classes'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_fullname()
+${STEMP1} = ${PTEMP3}.'get_fullname'()
 castclass_DONE_TYPE:
 
 # Generate two new labels.
@@ -1796,7 +1796,7 @@ ${INS} = concat "\n"
 
 # Emit exception throwing code.
 ${INS} = concat <<"CCPIR"
-$P1000000 = new .Exception
+$P1000000 = new "Exception"
 $P1000000["_message"] = "InvalidCastException"
 throw $P1000000
 CCPIR
@@ -1832,18 +1832,18 @@ if ${ITEMP0} goto isinst_INTERNAL_TYPE
 # External type. Get typeref token.
 ${ITEMP0} = band ${ARG0}, 0x00FFFFFF
 dec ${ITEMP0} # Array starts at 0, meta-data table starts at 1.
-${PTEMP2} = ${ASSEMBLY}.get_typerefs()
+${PTEMP2} = ${ASSEMBLY}.'get_typerefs'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_namespace()
+${STEMP1} = ${PTEMP3}.'get_namespace'()
 goto isinst_DONE_TYPE
 
 # Internal type. Get class token.
 isinst_INTERNAL_TYPE:
 ${ITEMP0} = band ${ARG0}, 0x01FFFFFF
 ${ITEMP0} -= 2
-${PTEMP2} = ${ASSEMBLY}.get_classes()
+${PTEMP2} = ${ASSEMBLY}.'get_classes'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_fullname()
+${STEMP1} = ${PTEMP3}.'get_fullname'()
 isinst_DONE_TYPE:
 
 # Generate two new labels.
@@ -1852,7 +1852,7 @@ ${ITEMP0} = ${LABELNUM}
 inc ${LABELNUM}
 ${ITEMP1} = ${LABELNUM}
 
-# Emit check for if input is null; if it is, we jump to putting null on the 
+# Emit check for if input is null; if it is, we jump to putting null on the
 # stack.
 ${INS} = concat "if null "
 ${INS} = concat ${STACK0}
@@ -1907,8 +1907,8 @@ class = op
 pop = 1
 arguments = ttype
 instruction = <<INS
-$P1000000 = ${STACK0}.load_pmc()
-$P1000000.__init()
+$P1000000 = ${STACK0}.'load_pmc'()
+$P1000000.'init'()
 INS
 typeinfo = # None
 
@@ -1918,9 +1918,9 @@ class = op
 pop = 2
 arguments = ttype
 instruction = <<INS
-$P1000000 = ${STACK0}.load_pmc()
+$P1000000 = ${STACK0}.'load_pmc'()
 $P1000000 = clone $P1000000
-${STACK1}.store_pmc($P1000000)
+${STACK1}.'store_pmc'($P1000000)
 INS
 typeinfo = # None
 
@@ -1931,11 +1931,11 @@ pop = 1
 push = 1
 arguments = ttype
 instruction = <<INS
-$P1000000 = ${STACK0}.load_pmc()
+$P1000000 = ${STACK0}.'load_pmc'()
 ${DEST0} = clone $P1000000
 INS
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_VALUETYPE
 annotate_reg_type(${PTEMP0})
 ${DTYPES}[0] = ${PTEMP0}
@@ -1964,20 +1964,20 @@ ${INS} = concat "\n"
 goto stobj_DONE
 
 stobj_INT:
-${INS} = concat "$P1000000 = new .Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto stobj_DONE
 
 stobj_NUM:
-${INS} = concat "$P1000000 = new .Float\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Float'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto stobj_DONE
 
 stobj_DONE:
 ${INS} = concat ${STACK1}
-${INS} = concat ".store_pmc($P1000000)\n"
+${INS} = concat ".'store_pmc'($P1000000)\n"
 PIR
 typeinfo = # None
 
@@ -1999,7 +1999,7 @@ if ${ITEMP0} != ELEMENT_TYPE_VALUETYPE goto box_NOT_VAL_TYPE
 ${INS} = concat ${DEST0}
 ${INS} = concat " = clone "
 ${INS} = concat ${STACK0}
-${INS} = concat "\n$P1000000 = new .Integer\n$P1000000 = 1\nsetprop "
+${INS} = concat "\n$P1000000 = new 'Integer'\n$P1000000 = 1\nsetprop "
 ${INS} = concat ${DEST0}
 ${INS} = concat ", \"boxed\", $P1000000\n"
 goto box_DONE
@@ -2016,66 +2016,66 @@ if ${ITEMP0} == ELEMENT_TYPE_I goto box_I
 if ${ITEMP0} == ELEMENT_TYPE_U goto box_U
 if ${ITEMP0} == ELEMENT_TYPE_R4 goto box_R4
 if ${ITEMP0} == ELEMENT_TYPE_R8 goto box_R8
-${PTEMP0} = new .Exception
+${PTEMP0} = new "Exception"
 ${PTEMP0}["_message"] = "Attempt to box non-value type"
 throw ${PTEMP0}
 box_I4:
 ${STEMP0} = "System.Int32"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_U4:
 ${STEMP0} = "System.UInt32"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_I2:
 ${STEMP0} = "System.Int16"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_U2:
 ${STEMP0} = "System.UInt16"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_I1:
 ${STEMP0} = "System.SByte"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_U1:
 ${STEMP0} = "System.Byte"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_I:
 ${STEMP0} = "System.IntPtr"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_U:
 ${STEMP0} = "System.UIntPtr"
-${INS} = concat "$P1000000 = new Integer\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_R4:
 ${STEMP0} = "System.Single"
-${INS} = concat "$P1000000 = new Float\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Float'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
 box_R8:
 ${STEMP0} = "System.Double"
-${INS} = concat "$P1000000 = new Float\n$P1000000 = "
+${INS} = concat "$P1000000 = new 'Float'\n$P1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n"
 goto box_EMIT
@@ -2130,17 +2130,17 @@ if ${ITEMP0} == ELEMENT_TYPE_I goto unbox_integer
 if ${ITEMP0} == ELEMENT_TYPE_U goto unbox_integer
 if ${ITEMP0} == ELEMENT_TYPE_R4 goto unbox_float
 if ${ITEMP0} == ELEMENT_TYPE_R8 goto unbox_float
-${PTEMP0} = new .Exception
+${PTEMP0} = new "Exception"
 ${PTEMP0}["_message"] = "Attempt to unbox unknown built-in."
 throw ${PTEMP0}
 unbox_integer:
-${INS} = concat "$P1000000 = new Integer\n$I1000000 = "
+${INS} = concat "$P1000000 = new 'Integer'\n$I1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n$P1000000 = $I1000000\n"
 ${STACK0} = "$P1000000"
 goto unbox_EMIT
 unbox_float:
-${INS} = concat "$P1000000 = new Float\n$N1000000 = "
+${INS} = concat "$P1000000 = new 'Float'\n$N1000000 = "
 ${INS} = concat ${STACK0}
 ${INS} = concat "\n$P1000000 = $N1000000\n"
 ${STACK0} = "$P1000000"
@@ -2161,22 +2161,22 @@ if ${ITEMP0} goto unbox_INTERNAL_TYPE
 # External type. Get typeref token.
 ${ITEMP0} = band ${ARG0}, 0x00FFFFFF
 dec ${ITEMP0} # Array starts at 0, meta-data table starts at 1.
-${PTEMP2} = ${ASSEMBLY}.get_typerefs()
+${PTEMP2} = ${ASSEMBLY}.'get_typerefs'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_namespace()
+${STEMP1} = ${PTEMP3}.'get_namespace'()
 goto unbox_DONE_TYPE
 
 # Internal type. Get class token.
 unbox_INTERNAL_TYPE:
 ${ITEMP0} = band ${ARG0}, 0x01FFFFFF
 ${ITEMP0} -= 2
-${PTEMP2} = ${ASSEMBLY}.get_classes()
+${PTEMP2} = ${ASSEMBLY}.'get_classes'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
-${STEMP1} = ${PTEMP3}.get_fullname()
+${STEMP1} = ${PTEMP3}.'get_fullname'()
 unbox_DONE_TYPE:
 
 # Build new type info hash.
-${PTEMP0} = new .Hash
+${PTEMP0} = new "Hash"
 
 # See if it's a special case.
 if ${STEMP1} == "System.Int32" goto unbox_I4
@@ -2246,7 +2246,7 @@ arguments = ttype
 pir = <<PIR
 # Always start with the same thing.
 ${INS} = concat ${DEST0}
-${INS} = concat " = new ."
+${INS} = concat " = new \""
 
 # Now decide on array type to use.
 ${PTEMP0} = ${DTYPES}[0]
@@ -2279,7 +2279,7 @@ goto newarr_FINAL
 
 # Now do final stuff.
 newarr_FINAL:
-${INS} = concat "\n"
+${INS} = concat "\"\n"
 ${INS} = concat ${DEST0}
 ${INS} = concat " = "
 ${INS} = concat ${STACK0}
@@ -2287,10 +2287,10 @@ ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
 # This is an array type.
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_SZARRAY
 ${PTEMP0}["byref"] = 0
-${PTEMP1} = new Hash
+${PTEMP1} = new "Hash"
 ${PTEMP0}["elements"] = ${PTEMP1}
 
 # Look up class.
@@ -2300,7 +2300,7 @@ if ${ITEMP0} goto newarr_INTERNAL_TYPE
 # External type. Get typeref token.
 ${ITEMP0} = band ${ARG0}, 0x00FFFFFF
 dec ${ITEMP0} # Array starts at 0, meta-data table starts at 1.
-${PTEMP2} = ${ASSEMBLY}.get_typerefs()
+${PTEMP2} = ${ASSEMBLY}.'get_typerefs'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
 goto newarr_DONE_TYPE
 
@@ -2308,12 +2308,12 @@ goto newarr_DONE_TYPE
 newarr_INTERNAL_TYPE:
 ${ITEMP0} = band ${ARG0}, 0x01FFFFFF
 dec ${ITEMP0} # Array starts at 0, meta-data table starts at 1.
-${PTEMP2} = ${ASSEMBLY}.get_classes()
+${PTEMP2} = ${ASSEMBLY}.'get_classes'()
 ${PTEMP3} = ${PTEMP2}[${ITEMP0}]
 newarr_DONE_TYPE:
 
 # See if we have a built-in type.
-${STEMP0} = ${PTEMP3}.get_namespace()
+${STEMP0} = ${PTEMP3}.'get_namespace'()
 if ${STEMP0} != "System" goto newarr_OBJECT
 
 # Get name of the built-in type and see if it's an integer or float.
@@ -2390,7 +2390,7 @@ pop = 1
 push = 1
 instruction = ${DEST0} = elements ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2628,7 +2628,7 @@ push = 1
 arguments = tstring
 pir = <<PIR
 ${ITEMP0} = band ${ARG0}, 0x0FFFFFFF
-${STEMP0} = ${ASSEMBLY}.get_user_string(${ITEMP0})
+${STEMP0} = ${ASSEMBLY}.'get_user_string'(${ITEMP0})
 ${STEMP2} = '"'
 ${STEMP1} = escaper(${STEMP0}, ${STEMP2})
 ${ITEMP0} = find_encoding "utf8"
@@ -2641,7 +2641,7 @@ ${INS} = concat ${STEMP1}
 ${INS} = concat "\")\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_STRING
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -2683,7 +2683,7 @@ code = 7A
 class = op
 pop = 1
 instruction = <<INS
-$P1000000 = new .Exception
+$P1000000 = new "Exception"
 $P1000000["obj"] = ${STACK0}
 throw $P1000000
 INS
@@ -2723,7 +2723,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_PTR
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -2742,7 +2742,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_PTR
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -2761,7 +2761,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_PTR
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -2780,7 +2780,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_PTR
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -2806,7 +2806,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\"\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_PTR
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2834,7 +2834,7 @@ ${INS} = concat ${DEST0}
 ${INS} = concat " = net_pmc_ptr $P1000000\n"
 PIR
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_PTR
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2849,7 +2849,7 @@ push = 1
 arguments = ttype
 instruction = net_ldelema ${DEST0}, ${STACK1}, ${STACK0}
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_PTR
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2861,9 +2861,9 @@ code = 46
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2875,9 +2875,9 @@ code = 47
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U1
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2889,9 +2889,9 @@ code = 48
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2903,9 +2903,9 @@ code = 49
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U2
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2917,9 +2917,9 @@ code = 4A
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2931,9 +2931,9 @@ code = 4C
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_pmc()
+instruction = ${DEST0} = ${STACK0}.'load_pmc'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2945,9 +2945,9 @@ code = 4B
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_U4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2959,9 +2959,9 @@ code = 4D
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_int()
+instruction = ${DEST0} = ${STACK0}.'load_int'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_I
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2973,9 +2973,9 @@ code = 4E
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_float()
+instruction = ${DEST0} = ${STACK0}.'load_float'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_R4
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -2987,9 +2987,9 @@ code = 4F
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_float()
+instruction = ${DEST0} = ${STACK0}.'load_float'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_R8
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -3001,9 +3001,9 @@ code = 50
 class = op
 pop = 1
 push = 1
-instruction = ${DEST0} = ${STACK0}.load_pmc()
+instruction = ${DEST0} = ${STACK0}.'load_pmc'()
 typeinfo = <<PIR
-${PTEMP0} = new Hash
+${PTEMP0} = new "Hash"
 ${PTEMP0}["type"] = ELEMENT_TYPE_OBJECT
 ${PTEMP0}["byref"] = 0
 annotate_reg_type(${PTEMP0})
@@ -3014,56 +3014,56 @@ PIR
 code = 51
 class = op
 pop = 2
-instruction = ${STACK1}.store_pmc(${STACK0})
+instruction = ${STACK1}.'store_pmc'(${STACK0})
 typeinfo = # None
 
 [stind.i1]
 code = 52
 class = op
 pop = 2
-instruction = ${STACK1}.store_int(${STACK0})
+instruction = ${STACK1}.'store_int'(${STACK0})
 typeinfo = # None
 
 [stind.i2]
 code = 53
 class = op
 pop = 2
-instruction = ${STACK1}.store_int(${STACK0})
+instruction = ${STACK1}.'store_int'(${STACK0})
 typeinfo = # None
 
 [stind.i4]
 code = 54
 class = op
 pop = 2
-instruction = ${STACK1}.store_int(${STACK0})
+instruction = ${STACK1}.'store_int'(${STACK0})
 typeinfo = # None
 
 [stind.i8]
 code = 55
 class = op
 pop = 2
-instruction = ${STACK1}.store_pmc(${STACK0})
+instruction = ${STACK1}.'store_pmc'(${STACK0})
 typeinfo = # None
 
 [stind.i]
 code = DF
 class = op
 pop = 2
-instruction = ${STACK1}.store_int(${STACK0})
+instruction = ${STACK1}.'store_int'(${STACK0})
 typeinfo = # None
 
 [stind.r4]
 code = 56
 class = op
 pop = 2
-instruction = ${STACK1}.store_float(${STACK0})
+instruction = ${STACK1}.'store_float'(${STACK0})
 typeinfo = # None
 
 [stind.r8]
 code = 57
 class = op
 pop = 2
-instruction = ${STACK1}.store_float(${STACK0})
+instruction = ${STACK1}.'store_float'(${STACK0})
 typeinfo = # None
 
 
@@ -3199,7 +3199,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "0"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3211,7 +3211,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "1"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3223,7 +3223,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "2"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3235,7 +3235,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "3"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3247,7 +3247,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "4"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3259,7 +3259,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "5"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3271,7 +3271,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "6"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3283,7 +3283,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "7"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3295,7 +3295,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "8"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3307,7 +3307,7 @@ class = load
 push = 1
 pir = ${LOADREG} = "-1"
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3320,7 +3320,7 @@ push = 1
 arguments = int8
 pir = ${LOADREG} = ${ARG0}
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3333,7 +3333,7 @@ push = 1
 arguments = int32
 pir = ${LOADREG} = ${ARG0}
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3353,13 +3353,13 @@ ${STEMP0} = ${ARG0}
 ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 ${INS} = concat ${DEST0}
-${INS} = concat ".set_high_bits("
+${INS} = concat ".'set_high_bits'("
 ${STEMP0} = ${ARG1}
 ${INS} = concat ${STEMP0}
 ${INS} = concat ")\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_I8
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3379,7 +3379,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_R4
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})
@@ -3399,7 +3399,7 @@ ${INS} = concat ${STEMP0}
 ${INS} = concat "\n"
 PIR
 typeinfo = <<PIR
-${LOADTYPE} = new Hash
+${LOADTYPE} = new "Hash"
 ${LOADTYPE}["type"] = ELEMENT_TYPE_R8
 ${LOADTYPE}["byref"] = 0
 annotate_reg_type(${LOADTYPE})

@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  38;
+use Test::More tests =>  30;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
@@ -19,11 +19,11 @@ use Parrot::Configure::Test qw(
 );
 use IO::CaptureOutput qw | capture |;
 
-########## --miniparrot ##########
+########## regular ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
-        argv => [ q{--miniparrot} ],
+        argv => [ ],
         mode => q{configure},
     }
 );
@@ -41,34 +41,13 @@ my $step = test_step_constructor_and_description($conf);
 
 my $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
-is($step->result(), q{skipped}, "Expected result was set");
-
-$conf->replenish($serialized);
-
-########## regular ##########
-
-$args = process_options(
-    {
-        argv => [ ],
-        mode => q{configure},
-    }
-);
-
-rerun_defaults_for_testing($conf, $args );
-
-$conf->add_steps($pkg);
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
-
-$ret = $step->runstep($conf);
-ok( $ret, "runstep() returned true value" );
 is($step->result(), q{}, "Result is empty string as expected");
 
 $conf->replenish($serialized);
 
 ########## --verbose ##########
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ q{--verbose} ],
         mode => q{configure},
@@ -93,7 +72,7 @@ $conf->replenish($serialized);
 
 ########## _set_from_Config(); _list_extra_headers() ##########
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},

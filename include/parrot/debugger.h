@@ -166,7 +166,7 @@ typedef struct PDB {
     PDB_file_t              *file;
     PDB_breakpoint_t        *breakpoint;
     PDB_condition_t         *watchpoint;
-    long                    breakpoint_skip;
+    unsigned long            breakpoint_skip;
     char                    *cur_command;
     char                    *last_command;
     opcode_t                *cur_opcode;
@@ -182,34 +182,34 @@ typedef struct PDB {
 /* HEADERIZER BEGIN: src/debug.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_debugger_break(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_debugger_destroy(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_debugger_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_debugger_load(PARROT_INTERP, ARGIN_NULLOK(STRING *filename))
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_debugger_start(PARROT_INTERP, ARGIN(opcode_t * cur_opcode))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void PDB_script_file(PARROT_INTERP, ARGIN(const char *command))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -265,7 +265,7 @@ void PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
 
 size_t PDB_disassemble_op(PARROT_INTERP,
     ARGOUT(char *dest),
-    int space,
+    size_t space,
     ARGIN(const op_info_t *info),
     ARGIN(const opcode_t *op),
     ARGMOD_NULLOK(PDB_file_t *file),
@@ -284,7 +284,7 @@ void PDB_enable_breakpoint(PARROT_INTERP, ARGIN(const char *command))
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PARROT_MALLOC
-char * PDB_escape(ARGIN(const char *string), INTVAL length)
+char * PDB_escape(ARGIN(const char *string), UINTVAL length)
         __attribute__nonnull__(1);
 
 void PDB_eval(PARROT_INTERP, ARGIN(const char *command))
@@ -298,7 +298,7 @@ PDB_breakpoint_t * PDB_find_breakpoint(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-void PDB_free_file(PARROT_INTERP)
+void PDB_free_file(PARROT_INTERP, ARGIN_NULLOK(PDB_file_t *file))
         __attribute__nonnull__(1);
 
 void PDB_get_command(PARROT_INTERP)
@@ -341,7 +341,7 @@ int PDB_run_command(PARROT_INTERP, ARGIN(const char *command))
 void PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
         __attribute__nonnull__(1);
 
-void PDB_skip_breakpoint(PARROT_INTERP, long i)
+void PDB_skip_breakpoint(PARROT_INTERP, unsigned long i)
         __attribute__nonnull__(1);
 
 void PDB_trace(PARROT_INTERP, ARGIN_NULLOK(const char *command))

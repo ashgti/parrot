@@ -27,9 +27,9 @@ Tests the Closure PMC.
 .end
 
 .sub new_closure
-    new P0, 'Closure'
+    new $P0, 'Closure'
     ok( 1, 'Created new Closure' )
-    isa_ok( P0, 'Closure' )
+    isa_ok( $P0, 'Closure' )
 .end
 
 .sub sweep_closures
@@ -39,7 +39,7 @@ Tests the Closure PMC.
     .lex "X", $P40
     $P40 = new 'Integer'
     $P40 = 22
-    .const .Sub $P43 = "___internal_test_1_0_"
+    .const 'Sub' $P43 = "___internal_test_1_0_"
     newclosure $P44, $P43
     sweep 1
     ok( 1, 'we lived' )

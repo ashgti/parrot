@@ -6,19 +6,14 @@
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests =>  6;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
 use Parrot::Configure::Test qw( test_step_thru_runstep);
+use Parrot::Configure::Step::List qw( get_steps_list );
 use IO::CaptureOutput qw | capture |;
-
-use_ok(
-    'Parrot::Configure::Step::List', qw|
-        get_steps_list
-        |
-);
 
 $| = 1;
 is( $|, 1, "output autoflush is set" );
@@ -26,7 +21,7 @@ is( $|, 1, "output autoflush is set" );
 my $testopt    = q{bindir};
 my $testoptval = q{mybindir};
 my $localargv  = [];
-my $args       = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         mode => q{configure},
         argv => $localargv,

@@ -85,9 +85,9 @@ php_string.pir - PHP string Standard Library
     unless argc > 1 goto L3
     $P2 = shift args
     $S2 = $P2
-    .return _trim($S1, $S2, .mode)
+    .tailcall _trim($S1, $S2, .mode)
   L3:
-    .return _trim($S1, " \n\r\t\v\0", .mode)
+    .tailcall _trim($S1, " \n\r\t\v\0", .mode)
 .endm
 
 =item C<string addcslashes(string str, string charlist)>
@@ -111,18 +111,6 @@ NOT IMPLEMENTED.
 =cut
 
 .sub 'addslashes'
-    not_implemented()
-.end
-
-=item C<string basename(string path [, string suffix])>
-
-Returns the filename component of the path
-
-NOT IMPLEMENTED.
-
-=cut
-
-.sub 'basename'
     not_implemented()
 .end
 
@@ -190,18 +178,6 @@ NOT IMPLEMENTED.
     not_implemented()
 .end
 
-=item C<string dirname(string path)>
-
-Returns the directory name component of the path
-
-NOT IMPLEMENTED.
-
-=cut
-
-.sub 'dirname'
-    not_implemented()
-.end
-
 =item C<array explode(string separator, string str [, int limit])>
 
 Splits a string on string separator and return array of components. If limit is positive only limit number of components is returned. If limit is negative all components except the last abs(limit) are returned.
@@ -258,7 +234,7 @@ An alias for implode
 
 .sub 'join'
     .param pmc args :slurpy
-    .return implode(args :flat)
+    .tailcall implode(args :flat)
 .end
 
 =item C<array localeconv(void)>
@@ -353,18 +329,6 @@ NOT IMPLEMENTED.
 =cut
 
 .sub 'parse_str'
-    not_implemented()
-.end
-
-=item C<array pathinfo(string path[, int options])>
-
-Returns information about a certain string
-
-NOT IMPLEMENTED.
-
-=cut
-
-.sub 'pathinfo'
     not_implemented()
 .end
 
@@ -554,7 +518,7 @@ An alias for strstr
 
 .sub 'strchr'
     .param pmc args :slurpy
-    .return strstr(args :flat)
+    .tailcall strstr(args :flat)
 .end
 
 =item C<int strcoll(string str1, string str2)>

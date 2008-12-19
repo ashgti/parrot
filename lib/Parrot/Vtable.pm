@@ -231,7 +231,7 @@ EOM
     for my $entry ( @{$vtable} ) {
         my $uc_meth = uc $entry->[1];
         $macros .= <<"EOM";
-#define PARROT_VTABLE_${uc_meth}_METHNAME \"__$entry->[1]\"
+#define PARROT_VTABLE_${uc_meth}_METHNAME \"$entry->[1]\"
 EOM
 
     }
@@ -266,7 +266,7 @@ EOM
         next if ( $entry->[4] =~ /MMD_/ );
         $num_vtable_funcs++;
         $macros .= <<"EOM";
-        \"__$entry->[1]\",
+        \"$entry->[1]\",
 EOM
     }
     $macros .= <<"EOM";
@@ -310,7 +310,7 @@ EOM
         next if ( $entry->[4] =~ /_STR$/ );
         next if ( $entry->[4] =~ /_FLOAT$/ );
         $macros .= <<"EOM";
-        \"__$entry->[1]\",
+        \"$entry->[1]\",
 EOM
     }
     $macros .= <<"EOM";
@@ -358,7 +358,7 @@ sub vtbl_embed {
 
         my $ret_type = find_type($return_type);
 
-        $protos .= sprintf "PARROT_API %s Parrot_PMC_%s( %s );\n", $ret_type, $name,
+        $protos .= sprintf "PARROT_EXPORT %s Parrot_PMC_%s( %s );\n", $ret_type, $name,
             $signature;
 
         # make sure the bare POD here doesn't appear in this module's perldoc
@@ -372,7 +372,7 @@ sub vtbl_embed {
 
     */
 
-    PARROT_API %s
+    PARROT_EXPORT %s
     Parrot_PMC_%s( %s )
     {
   END_HEADER

@@ -56,7 +56,7 @@ the output to the correct output file.
 
 =cut
 
-.namespace [ 'PGE::Perl6Grammar::Compiler' ]
+.namespace [ 'PGE';'Perl6Grammar';'Compiler' ]
 
 .sub 'main' :main
     .param pmc args
@@ -119,14 +119,15 @@ the output to the correct output file.
     $P0 = p6regex($S0, 'grammar'=>'PGE::Perl6Grammar', 'name'=>'statement', 'w'=>1)
 
     ##  Add the PGE::Perl6Regex's regex method to PGE::Perl6Grammar
-    $P0 = get_hll_global ['PGE::Perl6Regex'], 'regex'
-    $P1 = get_class ['PGE::Perl6Grammar']
+    $P0 = get_hll_global ['PGE';'Perl6Regex'], 'regex'
+    $P1 = get_class ['PGE';'Perl6Grammar']
     $P1.'add_method'('regex', $P0)
 
     ##   create the PGE::Perl6Grammar compiler object
-    .local pmc pgc
-    $P99 = subclass 'PCT::HLLCompiler', 'PGE::Perl6Grammar::Compiler'
-    pgc = new [ 'PGE::Perl6Grammar::Compiler' ]
+    .local pmc pgc, p6meta
+    p6meta = get_hll_global 'P6metaclass'
+    p6meta.'new_class'('PGE::Perl6Grammar::Compiler', 'parent'=>'PCT::HLLCompiler')
+    pgc = new [ 'PGE';'Perl6Grammar';'Compiler' ]
     pgc.'language'('PGE::Perl6Grammar')
 .end
 
@@ -151,7 +152,7 @@ the output to the correct output file.
     match = $P0.'new'(source, 'grammar'=>'PGE::Perl6Grammar')
 
     .local pmc stmtrule
-    stmtrule = get_hll_global ['PGE::Perl6Grammar'], 'statement'
+    stmtrule = get_hll_global ['PGE';'Perl6Grammar'], 'statement'
 
   stmt_loop:
     match = stmtrule(match)
@@ -179,19 +180,24 @@ the output to the correct output file.
     if namespace == '' goto ns_optable
     .local string inherit
     inherit = ns['inherit']
-    $S0 = initpir.unique('onload_')
-    initpir.emit(<<'        CODE', namespace, inherit, $S0)
+    $S0 = initpir.'unique'('onload_')
+    initpir.'emit'(<<'        CODE', namespace, inherit, $S0)
           ## namespace %0
           push_eh %2
-          $P0 = subclass '%1', '%0'
-          pop_eh
+          .local pmc p6meta
+          p6meta = get_hll_global 'P6metaclass'
+          p6meta.'new_class'('%0', 'parent'=>'%1')
         %2:
+          pop_eh
         CODE
   ns_optable:
     $P0 = ns['optable']
     if $P0 == '' goto iter_loop
-    initpir.emit("          optable = new 'PGE::OPTable'")
-    initpir.emit("          set_hll_global ['%0'], '$optable', optable", namespace)
+    initpir.'emit'("          optable = new ['PGE';'OPTable']")
+    $S0 = namespace
+    $P1 = split '::', $S0
+    $P1 = initpir.'key'($P1 :flat)
+    initpir.'emit'("          set_hll_global %0, '$optable', optable", $P1)
     initpir .= $P0
     goto iter_loop
   iter_end:
@@ -199,11 +205,11 @@ the output to the correct output file.
     .local pmc out
     out = new 'CodeString'
     if initpir == '' goto out_rule
-    out.emit("      .sub '__onload' :load :init")
-    out.emit("          .local pmc optable")
+    out.'emit'("      .sub '__onload' :load :init")
+    out.'emit'("          .local pmc optable")
     out .= initpir
-    out.emit("          .return ()")
-    out.emit("      .end")
+    out.'emit'("          .return ()")
+    out.'emit'("      .end")
   out_rule:
     out .= rulepir
 
@@ -215,7 +221,7 @@ the output to the correct output file.
 
   compile_pir:
     $P0 = compreg 'PIR'
-    .return $P0(out)
+    .tailcall $P0(out)
 .end
 
 
@@ -289,13 +295,16 @@ the output to the correct output file.
   rulepir_optable:
     ##   this is a special rule generated via the 'is optable' trait
     rulepir = new 'CodeString'
-    rulepir.emit(<<'      END', namespace, name)
-      .namespace [ "%0" ]
+    $S0 = namespace
+    $P0 = split '::', $S0
+    $P0 = rulepir.'key'($P0 :flat)
+    rulepir.'emit'(<<'      END', $P0, name)
+      .namespace %0
       .sub "%1"
         .param pmc mob
         .param pmc adverbs :named :slurpy
-        $P0 = get_hll_global ["%0"], "$optable"
-        .return $P0.'parse'(mob, 'rulename'=>"%1", adverbs :named :flat)
+        $P0 = get_hll_global %0, "$optable"
+        .tailcall $P0.'parse'(mob, 'rulename'=>"%1", adverbs :named :flat)
       .end
       END
   with_rulepir:
@@ -304,7 +313,7 @@ the output to the correct output file.
     .local pmc code
     $P0 = nstable[namespace]
     code = $P0['rule']
-    code.emit("\n## <%0::%1>\n", namespace, name)
+    code.'emit'("\n## <%0::%1>\n", namespace, name)
     code .= rulepir
     .return ()
 .end
@@ -313,14 +322,14 @@ the output to the correct output file.
     .param pmc stmt
     .param pmc namespace
     .param pmc nstable
-    .return 'regex_stmt'(stmt, namespace, nstable)
+    .tailcall 'regex_stmt'(stmt, namespace, nstable)
 .end
 
 .sub 'rule_stmt'
     .param pmc stmt
     .param pmc namespace
     .param pmc nstable
-    .return 'regex_stmt'(stmt, namespace, nstable)
+    .tailcall 'regex_stmt'(stmt, namespace, nstable)
 .end
 
 
@@ -366,11 +375,13 @@ the output to the correct output file.
     goto trait_sub
   trait_arg:
     if trait == 'parsed' goto trait_sub
-    arg = concat "'", arg
-    arg = concat arg, "'"
+    arg = optable.'escape'(arg)
     goto trait_arg_done
   trait_sub:
-    optable.emit("          $P0 = get_hll_global ['%0'], '%1'", namespace, arg)
+    $S0 = namespace
+    $P0 = split '::', $S0
+    $P0 = optable.'key'($P0 :flat)
+    optable.'emit'("          $P0 = get_hll_global %0, '%1'", $P0, arg)
     arg = '$P0'
     goto trait_arg_done
   trait_arg_null:
@@ -382,7 +393,8 @@ the output to the correct output file.
     concat traitlist, arg
     goto trait_loop
   trait_end:
-    optable.emit("          optable.newtok('%0'%1)", name, traitlist)
+    name = optable.'escape'(name)
+    optable.'emit'("          optable.'newtok'(%0%1)", name, traitlist)
   .return ()
 .end
 

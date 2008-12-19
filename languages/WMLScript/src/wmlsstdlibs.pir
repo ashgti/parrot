@@ -23,8 +23,9 @@ See "WMLScript Standard Libraries Specification".
 
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub '__onload' :load :anon
 #    print "__onload (wmlsstdlibs.pir)\n"
@@ -67,9 +68,10 @@ helper for CALL_LIB* opcodes.
     push_eh _handler
     $P1 = $P0[lindex]
     $P2 = $P1[findex]
+    pop_eh
     .return ($P2)
   _handler:
-    .const .Sub not_implemented = 'not_implemented'
+    .const 'Sub' not_implemented = 'not_implemented'
     .return (not_implemented)
 .end
 
@@ -88,7 +90,7 @@ helper for CALL_URL* opcodes.
     .local pmc loader
     .local pmc script
     new loader, 'WmlsBytecode'
-    push_eh _handler_1
+    push_eh _handler
     script = loader.'load'(content)
     script['filename'] = url
     .local string gen_pir
@@ -100,25 +102,14 @@ helper for CALL_URL* opcodes.
     $P0 = pbc_out[0]
     $P0()
     pop_eh
-#    push_eh _handler_2
     .local pmc entry
     $S0 = url
     $S0 .= ':'
     $S0 .= function
     entry = get_hll_global $S0
-    if_null entry, _handler_2
+    if_null entry, L2
     .return (entry)
-  _handler_1:
-    .local pmc e
-    .local string msg
-    .get_results (e, msg)
-    print msg
-    print "\n"
-    $S0 = "verification failed (can't translate '"
-    $S0 .= url
-    $S0 .= "')"
-    die $S0
-  _handler_2:
+  L2:
     $S0 = "external function '"
     $S0 .= function
     $S0 .= "' not found in '"
@@ -127,25 +118,35 @@ helper for CALL_URL* opcodes.
     die $S0
   L1:
     die "unable to load compilation unit"
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = e
+    $S0 .= "\nverification failed (can't translate '"
+    $S0 .= url
+    $S0 .= "')"
+    e = $S0
+    rethrow e
 .end
 
 .sub 'load_script'
     .param string filename
-    .local pmc pio
+    .local pmc fh
     .local string content
-    pio = new 'ParrotIO'
+    fh = new 'FileHandle'
     push_eh _handler
-    content = pio.'slurp'(filename)
-    if content goto L1
-    $S0 = err
-    print "Can't slurp '"
-    print filename
-    print "' ("
-    print $S0
-    print ")\n"
-  L1:
-  _handler:
+    content = fh.'readall'(filename)
+    pop_eh
     .return (content)
+  _handler:
+    $S0 = "Can't slurp '"
+    $S0 .= filename
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    printerr $S0
+    .return ('')
 .end
 
 .sub 'save_pbc'
@@ -153,21 +154,25 @@ helper for CALL_URL* opcodes.
     .param string filename
     .local string output
     .local pmc fh
+    fh = new 'FileHandle'
     output = concat filename, '.pbc'
-    fh = open output, '>'
-    if fh goto L1
-    $S0 = err
-    print "Can't open '"
-    print output
-    print "' ("
-    print $S0
-    print ")\n"
-    goto L2
-  L1:
-    print fh, pbc_out
-    close fh
-  L2:
+    push_eh _handler
+    fh.'open'(output, 'w')
+    pop_eh
+    fh.'print'(pbc_out)
+    fh.'close'()
     .return (output)
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't open '"
+    $S0 .= output
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 .sub 'save_pir'
@@ -175,27 +180,28 @@ helper for CALL_URL* opcodes.
     .param string filename
     .local string output
     .local pmc fh
+    fh = new 'FileHandle'
     output = concat filename, '.pir'
-    fh = open output, '>'
-    if fh goto L1
-    $S0 = err
-    print "Can't open '"
-    print output
-    print "' ("
-    print $S0
-    print ")\n"
-    goto L2
-  L1:
-    print fh, gen_pir
-    close fh
-  L2:
+    push_eh _handler
+    fh.'open'(output, 'w')
+    pop_eh
+    fh.'print'(gen_pir)
+    fh.'close'()
+    .return ()
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't open '"
+    $S0 .= output
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 =back
-
-=head1 AUTHORS
-
-Francois Perrad.
 
 =cut
 

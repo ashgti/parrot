@@ -39,17 +39,6 @@ properly.
 .end
 
 
-# deprecated RT#54000
-.sub 'get_array' :method
-    .return self.'list'()
-.end
-
-# deprecated RT#54000
-.sub 'get_hash' :method
-    .return self.'hash'()
-.end
-
-
 .sub 'unshift_pmc' :vtable :method
     .param pmc val
     $P0 = self.'list'()

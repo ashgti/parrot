@@ -5,24 +5,24 @@
 
 .sub '__onload' :anon :load
 #    print "__onload (script.pir)\n"
-    $P0 = subclass 'Hash', 'Wmls::Script'
-    $P0 = subclass 'Array', 'Wmls::Constants'
-    $P0 = subclass 'Integer', 'Wmls::ConstantInteger'
-    $P0 = subclass 'Float', 'Wmls::ConstantFloat'
-    $P0 = subclass 'String', 'Wmls::ConstantUTF8String'
-    $P0 = subclass 'String', 'Wmls::ConstantEmptyString'
-    $P0 = subclass 'String', 'Wmls::ConstantString'
-    $P0 = subclass 'Array', 'Wmls::Pragmas'
-    $P0 = subclass 'Hash', 'Wmls::AccessDomain'
-    $P0 = subclass 'Hash', 'Wmls::AccessPath'
-    $P0 = subclass 'Hash', 'Wmls::UserAgentProperty'
-    $P0 = subclass 'Hash', 'Wmls::UserAgentProperty&Scheme'
-    $P0 = subclass 'Array', 'Wmls::Functions'
-    $P0 = subclass 'Array', 'Wmls::FunctionNameTable'
-    $P0 = subclass 'Hash', 'Wmls::Function'
+    $P0 = subclass 'Hash', ['Wmls'; 'Script']
+    $P0 = subclass 'Array', ['Wmls'; 'Constants']
+    $P0 = subclass 'Integer', ['Wmls'; 'ConstantInteger']
+    $P0 = subclass 'Float', ['Wmls'; 'ConstantFloat']
+    $P0 = subclass 'String', ['Wmls'; 'ConstantUTF8String']
+    $P0 = subclass 'String', ['Wmls'; 'ConstantEmptyString']
+    $P0 = subclass 'String', ['Wmls'; 'ConstantString']
+    $P0 = subclass 'Array', ['Wmls'; 'Pragmas']
+    $P0 = subclass 'Hash', ['Wmls'; 'AccessDomain']
+    $P0 = subclass 'Hash', ['Wmls'; 'AccessPath']
+    $P0 = subclass 'Hash', ['Wmls'; 'UserAgentProperty']
+    $P0 = subclass 'Hash', ['Wmls'; 'UserAgentProperty&Scheme']
+    $P0 = subclass 'Array', ['Wmls'; 'Functions']
+    $P0 = subclass 'Array', ['Wmls'; 'FunctionNameTable']
+    $P0 = subclass 'Hash', ['Wmls'; 'Function']
 .end
 
-.namespace ['Wmls::Script']
+.namespace ['Wmls'; 'Script']
 
 .sub 'dump' :method
     .local string filename
@@ -65,7 +65,7 @@
     print "CharacterSet "
     print character_set
     print "\n"
-    constants.dump()
+    constants.'dump'()
 
     print "## Pragma Pool\n"
     print "##\n"
@@ -76,7 +76,7 @@
     print "NumberOfPragmas "
     print number_of_pragmas
     print "\n"
-    pragmas.dump()
+    pragmas.'dump'()
 
     print "## Function Pool\n"
     print "##\n"
@@ -89,15 +89,16 @@
     print "\n"
     .local pmc function_name_table
     function_name_table = self['FunctionNameTable']
-    function_name_table.dump()
-    functions.dump()
+    function_name_table.'dump'()
+    functions.'dump'()
 .end
 
 .sub 'translate' :method
     .local string pir
     pir = <<'PIRCODE'
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub '__onload' :load :anon
 
@@ -109,13 +110,13 @@ PIRCODE
 
     .local pmc function_name_table
     function_name_table = self['FunctionNameTable']
-    $S0 = function_name_table.translate(self)
+    $S0 = function_name_table.'translate'(self)
     pir .= $S0
     pir .= "\n.end\n"
 
     .local pmc functions
     functions = self['Functions']
-    $S0 = functions.translate(self)
+    $S0 = functions.'translate'(self)
     pir .= $S0
 
     pir .= <<'PIRCODE'
@@ -140,7 +141,7 @@ PIRCODE
     .return (number_of_arguments)
 .end
 
-.namespace ['Wmls::Constants']
+.namespace ['Wmls'; 'Constants']
 
 .sub 'dump' :method
     .local int nb
@@ -154,7 +155,7 @@ PIRCODE
     print "cst"
     print idx
     print " "
-    constant.dump()
+    constant.'dump'()
     print "\n"
     inc idx
     goto L1
@@ -165,11 +166,11 @@ PIRCODE
     .param int idx
     .local pmc constant
     constant = self[idx]
-    $S0 = constant.translate(idx)
+    $S0 = constant.'translate'(idx)
     .return ($S0)
 .end
 
-.namespace ['Wmls::ConstantInteger']
+.namespace ['Wmls'; 'ConstantInteger']
 
 .sub 'dump' :method
     print "int "
@@ -182,9 +183,7 @@ PIRCODE
     pir = "  .local pmc const"
     $S0 = idx
     pir .= $S0
-    pir .= "\n  new const"
-    pir .= $S0
-    pir .= ", 'WmlsInteger'\n  set const"
+    pir .= "\n  box const"
     pir .= $S0
     pir .= ", "
     $S0 = self
@@ -193,7 +192,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::ConstantFloat']
+.namespace ['Wmls'; 'ConstantFloat']
 
 .sub 'dump' :method
     print "float "
@@ -206,18 +205,21 @@ PIRCODE
     pir = "  .local pmc const"
     $S0 = idx
     pir .= $S0
-    pir .= "\n  new const"
-    pir .= $S0
-    pir .= ", 'WmlsFloat'\n  set const"
+    pir .= "\n  box const"
     pir .= $S0
     pir .= ", "
-    $S0 = self
+    # need a representation that always contains a dot,
+    # unless box a WmlsInteger
+    new $P0, 'FixedPMCArray'
+    set $P0, 1
+    $P0[0] = self
+    $S0 = sprintf "%f", $P0 # need a better precision
     pir .= $S0
     pir .= "\n"
     .return (pir)
 .end
 
-.namespace ['Wmls::ConstantUTF8String']
+.namespace ['Wmls'; 'ConstantUTF8String']
 
 .sub 'dump' :method
     .local int len
@@ -234,9 +236,7 @@ PIRCODE
     pir = "  .local pmc const"
     $S0 = idx
     pir .= $S0
-    pir .= "\n  new const"
-    pir .= $S0
-    pir .= ", 'WmlsString'\n  set const"
+    pir .= "\n  box const"
     pir .= $S0
     pir .= ", unicode:\""
     $S0 = self
@@ -246,7 +246,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::ConstantEmptyString']
+.namespace ['Wmls'; 'ConstantEmptyString']
 
 .sub 'dump' :method
     print "empty string"
@@ -264,7 +264,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::ConstantString']
+.namespace ['Wmls'; 'ConstantString']
 
 .sub 'dump' :method
     .local int len
@@ -281,9 +281,7 @@ PIRCODE
     pir = "  .local pmc const"
     $S0 = idx
     pir .= $S0
-    pir .= "\n  new const"
-    pir .= $S0
-    pir .= ", 'WmlsString'\n  set const"
+    pir .= "\n  box const"
     pir .= $S0
     pir .= ", \""
     $S0 = self
@@ -293,7 +291,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::Pragmas']
+.namespace ['Wmls'; 'Pragmas']
 
 .sub 'dump' :method
     .local int nb
@@ -307,14 +305,14 @@ PIRCODE
     print "pragma"
     print idx
     print " "
-    pragma.dump()
+    pragma.'dump'()
     print "\n"
     inc idx
     goto L1
   L2:
 .end
 
-.namespace ['Wmls::AccessDomain']
+.namespace ['Wmls'; 'AccessDomain']
 
 .sub 'dump' :method
     .local int access_domain_index
@@ -323,7 +321,7 @@ PIRCODE
     print access_domain_index
 .end
 
-.namespace ['Wmls::AccessPath']
+.namespace ['Wmls'; 'AccessPath']
 
 .sub 'dump' :method
     .local int access_path_index
@@ -332,7 +330,7 @@ PIRCODE
     print access_path_index
 .end
 
-.namespace ['Wmls::UserAgentProperty']
+.namespace ['Wmls'; 'UserAgentProperty']
 
 .sub 'dump' :method
     .local int property_name_index
@@ -345,7 +343,7 @@ PIRCODE
     print content_index
 .end
 
-.namespace ['Wmls::UserAgentProperty&Scheme']
+.namespace ['Wmls'; 'UserAgentProperty&Scheme']
 
 .sub 'dump' :method
     .local int property_name_index
@@ -362,7 +360,7 @@ PIRCODE
     print scheme_index
 .end
 
-.namespace ['Wmls::FunctionNameTable']
+.namespace ['Wmls'; 'FunctionNameTable']
 
 .sub 'dump' :method
     print "## Function Name Table\n"
@@ -412,7 +410,7 @@ PIRCODE
     couple = self[idx]
     function_index = couple[0]
     function_name = couple[1]
-    pir .= "  .const .Sub "
+    pir .= "  .const 'Sub' "
     pir .= function_name
     pir .= " = 'function"
     $S0 = function_index
@@ -430,7 +428,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::Functions']
+.namespace ['Wmls'; 'Functions']
 
 .sub 'dump' :method
     .local int nb
@@ -444,7 +442,7 @@ PIRCODE
     print "## function "
     print idx
     print "\n"
-    function.dump()
+    function.'dump'()
     inc idx
     goto L1
   L2:
@@ -462,7 +460,7 @@ PIRCODE
   L1:
     unless idx < nb goto L2
     function = self[idx]
-    $S0 = function.translate(script, idx)
+    $S0 = function.'translate'(script, idx)
     pir .= $S0
     inc idx
     goto L1
@@ -470,7 +468,7 @@ PIRCODE
     .return (pir)
 .end
 
-.namespace ['Wmls::Function']
+.namespace ['Wmls'; 'Function']
 
 .sub 'dump' :method
     .local int number_of_arguments
@@ -544,14 +542,12 @@ PIRCODE
     goto L5
   L6:
 
-    unless number_of_local_variables goto L7
-    pir .= "  new $P0, 'WmlsString'\n"
   L7:
     unless idx < number_of_variables goto L8
-    pir .= "  local"
+    pir .= "  new local"
     $S0 = idx
     pir .= $S0
-    pir .= " = $P0\n"
+    pir .= ", 'WmlsString'\n"
     inc idx
     goto L7
   L8:

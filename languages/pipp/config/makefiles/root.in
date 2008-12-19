@@ -8,7 +8,10 @@ EXE           = @exe@
 # Set up directories
 BUILD_DIR     = @build_dir@
 LIBRARY_DIR   = $(BUILD_DIR)/runtime/parrot/library
+INCLUDE_DIR   = $(BUILD_DIR)/include
 PMCDIR        = src/pmc
+PIPPDIR       = $(BUILD_DIR)/languages/pipp
+HASHDIR       = $(PIPPDIR)/src
 PARROT_DYNEXT = @build_dir@/runtime/parrot/dynext
 
 # Set up commands
@@ -20,6 +23,10 @@ PMCBUILD      = $(PERL) @build_dir@/tools/build/dynpmc.pl
 NQP           = $(BUILD_DIR)/compilers/nqp/nqp.pbc
 PCT           = $(BUILD_DIR)/runtime/parrot/library/PCT.pbc
 PBC_TO_EXE    = $(BUILD_DIR)/pbc_to_exe$(EXE)
+CC            = @cc@
+#copy/pasta from CFLAGS in config/gen/makefiles/dynpmc_pl.in
+CFLAGS        = @ccflags@ @cc_shared@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@
+TOUCH         = @touch@
 
 PMCS = \
  php \
@@ -29,7 +36,7 @@ PMCS = \
  phpinteger \
  phpresource \
  phpstring \
- phpundef
+ phpnull
 
 PMC_SOURCES = \
  $(PMCDIR)/php.pmc \
@@ -39,7 +46,13 @@ PMC_SOURCES = \
  $(PMCDIR)/phpinteger.pmc \
  $(PMCDIR)/phpresource.pmc \
  $(PMCDIR)/phpstring.pmc \
- $(PMCDIR)/phpundef.pmc
+ $(PMCDIR)/phpnull.pmc
+
+HASH_SOURCES = $(HASHDIR)/pipp_hash.c
+
+HASH_H = $(HASHDIR)/pipp_hash.h
+
+HASH_OBJS = $(HASHDIR)/pipp_hash$(O)
 
 PHP_GROUP=$(PMCDIR)/php_group$(LOAD_EXT)
 
@@ -131,6 +144,7 @@ help:
 	@echo "  test-antlr3:       Run the test suite for 'Pipp antlr3'."
 	@echo "  test-pct:          Run the test suite for 'Pipp pct'."
 	@echo "  test-pmc:          Run the test suite for Pipp's PMCs."
+	@echo "  smolder_test:      Run the PCT test suite and send report to the smolder server" 
 	@echo ""
 	@echo "Cleaning:"
 	@echo "  clean:             Clean up."
@@ -162,6 +176,7 @@ build:           build-pct
 
 build-all:       build-pct build-phc build-antlr3
 
+#build-common:    pmc src/common/pipplib.pbc pipp.pbc $(PHP_EXT) Test.pir
 build-common:    pmc src/common/pipplib.pbc pipp.pbc $(PHP_EXT)
 
 build-pct:       build-common
@@ -176,7 +191,7 @@ build-antlr3:    build-common
 pipp$(EXE): build-common
 	$(PBC_TO_EXE) pipp.pbc
 
-src/common/pipplib.pbc: src/common/builtins.pir src/common/php_standard.pir $(PHP_SRC_STD_EXT) src/common/php_API.pir src/common/php_MACRO.pir
+src/common/pipplib.pbc: src/common/builtins.pir src/common/guts.pir src/common/eval.pir src/common/php_standard.pir $(PHP_SRC_STD_EXT) src/common/php_API.pir src/common/php_MACRO.pir
 	$(PARROT) -o src/common/pipplib.pbc src/common/builtins.pir
 
 src/common/php_ctype.pbc: src/common/php_ctype.pir src/common/php_MACRO.pir
@@ -203,9 +218,22 @@ pipp.pbc: \
     src/pct/quote_expression.pir
 	$(PARROT) -o pipp.pbc src/common/pipp.pir
 
-pmc: $(PHP_GROUP)
+Test.pir: Test.php pipp.pbc
+	$(PARROT) pipp.pbc --target=pir --output=Test.pir Test.php
 
-$(PHP_GROUP): $(PARROT) $(PMC_SOURCES)
+
+pmc: $(HASH_OBJS) $(PHP_GROUP)
+
+#Any change to the hash code means phparray needs to be relinked too.
+#Recompiling is close enough for now.
+$(HASH_OBJS): $(HASH_SOURCES) $(HASH_H)
+	$(TOUCH) $(PMCDIR)/phparray.pmc
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $(HASH_SOURCES) -c -g -o $(HASH_OBJS)
+
+export DYNPMC_INCLUDE=$(PIPPDIR)
+export DYNPMC_LINK=$(HASH_OBJS)
+
+$(PHP_GROUP): $(PMC_SOURCES)
 	@cd $(PMCDIR) && $(PMCBUILD) generate $(PMCS)
 	@cd $(PMCDIR) && $(PMCBUILD) compile $(PMCS)
 	@cd $(PMCDIR) && $(PMCBUILD) linklibs $(PMCS)
@@ -216,19 +244,27 @@ test:     all test-pct
 test-all: all test-php test-phc test-antlr3 test-pct test-pmc
 
 test-php:
-	- cd .. && $(PERL) -I../lib -I pipp/lib pipp/t/harness --with-php
+	- $(PERL) t/harness --with-php
 
 test-phc:
-	- cd .. && $(PERL) -I../lib -I pipp/lib pipp/t/harness --with-phc
+	- $(PERL) t/harness --with-phc
 
 test-antlr3:
-	- cd .. && $(PERL) -I../lib -I pipp/lib pipp/t/harness --with-antlr3
+	- $(PERL) t/harness --with-antlr3
 
 test-pct:
-	- cd .. && $(PERL) -I../lib -I pipp/lib pipp/t/harness --with-pct
+	- $(PERL) t/harness --with-pct
+
+# run the test suite, create a TAP archive and send it off to smolder
+smolder_test : build
+	- $(PERL) t/harness --with-pct --archive --send-to-smolder
+
+
+# make sure debugging output is disabled while running the tests
+export PMCDEBUG=
 
 test-pmc: pmc
-	- $(PERL) -I../../lib t/pmc/*t
+	@ prove -I../../lib t/pmc
 
 # this does not work yet
 test-pcc-testsuite: all t/pcc-testsuite
@@ -238,14 +274,38 @@ test-pcc-testsuite: all t/pcc-testsuite
 t/pcc-testsuite:
 	svn co http:////code.roadsend.com//svn//pcc//trunk//pcc-testsuite t/pcc-testsuite
 
-clean: clean-common clean-pct clean-antlr3 clean-test
+# this does not work yet
+# Make sue that php 5.3 is in $PATH,
+# e.g export PATH=~/devel/PHP/php5/sapi/cli:$PATH
+test-php-qa-testsuite: pipp \
+ t/php_qa_testsuite/php5/run-tests.php \
+ t/php_qa_testsuite/php5/tests 
+ #t/php_qa_testsuite/php5/Zend/tests
+	cd t/php_qa_testsuite/php5 && cvs update tests run-tests.php
+	cd t/php_qa_testsuite/php5 && \
+ TEST_PHP_EXECUTABLE=pipp \
+ TEST_PHP_CGI_EXECUTABLE=pipp \
+ php run-tests.php -v --keep-all | tee run_tests.log
+
+t/php_qa_testsuite/php5/run-tests.php:
+	cd t/php_qa_testsuite && cvs -d :pserver:cvsread@cvs.php.net:/repository checkout -r PHP_5_3 php5/run-tests.php  
+
+t/php_qa_testsuite/php5/tests:
+	cd t/php_qa_testsuite && cvs -d :pserver:cvsread@cvs.php.net:/repository checkout -r PHP_5_3 php5/tests
+
+#t/php_qa_testsuite/php5/Zend/tests:
+	#cd php_qa_testsuite && cvs -d :pserver:cvsread@cvs.php.net:/repository/ZendEngine2 checkout -r PHP_5_3 php5/Zend/tests
+
+
+# cleaning up
+clean: clean-common clean-pct clean-antlr3 clean-test clean-hash
 
 clean-common: clean-pmc
 	$(RM_F) \
   src/common/pipplib.pbc \
   src/common/*.pbc \
   pipp.pbc \
-  pipp.c pipp.o pipp
+  pipp.c pipp.o pipp$(EXE)
 
 clean-pmc:
 	$(RM_F) "$(PMCDIR)/*dump" "$(PMCDIR)/*.c" "$(PMCDIR)/pmc_*h" "$(PMCDIR)/php_group.h" "$(PMCDIR)/*$(O)" "$(PMCDIR)/*$(LOAD_EXT)"
@@ -271,5 +331,13 @@ clean-test:
   pipp_phc_ast.xml pipp_phc_past.xml pipp_phc_past.nqp pipp_phc_past.pir \
   pipp_antlr_past.nqp  pipp_antlr_past.pir
 
+clean-hash:
+	$(RM_F) "$(HASHDIR)/pipp_hash$(O)"
+
 realclean: clean
 	$(RM_F) Makefile
+
+# Local variables:
+# mode: makefile
+# ex: ft=make
+# End:

@@ -17,7 +17,7 @@
     load_bytecode 'languages/forth/forth.pir'
 
     .local pmc iter
-    iter = new .Iterator, args
+    iter = new 'Iterator', args
 next_file:
     unless iter goto done
     $S0 = shift iter
@@ -113,8 +113,8 @@ missing_output:
 
 exception:
     .local pmc except
-    get_results '0,0', except, $S0
-    output = except[0]
+    .get_results (except)
+    output = except
 
 compare:
     if output == expected goto ok

@@ -20,16 +20,15 @@ The vtable functions for the native C call functions.
 
 #include "parrot/parrot.h"
 
-void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI * const nci_info);
-void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI * const nci_info) {
-        unsigned int i;
-        int j = 0;
-        char * sig_c = string_to_cstring(interp, sig);
-        size_t sig_length = strlen(sig_c);
-        char * param_sig = (char *) mem_sys_allocate(sig_length);
-        STRING *params;
+void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI_attributes * const nci_info);
+void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI_attributes * const nci_info) {
+        char   *sig_c      = string_to_cstring(interp, sig);
+        size_t  sig_length = strlen(sig_c);
+        char   *param_sig  = mem_allocate_n_zeroed_typed(sig_length, char);
+        size_t  j          = 0;
+        size_t  i;
 
-        for (i=1; i < sig_length; i++) {
+        for (i = 1; i < sig_length; i++) {
             switch (sig_c[i]) {
                 case '0':    /* null ptr or such - doesn't consume a reg */
                     break;
@@ -65,22 +64,29 @@ void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI * const nci_info) {
                     param_sig[j++] = 'I';
                     break;
                 case '@':
-                    param_sig[j++] = 'P';
+                    param_sig[j++] = '@';
                     break;
                 case 'b':   /* buffer (void*) pass PObj_bufstart(SReg) */
                 case 'B':   /* buffer (void**) pass &PObj_bufstart(SReg) */
                     param_sig[j++] = 'S';
                     break;
                 default:
-                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_JIT_ERROR,
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_JIT_ERROR,
                         "Unknown param Signature %c\n", sig_c[i]);
                     break;
             }
         }
-        param_sig[j++] = 0;
 
-        params = string_make(interp, param_sig, strlen(param_sig), "ascii", 0);
-        nci_info->pcc_params_signature = params;
+        PARROT_ASSERT(j <= sig_length);
+
+        /* use only the signature-significant part of the string buffer */
+        if (j) {
+            nci_info->pcc_params_signature = string_make(interp, param_sig, j,
+                NULL, PObj_constant_FLAG);
+        }
+        else
+            nci_info->pcc_params_signature = CONST_STRING(interp, "");
 
         mem_sys_free(param_sig);
         string_cstring_free(sig_c);
@@ -136,7 +142,7 @@ Initializes the NCI with a C<NULL> function pointer.
     VTABLE void init() {
         PMC_struct_val(SELF) = NULL;
         PMC_pmc_val(SELF)    = PMCNULL;
-        PMC_data(SELF)       = mem_allocate_zeroed_typed(Parrot_NCI);
+        PMC_data(SELF)       = mem_allocate_zeroed_typed(Parrot_NCI_attributes);
 
         /* Mark that we're not a raw NCI. */
         PObj_flag_CLEAR(private2, SELF);
@@ -160,21 +166,27 @@ Sets the specified function pointer and signature (C<*key>).
     }
 
     VTABLE void set_pointer_keyed_str(STRING *key, void *func) {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
-        int jitted = 0;
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
+        int                           jitted   = 0;
+        char                         *key_c;
 
         /* Store the original function and signature. */
         PMC_struct_val(SELF) = func;
-        nci_info->signature  = key;
+        key_c                = string_to_cstring(INTERP, key);
+        nci_info->signature  = string_make(interp, key_c, strlen(key_c),
+                                    NULL, PObj_constant_FLAG);
+        string_cstring_free(key_c);
         pcc_params(INTERP, key, nci_info);
 
         /* Arity is length of that string minus one (the return type). */
         nci_info->arity      = string_length(INTERP, key) - 1;
 
         /* Build call function. */
-        nci_info->func       = (PMC *)(build_call_func(INTERP, SELF, key, &jitted));
+        nci_info->func       = (PMC *)(build_call_func(INTERP, SELF,
+                                            key, &jitted));
         nci_info->jitted = jitted;
     }
+
 /*
 
 =item C<void mark()>
@@ -186,7 +198,7 @@ Mark any referenced strings and PMCs.
 */
     VTABLE void mark() {
         if (PARROT_NCI(SELF)) {
-            Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+            Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
 
             if (nci_info->signature)
                 pobject_lives(interp, (PObj*)nci_info->signature);
@@ -207,7 +219,7 @@ Destroys the NCI, freeing any allocated memory.
 
     VTABLE void destroy() {
         if (PMC_data(SELF)) {
-            Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+            Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
 
             mem_sys_free(nci_info);
             PMC_data(SELF) = NULL;
@@ -225,13 +237,13 @@ Creates and returns a clone of the NCI.
 */
 
     VTABLE PMC *clone() {
-        Parrot_NCI * const nci_info_self = PARROT_NCI(SELF);
-        Parrot_NCI *nci_info_ret;
+        Parrot_NCI_attributes * const nci_info_self = PARROT_NCI(SELF);
+        Parrot_NCI_attributes *nci_info_ret;
 
         PMC * const ret     = pmc_new_noinit(INTERP, SELF->vtable->base_type);
         PMC_struct_val(ret) = PMC_struct_val(SELF);
         PMC_pmc_val(ret)    = PMCNULL;
-        PMC_data(ret)       = mem_allocate_zeroed_typed(Parrot_NCI);
+        PMC_data(ret)       = mem_allocate_zeroed_typed(Parrot_NCI_attributes);
         nci_info_ret        = PARROT_NCI(ret);
 
         /* FIXME if data is malloced (JIT/i386!) then we need
@@ -242,7 +254,7 @@ Creates and returns a clone of the NCI.
         nci_info_ret->signature             = nci_info_self->signature;
         nci_info_ret->pcc_params_signature  = nci_info_self->pcc_params_signature;
         nci_info_ret->arity                 = nci_info_self->arity;
-        nci_info_ret->jitted                = nci_info_self->arity;
+        nci_info_ret->jitted                = nci_info_self->jitted;
         PObj_get_FLAGS(ret)    |= (PObj_get_FLAGS(SELF) & 0x7);
 
         return ret;
@@ -259,7 +271,7 @@ Returns whether the NCI is defined.
 */
 
     VTABLE INTVAL defined() {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
         return nci_info->func != NULL;
     }
 
@@ -276,7 +288,7 @@ shifted down.
 */
 
     VTABLE opcode_t *invoke(void *next) {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
 
         typedef INTVAL (*nci_sub_t)(PARROT_INTERP, PMC *);
 
@@ -296,7 +308,8 @@ shifted down.
             nci_jit_sub_t jit_func = (nci_jit_sub_t) D2FPTR(nci_info->func);
 
             /* Parrot_eprintf(interp, "JITTED %S\n", nci_info->signature); */
-            jit_func(INTERP, SELF, (char *) nci_info->pcc_params_signature->strstart);
+            jit_func(INTERP, SELF,
+                (char *) nci_info->pcc_params_signature->strstart);
         }
         else {
             if (PObj_flag_TEST(private2, SELF)) {
@@ -336,7 +349,7 @@ Returns the function pointer as an integer.
 */
 
     VTABLE INTVAL get_integer() {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
         return (INTVAL)nci_info->func;
     }
 
@@ -351,7 +364,7 @@ Returns the boolean value of the pointer.
 */
 
     VTABLE INTVAL get_bool() {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
         return (0 != (INTVAL)nci_info->func);
     }
 
@@ -365,13 +378,14 @@ Return the arity of the NCI (the number of arugments).
 
 */
     METHOD arity() {
-        Parrot_NCI * const nci_info = PARROT_NCI(SELF);
+        Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
         INTVAL arity = 0;
 
         if (nci_info && nci_info->func)
             arity = nci_info->arity;
         else
-            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
+            Parrot_ex_throw_from_c_args(INTERP, NULL,
+                EXCEPTION_INVALID_OPERATION,
                 "You cannot get the arity of an undefined NCI.");
 
         RETURN(INTVAL arity);

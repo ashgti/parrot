@@ -82,12 +82,18 @@ typedef enum {
         EXCEPTION_LIBRARY_ERROR,
         EXCEPTION_LIBRARY_NOT_LOADED,
         EXCEPTION_SYNTAX_ERROR,
+        EXCEPTION_MALFORMED_PACKFILE,
 
         CONTROL_RETURN,
         CONTROL_OK,
         CONTROL_BREAK,
         CONTROL_CONTINUE,
-        CONTROL_ERROR
+        CONTROL_ERROR,
+        CONTROL_TAKE,
+
+        CONTROL_LOOP_NEXT,
+        CONTROL_LOOP_LAST,
+        CONTROL_LOOP_REDO
 } exception_type_enum;
 
 /* &end_gen */
@@ -109,12 +115,12 @@ typedef enum {
 /* HEADERIZER BEGIN: src/exceptions.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void exit_fatal(int exitcode, ARGIN(const char *format), ...)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN_WHEN_FALSE
 void Parrot_assert(
     INTVAL condition,
@@ -124,7 +130,7 @@ void Parrot_assert(
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void Parrot_confess(
     ARGIN(const char *cond),
@@ -133,12 +139,12 @@ void Parrot_confess(
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_ex_add_c_handler(PARROT_INTERP, ARGIN(Parrot_runloop *jp))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC * Parrot_ex_build_exception(PARROT_INTERP,
     INTVAL severity,
@@ -146,35 +152,35 @@ PMC * Parrot_ex_build_exception(PARROT_INTERP,
     ARGIN_NULLOK(STRING *msg))
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 size_t Parrot_ex_calc_handler_offset(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_ex_mark_unhandled(PARROT_INTERP, ARGIN(PMC *exception))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void Parrot_ex_rethrow_from_c(PARROT_INTERP, ARGIN(PMC *exception))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 opcode_t * Parrot_ex_rethrow_from_op(PARROT_INTERP, ARGIN(PMC *exception))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void Parrot_ex_throw_from_c_args(PARROT_INTERP,
     ARGIN_NULLOK(void *ret_addr),
@@ -184,13 +190,23 @@ void Parrot_ex_throw_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(4);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 opcode_t * Parrot_ex_throw_from_op(PARROT_INTERP,
     ARGIN(PMC *exception),
     ARGIN_NULLOK(void *dest))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+opcode_t * Parrot_ex_throw_from_op_args(PARROT_INTERP,
+    ARGIN_NULLOK(void *dest),
+    int ex_type,
+    ARGIN(const char *format),
+    ...)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(4);
 
 PARROT_DOES_NOT_RETURN
 void do_panic(

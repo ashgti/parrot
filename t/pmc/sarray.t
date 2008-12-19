@@ -22,8 +22,6 @@ Tests the C<SArray> PMC, which is used for parameter-passing.
 
 =cut
 
-my $fp_equality_macro = pasm_fp_equality_macro();
-
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting sarray size" );
     new P0, 'SArray'
     set I0, P0
@@ -457,7 +455,7 @@ CODE
 OUTPUT
 
 pasm_output_is( << "CODE", << 'OUTPUT', "Access via Key PMC" );
-@{[ $fp_equality_macro ]}
+    .include 'include/fp_equality.pasm'
     new P0, 'SArray'
     set P0, 4
     set P0[0], 100
@@ -475,7 +473,7 @@ ok1:    print "ok 1\\n"
     new P2, 'Key'
     set P2, 1
     set N0, P0[P2]
-    .fp_eq(N0, 12.298, ok2)
+    .fp_eq_pasm(N0, 12.298, ok2)
     print "not "
 ok2:    print "ok 2\\n"
     new P3, 'Key'
@@ -545,7 +543,7 @@ CODE
 OUTPUT
 
 pasm_output_is( << "CODE", << 'OUTPUT', "Store PMC, get num" );
-@{[ $fp_equality_macro ]}
+    .include 'include/fp_equality.pasm'
     new P0, 'SArray'
     set P0, 2
     new P1, 'Integer'
@@ -555,11 +553,11 @@ pasm_output_is( << "CODE", << 'OUTPUT', "Store PMC, get num" );
     set P0[0], P1
     set P0[1], P2
     set N0, P0[0]
-    .fp_eq(N0, 11.0, ok1)
+    .fp_eq_pasm(N0, 11.0, ok1)
     print "not "
 ok1:    print "ok 1\\n"
     set N0, P0[1]
-    .fp_eq(N0, 1.1, ok2)
+    .fp_eq_pasm(N0, 1.1, ok2)
     print "not "
 ok2:    print "ok 2\\n"
         end
@@ -636,7 +634,7 @@ CODE
 OUTPUT
 
 pasm_output_is( << "CODE", << 'OUTPUT', "Store num, get PMC" );
-@{[ $fp_equality_macro ]}
+    .include 'include/fp_equality.pasm'
     new P0, 'SArray'
     set P0, 2
     set P0[0], 12.239
@@ -644,13 +642,13 @@ pasm_output_is( << "CODE", << 'OUTPUT', "Store num, get PMC" );
     new P1, 'Float'
     set P1, P0[0]
     set N0, P1
-    .fp_eq(N0, 12.239, ok1)
+    .fp_eq_pasm(N0, 12.239, ok1)
     print "not "
 ok1:    print "ok 1\\n"
     new P2, 'Integer'
     set P2, P0[1]
     set N0, P2
-    .fp_eq(N0, -1.9742, ok2)
+    .fp_eq_pasm(N0, -1.9742, ok2)
     print "not "
 ok2:    print "ok 2\\n"
         end

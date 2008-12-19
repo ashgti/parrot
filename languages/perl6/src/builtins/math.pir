@@ -61,7 +61,7 @@ Returns the nearest integer to $x.  The algorithm is floor($x + 0.5).
     .param num a
     a += 0.5
     $N0 = floor a
-    .return (a)
+    .return ($N0)
 .end
 
 
@@ -173,8 +173,6 @@ error.
 
 =cut
 
-.include 'library/dumper.pir' # XXX
-
 .sub 'radcalc'
     .param int radix
     .param string intpart
@@ -185,7 +183,7 @@ error.
     .param num    exp          :optional
     .param int    has_exp      :opt_flag
     .local num    result, fracdivisor, magnitude
-    .local pmc     iter
+    .local pmc    it
 
     if radix <= 1 goto err_range
     if radix > 36 goto err_range
@@ -194,11 +192,11 @@ error.
     fracdivisor = 1.0
 
     $P0 = split '', intpart
-    iter = new 'Iterator', $P0
+    it = iter $P0
 
   lp1: # Accumulate over decimal part
-    unless iter goto ex1
-    $S0 = shift iter
+    unless it goto ex1
+    $S0 = shift it
     $S0 = downcase $S0
     if $S0 == "_" goto lp1
     $I0 = index "0123456789abcdefghijklmnopqrstuvwxyz", $S0
@@ -216,8 +214,8 @@ error.
     $P99 = shift $P0                             # remove the radix point
 
   lp2: # Accumulate over fractional part, keep length
-    unless iter goto ex2
-    $S0 = shift iter
+    unless it goto ex2
+    $S0 = shift it
     $S0 = downcase $S0
     if $S0 == "_" goto lp2
     $I0 = index "0123456789abcdefghijklmnopqrstuvwxyz", $S0
@@ -302,7 +300,7 @@ sin, cos, tan, asin, acos, atan, sec, cosec, cotan, asec, acosec,
 acotan, sinh, cosh, tanh, asinh, acosh, atanh, sech, cosech, cotanh,
 asech, acosech, acotanh.
 
-Performs the various trigonmetric functions.
+Performs the various trigonometric functions.
 
 Option C<:$base> is used to declare how you measure your angles.
 Given the value of an arc representing a single full revolution.
@@ -375,7 +373,7 @@ The other alternative would be to remove the default. --law]
     $S1 = "sin: unrecognized base '"
     $S1 .= $S0
     $S1 .= "'"
-    .return 'die'($S1)
+    .tailcall 'die'($S1)
 .end
 
 

@@ -13,7 +13,7 @@ php_file.pir - PHP file Standard Library
 
 =cut
 
-.const string STREAM_PMC = 'ParrotIO'
+.const string STREAM_PMC = 'FileHandle'
 
 .const int SEEK_SET = 0
 .const int SEEK_CUR = 1
@@ -27,6 +27,63 @@ php_file.pir - PHP file Standard Library
     .REGISTER_LONG_CONSTANT(cst, 'SEEK_END', SEEK_END)
 .end
 
+=item C<string basename(string path [, string suffix])>
+
+Returns the filename component of the path
+
+=cut
+
+.include 'sysinfo.pasm'
+
+.sub 'basename'
+    .param pmc args :slurpy
+    .local string path
+    .local string suffix
+    .local string separator
+
+    ($I0, path, suffix) = parse_parameters('s|s', args :flat)
+    if $I0 goto L1
+    .RETURN_NULL()
+  L1:
+    $S0 = sysinfo .SYSINFO_PARROT_OS
+    if $S0 == 'MSWin32' goto L2
+    if $S0 == 'netware' goto L2
+    separator = '/'
+    goto L3
+  L2:
+    separator = '/\'
+  L3:
+    $I1 = 0
+    $P0 = split '', path
+  L4:
+    unless $P0 goto L5
+    $S1 = pop $P0
+    $I0 = index separator, $S1
+    inc $I1
+    if $I0 == -1 goto L4
+    dec $I1
+  L5:
+    .local int len_path
+    .local int len_suffix
+    .local int pos1
+    .local int pos2
+
+    len_path = length path
+    len_suffix = length suffix
+
+    pos1 = len_path - $I1
+    pos2 = len_path - len_suffix
+    $S3  = substr path, pos2
+    unless $S3 == suffix goto L6
+
+    $I2  = pos2 - pos1
+    $S4 = substr path, pos1, $I2
+    .RETURN_STRING($S4)
+  L6:
+    $S2 = substr path, pos1
+    .RETURN_STRING($S2)
+.end
+
 =item C<bool copy(string source_file, string destination_file)>
 
 Copy a file
@@ -36,6 +93,18 @@ NOT IMPLEMENTED.
 =cut
 
 .sub 'copy'
+    not_implemented()
+.end
+
+=item C<string dirname(string path)>
+
+Returns the directory name component of the path
+
+NOT IMPLEMENTED.
+
+=cut
+
+.sub 'dirname'
     not_implemented()
 .end
 
@@ -55,12 +124,14 @@ Close an open file pointer
   L1:
     $P1 = shift args
     .local pmc stream
+    push_eh L3
     stream = fetch_resource($P1, STREAM_PMC)
-    unless null stream goto L2
-    .RETURN_FALSE()
+    pop_eh
   L2:
     close stream
     .RETURN_TRUE()
+  L3:
+    .RETURN_FALSE()
 .end
 
 =item C<bool feof(resource fp)>
@@ -157,6 +228,7 @@ STILL INCOMPLETE.
 
 .sub 'file_get_contents'
     .param pmc args :slurpy
+
     .local string filename
     .local int use_include_path
     .local pmc context
@@ -180,13 +252,21 @@ STILL INCOMPLETE.
     unless use_include_path goto L3
     $I0 |= USE_PATH
   L3:
-    stream = stream_open(filename, '<', $I0, context)
-    if stream goto L4
-    .RETURN_FALSE()
+    stream = stream_open(filename, 'r', $I0, context)
   L4:
-    $S0 = stream.'slurp'('')
+    # for now ignore failures
+    push_eh catch
+
+    $S0 = stream.'readall'()
     close stream
+
+    pop_eh
+
     .RETURN_STRING($S0)
+
+catch:
+    .RETURN_FALSE()
+
 .end
 
 =item C<int file_put_contents(string file, mixed data [, int flags [, resource context]])>
@@ -250,11 +330,13 @@ STILL INCOMPLETE (see _getmode)
     $I0 |= USE_PATH
   L2:
     $S0 = _getmode(mode)
+    push_eh L4
     stream = stream_open(filename, $S0, $I0, context)
-    if stream goto L3
-    .RETURN_FALSE()
+    pop_eh
   L3:
     .RETURN_RESOURCE(stream)
+  L4:
+    .RETURN_FALSE()
 .end
 
 .sub '_getmode' :anon
@@ -430,6 +512,18 @@ NOT IMPLEMENTED.
 =cut
 
 .sub 'mkdir'
+    not_implemented()
+.end
+
+=item C<array pathinfo(string path[, int options])>
+
+Returns information about a certain string
+
+NOT IMPLEMENTED.
+
+=cut
+
+.sub 'pathinfo'
     not_implemented()
 .end
 

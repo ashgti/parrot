@@ -1,11 +1,11 @@
 #! perl
-# Copyright (C) 2007, The Perl Foundation.
+# Copyright (C) 2007-2008, The Perl Foundation.
 # $Id$
 # gen_platform-01.t
 
 use strict;
 use warnings;
-use Test::More tests => 20;
+use Test::More tests => 19;
 use Carp;
 use Cwd;
 use File::Copy;
@@ -25,7 +25,7 @@ use IO::CaptureOutput qw( capture );
 
 ########## regular ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},
@@ -47,11 +47,6 @@ $conf->data->set_p5( archname => 'foo-bar' );
 my $verbose = 0;
 
 ########## _get_platform() ##########
-
-$conf->options->set( miniparrot => 1 );
-is( $step->_get_platform( $conf, $verbose ), q{ansi},
-    "Got expected platform for miniparrot");
-$conf->options->set( miniparrot => undef );
 
 $conf->data->set_p5( OSNAME => 'msys' );
 is( $step->_get_platform( $conf, $verbose ), q{win32},

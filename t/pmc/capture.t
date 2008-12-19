@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2007, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 9;
+use Parrot::Test tests => 8;
 
 =head1 NAME
 
@@ -149,16 +149,16 @@ pir_output_is( <<'CODE', <<'OUTPUT', "Basic capture tests" );
 
 CODE
 12
-7 six 5.500000 4
-7 six 5.500000 4
+7 six 5.5 4
+7 six 5.5 4
 8
-11 ten 9.500000 8
+11 ten 9.5 8
 4
 3
 two
 1.5
 0
-15 fourteen 13.500000 12
+15 fourteen 13.5 12
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "defined, delete, exists" );
@@ -243,9 +243,9 @@ CODE
 0 0
 OUTPUT
 
-pir_output_is( $PRE . <<'CODE'. $POST, <<'OUTPUT', "get_hash, get_array" );
-    $P0 = capt.'get_array'()
-    $P1 = capt.'get_hash'()
+pir_output_is( $PRE . <<'CODE'. $POST, <<'OUTPUT', "hash, list" );
+    $P0 = capt.'list'()
+    $P1 = capt.'hash'()
 
     $S0 = typeof $P0
     $S1 = typeof $P1
@@ -258,19 +258,13 @@ Hash
 OUTPUT
 
 pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_integer not implemented' );
-    I0 = capt
+    $I0 = capt
 CODE
 /get_integer\(\) not implemented in class 'Capture'/
 OUT
 
-pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_string not implemented' );
-    S0 = capt
-CODE
-/get_string\(\) not implemented in class 'Capture'/
-OUT
-
 pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_number not implemented' );
-    N0 = capt
+    $N0 = capt
 CODE
 /get_number\(\) not implemented in class 'Capture'/
 OUT
@@ -297,7 +291,7 @@ CODE
 2
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', 'get_array method delegation' );
+pir_output_is( <<'CODE', <<'OUTPUT', 'list method delegation' );
 .sub main :main
     $P0 = subclass 'Capture', 'Match'
     addattribute $P0, '$.abc'
@@ -310,7 +304,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_array method delegation' );
     $P2 = new 'String'
     setattribute $P1, '$.xyz', $P2
 
-    $P2 = $P1.'get_array'()
+    $P2 = $P1.'list'()
     $P2 = 0
     $I0 = elements $P2
     print $I0

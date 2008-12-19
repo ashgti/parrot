@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 35;
+use Parrot::Test tests => 34;
 use Parrot::Config;
 
 =head1 NAME
@@ -38,14 +38,14 @@ Colin Kuskie - <ckuskie@sterling.net>
 my %expected = (
     '01_temp_var.pir' => << 'END_EXPECTED',
 42
-3.141590
+3.14159
 Hello
 Ford
 END_EXPECTED
 
     '02_local_var.pir' => << 'END_EXPECTED',
 42
-3.141590
+3.14159
 Hello
 Ford
 END_EXPECTED
@@ -62,7 +62,7 @@ END_EXPECTED
 
     '10_math_ops.pir' => << 'END_EXPECTED',
 7
-5.200000
+5.2
 END_EXPECTED
 
     '13_logical_ops.pir' => << 'END_EXPECTED',
@@ -193,10 +193,6 @@ END_EXPECTED
     '70_class_object.pir' => << 'END_EXPECTED',
 Hello
 5
-END_EXPECTED
-
-    '80_closure.pir' => << 'END_EXPECTED',
-27
 END_EXPECTED
 
     '81_continuation.pir' => << 'END_EXPECTED',

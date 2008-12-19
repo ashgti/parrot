@@ -17,7 +17,6 @@ Tests the Role PMC.
 =cut
 
 # L<PDD15/Role PMC API>
-# TODO fix smartlinks once this is specced
 
 .sub main :main
     .include 'include/test_more.pir'
@@ -38,13 +37,13 @@ Tests the Role PMC.
     $P1 = new 'Role', $P0
     ok(1, 'Created a Role initialized with a Hash')
 
-    $P2 = $P1.inspect('name')
+    $P2 = $P1.'inspect'('name')
     $S0 = $P2
     $I0 = $S0 == 'Wob'
     ok($I0, 'Role name was set correctly')
 
 
-    $P2 = $P1.inspect('namespace')
+    $P2 = $P1.'inspect'('namespace')
     $S0 = $P2
     $I0 = $S0 == 'Wob'
     ok($I0, 'Role namespace was set correctly')

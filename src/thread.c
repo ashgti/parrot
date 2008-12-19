@@ -455,16 +455,16 @@ thread_func(ARGIN_NULLOK(void *arg))
     sub_arg            = PMC_pmc_val(self);
 
     if (setjmp(jump_point.resume)) {
-        PMC *exception = Parrot_cx_peek_task(interp);
         /* caught exception */
         /* XXX what should we really do here */
-        PIO_eprintf(interp,
+        /* PMC *exception = Parrot_cx_peek_task(interp);
+        Parrot_io_eprintf(interp,
                     "Unhandled exception in thread with tid %d "
                     "(message=%Ss, number=%d)\n",
                     interp->thread_data->tid,
                     VTABLE_get_string(interp, exception),
                     VTABLE_get_integer_keyed_str(interp, exception,
-                        const_string(interp, "type")));
+                        const_string(interp, "type"))); */
 
         ret_val = PMCNULL;
     }
@@ -643,7 +643,7 @@ PMC *
 pt_transfer_sub(ARGOUT(Parrot_Interp d), ARGIN(Parrot_Interp s), ARGIN(PMC *sub))
 {
 #if defined THREAD_DEBUG && THREAD_DEBUG
-    PIO_eprintf(s, "copying over subroutine [%Ss]\n",
+    Parrot_io_eprintf(s, "copying over subroutine [%Ss]\n",
         Parrot_full_sub_name(s, sub));
 #endif
     return make_local_copy(d, s, sub);
@@ -1180,7 +1180,7 @@ pt_suspend_self_for_gc(PARROT_INTERP)
 
     if (interp->thread_data->state & THREAD_STATE_SUSPEND_GC_REQUESTED) {
         DEBUG_ONLY(fprintf(stderr, "remove queued request\n"));
-        while (!PMC_IS_NULL(Parrot_cx_delete_suspend_for_gc(interp)));
+        while (!PMC_IS_NULL(Parrot_cx_delete_suspend_for_gc(interp))) {/*Empty body*/};
         DEBUG_ONLY(fprintf(stderr, "removed all queued requests\n"));
         interp->thread_data->state &= ~THREAD_STATE_SUSPEND_GC_REQUESTED;
     }
@@ -1575,7 +1575,7 @@ pt_DOD_start_mark(PARROT_INTERP)
     }
     else if (interp->thread_data->state &
                THREAD_STATE_SUSPEND_GC_REQUESTED) {
-        while (!PMC_IS_NULL(Parrot_cx_delete_suspend_for_gc(interp)));
+        while (!PMC_IS_NULL(Parrot_cx_delete_suspend_for_gc(interp))) {/*Empty body*/};
 
         interp->thread_data->state &= ~THREAD_STATE_SUSPEND_GC_REQUESTED;
         interp->thread_data->state |= THREAD_STATE_SUSPENDED_GC;
@@ -1678,7 +1678,7 @@ Blocks stop-the-world DOD runs.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_shared_DOD_block(PARROT_INTERP)
 {
@@ -1701,7 +1701,7 @@ Unblocks stop-the-world DOD runs.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_shared_DOD_unblock(PARROT_INTERP)
 {

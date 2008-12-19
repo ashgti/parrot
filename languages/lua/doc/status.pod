@@ -140,7 +140,6 @@ There are eight basic types in Lua, each of them is implemented by a PMC.
 =item * string F<languages/lua/src/pmc/luastring.pmc>
 
 =item * function F<languages/lua/src/pmc/luafunction.pmc>
-& F<languages/lua/src/pmc/luaclosure.pmc>
 
 =item * userdata F<languages/lua/src/pmc/luauserdata.pmc>
 
@@ -221,11 +220,21 @@ These libraries are loaded dynamically with the Lua function C<require>.
 
 =item * bitwise operation library F<languages/lua/src/lib/bitlib.pir>
 
+=item * complex library F<languages/lua/src/lib/complex.pir>
+
 =item * Lua File System library F<languages/lua/src/lib/lfs.pir>
+
+=item * LPeg library F<languages/lua/src/lib/lpeg.pir>
+
+=item * markdown library F<languages/lua/src/lib/markdown.pir>
+
+=item * mathx library F<languages/lua/src/lib/mathx.pir>
 
 =item * md5 & sha1 library F<languages/lua/src/lib/md5.pir>
 
 =item * random library F<languages/lua/src/lib/random.pir>
+
+=item * struct library F<languages/lua/src/lib/struct.pir>
 
 =item * uuid library F<languages/lua/src/lib/uuid.pir>
 

@@ -11,7 +11,7 @@ use Parrot::Test tests => 2;
 
 pir_output_is( <<'CODE', <<'OUT', ".param :slurpy (using PMC)" );
 
-.HLL 'misc', ''
+.HLL 'misc'
 .HLL_map 'ResizablePMCArray' = 'ResizableStringArray'
 
 .sub main :main
@@ -32,13 +32,17 @@ CODE
 ResizableStringArray
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', ".param :slurpy (using object)" );
+$ENV{TEST_PROG_ARGS} ||= '';
+my @todo = $ENV{TEST_PROG_ARGS} =~ /-r/
+    ? ( todo => 'classes and HLL maps not thawed from PBC, RT #60648' )
+    : ();
+pir_output_is( <<'CODE', <<'OUT', ".param :slurpy (using object)", @todo );
 
 .sub setup :anon :immediate
  $P0 = subclass 'ResizablePMCArray', 'Stack'
 .end
 
-.HLL 'misc', ''
+.HLL 'misc'
 .HLL_map 'ResizablePMCArray' = 'Stack'
 
 .sub main :main

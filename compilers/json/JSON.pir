@@ -55,24 +55,24 @@ documentation at L<http://www.json.org/>.
 
    $P0 = get_root_global ['parrot'; 'PGE'], 'Match'
    match = $P0.'new'(json_string)
-   match.to(0)
+   match.'to'(0)
    match = parse(match)
    unless match goto failed
 
    .local pmc pirgrammar, pirbuilder, pir
-   pirgrammar = new 'JSON::PIR'
-   pirbuilder = pirgrammar.apply(match)
-   pir = pirbuilder.get('result')
+   pirgrammar = new ['JSON'; 'PIR']
+   pirbuilder = pirgrammar.'apply'(match)
+   pir = pirbuilder.'get'('result')
 
    .local pmc pirc, result
    pirc = compreg "PIR"
    result = pirc(pir)
-   .return result()
+   .tailcall result()
 
   failed:
-   P0 = new 'Exception'
-   P0[0] = "invalid JSON value"
-   throw P0
+   $P0 = new 'Exception'
+   $P0[0] = "invalid JSON value"
+   throw $P0
 .end
 
 # Local Variables:

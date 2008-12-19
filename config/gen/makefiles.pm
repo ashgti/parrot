@@ -46,8 +46,6 @@ sub _init {
             { SOURCE => 'config/gen/makefiles/pge.in' },
         'compilers/tge/Makefile'     =>
             { SOURCE => 'config/gen/makefiles/tge.in' },
-        'compilers/bcg/Makefile'     =>
-            { SOURCE => 'config/gen/makefiles/bcg.in' },
         'compilers/json/Makefile'    =>
             { SOURCE => 'config/gen/makefiles/json.in' },
         'compilers/pirc/Makefile'    =>
@@ -121,6 +119,7 @@ sub makefiles {
         : keys %{ $self->{makefiles} };
 
     foreach my $target (@targets) {
+        $target =~ s/\\/\//g if $^O eq 'MSWin32';
         my $args   = $self->{makefiles}->{$target};
         my $source = delete $args->{SOURCE};
 

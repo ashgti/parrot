@@ -23,7 +23,7 @@ or the resulting PIR code (target='PIR').
 
 =cut
 
-.namespace [ 'PGE::Glob' ]
+.namespace [ 'PGE';'Glob' ]
 
 .sub 'compile_glob'
     .param pmc source
@@ -52,9 +52,9 @@ or the resulting PIR code (target='PIR').
 
   analyze:
     .local pmc exp, pad
-    exp = new 'PGE::Exp::Concat'
+    exp = new ['PGE';'Exp';'Concat']
     $I0 = 1
-    $P0 = new 'PGE::Exp::Anchor'
+    $P0 = new ['PGE';'Exp';'Anchor']
     $P0.'result_object'('^')
     exp[0] = $P0
     if null match goto analyze_1
@@ -62,11 +62,11 @@ or the resulting PIR code (target='PIR').
     exp[$I0] = $P0
     inc $I0
   analyze_1:
-    $P0 = new 'PGE::Exp::Anchor'
+    $P0 = new ['PGE';'Exp';'Anchor']
     $P0.'result_object'('$')
     exp[$I0] = $P0
 
-    .return exp.'compile'(adverbs :flat :named)
+    .tailcall exp.'compile'(adverbs :flat :named)
 .end
 
 
@@ -77,7 +77,7 @@ or the resulting PIR code (target='PIR').
     load_bytecode 'PGE/Dumper.pbc'
 
     $P0 = compreg 'PGE::Glob'
-    .return $P0.'command_line'(args)
+    .tailcall $P0.'command_line'(args)
 .end
 
 
@@ -85,31 +85,32 @@ or the resulting PIR code (target='PIR').
     .local pmc optable
     load_bytecode 'PGE.pbc'
 
-    optable = new 'PGE::OPTable'
+    optable = new ['PGE';'OPTable']
     store_global '$optable', optable
 
     $P0 = find_global 'glob_literal'
-    optable.newtok('term:', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:', 'precedence'=>'=', 'nows'=>1, 'parsed'=>$P0)
 
     $P0 = find_global 'glob_quest'
-    optable.newtok('term:?', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:?', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
 
     $P0 = find_global 'glob_star'
-    optable.newtok('term:*', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:*', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
 
     $P0 = find_global 'glob_enum'
-    optable.newtok('term:[', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:[', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
 
     $P0 = find_global 'glob_alt'
-    optable.newtok('term:{', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'('term:{', 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
 
-    optable.newtok('infix:', 'looser'=>'term:', 'assoc'=>'list', 'nows'=>1, 'match'=>'PGE::Exp::Concat')
+    optable.'newtok'('infix:', 'looser'=>'term:', 'assoc'=>'list', 'nows'=>1, 'match'=>'PGE::Exp::Concat')
 
-    $P2 = newclass [ 'PGE::Glob::Compiler' ]
-    addattribute $P2, '$!compsub'
+    .local pmc p6meta
+    p6meta = get_hll_global 'P6metaclass'
+    p6meta.'new_class'('PGE::Glob::Compiler', 'attr'=>'$!compsub')
 
     $P0 = get_global 'compile_glob'
-    $P1 = new [ 'PGE::Glob::Compiler' ]
+    $P1 = new [ 'PGE';'Glob';'Compiler' ]
     $P1.'register'('PGE::Glob', $P0)
     .return ()
 .end
@@ -129,7 +130,7 @@ parse C<PGE::Match> object.
     .param pmc adverbs         :slurpy :named
 
     .local pmc optable, match
-    optable = find_global 'PGE::Glob', '$optable'
+    optable = find_global ['PGE';'Glob'], '$optable'
     match = optable.'parse'(mob)
     .return (match)
 .end
@@ -336,7 +337,7 @@ Parse an enumerated character list, such as [abcd],
     .return (mob)
 .end
 
-.namespace [ 'PGE::Glob::Compiler' ]
+.namespace [ 'PGE';'Glob';'Compiler' ]
 
 =item register(string name, pmc compsub)
 
@@ -370,7 +371,7 @@ Compile C<source> (possibly modified by any provided options).
     #   $!compsub is deprecated
     compsub = getattribute self, '$!compsub'
 
-    .return compsub(source, adverbs :flat :named)
+    .tailcall compsub(source, adverbs :flat :named)
 .end
 
 =back

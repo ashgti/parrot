@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 32;
+use Test::More tests => 31;
 use Carp;
 use Cwd;
 use File::Basename qw(basename dirname);
@@ -15,12 +15,12 @@ use lib qw( lib t/configure/testlib );
 use IO::CaptureOutput qw | capture |;
 use Tie::Filehandle::Preempt::Stdin;
 
-BEGIN { use_ok('Parrot::Configure::Utils') }
+BEGIN { use Parrot::Configure::Utils; }
 
 Parrot::Configure::Utils->import(@Parrot::Configure::Utils::EXPORT_OK);
 can_ok( __PACKAGE__, @Parrot::Configure::Utils::EXPORT_OK );
 
-# RT#44455 add verbose tests with some Test::Warn like mechanism
+# RT #44455 add verbose tests with some Test::Warn like mechanism
 
 my $cwd = cwd();
 my ( @prompts, $object, $cc, $nonexistent, $command );

@@ -28,7 +28,7 @@ Creates the Perl 6 document reader by subclassing a C<PCT::HLLCompiler> object.
     load_bytecode 'Protoobject.pbc'
 
     $P0 = get_hll_global 'Protomaker'
-    $P1 = get_class ['PCT::HLLCompiler']
+    $P1 = get_class ['PCT';'HLLCompiler']
     $P0.'new_subclass'($P1, 'Perl6doc')
 .end
 
@@ -51,10 +51,8 @@ Creates the Perl 6 document reader by subclassing a C<PCT::HLLCompiler> object.
     ##  set the $usage attribute
     $P0 = new 'String'
     $P0 = <<'USAGE'
-Usage: perl6 [switches] [--] [programfile] [arguments]
+Usage: perl6doc [switches] [--] [podfile]
   -h, --help           display this help text
-  --target=[stage]     specify compilation stage to emit
-  -t, --trace=[flags]  enable trace flags
   -V, --version        display version information
 USAGE
     setattribute self, '$usage', $P0
@@ -83,7 +81,7 @@ USAGE
 .end
 
 
-.namespace ['Perl6doc::Compiler']
+.namespace ['Perl6doc';'Compiler']
 
 =item main(args :slurpy)  :main
 
@@ -99,12 +97,12 @@ to the Perl 6 compiler.
     ##  coming directly from Parrot, but currently Parrot provides
     ##  it as a ResizableStringArray and we need Undefs for
     ##  non-existent elements (RSA gives empty strings).
-    .local pmc args, iter
+    .local pmc args, it
     args = new 'ResizableStringArray'
-    iter = new 'Iterator', args_str
+    it = iter args_str
   args_loop:
-    unless iter goto args_end
-    $P0 = shift iter
+    unless it goto args_end
+    $P0 = shift it
     push args, $P0
     goto args_loop
   args_end:

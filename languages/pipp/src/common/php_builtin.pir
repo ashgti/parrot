@@ -73,6 +73,7 @@ STILL INCOMPLETE.
 
 .sub 'define'
     .param pmc args :slurpy
+
     .local int argc
     argc = args
     .local int case_sensitive
@@ -102,7 +103,7 @@ STILL INCOMPLETE.
     if $I0 goto L4
     $I0 = isa $P2, 'PhpResource'
     if $I0 goto L4
-    $I0 = isa $P2, 'PhpUndef'
+    $I0 = isa $P2, 'PhpNull'
     if $I0 goto L4
     $I0 = isa $P2, 'PhpObject'
     unless $I0 goto L5
@@ -130,6 +131,7 @@ Check whether a constant exists
 
 .sub 'defined'
     .param pmc args :slurpy
+
     .local int argc
     argc = args
     unless argc != 1 goto L1
@@ -143,6 +145,7 @@ Check whether a constant exists
     $I0 = exists cst[$S1]
     .RETURN_BOOL($I0)
 .end
+
 
 =item C<array each(array arr)>
 
@@ -165,7 +168,15 @@ DUMMY IMPLEMENTATION.
 =cut
 
 .sub 'error_reporting'
-    .RETURN_LONG(0)
+    .param pmc level       :optional
+    .param int has_level   :opt_flag
+
+    unless has_level goto L1
+       set_hll_global 'php_errorreporting', level
+    L1:
+    get_hll_global $P0, 'php_errorreporting'
+
+    .return($P0)
 .end
 
 =item C<bool extension_loaded(string extension_name)>
@@ -391,6 +402,7 @@ Get the resource type name for a given resource
 
 .sub 'get_resource_type'
     .param pmc args :slurpy
+
     .local int argc
     argc = args
     unless argc != 1 goto L1
@@ -548,6 +560,7 @@ Binary safe string comparison
 
 .sub 'strcmp'
     .param pmc args :slurpy
+
     .local int argc
     argc = args
     unless argc != 2 goto L1
@@ -570,6 +583,7 @@ Get string length
 
 .sub 'strlen'
     .param pmc args :slurpy
+
     .local int argc
     argc = args
     unless argc != 1 goto L1

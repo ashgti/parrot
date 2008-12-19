@@ -20,6 +20,23 @@ class cardinal::Grammar::Actions;
 method TOP($/) {
     my $past := $( $<comp_stmt> );
     $past.blocktype('declaration');
+    $past.pirflags(':load');
+
+    our $?INIT;
+        if defined( $?INIT ) {
+        $?INIT.unshift(
+            PAST::Var.new(
+                :name('$def'),
+                :scope('lexical'),
+                :isdecl(1)
+            )
+        );
+        $?INIT.blocktype('declaration');
+        $?INIT.pirflags(':init :load');
+        $past.unshift( $?INIT );
+        $?INIT := PAST::Block.new(); # For the next eval.
+    }
+
     make $past;
 }
 
@@ -34,6 +51,9 @@ method comp_stmt($/,$key) {
         }
         else {
             $?BLOCK := PAST::Block.new( PAST::Stmts.new(), :node($/));
+            my $block := PAST::Var.new(:scope('parameter'), :named('!BLOCK'), :name('!BLOCK'), :viviself('Undef'));
+            $?BLOCK.symbol($block.name(), :scope('lexical'));
+            $?BLOCK[0].push($block);
         }
         @?BLOCK.unshift($?BLOCK);
     }
@@ -239,7 +259,11 @@ method varname($/, $key) {
 }
 
 method global($/) {
-    make PAST::Var.new( :name(~$/), :scope('package'), :viviself('Undef'), :node($/) );
+    my @namespace;
+    our @?BLOCK;
+    my $toplevel := @?BLOCK[0];
+    $toplevel.symbol(~$/, :scope('package'), :namespace(@namespace));
+    make PAST::Var.new( :name(~$/), :scope('package'), :namespace(@namespace), :viviself('Undef'), :node($/) );
 }
 
 method instance_variable($/) {
@@ -282,8 +306,12 @@ method class_variable($/) {
 
 method local_variable($/) {
     our $?BLOCK;
-    my $past := PAST::Var.new( :name(~$/), :node($/), :viviself('Undef') );
-    if $?BLOCK.symbol($<ident>) {
+    my $past := PAST::Var.new( :name(~$<ident>), :node($/), :viviself('Undef') );
+    if +$<ns> {
+        $past.scope('package');
+        $past.namespace(~$<ns>[0]);
+    }
+    elsif $?BLOCK.symbol($<ident>) {
         my $scope := '' ~ $?BLOCK.symbol($<ident>)<scope>;
         $past.scope(~$scope);
     }
@@ -319,7 +347,14 @@ method funcall($/) {
 
 method constant_variable($/) {
     my @a;
-    my $past := PAST::Var.new( :name(~$/), :scope('package'), :node($/), :viviself('Undef'), :namespace( @a ) );
+    my $name := ~$/;
+    if $name eq 'Integer' { $name := "CardinalInteger"; }
+    elsif $name eq 'String' { $name := "CardinalString"; }
+    elsif $name eq 'Array' { $name := "CardinalArray"; }
+    elsif $name eq 'Hash' { $name := "CardinalHash"; }
+    elsif $name eq 'Range' { $name := "CardinalRange"; }
+    elsif $name eq 'File' { $name := "CardinalFile"; }
+    my $past := PAST::Var.new( :name($name), :scope('package'), :node($/), :viviself('Undef'), :namespace( @a ) );
     make $past;
 }
 
@@ -389,11 +424,37 @@ method for_stmt($/) {
     make PAST::Op.new( $list, $body, :pasttype('for'), :node($/) );
 }
 
+method control_command($/,$key) {
+    make PAST::Op.new(
+            :pasttype('call'),
+            :name(~$/),
+        );
+}
+
+method yield($/) {
+    our $?BLOCK;
+    our @?BLOCK;
+    my $blockname;
+    if $?BLOCK.symbol('!BLOCK') {
+        if defined($?BLOCK.symbol('!BLOCK')<name>) {
+            $blockname := $?BLOCK.symbol('!BLOCK')<name>;
+        }
+        else {
+            $blockname := '!BLOCK';
+        }
+    }
+    my $call := $( $<call_args> );
+    $call.unshift( PAST::Var.new(:scope('lexical'), :name(~$blockname)));
+    $call.node($/);
+    make $call;
+}
+
 method module($/) {
     my $past := $( $<comp_stmt> );
     my $name := $( $<module_identifier> );
     $past.namespace( $name.name() );
     $past.blocktype('declaration');
+    $past.pirflags(':load :init');
     make $past;
 }
 
@@ -488,29 +549,50 @@ method functiondef($/) {
     #$past.push($args);
     $past.name(~$name);
     our $?BLOCK;
+    our $?CLASS;
     $?BLOCK.symbol(~$name, :scope('package'), :arity($arity));
+    if defined($?CLASS) {
+        $past.pirflags(':method');
+    }
+    make $past;
+}
+
+method sig_identifier($/) {
+    my $past := $($<identifier>);
+    if +$<default> == 1 {
+        $past.viviself( $( $<default>[0] ) );
+    }
     make $past;
 }
 
 method block_signature($/) {
     my $params := PAST::Stmts.new( :node($/) );
     my $past := PAST::Block.new($params, :blocktype('declaration'));
-    for $<identifier> {
+    for $<sig_identifier> {
         my $parameter := $( $_ );
         $past.symbol($parameter.name(), :scope('lexical'));
         $parameter.scope('parameter');
         $params.push($parameter);
     }
     if $<slurpy_param> {
-        $params.push( $( $<slurpy_param>[0] ) );
+        my $slurp := $( $<slurpy_param>[0] || $<slurpy_param> );
+        $past.symbol($slurp.name(), :scope('lexical'));
+        $params.push( $slurp );
     }
 
     if $<block_param> {
         my $block := $( $<block_param>[0] );
+        $block.named('!BLOCK');
+        $past.symbol($block.name(), :scope('lexical'));
+        $past.symbol('!BLOCK', :name(~$block.name()));
+        $params.push($block);
+    }
+    else {
+        my $block := PAST::Var.new(:scope('parameter'), :named('!BLOCK'), :name('!BLOCK'), :viviself('Undef'));
         $past.symbol($block.name(), :scope('lexical'));
         $params.push($block);
     }
-    $params.arity( +$<identifier> + +$<block_param> );
+    $params.arity( +$<sig_identifier> + +$<block_param> );
     our $?BLOCK_SIGNATURED := $past;
     make $past;
 }
@@ -584,7 +666,9 @@ method call_args($/) {
         $past := PAST::Op.new( :pasttype('call'), :node($/) );
     }
     if $<do_block> {
-        $past.push( $( $<do_block>[0] ) );
+        my $do := $( $<do_block>[0] );
+        $do.named(PAST::Val.new(:value('!BLOCK')));
+        $past.push($do);
     }
     make $past;
 }
@@ -631,6 +715,14 @@ method pcomp_stmt($/) {
     make $( $<comp_stmt> );
 }
 
+method quote_string($/) {
+    make $( $<quote_expression> );
+}
+
+method warray($/) {
+    make $( $<quote_expression> );
+}
+
 method array($/) {
     my $list;
     if $<args> {
@@ -645,27 +737,30 @@ method array($/) {
 }
 
 method ahash($/) {
-    my $hash;
-    if $<args> {
-        $hash := $( $<args>[0] );
-        $hash.name('hash');
+    my $hash := PAST::Op.new( :name('hash'), :node($/) );
+    if $<assocs> {
+        my $items := $( $<assocs>[0] );
+        for @($items) {
+            $hash.push( $_ );
+        }
     }
-    else {
-        $hash := PAST::Op.new( :name('hash'), :node($/) );
-    }
-
     make $hash;
 }
 
 method assocs($/) {
+    my $assoc := PAST::Stmts.new(:node($/));
     for $<assoc> {
-
+        my $item := $( $_ );
+        $assoc.push($item);
     }
-    # XXX
+    make $assoc;
 }
 
 method assoc($/) {
-    # XXX
+    my $past := PAST::Op.new(:name('list'), :node($/));
+    $past.push( $( $<arg>[0] ) );
+    $past.push( $( $<arg>[1] ) );
+    make $past;
 }
 
 method float($/) {
@@ -680,6 +775,77 @@ method string($/) {
     make PAST::Val.new( :value( ~$<string_literal> ), :returns('CardinalString'), :node($/) );
 }
 
+method regex($/) {
+    make $($<quote_expression>);
+}
+
+method quote_expression($/, $key) {
+    my $past;
+    if $key eq 'quote_regex' {
+        our $?NS;
+        $past := PAST::Block.new(
+            $<quote_regex>,
+            :compiler('PGE::Perl6Regex'),
+            :namespace($?NS),
+            :blocktype('declaration'),
+            :node( $/ )
+        );
+    }
+    elsif $key eq 'quote_concat' {
+        if +$<quote_concat> == 1 {
+            $past := $( $<quote_concat>[0] );
+        }
+        else {
+            $past := PAST::Op.new(
+                :name('list'),
+                :pasttype('call'),
+                :node( $/ )
+            );
+            for $<quote_concat> {
+                $past.push( $($_) );
+            }
+        }
+    }
+    make $past;
+}
+
+
+method quote_concat($/) {
+    my $terms := +$<quote_term>;
+    my $count := 1;
+    my $past := $( $<quote_term>[0] );
+    while ($count != $terms) {
+        $past := PAST::Op.new(
+            $past,
+            $( $<quote_term>[$count] ),
+            :pirop('concat'),
+            :pasttype('pirop')
+        );
+        $count := $count + 1;
+    }
+    make $past;
+}
+
+
+method quote_term($/, $key) {
+    my $past;
+    if ($key eq 'literal') {
+        $past := PAST::Val.new(
+            :value( ~$<quote_literal> ),
+            :returns('CardinalString'), :node($/)
+        );
+    }
+    elsif ($key eq 'variable') {
+        $past := $( $<variable> );
+    }
+    elsif ($key eq 'circumfix') {
+        $past := $( $<circumfix> );
+        if $past.WHAT() eq 'Block' {
+            $past.blocktype('immediate');
+        }
+    }
+    make $past;
+}
 
 method arg($/, $key) {
     ## Handle the operator table

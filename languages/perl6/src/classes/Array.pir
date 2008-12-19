@@ -4,58 +4,30 @@
 
 src/classes/Array.pir - Perl 6 Array class and related functions
 
-=head2 Object Methods
-
 =cut
 
-.sub 'onload' :anon :load :init
+.namespace []
+.sub '' :anon :load :init
     .local pmc p6meta, arrayproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     arrayproto = p6meta.'new_class'('Perl6Array', 'parent'=>'List', 'name'=>'Array')
+    arrayproto.'!MUTABLE'()
 
     $P0 = get_hll_namespace ['Perl6Array']
-    '!EXPORT'('delete exists pop push shift unshift', 'from'=>$P0)
+    '!EXPORT'('delete,exists,pop,push,shift,unshift', 'from'=>$P0)
 .end
 
+=head2 Methods
 
-.namespace ['Perl6Array']
-.sub 'infix:=' :method
-    .param pmc source
-    $P0 = get_hll_global 'list'
-    $P0 = $P0(source)
-    $I0 = elements self
-    splice self, $P0, 0, $I0
-    .return (self)
-.end
+=over
 
+=item delete
 
-.namespace []
-.sub 'circumfix:[ ]'
-    .param pmc values          :slurpy
-    $P0 = new 'Perl6Array'
-    $I0 = elements values
-    splice $P0, values, 0, $I0
-    $P0.'!flatten'()
-    $P1 = new 'Perl6Scalar'
-    assign $P1, $P0
-    .return ($P1)
-.end
-
-
-=head2 Array methods
-
-=over 4
-
-=item delete(indices :slurpy)
-
-Delete the elements specified by C<indices> from the array
-(i.e., replace them with null).  We also shorten the array
-to the length of the last non-null (existing) element.
+Remove items from an array.
 
 =cut
 
 .namespace ['Perl6Array']
-
 .sub 'delete' :method :multi(Perl6Array)
     .param pmc indices :slurpy
     .local pmc result
@@ -105,7 +77,7 @@ Return true if the elements at C<indices> have been assigned to.
     test = exists self[$I0]
     if test goto indices_loop
   indices_end:
-    .return 'prefix:?'(test)
+    .tailcall 'prefix:?'(test)
 .end
 
 
@@ -115,8 +87,21 @@ Return Array in item context (i.e., self)
 
 =cut
 
+.namespace ['Perl6Array']
 .sub 'item' :method
     .return (self)
+.end
+
+
+=item list
+
+Return invocant as a List.
+
+=cut
+
+.namespace ['Perl6Array']
+.sub '' :method('list')
+    .tailcall self.'values'()
 .end
 
 
@@ -132,7 +117,7 @@ Remove the last item from the array and return it.
     x = pop self
     goto done
   empty:
-    x = new 'Failure'
+    x = '!FAIL'('Undefined value popped from empty array')
   done:
     .return (x)
 .end
@@ -149,7 +134,7 @@ Add C<args> to the end of the Array.
     args.'!flatten'()
     $I0 = elements self
     splice self, args, $I0, 0
-    .return self.'elems'()
+    .tailcall self.'elems'()
 .end
 
 
@@ -165,7 +150,7 @@ Shift the first item off the array and return it.
     x = shift self
     goto done
   empty:
-    x = new 'Failure'
+    x = '!FAIL'('Undefined value shifted from empty array')
   done:
     .return (x)
 .end
@@ -181,22 +166,105 @@ Adds C<args> to the beginning of the Array.
     .param pmc args :slurpy
     args.'!flatten'()
     splice self, args, 0, 0
-    .return self.'elems'()
+    .tailcall self.'elems'()
 .end
-
 
 =item values()
 
-Return the values of the Array as a List.
+Return Array as a List of its values.
 
 =cut
 
+.namespace ['Perl6Array']
 .sub 'values' :method
     $P0 = new 'List'
     splice $P0, self, 0, 0
     .return ($P0)
 .end
 
+=back
+
+=head2 Operators
+
+=over
+
+=item circumfix:[]
+
+Create an array.
+
+=cut
+
+.namespace []
+.sub 'circumfix:[ ]'
+    .param pmc values          :slurpy
+    .tailcall values.'Scalar'()
+.end
+
+
+=back
+
+=head2 Coercion methods
+
+=over
+
+=item Array
+
+=cut
+
+.sub 'Array' :method
+    .return (self)
+.end
+
+
+=back
+
+=head2 Private Methods
+
+=over
+
+=item !flatten()
+
+Return self, as Arrays are already flattened.
+
+=cut
+
+.namespace ['Perl6Array']
+.sub '!flatten' :method
+    .return (self)
+.end
+
+=item !STORE()
+
+Store things into an Array (e.g., upon assignment)
+
+=cut
+
+.namespace ['Perl6Array']
+.sub '!STORE' :method
+    .param pmc source
+    .local pmc array, it
+    ## we create a new array here instead of emptying self in case
+    ## the source argument contains self or elements of self.
+    array = new 'ResizablePMCArray'
+    source = 'list'(source)
+    it = iter source
+  array_loop:
+    unless it goto array_done
+    $P0 = shift it
+    $P0 = 'Scalar'($P0)
+    $P0 = clone $P0
+    push array, $P0
+    goto array_loop
+  array_done:
+    $I0 = elements self
+    splice self, array, 0, $I0
+    .return (self)
+.end
+
+
+=back
+
+=cut
 
 # Local Variables:
 #   mode: pir

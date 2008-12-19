@@ -17,9 +17,12 @@ for executable objects.
     .local pmc p6meta, codeproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     codeproto = p6meta.'new_class'('Code', 'parent'=>'Any')
+    $P0 = get_hll_global 'Callable'
+    p6meta.'add_role'($P0, 'to'=>codeproto)
+    codeproto.'!IMMUTABLE'()
     p6meta.'register'('Sub', 'parent'=>codeproto, 'protoobject'=>codeproto)
-    p6meta.'register'('Closure', 'parent'=>codeproto, 'protoobject'=>codeproto)
 .end
+
 
 =over 4
 
@@ -30,11 +33,60 @@ for executable objects.
 .sub 'ACCEPTS' :method
     .param pmc topic
     .local pmc match
+
+    # If topic is an Array or Hash, need special treatment.
+    $I0 = isa topic, 'Perl6Array'
+    if $I0 goto is_array
+    $I0 = isa topic, 'Perl6Hash'
+    if $I0 goto is_hash
+    goto is_match
+
+    # Hash - just get keys and fall through to array case.
+  is_hash:
+    topic = topic.'keys'()
+
+    # Array - try matching against each entry. In future, can probably
+    # let junction dispatcher handle this for us.
+  is_array:
+    .local pmc it
+    it = iter topic
+  it_loop:
+    unless it goto it_loop_end
+    $P0 = shift it
+    match = self($P0)
+    if match goto store_match
+    goto it_loop
+  it_loop_end:
+    match = new 'Undef' # Otherwise we'd get a Null PMC Exception later
+    goto store_match
+
+    # Otherwise, just match on the topic.
+  is_match:
+    match = self(topic)
+
+  store_match:
+    # Store match object in $/.
+    push_eh not_regex
+    $P0 = getinterp
+    $P1 = $P0['lexpad';1]
+    $P1['$/'] = match
+  not_regex:
+
+    .return (match)
+.end
+
+=item REJECTS(topic)
+
+=cut
+
+.sub 'REJECTS' :method
+    .param pmc topic
+    .local pmc match
     match = self(topic)
     $P0 = getinterp
     $P1 = $P0['lexpad';1]
     $P1['$/'] = match
-    .return (match)
+    .tailcall 'prefix:!'(match)
 .end
 
 =item perl()
@@ -75,6 +127,35 @@ Gets the signature for the block, or returns Failure if it lacks one.
   no_sig:
     $P0 = get_hll_global 'Failure'
     .return ($P0)
+.end
+
+=item assumming()
+
+Returns a curried version of self.
+
+=cut
+
+.sub 'assuming' :method :subid('assuming')
+    .param pmc args :slurpy
+    .param pmc named_args :slurpy :named
+    .local pmc curried
+    .lex '@args', args
+    .lex '%args', named_args
+    .lex '$obj', self
+    .const 'Sub' curried = 'assuming_helper'
+    capture_lex curried
+    .return (curried)
+.end
+
+.sub 'assuming_helper' :outer('assuming')
+    .param pmc args :slurpy
+    .param pmc named_args :slurpy :named
+    .local pmc obj, assumed_args, assumed_named_args, result
+    find_lex obj, '$obj'
+    find_lex assumed_args, '@args'
+    find_lex assumed_named_args, '%args'
+    result = obj(assumed_args :flat, args :flat, assumed_named_args :flat :named, named_args :flat :named)
+    .return (result)
 .end
 
 =back

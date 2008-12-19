@@ -24,13 +24,20 @@ int e_pbc_end_sub(PARROT_INTERP, SHIM(void *param), ARGIN(IMC_Unit *unit))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-int e_pbc_new_sub(SHIM_INTERP, SHIM(void *param), ARGIN(IMC_Unit *unit))
+int e_pbc_new_sub(PARROT_INTERP, SHIM(void *param), ARGIN(IMC_Unit *unit))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
 int e_pbc_open(PARROT_INTERP, SHIM(void *param))
         __attribute__nonnull__(1);
 
 INTVAL IMCC_int_from_reg(PARROT_INTERP, ARGIN(const SymReg *r))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+STRING * IMCC_string_from__STRINGC(PARROT_INTERP, ARGIN(const char *buf))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

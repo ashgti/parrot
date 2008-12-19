@@ -17,14 +17,11 @@ B<wmlsd> disassembles binary form of WMLScript file.
 
 wmls2pir, wmls2pbc, wmlsi
 
-=head1 AUTHOR
-
-Francois Perrad.
-
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub 'main' :main
     .param pmc argv
@@ -43,21 +40,22 @@ Francois Perrad.
     .local pmc script
     new loader, 'WmlsBytecode'
     push_eh _handler
-    script = loader.load(content)
+    script = loader.'load'(content)
+    pop_eh
     script['filename'] = filename
-    script.dump()
-    end
-  _handler:
-    .local pmc e
-    .local string msg
-    .get_results (e, msg)
-    print msg
-    print "\n"
+    script.'dump'()
   L1:
     end
   USAGE:
     printerr "Usage: parrot wmlsd.pbc filename\n"
     exit -1
+  _handler:
+    .local pmc e
+    .local string msg
+    .get_results (e)
+    msg = e
+    say msg
+    end
 .end
 
 

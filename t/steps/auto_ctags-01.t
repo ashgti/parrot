@@ -5,10 +5,9 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  33;
+use Test::More tests =>  28;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::ctags');
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
@@ -20,14 +19,12 @@ use IO::CaptureOutput qw( capture );
 
 ########## regular ##########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
 
 my $conf = Parrot::Configure->new;
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
 
 my $pkg = q{auto::ctags};
 
@@ -49,7 +46,7 @@ $conf->replenish($serialized);
 
 ########## --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--verbose} ],
     mode => q{configure},
 } );
@@ -63,15 +60,15 @@ $step = test_step_constructor_and_description($conf);
     );
     ok( $ret, "runstep() returned true value" );
     ok( defined $step->result(), "Result was defined");
-    is($conf->data->get('ctags'), 'ctags',
-        "Correct value for 'ctags' attribute was set");
+    ok($possible_ctags{$conf->data->get('ctags')},
+        "Acceptable value for 'ctags' attribute was set");
 }
 
 $conf->replenish($serialized);
 
 ########## _evaluate_ctags() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -97,7 +94,7 @@ $conf->replenish($serialized);
 
 ########## _probe_for_ctags_output() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );

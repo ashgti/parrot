@@ -29,7 +29,7 @@ Various functions that call the run loop.
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static parrot_context_t * runops_args(PARROT_INTERP,
+static Parrot_Context * runops_args(PARROT_INTERP,
     ARGIN(PMC *sub),
     ARGIN_NULLOK(PMC *obj),
     SHIM(STRING *meth),
@@ -43,7 +43,7 @@ static parrot_context_t * runops_args(PARROT_INTERP,
 /* HEADERIZER END: static */
 
 #define STACKED_EXCEPTIONS 1
-/* #define RUNLOOP_TRACE 1 */
+#define RUNLOOP_TRACE      0
 
 static int
 runloop_id_counter = 0;          /* for synthesizing runloop ids. */
@@ -61,21 +61,23 @@ Run parrot ops. Set exception handler and/or resume after exception.
 void
 runops(PARROT_INTERP, size_t offs)
 {
-    volatile size_t offset = offs;
-    const int old_runloop_id    = interp->current_runloop_id;
-    const int our_runloop_level = ++interp->current_runloop_level;
-    const int our_runloop_id    = ++runloop_id_counter;
+    volatile size_t offset            = offs;
+    const    int    old_runloop_id    = interp->current_runloop_id;
+    const    int    our_runloop_level = ++interp->current_runloop_level;
+    const    int    our_runloop_id    = ++runloop_id_counter;
 
     /* It is OK if the runloop ID overflows; we only ever test it for equality,
        so the chance of collision is slight. */
     interp->current_runloop_id = our_runloop_id;
-#ifdef RUNLOOP_TRACE
+
+#if RUNLOOP_TRACE
     fprintf(stderr, "[entering loop %d, level %d]\n",
             interp->current_runloop_id, our_runloop_level);
 #endif
+
     /*
      * STACKED_EXCEPTIONS are necessary to catch exceptions in reentered
-     * run loops, e.g. if a delegate methods throws an exception
+     * run loops, e.g. if a delegate method throws an exception
      */
 #if ! STACKED_EXCEPTIONS
     if (!interp->current_runloop)
@@ -84,13 +86,13 @@ runops(PARROT_INTERP, size_t offs)
         new_runloop_jump_point(interp);
         if (setjmp(interp->current_runloop->resume)) {
             /* an exception was handled */
-            if (STACKED_EXCEPTIONS) {
+            if (STACKED_EXCEPTIONS)
                 free_runloop_jump_point(interp);
-            }
-            interp->current_runloop_level = our_runloop_level - 1;
-            interp->current_runloop_id = old_runloop_id;
 
-#ifdef RUNLOOP_TRACE
+            interp->current_runloop_level = our_runloop_level - 1;
+            interp->current_runloop_id    = old_runloop_id;
+
+#if RUNLOOP_TRACE
             fprintf(stderr, "[handled exception; back to loop %d, level %d]\n",
                     interp->current_runloop_id, interp->current_runloop_level);
 #endif
@@ -101,20 +103,21 @@ runops(PARROT_INTERP, size_t offs)
     runops_int(interp, offset);
 
     /* Remove the current runloop marker (put it on the free list). */
-    if (STACKED_EXCEPTIONS) {
+    if (STACKED_EXCEPTIONS || interp->current_runloop)
         free_runloop_jump_point(interp);
-    }
-#ifdef RUNLOOP_TRACE
+
+#if RUNLOOP_TRACE
     fprintf(stderr, "[exiting loop %d, level %d]\n",
             our_runloop_id, our_runloop_level);
 #endif
+
     interp->current_runloop_level = our_runloop_level - 1;
-    interp->current_runloop_id = old_runloop_id;
+    interp->current_runloop_id    = old_runloop_id;
 }
 
 /*
 
-=item C<parrot_context_t * Parrot_runops_fromc>
+=item C<Parrot_Context * Parrot_runops_fromc>
 
 Runs the Parrot ops, called from C code. The function arguments are
 already setup according to Parrot calling conventions, the C<sub> argument
@@ -124,17 +127,17 @@ is an invocable C<Sub> PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
-parrot_context_t *
+Parrot_Context *
 Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
 {
     opcode_t offset, *dest;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
 
     /* we need one return continuation with a NULL offset */
-    PMC * const ret_c = new_ret_continuation_pmc(interp, NULL);
+    PMC * const ret_c    = new_ret_continuation_pmc(interp, NULL);
     interp->current_cont = ret_c;
 #if defined GC_VERBOSE && GC_VERBOSE
     PObj_report_SET(ret_c);     /* s. also dod.c */
@@ -157,7 +160,7 @@ Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
 
 /*
 
-=item C<static parrot_context_t * runops_args>
+=item C<static Parrot_Context * runops_args>
 
 Calls the PMC subroutine C<sub> with optional name C<meth>. If PMC object
 C<obj> is provided, the call is treated as a method call on that object.
@@ -180,16 +183,16 @@ TODO: Update this list of possible signature elements.
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static parrot_context_t *
+static Parrot_Context *
 runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         SHIM(STRING *meth), ARGIN(const char *sig), va_list ap)
 {
     opcode_t offset, *dest;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
 
     char new_sig[10];
     const char *sig_p;
-    parrot_context_t * const old_ctx = CONTEXT(interp);
+    Parrot_Context * const old_ctx = CONTEXT(interp);
 
     interp->current_cont  = new_ret_continuation_pmc(interp, NULL);
     interp->current_object = obj;
@@ -217,11 +220,12 @@ runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         sig_p = new_sig;
     }
 
-    if (*sig_p && (dest[0] == PARROT_OP_get_params_pc
-                || (sub->vtable->base_type == enum_class_ExceptionHandler
-                    && PMC_cont(sub)->current_results))) {
+    if (*sig_p && (dest[0]     == PARROT_OP_get_params_pc
+    || (sub->vtable->base_type == enum_class_ExceptionHandler
+    &&  PMC_cont(sub)->current_results))) {
         dest = parrot_pass_args_fromc(interp, sig_p, dest, old_ctx, ap);
     }
+
     /*
      * main is now started with runops_args_fromc too
      * PASM subs usually don't have get_params
@@ -231,7 +235,7 @@ runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
             "no get_params in sub");
      */
 
-    ctx    = CONTEXT(interp);
+    ctx    = Parrot_context_ref(interp, CONTEXT(interp));
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return ctx;
@@ -252,18 +256,18 @@ If a PMC return value is registered it is returned.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 void *
 Parrot_run_meth_fromc(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj), SHIM(STRING *meth))
 {
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
     opcode_t offset, *dest;
 
     interp->current_cont   = new_ret_continuation_pmc(interp, NULL);
     interp->current_object = obj;
-    dest = VTABLE_invoke(interp, sub, (void *)1);
+    dest                   = VTABLE_invoke(interp, sub, (void *)1);
 
     if (!dest)
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -287,19 +291,22 @@ invocable C<Sub> PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
 Parrot_runops_fromc_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    PMC *retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
     va_end(args);
-    return (PMC *)set_retval(interp, *sig, ctx);
+    retval = (PMC *)set_retval(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -314,7 +321,7 @@ didn't return properly.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 void *
@@ -322,7 +329,7 @@ Parrot_runops_fromc_args_event(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
     void *retval;
     /*
      * running code from event handlers isn't fully reentrant due to
@@ -338,6 +345,7 @@ Parrot_runops_fromc_args_event(PARROT_INTERP, ARGIN(PMC *sub),
     ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
     va_end(args);
     retval = set_retval(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
 
     interp->current_args     = cargs;
     interp->current_params   = params;
@@ -358,19 +366,22 @@ C<INTVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 INTVAL
 Parrot_runops_fromc_args_reti(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    INTVAL retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
     va_end(args);
-    return set_retval_i(interp, *sig, ctx);
+    retval = set_retval_i(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -385,19 +396,22 @@ C<FLOATVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 FLOATVAL
 Parrot_runops_fromc_args_retf(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    FLOATVAL retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
     va_end(args);
-    return set_retval_f(interp, *sig, ctx);
+    retval = set_retval_f(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -412,7 +426,7 @@ list.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 void*
@@ -420,12 +434,15 @@ Parrot_run_meth_fromc_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj
         ARGIN(STRING *meth), ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    void* retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, obj, meth, sig, args);
     va_end(args);
-    return set_retval(interp, *sig, ctx);
+    retval = set_retval(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -440,19 +457,22 @@ list. Returns an C<INTVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 INTVAL
 Parrot_run_meth_fromc_args_reti(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         ARGIN(STRING *meth), ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    INTVAL retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, obj, meth, sig, args);
     va_end(args);
-    return set_retval_i(interp, *sig, ctx);
+    retval = set_retval_i(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -467,19 +487,22 @@ list C<args>. Returns a C<FLOATVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 FLOATVAL
 Parrot_run_meth_fromc_args_retf(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         ARGIN(STRING *meth), ARGIN(const char *sig), ...)
 {
     va_list args;
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    FLOATVAL retval;
 
     va_start(args, sig);
     ctx = runops_args(interp, sub, obj, meth, sig, args);
     va_end(args);
-    return set_retval_f(interp, *sig, ctx);
+    retval = set_retval_f(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -494,16 +517,19 @@ argument list C<args>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 void *
 Parrot_runops_fromc_arglist(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
+    void* retval;
+    Parrot_Context * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
 
-    return set_retval(interp, *sig, ctx);
+    retval = set_retval(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -518,15 +544,18 @@ argument list C<args>. Returns an C<INTVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 INTVAL
 Parrot_runops_fromc_arglist_reti(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
+    INTVAL retval;
+    Parrot_Context * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
 
-    return set_retval_i(interp, *sig, ctx);
+    retval = set_retval_i(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -541,15 +570,18 @@ argument list C<args>. Returns an C<FLOATVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 FLOATVAL
 Parrot_runops_fromc_arglist_retf(PARROT_INTERP, ARGIN(PMC *sub),
         ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
+    FLOATVAL retval;
+    Parrot_Context * const ctx = runops_args(interp, sub, PMCNULL, NULL, sig, args);
 
-    return set_retval_f(interp, *sig, ctx);
+    retval = set_retval_f(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -564,17 +596,20 @@ C<args>. C<args> is a C variadic argument list created with C<va_start>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 void*
 Parrot_run_meth_fromc_arglist(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         ARGIN(STRING *meth), ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t *ctx;
+    Parrot_Context *ctx;
+    void* retval;
 
     ctx = runops_args(interp, sub, obj, meth, sig, args);
-    return set_retval(interp, *sig, ctx);
+    retval = set_retval(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -590,16 +625,19 @@ Returns an C<INTVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 INTVAL
 Parrot_run_meth_fromc_arglist_reti(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         ARGIN(STRING *meth), ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t * const ctx = runops_args(interp, sub, obj, meth, sig, args);
+    INTVAL retval;
+    Parrot_Context * const ctx = runops_args(interp, sub, obj, meth, sig, args);
 
-    return set_retval_i(interp, *sig, ctx);
+    retval = set_retval_i(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -615,14 +653,18 @@ Returns a C<FLOATVAL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 FLOATVAL
 Parrot_run_meth_fromc_arglist_retf(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
         ARGIN(STRING *meth), ARGIN(const char *sig), va_list args)
 {
-    parrot_context_t * const ctx = runops_args(interp, sub, obj, meth, sig, args);
-    return set_retval_f(interp, *sig, ctx);
+    FLOATVAL retval;
+    Parrot_Context * const ctx = runops_args(interp, sub, obj, meth, sig, args);
+
+    retval = set_retval_f(interp, *sig, ctx);
+    Parrot_free_context(interp, ctx, 1);
+    return retval;
 }
 
 /*
@@ -642,20 +684,20 @@ getting one from the free list.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 new_runloop_jump_point(PARROT_INTERP)
 {
     Parrot_runloop *jump_point;
 
     if (interp->runloop_jmp_free_list) {
-        jump_point = interp->runloop_jmp_free_list;
+        jump_point                    = interp->runloop_jmp_free_list;
         interp->runloop_jmp_free_list = jump_point->prev;
     }
     else
         jump_point = mem_allocate_typed(Parrot_runloop);
 
-    jump_point->prev = interp->current_runloop;
+    jump_point->prev        = interp->current_runloop;
     interp->current_runloop = jump_point;
 }
 
@@ -669,14 +711,14 @@ Place runloop jump point back on the free list.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 free_runloop_jump_point(PARROT_INTERP)
 {
     Parrot_runloop * const jump_point = interp->current_runloop;
-    interp->current_runloop = jump_point->prev;
-    jump_point->prev = interp->runloop_jmp_free_list;
-    interp->runloop_jmp_free_list = jump_point;
+    interp->current_runloop           = jump_point->prev;
+    jump_point->prev                  = interp->runloop_jmp_free_list;
+    interp->runloop_jmp_free_list     = jump_point;
 }
 
 /*

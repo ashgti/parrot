@@ -23,8 +23,6 @@ out-of-bounds test. Checks INT and PMC keys.
 
 =cut
 
-my $fp_equality_macro = pasm_fp_equality_macro();
-
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'Array'
 
@@ -228,7 +226,7 @@ CODE
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'Array'
      set P0, 4
      new P1, 'Key'
@@ -253,7 +251,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 2.5, OK2)
+     .fp_eq_pasm(N0, 2.5, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -277,7 +275,7 @@ ok 4
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'Array'
      set P0, 1024
 
@@ -297,7 +295,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, -9.9, OK2)
+     .fp_eq_pasm(N0, -9.9, OK2)
      print "not "
 OK2: print "ok 2\\n"
 

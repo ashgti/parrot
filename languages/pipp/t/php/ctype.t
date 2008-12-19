@@ -1,4 +1,3 @@
-#! perl
 # Copyright (C) 2008, The Perl Foundation.
 # $Id$
 
@@ -8,7 +7,7 @@ t/php/ctype.t - Library ctype
 
 =head1 SYNOPSIS
 
-    % perl -I../lib pipp/t/php/ctype.t
+    perl t/harness t/php/ctype.t
 
 =head1 DESCRIPTION
 
@@ -23,37 +22,37 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../../lib";
+use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
 use Test::More     tests => 4;
 use Parrot::Test;
 
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'ctype_alnum() ok' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'ctype_alnum() ok' );
 <?php
   echo ctype_alnum('12abc'), "\n";
 ?>
 CODE
 1
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'ctype_alnum() ko' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'ctype_alnum() ko' );
 <?php
   echo ctype_alnum('12-abc'), "\n";
 ?>
 CODE
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'ctype_alnum() empty' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'ctype_alnum() empty' );
 <?php
   echo ctype_alnum(''), "\n";
 ?>
 CODE
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'ctype_alnum() int' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'ctype_alnum() int' );
 <?php
   echo ctype_alnum(65), "\n";
   echo ctype_alnum(32), "\n";
@@ -63,7 +62,7 @@ CODE
 1
 
 1
-OUTPUT
+OUT
 
 
 # Local Variables:

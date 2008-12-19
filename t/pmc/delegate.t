@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2005, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -98,7 +98,7 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "delegate set_number_native" );
     print "\n"
     returncc
 CODE
-47.110000
+47.11
 OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "delegate get_number" );
@@ -114,7 +114,7 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "delegate get_number" );
     set_returns "0", N5
     returncc
 CODE
-47.110000
+47.11
 OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "delegate assign_pmc" );
@@ -137,11 +137,11 @@ OUTPUT
 # math
 pir_output_is( <<'CODE', <<'OUTPUT', "delegate add_p_p_i" );
 .sub main
-    new P0, 'delegate'
-    set P0, 1
-    new P2, 'Integer'
-    add P2, P0, 1
-    print P2	# yeah 1+1 = 3
+    new $P0, 'delegate'
+    set $P0, 1
+    new $P2, 'Integer'
+    add $P2, $P0, 1
+    print $P2   # yeah 1+1 = 3
     print "\n"
     end
 .end
@@ -153,7 +153,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "delegate add_p_p_i" );
     print "\n"
     returncc
 .end
-.sub __add :multi(pmc, int)
+.sub add_int :multi(pmc, int, pmc)
     .param pmc l
     .param int r
     .param pmc d
@@ -172,14 +172,14 @@ OUTPUT
 # math
 pir_output_is( <<'CODE', <<'OUTPUT', "delegate add_p_p_p" );
 .sub main
-    new P0, 'delegate'
-    set P0, 1
-    new P1, 'Integer'
-    set P1, 1
-    new P2, 'Integer'
-    set P2, 777
-    add P2, P0, P1
-    print P2	# yeah 1+1 = 3
+    new $P0, 'delegate'
+    set $P0, 1
+    new $P1, 'Integer'
+    set $P1, 1
+    new $P2, 'Integer'
+    set $P2, 777
+    add $P2, $P0, $P1
+    print $P2   # yeah 1+1 = 3
     print "\n"
     end
 .end
@@ -191,11 +191,11 @@ pir_output_is( <<'CODE', <<'OUTPUT', "delegate add_p_p_p" );
     print i
     print "\n"
 .end
-.sub __add :multi(delegate, pmc)
+.sub add :multi(delegate, pmc)
     .param pmc l
     .param pmc r
     .param pmc d
-    print "in __add\n"
+    print "in add\n"
     print l
     print "\n"
     print r
@@ -210,7 +210,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "delegate add_p_p_p" );
 .end
 CODE
 1
-in __add
+in add
 one
 1
 777

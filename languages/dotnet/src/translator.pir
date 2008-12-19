@@ -1,7 +1,7 @@
 # This file contains some of the code that drives the .NET EXE/DLL to PIR
 # translation process.
 
-.HLL '_dotnet', ''
+.HLL '_dotnet'
 
 # This sub is the way translation from .NET to PIR is started.
 .sub dotnet_to_pir
@@ -10,7 +10,7 @@
     .param int standalone
     .param int trace
     .local string pir_output, src, summary, tmp, emsg
-    .local pmc assembly, classes, class_order, type, e, entry_meth, entry_class
+    .local pmc assembly, classes, class_order, type, e, entry_meth, entry_class, c
     .local int is_dll, i, max_class, class_id, total_types, done_types
 
     # Instantiate a new assembly class.
@@ -19,7 +19,7 @@
 
     # Set filename and attempt to load.
     assembly = filename
-    assembly.load()
+    assembly.'load'()
 
     # Load the escaper library, which we will be using.
     load_bytecode "library/Data/Escape.pir"
@@ -28,7 +28,7 @@
     pir_output = ""
 
     # Output HLL directive.
-    pir_output = concat ".HLL 'dotnet', ''\n"
+    pir_output = concat ".HLL 'dotnet'\n"
 
     # Put in ops loader code.
     pir_output = concat <<"PIR"
@@ -115,7 +115,7 @@ EXISTS:
 .end
 .sub ".ctor" :method :multi("System.String", string)
     .param string s
-    $P0 = new .String
+    $P0 = new "String"
     $P0 = s
     setattribute self, "Chars", $P0
 .end
@@ -144,8 +144,8 @@ PIR
     # XXX TODO: Translate globals.
 
     # Translate each class according to the ordering.
-    classes = assembly.get_classes()
-    class_order = assembly.get_class_order()
+    classes = assembly.'get_classes'()
+    class_order = assembly.'get_class_order'()
     max_class = elements classes
     i = 0
     total_types = 0
@@ -167,7 +167,8 @@ RESUME:
     inc i
     goto CLOOP
 trans_failure_handler:
-    .get_results (e, emsg)
+    .get_results (e)
+    emsg = e
     # Emit trace message.
     unless trace goto NOTRACE
     printerr "  **FAILED** ("
@@ -182,10 +183,10 @@ CEND:
     is_dll = assembly."is_dll"()
     if is_dll > 0 goto ISEXE
     src = pir_output
-    entry_meth = assembly.get_entry_method()
-    entry_class = entry_meth.get_class()
+    entry_meth = assembly.'get_entry_method'()
+    entry_class = entry_meth.'get_class'()
     pir_output = ".sub __ENTRY_POINT\n__DO_IMPORTS()\n$P0 = get_hll_global \""
-    tmp = entry_class.get_fullname()
+    tmp = entry_class.'get_fullname'()
     pir_output = concat tmp
     pir_output = concat "\", \""
     tmp = entry_meth
@@ -222,7 +223,7 @@ ISEXE:
     pir_output = ".sub __DO_IMPORTS :load\n"
 
     # Loop over assembly refs.
-    assrefs = assembly.get_assemblyrefs()
+    assrefs = assembly.'get_assemblyrefs'()
     assref_count = elements assrefs
     i = 0
 AR_LOOP:
@@ -257,8 +258,8 @@ AR_LOOP_END:
 
     # Get class name and namespace and build combo of them.
     name = class
-    namespace = class.get_namespace()
-    internal_name = class.get_fullname()
+    namespace = class.'get_namespace'()
+    internal_name = class.'get_fullname'()
 
     # Emit trace message.
     unless trace goto NOTRACE
@@ -282,8 +283,8 @@ NOTRACE:
     pir_output = concat "\n"
 
     # Add any interfaces that this class implements.
-    int_types = class.get_interface_types()
-    int_ids = class.get_interface_ids()
+    int_types = class.'get_interface_types'()
+    int_ids = class.'get_interface_ids'()
     num_interfaces = elements int_types
     i = 0
 INT_LOOP:
@@ -297,16 +298,16 @@ INT_LOOP:
 END_INT_LOOP:
 
     # Inherit the parent class. Note System.Object has ID 0, and jump over this stuff.
-    parent_id = class.get_parent_id()
+    parent_id = class.'get_parent_id'()
     if parent_id == 0 goto NO_PARENT
     dec parent_id
-    parent_type = class.get_parent_type()
+    parent_type = class.'get_parent_type'()
     (tmp, p_name) = add_parent(assembly, parent_type, parent_id)
     pir_output = concat tmp
 NO_PARENT:
 
     # Emit field list.
-    fields = class.get_fields()
+    fields = class.'get_fields'()
     max_field = elements fields
     i = 0
 FLOOP:
@@ -326,14 +327,16 @@ FEND:
     pir_output = concat ", \".cctor\"\n$P0()\n"
 
     # This is the end of the on load type setup sub.
+    pir_output = concat "pop_eh\n"
+    pir_output = concat "pop_eh\n"
     pir_output = concat "FAILED:\n.end\n\n"
 
     # If it's an interface, emit code to prevent it being instantiated.
-    flags = class.get_flags()
+    flags = class.'get_flags'()
     is_interface = band flags, 0x20
     if is_interface == 0 goto NOT_INTERFACE
     pir_output = concat <<"PIR"
-.sub __init :method
+.sub 'init' :method :vtable
     $P0 = class self
     $S0 = classname $P0
 PIR
@@ -355,7 +358,7 @@ NOT_INTERFACE:
     is_abstract = band flags, 0x80
     if is_abstract == 0 goto NOT_ABSTRACT
     pir_output = concat <<"PIR"
-.sub __init :method
+.sub 'init' :method :vtable
     $P0 = class self
     $S0 = classname $P0
 PIR
@@ -383,7 +386,7 @@ VAL_TYPE:
 NOT_VAL_TYPE:
 
     # Emit methods.
-    methods = class.get_methods()
+    methods = class.'get_methods'()
     max_method = elements methods
     i = 0
 MLOOP:
@@ -419,18 +422,18 @@ MEND:
     # Parent may be a type in this file.
 PARENT_DEF:
     dec parent_id # Because row 2 = element 0 here, thanks to the global class
-    classes = assembly.get_classes()
+    classes = assembly.'get_classes'()
     pclass = classes[parent_id]
-    pclass_ns = pclass.get_fullname()
+    pclass_ns = pclass.'get_fullname'()
     pclass_ns = namespace_to_key(pclass_ns)
     pir_output = concat pclass_ns
     goto PARENT_DONE
 
     # Parent may be a type in another file.
 PARENT_REF:
-    classes = assembly.get_typerefs()
+    classes = assembly.'get_typerefs'()
     pclass = classes[parent_id]
-    pclass_ns = pclass.get_namespace()
+    pclass_ns = pclass.'get_namespace'()
     pclass_ns = clone pclass_ns
     if pclass_ns == "" goto PARENT_NO_NS
     pclass_ns = concat "."
@@ -456,7 +459,7 @@ PARENT_DONE:
     .local string pir_output, name
 
     # Check it's an instance field.
-    flags = field.get_flags()
+    flags = field.'get_flags'()
     static = band flags, 0x10
     if static != 0 goto STATIC
 
@@ -494,7 +497,7 @@ STATIC:
 
     # The __init method needs to zero or null out any attributes.
     # The __clone method needs to clone each attribute.
-    fields = class.get_fields()
+    fields = class.'get_fields'()
     i = elements fields
     init_body = ""
     clone_body = ""
@@ -504,7 +507,7 @@ ILOOP:
     field = fields[i]
 
     # Skip if field is static.
-    flags = field.get_flags()
+    flags = field.'get_flags'()
     static = band flags, 0x10
     if static != 0 goto ILOOP
 
@@ -517,8 +520,8 @@ ILOOP:
     clone_body = concat "\", $P0\n"
 
     # Need to look at signature to initialize attributes by type.
-    sig_id = field.get_signature()
-    sig_data = assembly.get_blob(sig_id)
+    sig_id = field.'get_signature'()
+    sig_data = assembly.'get_blob'(sig_id)
     sig = new "DotNetSignature"
     sig = sig_data
     sig_info = get_signature_Field(sig)
@@ -543,7 +546,7 @@ INT_TYPE:
     goto DONE_INIT
 
 FLOAT_TYPE:
-    init_body = concat "$P0 = new .Float\n$P0 = 0.0\nsetattribute self, \""
+    init_body = concat "$P0 = new 'Float'\n$P0 = 0.0\nsetattribute self, \""
     init_body = concat name
     init_body = concat "\", $P0\n"
     goto DONE_INIT
@@ -566,11 +569,11 @@ DONE_INIT:
 ILOOP_END:
 
     # Build the code.
-    pir_output = ".sub __init :method\n"
+    pir_output = ".sub 'init' :method :vtable\n"
     pir_output = concat init_body
     pir_output = concat <<"PIR"
 .end
-.sub __clone :method
+.sub 'clone' :method :vtable
 .local pmc cpy
 $P0 = class self
 $P1 = classname $P0
@@ -584,29 +587,29 @@ PIR
     # enums.
     if parent != "[ \"System\" ; \"Enum\" ]" goto NOT_ENUM
     pir_output = concat <<"PIR"
-.sub __get_integer
+.sub 'get_integer' :vtable
     .param pmc s
     $P0 = getattribute s, "value__"
     $I0 = $P0
     .return($I0)
 .end
-.sub __set_integer_native
+.sub 'set_integer_native' :vtable
     .param pmc s
     .param int i
     $P0 = new 'Integer'
     $P0 = i
     setattribute s, "value__", $P0
 .end
-.sub __get_number
+.sub 'get_number' :vtable
     .param pmc s
     $P0 = getattribute s, "value__"
     $N0 = $P0
     .return($N0)
 .end
-.sub __set_number_native
+.sub 'set_number_native' :vtable
     .param pmc s
     .param num i
-    $P0 = new Float
+    $P0 = new 'Float'
     $P0 = i
     setattribute s, "value__", $P0
 .end

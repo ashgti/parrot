@@ -29,7 +29,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.4>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'string' ]
 
 .sub 'luaopen_string'
@@ -225,7 +226,7 @@ are also returned, after the two indices.
 
 .sub 'find'
     .param pmc argv :slurpy
-    .return str_find_aux(1, argv :flat)
+    .tailcall str_find_aux(1, argv :flat)
 .end
 
 .sub 'str_find_aux' :anon
@@ -607,7 +608,7 @@ table:
     .lex 'upvar_rulesub', rulesub
     $P0 = clone s
     .lex 'upvar_s', $P0
-    .const .Sub gmatch_aux = 'gmatch_aux'
+    .const 'Sub' gmatch_aux = 'gmatch_aux'
     res = newclosure gmatch_aux
     .return (res)
 .end
@@ -672,8 +673,6 @@ is replaced.
     if $I0 goto L1
     $I0 = isa repl, 'LuaString'
     if $I0 goto L1
-    $I0 = isa repl, 'LuaClosure'
-    if $I0 goto L1
     $I0 = isa repl, 'LuaFunction'
     if $I0 goto L1
     $I0 = isa repl, 'LuaTable'
@@ -722,18 +721,14 @@ is replaced.
     $I0 = isa repl, 'LuaNumber'
     unless $I0 goto L1
     $P0 = repl.'tostring'()
-    .return add_s(b, s, match, $P0)
+    .tailcall add_s(b, s, match, $P0)
   L1:
     $I0 = isa repl, 'LuaString'
     unless $I0 goto L2
-    .return add_s(b, s, match, repl)
+    .tailcall add_s(b, s, match, repl)
   L2:
-    $I0 = isa repl, 'LuaClosure'
-    if $I0 goto L3
     $I0 = isa repl, 'LuaFunction'
-    if $I0 goto L3
-    goto L4
-  L3:
+    unless $I0 goto L4
     $P0 = captures(match, 1)
     ($P1) = repl($P0 :flat)
     goto L5
@@ -881,7 +876,7 @@ start the search; its default value is 1 and may be negative.
 
 .sub 'match'
     .param pmc argv :slurpy
-    .return str_find_aux(0, argv :flat)
+    .tailcall str_find_aux(0, argv :flat)
 .end
 
 

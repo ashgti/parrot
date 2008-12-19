@@ -37,7 +37,7 @@ such as C<eval>, C<require>, and C<use>.
   lang_compile:
     .local pmc compiler
     compiler = compreg lang
-    .return compiler.'evalfiles'(filename)
+    .tailcall compiler.'evalfiles'(filename)
 
   lang_parrot:
     load_bytecode filename
@@ -109,14 +109,15 @@ such as C<eval>, C<require>, and C<use>.
 
   eval_parrot:
     .local pmc result
+    inc_hash[name] = realfilename
     result = 'evalfile'(realfilename, 'lang'=>'Parrot')
     goto done
 
   eval_perl6:
+    inc_hash[name] = realfilename
     result = 'evalfile'(realfilename, 'lang'=>'Perl6')
 
   done:
-    inc_hash[name] = realfilename
     .return (result)
 .end
 

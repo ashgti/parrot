@@ -30,7 +30,7 @@ Zakharevich, Paul Schinder, and others.
 Since these functions are different for most operating systems, each set of
 OS specific routines is available in a separate module, including:
 
-    *File::Spec::Unix
+    File::Spec::Unix
     *File::Spec::Mac
     *File::Spec::OS2
     File::Spec::Win32
@@ -52,6 +52,7 @@ called as object methods.
 
 .namespace [ 'File::Spec' ]
 
+.include 'sysinfo.pasm'
 
 .sub VERSION :method
     .local string version
@@ -64,7 +65,7 @@ called as object methods.
     '_init'()
 
     .local string osname
-    osname= '_get_osname'()
+    osname= sysinfo .SYSINFO_PARROT_OS
 
     .local string platform
     platform= '_get_module'( osname )
@@ -96,18 +97,7 @@ called as object methods.
     ## set modules['dos'], 'OS2'
     ## set modules['cygwin'], 'Cygwin'
 
-    store_global '_modules', modules
-.end
-
-
-.sub '_get_osname'
-    .local pmc config
-    .local pmc osname
-
-    config= '_config'()
-    osname= config['osname']
-
-    .return( osname )
+    set_global '_modules', modules
 .end
 
 
@@ -117,7 +107,7 @@ called as object methods.
     .local pmc modules
     modules= new 'Hash'
 
-    modules= find_global '_modules'
+    modules= get_global '_modules'
 
     .local string module
     module= modules[ osname ]
@@ -151,26 +141,23 @@ found_module:
     typeof name, self
 
     .local string osname
-    osname= '_get_osname'()
+    osname= sysinfo .SYSINFO_PARROT_OS
 
     .local string module
     module= '_get_module'( osname )
 
     .local pmc platform
-    platform= new String
+    platform= new 'String'
     platform= module
 
     .local pmc class
-    class= new String
+    class= new 'String'
     class= name
 
     concat class, class, '::'
     concat class, class, platform
     .return(class)
 .end
-
-
-.include 'library/config.pir'
 
 # Local Variables:
 #   mode: pir

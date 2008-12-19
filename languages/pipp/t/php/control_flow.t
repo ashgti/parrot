@@ -1,8 +1,13 @@
+# Copyright (C) 2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
 
-pipp/t/control_flow.t - tests for Pipp
+t/php/control_flow.t - tests for Pipp
+
+=head1 SYNOPSIS
+
+    perl t/harness t/php/control_flow.t
 
 =head1 DESCRIPTION
 
@@ -15,13 +20,13 @@ use strict;
 use warnings;
 
 use FindBin;
-use lib "$FindBin::Bin/../../lib";
+use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
-use Parrot::Config (); 
+use Parrot::Config ();
 use Parrot::Test;
-use Test::More     tests => 13;
+use Test::More     tests => 15;
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'if, one statement in block' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'if, one statement in block' );
 <?php
 if (1)
 {
@@ -30,9 +35,9 @@ if (1)
 ?>
 CODE
 Hi
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'if, no statements in block' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'if, no statements in block' );
 <?php
 if (1)
 {
@@ -41,9 +46,9 @@ echo "Hi\n";
 ?>
 CODE
 Hi
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'if, two statements in block' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'if, two statements in block' );
 <?php
 if (1)
 {
@@ -53,9 +58,9 @@ if (1)
 ?>
 CODE
 Hi
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'if/else taking if-branch' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'if/else taking if-branch' );
 <?php
 if (1)
 {
@@ -68,9 +73,9 @@ else
 ?>
 CODE
 if block
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'i/else taking else-branchf' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'i/else taking else-branchf' );
 <?php
 if (0)
 {
@@ -83,9 +88,9 @@ else
 ?>
 CODE
 else block
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT' . q{  }, 'positive int' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT' . q{  }, 'positive int' );
 <?php
 if (1) {
   ?>
@@ -95,9 +100,9 @@ if (1) {
 ?>
 CODE
     Condition is true.
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'zero' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'zero' );
 <?php
 if (0) {
   ?>
@@ -108,9 +113,9 @@ if (0) {
 Condition is false.
 CODE
 Condition is false.
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'string' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'string' );
 <?php
 if ( 'false' ) {
 ?>
@@ -120,9 +125,9 @@ The string 'false' is true.
 ?>
 CODE
 The string 'false' is true.
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'string' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'string' );
 <?php
 if ( 'vrai' ) {
 ?>
@@ -138,10 +143,10 @@ The string 'vrai' is false.
 ?>
 CODE
 The string 'vrai' is true.
-OUTPUT
+OUT
 
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'string' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'string' );
 <?php
 if ( 0 ) {
 ?>
@@ -157,9 +162,9 @@ The integer 0 is false.
 ?>
 CODE
 The integer 0 is false.
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'while loop' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'while loop' );
 <?php
 
 $count = 0;
@@ -175,9 +180,9 @@ round 7
 round 8
 round 9
 round 10
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'while with negated expression' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'while with negated expression' );
 <?php
 
 $count = 0;
@@ -193,9 +198,9 @@ round 7
 round 8
 round 9
 round 10
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'classic for-loop' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'classic for-loop' );
 <?php
 
 $count = 0;
@@ -211,4 +216,42 @@ round 6
 round 7
 round 8
 round 9
-OUTPUT
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'for-loop with HTML-block' );
+<?php
+
+$count = 0;
+for ( $count = 0; $count < 10; $count++ ) { ?>round <?php echo $count
+?>
+
+<?php } ?>
+CODE
+round 0
+round 1
+round 2
+round 3
+round 4
+round 5
+round 6
+round 7
+round 8
+round 9
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'another for-loop' );
+<?php for ( $count = 0; $count < 10; $count++ ) { ?>round <?php echo $count ?>
+
+<?php } ?>
+CODE
+round 0
+round 1
+round 2
+round 3
+round 4
+round 5
+round 6
+round 7
+round 8
+round 9
+OUT

@@ -7,21 +7,21 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
 use Parrot::Config;
-use Parrot::Test tests => 20;
+use Parrot::Test tests => 21;
 
 ##############################
 # Parrot Calling Conventions
 
 pir_output_is( <<'CODE', <<'OUT', "low-level syntax" );
 .sub test :main
-    .const .Sub sub = "_sub"
+    .const 'Sub' sub = "_sub"
     .const int y = 20
     .begin_call
-    .arg 10
-    .arg y
+    .set_arg 10
+    .set_arg y
     .call sub
     .local string z
-    .result z
+    .get_result z
     .end_call
     print z
     end
@@ -87,7 +87,7 @@ OUT
 pir_output_is( <<'CODE', <<'OUT', "_func() syntax with var - global" );
 .sub test :main
     .local pmc the_sub
-    the_sub = global "_sub"
+    the_sub = get_global "_sub"
     the_sub(10, 20)
     end
 .end
@@ -138,7 +138,7 @@ pir_output_is( <<'CODE', <<'OUT', "tail recursive sub" );
 recur:
    product = product * count
    dec count
-   .return _fact(product, count)
+   .tailcall _fact(product, count)
 .end
 
 CODE
@@ -256,7 +256,7 @@ done in coroutine
 done in main
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', ".arg :flat" );
+pir_output_is( <<'CODE', <<'OUT', ".set_arg :flat" );
 .sub _main
     .local pmc x, y, z, ar, ar2, s
     x = new 'String'
@@ -272,13 +272,13 @@ pir_output_is( <<'CODE', <<'OUT', ".arg :flat" );
     push ar2, "ok 3\n"
     push ar2, "ok 4\n"
     push ar2, "ok 5\n"
-    .const .Sub s = "_sub"
+    .const 'Sub' s = "_sub"
     .begin_call
-    .arg x
-    .arg ar :flat
-    .arg y
-    .arg ar2 :flat
-    .arg z
+    .set_arg x
+    .set_arg ar :flat
+    .set_arg y
+    .set_arg ar2 :flat
+    .set_arg z
     .call s
     .end_call
     end
@@ -399,15 +399,15 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "\:main defined twice" );
 .sub foo :main
-        set S0, 'not ok'
-        print S0
+        set $S0, 'not ok'
+        print $S0
         print "\r\n"
         end
 .end
 
 .sub bar :main
-        set S0, 'ok'
-        print S0
+        set $S0, 'ok'
+        print $S0
         print "\r\n"
         end
 .end
@@ -509,6 +509,22 @@ pir_output_is( <<'CODE', <<'OUT', "()=foo() syntax, skip returned value" );
 CODE
 foo
 OUT
+
+#RT #58866 calling a PIR sub with 206 params segfaults parrot
+my $too_many_args = <<'CODE';
+.sub main :main
+    'foo'(_ARGS_)
+    say "didn't segfault"
+.end
+
+.sub foo
+.end
+CODE
+
+my $too_many_args_args = join ',', 1 .. 20_000;
+$too_many_args =~ s/_ARGS_/$too_many_args_args/;
+
+pir_output_is( $too_many_args, "didn't segfault\n", "calling a sub with way too many params" );
 
 # Local Variables:
 #   mode: cperl

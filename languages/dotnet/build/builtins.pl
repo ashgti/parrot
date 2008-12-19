@@ -27,7 +27,7 @@ my @methods = parse($input);
 my $output = <<'PIR_OUT';
 # THIS IS A GENERATED FILE! DO NOT EDIT!
 
-.HLL '_dotnet', ''
+.HLL '_dotnet'
 
 .sub internal_method_body
     .param pmc class
@@ -35,7 +35,7 @@ my $output = <<'PIR_OUT';
     .local string class_name, method_name, body
 
     # Get class and method names.
-    class_name = class.get_fullname()
+    class_name = class.'get_fullname'()
     method_name = meth
 PIR_OUT
 
@@ -50,7 +50,7 @@ $output .= <<'PIR_OUT';
     # Generic unimplemented internal method body (throws exception).
 EXCEPTION_UNIMPLEMENTED:
     body = <<"PIR"
-$P0 = new .Exception
+$P0 = new "Exception"
 $P0 = "System.NotImplementedException"
 $P1 = new "System.NotImplementedException"
 $P0["obj"] = $P1
@@ -181,7 +181,7 @@ sub generate_lookup {
     # Add failure.
     $pir .= <<'PIR'
 FAIL:
-    $P0 = new .Exception
+    $P0 = new "Exception"
     $P0 = "No body supplied for built-in method"
     throw $P0
 PIR

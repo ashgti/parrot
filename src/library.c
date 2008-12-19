@@ -8,7 +8,7 @@ src/library.c - Interface to Parrot's bytecode library
 
 =head1 DESCRIPTION
 
-This file contains a C function to access Parrot's bytecode library functions.
+This file contains C functions to access Parrot's bytecode library functions.
 
 =head2 Functions
 
@@ -202,7 +202,16 @@ parrot_init_library_paths(PARROT_INTERP)
 
 =item C<static PMC* get_search_paths>
 
-RT#48260: Not yet documented!!!
+Return lib_paths as array of StringArrays with library searchpaths and shared
+extension used for loading various files at runtime.
+The structure looks like this:
+
+  lib_paths = [
+    [ "runtime/parrot/include", ... ],   # paths for .include 'file'
+    [ "runtime/parrot/library", ... ],   # paths for load_bytecode
+    [ "runtime/parrot/dynext", ... ],    # paths for loadlib
+    [ ".so", ... ]                       # list of shared extensions
+  ]
 
 =cut
 
@@ -398,7 +407,7 @@ path_concat(PARROT_INTERP, ARGMOD(STRING *l_path), ARGMOD(STRING *r_path))
     return join;
 }
 
-#define LOAD_EXT_CODE_LAST 3
+#define LOAD_EXT_CODE_LAST 2
 
 static const char* load_ext_code[ LOAD_EXT_CODE_LAST + 1 ] = {
     ".pbc",
@@ -406,7 +415,6 @@ static const char* load_ext_code[ LOAD_EXT_CODE_LAST + 1 ] = {
     /* source level files */
 
     ".pasm",
-    ".past",
     ".pir",
 };
 
@@ -444,9 +452,9 @@ try_load_path(PARROT_INTERP, ARGMOD(STRING* path))
 
 =item C<static STRING* try_bytecode_extensions>
 
-guess extensions, so that the user can drop the extensions
+Guess extensions, so that the user can drop the extensions
 leaving it up to the build process/install whether or not
-a .pbc or a .pir file is used.
+a .pbc, .pasm or a .pir file is used.
 
 =cut
 
@@ -462,8 +470,8 @@ try_bytecode_extensions(PARROT_INTERP, ARGMOD(STRING* path))
     int guess;
 
     /*
-      first try the path without guessing to ensure compatibility with
-      existing code.
+      First try the path without guessing the extension to ensure compatibility
+      with existing code.
      */
 
     with_ext = string_copy(interp, path);
@@ -473,8 +481,8 @@ try_bytecode_extensions(PARROT_INTERP, ARGMOD(STRING* path))
         return result;
 
     /*
-      start guessing now. this version tries to find the lowest form of the
-      code, starting with bytecode and working up to PIR. note the atypical
+      Start guessing now. This version tries to find the lowest form of the
+      code, starting with bytecode and working up to PIR. Note the atypical
       loop control. This is so the array can easily be processed in reverse.
      */
 
@@ -493,13 +501,40 @@ try_bytecode_extensions(PARROT_INTERP, ARGMOD(STRING* path))
 
 /*
 
-=item C<STRING* Parrot_locate_runtime_file_str>
+=item C<void Parrot_add_library_path>
+
+Add a path to the library searchpath of the given type.
+
+TODO:
+  - allow path to be a list of paths.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_add_library_path(PARROT_INTERP,
+        ARGIN(const char *path),
+        enum_lib_paths which)
+{
+    PMC * const iglobals = interp->iglobals;
+    PMC * const lib_paths = VTABLE_get_pmc_keyed_int(interp, iglobals,
+        IGLOBALS_LIB_PATHS);
+    PMC * paths = VTABLE_get_pmc_keyed_int(interp, lib_paths, which);
+    STRING * const path_str = string_from_cstring(interp, path, 0);
+    VTABLE_push_string(interp, paths, path_str);
+}
+
+/*
+
+=item C<char* Parrot_locate_runtime_file>
 
 Locate the full path for C<file_name> and the given file type(s). If
 successful, returns a C-string allocated with C<string_to_cstring> or
 NULL otherwise.  Remember to free the string with C<string_cstring_free()>.
 
-=item C<Parrot_locate_runtime_file_str>
+=item C<STRING* Parrot_locate_runtime_file_str>
 
 Like above but use and return STRINGs. If successful, the returned STRING
 is 0-terminated so that C<result-E<gt>strstart> is usable as B<const char*>
@@ -513,7 +548,7 @@ F<include/parrot/library.h>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 STRING*
@@ -524,7 +559,6 @@ Parrot_locate_runtime_file_str(PARROT_INTERP, ARGMOD(STRING *file),
     STRING *full_name;
     PMC    *paths;
     INTVAL  i, n;
-    char   *prefix_c;
 
     /* if this is an absolute path return it as is */
     if (is_abs_path(file))
@@ -537,10 +571,8 @@ Parrot_locate_runtime_file_str(PARROT_INTERP, ARGMOD(STRING *file),
     else
         paths = get_search_paths(interp, PARROT_LIB_PATH_INCLUDE);
 
-    prefix_c = Parrot_get_runtime_prefix(interp);
-    prefix   = string_from_cstring(interp, prefix_c, 0);
-    n        = VTABLE_elements(interp, paths);
-    mem_sys_free(prefix_c);
+    prefix = Parrot_get_runtime_path(interp);
+    n = VTABLE_elements(interp, paths);
 
     for (i = 0; i < n; ++i) {
         STRING * const path = VTABLE_get_string_keyed_int(interp, paths, i);
@@ -569,17 +601,7 @@ Parrot_locate_runtime_file_str(PARROT_INTERP, ARGMOD(STRING *file),
     return full_name;
 }
 
-/*
-
-=item C<char* Parrot_locate_runtime_file>
-
-RT#48260: Not yet documented!!!
-
-=cut
-
-*/
-
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PARROT_MALLOC
@@ -607,11 +629,14 @@ Parrot_locate_runtime_file(PARROT_INTERP, ARGIN(const char *file_name),
 Return a malloced C-string for the runtime prefix.  The calling function
 must free it.
 
+This function is deprecated, use Parrot_get_runtime_path instead.
+See RT#58988
+
 =cut
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 char*
@@ -634,6 +659,45 @@ Parrot_get_runtime_prefix(PARROT_INTERP)
         else
             return str_dup(".");
     }
+}
+
+/*
+
+=item C<STRING * Parrot_get_runtime_path>
+
+Return a string for the runtime prefix.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+STRING *
+Parrot_get_runtime_path(PARROT_INTERP)
+{
+    int     free_it;
+    char * const env = Parrot_getenv("PARROT_RUNTIME", &free_it);
+    STRING *result;
+
+    if (env)
+    {
+        result = string_from_cstring(interp, env, 0);
+        if (free_it)
+             free(env);
+    }
+    else {
+        PMC    * const config_hash =
+            VTABLE_get_pmc_keyed_int(interp, interp->iglobals, (INTVAL) IGLOBALS_CONFIG_HASH);
+
+        if (VTABLE_elements(interp, config_hash)) {
+            STRING * const key = CONST_STRING(interp, "prefix");
+            result = VTABLE_get_string_keyed_str(interp, config_hash, key);
+        }
+        else
+            result = CONST_STRING(interp, ".");
+    }
+    return result;
 }
 
 /*

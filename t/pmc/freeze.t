@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2006, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -275,10 +275,10 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a FixedPMCArray" );
     freeze S0, P0
 
     thaw P10, S0
-    typeof S10, P10	# type
+    typeof S10, P10 # type
     print S10
     print " "
-    set I11, P10	# elements
+    set I11, P10    # elements
     print I11
     print "\n"
     set P12, P10[0]
@@ -315,10 +315,10 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a FixedPMCArray" );
     freeze S0, P0
 
     thaw P10, S0
-    typeof S10, P10	# type
+    typeof S10, P10 # type
     print S10
     print " "
-    set I11, P10	# elements
+    set I11, P10    # elements
     print I11
     print "\n"
     set P12, P10[0]
@@ -448,7 +448,7 @@ ok1:
     set P6, "ok 5\n"
     setattribute P5, '.aa', P6
     print "ok 4\n"
-    getattribute P7, P5, '.aa' 
+    getattribute P7, P5, '.aa'
     print P7
     end
 CODE
@@ -633,20 +633,20 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a ResizableBooleanArray" );
 
     # Dump some data before freezing
     print "Before freezing:\n"
-    typeof S10, original_arr	# type
-    print S10
+    typeof $S10, original_arr   # type
+    print $S10
     print "\n"
-    set I12, original_arr	# elements
-    print I12
+    set $I12, original_arr  # elements
+    print $I12
     print "\n"
-    I12 = original_arr[554]
-    print I12
+    $I12 = original_arr[554]
+    print $I12
     print "\n"
-    I12 = original_arr[555]
-    print I12
+    $I12 = original_arr[555]
+    print $I12
     print "\n"
-    I12 = original_arr[556]
-    print I12
+    $I12 = original_arr[556]
+    print $I12
     print "\n"
 
     frozen_arr = freeze original_arr
@@ -654,20 +654,20 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a ResizableBooleanArray" );
 
     # Dump the same data after freeze/thaw
     print "\nAfter freeze/thaw:\n"
-    typeof S10, thawed_arr	# type
-    print S10
+    typeof $S10, thawed_arr # type
+    print $S10
     print "\n"
-    set I12, thawed_arr	# elements
-    print I12
+    set $I12, thawed_arr    # elements
+    print $I12
     print "\n"
-    I12 = thawed_arr[554]
-    print I12
+    $I12 = thawed_arr[554]
+    print $I12
     print "\n"
-    I12 = thawed_arr[555]
-    print I12
+    $I12 = thawed_arr[555]
+    print $I12
     print "\n"
-    I12 = thawed_arr[556]
-    print I12
+    $I12 = thawed_arr[556]
+    print $I12
     print "\n"
 
 .end
@@ -698,20 +698,20 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a ResizablePMCArray" );
 
     # Dump some data before freezing
     print "Before freezing:\n"
-    typeof S10, original_arr	# type
-    print S10
+    typeof $S10, original_arr    # type
+    print $S10
     print "\n"
-    set I12, original_arr	# elements
-    print I12
+    set $I12, original_arr   # elements
+    print $I12
     print "\n"
-    I12 = original_arr[0]
-    print I12
+    $I12 = original_arr[0]
+    print $I12
     print "\n"
-    N12 = original_arr[1]
-    print N12
+    $N12 = original_arr[1]
+    print $N12
     print "\n"
-    S12 = original_arr[2]
-    print S12
+    $S12 = original_arr[2]
+    print $S12
     print "\n"
 
     frozen_arr = freeze original_arr
@@ -719,20 +719,20 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a ResizablePMCArray" );
 
     # Dump the same data after freeze/thaw
     print "\nAfter freeze/thaw:\n"
-    typeof S10, thawed_arr	# type
-    print S10
+    typeof $S10, thawed_arr  # type
+    print $S10
     print "\n"
-    set I12, thawed_arr	# elements
-    print I12
+    set $I12, thawed_arr # elements
+    print $I12
     print "\n"
-    I12 = thawed_arr[0]
-    print I12
+    $I12 = thawed_arr[0]
+    print $I12
     print "\n"
-    N12 = thawed_arr[1]
-    print N12
+    $N12 = thawed_arr[1]
+    print $N12
     print "\n"
-    S12 = thawed_arr[2]
-    print S12
+    $S12 = thawed_arr[2]
+    print $S12
     print "\n"
 
 .end
@@ -741,14 +741,14 @@ Before freezing:
 ResizablePMCArray
 3
 1
-2.720000
+2.72
 three.14
 
 After freeze/thaw:
 ResizablePMCArray
 3
 1
-2.720000
+2.72
 three.14
 OUTPUT
 

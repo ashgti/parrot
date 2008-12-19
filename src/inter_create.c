@@ -105,7 +105,7 @@ Create the Parrot interpreter. Allocate memory and clear the registers.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 Parrot_Interp
 make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
@@ -148,7 +148,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
 
     /* PANIC will fail until this is done */
     interp->piodata = NULL;
-    PIO_init(interp);
+    Parrot_io_init(interp);
 
     if (is_env_var_set("PARROT_GC_DEBUG")) {
 #if ! DISABLE_GC_DEBUG
@@ -173,8 +173,8 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     /* Set up the MMD struct */
     interp->binop_mmd_funcs = NULL;
 
-    /* Go and init the MMD tables */
-    mmd_add_function(interp, MMD_USER_FIRST - 1, (funcptr_t)NULL);
+    /* MMD cache for builtins. */
+    interp->op_mmd_cache = Parrot_mmd_cache_create(interp);
 
     /* create caches structure */
     init_object_cache(interp);
@@ -234,7 +234,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     setup_default_compreg(interp);
 
     /* setup stdio PMCs */
-    PIO_init(interp);
+    Parrot_io_init(interp);
 
     /* init IMCC compiler */
     imcc_init(interp);
@@ -282,7 +282,7 @@ This function is not currently used.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_destroy(PARROT_INTERP)
 {
@@ -309,10 +309,7 @@ Note that C<exit_code> is ignored.
 void
 Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
 {
-
-    /*
-     * wait for threads to complete if needed; terminate the event loop
-     */
+    /* wait for threads to complete if needed; terminate the event loop */
     if (!interp->parent_interpreter) {
         Parrot_cx_runloop_end(interp);
         pt_join_threads(interp);
@@ -327,16 +324,16 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
      * Need to turn off DOD blocking, else things stay alive and IO
      * handles aren't closed
      */
-    interp->arena_base->DOD_block_level =
+    interp->arena_base->DOD_block_level    =
         interp->arena_base->GC_block_level = 0;
 
     if (Interp_trace_TEST(interp, ~0)) {
-        PIO_eprintf(interp, "ParrotIO objects (like stdout and stderr)"
+        Parrot_io_eprintf(interp, "FileHandle objects (like stdout and stderr)"
             "are about to be closed, so clearing trace flags.\n");
         Interp_trace_CLEAR(interp, ~0);
     }
 
-    /* Destroys all PMCs, even constants and the ParrotIO objects for
+    /* Destroys all PMCs, even constants and the FileHandle objects for
      * std{in, out, err}, so don't be verbose about DOD'ing. */
     if (interp->thread_data)
         interp->thread_data->state |= THREAD_STATE_SUSPENDED_GC;
@@ -344,9 +341,9 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     Parrot_do_dod_run(interp, GC_finish_FLAG);
 
 #if STM_PROFILE
-    if (interp->thread_data && interp->thread_data->stm_log &&
-            !interp->parent_interpreter &&
-                Interp_debug_TEST(interp, PARROT_THREAD_DEBUG_FLAG))
+    if (interp->thread_data && interp->thread_data->stm_log
+    && !interp->parent_interpreter
+    &&  Interp_debug_TEST(interp, PARROT_THREAD_DEBUG_FLAG))
         Parrot_STM_dump_profile(interp);
 #endif
 
@@ -362,16 +359,17 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     imcc_destroy(interp);
 
     /* Now the PIOData gets also cleared */
-    PIO_finish(interp);
+    Parrot_io_finish(interp);
 
     /*
      * now all objects that need timely destruction should be finalized
      * so terminate the event loop
      */
-    if (!interp->parent_interpreter) {
+ /*   if (!interp->parent_interpreter) {
         PIO_internal_shutdown(interp);
-/*        Parrot_kill_event_loop(interp); */
+        Parrot_kill_event_loop(interp);
     }
+  */
 
     /* we destroy all child interpreters and the last one too,
      * if the --leak-test commandline was given
@@ -396,15 +394,18 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         Parrot_STM_destroy(interp);
     }
 
-    if (interp->parent_interpreter &&
-        interp->thread_data &&
-        (interp->thread_data->state & THREAD_STATE_JOINED)) {
+    if (interp->parent_interpreter
+    &&  interp->thread_data
+    && (interp->thread_data->state & THREAD_STATE_JOINED)) {
         Parrot_merge_header_pools(interp->parent_interpreter, interp);
         Parrot_merge_memory_pools(interp->parent_interpreter, interp);
     }
 
     if (interp->arena_base->finalize_gc_system)
         interp->arena_base->finalize_gc_system(interp);
+
+    /* MMD cache */
+    Parrot_mmd_cache_destroy(interp, interp->op_mmd_cache);
 
     /* copies of constant tables */
     Parrot_destroy_constants(interp);
@@ -455,30 +456,36 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
 
         /* free vtables */
         parrot_free_vtables(interp);
-        mmd_destroy(interp);
+
+        /* dynop libs */
+        if (interp->n_libs > 0) {
+            mem_sys_free(interp->op_info_table);
+            mem_sys_free(interp->op_func_table);
+        }
 
         MUTEX_DESTROY(interpreter_array_mutex);
         mem_sys_free(interp);
-        /*
-         * finally free other globals
-         */
+
+        /* finally free other globals */
         mem_sys_free(interpreter_array);
         interpreter_array = NULL;
     }
 
     else {
         /* don't free a thread interpreter, if it isn't joined yet */
-        if (!interp->thread_data || (
-                    interp->thread_data &&
-                    (interp->thread_data->state & THREAD_STATE_JOINED))) {
+        if (!interp->thread_data
+        || (interp->thread_data
+        && (interp->thread_data->state & THREAD_STATE_JOINED))) {
             if (interp->thread_data) {
                 mem_sys_free(interp->thread_data);
                 interp->thread_data = NULL;
             }
+
             mem_sys_free(interp);
         }
     }
 }
+
 
 /*
 

@@ -13,7 +13,8 @@ lib/luaaux.pir - Lua Auxiliary PIR Library
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace []
 
 
@@ -26,15 +27,24 @@ the call stack:
 
 This function never returns.
 
+CAUTION: don't used it in an exception handler, but lua_x_argerror & rethrow.
+
 =cut
 
 .sub 'lua_argerror'
     .param int narg
     .param pmc extramsg :slurpy
+    $S0 = lua_x_argerror(narg, extramsg :flat)
+    lua_error($S0)
+.end
+
+.sub 'lua_x_argerror'
+    .param int narg
+    .param pmc extramsg :slurpy
     $S1 = narg
     new $P0, 'Lua'
     $S0 = $P0.'caller'()
-    lua_error("bad argument #", $S1, " to '", $S0, "' (", extramsg :flat, ")")
+    .tailcall lua_x_error("bad argument #", $S1, " to '", $S0, "' (", extramsg :flat, ")")
 .end
 
 
@@ -198,14 +208,21 @@ Raises an error.
 
 This function never returns.
 
+CAUTION: don't used it in an exception handler, but lua_x_error & rethrow.
+
 =cut
 
 .sub 'lua_error'
     .param pmc message :slurpy
-    $S0 = join '', message
+    $S0 = lua_x_error(message :flat)
     die $S0
 .end
 
+.sub 'lua_x_error'
+    .param pmc message :slurpy
+    $S0 = join '', message
+    .return ($S0)
+.end
 
 =item C<lua_findtable (t, fname)>
 
@@ -435,10 +452,8 @@ Returns 1 if the value is a function, and 0 otherwise.
     .local int res
     res = 0
     if null val goto L1
-    res = isa val, 'LuaClosure'
-    if res goto L1
     res = isa val, 'LuaFunction'
-L1:
+  L1:
     new $P0, 'LuaBoolean'
     set $P0, res
     .return ($P0)
@@ -480,7 +495,7 @@ and 0 otherwise.
     if res goto L1
     $P0 = val.'tonumber'()
     res = isa $P0, 'LuaNumber'
-L1:
+  L1:
     new $P0, 'LuaBoolean'
     set $P0, res
     .return ($P0)
@@ -502,7 +517,7 @@ to a string), and 0 otherwise.
     res = isa val, 'LuaString'
     if res goto L1
     res = isa val, 'LuaNumber'
-L1:
+  L1:
     new $P0, 'LuaBoolean'
     set $P0, res
     .return ($P0)
@@ -567,9 +582,9 @@ messages and in debug information.
   L1:
     $S0 = substr data, 0, 4
     unless $S0 == "\033Lua" goto L2
-    .return undump(data, chunkname)
+    .tailcall undump(data, chunkname)
   L2:
-    .return parser(data, chunkname)
+    .tailcall parser(data, chunkname)
 .end
 
 .sub 'parser' :anon
@@ -583,9 +598,11 @@ messages and in debug information.
     .local pmc env
     env = get_hll_global '_G'
     $P0.'setfenv'(env)
+    pop_eh
     .return ($P0)
   _handler:
-    .get_results ($P0, $S0)
+    .get_results ($P0)
+    $S0 = $P0
     null $P0
     .return ($P0, $S0)
 .end
@@ -605,9 +622,11 @@ messages and in debug information.
     .local pmc env
     env = get_hll_global '_G'
     $P0.'setfenv'(env)
+    pop_eh
     .return ($P0)
   _handler:
-    .get_results ($P0, $S0)
+    .get_results ($P0)
+    $S0 = $P0
     null $P0
     .return ($P0, $S0)
 .end
@@ -624,7 +643,7 @@ C<name> is the chunk name, used for debug information and error messages.
 .sub 'lua_loadbuffer'
     .param string buff
     .param string chunkname
-    .return lua_load(buff, chunkname)
+    .tailcall lua_load(buff, chunkname)
 .end
 
 
@@ -648,21 +667,22 @@ This function only loads the chunk; it does not run it.
     goto L2
   L1:
     chunkname = filename
-    f = open filename, '<'
-    unless f goto L3
+    f = new 'FileHandle'
+    push_eh _handler
+    f.'open'(filename, 'r')
+    pop_eh
   L2:
-    $S0 = f.'slurp'('')
+    $S0 = f.'readall'()
     if filename == '' goto L4
-    close f
+    f.'close'()
   L4:
-    .return lua_load($S0, chunkname)
-  L3:
+    .tailcall lua_load($S0, chunkname)
+  _handler:
     $S0 = 'cannot open '
     $S0 .= filename
     $S0 .= ': '
     $S1 = err
     $S0 .= $S1
-  L5:
     null $P0
     .return ($P0, $S0)
 .end
@@ -759,6 +779,25 @@ If this argument is absent or is B<nil>, returns C<def>. Otherwise, raises an er
 .end
 
 
+=item C<lua_optnumber (narg, arg, def)>
+
+If the function argument C<narg> is a number, returns this number.
+If this argument is absent or is B<nil>, returns C<def>. Otherwise, raises an error.
+
+=cut
+
+.sub 'lua_optnumber'
+    .param int narg
+    .param pmc arg
+    .param num default
+    if null arg goto L1
+    unless arg goto L1
+    .tailcall lua_checknumber(narg, arg)
+  L1:
+    .return (default)
+.end
+
+
 =item C<lua_optstring (narg, arg, def)>
 
 If the function argument C<narg> is a string, returns this string.
@@ -789,7 +828,7 @@ If this argument is absent or is B<nil>, returns C<def>. Otherwise, raises an er
     .param pmc names
     .param pmc env :optional
     if null libname goto L1
-    .const .LuaString _loaded = '_LOADED'
+    .const 'LuaString' _loaded = '_LOADED'
     .local pmc _lua__REGISTRY
     _lua__REGISTRY = get_hll_global '_REGISTRY'
     $P0 = _lua__REGISTRY[_loaded]
@@ -807,6 +846,9 @@ If this argument is absent or is B<nil>, returns C<def>. Otherwise, raises an er
     $S0 = shift names
     unless $S0 goto L3
     $P0 = ns[$S0]
+    unless null $P0 goto L5
+    lua_error("missing method ", $S0)
+  L5:
     $P0.'setfenv'(env)
     set $P1, $S0
     lib[$P1] = $P0
@@ -896,7 +938,7 @@ This function never returns.
     inc i
     goto L4
   L5:
-    .const .LuaString k_arg = 'arg'
+    .const 'LuaString' k_arg = 'arg'
     env.'rawset'(k_arg, $P0)
   L3:
     .return (res)
@@ -941,16 +983,18 @@ This function never returns.
     .param pmc vararg :slurpy
     push_eh _handler
     ($P0 :slurpy) = f(vararg :flat)
+    pop_eh
     .return (0, $P0)
   _handler:
     .local pmc ex
-    .local string msg
-    .get_results (ex, msg)
+    .get_results (ex)
     $P0 = getattribute ex, 'severity'
     if null $P0 goto L1
     $I0 = $P0
     if $I0 == .EXCEPT_EXIT goto L2
   L1:
+    .local string msg
+    msg = ex
     .local int lineno
     .local string traceback, where
     (traceback, where) = 'traceback'()
@@ -965,6 +1009,9 @@ This function never returns.
 .end
 
 .sub 'traceback'
+    # dummy implementation
+    .return ("stack traceback:\n\tdummy\n", "_._:0:")
+    # previous one that segfaults (see RT #60206)
     .local pmc obj
     .local string traceback, where
     new obj, 'Lua'

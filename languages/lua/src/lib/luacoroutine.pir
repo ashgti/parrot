@@ -19,7 +19,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.2>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'coroutine' ]
 
 .sub 'luaopen_coroutine'
@@ -69,8 +70,8 @@ Returns this new coroutine, an object with type C<"thread">.
     .param pmc extra :slurpy
     .local pmc res
     lua_checktype(1, f, 'function')
-    $I0 = isa f, 'LuaClosure'
-    if $I0 goto L1
+    $P0 = f.'get_outer'()
+    unless null $P0 goto L1
     lua_argerror(1, 'Lua function expected')
   L1:
     new res, 'LuaThread', f
@@ -132,11 +133,13 @@ C<resume> returns B<false> plus the error message.
   L1:
     push_eh _handler
     (res :slurpy) = $P0.'resume'(argv :flat)
+    pop_eh
     .return (1, res :flat)
   _handler:
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     $P0 = pop co_stack
     .return (0, s)
 .end
@@ -218,7 +221,7 @@ case of error, propagates the error.
     .local pmc co
     .lex 'upvar_co', co
     co = create(f)
-    .const .Sub auxwrap = 'auxwrap'
+    .const 'Sub' auxwrap = 'auxwrap'
     res = newclosure auxwrap
     .return (res)
 .end

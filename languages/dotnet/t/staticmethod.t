@@ -61,12 +61,12 @@ ok( translate( "t.dll", "t.pbc" ), 'translate' );
 
 ## Tests.
 is( run_pir(<<'PIR'), <<'OUTPUT', 'test_no_args' );
-.HLL 'dotnet', ''
+.HLL 'dotnet'
 .sub main
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	obj.test_no_args()
+	obj."test_no_args"()
     $P0 = new 'Integer'
     $P0 = get_hll_global [ "Testing" ; "Test" ], "x"
 	print $P0
@@ -77,12 +77,12 @@ PIR
 OUTPUT
 
 is( run_pir(<<'PIR'), <<'OUTPUT', 'test_args' );
-.HLL 'dotnet', ''
+.HLL 'dotnet'
 .sub main
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-	obj.test_args(10)
+	obj."test_args"(10)
     $P0 = new 'Integer'
     $P0 = get_hll_global [ "Testing" ; "Test" ], "y"
 	print $P0
@@ -97,7 +97,7 @@ is( run_pir(<<'PIR'), <<'OUTPUT', 'test_ret' );
 	.local pmc obj
 	load_bytecode "t.pbc"
 	obj = new [ "Testing" ; "Test" ]
-    $I0 = obj.test_ret()
+    $I0 = obj."test_ret"()
 	print $I0
 	print "\n"
 .end

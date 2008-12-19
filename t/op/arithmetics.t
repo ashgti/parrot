@@ -1,12 +1,16 @@
 #!perl
-# Copyright (C) 2001-2005, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
+
 use Test::More;
-use Parrot::Test tests => 26;
+use Parrot::Test tests => 27;
+
+# test for GMP
+use Parrot::Config;
 
 =head1 NAME
 
@@ -22,8 +26,6 @@ Tests basic arithmetic on various combinations of Parrot integer and
 number types.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 #
 # Operations on a single INTVAL
@@ -168,7 +170,7 @@ OUTPUT
 #
 
 SKIP: {
-    skip 'failling on win32' => 1 if $^O =~ m/win32/i;
+    skip 'failing on win32' => 1 if $^O =~ m/win32/i;
 
 pasm_output_is( <<'CODE', <<OUTPUT, "turn a native number into its negative" );
         set N0, 0
@@ -206,12 +208,12 @@ pasm_output_is( <<'CODE', <<OUTPUT, "turn a native number into its negative" );
         print "\n"
         end
 CODE
--0.000000
-0.000000
+-0
+0
 -123.456789
 123.456789
--0.000000
-0.000000
+-0
+0
 -123.456789
 123.456789
 OUTPUT
@@ -257,14 +259,14 @@ pasm_output_is( <<'CODE', <<OUTPUT, "take the absolute of a native number" );
         print "\n"
         end
 CODE
-0.000000
-0.000000
-123.456789
-123.456789
-0.000000
-0.000000
-123.456789
-123.456789
+0
+0
+123.45678901
+123.45678901
+0
+0
+123.45678901
+123.45678901
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "ceil of a native number" );
@@ -322,13 +324,13 @@ pasm_output_is( <<'CODE', <<OUTPUT, "ceil of a native number" );
        print "\n"
        end
 CODE
-0.000000
-124.000000
--123.000000
-0.000000
-0.000000
-124.000000
--123.000000
+0
+124
+-123
+0
+0
+124
+-123
 0
 0
 124
@@ -390,13 +392,13 @@ pasm_output_is( <<'CODE', <<OUTPUT, "floor of a native number" );
        print "\n"
        end
 CODE
-0.000000
-123.000000
--124.000000
-0.000000
-0.000000
-123.000000
--124.000000
+0
+123
+-124
+0
+0
+123
+-124
 0
 0
 123
@@ -420,9 +422,9 @@ pasm_output_is( <<'CODE', <<OUTPUT, "add native integer to native number" );
         print "\n"
         end
 CODE
-3876.877000
-3876.877000
-7876.877000
+3876.877
+3876.877
+7876.877
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "subtract native integer from native number" );
@@ -439,9 +441,9 @@ pasm_output_is( <<'CODE', <<OUTPUT, "subtract native integer from native number"
         print "\n"
         end
 CODE
--4123.123000
--4123.123000
--8123.123000
+-4123.123
+-4123.123
+-8123.123
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "multiply native number with native integer" );
@@ -458,9 +460,9 @@ pasm_output_is( <<'CODE', <<OUTPUT, "multiply native number with native integer"
         print "\n"
         end
 CODE
--492492.000000
--492492.000000
-984984.000000
+-492492
+-492492
+984984
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "divide native number by native integer" );
@@ -484,11 +486,11 @@ pasm_output_is( <<'CODE', <<OUTPUT, "divide native number by native integer" );
         print "\n"
         end
 CODE
--0.030781
--0.030781
--0.030781
-1.000000
-100.000000
+-0.03078075
+-0.03078075
+-0.03078075
+1
+100
 OUTPUT
 
 #
@@ -505,8 +507,8 @@ pasm_output_is( <<'CODE', <<OUTPUT, "add native number to native number" );
         print "\n"
         end
 CODE
-3877.123000
-3877.123000
+3877.123
+3877.123
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "subtract native number from native number" );
@@ -520,8 +522,8 @@ pasm_output_is( <<'CODE', <<OUTPUT, "subtract native number from native number" 
         print "\n"
         end
 CODE
--4123.369000
--4123.369000
+-4123.369
+-4123.369
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "multiply native number with native number" );
@@ -550,8 +552,8 @@ pasm_output_is( <<'CODE', <<OUTPUT, "divide native number by native number" );
         print "\n"
         end
 CODE
--0.030779
--0.030779
+-0.0307788571002883
+-0.0307788571002883
 OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "lcm_I_I_I" );
@@ -841,6 +843,73 @@ ok 2
 ok 3
 ok 4
 OUTPUT
+
+SKIP: {
+    skip( 'No integer overflow for 32-bit INTVALs without GMP installed', 1 )
+        if $PConfig{intvalsize} == 4 && !$PConfig{gmp};
+
+    pir_output_is( <<'CODE', <<OUTPUT, "integer overflow with 'pow'" );
+.sub main
+    .local pmc i1, i2, r
+    i1 = new 'Integer'
+    i2 = new 'Integer'
+    i1 = 2
+    i2 = 1
+next:
+    null r
+    r = pow i1, i2
+    $S0 = r
+    say $S0
+    inc i2
+# XXX: this must be extended to at least 64 bit range
+# when sure that the result is not floating point.
+# In the meantime, make sure it overflows nicely
+# on 32 bit.
+    unless i2 > 40 goto next
+.end
+CODE
+2
+4
+8
+16
+32
+64
+128
+256
+512
+1024
+2048
+4096
+8192
+16384
+32768
+65536
+131072
+262144
+524288
+1048576
+2097152
+4194304
+8388608
+16777216
+33554432
+67108864
+134217728
+268435456
+536870912
+1073741824
+2147483648
+4294967296
+8589934592
+17179869184
+34359738368
+68719476736
+137438953472
+274877906944
+549755813888
+1099511627776
+OUTPUT
+}
 
 # Local Variables:
 #   mode: cperl

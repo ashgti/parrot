@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 15;
+use Parrot::Test tests => 17;
 
 =head1 NAME
 
@@ -22,8 +22,6 @@ Tests C<ResizableIntegerArray> PMC. Checks size, sets various elements, includin
 out-of-bounds test. Checks INT and PMC keys.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'ResizableIntegerArray'
@@ -123,7 +121,37 @@ ok 2
 ok 3
 OUTPUT
 
-# RT#46823: Rewrite these properly when we have exceptions
+pasm_output_is( <<'CODE', <<'OUTPUT', "Setting negatively indexed elements" );
+    new P0, 'ResizableIntegerArray'
+    set P0, 1
+
+    push_eh eh
+    set P0[-1], -7
+    pop_eh
+    print "no ex\n"
+    end
+eh:
+    say "got an ex"
+    end
+CODE
+got an ex
+OUTPUT
+
+pasm_output_is( <<'CODE', <<'OUTPUT', "Getting negatively indexed elements" );
+    new P0, 'ResizableIntegerArray'
+    set P0, 1
+
+    push_eh eh
+    set I0, P0[-1]
+    pop_eh
+    print "no ex\n"
+    end
+eh:
+    say "got an ex"
+    end
+CODE
+got an ex
+OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting out-of-bounds elements" );
     new P0, 'ResizableIntegerArray'
@@ -149,7 +177,7 @@ ok 1
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableIntegerArray'
      new P1, 'Key'
 
@@ -168,7 +196,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 2.0, OK2)
+     .fp_eq_pasm(N0, 2.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -185,7 +213,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableIntegerArray'
      set P0, 1
 
@@ -205,7 +233,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, 10.0, OK2)
+     .fp_eq_pasm(N0, 10.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 

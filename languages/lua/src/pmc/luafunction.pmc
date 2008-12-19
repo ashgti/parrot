@@ -10,10 +10,6 @@ pmc/luafunction.pmc - Lua Function
 
 C<LuaFunction> extends C<Parrot Sub> and C<LuaAny> to provide a class
 with the behaviour of the Lua C<Function> type.
-C<LuaFunction> is used by standard libraries
-written in PIR.
-
-See also: F<languages/lua/pmc/luaclosure.pmc>
 
 =head2 Overloaded Methods
 
@@ -39,6 +35,27 @@ pmclass LuaFunction
 
 /*
 
+=item C<void init_pmc(PMC *sub)>
+
+=cut
+
+*/
+    VTABLE void init_pmc(PMC *sub) {
+        if (VTABLE_isa(INTERP, sub, const_string(INTERP, "Sub"))) {
+            PMC_struct_val(SELF) = mem_allocate_zeroed_typed(Parrot_sub);
+            PMC_pmc_val(SELF)    = NULL;
+            PMC_metadata(SELF)   = NULL;
+            PObj_custom_mark_destroy_SETALL(SELF);
+            /* copy the sub struct */
+            memcpy(PMC_sub(SELF), PMC_sub(sub), sizeof (Parrot_sub));
+        }
+        else
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
+                "not a Sub (%Ss)", SELF->vtable->whoami);
+    }
+
+/*
+
 =item C<void mark()>
 
 Marks the function as live.
@@ -46,7 +63,7 @@ Marks the function as live.
 =cut
 
 */
-    void mark() {
+    VTABLE void mark() {
         SUPER();
         if (PMC_metadata(SELF))
             pobject_lives(INTERP, (PObj *)PMC_metadata(SELF));
@@ -61,7 +78,7 @@ Return the string "function".
 =cut
 
 */
-    STRING* name() {
+    VTABLE STRING* name() {
         return const_string(INTERP, "function");
     }
 
@@ -72,10 +89,9 @@ Return the string "function".
 =cut
 
 */
-    PMC* clone() {
+    VTABLE PMC* clone() {
         PMC* ret = SUPER();
         PMC_metadata(ret) = PMC_metadata(SELF);
-        PObj_custom_mark_SET(ret);
         return ret;
     }
 
@@ -86,7 +102,7 @@ Return the string "function".
 =cut
 
 */
-    STRING* get_string() {
+    VTABLE STRING* get_string() {
         return Parrot_sprintf_c(INTERP, "function: %08X", SELF);
     }
 
@@ -97,26 +113,31 @@ Return the string "function".
 =cut
 
 */
-    void set_pmc(PMC *value) {
+    VTABLE void set_pmc(PMC *value) {
         PMC_struct_val(SELF) = PMC_struct_val(value);
         PMC_metadata(SELF)   = PMC_metadata(value);
     }
 
 /*
 
+=back
+
+=head2 non-Vtable Methods
+
+=over 4
+
 =item C<INTVAL is_equal(PMC *value)>
 
 =cut
 
 */
-    INTVAL is_equal(PMC *value) {
-MMD_LuaFunction: {
-            return (PMC_sub(SELF))->start_offs == (PMC_sub(value))->start_offs
-                && (PMC_sub(SELF))->seg        == (PMC_sub(value))->seg;
-        }
-MMD_DEFAULT: {
-            return (INTVAL)0;
-        }
+    MULTI INTVAL is_equal(LuaFunction value) {
+        return (PMC_sub(SELF))->start_offs == (PMC_sub(value))->start_offs
+            && (PMC_sub(SELF))->seg        == (PMC_sub(value))->seg;
+    }
+
+    MULTI INTVAL is_equal(DEFAULT value) {
+        return (INTVAL)0;
     }
 
 /*

@@ -211,7 +211,7 @@ find_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int first)
     Instruction          *ins;
     const SymHash * const hsh = &unit->hash;
     int                   nu  = 0;
-    int                   i;
+    unsigned int          i;
 
     IMCC_info(interp, 2, "find_basic_blocks\n");
     init_basic_blocks(unit);
@@ -711,7 +711,7 @@ void
 life_analysis(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
 {
     SymReg  ** const reglist = unit->reglist;
-    int              i;
+    unsigned int     i;
 
     IMCC_info(interp, 2, "life_analysis\n");
 
@@ -985,14 +985,14 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     int b, runner, wrong;
     Set **dominators;
 
-    const int n = unit->n_basic_blocks;
+    const unsigned int n = unit->n_basic_blocks;
     IMCC_info(interp, 2, "compute_dominators\n");
 
-    unit->idoms      = mem_allocate_n_zeroed_typed(n, int);
-    dominators       = mem_allocate_n_zeroed_typed(n, Set *);
-    unit->dominators = dominators;
+    unit->idoms          = mem_allocate_n_zeroed_typed(n, int);
+    dominators           = mem_allocate_n_zeroed_typed(n, Set *);
+    unit->dominators     = dominators;
 
-    dominators[0]    = set_make(n);
+    dominators[0]        = set_make(n);
     set_add(dominators[0], 0);
 
     for (i = n - 1; i; --i) {
@@ -1032,6 +1032,7 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     change = 1;
 
     while (change) {
+        unsigned int i;
         change = 0;
 
         /* TODO: This 'for' should be a breadth-first search for speed */
@@ -1136,8 +1137,12 @@ compute_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
                 /* while runner != idoms[b] */
                 while (runner >= 0 && runner != unit->idoms[b]) {
-                    /* add b to runner's dominance frontier set */
-                    set_add(unit->dominance_frontiers[runner], b);
+                    if (set_contains(unit->dominance_frontiers[runner], b))
+                        /* we've already gone down this path once before */
+                        runner = 0;
+                    else
+                        /* add b to runner's dominance frontier set */
+                        set_add(unit->dominance_frontiers[runner], b);
 
                     /* runner = idoms[runner] */
                     if (runner == 0)
@@ -1335,7 +1340,7 @@ transfers control directly to the header.
 
 PARROT_WARN_UNUSED_RESULT
 int
-natural_preheader(ARGIN(const IMC_Unit *unit), ARGIN(const Loop_info* loop_info))
+natural_preheader(ARGIN(const IMC_Unit *unit), ARGIN(const Loop_info *loop_info))
 {
     Edge *edge;
     int   preheader = -1;
@@ -1394,7 +1399,7 @@ mark_loop(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const Edge *e))
         }
 
     IMCC_debug(interp, DEBUG_CFG, "loop from %d to %d, entered from %d\n",
-            footer->index, header->index, enter ? enter->index : -1);
+            footer->index, header->index, enter ? (int)enter->index : -1);
 
     if (i == 0) {
         if (header->index)

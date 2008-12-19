@@ -5,10 +5,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 21;
+use Test::More tests => 16;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::socklen_t');
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
@@ -21,7 +20,7 @@ use IO::CaptureOutput qw| capture |;
 
 ########### regular ###########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},
@@ -29,8 +28,6 @@ my $args = process_options(
 );
 
 my $conf = Parrot::Configure->new;
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
 
 my $pkg = q{auto::socklen_t};
 
@@ -48,7 +45,7 @@ $conf->replenish($serialized);
 
 ##### _evaluate_socklen_t() #####
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},

@@ -368,7 +368,7 @@ sub generate_initial_pir {
     my $pir = <<TRANSPIR;
 # THIS IS A GENERATED FILE! DO NOT EDIT!
 
-.HLL '_dotnet', ''
+.HLL '_dotnet'
 
 .sub trans_instructions
     .param pmc assembly
@@ -447,12 +447,12 @@ printerr "\\n"
 NO_IN_TRACE:
 
     # Get bytecode and initialize pc.
-    bc = meth.get_bytecode()
-    bc_length = bc.get_length()
+    bc = meth.'get_bytecode'()
+    bc_length = bc.'get_length'()
     pc = 0
 
         # Initialize stack types array.
-        stypes = new ResizablePMCArray
+        stypes = new "ResizablePMCArray"
 
     # Instantiate a bytecode escaper.
     escaper = find_global "Data::Escape", "String"
@@ -486,11 +486,11 @@ TRANSPIR
     # routine will jump back to TRANS_LOOP after translating the instruction.
     $pir .= <<'PIRCODE';
     # If we have exception handlers, need some intial stuff emitted.
-    ehs = bc.get_eh()
+    ehs = bc.'get_eh'()
     if null ehs goto NO_EH_HEADER
     i = elements ehs
     gen_pir = concat ".local pmc cur_exception\n"
-    gen_pir = concat ".local pmc saved_ehs\nsaved_ehs = new .FixedPMCArray\nsaved_ehs = "
+    gen_pir = concat ".local pmc saved_ehs\nsaved_ehs = new 'FixedPMCArray'\nsaved_ehs = "
     tmp = i
     gen_pir = concat tmp
     gen_pir = concat "\n"
@@ -498,9 +498,9 @@ NO_EH_HEADER:
     gen_pir = concat "pushmark 0\n"
 
     # Translation loop.
-    ss_propogate = new .Hash
+    ss_propogate = new 'Hash'
 TRANS_LOOP:
-    pc = bc.get_pos()
+    pc = bc.'get_pos'()
         next_pc = pc
     if pc >= bc_length goto COMPLETE
 
@@ -530,11 +530,11 @@ EH_LOOP:
     eh = ehs[i]
 
     # If this is the start of a try block, emit a push_eh instruction.
-    try_offset = eh.get_try_offset()
-    try_length = eh.get_try_length()
+    try_offset = eh.'get_try_offset'()
+    try_length = eh.'get_try_length'()
     if try_offset != pc goto NOT_TRY_START
     gen_pir = concat "push_eh LAB"
-    handler_offset = eh.get_handler_offset()
+    handler_offset = eh.'get_handler_offset'()
     tmp = handler_offset
     gen_pir = concat tmp
     gen_pir = concat "\npushmark "
@@ -545,17 +545,17 @@ EH_LOOP:
 NOT_TRY_START:
 
     # If this is the start of a typed exception handler...
-    handler_offset = eh.get_handler_offset()
-    eh_flags = eh.get_flags()
+    handler_offset = eh.'get_handler_offset'()
+    eh_flags = eh.'get_flags'()
     if eh_flags != 0 goto NOT_TYPED_EH_START
     if handler_offset != pc goto NOT_TYPED_EH_START
 
     # Emit code to get the .NET exception object and check if it's of the type that
     # is accepted.
-    gen_pir = concat ".get_results (cur_exception, $S1000000)\n"
+    gen_pir = concat ".get_results (cur_exception)\n"
     gen_pir = concat "$P1000001 = cur_exception[\"obj\"]\n"
-    class_type = eh.get_class_type()
-    class_id = eh.get_class_id()
+    class_type = eh.'get_class_type'()
+    class_id = eh.'get_class_id'()
     gen_pir = concat "$I1000000 = isa $P1000001, "
     ($P0, $S0) = class_info_from_ehtype(assembly, class_type, class_id)
     $S0 = namespace_to_key($S0)
@@ -568,8 +568,8 @@ NOT_TRY_START:
     gen_pir = concat ":\n"
 
     # Need to fix up stack type state. Create new empty array.
-    stypes = new ResizablePMCArray
-    type_trans = new Hash
+    stypes = new "ResizablePMCArray"
+    type_trans = new "Hash"
     type_trans["type"] = ELEMENT_TYPE_CLASS
     type_trans["byref"] = 0
     annotate_reg_type(type_trans)
@@ -611,7 +611,7 @@ NOT_TYPED_EH_START:
 
     # Emit code to get and stash the .NET exception object, then put a jump
     # label.
-    gen_pir = concat ".get_results (cur_exception, $S1000000)\nsaved_ehs["
+    gen_pir = concat ".get_results (cur_exception)\nsaved_ehs["
     tmp = i
     gen_pir = concat tmp
     gen_pir = concat "] = cur_exception\nFINALLY_"
@@ -680,7 +680,7 @@ sub generate_dispatch_table {
     # rather than O(n).
     my $pir = <<PIRCODE;
         # Translation code dispatch table.
-        cur_ic = bc.read_uint8()
+        cur_ic = bc.'read_uint8'()
         next_pc += 1
 PIRCODE
     $pir .= binary_dispatch_table( '', @rules_grouped );
@@ -756,7 +756,7 @@ sub binary_dispatch_table {
                 hex($x) <=> hex($1)
             } @rules;
             $pir .= "B2_BRANCH_$_:\n";
-            $pir .= "    cur_ic = bc.read_uint8()\n    next_pc += 1\n";
+            $pir .= "    cur_ic = bc.'read_uint8'()\n    next_pc += 1\n";
             $pir .= binary_dispatch_table( $_, @rules );
         }
     }
@@ -838,87 +838,87 @@ PIR
 
         # uint8
         if (/^uint8$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_uint8()\n    next_pc += 1\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_uint8'()\n    next_pc += 1\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # int8
         elsif (/^int8$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_int8()\n    next_pc += 1\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_int8'()\n    next_pc += 1\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # uint16
         elsif (/^uint16$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_uint16()\n    next_pc += 2\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_uint16'()\n    next_pc += 2\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # int16
         elsif (/^int16$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_int16()\n    next_pc += 2\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_int16'()\n    next_pc += 2\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # uint32
         elsif (/^uint32$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_uint32()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_uint32'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # int32
         elsif (/^int32$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_int32()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_int32'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # float32
         elsif (/^float32$/) {
-            $out      = "    \${N_ARG_$arg_num} = bc.read_float32()\n    next_pc += 4\n";
+            $out      = "    \${N_ARG_$arg_num} = bc.'read_float32'()\n    next_pc += 4\n";
             $arg_name = "N_ARG_$arg_num";
         }
 
         # float64
         elsif (/^float64$/) {
-            $out      = "    \${N_ARG_$arg_num} = bc.read_float64()\n    next_pc += 8\n";
+            $out      = "    \${N_ARG_$arg_num} = bc.'read_float64'()\n    next_pc += 8\n";
             $arg_name = "N_ARG_$arg_num";
         }
 
         # tfield
         elsif (/^tfield$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_tfield()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_tfield'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # tmethod
         elsif (/^tmethod$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_tmethod()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_tmethod'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # ttype
         elsif (/^ttype$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_ttype()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_ttype'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # tstring
         elsif (/^tstring$/) {
-            $out      = "    \${I_ARG_$arg_num} = bc.read_tstring()\n    next_pc += 4\n";
+            $out      = "    \${I_ARG_$arg_num} = bc.'read_tstring'()\n    next_pc += 4\n";
             $arg_name = "I_ARG_$arg_num";
         }
 
         # jumptable
         elsif (/^jumptable$/) {
             $out = <<"PIR";
-    \${P_ARG_$arg_num} = new FixedPMCArray
-    i = bc.read_uint32()
+    \${P_ARG_$arg_num} = new "FixedPMCArray"
+    i = bc.'read_uint32'()
     next_pc += 4
     \${P_ARG_$arg_num} = i
     j = 0
 JT_LOOP_$name:
     if j == i goto JT_LOOP_END_$name
-    \$I0 = bc.read_int32()
+    \$I0 = bc.'read_int32'()
     next_pc += 4
     \${P_ARG_$arg_num}[j] = \$I0
     inc j
@@ -957,7 +957,7 @@ PIR
     if ( $rule->{'class'} eq 'op' ) {
 
         # Init destination types array.
-        $pir .= "    dtypes = new ResizablePMCArray\n";
+        $pir .= "    dtypes = new 'ResizablePMCArray'\n";
 
         # Insert typeinfo code (sets up dtypes).
         $pir .= "### typeinfo\n";
@@ -1095,7 +1095,7 @@ PIR
             $pir .= <<PIR
 \$I1000000 = loadtype["type"]
 if \$I1000000 != ELEMENT_TYPE_VALUETYPE goto $label
-dtypes = new ResizablePMCArray
+dtypes = new "ResizablePMCArray"
 dtypes[0] = loadtype
 $pre_op
 gen_pir = concat dest0
@@ -1236,8 +1236,8 @@ PIRCODE
     elsif ( $rule->{'class'} eq 'calling' ) {
 
         # Init destination types array and params array and set meta-variable.
-        $pir .= "    dtypes = new ResizablePMCArray\n";
-        $pir .= "    c_params = new ResizableStringArray\n";
+        $pir .= "    dtypes = new 'ResizablePMCArray'\n";
+        $pir .= "    c_params = new 'ResizableStringArray'\n";
         $mv->{'PARAMS'} = 'c_params';
         push @localmv, 'PARAMS';
 

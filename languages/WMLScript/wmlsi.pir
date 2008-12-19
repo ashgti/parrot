@@ -18,14 +18,11 @@ C<function(params, ...)>.
 
 wmlsd, wmls2pir, wmls2pbc
 
-=head1 AUTHOR
-
-Francois Perrad.
-
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub 'main' :main
     .param pmc argv
@@ -46,10 +43,10 @@ Francois Perrad.
     .local pmc script
     new loader, 'WmlsBytecode'
     push_eh _handler
-    script = loader.load(content)
+    script = loader.'load'(content)
     script['filename'] = filename
     .local string gen_pir
-    gen_pir = script.translate()
+    gen_pir = script.'translate'()
     .local pmc pir_comp
     .local pmc pbc_out
     pir_comp = compreg 'PIR'
@@ -77,18 +74,19 @@ Francois Perrad.
     end
   L4:
     entry(params :flat)
-    end
-  _handler:
-    .local pmc e
-    .local string s
-    .get_results (e, s)
-    print s
-    print "\n"
+    pop_eh
   L1:
     end
   USAGE:
     printerr "Usage: parrot wmlsi.pbc filename entry\n"
     exit -1
+  _handler:
+    .local pmc e
+    .local string msg
+    .get_results (e)
+    msg = e
+    say msg
+    end
 .end
 
 

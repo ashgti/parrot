@@ -1,14 +1,12 @@
 #!perl
-# Copyright (C) 2005-2007, The Perl Foundation.
+# Copyright (C) 2005-2008, The Perl Foundation.
 # $Id$
 
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 
-use Test::More;
 use Parrot::Test tests => 1;
-use Parrot::Config;
 
 =head1 NAME
 
@@ -41,7 +39,7 @@ Bernhard Schmalhofer - <Bernhard.Schmalhofer@gmx.de>
 my %expected = (
     'namespace_dump.pir' => << 'END_EXPECTED',
 /^parrot.*
-^__parrot_core/sm
+^MULTI\s=>\sMULTI/sm
 END_EXPECTED
 );
 

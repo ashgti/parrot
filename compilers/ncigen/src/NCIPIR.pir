@@ -1,10 +1,10 @@
 =head1 NAME
 
-NCIPIR::Compiler - NCI PIR Compiler for c99AST trees.
+NCIPIR::Compiler - NCI PIR Compiler for NCIGENAST trees.
 
 =head1 DESCRIPTION
 
-NCIPIR::Compiler defines a compiler that converts a c99AST tree into PIR
+NCIPIR::Compiler defines a compiler that converts a NCIGENAST tree into PIR
 
 =head1 METHODS
 
@@ -12,7 +12,7 @@ NCIPIR::Compiler defines a compiler that converts a c99AST tree into PIR
 
 =cut
 
-.namespace [ 'NCIPIR::Compiler' ]
+.namespace [ 'NCIPIR';'Compiler' ]
 
 .sub '__onload' :load :init
     .local pmc p6meta, cproto
@@ -33,7 +33,7 @@ NCIPIR::Compiler defines a compiler that converts a c99AST tree into PIR
     .param pmc adverbs         :slurpy :named
 
     .local pmc newself
-    newself = new 'NCIPIR::Compiler'
+    newself = new ['NCIPIR';'Compiler']
 
     ##  start with empty code
     .local pmc code
@@ -41,9 +41,9 @@ NCIPIR::Compiler defines a compiler that converts a c99AST tree into PIR
     newself.'code'(code)
 
     ##  if the root node isn't a Sub, wrap it
-    $I0 = isa ast, 'c99AST::Decls'
+    $I0 = isa ast, ['NCIGENAST';'Decls']
     if $I0 goto have_sub
-    $P0 = get_hll_global ['c99AST'], 'Decls'
+    $P0 = get_hll_global ['NCIGENAST'], 'Decls'
     ast = $P0.'new'(ast, 'name'=>'anon')
   have_sub:
 
@@ -57,7 +57,7 @@ NCIPIR::Compiler defines a compiler that converts a c99AST tree into PIR
     newself.'pir'(ast)
 
     ##  and return whatever code was generated
-    .return newself.'code'()
+    .tailcall newself.'code'()
 .end
 
 .sub 'gen_preamble' :method
@@ -172,9 +172,9 @@ Return pir for an operation node.
 
 =cut
 
-.sub 'pir' :method :multi(_,['c99AST::FuncDecl'])
+.sub 'pir' :method :multi(_,['NCIGENAST';'FuncDecl'])
     .param pmc node
-    
+
     ##  get list of arguments to operation
     .local pmc arglist
     arglist = node.'list'()
@@ -215,10 +215,12 @@ Return pir for an operation node.
   .param pmc node
   .param int returncode :optional
   $I0 = node.'pointer'()
+  $I2 = node.'pointer_cnt'()
   $S0 = node.'primitive_type'()
 
+
   if $I0, LPOINTER
-  
+
   iseq $I1, $S0, 'void'
   unless $I1, LL2
   if returncode, LL11
@@ -245,14 +247,41 @@ Return pir for an operation node.
     .return("p")
 
   LPOINTER:
-  iseq $I1, $S0, 'char'
+  isgt $I3, $I2, 1
+  if $I3, LL18 # pointer_cnt > 1
+
+  iseq $I1, $S0, 'void' #void *
   unless $I1, LL7
-  $I0 = node.'pointer_cnt'()
-  iseq $I1, $I0, 1
-  unless $I1, LL7
-    .return("S")
-  LL7:
+  if returncode, LL111
     .return("p")
+  LL111:
+    .return("p")
+#    .return("V") #probably should be this
+  LL7:
+  iseq $I1, $S0, 'char' #char *
+  unless $I1, LL8
+    .return("t")
+  LL8:
+  iseq $I1, $S0, 'int' #int *
+  unless $I1, LL13
+    .return("V")
+  LL13:
+  iseq $I1, $S0, 'long' #long *
+  unless $I1, LL14
+    .return("V")
+  LL14:
+  iseq $I1, $S0, 'short' #short *
+  unless $I1, LL15
+    .return("V")
+  LL15: #struct *, typedef *,
+    say "ERROR"
+    say $S0
+    say "what is this"
+    .return("p")
+
+#something **
+  LL18:
+    .return("V")
 .end
 
 =item pir(POST::Label node)
@@ -261,10 +290,10 @@ Generate a label.
 
 =cut
 
-.sub 'pir' :method :multi(_, ['c99AST::TypeDef'])
+.sub 'pir' :method :multi(_, ['NCIGENAST';'TypeDef'])
     .param pmc node
     .return ('')
-    .return pir_dump(node)
+    .tailcall pir_dump(node)
 .end
 
 =item pir(POST::Label node)
@@ -273,10 +302,10 @@ Generate a label.
 
 =cut
 
-.sub 'pir' :method :multi(_, ['c99AST::VarDecl'])
+.sub 'pir' :method :multi(_, ['NCIGENAST';'VarDecl'])
     .param pmc node
     .return ('')
-    .return pir_dump(node)
+    .tailcall pir_dump(node)
 .end
 
 =item pir(POST::Label node)

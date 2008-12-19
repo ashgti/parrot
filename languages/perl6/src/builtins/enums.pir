@@ -6,7 +6,7 @@ src/builtins/enums.pir - implements various enumerations
 
 =cut
 
-.namespace
+.namespace []
 .sub 'setup' :load :init
     # Set up bool role.
     .local pmc bool_role
@@ -79,7 +79,7 @@ src/builtins/enums.pir - implements various enumerations
     $P48 = "prefix:~"($P47)
     .return ($P48)
 .end
-.sub "bool_class_number" :method :lexid("26")
+.sub "bool_class_number" :method
     getattribute $P52, self, "$!bool"
     $P53 = "prefix:+"($P52)
     .return ($P53)

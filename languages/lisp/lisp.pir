@@ -90,7 +90,7 @@ READ_STDIN:
     .local pmc symbol
     symbol = _LOOKUP_GLOBAL("COMMON-LISP", "*STANDARD-INPUT*")
     .local pmc stdin
-    stdin = symbol._get_value()
+    stdin = symbol.'_get_value'()
 
     push_eh DEBUGGER                    # Setup error handler for debug loop.
 
@@ -135,8 +135,7 @@ DEBUGGER:
     .local string msgtype
     .local pmc e
 
-    # TODO: is P5 still the exception ?
-    e = P5
+    .get_results (e)
 
     message = e
 

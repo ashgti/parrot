@@ -35,12 +35,12 @@ C<STRING> with a vtable.
 #include "pmc_freeze.str"
 
 /* default.pmc thawing of properties */
-PARROT_API void
-Parrot_default_thaw(Interp* , PMC* pmc, visit_info *info);
+PARROT_EXPORT void
+Parrot_default_thaw(PARROT_INTERP, PMC *pmc, visit_info *info);
 
 /* XXX This should be in a header file. */
-PARROT_API void
-Parrot_default_thawfinish(PARROT_INTERP, PMC* pmc, visit_info *info);
+PARROT_EXPORT void
+Parrot_default_thawfinish(PARROT_INTERP, PMC *pmc, visit_info *info);
 
 
 /* HEADERIZER HFILE: include/parrot/pmc_freeze.h */
@@ -315,20 +315,15 @@ static void visit_todo_list_thaw(PARROT_INTERP,
 #  define FREEZE_ASCII 0
 #endif
 
-/*
- * normal freeze can use next_for_GC ptrs or a seen hash
- */
+/* normal freeze can use next_for_GC ptrs or a seen hash */
 #define FREEZE_USE_NEXT_FOR_GC 0
 
-/*
- * when thawing a string longer then this size, we first do a
- * DOD run and then block DOD/GC - the system can't give us more headers
- */
+/* when thawing a string longer then this size, we first do a DOD run and then
+ * block DOD/GC - the system can't give us more headers */
+
 #define THAW_BLOCK_DOD_SIZE 100000
 
-/*
- * preallocate freeze image for aggregates with this estimation
- */
+/* preallocate freeze image for aggregates with this estimation */
 #if FREEZE_ASCII
 #  define FREEZE_BYTES_PER_ITEM 17
 #else
@@ -1529,6 +1524,7 @@ visit_loop_next_for_GC(PARROT_INTERP, ARGIN(PMC *current),
     }
 }
 
+
 /*
 
 =item C<static void visit_loop_todo_list>
@@ -1543,30 +1539,23 @@ static void
 visit_loop_todo_list(PARROT_INTERP, ARGIN_NULLOK(PMC *current),
         ARGIN(visit_info *info))
 {
-    List * const todo = (List *)PMC_data(info->todo);
-    PMC **list_item;
-    int i;
-    List *finish_list;
-    int finished_first = 0;
+    PMC        **list_item;
+    List        *finish_list    = NULL;
+    List * const todo           = (List *)PMC_data(info->todo);
+    int          finished_first = 0;
+    const int    thawing        = info->what == VISIT_THAW_CONSTANTS
+                               || info->what == VISIT_THAW_NORMAL;
+    int          i;
 
-    const int thawing =
-        info->what == VISIT_THAW_CONSTANTS ||
-        info->what == VISIT_THAW_NORMAL;
-
+    /* create a list that contains PMCs that need thawfinish */
     if (thawing) {
-        /*
-         * create a list that contains PMCs that need thawfinish
-         */
         PMC * const finish_list_pmc = pmc_new(interp, enum_class_Array);
-        finish_list = (List *)PMC_data(finish_list_pmc);
+        finish_list                 = (List *)PMC_data(finish_list_pmc);
     }
-    else
-        finish_list = NULL;
 
     (info->visit_pmc_now)(interp, current, info);
-    /*
-     * can't cache upper limit, visit may append items
-     */
+
+    /* can't cache upper limit, visit may append items */
 again:
     while ((list_item = (PMC**)list_shift(interp, todo, enum_type_PMC))) {
         current = *list_item;
@@ -1574,36 +1563,35 @@ again:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                 "NULL current PMC in visit_loop_todo_list");
 
+        PARROT_ASSERT(current->vtable);
+
         VTABLE_visit(interp, current, info);
+
         if (thawing) {
             if (current == info->thaw_result)
                 finished_first = 1;
-            if (current->vtable && current->vtable->thawfinish !=
-                    Parrot_default_thawfinish)
+            if (current->vtable->thawfinish != Parrot_default_thawfinish)
                 list_unshift(interp, finish_list, current, enum_type_PMC);
         }
     }
 
     if (thawing) {
         INTVAL n;
-        /*
-         * if image isn't consumed, there are some extra data to thaw
-         */
+        /* if image isn't consumed, there are some extra data to thaw */
         if (info->image->bufused > 0) {
             (info->visit_pmc_now)(interp, NULL, info);
             goto again;
         }
-        /*
-         * on thawing call thawfinish for each processed PMC
-         */
+
+        /* on thawing call thawfinish for each processed PMC */
         if (!finished_first) {
-            /*
-             * the first create PMC might not be in the list,
-             * if it has no pmc_ext
-             */
+            /* the first create PMC might not be in the list,
+             * if it has no pmc_ext */
             list_unshift(interp, finish_list, info->thaw_result, enum_type_PMC);
         }
+
         n = list_length(interp, finish_list);
+
         for (i = 0; i < n ; ++i) {
             current = *(PMC**)list_get(interp, finish_list, i, enum_type_PMC);
             if (!PMC_IS_NULL(current))
@@ -1611,6 +1599,7 @@ again:
         }
     }
 }
+
 
 /*
 
@@ -1735,7 +1724,7 @@ interrupted by a DOD run.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 STRING*
@@ -1771,7 +1760,7 @@ Freeze using either method.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 STRING*
@@ -1812,7 +1801,7 @@ Thaw a PMC, called from the C<thaw> opcode.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
@@ -1832,7 +1821,7 @@ constants.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
@@ -1853,7 +1842,7 @@ PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*

@@ -13,16 +13,17 @@ See "WMLScript Reference UP.SDK R4.B3 - October 1999".
 
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 
 .sub 'getConsole'
     new $P0, 'Hash'
 
-    .const .Sub _console_print = '_console_print'
+    .const 'Sub' _console_print = '_console_print'
     $P0[0]  = _console_print
-    .const .Sub _console_println = '_console_println'
+    .const 'Sub' _console_println = '_console_println'
     $P0[1]  = _console_println
 
     .return ($P0)
@@ -52,8 +53,7 @@ Number or invalid.
     $S0 = str
     print $S0
     $I0 = length $S0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L2
   L1:
     new res, 'WmlsInvalid'
@@ -83,24 +83,15 @@ Number or invalid.
     $I0 = isa str, 'WmlsInvalid'
     if $I0 goto L1
     $S0 = str
-    print $S0
-    print "\n"
+    say $S0
     $I0 = length $S0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L2
   L1:
     new res, 'WmlsInvalid'
   L2:
     .return (res)
 .end
-
-
-=head1 AUTHORS
-
-Francois Perrad.
-
-=cut
 
 
 # Local Variables:

@@ -46,7 +46,7 @@ register stacks.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 stack_system_init(SHIM_INTERP)
 {
@@ -62,7 +62,7 @@ Get a new chunk either from the freelist or allocate one.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 Stack_Chunk_t *
@@ -85,7 +85,7 @@ debugging/error reporting.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 Stack_Chunk_t *
@@ -111,7 +111,7 @@ Mark entries in a stack structure during DOD.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 mark_stack(PARROT_INTERP, ARGMOD(Stack_Chunk_t *chunk))
 {
@@ -149,7 +149,7 @@ stack_destroy() doesn't need to do anything, since GC does it all.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 stack_destroy(SHIM(Stack_Chunk_t *top))
 {
@@ -166,7 +166,7 @@ Returns the height of the stack. The maximum "depth" is height - 1.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 size_t
 stack_height(SHIM_INTERP, ARGIN(const Stack_Chunk_t *chunk))
@@ -196,7 +196,7 @@ if C<|depth| > number> of entries in stack.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 Stack_Entry_t *
@@ -226,69 +226,6 @@ stack_entry(PARROT_INTERP, ARGIN(Stack_Chunk_t *stack), INTVAL depth)
 
 /*
 
-=item C<void rotate_entries>
-
-Rotate the top N entries by one.  If C<< N > 0 >>, the rotation is bubble
-up, so the top most element becomes the Nth element.  If C<< N < 0 >>, the
-rotation is bubble down, so that the Nth element becomes the top most
-element.
-
-*/
-
-PARROT_API
-void
-rotate_entries(PARROT_INTERP, ARGMOD(Stack_Chunk_t **stack_p), INTVAL num_entries)
-{
-    Stack_Chunk_t * const stack = *stack_p;
-
-    if (num_entries >= -1 && num_entries <= 1) {
-        return;
-    }
-
-    if (num_entries < 0) {
-        INTVAL i;
-        Stack_Entry_t temp;
-        INTVAL depth;
-
-        num_entries = -num_entries;
-        depth = num_entries - 1;
-
-        if (stack_height(interp, stack) < (size_t)num_entries)
-            Parrot_ex_throw_from_c_args(interp, NULL, ERROR_STACK_SHALLOW,
-                "Stack too shallow!");
-
-        /* XXX Dereferencing stack_entry here is a cavalcade of danger */
-        temp = *stack_entry(interp, stack, depth);
-        for (i = depth; i > 0; i--) {
-            *stack_entry(interp, stack, i) =
-                *stack_entry(interp, stack, i - 1);
-        }
-
-        *stack_entry(interp, stack, 0) = temp;
-    }
-    else {
-        INTVAL i;
-        Stack_Entry_t temp;
-        INTVAL depth = num_entries - 1;
-
-        if (stack_height(interp, stack) < (size_t)num_entries)
-            Parrot_ex_throw_from_c_args(interp, NULL, ERROR_STACK_SHALLOW,
-                "Stack too shallow!");
-
-        /* XXX Dereferencing stack_entry here is a cavalcade of danger */
-        temp = *stack_entry(interp, stack, 0);
-
-        for (i = 0; i < depth; i++) {
-            *stack_entry(interp, stack, i) =
-                *stack_entry(interp, stack, i + 1);
-        }
-
-        *stack_entry(interp, stack, depth) = temp;
-    }
-}
-
-/*
-
 =item C<Stack_Entry_t* stack_prepare_push>
 
 Return a pointer, where new entries go for push.
@@ -297,7 +234,7 @@ Return a pointer, where new entries go for push.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 Stack_Entry_t*
@@ -327,7 +264,7 @@ variable or something.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 stack_push(PARROT_INTERP, ARGMOD(Stack_Chunk_t **stack_p),
            ARGIN(void *thing), Stack_entry_type type, NULLOK(Stack_cleanup_method cleanup))
@@ -368,7 +305,7 @@ Return a pointer, where new entries are popped off.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 Stack_Entry_t*
@@ -394,7 +331,7 @@ Pop off an entry and return a pointer to the contents.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void *
 stack_pop(PARROT_INTERP, ARGMOD(Stack_Chunk_t **stack_p),
@@ -454,7 +391,7 @@ Pop off a destination entry and return a pointer to the contents.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 void *
@@ -478,7 +415,7 @@ Peek at stack and return pointer to entry and the type of the entry.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 void *
@@ -521,13 +458,13 @@ get_entry_type(ARGIN(const Stack_Entry_t *entry))
 =item C<void Parrot_dump_dynamic_environment>
 
 Print a representation of the dynamic stack to the standard error (using
-C<PIO_eprintf>).  This is used only temporarily for debugging.
+C<Parrot_io_eprintf>).  This is used only temporarily for debugging.
 
 =cut
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_dump_dynamic_environment(PARROT_INTERP, ARGIN(Stack_Chunk_t *dynamic_env))
 {
@@ -537,9 +474,9 @@ Parrot_dump_dynamic_environment(PARROT_INTERP, ARGIN(Stack_Chunk_t *dynamic_env)
         const Stack_Entry_t * const e = stack_entry(interp, dynamic_env, 0);
 
         if (! e)
-            Parrot_ex_throw_from_c_args(interp, NULL, 1, "Control stack damaged");
+            Parrot_ex_throw_from_c_args(interp, NULL, 1, "Dynamic environment stack damaged");
 
-        PIO_eprintf(interp, "[%4d:  chunk %p entry %p "
+        Parrot_io_eprintf(interp, "[%4d:  chunk %p entry %p "
                                  "type %d cleanup %p]\n",
                     height, dynamic_env, e,
                     e->entry_type, e->cleanup);
@@ -547,18 +484,18 @@ Parrot_dump_dynamic_environment(PARROT_INTERP, ARGIN(Stack_Chunk_t *dynamic_env)
                 || e->entry_type == STACK_ENTRY_ACTION) {
             PMC * const thing = UVal_pmc(e->entry);
 
-            PIO_eprintf(interp, "[        PMC %p type %d => %Ss]\n",
+            Parrot_io_eprintf(interp, "[        PMC %p type %d => %Ss]\n",
                         thing, thing->vtable->base_type,
                         VTABLE_get_string(interp, thing));
         }
         else if (e->entry_type == STACK_ENTRY_MARK) {
-            PIO_eprintf(interp, "[        mark %d]\n",
+            Parrot_io_eprintf(interp, "[        mark %d]\n",
                         UVal_int(e->entry));
         }
         dynamic_env = dynamic_env->prev;
         height--;
     }
-    PIO_eprintf(interp, "[%4d:  chunk %p %s base]\n",
+    Parrot_io_eprintf(interp, "[%4d:  chunk %p %s base]\n",
                 height, dynamic_env, dynamic_env->name);
 }
 
@@ -595,7 +532,7 @@ Pushes an action handler onto the dynamic environment.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_push_action(PARROT_INTERP, ARGIN(PMC *sub))
 {
@@ -617,7 +554,7 @@ Push a cleanup mark onto the dynamic environment.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_push_mark(PARROT_INTERP, INTVAL mark)
 {
@@ -635,7 +572,7 @@ Pop items off the dynamic environment up to the mark.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_pop_mark(PARROT_INTERP, INTVAL mark)
 {

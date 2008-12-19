@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2007, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 17;
+use Parrot::Test tests => 19;
 
 =head1 NAME
 
@@ -314,32 +314,54 @@ ok 3
 ok 4
 OUTPUT
 
-pir_output_is( << 'CODE', << 'OUTPUT', "n_<oper>" );
+pasm_output_is( <<'CODE', <<'OUT', "add" );
+   new P0, 'Integer'
+   set P0, 5
+   new P1, 'Integer'
+   set P1, 10
+   new P2, 'Integer'
+   add P2, P0, P1
+   set S0, P2
+   print S0
+   print "\n"
+   set P0, "20"
+   set P1, "30"
+   add P2, P1, P0
+   set S0, P2
+   print S0
+   print "\n"
+   end
+CODE
+15
+50
+OUT
+
+pir_output_is( << 'CODE', << 'OUTPUT', "<oper>" );
 .sub main :main
     $P0 = new 'Integer'
     $P1 = new 'Integer'
     set $P0, 6
     set $P1, 2
 
-    n_add $P2, $P0, $P1
+    add $P2, $P0, $P1
     print $P2
     print "\n"
-    $P2 = n_add $P0, $P1
+    $P2 = add $P0, $P1
     print $P2
     print "\n"
-    n_sub $P2, $P0, $P1
+    sub $P2, $P0, $P1
     print $P2
     print "\n"
-    n_mul $P2, $P0, $P1
+    mul $P2, $P0, $P1
     print $P2
     print "\n"
-    n_div $P2, $P0, $P1
+    div $P2, $P0, $P1
     print $P2
     print "\n"
-    n_mod $P2, $P0, $P1
+    mod $P2, $P0, $P1
     print $P2
     print "\n"
-    n_pow $P2, $P0, $P1
+    pow $P2, $P0, $P1
     print $P2
     print "\n"
 .end
@@ -472,23 +494,49 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', 'cmp functions for subclasses' );
 .sub main :main
     $P0 = subclass 'Integer', 'Int'
- 
+
     $P1 = new 'Int'
     $P1 = 1
     $P2 = new 'Int'
     $P2 = 2
 
     $I0 = cmp $P1, $P2
-    say $I0 
+    say $I0
     $I0 = cmp $P1, $P1
-    say $I0 
+    say $I0
     $I0 = cmp $P2, $P1
-    say $I0 
+    say $I0
 .end
 CODE
 -1
 0
 1
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', 'cmp for Integers more than 2^31 apart, RT #59336' );
+.sub 'main' :main
+    $P0 = new 'Integer'
+    $P0 = 2147483600
+
+  test_10:
+    print $P0
+    print " is"
+    if $P0 > -10 goto skip_10
+    print " not"
+  skip_10:
+    say " greater than -10"
+
+  test_1000:
+    print $P0
+    print " is"
+    if $P0 > -1000 goto skip_1000
+    print " not"
+  skip_1000:
+    say " greater than -1000"
+.end
+CODE
+2147483600 is greater than -10
+2147483600 is greater than -1000
 OUTPUT
 
 # Local Variables:

@@ -20,12 +20,13 @@ Use PMC BigFloat when available.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'bc' ]
 
 .sub '__onload' :anon :load
 #    print "__onload bc\n"
-    .const .Sub entry = 'luaopen_bc'
+    .const 'Sub' entry = 'luaopen_bc'
     set_hll_global 'luaopen_bc', entry
 .end
 
@@ -162,13 +163,14 @@ LIST
     new $P0, MYPMC
     push_eh _handler
     $P0 = .op $P1, $P2
+    pop_eh
     .local pmc mt
     mt = lua_getmetatable(MYTYPE)
     .local pmc res
     res = lua_newuserdata($P0, mt)
     .return (res)
   _handler:
-    .get_results ($P0, $S0)
+    .get_results ($P0)
     new res, 'LuaNil'
     .return (res)
 .endm
@@ -394,11 +396,12 @@ LIST
     new $P0, MYPMC
     push_eh _handler
     $P0 = $P1.'sqrt'()
+    pop_eh
     mt = lua_getmetatable(MYTYPE)
     res = lua_newuserdata($P0, mt)
     .return (res)
   _handler:
-    .get_results ($P0, $S0)
+    .get_results ($P0)
     new res, 'LuaNil'
     .return (res)
 .end

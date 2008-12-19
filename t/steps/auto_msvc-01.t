@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 44;
+use Test::More tests => 43;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
@@ -20,7 +20,7 @@ use IO::CaptureOutput qw| capture |;
 
 ########## Win32 ##########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -46,7 +46,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_msvc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -55,7 +55,7 @@ $step = test_step_constructor_and_description($conf);
 my $msvcref = { _MSC_VER => 1399 };
 ok($step->_evaluate_msvc($conf, $msvcref),
     "_evaluate_msvc returned true value");
-is($step->result, 'yes', "Got expected result");
+is($step->result, 'yes, 13.99', "Got expected result");
 is($conf->data->get('msvcversion'), '13.99',
     "Got expected msvc version string");
 
@@ -63,7 +63,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_msvc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -72,7 +72,7 @@ $step = test_step_constructor_and_description($conf);
 $msvcref = { _MSC_VER => 1400 };
 ok($step->_evaluate_msvc($conf, $msvcref),
     "_evaluate_msvc returned true value");
-is($step->result, 'yes', "Got expected result");
+is($step->result, 'yes, 14.0', "Got expected result");
 is($conf->data->get('msvcversion'), '14.0',
     "Got expected msvc version string");
 like(
@@ -85,7 +85,7 @@ $conf->replenish($serialized);
 
 ########## _handle_not_msvc() ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
@@ -125,7 +125,7 @@ ok(! defined ($conf->data->get( 'msvcversion' )),
     $minor = undef;
     $verbose = 1;
     capture(
-        sub { $status = 
+        sub { $status =
             $step->_handle_not_msvc($conf, $major, $minor, $verbose); },
         \$stdout,
     );
@@ -147,7 +147,7 @@ $minor = 99;
 $verbose = undef;
 $msvcversion = $step->_compose_msvcversion($major, $minor, $verbose);
 is($msvcversion, '13.99', "Got expected MSVC version");
-is($step->result(), 'yes', "Got expected result");
+is($step->result(), 'yes, 13.99', "Got expected result");
 $step->set_result(undef);
 
 {
@@ -161,8 +161,7 @@ $step->set_result(undef);
         \$stdout,
     );
     is($msvcversion, '13.99', "Got expected MSVC version");
-    is($step->result(), 'yes', "Got expected result");
-    like($stdout, qr/yep:\s+$major\.$minor/, "Got expected verbose output");
+    is($step->result(), 'yes, 13.99', "Got expected result");
     $step->set_result(undef);
 }
 

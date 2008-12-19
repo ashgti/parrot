@@ -7,7 +7,7 @@ use warnings;
 use lib qw( lib );
 
 use Test::More;
-use Parrot::Test 'no_plan';#tests => 26;
+use Parrot::Test tests => 26;
 
 =head1 NAME
 
@@ -247,35 +247,35 @@ pir_output_is( <<'CODE', <<'OUT', "dumping complex data" );
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello"
-    S1 = "world"
-    set hash1[S0], S1
+    $S0 = "hello"
+    $S1 = "world"
+    set hash1[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello2"
-    S1 = "world2"
-    set hash1[S0], S1
+    $S0 = "hello2"
+    $S1 = "world2"
+    set hash1[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "hash2"
-    set hash1[S0], hash2
+    $S0 = "hash2"
+    set hash1[$S0], hash2
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello3"
-    S1 = "world3"
-    set hash2[S0], S1
+    $S0 = "hello3"
+    $S1 = "world3"
+    set hash2[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "name"
-    S1 = "parrot"
-    set hash3[S0], S1
-    S0 = "is"
-    S1 = "cool"
-    set hash3[S0], S1
+    $S0 = "name"
+    $S1 = "parrot"
+    set hash3[$S0], $S1
+    $S0 = "is"
+    $S1 = "cool"
+    set hash3[$S0], $S1
 
     push array1, "this"
     push array1, "is"
@@ -283,8 +283,8 @@ pir_output_is( <<'CODE', <<'OUT', "dumping complex data" );
     push array1, "test"
     push array1, hash3
 
-    S0 = "array1"
-    set hash2[S0], array1
+    $S0 = "array1"
+    set hash2[$S0], array1
 
     yaml( hash1,"hash1" )
 
@@ -698,35 +698,35 @@ pir_output_is( <<'CODE', <<'OUT', "dumping complex data in Hash" );
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello"
-    S1 = "world"
-    set hash1[S0], S1
+    $S0 = "hello"
+    $S1 = "world"
+    set hash1[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello2"
-    S1 = "world2"
-    set hash1[S0], S1
+    $S0 = "hello2"
+    $S1 = "world2"
+    set hash1[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "hash2"
-    set hash1[S0], hash2
+    $S0 = "hash2"
+    set hash1[$S0], hash2
 
     yaml( hash1,"hash1" )
 
-    S0 = "hello3"
-    S1 = "world3"
-    set hash2[S0], S1
+    $S0 = "hello3"
+    $S1 = "world3"
+    set hash2[$S0], $S1
 
     yaml( hash1,"hash1" )
 
-    S0 = "name"
-    S1 = "parrot"
-    set hash3[S0], S1
-    S0 = "is"
-    S1 = "cool"
-    set hash3[S0], S1
+    $S0 = "name"
+    $S1 = "parrot"
+    set hash3[$S0], $S1
+    $S0 = "is"
+    $S1 = "cool"
+    set hash3[$S0], $S1
 
     array1 = 5
     array1[0] = "this"
@@ -735,8 +735,8 @@ pir_output_is( <<'CODE', <<'OUT', "dumping complex data in Hash" );
     array1[3] = "test"
     array1[4] = hash3
 
-    S0 = "array1"
-    set hash2[S0], array1
+    $S0 = "array1"
+    set hash2[$S0], array1
 
     yaml( hash1,"hash1" )
 
@@ -834,7 +834,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "dumping Float PMC" );
 CODE
 ---
 {
-    "Float" : !Float [ 12345.7 ],
+    "Float" : !Float [ 12345.678 ],
 }
 OUTPUT
 

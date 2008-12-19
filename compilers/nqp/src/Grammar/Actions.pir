@@ -2,15 +2,16 @@
 # $Id$
 
 .sub '__onload' :init :load
-    $P0 = newclass 'NQP::Grammar::Actions'
+    $P0 = get_hll_global 'P6metaclass'
+    $P0 = $P0.'new_class'('NQP::Grammar::Actions')
 
     ##  create the stack for nested lexical blocks
     $P0 = new 'ResizablePMCArray'
-    set_hll_global ['NQP::Grammar::Actions'], '@?BLOCK', $P0
+    set_hll_global ['NQP';'Grammar';'Actions'], '@?BLOCK', $P0
 
     ##  initialize optable with inline PIR
     .local pmc optable
-    optable = get_hll_global [ 'NQP::Grammar' ], '$optable'
+    optable = get_hll_global [ 'NQP';'Grammar' ], '$optable'
 
     optable['postfix:++'; 'inline'] = <<"        END"
         ##  inline postfix:++
@@ -27,7 +28,7 @@
     .return ()
 .end
 
-.namespace [ 'NQP::Grammar::Actions' ]
+.namespace [ 'NQP';'Grammar';'Actions' ]
 
 
 ##    method TOP($/, $key) {
@@ -273,13 +274,14 @@
     $P0  = $P0.'item'()
     $P1  = match['block']
     block = $P1.'item'()
-    block.'blocktype'('sub')
+    block.'blocktype'('immediate')
     .local pmc params, topic_var
     params = block[0]
     $P3 = get_hll_global ['PAST'], 'Var'
     topic_var = $P3.'new'('name'=>'$_', 'scope'=>'parameter')
     params.'push'(topic_var)
     block.'symbol'('$_', 'scope'=>'lexical')
+    block.'arity'(1)
     $P2  = get_hll_global ['PAST'], 'Op'
     $S1  = match['sym']
     past = $P2.'new'($P0, block, 'pasttype'=>$S1, 'node'=>match)
@@ -401,6 +403,7 @@
   add_signature:
     $P0 = match['signature']
     $P0 = $P0[0]
+    if null $P0 goto param_end
     unless $P0 goto param_end
     .local pmc iter
     iter = new 'Iterator', $P0
@@ -789,8 +792,8 @@
         $P1 = split '::', '%s'
         push_eh subclass_done
         $P2 = $P0.'new_class'($P1)
-        pop_eh
       subclass_done:
+        pop_eh
         INLINE
     $S0 = match['name']
     $I0 = index inline, '%s'

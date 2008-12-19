@@ -17,7 +17,6 @@ Tests the Object PMC.
 =cut
 
 # L<PDD15/Object PMC API>
-# TODO fix smartlinks once this is specced
 ## TODO add more tests as this is documented and implemented
 
 .sub main :main
@@ -26,7 +25,7 @@ Tests the Object PMC.
     plan(1)
 
     push_eh cant_instantiate
-      new P0, 'Object'
+      new $P0, 'Object'
     pop_eh
     ok(0, 'Able to instantiate Object')
     goto done_1

@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2006-2007, The Perl Foundation.
+# Copyright (C) 2006-2008, The Perl Foundation.
 # $Id$
 
 =head1 NAME
@@ -19,12 +19,12 @@ Tests C<WmlsInteger> PMC
 
 use strict;
 use warnings;
-use Parrot::Test tests => 10;
+use Parrot::Test tests => 11;
 use Test::More;
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check inheritance' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
     .local int bool1
@@ -43,7 +43,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check interface' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
     .local int bool1
@@ -66,7 +66,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check name' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
     .local string str1
@@ -81,7 +81,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check clone' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
     pmc1 = 10
@@ -109,7 +109,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check get_bool' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
     pmc1 = 42
@@ -129,7 +129,8 @@ CODE
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL' );
-.HLL "WMLScript", "wmls_group"
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .sub _main
     .local pmc pmc1
     pmc1 = new "WmlsInteger"
@@ -148,9 +149,10 @@ CODE
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL & .const' );
-.HLL "WMLScript", "wmls_group"
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .sub _main
-    .const .WmlsInteger cst1 = "42"
+    .const "WmlsInteger" cst1 = "42"
     print cst1
     print "\n"
     .local int bool1
@@ -164,10 +166,11 @@ CODE
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check istrue' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
-    .const .WmlsInteger cst1 = "42"
+    .const "WmlsInteger" cst1 = "42"
     print cst1
     print "\n"
     $P0 = istrue cst1
@@ -184,10 +187,11 @@ WmlsBoolean
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check typeof' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
-    .const .WmlsInteger cst1 = "42"
+    .const "WmlsInteger" cst1 = "42"
     print cst1
     print "\n"
     $P0 = typeof cst1
@@ -204,10 +208,11 @@ WmlsInteger
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check defined' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
-    .const .WmlsInteger cst1 = "42"
+    .const "WmlsInteger" cst1 = "42"
     print cst1
     print "\n"
     $P0 = defined cst1
@@ -221,6 +226,23 @@ CODE
 42
 true
 WmlsBoolean
+OUTPUT
+
+pir_output_is( << 'CODE', << 'OUTPUT', 'check box' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
+.loadlib "wmls_ops"
+.sub _main
+    $P0 = box 42
+    print $P0
+    print "\n"
+    $S0 = typeof $P0
+    print $S0
+    print "\n"
+.end
+CODE
+42
+WmlsInteger
 OUTPUT
 
 # Local Variables:

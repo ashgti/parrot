@@ -1,14 +1,13 @@
 #! perl
-# Copyright (C) 2007, The Perl Foundation.
+# Copyright (C) 2008, The Perl Foundation.
 # $Id$
 # auto_format-01.t
 
 use strict;
 use warnings;
-use Test::More tests => 21;
+use Test::More tests => 16;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::format');
 use Parrot::BuildUtil;
 use Parrot::Configure;
@@ -20,14 +19,12 @@ use Parrot::Configure::Test qw(
 
 ########## _set_intvalfmt() ##########
 
-my $args = process_options( {
+my ($args, $step_list_ref) = process_options( {
     argv            => [],
     mode            => q{configure},
 } );
 
 my $conf = Parrot::Configure->new();
-
-test_step_thru_runstep($conf, q{init::defaults}, $args);
 
 my ($task, $step_name, $step, $ret);
 my $pkg = q{auto::format};
@@ -89,7 +86,7 @@ $step = test_step_constructor_and_description($conf);
 {
     $conf->data->set( nv => 'double' );
     auto::format::_set_floatvalfmt_nvsize($conf);
-    is($conf->data->get( 'floatvalfmt' ), '%f',
+    is($conf->data->get( 'floatvalfmt' ), '%.15g',
         "floatvalfmt set as expected");
     is($conf->data->get( 'nvsize' ), $conf->data->get( 'doublesize' ),
         "nvsize set as expected");

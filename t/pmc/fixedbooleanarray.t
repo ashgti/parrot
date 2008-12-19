@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 12;
+use Parrot::Test tests => 13;
 
 =head1 NAME
 
@@ -22,8 +22,6 @@ Tests C<FixedBooleanArray> PMC. Checks size, sets various elements, including
 out-of-bounds test. Checks INT and PMC keys.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'FixedBooleanArray'
@@ -144,7 +142,7 @@ current instr\.:/
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'FixedBooleanArray'
      set P0, 3
      new P1, 'Key'
@@ -164,7 +162,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 1.0, OK2)
+     .fp_eq_pasm(N0, 1.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -181,7 +179,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'FixedBooleanArray'
      set P0, 1024
 
@@ -201,7 +199,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, 1.0, OK2)
+     .fp_eq_pasm(N0, 1.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -306,7 +304,33 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw" );
     fba = thaw s
     say fba
 
-.end    
+.end
+
+CODE
+01001000100010010
+01001000100010010
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "clone" );
+.sub main :main
+    .local pmc fba1, fba2
+    .local int i
+    .local string s
+
+    fba1 = new 'FixedBooleanArray'
+    fba1 = 17
+
+    fba1[1]  = 1
+    fba1[4]  = 1
+    fba1[8]  = 1
+    fba1[12] = 1
+    fba1[15] = 1
+
+    say fba1
+    fba2 = clone fba1
+    say fba2
+
+.end
 
 CODE
 01001000100010010

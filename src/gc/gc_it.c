@@ -270,7 +270,7 @@ state of the collector.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_gc_it_init(PARROT_INTERP)
 {
@@ -363,7 +363,7 @@ if GC_finish_FLAG
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_gc_it_run(PARROT_INTERP, int flags)
 {
@@ -866,7 +866,9 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
        we don't lose anything. This is probably not the right way to go, but
        it should work. */
     if (gc_priv_data->queue) {
+#  if GC_IT_DEBUG
         fprintf(stderr, "Objects on queue before root queue. Tracing.\n");
+#  endif
         gc_it_trace_normal(interp);
     }
 
@@ -874,7 +876,9 @@ gc_it_enqueue_all_roots(PARROT_INTERP)
     /* Move the entire root queue to the queue */
     gc_priv_data->queue       = gc_priv_data->root_queue;
     gc_priv_data->root_queue  = NULL;
+#  if GC_IT_DEBUG
     fprintf(stderr, "Root queue added to queue\n");
+#  endif
 }
 #  endif
 
@@ -1008,7 +1012,7 @@ Kill the GC and reset everything.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_gc_it_deinit(PARROT_INTERP)
 {
@@ -1036,7 +1040,7 @@ functions, and setting the size of the objects to include the GC header.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {
@@ -1084,7 +1088,7 @@ free list.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 gc_it_add_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool),
     ARGMOD(void *to_add))
@@ -1140,7 +1144,7 @@ snatch it up.
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-PARROT_API
+PARROT_EXPORT
 void *
 gc_it_get_free_object(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
@@ -1225,7 +1229,7 @@ the initialization nastyness.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 gc_it_alloc_objects(PARROT_INTERP, ARGMOD(struct Small_Object_Pool *pool))
 {
@@ -1411,7 +1415,7 @@ allocate a new arena and return an object from that.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 {

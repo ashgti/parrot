@@ -1,6 +1,6 @@
 .sub __init_compiler :load
   loadlib $P0, "match_group"
-  .const .Sub $P1 =  "_compile_regex"
+  .const 'Sub' $P1 =  "_compile_regex"
   compreg "regex", $P1
 .end
 
@@ -32,7 +32,7 @@
 pir_to_pbc:
   pir_data = _readfile(pirfile)
   $P0 = compreg "PIR"
-  $P1 = $P0.compile(pir_data)
+  $P1 = $P0.'compile'(pir_data)
 
 #  $P0 = compreg "FILE"
 #  $P1 = $P0(pirfile)

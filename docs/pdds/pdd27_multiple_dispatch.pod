@@ -111,8 +111,8 @@ PMCs, and the types are extracted from the types of the array elements.
 
 Return an array of matching candidates, sorted from best matching to worst
 matching, for a passed in signature. The signature passed in is a simple type
-string for the signature ('P' for PMC, 'I' for integer, 'N' for number, and 'S'
-for string).
+string for the signature ('P' for PMC, 'I' for integer, 'N' for number, and
+'S' for string).
 
 =item get_iter
 
@@ -124,7 +124,7 @@ worst matching, for the current call arguments.
 
 Return a function pointer to the best matching candidate for the current call
 arguments, and set up the interpreter preparing for invocation. This vtable
-function calls C<Parrot_mmd_sort_candidate_list> from the public MMD API, but
+function calls C<Parrot_mmd_sort_manhattan> from the public MMD API, but
 may be changed to call C<Parrot_mmd_invoke>.
 
 =item set_integer_keyed_int, set_number_keyed_int, set_string_keyed_int
@@ -146,8 +146,8 @@ sub. (Masks the vtable functions inherited from ResizablePMCArray.)
 Return an array of matching candidates, sorted from best matching to worst
 matching, for a passed in signature. If the signature passed in is an array of
 PMCs, the types are extracted from the types of the array elements. If the
-signature passed in is a simple type string for the signature ('P' for PMC, 'I'
-for integer, 'N' for number, and 'S' for string), the types are matched as
+signature passed in is a simple type string for the signature ('P' for PMC,
+'I' for integer, 'N' for number, and 'S' for string), the types are matched as
 simple types.
 
 =back
@@ -189,7 +189,7 @@ functions.
 
 =over 4
 
-=item Parrot_mmd_sort_candidate_list
+=item Parrot_mmd_sort_manhattan
 
 Performs a multiple dispatch lookup on an array of subroutines. The call
 signature to match is pulled from the current interpreter, following the
@@ -254,7 +254,7 @@ None.
 =head1 REFERENCES
 
 docs/mmd.pod
-src/mmd.c
+src/multidispatch.c
 src/pmc/multisub.pmc
 
 =cut

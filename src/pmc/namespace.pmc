@@ -28,6 +28,79 @@ These are the vtable functions for the namespace PMC.
 
 #include "parrot/parrot.h"
 
+static void add_to_class(
+        Interp *interp,
+        Parrot_NameSpace_attributes * const nsinfo,
+        PMC * const classobj,
+        STRING *key,
+        PMC *value)
+{
+    /* Insert it in class, if there is a class */
+    if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
+        VTABLE_add_method(interp, classobj, key, value);
+
+    /* Otherwise, store it in the namespace for the class to
+     * retrieve later */
+    else {
+        /* If we don't have a place to hang methods, make one. */
+        if (PMC_IS_NULL(nsinfo->methods))
+            nsinfo->methods = pmc_new(interp, enum_class_Hash);
+
+        /* Insert it. */
+        VTABLE_set_pmc_keyed_str(interp, nsinfo->methods, key, value);
+    }
+}
+
+static int
+ns_insert_sub_keyed_str(PARROT_INTERP, PMC *self, STRING *key, PMC *value)
+{
+    Parrot_NameSpace_attributes * const nsinfo   = PARROT_NAMESPACE(self);
+    PMC              *       vtable   = nsinfo->vtable;
+    Parrot_sub       * const sub      = PMC_sub(value);
+    PMC              * const classobj = VTABLE_get_class(interp, self);
+
+    /* Handle vtable methods with two underscores at the start. */
+    if (sub->vtable_index == -1) {
+        if (string_str_index(interp, key, CONST_STRING(interp, "__"), 0) == 0) {
+            STRING * const meth_name = string_substr(interp, key, 2,
+                (INTVAL)(string_length(interp, key) - 2), NULL, 0);
+            sub->vtable_index        =
+                Parrot_get_vtable_index(interp, meth_name);
+        }
+    }
+
+    if (sub->vtable_index != -1) {
+        /* Insert it in class, if there is a class */
+        if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
+            VTABLE_add_vtable_override(interp, classobj, key, value);
+
+        /* Otherwise, store it in the namespace for the class to
+         * retrieve later */
+        else {
+            /* If we don't have a place to hang vtable methods, make one. */
+            if (PMC_IS_NULL(vtable))
+                nsinfo->vtable = vtable = pmc_new(interp, enum_class_Hash);
+
+            /* Insert it. */
+            VTABLE_set_pmc_keyed_int(interp, vtable, sub->vtable_index, value);
+        }
+    }
+
+    if (sub->comp_flags & SUB_COMP_FLAG_METHOD) {
+        STRING *method_name = key;
+
+        if (0 != string_equal(interp, sub->method_name, CONST_STRING(interp, "")))
+            method_name = sub->method_name;
+        add_to_class(interp, nsinfo, classobj, method_name, value);
+    }
+
+    /* If it's anonymous, we're done. */
+    if (PObj_get_FLAGS(value) & SUB_FLAG_PF_ANON)
+        return 1;
+
+    return 0;
+}
+
 /*
  * Typically a named slot contains either another namespace or a
  * var/sub (not both).
@@ -72,7 +145,7 @@ other fields.
         SUPER();                                /* _struct_val := Hash */
         PMC_pmc_val(SELF)              = NULL;  /* parent */
         PMC_data(SELF)                 =
-                mem_allocate_zeroed_typed(Parrot_NameSpace);
+                mem_allocate_zeroed_typed(Parrot_NameSpace_attributes);
         PARROT_NAMESPACE(SELF)->vtable = PMCNULL;
         PARROT_NAMESPACE(SELF)->_class = PMCNULL;
     }
@@ -87,7 +160,7 @@ Marks the namespace as live.
 
 */
     VTABLE void mark() {
-        Parrot_NameSpace * const nsinfo = PARROT_NAMESPACE(SELF);
+        Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
         SUPER();
         if (PMC_pmc_val(SELF))
             pobject_lives(INTERP, (PObj *)PMC_pmc_val(SELF));
@@ -163,115 +236,53 @@ really a public API.
 */
 
     VTABLE void set_pmc_keyed_str(STRING *key, PMC *value) {
-        const int   val_is_NS =
-            value->vtable->base_type == enum_class_NameSpace;
         PMC        *new_tuple = NULL;
-        PMC * const old       = (PMC *)parrot_hash_get(INTERP, NS_HASH(SELF), key);
+        const int   val_is_NS = PMC_IS_NULL(value)
+                              ? 0
+                              :value->vtable->base_type == enum_class_NameSpace;
+
+        /* don't need this everywhere yet */
+        PMC *old = (PMC *)parrot_hash_get(INTERP, NS_HASH(SELF), key);
 
         /* If it's a sub... */
         if (!PMC_IS_NULL(value) && VTABLE_isa(INTERP, value, CONST_STRING(INTERP, "Sub"))) {
-            Parrot_NameSpace * const nsinfo   = PARROT_NAMESPACE(SELF);
-            PMC              *       vtable   = nsinfo->vtable;
-            Parrot_sub       * const sub      = PMC_sub(value);
-            PMC              * const classobj = VTABLE_get_class(interp, SELF);
-
-            /* Handle vtable methods with two underscores at the start. */
-            if (sub->vtable_index == -1) {
-                if (string_str_index(interp, key,
-                    CONST_STRING(interp, "__"), 0) == 0) {
-                    STRING * const meth_name = string_substr(interp, key, 2,
-                        string_length(interp, key) - 2, NULL, 0);
-                    sub->vtable_index        =
-                        Parrot_get_vtable_index(interp, meth_name);
-                }
+            /* TT #10; work around that Sub doesn't use PMC ATTRs */
+            if (value->vtable->base_type != enum_class_Object) {
+                if (ns_insert_sub_keyed_str(interp, SELF, key, value))
+                    return;
             }
-
-            if (sub->vtable_index != -1) {
-                /* Insert it in class, if there is a class */
-                if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
-                    VTABLE_add_vtable_override(interp, classobj, key, value);
-
-                /* Otherwise, store it in the namespace for the class to
-                 * retrieve later */
-                else {
-                    /* If we don't have a place to hang vtable methods, make one. */
-                    if (PMC_IS_NULL(vtable))
-                        nsinfo->vtable = vtable = pmc_new(interp, enum_class_Hash);
-
-                    /* Insert it. */
-                    VTABLE_set_pmc_keyed_int(INTERP, vtable,
-                        sub->vtable_index, value);
-                }
-            }
-
-            if (sub->comp_flags & SUB_COMP_FLAG_METHOD) {
-                /* Insert it in class, if there is a class */
-                if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
-                    VTABLE_add_method(interp, classobj, key, value);
-
-                /* Otherwise, store it in the namespace for the class to
-                 * retrieve later */
-                else {
-                    /* If we don't have a place to hang methods, make one. */
-                    if (PMC_IS_NULL(nsinfo->methods))
-                        nsinfo->methods = pmc_new(interp, enum_class_Hash);
-
-                    /* Insert it. */
-                    VTABLE_set_pmc_keyed_str(INTERP, nsinfo->methods, key, value);
-                }
-            }
-
-            /* If it's anonymous, we're done. */
-            if (PObj_get_FLAGS(value) & SUB_FLAG_PF_ANON)
-                return;
         }
 
         /* If it's an NCI method */
-        if (value->vtable->base_type == enum_class_NCI) {
-            Parrot_NameSpace * const nsinfo   = PARROT_NAMESPACE(SELF);
-            PMC              * const classobj = VTABLE_get_class(interp, SELF);
+        if (!PMC_IS_NULL(value) && VTABLE_isa(INTERP, value, CONST_STRING(INTERP, "NCI"))) {
+            Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
+            PMC * const classobj = VTABLE_get_class(interp, SELF);
 
             /* Insert it in class, if there is a class */
-            if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
-                VTABLE_add_method(interp, classobj, key, value);
-
-            /* Otherwise, store it in the namespace for the class to
-             * retrieve later */
-            else {
-                /* If we don't have a place to hang methods, make one. */
-                if (PMC_IS_NULL(nsinfo->methods))
-                    nsinfo->methods = pmc_new(interp, enum_class_Hash);
-
-                /* Insert it. */
-                VTABLE_set_pmc_keyed_str(INTERP, nsinfo->methods, key, value);
-            }
+              add_to_class(INTERP, nsinfo, classobj, key, value);
         }
 
-        /* If it's a multi-sub... */
-        if (value->vtable->base_type == enum_class_MultiSub) {
+        /* If it's a multi-sub and the first in this NS... */
+        if (!PMC_IS_NULL(value)
+        &&   VTABLE_isa(INTERP, value, CONST_STRING(INTERP, "MultiSub"))) {
 
-            if (VTABLE_elements(interp, value) > 0) {
-                Parrot_NameSpace * const nsinfo = PARROT_NAMESPACE(SELF);
+            /* TT #10; work around that Sub doesn't use PMC ATTRs */
+            if (value->vtable->base_type != enum_class_Object
+            && VTABLE_elements(interp, value) > 0) {
+                Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
                 PMC * const classobj = VTABLE_get_class(interp, SELF);
 
                 /* Extract the first alternate and check if it is a method */
-                Parrot_sub * const sub = PMC_sub(VTABLE_get_pmc_keyed_int(interp, value, 0));
+                PMC *pmc_sub = VTABLE_get_pmc_keyed_int(interp, value, 0);
+                Parrot_sub * const sub = PMC_sub(pmc_sub);
 
                 if (sub->comp_flags & SUB_COMP_FLAG_METHOD) {
-                    /* Insert it in class, if there is a class */
-                    if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
-                        VTABLE_add_method(interp, classobj, key, value);
+                    STRING *method_name = key;
 
-                    /* Otherwise, store it in the namespace for the class to
-                     * retrieve later */
-                    else {
-                        /* If we don't have a place to hang methods, make one. */
-                        if (PMC_IS_NULL(nsinfo->methods))
-                            nsinfo->methods = pmc_new(interp, enum_class_Hash);
+                    if (0 != string_equal(interp, sub->method_name, CONST_STRING(interp, "")))
+                        method_name = sub->method_name;
 
-                        /* Insert it. */
-                        VTABLE_set_pmc_keyed_str(INTERP, nsinfo->methods, key, value);
-                    }
+                    add_to_class(INTERP, nsinfo, classobj, method_name, value);
 
                     SUPER(key, value);
                 }
@@ -306,7 +317,7 @@ really a public API.
 
         if (val_is_NS) {
             /* TODO - this hack needs to go */
-            Parrot_NameSpace *nsinfo = PARROT_NAMESPACE(value);
+            Parrot_NameSpace_attributes *nsinfo = PARROT_NAMESPACE(value);
             PMC_pmc_val(value)       = SELF;  /* set parent */
             nsinfo->name             = key;   /* and name */
 
@@ -328,7 +339,7 @@ really a public API.
     }
 
     VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
-        PMC    *ns = SELF;
+        PMC *ns = SELF;
 
         if (key->vtable->base_type == enum_class_String) {
             SELF.set_pmc_keyed_str(VTABLE_get_string(INTERP, key), value);
@@ -337,7 +348,7 @@ really a public API.
 
         if (key->vtable->base_type == enum_class_Key) {
             while (1) {
-                STRING * const part = key_string(INTERP, key);
+                STRING * const part = VTABLE_get_string(INTERP, key);
                 key  = key_next(INTERP, key);
 
                 if (!key) {
@@ -390,7 +401,7 @@ really a public API.
         ns = SELF;
 
         if (key->vtable->base_type == enum_class_Key) {
-            STRING * const part = key_string(INTERP, key);
+            STRING * const part = VTABLE_get_string(INTERP, key);
             key  = key_next(INTERP, key);
 
             if (!key)
@@ -409,7 +420,7 @@ really a public API.
     }
 
     VTABLE PMC *get_pmc_keyed_int(INTVAL key) {
-        Parrot_NameSpace * const nsinfo = PARROT_NAMESPACE(SELF);
+        Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
         PMC              * const vtable = nsinfo->vtable;
 
         if (PMC_IS_NULL(vtable))
@@ -456,8 +467,9 @@ TOTAL KLUDGE.  ON THE CHOPPING BLOCK.
             return SELF.get_pointer_keyed_str(VTABLE_get_string(INTERP, key));
 
         if (key->vtable->base_type == enum_class_Key) {
-            while (key) {
-                STRING * const part = key_string(INTERP, key);
+            /* this loop (and function) could use a rewrite for clarity */
+            while (1) {
+                STRING * const part = VTABLE_get_string(INTERP, key);
                 key  = key_next(INTERP, key);
 
                 if (!key)
@@ -505,7 +517,7 @@ Return the name of this namespace part.
 */
 
     VTABLE STRING *get_string() {
-        const Parrot_NameSpace * const nsinfo = PARROT_NAMESPACE(SELF);
+        const Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
         return nsinfo->name;
     }
 
@@ -602,7 +614,7 @@ Returns the name of the namespace as an array of strings.
         PMC *ns        = SELF;
 
         while (ns) {
-            Parrot_NameSpace *nsinfo = PARROT_NAMESPACE(ns);
+            Parrot_NameSpace_attributes *nsinfo = PARROT_NAMESPACE(ns);
             VTABLE_unshift_string(INTERP, ar, nsinfo->name);
             ns = PMC_pmc_val(ns);
         }
@@ -898,7 +910,7 @@ Returns the class or role PMC that is associated with this namespace.
 */
 
     METHOD get_class() {
-        Parrot_NameSpace * const nsinfo = PARROT_NAMESPACE(SELF);
+        Parrot_NameSpace_attributes * const nsinfo = PARROT_NAMESPACE(SELF);
         PMC              *ret_class     = nsinfo->_class;
 
         if (PMC_IS_NULL(ret_class))
@@ -933,7 +945,7 @@ the namespace.
 */
 
     METHOD get_associated_methods() {
-        Parrot_NameSpace * const nsinfo      = PARROT_NAMESPACE(SELF);
+        Parrot_NameSpace_attributes * const nsinfo      = PARROT_NAMESPACE(SELF);
         PMC              * const ret_methods = nsinfo->methods;
 
         nsinfo->methods = PMCNULL;
@@ -953,7 +965,7 @@ from the namespace.
 */
 
     METHOD get_associated_vtable_methods() {
-        Parrot_NameSpace * const nsinfo      = PARROT_NAMESPACE(SELF);
+        Parrot_NameSpace_attributes * const nsinfo      = PARROT_NAMESPACE(SELF);
         PMC              * const ret_methods = nsinfo->vtable;
 
         nsinfo->vtable = PMCNULL;

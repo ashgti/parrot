@@ -14,13 +14,16 @@ src/builtins/io.pir - Perl6 builtins for I/O
 
 .sub 'print'
     .param pmc args            :slurpy
-    .local pmc iter
+    .local pmc it
     args.'!flatten'()
-    iter = new 'Iterator', args
+    it = iter args
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
-    print $S0
+    unless it goto iter_end
+    $P0 = shift it
+    unless null $P0 goto iter_nonull
+    $P0 = new 'Failure'
+  iter_nonull:
+    print $P0
     goto iter_loop
   iter_end:
     .return (1)
@@ -133,12 +136,11 @@ It is an error to use bare C<unlink> without arguments.
   it_loop:
     unless it goto it_loop_end
     $S0 = shift it
-    push_eh unlink_eh
-    os.rm($S0)
-    pop_eh
+    push_eh unlink_skip
+    os.'rm'($S0)
     inc success_count
-    goto it_loop
-  unlink_eh:
+  unlink_skip:
+    pop_eh
     goto it_loop
   it_loop_end:
 

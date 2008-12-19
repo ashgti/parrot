@@ -27,12 +27,19 @@ Implements an instance of a class.
 static INTVAL
 get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
 {
-    Parrot_Class * const _class = PARROT_CLASS(self);
-    int                  num_classes, i;
+    Parrot_Class_attributes * const _class  = PARROT_CLASS(self);
+    INTVAL                          cur_hll = CONTEXT(interp)->current_HLL;
+    int                             num_classes, i;
+
+    CONTEXT(interp)->current_HLL = 0;
 
     /* First see if we can find it in the cache. */
-    if (VTABLE_exists_keyed_str(interp, _class->attrib_cache, name))
-        return VTABLE_get_integer_keyed_str(interp, _class->attrib_cache, name);
+    if (VTABLE_exists_keyed_str(interp, _class->attrib_cache, name)) {
+        INTVAL retval =
+            VTABLE_get_integer_keyed_str(interp, _class->attrib_cache, name);
+        CONTEXT(interp)->current_HLL = cur_hll;
+        return retval;
+    }
 
     /* No hit. We need to walk up the list of parents to try and find the
      * attribute. */
@@ -55,10 +62,12 @@ get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
             VTABLE_set_integer_keyed_str(interp, _class->attrib_cache, name,
                 index);
 
+            CONTEXT(interp)->current_HLL = cur_hll;
             return index;
         }
     }
 
+    CONTEXT(interp)->current_HLL = cur_hll;
     return -1;
 }
 
@@ -69,7 +78,7 @@ get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
 static INTVAL
 get_attrib_index_keyed(PARROT_INTERP, PMC *self, PMC *key, STRING *name)
 {
-    Parrot_Class * const _class       = PARROT_CLASS(self);
+    Parrot_Class_attributes * const _class       = PARROT_CLASS(self);
     PMC          * const class_cache  = VTABLE_get_pmc_keyed_str(interp,
                     _class->attrib_cache, VTABLE_get_string(interp, key));
     PMC                 *parent_class;
@@ -177,7 +186,7 @@ Mark any referenced strings and PMCs.
 */
     VTABLE void mark() {
         if (PARROT_OBJECT(SELF)) {
-            Parrot_Object * const obj = PARROT_OBJECT(SELF);
+            Parrot_Object_attributes * const obj = PARROT_OBJECT(SELF);
 
             if (obj->_class)
                 pobject_lives(interp, (PObj*)obj->_class);
@@ -197,7 +206,7 @@ of the given name walking up the inheritance tree.
 
 */
     VTABLE PMC *get_attr_str(STRING *name) {
-        Parrot_Object * const obj      = PARROT_OBJECT(SELF);
+        Parrot_Object_attributes * const obj      = PARROT_OBJECT(SELF);
         STRING        * const get_attr = CONST_STRING(interp, "get_attr_str");
         INTVAL index;
 
@@ -231,7 +240,7 @@ defined in the parent identified by the given key.
 
 */
     VTABLE PMC *get_attr_keyed(PMC *key, STRING *name) {
-        Parrot_Object * const obj = PARROT_OBJECT(SELF);
+        Parrot_Object_attributes * const obj = PARROT_OBJECT(SELF);
 
         /* Look up the index. */
         const INTVAL index = get_attrib_index_keyed(interp, obj->_class, key, name);
@@ -256,7 +265,7 @@ of the given name walking up the inheritance tree.
 
 */
     VTABLE void set_attr_str(STRING *name, PMC *value) {
-        Parrot_Object * const obj       = PARROT_OBJECT(SELF);
+        Parrot_Object_attributes * const obj       = PARROT_OBJECT(SELF);
         STRING        *vtable_meth_name = CONST_STRING(interp, "set_attr_str");
         INTVAL         index;
 
@@ -291,7 +300,7 @@ defined in the parent identified by the given key.
 
 */
     VTABLE void set_attr_keyed(PMC *key, STRING *name, PMC *value) {
-        Parrot_Object * const obj = PARROT_OBJECT(SELF);
+        Parrot_Object_attributes * const obj = PARROT_OBJECT(SELF);
         const INTVAL index        = get_attrib_index_keyed(interp, obj->_class, key, name);
 
         /* If lookup failed, exception. */
@@ -313,8 +322,8 @@ Queries this object's class to find the method with the given name.
 
 */
     VTABLE PMC *find_method(STRING *name) {
-        Parrot_Object * const obj    = PARROT_OBJECT(SELF);
-        Parrot_Class  * const _class = PARROT_CLASS(obj->_class);
+        Parrot_Object_attributes * const obj    = PARROT_OBJECT(SELF);
+        Parrot_Class_attributes  * const _class = PARROT_CLASS(obj->_class);
         PMC           *method        = PMCNULL;
         STRING        *find_method   = CONST_STRING(interp, "find_method");
 
@@ -343,7 +352,7 @@ Queries this object's class to find the method with the given name.
             /* If it's from this universe or the class doesn't inherit from
              * anything outside of it... */
             if (all_in_universe || VTABLE_isa(interp, cur_class, CONST_STRING(interp, "Class"))) {
-                const Parrot_Class * const class_info = PARROT_CLASS(cur_class);
+                const Parrot_Class_attributes * const class_info = PARROT_CLASS(cur_class);
                 if (VTABLE_exists_keyed_str(interp, class_info->methods, name)) {
                     /* Found it! */
                     method = VTABLE_get_pmc_keyed_str(interp, class_info->methods, name);
@@ -380,6 +389,51 @@ Queries this object's class to find the method with the given name.
 
 /*
 
+=item C<INTVAL get_integer()>
+
+Invoke the PIR-defined vtable override, or call the default get_integer.
+
+=cut
+
+*/
+    VTABLE INTVAL get_integer() {
+        Parrot_Object_attributes * const obj       = PARROT_OBJECT(pmc);
+        Parrot_Class_attributes  * const _class    = PARROT_CLASS(obj->_class);
+        STRING * const meth_name = CONST_STRING(interp, "get_integer");
+
+        /* Walk and search for the vtable method. */
+        const int num_classes = VTABLE_elements(interp, _class->all_parents);
+        int i;
+        for (i = 0; i < num_classes; i++) {
+            /* Get the class. */
+            PMC * const cur_class = VTABLE_get_pmc_keyed_int(interp, _class->all_parents, i);
+
+            PMC * const meth = Parrot_oo_find_vtable_override_for_class(interp,
+                    cur_class, meth_name);
+            if (!PMC_IS_NULL(meth)) {
+                INTVAL result;
+                Parrot_pcc_invoke_sub_from_c_args(interp, meth, "P->I", pmc, &result);
+                return result;
+/*            return (INTVAL)Parrot_run_meth_fromc_args_reti(interp, meth, pmc, meth_name, "I"); */
+
+            }
+            /* method name is get_integer */
+            if (cur_class->vtable->base_type == enum_class_PMCProxy) {
+                /* Get the PMC instance and call the vtable method on that. */
+                STRING * const proxy      = CONST_STRING(interp, "proxy");
+                PMC    * const del_object = VTABLE_get_attr_str(interp, pmc, proxy);
+
+                if (!PMC_IS_NULL(del_object)) {
+                    return (INTVAL)VTABLE_get_integer(interp, del_object);
+
+                }
+            }
+        }
+        return (INTVAL)Parrot_default_get_integer(interp, pmc);
+    }
+
+/*
+
 =item C<PMC *get_class()>
 
 Get the class PMC representing the class that this object is an instance of.
@@ -399,6 +453,31 @@ Get the class PMC representing the class that this object is an instance of.
                     get_class, "P");
 
         return classobj;
+    }
+
+/*
+
+=item C<PMC *get_namespace()>
+
+Get the namespace PMC associated with the class that this object is an instance of.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_namespace() {
+        PMC    * const classobj = VTABLE_get_class(interp, SELF);
+        STRING *get_namespace   = CONST_STRING(interp, "get_namespace");
+        /* If there's a vtable override for 'get_namespace' run that instead. */
+        PMC * const method = Parrot_oo_find_vtable_override(interp,
+                classobj, get_namespace);
+
+        if (!PMC_IS_NULL(method))
+            return (PMC *)Parrot_run_meth_fromc_args(interp, method, SELF,
+                    get_namespace, "P");
+        else
+            return VTABLE_inspect_str(interp, classobj, CONST_STRING(interp, "namespace"));
+
     }
 
 /*
@@ -508,8 +587,8 @@ Invokes the object (if this vtable function is overridden).
 */
 
     opcode_t * invoke(void *next) {
-        Parrot_Object * const obj    = PARROT_OBJECT(pmc);
-        Parrot_Class  * const _class = PARROT_CLASS(obj->_class);
+        Parrot_Object_attributes * const obj    = PARROT_OBJECT(pmc);
+        Parrot_Class_attributes  * const _class = PARROT_CLASS(obj->_class);
 
         /* Walk and search for the vtable method. */
         const int num_classes = VTABLE_elements(interp, _class->all_parents);
@@ -567,15 +646,15 @@ Creates a clone of the object.
 */
 
     VTABLE PMC * clone() {
-        Parrot_Object * const obj       = PARROT_OBJECT(pmc);
-        Parrot_Class  * const _class    = PARROT_CLASS(obj->_class);
+        Parrot_Object_attributes * const obj       = PARROT_OBJECT(pmc);
+        Parrot_Class_attributes  * const _class    = PARROT_CLASS(obj->_class);
         STRING        * const meth_name = CONST_STRING(interp, "clone");
         PMC           * cloned;
-        Parrot_Object * cloned_guts;
+        Parrot_Object_attributes * cloned_guts;
 
         /* See if we have a custom override of the method first. */
         const int num_classes = VTABLE_elements(interp, _class->all_parents);
-        int i;
+        int i, num_attrs;
         for (i = 0; i < num_classes; i++) {
             /* Get the class. */
             PMC * const cur_class = VTABLE_get_pmc_keyed_int(interp, _class->all_parents, i);
@@ -598,10 +677,18 @@ Creates a clone of the object.
         PObj_is_object_SET(cloned);
 
         /* Now create the underlying structure, and clone attributes list.class. */
-        cloned_guts               = mem_allocate_zeroed_typed(Parrot_Object);
+        cloned_guts               = mem_allocate_zeroed_typed(Parrot_Object_attributes);
         cloned_guts->_class       = obj->_class;
         cloned_guts->attrib_store = VTABLE_clone(INTERP, obj->attrib_store);
         PMC_data(cloned)          = cloned_guts;
+        num_attrs                 = VTABLE_elements(INTERP, cloned_guts->attrib_store);
+        for (i = 0; i < num_attrs; i++) {
+            PMC *to_clone = VTABLE_get_pmc_keyed_int(INTERP, cloned_guts->attrib_store, i);
+            if (!PMC_IS_NULL(to_clone)) {
+                VTABLE_set_pmc_keyed_int(INTERP, cloned_guts->attrib_store, i,
+                        VTABLE_clone(INTERP, to_clone));
+            }
+        }
 
         /* Some of the attributes may have been the PMCs providing storage for any
          * PMCs we inherited from; also need to clone those. */
@@ -612,9 +699,9 @@ Creates a clone of the object.
                 if (cur_class->vtable->base_type == enum_class_PMCProxy) {
                     /* Clone this PMC too. */
                     STRING *proxy         = CONST_STRING(interp, "proxy");
-                    VTABLE_set_attr_str(interp, cloned, proxy,
+                    VTABLE_set_attr_keyed(interp, cloned, cur_class, proxy,
                         VTABLE_clone(interp,
-                            VTABLE_get_attr_keyed(interp, pmc, cur_class, proxy)));
+                            VTABLE_get_attr_keyed(interp, cloned, cur_class, proxy)));
                 }
             }
         }
@@ -636,7 +723,7 @@ C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 */
 
     VTABLE void visit(visit_info *info) {
-        Parrot_Object * const obj_data = PARROT_OBJECT(SELF);
+        Parrot_Object_attributes * const obj_data = PARROT_OBJECT(SELF);
         PMC **pos;
 
         /* 1) visit class */
@@ -666,7 +753,7 @@ Used to unarchive the object.
         }
         else if (info->extra_flags == EXTRA_IS_NULL) {
             /* Allocate the object's core data struct */
-            PMC_data(SELF) = mem_allocate_zeroed_typed(Parrot_Object);
+            PMC_data(SELF) = mem_allocate_zeroed_typed(Parrot_Object_attributes);
         }
     }
 

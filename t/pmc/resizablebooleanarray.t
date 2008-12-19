@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 20;
+use Parrot::Test tests => 23;
 
 =head1 NAME
 
@@ -22,8 +22,6 @@ Tests C<ResizableBooleanArray> PMC. Checks size, sets various elements, includin
 out-of-bounds test. Checks INT and PMC keys.
 
 =cut
-
-my $fp_equality_macro = pasm_fp_equality_macro();
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'ResizableBooleanArray'
@@ -123,10 +121,35 @@ ok 2
 ok 3
 OUTPUT
 
-# RT#46823: Rewrite these properly when we have exceptions
+pasm_output_is( <<'CODE', <<'OUTPUT', "Setting negatively indexed elements" );
+    new P0, 'ResizableBooleanArray'
+
+    push_eh caught
+    set P0[-1], 1
+    pop_eh
+    print "no exception"
+    end
+caught:
+    say "caught an exception"
+    end
+CODE
+caught an exception
+OUTPUT
+
+pasm_output_is( <<'CODE', <<'OUTPUT', "Getting negatively indexed elements" );
+    new P0, 'ResizableBooleanArray'
+    set P0, 1
+
+    set I0, P0[-1]
+    print "got "
+    say I0
+    end
+CODE
+got 0
+OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting out-of-bounds elements" );
-        new P0, 'ResizableBooleanArray'
+    new P0, 'ResizableBooleanArray'
 
     set P0[1], -7
     set I0, P0[1]
@@ -165,7 +188,7 @@ ok 1
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableBooleanArray'
      new P1, 'Key'
 
@@ -184,7 +207,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 1.0, OK2)
+     .fp_eq_pasm(N0, 1.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -201,7 +224,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'ResizableBooleanArray'
      set P0, 1
 
@@ -221,7 +244,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, 1.0, OK2)
+     .fp_eq_pasm(N0, 1.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -363,8 +386,8 @@ OUTPUT
 
 pir_error_output_like( << 'CODE', << 'OUTPUT', "pop bounds checking" );
 .sub 'test' :main
-       P0 = new 'ResizableBooleanArray'
-       pop I0, P0
+       $P0 = new 'ResizableBooleanArray'
+       pop $I0, $P0
 .end
 CODE
 /ResizableBooleanArray: Can't pop from an empty array!.*/
@@ -495,8 +518,8 @@ OUTPUT
 
 pir_error_output_like( << 'CODE', << 'OUTPUT', "shift bounds checking" );
 .sub 'test' :main
-       P0 = new 'ResizableBooleanArray'
-       shift I0, P0
+       $P0 = new 'ResizableBooleanArray'
+       shift $I0, $P0
 .end
 CODE
 /ResizableBooleanArray: Can't shift from an empty array!.*/
@@ -850,47 +873,120 @@ CODE
 ok
 OUTPUT
 
-TODO: {
-    local $TODO = "this is broken";
+pir_output_is( <<'CODE', <<'OUTPUT', "clone" );
+.sub _main
+    .local pmc rba1, rba2
+    .local int i
+    rba1 = new 'ResizableBooleanArray'
 
-    pasm_output_is( <<'CODE', <<'OUTPUT', "clone" );
-    new P0, 'ResizableBooleanArray'
-       set P0[0], 1
-       set P0[5000], 1
-       clone P1, P0
+    rba1[0]    = 1
+    rba1[5000] = 1
 
-       set I0, P0[5000]
-       eq I0, 1, ok_1
-       print "nok 1 "
+    rba2 = clone rba1
+
+    i = rba1[5000]
+    if i == 1 goto ok_0
+    print "nok 0 "
+
+ok_0:
+    i = pop rba1
+    if i == 1 goto ok_1
+    print "nok 1 "
+
 ok_1:
-       pop I0, P0
-       eq I0, 1, ok_2
-       print "nok 2 "
+    i = rba1
+    if i == 5000 goto ok_2
+    print "nok 2 "
+    print i
+
 ok_2:
-       set I0, P0
-       eq I0, 5000, ok_3
-       print "nok 3 "
+    i = pop rba2
+    if i == 1 goto ok_3
+    print "nok 3 "
+
 ok_3:
-       set I0, P1
-       eq I0, 5000, ok_4
-       print "nok 4 "
+    i = rba2
+    if i == 5000 goto ok_4
+    print "nok 4 "
+
 ok_4:
-       set I0, P1[5000]
-       eq I0, 1, ok_5
-       print "nok 5 "
+    i = rba2[5000] #should be undefined, i.e. 0
+    if i == 0 goto ok_5
+    print "nok 5 "
+
 ok_5:
-       pop I0, P1
-       eq I0, 1, ok_6
-       print "nok 6 "
-       end
+    i = pop rba2 #same as previous
+    if i == 0 goto ok_6
+    print "nok 6 "
+    $S0 = rba2
+    say $S0
+    end
+
 ok_6:
-       print "ok\n"
-       end
+    print "ok\n"
+.end
 CODE
 ok
 OUTPUT
 
-}    # RT#46825
+pir_output_is( <<'CODE', <<'OUTPUT', "clone (alternate)" );
+.sub _main
+    .local pmc rba1, rba2
+    .local int i
+    rba1 = new 'ResizableBooleanArray'
+
+    rba1[0]    = 1
+    rba1[4]    = 1
+    rba1[5004] = 1
+    i = shift rba1
+    i = shift rba1
+    i = shift rba1
+    i = shift rba1
+
+    rba2 = clone rba1
+
+    i = rba1[5000]
+    if i == 1 goto ok_0
+    print "nok 0 "
+
+ok_0:
+    i = pop rba1
+    if i == 1 goto ok_1
+    print "nok 1 "
+
+ok_1:
+    i = rba1
+    if i == 5000 goto ok_2
+    print "nok 2 "
+    print i
+
+ok_2:
+    i = pop rba2
+    if i == 1 goto ok_3
+    print "nok 3 "
+
+ok_3:
+    i = rba2
+    if i == 5000 goto ok_4
+    print "nok 4 "
+
+ok_4:
+    i = rba2[5000] #should be undefined, i.e. 0
+    if i == 0 goto ok_5
+    print "nok 5 "
+
+ok_5:
+    i = pop rba2 #same as previous
+    if i == 0 goto ok_6
+    print "nok 6 "
+    end
+
+ok_6:
+    print "ok\n"
+.end
+CODE
+ok
+OUTPUT
 
 # Local Variables:
 #   mode: cperl

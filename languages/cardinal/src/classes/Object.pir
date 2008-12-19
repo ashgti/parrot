@@ -59,7 +59,7 @@ resolve_loop:
     push resolve_list, $P0
     goto resolve_loop
 resolve_loop_end:
-    class.resolve_method(resolve_list)
+    class.'resolve_method'(resolve_list)
 
     .return(class)
 .end
@@ -131,117 +131,21 @@ Create a new object having the same class as the invocant.
 =cut
 
 .sub 'new' :method
-    .param pmc init_parents :slurpy
-    .param pmc init_this    :named :slurpy
-
+    .param pmc args :slurpy
+    .param pmc named_args :named :slurpy
     # Instantiate.
     .local pmc cardinalmeta
     cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
-    $P0 = cardinalmeta.get_parrotclass(self)
+    $P0 = cardinalmeta.'get_parrotclass'(self)
     $P1 = $P0.'new'()
+#print 'constructing a new object w/ id'
+#$P98 = $P1.'object_id'()
+#say $P98
     $P2 = $P1.'HOW'()
-    $I0 = $P2.can(self,'initialize')
+    $I0 = $P2.'can'(self,'initialize')
     unless $I0, no_initialize
     $P2 = $P1.'initialize'(args :flat, named_args :named :flat)
   no_initialize:
-
-    # If this proto object has a WHENCE auto-vivification, we should use
-    # put any values it contains but that init_this does not into init_this.
-    .local pmc whence
-    whence = self.'WHENCE'()
-    unless whence goto no_whence
-    .local pmc this_whence_iter
-    this_whence_iter = new 'Iterator', whence
-  this_whence_iter_loop:
-    unless this_whence_iter goto no_whence
-    $S0 = shift this_whence_iter
-    $I0 = exists init_this[$S0]
-    if $I0 goto this_whence_iter_loop
-    $P2 = whence[$S0]
-    init_this[$S0] = $P2
-    goto this_whence_iter_loop
-  no_whence:
-
-    # Now we will initialize each attribute in the class itself and it's
-    # parents with an Undef or the specified initialization value. Note that
-    # the all_parents list includes ourself.
-    .local pmc all_parents, class_iter
-    all_parents = inspect $P0, "all_parents"
-    class_iter = new 'Iterator', all_parents
-  class_iter_loop:
-    unless class_iter goto class_iter_loop_end
-    .local pmc cur_class
-    cur_class = shift class_iter
-
-    # If this the current class?
-    .local pmc init_attribs
-    eq_addr cur_class, $P0, current_class
-
-    # If it's not the current class, need to see if we have any attributes.
-    # Go through the provided init_parents to see if we have anything that
-    # matches.
-    .local pmc ip_iter, cur_ip
-    ip_iter = new 'Iterator', init_parents
-  ip_iter_loop:
-    unless ip_iter goto ip_iter_loop_end
-    cur_ip = shift ip_iter
-
-    # We will check if their HOW matches.
-    $P2 = cardinalmeta.'get_parrotclass'(cur_ip)
-    eq_addr cur_class, $P2, found_parent_init
-
-    goto found_init_attribs
-  ip_iter_loop_end:
-
-    # If we get here, found nothing.
-    init_attribs = new 'Hash'
-    goto parent_init_search_done
-
-    # We found some parent init data, potentially.
-  found_parent_init:
-    init_attribs = cur_ip.WHENCE()
-    $I0 = 'defined'(init_attribs)
-    if $I0 goto parent_init_search_done
-    init_attribs = new 'Hash'
-  parent_init_search_done:
-    goto found_init_attribs
-
-    # If it's the current class, we will take the init_this hash.
-  current_class:
-    init_attribs = init_this
-  found_init_attribs:
-
-    # Now go through attributes of the current class and iternate over them.
-    .local pmc attribs, iter
-    attribs = inspect cur_class, "attributes"
-    iter = new 'Iterator', attribs
-  iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
-    $S1 = substr $S0, 2
-    $I0 = exists init_attribs[$S1]
-    if $I0 goto have_init_value
-    $P2 = new 'Undef'
-    goto init_done
-  have_init_value:
-    $P2 = init_attribs[$S1]
-    delete init_attribs[$S1]
-  init_done:
-    push_eh set_attrib_eh
-    setattribute $P1, cur_class, $S0, $P2
-set_attrib_eh:
-    goto iter_loop
-  iter_end:
-
-    # Do we have anything left in the hash? If so, unknown.
-    $I0 = elements init_attribs
-    if $I0 == 0 goto init_attribs_ok
-    'die'("You passed an initialization parameter that does not have a matching attribute.")
-  init_attribs_ok:
-
-    # Next class.
-    goto class_iter_loop
-  class_iter_loop_end:
 
     .return ($P1)
 .end
@@ -280,7 +184,23 @@ Defines the .true method on all objects via C<prefix:?>.
 =cut
 
 .sub 'true' :method
- .return 'prefix:?'(self)
+        .tailcall 'prefix:?'(self)
+.end
+
+.sub 'object_id' :method
+        get_addr $I0, self
+        .return ($I0)
+.end
+
+=item get_bool(vtable)
+
+Returns true if he object is defined, false otherwise
+
+=cut
+
+.sub '' :vtable('get_bool')
+   $I0 = 'defined'(self)
+   .return ($I0)
 .end
 
 =item print()
@@ -293,12 +213,12 @@ Print the object
 
 .sub 'print' :method
     $P0 = get_hll_global 'print'
-    .return $P0(self)
+    .tailcall $P0(self)
 .end
 
 .sub 'puts' :method
     $P0 = get_hll_global 'puts'
-    .return $P0(self)
+    .tailcall $P0(self)
 .end
 
 =item to_s()
@@ -313,9 +233,53 @@ Return a CardinalString representation of the object.
     .return ($P0)
 .end
 
+=item inspect()
+
+This is the same a to_s by default unless overriden
+
+=cut
+
+.sub 'inspect' :method
+    $P0 = self.'to_s'()
+.end
+
 .sub 'puts' :method
     $P0 = get_hll_global 'puts'
-    .return $P0(self)
+    .tailcall $P0(self)
+.end
+
+=item !cloneattr(attrlist)
+
+Create a clone of self, also cloning the attributes given by attrlist.
+
+=cut
+
+.sub '!cloneattr' :method
+    .param string attrlist
+    .local pmc result
+    .local pmc cardinalmeta
+    cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
+    $P0 = cardinalmeta.'get_parrotclass'(self)
+    result = new $P0
+
+    .local pmc attr_it
+    attr_it = split ' ', attrlist
+  attr_loop:
+    unless attr_it goto attr_end
+    $S0 = shift attr_it
+    unless $S0 goto attr_loop
+    $P1 = getattribute self, $S0
+    unless $P1 goto set_default
+    $P1 = clone $P1
+    setattribute result, $S0, $P1
+    goto attr_loop
+  set_default:
+    $P2 = new 'CardinalInteger'
+    $P2 = 0
+    setattribute result, $S0, $P2
+    goto attr_loop
+  attr_end:
+    .return (result)
 .end
 
 =item methods()
@@ -327,7 +291,7 @@ Get a list of all methods in the object.
 .include 'library/dumper.pir'
 .sub 'methods' :method
     $P0 = class self
-    $P1 = $P0.methods()
+    $P1 = $P0.'methods'()
     .local pmc meth_iter
     meth_iter = new 'Iterator', $P1
     .local pmc method_list
@@ -335,10 +299,66 @@ Get a list of all methods in the object.
   methods_loop:
     unless meth_iter goto methods_loop_end
     $P0 = shift meth_iter
-    method_list.push($P0)
+    method_list.'push'($P0)
     goto methods_loop
   methods_loop_end:
     .return(method_list)
+.end
+
+.sub 'class' :method
+        $P0 = new 'CardinalString'
+        $S0 = self.'WHAT'()
+        $P0.'concat'($S0)
+        .return ($P0)
+.end
+
+.sub 'defined' :method
+       $P0 = get_hll_global ['Bool'], 'False'
+       .return ($P0)
+.end
+
+.sub 'nil?' :method
+    $P0 = get_hll_global 'nil'
+    if self == $P0 goto yes
+    goto no
+    yes:
+      $P0 = get_hll_global ['Bool'], 'True'
+      .return ($P0)
+    no:
+      $P0 = get_hll_global ['Bool'], 'False'
+      .return ($P0)
+.end
+
+.sub 'freeze' :method
+   #Parrots freeze seems to mean the same as Javas serialize
+   #Rubys freeze means to set the object as readonly. I think Perl6 gives their objects a role of Mutable, then checks for that role in infix:=
+   #freeze $S0, self
+   #.return (self)
+   #self = $S0
+   #.return ($S0)
+   #share_ro $P0, self
+   .return (self)
+.end
+
+.sub 'is_a?' :method
+        .param pmc test
+        .local pmc metaclass
+        .local int result
+        metaclass = self.'HOW'()
+        result = metaclass.'isa'(test)
+        if result goto yes
+        goto no
+        yes:
+          $P0 = get_hll_global ['Bool'], 'True'
+          .return ($P0)
+        no:
+          $P0 = get_hll_global ['Bool'], 'False'
+.end
+
+.sub 'kind_of?' :method
+        .param pmc test
+        $P0 = self.'is_a?'(test)
+        .return ($P0)
 .end
 
 =back

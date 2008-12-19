@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2005-2006, The Perl Foundation.
+# Copyright (C) 2005-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -55,7 +55,6 @@ my %skips = (
     'pidigits.pir'    => [ 'not exists $PConfig{HAS_GMP}', 'needs GMP' ],
     'recursive.pir'   => [ '$PConfig{cpuarch} !~ /86/',    'float JIT broken on non-x86' ],
     'recursive-2.pir' => [ '$PConfig{cpuarch} !~ /86/',    'float JIT broken on non-x86' ],
-    'fannkuch.pir'    => [ '$^O eq "darwin"',              'fannkuch benchmark failure on darwin' ],
 );
 my $INPUT_EXT = '_input';
 foreach my $script (@shootouts) {

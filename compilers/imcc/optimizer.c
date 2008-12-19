@@ -969,14 +969,16 @@ IMCC_subst_constants(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *na
         /*
          * abs_i_ic ...
          */
-        if (n == 3 &&
-                r[1]->type & (VTCONST|VT_CONSTP) &&
-                STREQ(name, ops2[i])) {
-            found = 3;
-            snprintf(op, sizeof (op), "%s_%c_%c", name, tolower((unsigned char)r[0]->set),
-                    tolower((unsigned char)r[1]->set));
-            debug_fmt = "opt %s_x_xc => ";
-            break;
+        if (n == 3) {
+            PARROT_ASSERT(r[1]);
+            if (r[1]->type & (VTCONST|VT_CONSTP) &&
+                    STREQ(name, ops2[i])) {
+                found = 3;
+                snprintf(op, sizeof (op), "%s_%c_%c", name, tolower((unsigned char)r[0]->set),
+                        tolower((unsigned char)r[1]->set));
+                debug_fmt = "opt %s_x_xc => ";
+                break;
+            }
         }
     }
     for (i = 0; !found && i < N_ELEMENTS(ops3); i++) {
@@ -1056,10 +1058,15 @@ IMCC_subst_constants(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *na
                 r[1] = mk_const(interp, b, r[0]->set);
                 break;
             case 'S':
-                r[1] = mk_const(interp, string_to_cstring(interp,
-                        REG_STR(interp, 0)), r[0]->set);
+            {
+                char *name = string_to_cstring(interp, REG_STR(interp, 0));
+                r[1]       = mk_const(interp, name, r[0]->set);
+
                 snprintf(b, sizeof (b), "%p", REG_STR(interp, 0));
+                string_cstring_free(name);
+
                 break;
+            }
             default:
                 break;
         }
@@ -1164,12 +1171,16 @@ branch_reorg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         /* if basic block ends with unconditional jump */
         if ((ins->type & IF_goto) && STREQ(ins->opname, "branch")) {
             SymReg * const r = get_sym(interp, ins->symregs[0]->name);
+
             if (r && (r->type & VTADDRESS) && r->first_ins) {
-                Edge *edge;
+                Edge               *edge;
                 Instruction * const start = r->first_ins;
-                int found = 0;
+                int                 found = 0;
+
                 for (edge = unit->bb_list[start->bbindex]->pred_list;
-                        edge; edge = edge->pred_next) {
+                     edge;
+                     edge = edge->pred_next) {
+
                     if (edge->from->index == start->bbindex - 1) {
                         found = 1;
                         break;
@@ -1484,9 +1495,10 @@ dead_code_remove(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
             continue;
         /* this block isn't entered from anywhere */
         if (!bb->pred_list) {
-            const int bbi = bb->index;
+            const unsigned int bbi = bb->index;
             IMCC_debug(interp, DEBUG_OPT1,
                        "found dead block %d\n", bb->index);
+
             for (ins = bb->start; ins && ins->bbindex == bbi;) {
                 IMCC_debug(interp, DEBUG_OPT1,
                         "\tins deleted (dead block) %I\n", ins);
@@ -1499,7 +1511,7 @@ dead_code_remove(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
     /* Unreachable instructions */
 
-    for (last = unit->instructions, ins=last->next;
+    for (last = unit->instructions, last && (ins = last->next);
          last && ins;
          ins = ins->next) {
         if ((last->type & IF_goto) && !(ins->type & ITLABEL) &&
@@ -1552,7 +1564,13 @@ used_once(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
             if (r && (r->use_count == 1 && r->lhs_use_count == 1)) {
                 IMCC_debug(interp, DEBUG_OPT2, "used once '%I' deleted\n", ins);
                 ins = delete_ins(unit, ins);
-                ins = ins->prev ? ins->prev : unit->instructions;
+
+                /* find previous instruction or first instruction of this CU
+                 * ... but only the latter if it wasn't deleted */
+                ins = ins->prev
+                    ? ins->prev
+                    : opt ? unit->instructions : NULL;
+
                 unit->ostat.deleted_ins++;
                 unit->ostat.used_once++;
                 opt++;

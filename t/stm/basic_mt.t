@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2006-2007, The Perl Foundation.
+# Copyright (C) 2006-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -73,8 +73,8 @@ loop:
     a = 0
     a = new 'STMRef', a
 
-    _incr = global "incr"
-    _waiter = global "waiter"
+    _incr = find_global "incr"
+    _waiter = find_global "waiter"
 
     wThr = new 'ParrotThread'
     wThr.'run_clone'(_waiter, a)
@@ -139,8 +139,8 @@ loop:
     a = ""
     a = new 'STMRef', a
 
-    _incr = global "incr"
-    _waiter = global "waiter"
+    _incr = find_global "incr"
+    _waiter = find_global "waiter"
 
     wThr = new 'ParrotThread'
     wThr.'run_clone'(_waiter, a)
@@ -214,6 +214,9 @@ OUTPUT
 
 }    #skip x86_64
 
+SKIP: {
+    skip( "Intermittent failures on several platforms (See RT #59790)", 1 );
+
 pir_output_is( <<'CODE', <<'OUTPUT', "wait + invalidate outer transcation" );
 .const int N = 50
 .sub waiter
@@ -227,7 +230,7 @@ tx:
     print "okay\n"
     .return ()
 retry:
-    # we start a nested transcation here;
+    # we start a nested transaction here;
     # the only we we ill get out of this loop
     # is if stm_wait jumps to 'invalid'.
     stm_start
@@ -280,6 +283,8 @@ loop:
 CODE
 okay
 OUTPUT
+
+}    #skip darwin
 
 # Local Variables:
 #   mode: cperl

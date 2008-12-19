@@ -15,11 +15,32 @@ php_info.pir - PHP info Standard Library
 
 .include 'languages/pipp/src/common/php_MACRO.pir'
 
-.const string PHP_LOGO_GUID = 'PHPE9568F34-D428-11d2-A769-00AA001ACF42'
+.const string PHP_LOGO_GUID     = 'PHPE9568F34-D428-11d2-A769-00AA001ACF42'
 .const string PHP_EGG_LOGO_GUID = 'PHPE9568F36-D428-11d2-A769-00AA001ACF42'
-.const string ZEND_LOGO_GUID = 'PHPE9568F35-D428-11d2-A769-00AA001ACF42'
+.const string ZEND_LOGO_GUID    = 'PHPE9568F35-D428-11d2-A769-00AA001ACF42'
 
 .include 'tm.pasm'
+
+.sub '__init' :anon :load :init
+    .local pmc cst
+    .GET_CONSTANTS(cst)
+    $S0 = sysinfo .SYSINFO_PARROT_OS
+    .REGISTER_STRING_CONSTANT(cst, 'PHP_OS', $S0)
+    .REGISTER_STRING_CONSTANT(cst, 'PHP_VERSION', "5.3.0 on Parrot")
+    .REGISTER_LONG_CONSTANT(cst, 'PHP_MAJOR_VERSION', 5)
+    .REGISTER_LONG_CONSTANT(cst, 'PHP_MINOR_VERSION', 3)
+    .REGISTER_LONG_CONSTANT(cst, 'PHP_RELEASE_VERSION', 0)
+    .REGISTER_STRING_CONSTANT(cst, 'PHP_EXTRA_VERSION', " on Parrot")
+    .REGISTER_LONG_CONSTANT(cst, 'PHP_VERSION_ID', 50300)
+    .REGISTER_LONG_CONSTANT(cst, 'PHP_ZTS', 0)
+
+    .REGISTER_STRING_CONSTANT(cst, 'DEFAULT_INCLUDE_PATH', '.')
+
+    # register NULL
+    new $P0, 'PhpNull'
+    cst['NULL'] = $P0
+
+.end
 
 .sub 'logo_guid' :anon
     $I0 = time
@@ -96,7 +117,7 @@ Return the special ID used to request the PHP logo in phpinfo screens
     wrong_param_count()
     .RETURN_NULL()
   L1:
-    .return logo_guid()
+    .tailcall logo_guid()
 .end
 
 =item C<string php_real_logo_guid(void)>
@@ -154,7 +175,7 @@ STILL INCOMPLETE (see get_uname).
     if $I0 goto L1
     .RETURN_NULL()
   L1:
-    .return get_uname(mode)
+    .tailcall get_uname(mode)
 .end
 
 =item C<void phpcredits([int flag])>
@@ -194,7 +215,7 @@ STILL INCOMPLETE (see get_module_version).
     .local int argc
     argc = args
     if argc goto L1
-    .RETURN_STRING('5.3 on Parrot')
+    .RETURN_STRING('5.3.0 on Parrot')
   L1:
     unless argc == 1 goto L2
     .local string ext

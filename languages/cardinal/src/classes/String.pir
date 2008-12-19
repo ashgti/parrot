@@ -24,14 +24,31 @@ Stolen from Rakudo
     .local pmc cardinalmeta, strproto
     cardinalmeta = get_hll_global ['CardinalObject'], '!CARDINALMETA'
     strproto = cardinalmeta.'new_class'('CardinalString', 'parent'=>'String CardinalObject')
-    cardinalmeta.'register'('CardinalString', 'parent'=>'CardinalObject', 'protoobject'=>strproto)
+    cardinalmeta.'register'('String', 'parent'=>'CardinalObject', 'protoobject'=>strproto)
 .end
 
+.sub 'new' :method :multi(_)
+    $P0 = new 'CardinalString'
+    .return ($P0)
+.end
+
+.sub 'new' :method :multi(_,_)
+    .param pmc a
+    $P0 = new 'CardinalString'
+    $P0 = a
+    .return ($P0)
+.end
 
 .sub 'ACCEPTS' :method
     .param string topic
-    .return 'infix:eq'(topic, self)
+    .tailcall 'infix:eq'(topic, self)
 .end
+
+=item chars()
+
+Returns the number of characters in C<self>
+
+=cut
 
 .sub 'chars' :method
     .local pmc retv
@@ -44,17 +61,71 @@ Stolen from Rakudo
     .return (retv)
 .end
 
-.sub 'reverse' :method
+
+=item size()
+
+=cut
+
+.sub 'size' :method
     .local pmc retv
 
-    retv = self.'split'('')
-    retv = retv.'reverse'()
-    retv = retv.join('')
+    retv = new 'CardinalInteger'
+    $S0  = self
+    $I0  = length $S0
+    retv = $I0
 
-    .return(retv)
+    .return (retv)
 .end
 
-.sub split :method :multi('CardinalString')
+
+=item concat()
+
+Adds given object to C<self>. Returns self
+
+=cut
+
+.sub 'concat' :method
+    .param pmc item
+    concat self, item
+    .return(self)
+.end
+
+=item reverse()
+
+Returns a new CardinalString with the characters of C<self> in reverse order.
+
+=cut
+
+.sub 'reverse' :method
+    .local pmc res
+    .local int i
+
+    res = new 'CardinalString'
+
+    .local pmc iterator, item
+    iterator = new 'Iterator', self
+  each_loop:
+    unless iterator goto each_loop_done
+    item = shift iterator
+    res = concat item, res
+    goto each_loop
+  each_loop_done:
+    .return(res)
+.end
+
+=item reverse!()
+
+Returns the characters in C<self> in reverse order. Destructive update.
+
+=cut
+
+.sub 'reverse!' :method
+    $S0 = self.'reverse'()
+    self = $S0
+    .return(self)
+.end
+
+.sub 'split' :method :multi('CardinalString',_)
     .param string delim
     .local string objst
     .local pmc pieces
@@ -84,6 +155,14 @@ Stolen from Rakudo
     .return(retv)
 .end
 
+.sub 'each' :method :multi('CardinalString',_)
+    .param pmc delim
+    .param pmc block :named('!BLOCK')
+    .local pmc list
+    list = self.'split'(delim)
+    list.'each'(block)
+.end
+
 .sub lc :method
     .local string tmps
     .local pmc retv
@@ -95,6 +174,32 @@ Stolen from Rakudo
     retv = tmps
 
     .return(retv)
+.end
+
+=item downcase()
+
+Returns a copy of C<self> with all upper case letters converted to lower case
+
+=cut
+
+.sub downcase :method
+    .local pmc s
+    s = new 'CardinalString'
+    s = self
+    .tailcall s.'lc'()
+.end
+
+=item upcase()
+
+Returns a copy of C<self> with all lower case letters converted to upper case
+
+=cut
+
+.sub upcase :method
+    .local pmc s
+    s = new 'CardinalString'
+    s = self
+    .tailcall s.'uc'()
 .end
 
 .sub uc :method
@@ -156,6 +261,12 @@ Stolen from Rakudo
     .return(retv)
 .end
 
+=item capitalize()
+
+    Returns a copy of C<self> with the first character converted to uppercase and the remainder to lowercase.
+
+=cut
+
 .sub capitalize :method
     .local string tmps
     .local string fchr
@@ -173,27 +284,84 @@ Stolen from Rakudo
     .local int pos, is_ws, is_lc
     pos = 0
     goto first_char
-  next_grapheme:
-    if pos == len goto done
-    is_ws = is_cclass .CCLASS_WHITESPACE, tmps, pos
-    if is_ws goto ws
-  advance:
-    pos += 1
-    goto next_grapheme
-  ws:
-    pos += 1
+  #next_grapheme:
+  #  if pos == len goto done
+  #  is_ws = is_cclass .CCLASS_WHITESPACE, tmps, pos
+  #  if is_ws goto ws
+  #advance:
+  #  pos += 1
+  #  goto next_grapheme
+  #ws:
+  #  pos += 1
   first_char:
     is_lc = is_cclass .CCLASS_LOWERCASE, tmps, pos
-    unless is_lc goto advance
+    #unless is_lc goto advance
+    unless is_lc goto done
     $S1 = substr tmps, pos, 1
     upcase $S1
     substr tmps, pos, 1, $S1
     ## the length may have changed after replacement, so measure it again
     len = length tmps
-    goto advance
+    #goto advance
   done:
     retv = tmps
     .return (retv)
+.end
+
+=item
+  TODO: Read from the global record separator
+=cut
+.sub 'chomp' :method
+    .param string splitby :optional
+    .param int custom_split :opt_flag
+    .local string tmps
+    .local pmc retv
+    if custom_split goto have_split
+    splitby = "\n"
+  have_split:
+
+    retv = new 'CardinalString'
+    $I0 = self.'chars'()
+    if $I0 == 0 goto done
+    $I1 = length splitby
+    $I0 = $I0 - $I1
+    $S0 = substr self, $I0, $I1
+    if $S0 == splitby goto chop
+    tmps = self
+    goto done
+  chop:
+    tmps = substr self, 0, $I0
+    goto done
+  done:
+    retv = tmps
+    .return(retv)
+.end
+
+=item
+  TODO: Read from the global record separator
+=cut
+.sub 'chomp!' :method
+    .param string splitby :optional
+    .param int custom_split :opt_flag
+    .local string tmps
+    if custom_split goto have_split
+    splitby = "\n"
+  have_split:
+
+    $I0 = self.'chars'()
+    if $I0 == 0 goto done
+    $I1 = length splitby
+    $I0 = $I0 - $I1
+    $S0 = substr self, $I0, $I1
+    if $S0 == splitby goto chop
+    tmps = self
+    goto done
+  chop:
+    tmps = substr self, 0, $I0
+    goto done
+  done:
+    self = tmps
+    .return(self)
 .end
 
 .sub 'chop' :method
@@ -203,16 +371,114 @@ Stolen from Rakudo
 
     retv = new 'CardinalString'
     tmps = self
-
-    len = length tmps
-    if len == 0 goto done
-    dec len
-    substr tmps,tmps, 0, len
-  done:
+    chopn tmps, 1
     retv = tmps
     .return(retv)
 .end
 
+.sub 'chop!' :method
+    .local string tmps
+    .local int len
+
+    tmps = self
+    chopn tmps, 1
+    self = tmps
+    .return(self)
+.end
+
+=item length()
+
+ Return the number of characters in C<self>
+
+=cut
+
+.sub 'length' :method
+     $I0 = self.'chars'()
+     .return($I0)
+.end
+
+=item '[]'
+
+ subscript operator. Accepts [(-)? int], [(-)?int, (-)?int]
+
+=cut
+
+.sub '[]' :method :vtable('get_pmc_keyed')
+    .param int start
+    .param int stop :optional
+    .local string tmp
+    .local int len
+
+    if stop <= 0 goto init_stop
+    process:
+        tmp = self
+        len = length tmp
+        if start >= len goto oob
+        if start >= 0 goto pos_access
+        if start < 0 goto neg_access
+        goto oob
+    neg_access:
+        substr $S0, tmp, start, stop
+        .return($S0)
+    pos_access:
+        substr $S0, tmp, start, stop
+        .return($S0)
+    oob:
+        # out of bounds, return nil
+        $P0 = new 'NilClass'
+        .return($P0)
+    init_stop:
+        stop = 1
+        goto process
+.end
+
+=item '[]='
+
+Warning: Partial implementation. Look for TODO
+
+=cut
+
+.sub '[]=' :method :vtable('set_pmc_keyed')
+    .param int start
+    .param string replace_with
+    .local string tmp
+    .local int len
+    .local int stop
+
+    tmp = self
+    len = length tmp
+    stop = length replace_with
+
+    if start > len goto oob
+    if start >= len goto oob
+    if start >= 0 goto pos_access
+    if start < 0 goto neg_access
+    goto oob
+    neg_access:
+        substr $S0, tmp, start, stop, replace_with
+        self = tmp
+        .return()
+    pos_access:
+        substr $S0, tmp, start, stop, replace_with
+        self = tmp
+        .return()
+    oob:
+        say "oob, IndexException"
+        # TODO out of bounds, throw IndexException
+        .return()
+.end
+
+.sub 'each_byte' :method
+    .param pmc block :named('!BLOCK')
+    .local pmc iterator, item
+    iterator = new 'Iterator', self
+  each_loop:
+    unless iterator goto each_loop_done
+    item = shift iterator
+    block(item)
+    goto each_loop
+  each_loop_done:
+.end
 
 =item perl()
 
@@ -254,7 +520,8 @@ Returns self
 .include 'cclass.pasm'
 
 
-=item lc
+
+=item lc()
 
  our Str multi Str::lc ( Str $string )
 
@@ -268,11 +535,11 @@ form, if uppercase.
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'lc'()
+    .tailcall s.'lc'()
 .end
 
 
-=item lcfirst
+=item lcfirst()
 
  our Str multi Str::lcfirst ( Str $string )
 
@@ -285,7 +552,7 @@ Like C<lc>, but only affects the first character.
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'lcfirst'()
+    .tailcall s.'lcfirst'()
 .end
 
 
@@ -304,7 +571,7 @@ full "uppercase".
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'uc'()
+    .tailcall s.'uc'()
 .end
 
 
@@ -321,7 +588,7 @@ Performs a Unicode "titlecase" operation on the first character of the string.
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'ucfirst'()
+    .tailcall s.'ucfirst'()
 .end
 
 
@@ -339,7 +606,7 @@ C<s:g/(\w+)/{ucfirst $1}/> on it.
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'capitalize'()
+    .tailcall s.'capitalize'()
 .end
 
 
@@ -371,9 +638,8 @@ B<Note:> partial implementation only
     a = target
     b = sep
 
-    .return a.'split'(b)
+    .tailcall a.'split'(b)
 .end
-
 
 =item join
 
@@ -452,7 +718,7 @@ Returns string with one Char removed from the end.
     .local pmc s
     s = new 'CardinalString'
     s = a
-    .return s.'chop'()
+    .tailcall s.'chop'()
 .end
 
 =back
@@ -490,10 +756,6 @@ as a property of the string.)  Otherwise a standard newline is removed.
 Note: Most users should just let their I/O handles autochomp instead.
 (Autochomping is the default.)
 
-=item length
-
-This word is banned in Cardinal.  You must specify units.
-
 =item index
 
 Needs to be in terms of StrPos, not Int.
@@ -520,6 +782,15 @@ Should replace vec with declared arrays of bit, uint2, uint4, etc.
 
  our CardinalArray multi Str::words ( Rule $matcher = /\S+/,  Str $input = $+_, Int $limit = inf )
  our CardinalArray multi Str::words ( Str $input : Rule $matcher = /\S+/, Int $limit = inf )
+
+=cut
+
+.sub 'infix:<<' :multi('CardinalString',_)
+    .param pmc s
+    .param pmc item
+    concat s, item
+    .return(s)
+.end
 
 =back
 

@@ -38,6 +38,10 @@ typedef struct _hash_entry {
 typedef UINTVAL BucketIndex;
 #define INITBucketIndex ((BucketIndex)-2)
 
+#define N_BUCKETS(n) ((n) - (n)/4)
+#define HASH_ALLOC_SIZE(n) (N_BUCKETS(n) * sizeof (HashBucket) + \
+                                     (n) * sizeof (HashBucket *))
+
 typedef int (*hash_comp_fn)(PARROT_INTERP, const void*const, const void*const);
 typedef void (*hash_mark_key_fn)(PARROT_INTERP, PObj *);
 typedef size_t (*hash_hash_key_fn)(PARROT_INTERP, ARGIN(const void *), size_t seed);
@@ -71,14 +75,16 @@ struct _hash {
     hash_hash_key_fn hash_val;  /* generate a hash value for key */
 };
 
+typedef void (*value_free)(void *);
+
 /* HEADERIZER BEGIN: src/hash.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 void parrot_dump_hash(SHIM_INTERP, ARGIN(const Hash *hash))
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_hash_clone(PARROT_INTERP,
     ARGIN(const Hash *hash),
     ARGOUT(Hash *dest))
@@ -87,19 +93,19 @@ void parrot_hash_clone(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*dest);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_hash_delete(PARROT_INTERP, ARGMOD(Hash *hash), ARGIN(void *key))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*hash);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_hash_destroy(SHIM_INTERP, ARGMOD(Hash *hash))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hash);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL parrot_hash_exists(PARROT_INTERP,
     ARGIN(Hash *hash),
@@ -108,7 +114,7 @@ INTVAL parrot_hash_exists(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 void * parrot_hash_get(PARROT_INTERP,
@@ -118,7 +124,7 @@ void * parrot_hash_get(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 HashBucket * parrot_hash_get_bucket(PARROT_INTERP,
@@ -128,7 +134,7 @@ HashBucket * parrot_hash_get_bucket(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 void * parrot_hash_get_idx(SHIM_INTERP,
@@ -138,7 +144,7 @@ void * parrot_hash_get_idx(SHIM_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*key);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
 HashBucket* parrot_hash_put(PARROT_INTERP,
@@ -150,14 +156,14 @@ HashBucket* parrot_hash_put(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*hash);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_PURE_FUNCTION
 INTVAL parrot_hash_size(PARROT_INTERP, ARGIN(const Hash *hash))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_hash_visit(PARROT_INTERP,
     ARGMOD(Hash *hash),
     ARGMOD(void *pinfo))
@@ -167,33 +173,33 @@ void parrot_hash_visit(PARROT_INTERP,
         FUNC_MODIFIES(*hash)
         FUNC_MODIFIES(*pinfo);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_mark_hash(PARROT_INTERP, ARGIN(Hash *hash))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_new_cstring_hash(SHIM_INTERP, ARGOUT(Hash **hptr))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hptr);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_new_hash(SHIM_INTERP, ARGOUT(Hash **hptr))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hptr);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_new_INTVAL_hash(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_new_pmc_hash(SHIM_INTERP, ARGOUT(PMC *container))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*container);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_new_pointer_hash(SHIM_INTERP, ARGOUT(Hash **hptr))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hptr);
@@ -214,26 +220,38 @@ void parrot_chash_destroy(PARROT_INTERP, ARGMOD(Hash *hash))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*hash);
 
+void parrot_chash_destroy_values(PARROT_INTERP,
+    ARGMOD(Hash *hash),
+    ARGIN(value_free func))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*hash);
+
 void parrot_new_hash_x(
+    PARROT_INTERP,
     ARGOUT(Hash **hptr),
     PARROT_DATA_TYPE val_type,
     Hash_key_type hkey_type,
     NOTNULL(hash_comp_fn compare),
     NOTNULL(hash_hash_key_fn keyhash))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(4)
+        __attribute__nonnull__(2)
         __attribute__nonnull__(5)
+        __attribute__nonnull__(6)
         FUNC_MODIFIES(*hptr);
 
 void parrot_new_pmc_hash_x(
+    PARROT_INTERP,
     ARGMOD(PMC *container),
     PARROT_DATA_TYPE val_type,
     Hash_key_type hkey_type,
     NOTNULL(hash_comp_fn compare),
     NOTNULL(hash_hash_key_fn keyhash))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(4)
+        __attribute__nonnull__(2)
         __attribute__nonnull__(5)
+        __attribute__nonnull__(6)
         FUNC_MODIFIES(*container);
 
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */

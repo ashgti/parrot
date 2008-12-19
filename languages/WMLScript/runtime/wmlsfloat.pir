@@ -16,28 +16,29 @@ See "WMLScript Standard Libraries Specification", section 8 "Float".
 
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 
 .sub 'getFloat'
     new $P0, 'Hash'
 
-    .const .Sub _float_int = '_float_int'
+    .const 'Sub' _float_int = '_float_int'
     $P0[0]  = _float_int
-    .const .Sub _float_floor = '_float_floor'
+    .const 'Sub' _float_floor = '_float_floor'
     $P0[1]  = _float_floor
-    .const .Sub _float_ceil = '_float_ceil'
+    .const 'Sub' _float_ceil = '_float_ceil'
     $P0[2]  = _float_ceil
-    .const .Sub _float_pow = '_float_pow'
+    .const 'Sub' _float_pow = '_float_pow'
     $P0[3]  = _float_pow
-    .const .Sub _float_round = '_float_round'
+    .const 'Sub' _float_round = '_float_round'
     $P0[4]  = _float_round
-    .const .Sub _float_sqrt = '_float_sqrt'
+    .const 'Sub' _float_sqrt = '_float_sqrt'
     $P0[5]  = _float_sqrt
-    .const .Sub _float_maxFloat = '_float_maxFloat'
+    .const 'Sub' _float_maxFloat = '_float_maxFloat'
     $P0[6]  = _float_maxFloat
-    .const .Sub _float_minFloat = '_float_minFloat'
+    .const 'Sub' _float_minFloat = '_float_minFloat'
     $P0[7]  = _float_minFloat
 
     .return ($P0)
@@ -72,8 +73,7 @@ Integer or invalid.
     $I0 = isa $P0, 'WmlsInvalid'
     if $I0 goto L2
     $I0 = $P0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L3
   L2:
     new res, 'WmlsInvalid'
@@ -111,8 +111,7 @@ Integer or invalid.
     if $I0 goto L2
     $N0 = $P0
     $I0 = floor $N0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L3
   L2:
     new res, 'WmlsInvalid'
@@ -150,8 +149,7 @@ Integer or invalid.
     if $I0 goto L2
     $N0 = $P0
     $I0 = ceil $N0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L3
   L2:
     new res, 'WmlsInvalid'
@@ -208,8 +206,7 @@ If value1 < 0 and value2 is not an integer then C<invalid> is returned.
     $N2 = $P2
     unless $N1 == 0.0 goto L4
     if $N2 < 0.0 goto L2
-    new res, 'WmlsFloat'
-    set res, 0.0
+    box res, 0.0
     goto L5
   L4:
     unless $N1 < 0.0 goto L6
@@ -217,8 +214,7 @@ If value1 < 0 and value2 is not an integer then C<invalid> is returned.
     if $I0 goto L2
   L6:
     $N0 = pow $N1, $N2
-    new res, 'WmlsFloat'
-    set res, $N0
+    box res, $N0
     goto L5
   L2:
     new res, 'WmlsInvalid'
@@ -259,8 +255,7 @@ Integer or invalid.
     $N0 = $P0
     $N0 += 0.5
     $I0 = floor $N0
-    new res, 'WmlsInteger'
-    set res, $I0
+    box res, $I0
     goto L3
   L2:
     new res, 'WmlsInvalid'
@@ -303,8 +298,7 @@ If value is a negative number then invalid is returned.
     $N0 = $P0
     if $N0 < 0.0 goto L2
     $N1 = sqrt $N0
-    new res, 'WmlsFloat'
-    set res, $N1
+    box res, $N1
     goto L3
   L2:
     new res, 'WmlsInvalid'
@@ -328,8 +322,7 @@ Floating-point 3.40282347e+38.
 
 .sub '_float_maxFloat' :anon
     .local pmc res
-    new res, 'WmlsFloat'
-    set res, 3.40282347e+38
+    box res, 3.40282347e+38
     .return (res)
 .end
 
@@ -350,17 +343,9 @@ precision floating-point value: 1.17549435e-38.
 
 .sub '_float_minFloat' :anon
     .local pmc res
-    new res, 'WmlsFloat'
-    set res, 1.17549435e-38
+    box res, 1.17549435e-38
     .return (res)
 .end
-
-
-=head1 AUTHORS
-
-Francois Perrad.
-
-=cut
 
 
 # Local Variables:

@@ -7,7 +7,14 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 44;
+use Parrot::Test;
+
+$ENV{TEST_PROG_ARGS} ||= '';
+
+plan( skip_all => 'lexicals not thawed properly from PBC, RT #60652' )
+    if $ENV{TEST_PROG_ARGS} =~ /-r/;
+
+plan( tests => 47 );
 
 =head1 NAME
 
@@ -34,7 +41,7 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', '.lex parsing - PIR' );
 .sub main
-    .lex "$a", P0
+    .lex "$a", $P0
     print "ok\n"
 .end
 CODE
@@ -194,16 +201,16 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set var via pad' );
     .local pmc pad, interp
     interp = getinterp
     pad = interp["lexpad"]
-    .lex '$a', P0
+    .lex '$a', $P0
     unless null pad goto ok
     print "pad is NULL\n"
     end
 ok:
     print "ok\n"
-    P1 = new 'Integer'
-    P1 = 13013
-    pad['$a'] = P1
-    print P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    pad['$a'] = $P1
+    print $P0
     print "\n"
     end
 .end
@@ -214,8 +221,8 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set two vars via pad (2 lex -> 2 pmc)' );
 .sub main
-    .lex '$a', P0
-    .lex '$b', P2
+    .lex '$a', $P0
+    .lex '$b', $P2
     .local pmc pad, interp
     interp = getinterp
     pad = interp["lexpad"]
@@ -225,14 +232,14 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set two vars via pad (2 lex -
     end
 ok:
     print "ok\n"
-    P1 = new 'Integer'
-    P1 = 13013
-    pad['$a'] = P1
-    print P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    pad['$a'] = $P1
+    print $P0
     print "\n"
-    P1 = 42
-    pad['$b'] = P1
-    print P2
+    $P1 = 42
+    pad['$b'] = $P1
+    print $P2
     print "\n"
     end
 .end
@@ -244,11 +251,11 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'synopsis example' );
 .sub main
-    .lex '$a', P0
-    P1 = new 'Integer'
-    P1 = 13013
-    store_lex '$a', P1
-    print P0
+    .lex '$a', $P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    store_lex '$a', $P1
+    print $P0
     print "\n"
     end
 .end
@@ -321,7 +328,7 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexinfo from pad' );
 .sub main
-    .lex '$a', P0
+    .lex '$a', $P0
     .local pmc pad, interp, info
     interp = getinterp
     pad = interp["lexpad"]
@@ -409,7 +416,7 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'get_outer via interp' );
 .sub "main"
-    .const .Sub foo = "foo"
+    .const 'Sub' foo = "foo"
     .local pmc foo_cl
     .lex "a", $P0
     foo_cl = newclosure foo
@@ -417,7 +424,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_outer via interp' );
     print $P0
 .end
 .sub foo  :outer('main')
-    .const .Sub bar = "bar"
+    .const 'Sub' bar = "bar"
     .local pmc bar_cl
     bar_cl = newclosure bar
     bar_cl()
@@ -467,7 +474,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'closure 3' );
     .local pmc n
     .lex '$n', n
     n = arg
-    .const .Sub anon = "anon"
+    .const 'Sub' anon = "anon"
     $P0 = newclosure anon
     .return ($P0)
 .end
@@ -551,8 +558,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'closure 4' );
      .lex 'x', x
      .lex 'y', y
      .lex 'choose', choose
-     .const .Sub choose_sub = "_choose"
-     .const .Sub fail_sub = "_fail"
+     .const 'Sub' choose_sub = "_choose"
+     .const 'Sub' fail_sub = "_fail"
      fail = newclosure fail_sub
      arr1 = new 'ResizablePMCArray'
      arr1[0] = 1
@@ -603,7 +610,7 @@ the_end:
      .include "interpinfo.pasm"
      $P1 = interpinfo .INTERPINFO_CURRENT_CONT
      store_lex  "cc", $P1
-     .const .Sub tr_sub = "_try"
+     .const 'Sub' tr_sub = "_try"
      newclosure our_try, tr_sub
      store_lex "try", our_try
      $P2 = our_try(choices)
@@ -621,7 +628,7 @@ the_end:
      store_lex "fail", $P1
      $P1()
 have_choices:
-     .const .Sub f = "new_fail"
+     .const 'Sub' f = "new_fail"
      newclosure $P2, f
      store_lex "fail", $P2
      $P3 = find_lex "choices"
@@ -676,7 +683,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'closure 5' );
     $P0 = new 'Integer'
     $P0 = 0
 
-    .const .Sub bar_sub = "bar"
+    .const 'Sub' bar_sub = "bar"
     $P1 = newclosure bar_sub
     .return ($P1)
 .end
@@ -731,7 +738,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'closure 6' );
     print "foo: "
     print $P0
     print "\n"
-    .const .Sub closure = 'bar'
+    .const 'Sub' closure = 'bar'
     $P2 = newclosure closure
     .return($P2)
 .end
@@ -991,7 +998,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'package-scoped closure 3 - autoclose' );
     .lex '$y', y
     .local pmc x
     x = find_lex '$x'
-    $P0 = n_add x, y
+    $P0 = add x, y
     .return ($P0)
 .end
 
@@ -1200,7 +1207,7 @@ sub test_closures
     $P1 = 1
 
     find_lex $P2, '@closures'
-    .const .Sub $P3 = 'anonymous'
+    .const 'Sub' $P3 = 'anonymous'
     newclosure $P4, $P3
     push $P2, $P4
 
@@ -1263,6 +1270,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure (RT
 .sub 'bar' :outer('foo')
     .param pmc b
     .lex '$b', b
+    .const 'Sub' $P0 = 'bar_inner'
+    capture_lex $P0
     .local pmc a
     a = find_lex '$a'
     print a
@@ -1280,6 +1289,181 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure (RT
 CODE
 hello world
 hello world
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398:  Patrick's request" );
+.sub 'main' :main
+    foo('try 1')
+    foo('try 2')
+    foo('try 3')
+.end
+
+.sub 'foo' :subid('foo')
+    .param pmc x
+    .lex '$x', x
+    print "outer foo "
+    say x
+    'inner'()
+.end
+
+.sub 'inner' :outer('foo')
+    .local pmc x
+    x = find_lex '$x'
+    print "inner foo "
+    say x
+    $P0 = new 'String'
+    $P0 = 'BOGUS!'
+    store_lex '$x', $P0
+.end
+CODE
+outer foo try 1
+inner foo try 1
+outer foo try 2
+inner foo try 2
+outer foo try 3
+inner foo try 3
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Bob's recursion bug");
+.sub main :main
+    rpwi(0)
+.end
+
+.sub rpwi
+    .param int recursive_p
+    unless recursive_p goto do_lex
+    print "rpwi:  recursive case\n"
+    .return ()
+do_lex:
+    .lex "(SAVED *SHARP-EQUAL-ALIST*)", $P40
+    $P40 = new 'Integer'
+    $P40 = 99
+    .const 'Sub' $P80 = "(:INTERNAL rpwi 0)"
+    newclosure $P81, $P80
+    ## $P81 = clone $P80
+    ## pushaction $P81
+    print "rpwi:  lex case\n"
+    rpwi(1)
+    $P81()
+.end
+
+.sub "(:INTERNAL rpwi 0)" :anon :outer('rpwi')
+    print "[restoring *SHARP-EQUAL-ALIST*]\n"
+    find_lex $P40, "(SAVED *SHARP-EQUAL-ALIST*)"
+    print "[got "
+    print $P40
+    print "]\n"
+.end
+CODE
+rpwi:  lex case
+rpwi:  recursive case
+[restoring *SHARP-EQUAL-ALIST*]
+[got 99]
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Jonathan's recursive case" );
+.sub 'main' :main
+    $P0 = new 'ResizablePMCArray'
+    push $P0, 'a'
+    $P1 = new 'ResizablePMCArray'
+    $P2 = new 'ResizablePMCArray'
+    push $P2, 'simple'
+    push $P1, $P2
+    push $P1, 'test'
+    $P3 = new 'ResizablePMCArray'
+    push $P3, 'for'
+    push $P3, 'a'
+    push $P3, 'simple'
+    push $P1, $P3
+    push $P0, $P1
+    push $P0, 'script'
+    'dump_thing'($P0, '# ')
+.end
+
+.sub 'dump_thing'
+    .param pmc thing
+    .param pmc prefix
+    .lex '$thing', thing
+    .lex '$prefix', prefix
+
+    $P0 = get_hll_global 'anon_1'
+    $P1 = newclosure $P0
+    .lex '$recur', $P1
+
+    $P2 = find_lex '$thing'
+    $I0 = isa $P2, 'ResizablePMCArray'
+    unless $I0 goto not_ResizablePMCArray
+
+    $P3 = find_lex '$prefix'
+    print $P3
+    print "[\n"
+    $P4 = get_hll_global 'anon_2'
+    $P5 = newclosure $P4
+    $P6 = find_lex '$thing'
+    'map'($P5, $P6)
+    $P7 = find_lex '$prefix'
+    print $P7
+    print "]\n"
+    goto end_if
+
+  not_ResizablePMCArray:
+    $P8 = find_lex '$prefix'
+    print $P8
+    $P9 = find_lex '$thing'
+    print $P9
+    print "\n"
+  end_if:
+.end
+
+.sub 'anon_1' :outer('dump_thing')
+    .param pmc subthing
+    .lex '$subthing', subthing
+    $P0 = find_lex '$subthing'
+    $P1 = find_lex '$prefix'
+    $P2 = new 'String'
+    $P2 = concat $P1, '    '
+   'dump_thing'($P0, $P2)
+.end
+
+.sub 'anon_2' :outer('dump_thing')
+    .param pmc topic
+    .lex "$_", topic
+    $P0 = find_lex '$recur'
+    $P1 = find_lex '$_'
+    $P0($P1)
+.end
+
+.sub 'map'
+    .param pmc block
+    .param pmc array
+    .local pmc result, it
+    result = new 'ResizablePMCArray'
+    it = iter array
+    loop:
+    unless it goto loop_end
+    $P0 = shift it
+    $P0 = block($P0)
+    push result, $P0
+    goto loop
+    loop_end:
+    .return (result)
+.end
+CODE
+# [
+#     a
+#     [
+#         [
+#             simple
+#         ]
+#         test
+#         [
+#             for
+#             a
+#             simple
+#         ]
+#     ]
+#     script
+# ]
 OUTPUT
 
 # Local Variables:

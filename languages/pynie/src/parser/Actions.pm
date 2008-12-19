@@ -120,6 +120,44 @@ method while_stmt($/) {
     make $past;
 }
 
+method for_stmt($/) {
+    # translates to:
+    # $P0 = new 'Iterator', <expression_list>
+    # while $P0:
+    #   i = shift $P0
+    #   ...
+
+    # XXX implement complex for syntax
+
+    # XXX right now this uses a Block rather than Stmts so that $iter's scope
+    # XXX is confined to this 'for'. Better to use Stmts and make $iter an anonymous register.
+    #my $past := PAST::Stmts.new( :node($/) );
+    my $past := PAST::Block.new( :blocktype('immediate'), :node($/) );
+
+    # create iterator
+    my $list := $( $<expression_list> );
+    my $iter := PAST::Var.new(     :name('iter'), :scope('register'), :node($/) );
+    my $iterdecl := PAST::Var.new( :name('iter'), :scope('register'), :node($/), :isdecl(1) );
+    $past.push( $iterdecl );
+    $past.push( PAST::Op.new( $iter, $list,
+                              :inline('    %0 = new "Iterator", %1'),
+                              :node($/) ) );
+
+    # make loop body
+    my $tgt := $( $<target> );
+    my $loop := PAST::Stmts.new( :node($/) );
+    my $shifted := PAST::Op.new( $iter,
+                                 :inline('    %r = shift %0'),
+                                 :node($/) );
+    $loop.push( PAST::Op.new( $tgt, $shifted, :pasttype('bind'), :node($/) ) );
+    $loop.push( $( $<suite> ) );
+
+    $past.push( PAST::Op.new( $iter, $loop,
+                              :pasttype('while'),
+                              :node($/) ) );
+    make $past;
+}
+
 method parameter_list($/) {
     ## the only place for parameters to live is in a function block;
     ## create that here already.
@@ -346,6 +384,21 @@ method raise_stmt($/) {
     make $past;
 }
 
+method try_stmt($/, $key) {
+    make $( $/{$key} );
+}
+
+method try1_stmt($/) {
+    # XXX implement except params, else, finally
+    my $try := $($<try>);
+    my $handler := $($<except>);
+    my $past := PAST::Op.new( $try,
+                              $handler,
+                              :pasttype('try'),
+                              :node($/) );
+    make $past;
+}
+
 method simple_stmt($/, $key) {
     make $( $/{$key} );
 }
@@ -425,9 +478,9 @@ method or_test($/) {
     my $past := $( $<and_test>[$count] );
     while $count != 0 {
         $count := $count - 1;
-        my $past := PAST::Op.new( $($<and_test>[$count]),
+        $past := PAST::Op.new( $($<and_test>[$count]),
                                   $past,
-                                  :pasttype('if') );
+                                  :pasttype('unless') );
     }
     make $past;
 }
@@ -437,9 +490,9 @@ method and_test($/) {
     my $past := $( $<not_test>[$count] );
     while $count != 0 {
         $count := $count - 1;
-        my $past := PAST::Op.new( $($<not_test>[$count]),
+        $past := PAST::Op.new( $($<not_test>[$count]),
                                   $past,
-                                  :pasttype('unless') );
+                                  :pasttype('if') );
     }
     make $past;
 }
@@ -448,7 +501,7 @@ method and_test($/) {
 method not_test($/) {
     my $past := $( $<in_test> );
     for $<nots> {
-        $past := PAST::Op.new( $past, :pirop('not'), :node($/) );
+        $past := PAST::Op.new( $past, :pirop('not II'), :node($/) );
     }
     make $past;
 }
@@ -520,6 +573,20 @@ method call($/, $key) {
     }
 }
 
+method attributeref($/) {
+    my $attr := $($<identifier>);
+    $attr.scope('attribute');
+    make $attr;
+}
+
+method methodcall($/) {
+    my $attrname := $($<identifier>).name();
+    my $call := $($<call>);
+    $call.pasttype('callmethod');
+    $call.name($attrname);
+    make $call;
+}
+
 method subscription($/) {
     make PAST::Var.new( $( $<tuple_or_scalar> ), :scope('keyed'));
 }
@@ -570,6 +637,17 @@ method assignment_stmt($/) {
 #    }
     $past := PAST::Op.new( $lhs.shift(), $explist, :pasttype('bind'), :node($/) );
 
+    make $past;
+}
+
+method augop($/, $key) {
+    make PAST::Op.new( :pirop($key), :node($/) );
+}
+
+method augmented_assignment_stmt($/) {
+    my $past := $($<augop>);
+    $past.push( $($<target>) );
+    $past.push( $($<expression>) );
     make $past;
 }
 

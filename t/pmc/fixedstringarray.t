@@ -23,8 +23,6 @@ out-of-bounds test. Checks INT and PMC keys.
 
 =cut
 
-my $fp_equality_macro = pasm_fp_equality_macro();
-
 pasm_output_is( <<'CODE', <<'OUTPUT', "Setting array size" );
     new P0, 'FixedStringArray'
 
@@ -144,7 +142,7 @@ current instr\.:/
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'FixedStringArray'
      set P0, 3
      new P1, 'Key'
@@ -164,7 +162,7 @@ pasm_output_is( <<"CODE", <<'OUTPUT', "Set via PMC keys, access via INTs" );
 OK1: print "ok 1\\n"
 
      set N0, P0[1]
-     .fp_eq(N0, 2.5, OK2)
+     .fp_eq_pasm(N0, 2.5, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -181,7 +179,7 @@ ok 3
 OUTPUT
 
 pasm_output_is( <<"CODE", <<'OUTPUT', "Set via INTs, access via PMC Keys" );
-@{[ $fp_equality_macro ]}
+     .include 'include/fp_equality.pasm'
      new P0, 'FixedStringArray'
      set P0, 1024
 
@@ -201,7 +199,7 @@ OK1: print "ok 1\\n"
 
      set P2, 128
      set N0, P0[P2]
-     .fp_eq(N0, 10.2, OK2)
+     .fp_eq_pasm(N0, 10.2, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
@@ -333,16 +331,16 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "get_iter" );
 .sub 'main' :main
-    new P0, 'FixedStringArray'
-    set P0, 3
-    P0[0] = 42
-    P0[1] = 43
-    P0[2] = 44
-    P1 = iter P0
+    new $P0, 'FixedStringArray'
+    set $P0, 3
+    $P0[0] = 42
+    $P0[1] = 43
+    $P0[2] = 44
+    $P1 = iter $P0
   loop:
-    unless P1 goto loop_end
-    S2 = shift P1
-    say S2
+    unless $P1 goto loop_end
+    $S2 = shift $P1
+    say $S2
     goto loop
   loop_end:
 .end

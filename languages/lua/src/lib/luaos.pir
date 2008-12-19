@@ -18,7 +18,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.8>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'os' ]
 
 .sub 'luaopen_os'
@@ -294,6 +295,7 @@ describing the error.
     new $P0, 'OS'
     push_eh _handler
     $P0.'rm'($S1)
+    pop_eh
     new res, 'LuaBoolean'
     set res, 1
     .return (res)
@@ -302,7 +304,8 @@ describing the error.
     .local pmc msg
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     concat $S0, ': '
     concat $S0, s
     new nil, 'LuaNil'
@@ -330,6 +333,7 @@ fails, it returns B<nil>, plus a string describing the error.
     new $P0, 'OS'
     push_eh _handler
     $P0.'rename'($S1, $S2)
+    pop_eh
     new res, 'LuaBoolean'
     set res, 1
     .return (res)
@@ -338,7 +342,8 @@ fails, it returns B<nil>, plus a string describing the error.
     .local pmc msg
     .local pmc e
     .local string s
-    .get_results (e, s)
+    .get_results (e)
+    s = e
     concat $S0, ': '
     concat $S0, s
     new nil, 'LuaNil'

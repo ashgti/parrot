@@ -128,7 +128,7 @@ OUTPUT
 
 pasm_output_is( <<'CODE', <<OUTPUT, "vanishing slingleton PMC" );
 _main:
-    .const .Sub P0 = "_rand"
+    .const 'Sub' P0 = "_rand"
     set I16, 100
     set I17, 0
 loop:
@@ -170,8 +170,8 @@ pir_output_is( <<'CODE', <<OUTPUT, "vanishing return continuation in method call
 .sub init :vtable :method
     print "init\n"
     sweep 1
-    new P6, 'String'
-    set P6, "hi"
+    new $P6, 'String'
+    set $P6, "hi"
     self."do_inc"()
     sweep 1
 .end
@@ -237,7 +237,7 @@ OUTPUT
 # s. also src/pmc/retcontinuation.pmc
 pasm_output_is( <<'CODE', <<OUTPUT, "coro context and invalid return continuations" );
 .pcc_sub main:
-    .const .Sub P0 = "co1"
+    .const 'Sub' P0 = "co1"
     set I20, 0
 l:
     get_results ''

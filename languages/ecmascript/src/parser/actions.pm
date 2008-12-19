@@ -239,7 +239,7 @@ method catch($/) {
    my $exid := $( $<identifier> );
    ##  Add a catch node to the try op that captures the
    ##  exception object into the declared identifier. Thanks to Rakudo for this trick.
-   my $catchpir := "    .get_results (%r, $S0)\n    store_lex '" ~ $exid.name() ~ "', %r";
+   my $catchpir := "    .get_results (%r)\n    store_lex '" ~ $exid.name() ~ "', %r";
    $past.unshift( PAST::Op.new( :inline( $catchpir ) ) );
    make $past;
 }
@@ -395,6 +395,10 @@ method primary_expression($/, $key) {
     make $( $/{$key} );
 }
 
+method regular_expression_literal ($/) {
+    make PAST::Val.new( :value( ~$<regular_expression_literal> ), :node($/) );
+}
+
 method this($/) {
     ## XXX wait for PAST support for 'self'
     ## load 'self' into a register; when this PAST node is used as a child somewhere
@@ -430,7 +434,7 @@ method post_call_expr($/, $key) {
     make $( $/{$key} );
 }
 
-method assignment_expression($/) {
+method assignment_expression_X($/) {
     my $past := $( $<conditional_expression> );
 
     ## get number of lhs_expressions
@@ -546,8 +550,8 @@ method lhs_expression($/, $key) {
     make $( $/{$key} );
 }
 
-method member_expression($/) {
-    my $member := $( $<member> );
+method member_expressionX($/) {
+    my $member := $( $<member_prefix> );
 
     ## if there are any arguments, $member is invoked with these arguments.
     if $<arguments> {
@@ -563,14 +567,14 @@ method member_expression($/) {
     }
 }
 
-method member($/) {
+method member_expression($/) {
     my $past := $( $<member_prefix> );
 
     ## for each index, $past acts as the invocant or main object on
     ## which some operation is executed; therefore $past must be the
     ## first child, so unshift it. Then, $past is assigned this result
     ## preparing for either the next index or as argument for 'make'.
-    for $<index> {
+    for $<member_suffix> {
         my $idx := $( $_ );
         $idx.unshift($past);
         $past := $idx;
@@ -583,7 +587,7 @@ method member_prefix($/, $key) {
     make $( $/{$key} );
 }
 
-method index($/, $key) {
+method member_suffix($/, $key) {
     ## get the index expression
     my $idx := $( $/{$key} );
 
@@ -681,7 +685,7 @@ method property($/) {
     my $key  := $( $<property_name> );
 
     ## XXX my $key  := PAST::Val.new( $prop, :returns('String'), :node($/) );
-    my $val  := $( $<expression> );
+    my $val  := $( $<assignment_expression> );
 
     $val.named($key);
     make $val;
@@ -737,7 +741,8 @@ method decimal_literal($/, $key) {
     make $( $/{$key} );
 }
 
-method logical_or_expression($/, $key) {
+#method logical_or_expression($/, $key) {
+method assignment_expression($/, $key) {
     ## Handle the operator table
     ##
     if ($key eq 'end') {

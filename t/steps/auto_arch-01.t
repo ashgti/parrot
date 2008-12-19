@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 110;
+use Test::More tests => 102;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
@@ -19,14 +19,12 @@ use Parrot::Configure::Test qw(
 );
 use IO::CaptureOutput qw| capture |;
 
-########## --miniparrot ##########
+########## Darwin special case ##########
 
-my $args = process_options(
-    {
-        argv => [ q{--miniparrot} ],
-        mode => q{configure},
-    }
-);
+my ($args, $step_list_ref) = process_options( {
+    argv => [ ],
+    mode => q{configure},
+} );
 
 my $conf = Parrot::Configure->new;
 
@@ -39,22 +37,6 @@ my $pkg = q{auto::arch};
 $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
 my $step = test_step_constructor_and_description($conf);
-my $ret = $step->runstep($conf);
-ok( $ret, "runstep() returned true value" );
-is($step->result(), q{skipped}, "Got expected result");
-
-$conf->replenish($serialized);
-
-########## Darwin special case ##########
-
-$args = process_options( {
-    argv => [ ],
-    mode => q{configure},
-} );
-rerun_defaults_for_testing($conf, $args );
-$conf->add_steps($pkg);
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
 my $errstr;
 {
     # As the t/configure/ test suite is currently (Dec 25 2007) constructed,
@@ -83,7 +65,7 @@ $conf->replenish($serialized);
 
 ########## --verbose ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ q{--verbose} ],
     mode => q{configure},
 } );
@@ -109,7 +91,7 @@ $conf->replenish($serialized);
 
 ########## mock architecture ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -119,7 +101,7 @@ $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
 my $pseudoarch = q{foobar};
 $conf->data->set('archname' => $pseudoarch);
-$ret = $step->runstep($conf);
+my $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
 is($step->result(), q{}, "Result was empty string as expected");
 is($conf->data->get('cpuarch'), q{},
@@ -131,7 +113,7 @@ $conf->replenish($serialized);
 
 ########## mock darwin ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -155,7 +137,7 @@ $conf->replenish($serialized);
 
 ########## mock darwin ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -179,7 +161,7 @@ $conf->replenish($serialized);
 
 ########## mock win32 ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -201,7 +183,7 @@ $conf->replenish($serialized);
 
 ########## mock win32 ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -223,7 +205,7 @@ $conf->replenish($serialized);
 
 ########## mock cygwin ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -245,7 +227,7 @@ $conf->replenish($serialized);
 
 ########## mock powerpc-linux ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );
@@ -267,7 +249,7 @@ $conf->replenish($serialized);
 
 ########## mock cygwin-i486 ##########
 
-$args = process_options( {
+($args, $step_list_ref) = process_options( {
     argv => [ ],
     mode => q{configure},
 } );

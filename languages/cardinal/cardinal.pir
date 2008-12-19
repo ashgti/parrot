@@ -30,14 +30,10 @@ object.
     $P0 = subclass 'ResizablePMCArray', 'List'
 .end
 
-.namespace [ 'List' ]
+.namespace [ 'cardinal';'Compiler' ]
 
-
-
-
-.namespace [ 'cardinal::Compiler' ]
-
-.loadlib 'cardinal_group'
+#no caridinal_group found on my machine
+#.loadlib 'cardinal_group'
 
 .sub 'onload' :anon :load :init
     load_bytecode 'PCT.pbc'
@@ -61,7 +57,7 @@ object.
     $P0 = new 'List'
     set_hll_global ['cardinal';'Grammar';'Actions'], '@?BLOCK', $P0
 
-    $P1 = get_hll_global ['PAST::Compiler'], '%valflags'
+    $P1 = get_hll_global ['PAST';'Compiler'], '%valflags'
     $P1['CardinalString'] = 'e'
 .end
 
@@ -105,6 +101,7 @@ to the cardinal compiler.
 
 
 .include 'src/gen_grammar.pir'
+.include 'src/parser/quote_expression.pir'
 .include 'src/gen_actions.pir'
 
 

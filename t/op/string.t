@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2007, The Perl Foundation.
+# Copyright (C) 2001-2008, The Perl Foundation.
 # $Id$
 
 use strict;
@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 160;
+use Parrot::Test tests => 161;
 use Parrot::Config;
 
 =head1 NAME
@@ -1463,38 +1463,38 @@ pir_output_is( << 'CODE', << 'OUTPUT', 'index with different charsets' );
 .sub test :main
 
     print "default - default:\n"
-    set S0, "Parrot"
-    set S1, "rot"
-    index I1, S0, S1
-    print I1
+    set $S0, "Parrot"
+    set $S1, "rot"
+    index $I1, $S0, $S1
+    print $I1
     print "\n"
 
     print "ascii - ascii:\n"
-    set S0, ascii:"Parrot"
-    set S1, ascii:"rot"
-    index I1, S0, S1
-    print I1
+    set $S0, ascii:"Parrot"
+    set $S1, ascii:"rot"
+    index $I1, $S0, $S1
+    print $I1
     print "\n"
 
     print "default - ascii:\n"
-    set S0, "Parrot"
-    set S1, ascii:"rot"
-    index I1, S0, S1
-    print I1
+    set $S0, "Parrot"
+    set $S1, ascii:"rot"
+    index $I1, $S0, $S1
+    print $I1
     print "\n"
 
     print "ascii - default:\n"
-    set S0, ascii:"Parrot"
-    set S1, "rot"
-    index I1, S0, S1
-    print I1
+    set $S0, ascii:"Parrot"
+    set $S1, "rot"
+    index $I1, $S0, $S1
+    print $I1
     print "\n"
 
     print "binary - binary:\n"
-    set S0, binary:"Parrot"
-    set S1, binary:"rot"
-    index I1, S0, S1
-    print I1
+    set $S0, binary:"Parrot"
+    set $S1, binary:"rot"
+    index $I1, $S0, $S1
+    print $I1
     print "\n"
 
 .end
@@ -1593,7 +1593,7 @@ pasm_output_is( <<'CODE', <<'OUTPUT', 'num to string' );
     end
 CODE
 80.43
--1.11111
+-1.111111
 OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', 'string to int' );
@@ -1968,7 +1968,7 @@ String #2
 OUTPUT
 
 SKIP: {
-    skip( "Peding reimplementation of find_encoding", 1 );
+    skip( "Pending reimplementation of find_encoding", 1 );
     pasm_output_is( <<'CODE', <<'OUTPUT', 'find_encoding' );
       find_encoding I0, "singlebyte"
       print I0
@@ -2656,18 +2656,18 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', 'join: get_string returns a null string' );
 
 .sub _main
-    newclass P0, "Foo"
+    newclass $P0, "Foo"
 
-    new P0, 'ResizablePMCArray'
+    new $P0, 'ResizablePMCArray'
 
-    P1 = new "Foo"
+    $P1 = new "Foo"
 
-    push P0, P1
+    push $P0, $P1
 
     print "a"
-    join S0, "", P0
+    join $S0, "", $P0
     print "b"
-    print S0
+    print $S0
     print "c\n"
     end
 .end
@@ -2679,7 +2679,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'join: get_string returns a null string' );
 
     null ret
     .begin_return
-    .return ret
+    .set_return ret
     .end_return
 .end
 CODE
@@ -2889,6 +2889,32 @@ CODE
 0
 -89
 0
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', 'constant string and modify-in-situ op (RT #60030)' );
+.sub doit
+    .param string s
+    $I0 = index s, '::'
+    say s
+    substr s, $I0, 2, "/"
+    say s
+    collect
+    say s
+.end
+
+.sub main :main
+    doit('Foo::Bar')
+
+    # repeat to prove that the constant 'Foo::Bar' remains unchanged
+    doit('Foo::Bar')
+.end
+CODE
+Foo::Bar
+Foo/Bar
+Foo/Bar
+Foo::Bar
+Foo/Bar
+Foo/Bar
 OUT
 
 # Local Variables:

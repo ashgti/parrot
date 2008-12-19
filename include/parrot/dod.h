@@ -50,12 +50,12 @@
 /* HEADERIZER BEGIN: src/gc/dod.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 void object_lives(SHIM_INTERP, ARGMOD(PObj *obj))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*obj);
 
-PARROT_API
+PARROT_EXPORT
 void pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -102,7 +102,7 @@ void Parrot_dod_free_sysmem(SHIM_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*b);
 
-void Parrot_dod_ms_run(PARROT_INTERP, int flags)
+void Parrot_dod_ms_run(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
 void Parrot_dod_ms_run_init(PARROT_INTERP)
@@ -170,11 +170,11 @@ extern int CONSERVATIVE_POINTER_CHASING;
 /* HEADERIZER BEGIN: src/gc/gc_gms.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_gc_gms_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void parrot_gc_gms_pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -225,7 +225,7 @@ void Parrot_gc_ims_init(PARROT_INTERP)
 /* HEADERIZER BEGIN: src/gc/gc_it.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 void gc_it_add_free_object(PARROT_INTERP,
     ARGMOD(struct Small_Object_Pool *pool),
     ARGMOD(void *to_add))
@@ -235,7 +235,7 @@ void gc_it_add_free_object(PARROT_INTERP,
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*to_add);
 
-PARROT_API
+PARROT_EXPORT
 void gc_it_alloc_objects(PARROT_INTERP,
     ARGMOD(struct Small_Object_Pool *pool))
         __attribute__nonnull__(1)
@@ -244,34 +244,34 @@ void gc_it_alloc_objects(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-PARROT_API
+PARROT_EXPORT
 void * gc_it_get_free_object(PARROT_INTERP,
     ARGMOD(struct Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-PARROT_API
+PARROT_EXPORT
 void gc_it_more_objects(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_gc_it_deinit(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_gc_it_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_gc_it_pool_init(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_gc_it_run(PARROT_INTERP, int flags)
         __attribute__nonnull__(1);
 

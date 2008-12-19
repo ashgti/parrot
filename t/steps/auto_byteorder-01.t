@@ -5,10 +5,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 29;
+use Test::More tests => 24;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::byteorder');
 use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
@@ -19,7 +18,7 @@ use Parrot::Configure::Test qw(
 
 ########## _evaluate_byteorder() ##########
 
-my $args = process_options(
+my ($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},
@@ -27,8 +26,6 @@ my $args = process_options(
 );
 
 my $conf = Parrot::Configure->new;
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
 
 my $pkg = q{auto::byteorder};
 
@@ -50,7 +47,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_byteorder() ##########
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},
@@ -78,7 +75,7 @@ $conf->replenish($serialized);
 
 ########## _evaluate_byteorder(); phony byte order ##########
 
-$args = process_options(
+($args, $step_list_ref) = process_options(
     {
         argv => [ ],
         mode => q{configure},

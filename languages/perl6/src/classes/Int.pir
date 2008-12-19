@@ -19,9 +19,27 @@ Int - Perl 6 integers
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     intproto = p6meta.'new_class'('Int', 'parent'=>'Integer Any')
     p6meta.'register'('Integer', 'parent'=>intproto, 'protoobject'=>intproto)
+    p6meta.'register'('BigInt', 'parent'=>intproto, 'protoobject'=>intproto)
 
     $P0 = get_hll_namespace ['Int']
     '!EXPORT'('abs', 'from'=>$P0)
+.end
+
+
+=item Scalar
+
+This is a value type, so just returns itself.
+
+=cut
+
+.sub 'Scalar' :method
+    .return (self)
+.end
+
+
+.sub 'abs' :method :multi('Integer')
+    $P0 = n_abs self
+    .return ($P0)
 .end
 
 
@@ -31,8 +49,9 @@ Int - Perl 6 integers
 
 .sub 'ACCEPTS' :method
     .param num topic
-    .return 'infix:=='(topic, self)
+    .tailcall 'infix:=='(topic, self)
 .end
+
 
 
 =item perl()
@@ -47,8 +66,21 @@ Returns a Perl representation of the Int.
 .end
 
 
-.sub 'abs' :method :multi('Integer')
-    $P0 = n_abs self
+=item succ and pred
+
+Increment and Decrement Methods
+
+=cut
+
+.sub 'pred' :method
+    $P0 = clone self
+    dec $P0
+    .return ($P0)
+.end
+
+.sub 'succ' :method
+    $P0 = clone self
+    inc $P0
     .return ($P0)
 .end
 
@@ -75,7 +107,7 @@ Overridden for Int.
 .sub 'infix:===' :multi(Integer,Integer)
     .param int a
     .param int b
-    .return 'infix:=='(a, b)
+    .tailcall 'infix:=='(a, b)
 .end
 
 =back

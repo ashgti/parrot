@@ -186,11 +186,11 @@ newline or semicolon after an end keyword."
     "join" "jsr" "jump"
     "lcm" "le" "length" "listen" "ln" "load_bytecode" "loadlib" "localtime"
     "log10" "log2" "lookback" "lsr" "lt"
-    "mmdvtfind" "mmdvtregister" "mod" "mul"
+    "find_multi" "add_multi" "mod" "mul"
     "n_infix" "ne" "needs_destroy" "neg" "new" "new_callback" "newclass"
     "newclosure" "nors" "not" "null"
     "open" "or" "ord"
-    "peek" "pin" "pioctl" "poll" "pop" "popmark" "pow" "print" "printerr"
+    "peek" "pin" "poll" "pop" "popmark" "pow" "print" "printerr"
     "profile" "prophash" "push" "push_eh" "pushaction" "pushmark"
     "read" "readline" "recv" "register" "removeattribute" "removeparent"
     "repeat" "restore" "result_info" "ret" "rethrow" "returncc"
@@ -204,7 +204,6 @@ newline or semicolon after an end keyword."
     "tailcall" "tailcallmethod" "tan" "tanh" "tell" "thaw" "throw" "time"
     "titlecase" "trace" "trans_charset" "trans_encoding" "typeof"
     "unless" "unless_null" "unpin" "unregister" "unshift" "upcase"
-    "valid_type"
     "warningsoff" "warningson"
     "xor"
     "yield"))
@@ -222,7 +221,7 @@ newline or semicolon after an end keyword."
 (defvar pir-dollar-register-regexp "\\$[INPS][0-9]+")
 
 (defvar pir-directives
-  '(":anon" ":flat" ":init" ":lex" ":lexid" ":load" ":main" ":method" ":multi"
+  '(":anon" ":flat" ":init" ":lex" ":subid" ":load" ":main" ":method" ":multi"
     ":named" ":opt_count" ":opt_flag" ":optional" ":outer" ":postcomp"
     ":slurpy" ":unique_reg" ":vtable" ":wrap"))
 
@@ -232,7 +231,7 @@ newline or semicolon after an end keyword."
     ".include" ".invocant" ".lex" ".line" ".loadlib" ".macro" ".meth_call"
     ".namespace" ".nci_call" ".pcc_begin" ".pcc_begin_return"
     ".pcc_begin_yield" ".pcc_call" ".pcc_end" ".pcc_end_return"
-    ".pcc_end_yield" ".pcc_sub" ".pragma" ".result" ".return" ".sub"
+    ".pcc_end_yield" ".pcc_sub" ".result" ".return" ".sub"
     ".yield"))
 
 (defvar pir-variable-declarations

@@ -175,13 +175,14 @@ NOT IMPLEMENTED.
 =item C<string get_include_path()>
 
 Get the current include_path configuration option
+Currently only the current include path is returned.
 
-NOT IMPLEMENTED.
+STILL INCOMPLETE.
 
 =cut
 
 .sub 'get_include_path'
-    not_implemented()
+    .tailcall constant('DEFAULT_INCLUDE_PATH')
 .end
 
 =item C<int get_magic_quotes_gpc(void)>
@@ -218,6 +219,7 @@ STILL INCOMPLETE.
 
 .sub 'getenv'
     .param pmc args :slurpy
+
     .local string varname
     ($I0, varname) = parse_parameters('s', args :flat)
     if $I0 goto L1
@@ -597,6 +599,7 @@ Delay for a given number of seconds
 
 .sub 'sleep'
     .param pmc args :slurpy
+
     .local int seconds
     ($I0, seconds) = parse_parameters('l', args :flat)
     if $I0 goto L1

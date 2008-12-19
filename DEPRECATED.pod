@@ -4,8 +4,7 @@
 
 This is a list of currently deprecated features of Parrot.  Every deprecation
 has an associated RT ticket.  Each item indicates the last release it's
-guaranteed to appear in.  Items marked with a release of ??? are still
-deprecated, but a firm deadline for their removal has not yet been established.
+guaranteed to appear in.
 
 When deprecated items are removed, all usage of the feature in the
 repository should be updated or removed; including documentation.
@@ -19,27 +18,12 @@ warnings selectively with:
 
 And then receive runtime warnings if they are using any deprecated opcodes.
 The C<-w> command line option for parrot can also be used to enable all
-warnings.
+warnings. You can use C<make warnings_tests> to run the standard test suite
+with this option.
 
 =head1 vtable entries
 
 =over 4
-
-=item * C<type_keyed> [post 0.5.2]
-
-See RT #48577.
-
-=item * C<type_keyed_int> [post 0.5.2]
-
-See RT #48579.
-
-=item * C<type_keyed_str> [post 0.5.2]
-
-See RT #48581.
-
-=item * C<type> [post 0.5.2]
-
-See RT #48567.
 
 =item * C<new_from_string> [post 0.5.0]
 
@@ -51,10 +35,6 @@ See RT #47011.
 
 =over 4
 
-=item * C<pioctl> [post 0.5.1]
-
-See RT #48589.
-
 =item * C<store_global> [post 0.5.0]
 
 See RT #48016. Replace usage with set_[hll,root]_global variants.
@@ -63,13 +43,33 @@ See RT #48016. Replace usage with set_[hll,root]_global variants.
 
 See RT #48018. Replace usage with get_[hll,root]_global variants.
 
-=item * C<new>(out PMC, in INT, in STR) [post 0.5.0]
-
-See RT #47011.
-
 =item * C<get_mro> [post 0.5.0]
 
 See RT #47976.
+
+=item * C<n_*> math opcode variants [post 0.7.1]
+
+See RT #58410.
+
+=item * C<open> opcode mode string [post 0.8.2]
+
+The C<open> opcode will change from Perl-style mode-strings to 'r' for read,
+'w' for write, 'a' for append, and 'p' for pipe.
+
+=item * C<infix> and C<n_infix> opcodes [post 0.8.2]
+
+These opcodes were only used by the old MMD system. See TT #7.
+
+=item * C<slice> [post 0.8.2]
+
+The C<slice> opcode's implementation is experimental. Its use cases and
+implementation should be reconsidered. The current implementation will
+be removed.
+
+=item * C<add_io_event> [post 0.8.2]
+
+The C<add_io_event> opcode is experimental and non-functional. The current
+implementation will be removed.
 
 =back
 
@@ -77,16 +77,15 @@ See RT #47976.
 
 =over 4
 
-=item * Integer Type IDs [post 0.5.0]
-
-See RT #48024. Instead of C<$P0 = new Integer> or C<$P0 = new .Integer>,
-use the following syntax, which works for both PMCs and objects.
-
-  $P0 = new 'Integer'
-
 =item * PMC union struct [post 0.5.0]
 
 See RT #48014. This will be removed once all core PMCs have been updated.
+
+=item * :anon and :vtable named parameters to add_method [post 0.8.2]
+
+If you want to override a vtable method/function when building a Class, then
+use the method C<add_vtable_override> instead of calling C<add_method> with
+one or both of these flags.
 
 =back
 
@@ -94,72 +93,7 @@ See RT #48014. This will be removed once all core PMCs have been updated.
 
 =over 4
 
-=item * old-style PASM registers [post 0.6.4]
-
-Old-style PASM registers without the C<$> character are deprecated; use
-PIR-style registers only.
-
-See RT #57638.
-
-=item * C<global> keyword [post 0.6.4]
-
-See RT #48016
-and RT #48018.
-
-=item * bare method names [post 0.6.4]
-
-C<foo.bar()>, where C<bar> is not a local identifier (thus indicating
-a method name) is no longer supported.
-
-See RT #45859.
-
-=item * C<#line> [post 0.6.4]
-
-Will be replaced by C<.line> to be more consistent with other PIR syntax.
-
-See [RT#45857], [RT#43269], and [RT#47141].
-
-=item * C<.pragma n_operators> [post 0.6.4]
-
-See RT #57438.
-
-=item * C<<.namespace <identifier> >> syntax [post 0.5.1]
-
-See RT #48737.
-
-=item * Use of C<::> in identifiers [post 0.5.1]
-
-See RT #48735.
-
-=item * C<.namespace [ "a" .. "b" ]> [post 0.5.0]
-
-See RT #46715.
-
-=item * C<.namespace> (without brackets) [post 0.6.2]
-
-All should C<.namespace> directives without brackets should take
-empty brackets to indicate the root namespace.
-See RT #48549.
-
-=item * C<.HLL_map> <string> ',' <string> [post 0.6.4]
-
-This will be replaced by C<.HLL_map> <string> '=' <string>
-
-See RT #57430.
-
-=item * C<.HLL> <string> ',' <string> [post 0.6.4]
-
-This will be replaced by C<.HLL> <string>; the second string (and
-comma to separate them) will no longer be accepted. Use C<.loadlib>
-for specifying the library name.
-
-See RT #57428.
-
-=item * vtable name .constants and __vtable overrides [post 0.5.2]
-
-See RT #48877.
-
-=item * Assignment syntax with opcodes [post ???]
+=item * Assignment syntax with opcodes [post 0.8.2]
 
 See RT #36283.  When the first argument of an opcode is C<OUT>, then
 the assignment syntax will be allowed, as it is today.
@@ -175,10 +109,59 @@ Will have to be:
     print $S0
     substr $P0, 1, 2, "x"
 
-=item * mmdvtregister and mmdvtablefind opcodes [post 0.7.0]
+=item * Exception Handlers won't automatically be disabled [post 0.8.1]
 
-These opcodes are part of the old MMD system, now deprecated and to be removed
-when the branch is merged in after the release.
+Exception handlers won't be automatically disabled after 0.8.1.
+Any exception handlers that currently rely on this feature will need to
+either be more specific about what they catch or rethrow exceptions they
+don't recognize.
+
+See RT #60640.
+
+=back
+
+=head1 Functions
+
+=over 4
+
+=item Old-style MMD functions [post 0.7.1]
+
+mmd_cvt_to_types.
+
+See RT #60626.
+
+=item src/pic.c and src/pic_jit.c [post 0.8.1]
+
+These two files were a thin prototype implementation of Polymorphic Inline
+Caching that only ever applied to 4 opcodes, one of which has now been removed.
+The files (and all functions in them) are deprecated, and will be removed. See
+RT #60048.
+
+=item * Subs marked with C<:vtable>/C<:method> aren't in namespace [post 0.8.2]
+
+Subs marked with C<:vtable> or C<:method> flags are no longer given a
+namespace entry by default.  Use the C<:nsentry> flag to cause this
+to happen.  See RT #60586 and RT #53302.
+
+=item * Bytecode packfile segment will use subid not sub name [post 0.8.1]
+
+See RT #60590.
+
+=back
+
+=head1 Compiler Tools
+
+=over 4
+
+=item 'get_string', 'get_bool', etc. named vtable functions [post 0.8.1]
+
+All of the named vtable functions in PCT and PGE will lose
+their names and effectively become anonymous.  See RT #60384.
+
+=item Capture_PIR class [post 0.8.2]
+
+The Capture_PIR class in runtime/parrot/library/Parrot/Capture_PIR.pir
+is deprecated and will be removed.
 
 =item * C<addr> shortcut for C<set_addr> op [post 0.7.1]
 
@@ -189,16 +172,16 @@ See RT#58238.
 
 =back
 
-=head1 Parrot Compiler tools
-
-=head2 Capture-based objects
+=head1 Misc.
 
 =over 4
 
-=item get_array, get_hash, get_scalar deprecations [post 0.6.2]
+=item 'make smoke' [post 0.8.2]
 
-See RT#54000.  The 'get_array', 'get_hash', and 'get_scalar'
-methods are now called 'list', 'hash', and 'item' respectively.
+The functionality currently provided by "make smoke" will be changing to
+be an alias for "make smolder_test". We're moving towards smolder as our
+single point of online test reporting, and will keep the make target to
+simplify the switch for anyone currently smoking parrot.  See RT #49276.
 
 =back
 

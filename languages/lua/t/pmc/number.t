@@ -20,12 +20,12 @@ Tests C<LuaNumber> PMC
 use strict;
 use warnings;
 
-use Parrot::Test tests => 11;
+use Parrot::Test tests => 13;
 use Test::More;
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check inheritance' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
     .local int bool1
@@ -44,7 +44,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check interface' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
     .local int bool1
@@ -67,7 +67,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check name' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
     .local string str1
@@ -82,7 +82,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check set_integer_native' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     .local string str1
     pmc1 = new 'LuaNumber'
@@ -109,7 +109,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check get_bool' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
     pmc1 = 3.14
@@ -130,7 +130,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check logical_not' );
 .sub _main
-    loadlib P1, 'lua_group'
+    loadlib $P1, 'lua_group'
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
     pmc1 = 3.14
@@ -151,7 +151,8 @@ boolean
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL' );
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .sub _main
     .local pmc pmc1
     pmc1 = new 'LuaNumber'
@@ -170,7 +171,8 @@ CODE
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL (autoboxing)' );
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .sub _main
     .local pmc pmc1
     pmc1 = test()
@@ -190,9 +192,10 @@ CODE
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL & .const' );
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .sub _main
-    .const .LuaNumber cst1 = '3.14'
+    .const 'LuaNumber' cst1 = '3.14'
     print cst1
     print "\n"
     .local int bool1
@@ -205,10 +208,47 @@ CODE
 1
 OUTPUT
 
-pir_output_is( << 'CODE', << 'OUTPUT', 'check tostring' );
-.HLL 'Lua', 'lua_group'
+pir_output_is( << 'CODE', << 'OUTPUT', 'check box float' );
+.HLL 'Lua'
+.loadlib 'lua_group'
 .sub _main
-    .const .LuaNumber cst1 = '3.14'
+    .local pmc pmc1
+    box pmc1, 3.14
+    print pmc1
+    print "\n"
+    .local int bool1
+    bool1 = isa pmc1, 'LuaNumber'
+    print bool1
+    print "\n"
+.end
+CODE
+3.14
+1
+OUTPUT
+
+pir_output_is( << 'CODE', << 'OUTPUT', 'check box integer' );
+.HLL 'Lua'
+.loadlib 'lua_group'
+.sub _main
+    .local pmc pmc1
+    box pmc1, -2
+    print pmc1
+    print "\n"
+    .local int bool1
+    bool1 = isa pmc1, 'LuaNumber'
+    print bool1
+    print "\n"
+.end
+CODE
+-2
+1
+OUTPUT
+
+pir_output_is( << 'CODE', << 'OUTPUT', 'check tostring' );
+.HLL 'Lua'
+.loadlib 'lua_group'
+.sub _main
+    .const 'LuaNumber' cst1 = '3.14'
     print cst1
     print "\n"
     $P0 = cst1.'tostring'()
@@ -225,9 +265,10 @@ string
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check tonumber' );
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .sub _main
-    .const .LuaNumber cst1 = '3.14'
+    .const 'LuaNumber' cst1 = '3.14'
     print cst1
     print "\n"
     $P0 = cst1.'tonumber'()

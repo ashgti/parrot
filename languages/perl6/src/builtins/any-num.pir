@@ -21,7 +21,7 @@ the size of that file down and to emphasize their generic,
 .namespace []
 .sub 'onload' :anon :init :load
     $P0 = get_hll_namespace ['Any']
-    '!EXPORT'('abs cis polar sqrt truncate int unpolar', 'from'=>$P0)
+    '!EXPORT'('abs,cis,int,log,chr,polar,sqrt,truncate,unpolar', 'from'=>$P0)
 
     ##  pre-seed a random number generator
     $P0 = new 'Random'
@@ -41,6 +41,16 @@ the size of that file down and to emphasize their generic,
     .return ($N1)
 .end
 
+=item chr()
+
+=cut
+
+.namespace ['Any']
+.sub 'chr' :method :multi(_)
+    $I0 = self
+    $S0 = chr $I0
+    .return ($S0)
+.end
 
 =item cis($angle)
 
@@ -48,7 +58,31 @@ the size of that file down and to emphasize their generic,
 
 .namespace ['Any']
 .sub 'cis' :method :multi(_)
-    .return 'unpolar'(1.0, self)
+    .tailcall 'unpolar'(1.0, self)
+.end
+
+
+.sub 'int' :method :multi(_)
+    .tailcall self.'truncate'()
+.end
+
+=item log
+
+ our Num multi Num::log         ( Num $x: Num :$base )
+ our Num multi Math::Basic::log ( Num $x, Num :$base )
+
+Logarithm of base C<$base>, default Natural. Calling with C<$x == 0> is an
+error.
+
+=cut
+
+.sub 'log' :method :multi(_)
+    if self == 0 goto fail
+    $N0 = self
+    $N1 = ln $N0
+    .return ($N1)
+  fail:
+    .tailcall '!FAIL'("Can't take log of 0")
 .end
 
 
@@ -59,7 +93,7 @@ the size of that file down and to emphasize their generic,
 .namespace ['Any']
 .sub 'polar' :method :multi(_)
     $N0 = self
-    .return 'list'($N0, 0)
+    .tailcall 'list'($N0, 0)
 .end
 
 
@@ -148,9 +182,6 @@ the size of that file down and to emphasize their generic,
     .return ($I0)
 .end
 
-.sub 'int' :method :multi(_)
-    .return self.'truncate'()
-.end
 
 =item unpolar($angle)
 
@@ -170,7 +201,6 @@ the size of that file down and to emphasize their generic,
     result[1] = $N0
     .return (result)
 .end
-
 
 =back
 
