@@ -45,7 +45,21 @@ sub runstep {
     # first pick wins. On cygwin prefer make over nmake.
     $prog ||= $ENV{ uc($util) };
     $prog ||= $conf->options->get($util);
-    $prog ||= check_progs( $^O eq 'cygwin' ? ['gmake', 'make'] : ['gmake', 'mingw32-make', 'nmake', 'make'], $verbose );
+
+    my $canidates;
+    if ( $^O eq 'cygwin') {
+        # Cygwin
+        $canidates = ['gmake', 'make'];
+    }
+    elsif ($conf->option_or_data('cc') =~ /cl(\.exe)?$/) {
+        # Windows, Visual C++, prefer nmake
+        $canidates = [ 'nmake', 'mingw32-make', 'gmake', 'make' ];
+    }
+    else {
+        # Default
+        $canidates = ['gmake', 'mingw32-make', 'nmake', 'make'];
+    }
+    $prog ||= check_progs( $canidates, $verbose );
     if ( !$prog ) {
         $prog = ( $conf->options->get('ask') )
             ? prompt( $prompt, $prog ? $prog : $conf->data->get($util) )
@@ -59,10 +73,9 @@ sub runstep {
         $self->set_result('yes');
     }
     else {
-        $prog = check_progs( [ 'gmake', 'mingw32-make', 'nmake', 'make' ], $verbose );
+        $prog = check_progs( $canidates, $verbose );
 
         unless ($prog) {
-
             # fall back to default
             $self->set_result('no');
             return 1;
