@@ -9,9 +9,7 @@ use Test::More;
 use Parrot::Test;
 use Parrot::Config;
 
-plan $^O =~ /MSWin32/
-    ? ( skip_all => 'broken on Win32' )
-    : tests => 4;
+plan tests => 4;
 
 =head1 NAME
 

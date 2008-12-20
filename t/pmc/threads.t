@@ -74,10 +74,7 @@ OUTPUT
 
 # RT #46807 rework tests since we don't really have thread types?
 
-SKIP: {
-    skip 'busted on win32' => 2 if $^O eq 'MSWin32';
-
-    pir_output_is( <<'CODE', <<'OUTPUT', "thread type 1" );
+pir_output_is( <<'CODE', <<'OUTPUT', "thread type 1" );
 .sub main :main
     .local pmc threadfunc
     .local pmc thread
@@ -111,6 +108,9 @@ CODE
 thread
 main 10
 OUTPUT
+
+SKIP: {
+    skip 'hangs on Windows, VC9' => 1 if $^O eq 'MSWin32';
 
     pir_output_is( <<'CODE', <<'OUTPUT', "thread type 1 -- repeated" );
 .sub real_main :main
@@ -158,9 +158,6 @@ main 10
 OUTPUT
 }
 
-SKIP: {
-    skip 'failing on win32' => 1 if $^O =~ m/win32/i;
-
 pir_output_is( <<'CODE', <<'OUTPUT', "thread type 2" );
 .sub main :main
     set $I5, 10
@@ -204,11 +201,6 @@ ParrotThread tid 1
 from 10 interp
 OUTPUT
 
-}
-
-SKIP: {
-    skip 'failing on win32' => 1 if $^O =~ m/win32/i;
-
 pir_output_is( <<'CODE', <<'OUTPUT', 'thread - kill' );
 .sub main :main
     .local pmc threadsub
@@ -241,8 +233,6 @@ start 1
 in thread
 done
 OUTPUT
-
-}
 
 pir_output_is( <<'CODE', <<'OUTPUT', "join, get retval" );
 .sub _main
@@ -295,9 +285,7 @@ CODE
 500500
 OUTPUT
 
-SKIP: {
-    skip( "detatch broken on $^O", 1 ) if ( $^O =~ /MSWin32/ );
-    pir_output_like( <<'CODE', <<'OUTPUT', "detach" );
+pir_output_like( <<'CODE', <<'OUTPUT', "detach" );
 .sub main :main
     .local pmc foo
     .local pmc queue
@@ -324,7 +312,6 @@ wait:
 CODE
 /(done\nthread\n)|(thread\ndone\n)/
 OUTPUT
-}
 
 pir_output_is( <<'CODE', <<'OUTPUT', "share a PMC" );
 .sub main :main

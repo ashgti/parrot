@@ -169,9 +169,6 @@ OUTPUT
 # Operations on a single NUMVAL
 #
 
-SKIP: {
-    skip 'failing on win32' => 1 if $^O =~ m/win32/i;
-
 pasm_output_is( <<'CODE', <<OUTPUT, "turn a native number into its negative" );
         set N0, 0
         neg N0
@@ -217,8 +214,6 @@ CODE
 -123.456789
 123.456789
 OUTPUT
-
-}
 
 pasm_output_is( <<'CODE', <<OUTPUT, "take the absolute of a native number" );
         set N0, 0

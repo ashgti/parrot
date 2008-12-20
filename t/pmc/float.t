@@ -503,9 +503,6 @@ ok 1
 ok 2
 OUTPUT
 
-SKIP: {
-    skip 'failing on win32' => 1 if $^O =~ m/win32/i;
-
 pasm_output_like( << 'CODE', << 'OUTPUT', "neg 0" );
     new P0, 'Float'
     set P0, 0.0
@@ -515,8 +512,6 @@ pasm_output_like( << 'CODE', << 'OUTPUT', "neg 0" );
 CODE
 /^-0/
 OUTPUT
-
-}
 
 pasm_output_is( << 'CODE', << 'OUTPUT', "Equality" );
     new P0, 'Float'
