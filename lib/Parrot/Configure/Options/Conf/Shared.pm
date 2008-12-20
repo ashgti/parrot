@@ -74,6 +74,7 @@ our @shared_valid_options = qw{
     without-opengl
     without-pcre
     without-icu
+    with-debug-crt
     yacc
 };
 

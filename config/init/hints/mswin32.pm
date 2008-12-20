@@ -38,6 +38,18 @@ sub runstep {
     }
 
     if ($is_msvc) {
+        my ($md, $msvcrt);
+        if ($conf->options->get('with-debug-crt')) {
+            $md = '-MDd';
+            $msvcrt = 'msvcrtd.lib';
+        }
+        else {
+            $md = '-MD';
+            $msvcrt = 'msvcrt.lib';
+        }
+
+        $ccflags = "-nologo $md -GF -Zi -GS -RTCcsu -DWIN32";
+        $libs = "$msvcrt kernel32.lib ws2_32.lib";
 
         # Check the output of cl.exe to see if it contains the
         # string 'Standard' and remove the -O1 option if it does.
@@ -81,8 +93,9 @@ sub runstep {
             ld_share_flags      => '-dll',
             ld_load_flags       => '-dll',
             ld_out              => '-out:',
+            linkflags           => '-nologo -nodefaultlib',
             ldflags             => '-nologo -nodefaultlib',
-            libs                => 'kernel32.lib ws2_32.lib msvcrt.lib oldnames.lib ',
+            libs                => $libs,
             libparrot_static    => 'libparrot' . $conf->data->get('a'),
             libparrot_shared    => 'libparrot$(SHARE_EXT)',
             ar_flags            => '',
