@@ -2053,7 +2053,20 @@ string_to_num(PARROT_INTERP, ARGIN(const STRING *s))
     while (isspace((unsigned char)*p))
         p++;
 
-    f = atof(p);
+    /* Handle NaN strings.  Expand this test to handle all defined NaN
+     * values, if necessary. */
+    if (strcmp(p, "NaN") == 0)
+    {
+        /* There seems to be no NaN constant, and compilers detect
+         * constant '0.0/0.0'. */
+        FLOATVAL nan = 0.0;
+        nan /= 0.0;
+        f = nan;
+    }
+    else
+    {
+        f = atof(p);
+    }
 
     /* Not all atof()s return -0 from "-0" */
     if (*p == '-' && FLOAT_IS_ZERO(f))
