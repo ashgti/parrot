@@ -1,0 +1,14 @@
+# $Id$
+
+All todo items should have a corresponding trac ticket. See the current list:
+
+ https://trac.parrot.org/parrot/report/9
+
+To open a new todo ticket, use
+
+ https://trac.parrot.org/
+
+Note that we are still transitioning away from RT. To see what todos remain
+in our old tracking system, use:
+
+ http://www.parrotcode.org/todo

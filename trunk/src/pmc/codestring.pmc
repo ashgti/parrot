@@ -1,0 +1,266 @@
+/*
+Copyright (C) 2007-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/codestring.pmc - CodeString PMC Class
+
+=head1 DESCRIPTION
+
+C<CodeString> is a class intended to simplify the process of emitting code
+strings.  Ideally this will eventually become a form of "CodeBuffer" that is
+more efficient than string concatenation, but for now it works well enough for
+me.
+
+The primary method for C<CodeString> objects is C<emit>, which appends a line
+(or lines) of code to the string according to a format parameter.  The line can
+contain substitution markers (ala printf) that indicate where other parameters
+to the call should be placed.
+
+Note that C<CodeString> is just a subclass of Parrot's native C<String> class,
+so it's easy to combine CodeString objects with other strings outside of the
+C<emit> method.
+
+=head2 Methods
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+
+pmclass CodeString extends String provides string {
+
+/*
+
+=item C<emit(string fmt [, pmc args ] [, pmc hash ])>
+
+Add a line to a C<CodeString> object according to C<fmt>.
+The C<fmt> string can contain any number of "%-replacements"
+which are replaced by the corresponding values from C<args>
+or C<hash> prior to being appended to the string.  (Here
+C<args> is a slurpy array, and C<hash> is a slurpy hash.)
+
+The currently defined replacements include:
+
+    %0 %1 ... %9     the value from the args array at index 0..9
+    %,               the values of the args array separated by commas
+    %%               a percent sign
+
+A percent-sign followed by any other character that is a hash
+key receives the value of the hash element.
+
+A newline is automatically added to the end of the fmt.
+
+=cut
+
+*/
+
+  METHOD emit(STRING *fmt, PMC *args :slurpy, PMC *hash :slurpy :named) {
+    STRING *percent     = CONST_STRING(INTERP, "%");
+    STRING *comma       = CONST_STRING(INTERP, ",");
+    STRING *comma_space = CONST_STRING(INTERP, ", ");
+    STRING *newline     = CONST_STRING(INTERP, "\n");
+    STRING *key, *repl, *S0, *S1;
+    INTVAL pos          = 0;
+    INTVAL replen       = 0;
+    INTVAL I0, I1;
+
+    fmt = Parrot_make_COW_reference(INTERP, fmt);
+
+    while (pos >= 0) {
+        pos += replen;
+        pos = string_str_index(INTERP, fmt, percent, pos);
+        if (pos < 0) break;
+
+        key = string_substr(INTERP, fmt, pos+1, 1, &key, 0);
+
+        if (VTABLE_exists_keyed_str(INTERP, hash, key)) {
+            repl = VTABLE_get_string_keyed_str(INTERP, hash, key);
+        }
+        else if (Parrot_string_is_cclass(INTERP, enum_cclass_numeric, fmt,
+                (UINTVAL)pos + 1)) {
+            I0   = string_to_int(INTERP, key);
+            repl = VTABLE_get_string_keyed_int(INTERP, args, I0);
+        }
+        else if (0 == string_equal(INTERP, key, comma)) {
+            repl = VTABLE_get_string_keyed_int(INTERP, args, 0);
+            repl = Parrot_make_COW_reference(INTERP, repl);
+            I1   = VTABLE_elements(INTERP, args);
+            I0   = 1;
+
+            while (I0 < I1) {
+                S0   = VTABLE_get_string_keyed_int(INTERP, args, I0);
+                repl = string_append(INTERP, repl, comma_space);
+                repl = string_append(INTERP, repl, S0);
+                I0++;
+            }
+        }
+        else if (0 == string_equal(INTERP, key, percent)) {
+            repl = percent;
+        }
+        else {
+            /* No substitution is necessary */
+            replen = 2;
+            continue;
+        }
+
+        (void) string_replace(INTERP, fmt, pos, 2, repl, NULL);
+        replen = string_length(INTERP, repl);
+    }
+
+    /* Add a newline if necessary */
+    if ('\n' != string_index(INTERP, fmt, string_length(interp, fmt) - 1))
+        fmt = string_concat(INTERP, fmt, newline, 0);
+
+    S1 = string_concat(INTERP, SELF.get_string(), fmt, 0);
+    VTABLE_set_string_native(INTERP, SELF, S1);
+
+    RETURN(PMC *SELF);
+}
+
+
+
+/*
+
+=item C<unique([string fmt])>
+
+Each call to C<unique> returns a unique number, or if a C<fmt>
+parameter is given it returns a unique string beginning with
+C<fmt>.  (This may eventually be generalized to allow
+uniqueness anywhere in the string.)  The function starts
+counting at 10 (so that the values 0..9 can be considered "safe").
+
+=cut
+
+*/
+
+  METHOD unique(STRING *format :optional, int has_fmt :opt_flag) {
+    static INTVAL counter = 10;
+    STRING *counter_as_string = string_from_int(INTERP, counter);
+    UNUSED(SELF);
+
+    counter++;
+
+    if (!has_fmt) {
+        RETURN(STRING *counter_as_string);
+    }
+    else {
+        STRING *result = string_copy(INTERP, format);
+        result         = string_concat(INTERP, result, counter_as_string, 1);
+        RETURN(STRING *result);
+    }
+  }
+
+/*
+
+=item C<escape(string str)>
+
+Returns an escaped value of C<str> suitable for including in PIR.
+If the string contains any non-ASCII characters, then it's
+prefixed with 'unicode:'.
+
+=cut
+
+*/
+
+  METHOD escape(STRING *str) {
+    STRING *escaped_str = string_escape_string(INTERP, str);
+    STRING *quote       = CONST_STRING(INTERP, "\x22");
+    STRING *x           = CONST_STRING(INTERP, "\\x");
+    INTVAL x_pos;
+    INTVAL is_unicode = 0;
+    UNUSED(SELF);
+
+    escaped_str = string_concat(INTERP, quote, escaped_str, 1);
+    escaped_str = string_concat(INTERP, escaped_str, quote, 1);
+    x_pos       = string_str_index(INTERP, escaped_str, x, 0);
+
+    if (x_pos != -1) {
+        is_unicode = 1;
+    }
+    else
+    {
+        STRING *u = CONST_STRING(INTERP, "\\u");
+        INTVAL u_pos = string_str_index(INTERP, escaped_str, u, 0);
+        if (u_pos != -1)
+            is_unicode = 1;
+    }
+
+    if (is_unicode) {
+        STRING *unicode = CONST_STRING(INTERP, "unicode:");
+        escaped_str     = string_concat(INTERP, unicode, escaped_str, 1);
+    }
+
+    RETURN(STRING *escaped_str);
+  }
+
+/*
+
+=item C<key( string name1 [, string name2, ...] )>
+
+Construct a PIR key using the strings passed as arguments.
+For example, C<key('Foo', 'Bar')> returns C<["Foo";"Bar"]>.
+
+=cut
+
+*/
+
+  METHOD key(PMC *args :slurpy) {
+    STRING *open_bracket  = CONST_STRING(INTERP, "[");
+    STRING *semi          = CONST_STRING(INTERP, ";");
+    STRING *close_bracket = CONST_STRING(INTERP, "]");
+    STRING *s_array       = CONST_STRING(INTERP, "array");
+    STRING *prefix        = open_bracket;
+    STRING *out           = CONST_STRING(INTERP, "");
+    INTVAL elements, index;
+
+    elements     = VTABLE_elements(INTERP, args);
+
+    for (index = 0; index < elements; index++) {
+        PMC *P0      = VTABLE_get_pmc_keyed_int(INTERP, args, index);
+        if (VTABLE_does(interp, P0, s_array)) {
+            INTVAL elements2, index2;
+            elements2 = VTABLE_elements(INTERP, P0);
+            for (index2 = 0; index2 < elements2; index2++) {
+                STRING *S0   = VTABLE_get_string_keyed_int(INTERP, P0, index2);
+                out          = string_append(INTERP, out, prefix);
+                (STRING *S0) = PCCINVOKE(INTERP, SELF, "escape", STRING *S0);
+                out          = string_append(INTERP, out, S0);
+                prefix       = semi;
+            }
+        }
+        else {
+            STRING *S0   = VTABLE_get_string_keyed_int(INTERP, args, index);
+            out          = string_append(INTERP, out, prefix);
+            (STRING *S0) = PCCINVOKE(INTERP, SELF, "escape", STRING *S0);
+            out          = string_append(INTERP, out, S0);
+            prefix       = semi;
+        }
+    }
+
+    out = string_append(INTERP, out, close_bracket);
+
+    RETURN(STRING *out);
+}
+
+/*
+
+=back
+
+=cut
+
+*/
+
+}
+
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

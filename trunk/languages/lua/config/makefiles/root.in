@@ -1,0 +1,323 @@
+# Copyright (C) 2005-2008, The Perl Foundation.
+# $Id$
+
+## configuration settings
+O        = @o@
+LOAD_EXT = @load_ext@
+
+## Setup some commands
+MAKE    = @make_c@
+RM_F    = @rm_f@
+PERL    = @perl@
+PARROT  = ../../parrot@exe@
+PBC_MERGE = ../../pbc_merge@exe@
+PGE      = $(PARROT) ../../runtime/parrot/library/PGE/Perl6Grammar.pir
+TGE      = $(PARROT) ../../compilers/tge/tgc.pir
+PBC_TO_EXE = ../../pbc_to_exe@exe@
+RECONFIGURE = $(PERL) @build_dir@/tools/dev/reconfigure.pl
+PMCBUILD = $(PERL) @build_dir@/tools/build/dynpmc.pl
+#CONDITIONED_LINE(darwin):
+#CONDITIONED_LINE(darwin):# MACOSX_DEPLOYMENT_TARGET must be defined for OS X compilation/linking
+#CONDITIONED_LINE(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
+
+## places to look for things
+LIBPATH  = src/lib
+PMCDIR   = src/pmc
+PARROT_DYNEXT = @build_dir@/runtime/parrot/dynext
+
+PMCS = \
+ lua \
+ luaany \
+ luaboolean \
+ luabytecode \
+ luafunction \
+ luanil \
+ luanumber \
+ luastring \
+ luatable \
+ luathread \
+ luauserdata
+
+PMC_FILES = \
+ $(PMCDIR)/lua.pmc \
+ $(PMCDIR)/luaany.pmc \
+ $(PMCDIR)/luaboolean.pmc \
+ $(PMCDIR)/luabytecode.pmc \
+ $(PMCDIR)/luafunction.pmc \
+ $(PMCDIR)/luanil.pmc \
+ $(PMCDIR)/luanumber.pmc \
+ $(PMCDIR)/luastring.pmc \
+ $(PMCDIR)/luatable.pmc \
+ $(PMCDIR)/luathread.pmc \
+ $(PMCDIR)/luauserdata.pmc
+
+LIB_SRCS = \
+ $(LIBPATH)/luaaux.pir \
+ $(LIBPATH)/luabasic.pir \
+ $(LIBPATH)/luacoroutine.pir \
+ $(LIBPATH)/luapackage.pir \
+ $(LIBPATH)/luaregex.pir \
+ $(LIBPATH)/luastring.pir \
+ $(LIBPATH)/luatable.pir \
+ $(LIBPATH)/luamath.pir \
+ $(LIBPATH)/luaio.pir \
+ $(LIBPATH)/luafile.pir \
+ $(LIBPATH)/luaos.pir \
+ $(LIBPATH)/luadebug.pir \
+ $(LIBPATH)/luabytecode.pir
+
+LIB_PBCS = \
+ $(LIBPATH)/luaaux.pbc \
+ $(LIBPATH)/luabasic.pbc \
+ $(LIBPATH)/luacoroutine.pbc \
+ $(LIBPATH)/luapackage.pbc \
+ $(LIBPATH)/luaregex.pbc \
+ $(LIBPATH)/luastring.pbc \
+ $(LIBPATH)/luatable.pbc \
+ $(LIBPATH)/luamath.pbc \
+ $(LIBPATH)/luaio.pbc \
+ $(LIBPATH)/luafile.pbc \
+ $(LIBPATH)/luaos.pbc \
+ $(LIBPATH)/luadebug.pbc \
+ $(LIBPATH)/luabytecode.pbc
+
+GEN_PIR = \
+ src/lua51_testlex_gen.pir \
+ src/dumplex_gen.pir \
+ src/lua51_gen.pir \
+ src/PASTGrammar_gen.pir \
+ src/POSTGrammar_gen.pir \
+ $(LIBPATH)/luabytecode_gen.pir \
+ $(LIBPATH)/gl.pir \
+ $(LIBPATH)/sha1.pir
+
+GEN_PBC = \
+ lua.pbc
+
+all: \
+ $(PMCDIR)/lua_group$(LOAD_EXT) \
+ $(LIB_PBCS) \
+ $(LIBPATH)/luaperl.pbc \
+ _helpers.pbc \
+ alarm.pbc \
+ base64.pbc \
+ bc.pbc \
+ bit.pbc \
+ bitlib.pbc \
+ complex.pbc \
+ $(LIBPATH)/gl.pbc \
+ gl_binding.pbc \
+ glut.pbc \
+ lfs.pbc \
+ lpeg.pbc \
+ markdown.pbc \
+ mathx.pbc \
+ md5.pbc \
+ random.pbc \
+ sha1.pbc \
+ struct.pbc \
+ uuid.pbc \
+ $(GEN_PIR) \
+ $(GEN_PBC) \
+ src/yapp/Lua/parser.pm
+
+
+src/lua51_testlex_gen.pir: src/lua51_testlex.pg
+	$(PGE) --output=src/lua51_testlex_gen.pir src/lua51_testlex.pg
+
+src/dumplex_gen.pir: src/dumplex.tg
+	$(TGE) --output=src/dumplex_gen.pir src/dumplex.tg
+
+src/lua51_gen.pir: src/lua51.pg
+	$(PGE) --output=src/lua51_gen.pir src/lua51.pg
+
+src/PASTGrammar_gen.pir: src/PASTGrammar.tg
+	$(TGE) --output=src/PASTGrammar_gen.pir src/PASTGrammar.tg
+
+src/POSTGrammar_gen.pir: src/POSTGrammar.tg
+	$(TGE) --output=src/POSTGrammar_gen.pir src/POSTGrammar.tg
+	$(PERL) -i.bak -pe "s|'PAST::|'PAST;|" src/POSTGrammar_gen.pir
+
+lua.pbc: lua.pir src/lua51.pir src/grammar51.pir src/lua51_gen.pir src/PASTGrammar_gen.pir src/POSTGrammar_gen.pir $(LIB_SRCS)
+	$(PARROT) -o lua.pbc --output-pbc lua.pir
+
+lua@exe@: lua.pbc
+	$(PBC_TO_EXE) lua.pbc
+
+$(LIBPATH)/lualibs.pbc: $(LIB_PBCS)
+	$(PBC_MERGE) -o $(LIBPATH)/lualibs.pbc $(LIB_PBCS)
+
+$(PMCDIR)/lua_group$(LOAD_EXT) : $(PMC_FILES)
+	@cd $(PMCDIR) && $(PMCBUILD) generate $(PMCS)
+	@cd $(PMCDIR) && $(PMCBUILD) compile $(PMCS)
+	@cd $(PMCDIR) && $(PMCBUILD) linklibs $(PMCS)
+	@cd $(PMCDIR) && $(PMCBUILD) copy "--destination=$(PARROT_DYNEXT)" $(PMCS)
+
+$(LIBPATH)/luaperl.pbc: $(LIBPATH)/luaperl.pir
+	-$(PARROT) --output=$(LIBPATH)/luaperl.pbc $(LIBPATH)/luaperl.pir
+
+$(LIBPATH)/luaaux.pbc: $(LIBPATH)/luaaux.pir
+	-$(PARROT) --output=$(LIBPATH)/luaaux.pbc $(LIBPATH)/luaaux.pir
+
+$(LIBPATH)/luabasic.pbc: $(LIBPATH)/luabasic.pir
+	-$(PARROT) --output=$(LIBPATH)/luabasic.pbc $(LIBPATH)/luabasic.pir
+
+$(LIBPATH)/luacoroutine.pbc: $(LIBPATH)/luacoroutine.pir
+	-$(PARROT) --output=$(LIBPATH)/luacoroutine.pbc $(LIBPATH)/luacoroutine.pir
+
+$(LIBPATH)/luapackage.pbc: $(LIBPATH)/luapackage.pir
+	-$(PARROT) --output=$(LIBPATH)/luapackage.pbc $(LIBPATH)/luapackage.pir
+
+$(LIBPATH)/luaregex.pbc: $(LIBPATH)/luaregex.pir
+	-$(PARROT) --output=$(LIBPATH)/luaregex.pbc $(LIBPATH)/luaregex.pir
+
+$(LIBPATH)/luastring.pbc: $(LIBPATH)/luastring.pir
+	-$(PARROT) --output=$(LIBPATH)/luastring.pbc $(LIBPATH)/luastring.pir
+
+$(LIBPATH)/luatable.pbc: $(LIBPATH)/luatable.pir
+	-$(PARROT) --output=$(LIBPATH)/luatable.pbc $(LIBPATH)/luatable.pir
+
+$(LIBPATH)/luamath.pbc: $(LIBPATH)/luamath.pir
+	-$(PARROT) --output=$(LIBPATH)/luamath.pbc $(LIBPATH)/luamath.pir
+
+$(LIBPATH)/luaio.pbc: $(LIBPATH)/luaio.pir
+	-$(PARROT) --output=$(LIBPATH)/luaio.pbc $(LIBPATH)/luaio.pir
+
+$(LIBPATH)/luafile.pbc: $(LIBPATH)/luafile.pir
+	-$(PARROT) --output=$(LIBPATH)/luafile.pbc $(LIBPATH)/luafile.pir
+
+$(LIBPATH)/luaos.pbc: $(LIBPATH)/luaos.pir
+	-$(PARROT) --output=$(LIBPATH)/luaos.pbc $(LIBPATH)/luaos.pir
+
+$(LIBPATH)/luadebug.pbc: $(LIBPATH)/luadebug.pir
+	-$(PARROT) --output=$(LIBPATH)/luadebug.pbc $(LIBPATH)/luadebug.pir
+
+$(LIBPATH)/luabytecode.pbc: $(LIBPATH)/luabytecode.pir $(LIBPATH)/luabytecode_gen.pir
+	-$(PARROT) --output=$(LIBPATH)/luabytecode.pbc $(LIBPATH)/luabytecode.pir
+
+_helpers.pbc: $(LIBPATH)/_helpers.pir
+	$(PARROT) --output=_helpers.pbc $(LIBPATH)/_helpers.pir
+
+alarm.pbc: $(LIBPATH)/alarm.pir
+	-$(PARROT) --output=alarm.pbc $(LIBPATH)/alarm.pir
+
+base64.pbc: $(LIBPATH)/base64.pir
+	-$(PARROT) --output=base64.pbc $(LIBPATH)/base64.pir
+
+bc.pbc: $(LIBPATH)/bc.pir
+	-$(PARROT) --output=bc.pbc $(LIBPATH)/bc.pir
+
+bit.pbc: $(LIBPATH)/bit.pir
+	-$(PARROT) --output=bit.pbc $(LIBPATH)/bit.pir
+
+bitlib.pbc: $(LIBPATH)/bitlib.pir
+	-$(PARROT) --output=bitlib.pbc $(LIBPATH)/bitlib.pir
+
+complex.pbc: $(LIBPATH)/complex.pir
+	-$(PARROT) --output=complex.pbc $(LIBPATH)/complex.pir
+
+$(LIBPATH)/gl.pir: $(LIBPATH)/gl.lua lua.pbc
+	-$(PARROT) luap.pir --target=pir $(LIBPATH)/gl.lua > $(LIBPATH)/gl.pir
+
+$(LIBPATH)/gl.pbc: $(LIBPATH)/gl.pir
+	-$(PARROT) --output=$(LIBPATH)/gl.pbc $(LIBPATH)/gl.pir
+
+gl_binding.pbc: $(LIBPATH)/gl_binding.pir
+	-$(PARROT) --output=gl_binding.pbc $(LIBPATH)/gl_binding.pir
+
+glut.pbc: $(LIBPATH)/glut.pir
+	-$(PARROT) --output=glut.pbc $(LIBPATH)/glut.pir
+
+lfs.pbc: $(LIBPATH)/lfs.pir
+	-$(PARROT) --output=lfs.pbc $(LIBPATH)/lfs.pir
+
+lpeg.pbc: $(LIBPATH)/lpeg.pir
+	-$(PARROT) --output=lpeg.pbc $(LIBPATH)/lpeg.pir
+
+markdown.pbc: $(LIBPATH)/markdown.pir
+	-$(PARROT) --output=markdown.pbc $(LIBPATH)/markdown.pir
+
+mathx.pbc: $(LIBPATH)/mathx.pir
+	-$(PARROT) --output=mathx.pbc $(LIBPATH)/mathx.pir
+
+md5.pbc: $(LIBPATH)/md5.pir
+	-$(PARROT) --output=md5.pbc $(LIBPATH)/md5.pir
+
+random.pbc: $(LIBPATH)/random.pir
+	-$(PARROT) --output=random.pbc $(LIBPATH)/random.pir
+
+sha1.pbc: $(LIBPATH)/md5.pir
+	$(PERL) -pe "s|md5|sha1|g; s|MD5|SHA1|g" $(LIBPATH)/md5.pir > $(LIBPATH)/sha1.pir
+	-$(PARROT) --output=sha1.pbc $(LIBPATH)/sha1.pir
+
+struct.pbc: $(LIBPATH)/struct.pir
+	-$(PARROT) --output=struct.pbc $(LIBPATH)/struct.pir
+
+uuid.pbc: $(LIBPATH)/uuid.pir
+	-$(PARROT) --output=uuid.pbc $(LIBPATH)/uuid.pir
+
+$(LIBPATH)/luabytecode_gen.pir: $(LIBPATH)/luabytecode.rules src/build/translator.pl
+	$(PERL) src/build/translator.pl $(LIBPATH)/luabytecode.rules --output $(LIBPATH)/luabytecode_gen.pir
+
+src/yapp/Lua/parser.pm: src/yapp/Lua/lua51.yp
+	yapp -v -m Lua::parser -o src/yapp/Lua/parser.pm src/yapp/Lua/lua51.yp
+
+# regenerate the Makefile
+Makefile: config/makefiles/root.in
+	cd ../.. && $(RECONFIGURE) --step=gen::languages --languages=lua
+
+help:
+	@echo ""
+	@echo "Following targets are available for the user:"
+	@echo ""
+	@echo "  all:"
+	@echo "                     This is the default."
+	@echo "Testing:"
+	@echo "  test:              Run the test suite."
+	@echo "  testclean:         Clean up test results."
+	@echo ""
+	@echo "Cleaning:"
+	@echo "  clean:             Basic cleaning up."
+	@echo "  realclean:         Removes also files generated by 'Configure.pl'"
+	@echo "  distclean:         Removes also anything built, in theory"
+	@echo ""
+	@echo "Misc:"
+	@echo "  help:              Print this help message."
+	@echo ""
+
+test: all
+	cd .. && $(PERL) t/harness --languages=lua
+
+
+TEST_CLEANERS = \
+ "t/pmc/*.pir" \
+ "t/*.pir" \
+ "t/*.lua" \
+ "t/*.luac" \
+ "t/*.orig_out" \
+ "t/*.parrot_out"
+
+testclean:
+	$(RM_F) $(TEST_CLEANERS)
+
+BUILD_CLEANERS = \
+ lua@exe@ \
+ lua$(O) \
+ lua.c \
+ "*.pbc" \
+ $(GEN_PIR) \
+ "$(PMCDIR)/*.dump" \
+ "$(PMCDIR)/*.c" \
+ "$(PMCDIR)/pmc_*.h" \
+ "$(PMCDIR)/*_group.h" \
+ "$(PMCDIR)/*$(LOAD_EXT)" \
+ "$(PMCDIR)/*$(O)" \
+ "$(LIBPATH)/*.pbc"
+
+clean:
+	$(RM_F) $(BUILD_CLEANERS) $(TEST_CLEANERS)
+
+realclean: clean
+	$(RM_F) Makefile
+
+distclean: realclean

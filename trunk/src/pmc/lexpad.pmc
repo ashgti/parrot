@@ -1,0 +1,168 @@
+/*
+Copyright (C) 2007-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/lexpad.pmc - LexPad PMC
+
+=head1 DESCRIPTION
+
+These are the vtable functions for the lexpad PMC.
+
+=head2 Functions
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+
+/*
+ * LexPad provides a Hash interface for lexical fetch/store
+ * needed
+ *
+ * struct_val ... Parrot_Context *ctx
+ * pmc_val    ... LexInfo
+ */
+
+pmclass LexPad provides hash no_ro {
+
+    VTABLE void init() {
+        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
+            "Cannot create a LexPad PMC without an initializer");
+    }
+
+/*
+
+=item C<init_pmc(PMC *lexinfo)>
+
+Initialize the LexPad PMC and remember the associate
+lexinfo.
+
+=item C<void set_pointer(void *)>
+
+Initialize the LexPad PMC and remember the associate context.
+
+=item C<INTVAL elements()>
+
+Returns the number of elements in the hash.
+
+=item C<INTVAL exists_keyed(PMC *name)>
+
+=item C<INTVAL exists_keyed_str(STRING *name)>
+
+Returns whether a lexical C<name> exists in the hash.
+
+=item C<PMC *get_pmc_keyed_str(STRING *name)>
+
+=item C<PMC *get_pmc_keyed(PMC *name)>
+
+Return the lexical with the given name, or NULL (not PMCNULL), if the
+lexical doesn't exist.
+
+=item C<void set_pmc_keyed(PMC *name, PMC *value)>
+
+=item C<void set_pmc_keyed_str(STRING *name, PMC *value)>
+
+Set the lexical with the given name to value. If the lexical name
+doesn't exist, it is created.
+
+=item C<PMC *get_lexinfo()>
+
+Return the LexInfo PMC, if any or a Null PMC.
+
+=cut
+
+*/
+    VTABLE void init_pmc(PMC *lexinfo) {
+        PMC_pmc_val(SELF) = lexinfo;
+    }
+
+    VTABLE void set_pointer(void *ctx) {
+        PMC_struct_val(SELF) = ctx;
+    }
+
+    VTABLE INTVAL elements() {
+        PMC *info = PMC_pmc_val(SELF);
+        return parrot_hash_size(INTERP, (Hash *)PMC_struct_val(info));
+    }
+
+    VTABLE INTVAL exists_keyed_str(STRING *name) {
+        PMC * const info = PMC_pmc_val(SELF);
+        return parrot_hash_get_bucket(INTERP,
+            (Hash *)PMC_struct_val(info), name) != 0;
+    }
+
+    VTABLE INTVAL exists_keyed(PMC *name) {
+        STRING * const s = VTABLE_get_string(INTERP, name);
+        return SELF.exists_keyed_str(s);
+    }
+
+    VTABLE PMC *get_pmc_keyed_str(STRING *name) {
+        PMC              * const info = PMC_pmc_val(SELF);
+        Hash             * const hash = (Hash *)PMC_struct_val(info);
+        Parrot_Context   * const ctx  = (Parrot_Context *)PMC_struct_val(SELF);
+        HashBucket       * const b    = parrot_hash_get_bucket(INTERP, hash, name);
+        INTVAL            regno;
+
+        if (!b)
+            return NULL;
+
+        regno = (INTVAL) b->value;
+
+        return CTX_REG_PMC(ctx, regno);
+    }
+
+    VTABLE PMC *get_pmc_keyed(PMC *name) {
+        STRING * const s = VTABLE_get_string(INTERP, name);
+        return SELF.get_pmc_keyed_str(s);
+    }
+
+    VTABLE void set_pmc_keyed_str(STRING *name, PMC *value) {
+        PMC              * const info  = PMC_pmc_val(SELF);
+        Hash             * const hash  = (Hash *)PMC_struct_val(info);
+        Parrot_Context   * const ctx   = (Parrot_Context *)PMC_struct_val(SELF);
+        HashBucket       * const b     = parrot_hash_get_bucket(INTERP, hash, name);
+        INTVAL            regno;
+
+        if (!b)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LEX_NOT_FOUND,
+                "Lexical '%Ss' not found", name);
+
+        regno                   = (INTVAL) b->value;
+        CTX_REG_PMC(ctx, regno) = value;
+    }
+
+    VTABLE void set_pmc_keyed(PMC *name, PMC *value) {
+        STRING * const s = VTABLE_get_string(INTERP, name);
+        SELF.set_pmc_keyed_str(s, value);
+    }
+
+    METHOD get_lexinfo() {
+        PMC *lexinfo = PMC_pmc_val(SELF);
+        RETURN(PMC *lexinfo);
+    }
+}
+
+
+/*
+
+=back
+
+=head1 SEE ALSO
+
+F<docs/pdds/pdd20_lexical_vars.pod>, F<src/pmc/lexinfo.pmc>.
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

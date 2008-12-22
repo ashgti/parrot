@@ -1,0 +1,160 @@
+/*
+Copyright (C) 2001-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/parrotlibrary.pmc - Dynamic Library
+
+=head1 DESCRIPTION
+
+Class for holding info about a dynamic library.
+
+     PMC data
+     PMC_struct_val(SELF)   oplib init function
+     PMC_data(SELF)         DLL handle
+
+Properties:
+
+    _filename               full path/file of lib
+    _ro                     true after init
+
+All ParrotLibrary PMCs are in interp->iglobals.
+
+When a dynamic library (pmc or ops) is loaded, the load function returns
+a ParrotLibrary PMC.
+
+=head2 Methods
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+
+pmclass ParrotLibrary need_ext provides library {
+
+/*
+
+=item C<void init()>
+
+Initializes the library with a C<NULL> oplib init function.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        PObj_active_destroy_SET(SELF);
+        PMC_struct_val(SELF) = NULL;
+    }
+
+/*
+
+=item C<void destroy()>
+
+Destroys the library, closing the shared library.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        if (PMC_data(SELF))
+            Parrot_dlclose(PMC_data(SELF));
+    }
+
+
+/*
+
+=item C<PMC *clone()>
+
+Creates and returns a clone of the library.
+
+=cut
+
+*/
+
+    VTABLE PMC *clone() {
+        PMC *dest            = pmc_new_noinit(INTERP, SELF->vtable->base_type);
+        PMC_struct_val(dest) = PMC_struct_val(SELF);
+        PMC_data(dest)       = PMC_data(SELF);
+
+        if (PMC_metadata(SELF))
+            PMC_metadata(dest) = VTABLE_clone(INTERP, PMC_metadata(SELF));
+
+        return dest;
+    }
+
+/*
+
+=item C<INTVAL get_bool()>
+
+Returns whether a library has been successfully loaded.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_bool() {
+        return (PMC_data(SELF) != NULL);
+    }
+
+/*
+
+=item C<STRING *get_string()>
+
+Returns the name of the loaded library.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string() {
+        STRING *key  = CONST_STRING(INTERP, "_filename");
+        PMC    *prop = VTABLE_getprop(INTERP, SELF, key);
+
+        return VTABLE_get_string(INTERP, prop);
+    }
+
+/*
+
+=item C<void set_pointer(void *handle)>
+
+Set the pointer to the shared library handle.
+
+=cut
+
+*/
+
+    VTABLE void set_pointer(void *handle) {
+        PMC_data(SELF) = handle;
+    }
+}
+
+/*
+
+=back
+
+=head1 SEE ALSO
+
+    Date:    Mon, 29 Sep 2003 14:37:11 -0400 (EDT)
+    Subject: Library loading and initialization sequence
+    From:    Dan Sugalski
+
+=head1 HISTORY
+
+Initial version by leo 2003.10.12.
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

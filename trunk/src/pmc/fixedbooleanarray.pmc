@@ -1,0 +1,560 @@
+/*
+Copyright (C) 2001-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/fixedbooleanarray.pmc - fixed size array for booleans only
+
+=head1 DESCRIPTION
+
+The C<FixedBooleanArray> PMC implements an array of fixed size, which
+stores booleans.  It uses the C<Boolean> PMC for all conversions.  The
+C<FixedBooleanArray> PMC is extended by the C<ResizableBooleanArray>
+PMC.
+
+=head2 Functions
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+
+#define BITS_PER_CHAR 8
+
+pmclass FixedBooleanArray need_ext provides array {
+
+/*
+
+=back
+
+=head2 Methods
+
+=over 4
+
+=item C<void init()>
+
+Initializes the array.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        PMC_int_val(SELF)  = 0;
+        PMC_int_val2(SELF) = 0;
+        PMC_data(SELF)     = NULL;
+        PObj_active_destroy_SET(SELF);
+    }
+
+/*
+
+=item C<void destroy()>
+
+Destroys the array.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        PMC_int_val(SELF)  = 0;
+        PMC_int_val2(SELF) = 0;
+
+        if (PMC_data(SELF)) {
+            mem_sys_free(PMC_data(SELF));
+            PMC_data(SELF) = NULL;
+        }
+    }
+
+/*
+
+=item C<PMC *clone()>
+
+Creates and returns a copy of the array.
+
+=cut
+
+*/
+
+    VTABLE PMC *clone() {
+        PMC * const dest   = pmc_new(INTERP, SELF->vtable->base_type);
+        PMC_int_val(dest)  = PMC_int_val(SELF);
+        PMC_int_val2(dest) = PMC_int_val2(SELF);
+
+        if (PMC_data(SELF)) {
+            const size_t size_in_bytes = PMC_int_val2(SELF) / BITS_PER_CHAR;
+            PMC_data(dest)             = mem_sys_allocate(size_in_bytes);
+
+            mem_sys_memcopy(PMC_data(dest), PMC_data(SELF), size_in_bytes);
+        }
+        else
+            PMC_data(dest) = NULL;
+
+        PObj_active_destroy_SET(dest);
+        return dest;
+    }
+
+/*
+
+=item C<INTVAL get_bool()>
+
+Returns whether the array has any elements (meaning been initialized, for a
+fixed sized array).
+
+=cut
+
+*/
+    VTABLE INTVAL get_bool() {
+        return SELF.elements() ? 1 : 0;
+    }
+
+/*
+
+=item C<INTVAL elements()>
+
+=cut
+
+*/
+
+    VTABLE INTVAL elements() {
+        return PMC_int_val(SELF);
+    }
+
+/*
+
+=item C<INTVAL get_integer()>
+
+Returns the number of elements in the array.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer() {
+        return SELF.elements();
+    }
+
+/*
+
+=item C<INTVAL get_integer_keyed_int(INTVAL key)>
+
+Returns the integer value of the element at index C<key>.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
+        const Parrot_UInt1 * const sd = PMC_data_typed(SELF, Parrot_UInt1 *);
+
+        if (key < 0 || key >= PMC_int_val(SELF))
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                "FixedBooleanArray: index out of bounds!");
+
+        return (sd[key / BITS_PER_CHAR] & (1 << (key % BITS_PER_CHAR))) ? 1 : 0;
+    }
+
+/*
+
+=item C<INTVAL get_integer_keyed(PMC *key)>
+
+Returns the integer value of the element at index C<*key>.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer_keyed(PMC *key) {
+        /* simple int keys only */
+        const INTVAL k = key_integer(INTERP, key);
+        return SELF.get_integer_keyed_int(k);
+    }
+
+
+/*
+
+=item C<FLOATVAL get_number_keyed_int(INTVAL key)>
+
+Returns the floating-point value of the element at index C<key>.
+
+=cut
+
+*/
+
+    VTABLE FLOATVAL get_number_keyed_int(INTVAL key) {
+        const INTVAL i = SELF.get_integer_keyed_int(key);
+        return (FLOATVAL)i;
+    }
+
+/*
+
+=item C<FLOATVAL get_number_keyed(PMC *key)>
+
+Returns the floating-point value of the element at index C<*key>.
+
+=cut
+
+*/
+
+    VTABLE FLOATVAL get_number_keyed(PMC *key) {
+        const INTVAL k = key_integer(INTERP, key);
+        return SELF.get_number_keyed_int(k);
+    }
+
+/*
+
+=item C<STRING *get_string()>
+
+Returns the Parrot string representation of the array.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string() {
+        STRING *str   = NULL;
+        UINTVAL elems = SELF.elements();
+        UINTVAL i;
+
+        string_repeat(INTERP, CONST_STRING(INTERP, '0'), elems, &str);
+
+        for (i = 0; i < elems; i++) {
+            if (SELF.get_integer_keyed_int((INTVAL)i))
+                *(str->strstart+i) = '1';
+        }
+
+        return str;
+
+    }
+
+/*
+
+=item C<STRING *get_string_keyed_int(INTVAL key)>
+
+Returns the Parrot string value of the element at index C<key>.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string_keyed_int(INTVAL key) {
+        PMC * const val = SELF.get_pmc_keyed_int(key);
+        return VTABLE_get_string(INTERP, val);
+    }
+
+/*
+
+=item C<STRING *get_string_keyed(PMC *key)>
+
+Returns the Parrot string value of the element at index C<*key>.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string_keyed(PMC *key) {
+        const INTVAL k = key_integer(INTERP, key);
+        return SELF.get_string_keyed_int(k);
+    }
+
+
+/*
+
+=item C<PMC *get_pmc_keyed_int(INTVAL key)>
+
+Returns the PMC value of the element at index C<key>.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_pmc_keyed_int(INTVAL key) {
+        PMC  * const ret = pmc_new(INTERP, enum_class_Boolean);
+        const INTVAL val = SELF.get_integer_keyed_int(key);
+        VTABLE_set_integer_native(INTERP, ret, val);
+        return ret;
+    }
+
+/*
+
+=item C<PMC *get_pmc_keyed(PMC *key)>
+
+Returns the PMC value of the element at index C<*key>.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_pmc_keyed(PMC *key) {
+        const INTVAL k = key_integer(INTERP, key);
+        return SELF.get_pmc_keyed_int(k);
+    }
+
+/*
+
+=item C<void set_integer_native(INTVAL size)>
+
+Resizes the array to C<size> elements.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_native(INTVAL size) {
+        size_t size_in_bytes;
+
+        if (PMC_int_val(SELF) || size < 1)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                "FixedBooleanArray: Can't resize!");
+
+        size_in_bytes      = size / BITS_PER_CHAR + 1;
+        PMC_int_val(SELF)  = size;
+        PMC_int_val2(SELF) = size_in_bytes * BITS_PER_CHAR;
+        PMC_data(SELF)     = mem_sys_allocate_zeroed(size_in_bytes);
+    }
+
+/*
+
+=item C<void set_integer_keyed_int(INTVAL key, INTVAL value)>
+
+Sets the integer value of the element at index C<key> to C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
+        Parrot_UInt1 * const sd = PMC_data_typed(SELF, Parrot_UInt1 *);
+
+        if (key < 0 || key >= PMC_int_val(SELF))
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                "FixedBooleanArray: index out of bounds!");
+
+        if (value)
+            sd[key/BITS_PER_CHAR] |=  (1 << (key % BITS_PER_CHAR));
+        else
+            sd[key/BITS_PER_CHAR] &= ~(1 << (key % BITS_PER_CHAR));
+    }
+
+/*
+
+=item C<void set_integer_keyed(PMC *key, INTVAL value)>
+
+Sets the integer value of the element at index C<key> to C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_keyed(PMC *key, INTVAL value) {
+        const INTVAL k = key_integer(INTERP, key);
+        SELF.set_integer_keyed_int(k, value);
+    }
+
+/*
+
+=item C<void set_number_keyed_int(INTVAL key, FLOATVAL value)>
+
+Sets the floating-point value of the element at index C<key> to
+C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_number_keyed_int(INTVAL key, FLOATVAL value) {
+        SELF.set_integer_keyed_int(key, !FLOAT_IS_ZERO(value));
+    }
+
+/*
+
+=item C<void set_number_keyed(PMC *key, FLOATVAL value)>
+
+Sets the floating-point value of the element at index C<key> to
+C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_number_keyed(PMC *key, FLOATVAL value) {
+        const INTVAL k = key_integer(INTERP, key);
+        SELF.set_number_keyed_int(k, value);
+    }
+
+/*
+
+=item C<void set_string_keyed_int(INTVAL key, STRING *value)>
+
+Sets the Parrot string value of the element at index C<key> to C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_string_keyed_int(INTVAL key, STRING *value) {
+        INTVAL tempInt;
+        PMC * const tempPMC = pmc_new(INTERP, enum_class_Boolean);
+
+        VTABLE_set_string_native(INTERP, tempPMC, value);
+        tempInt = VTABLE_get_integer(INTERP, tempPMC);
+
+        SELF.set_integer_keyed_int(key, tempInt);
+    }
+
+/*
+
+=item C<void set_string_keyed(PMC *key, STRING *value)>
+
+Sets the string value of the element at index C<key> to
+C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_string_keyed(PMC *key, STRING *value) {
+        const INTVAL k = key_integer(INTERP, key);
+        SELF.set_string_keyed_int(k, value);
+    }
+
+/*
+
+=item C<void set_pmc_keyed_int(INTVAL key, PMC *src)>
+
+Sets the PMC value of the element at index C<key> to C<*src>.
+
+=cut
+
+*/
+
+    VTABLE void set_pmc_keyed_int(INTVAL key, PMC *src) {
+        const INTVAL tempInt = VTABLE_get_integer(INTERP, src);
+        SELF.set_integer_keyed_int(key, tempInt);
+    }
+
+/*
+
+=item C<void set_pmc_keyed(PMC *key, PMC *value)>
+
+Sets the string value of the element at index C<key> to
+C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
+        const INTVAL k = key_integer(INTERP, key);
+        SELF.set_pmc_keyed_int(k, value);
+    }
+
+/*
+
+=item C<void push_integer(INTVAL value)>
+
+Extends the array by adding an element of value C<value> to the end of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void push_integer(INTVAL value) {
+        const INTVAL nextix = SELF.elements();
+        SELF.set_integer_keyed_int(nextix, value);
+    }
+
+/*
+
+=back
+
+=head2 Freeze/thaw Interface
+
+=over 4
+
+=item C<void freeze(visit_info *info)>
+
+Used to archive the string.
+
+=cut
+
+*/
+    VTABLE void freeze(visit_info *info) {
+        IMAGE_IO * const io = info->image_io;
+        STRING   * const s  = string_from_cstring(INTERP,
+                                PMC_data_typed(SELF, char *),
+                                (UINTVAL)(PMC_int_val2(SELF) / BITS_PER_CHAR));
+
+        VTABLE_push_integer(INTERP, io, PMC_int_val(SELF));
+        VTABLE_push_string(INTERP, io, s);
+    }
+
+/*
+
+=item C<void thaw(visit_info *info)>
+
+Used to unarchive the string.
+
+=cut
+
+*/
+    VTABLE void thaw(visit_info *info) {
+        IMAGE_IO * const io = info->image_io;
+        SUPER(info);
+
+        if (info->extra_flags == EXTRA_IS_NULL) {
+            const INTVAL size = VTABLE_shift_integer(INTERP, io);
+            STRING * const s  = VTABLE_shift_string(INTERP, io);
+
+            PMC_int_val(SELF) = size;
+            PMC_int_val2(pmc) = s->bufused * BITS_PER_CHAR;
+            PMC_data(pmc)     = mem_sys_allocate_zeroed(s->bufused);
+            mem_sys_memcopy(PMC_data(SELF), s->strstart, s->bufused);
+        }
+    }
+
+/*
+
+=item C<METHOD fill(INTVAL fill)>
+
+Sets all of the entires to true if fill is a true value, otherwise
+sets them all to false.
+
+=cut
+
+*/
+
+    METHOD fill(INTVAL fill) {
+        Parrot_UInt1 * const sd = PMC_data_typed(SELF, Parrot_UInt1 *);
+        const size_t         j  = PMC_int_val(SELF) / BITS_PER_CHAR + 1;
+
+        if (fill)
+            memset(sd, 0xff, j);
+        else
+            memset(sd, 0, j);
+    }
+}
+
+/*
+
+=back
+
+=head1 SEE ALSO
+
+F<docs/pdds/pdd17_basic_types.pod>.
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

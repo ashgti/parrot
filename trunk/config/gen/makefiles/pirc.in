@@ -1,0 +1,99 @@
+# $Id$
+
+# Setup some commands
+LN_S          = @lns@
+PERL          = @perl@
+RM_F          = @rm_f@
+PARROT        = ../../parrot@exe@
+TOOL_DIR      = ../..
+CC            = @cc@
+CP            = @cp@
+BUILD         = $(PERL) @build_dir@/tools/build/dynpmc.pl
+O             = @o@
+EXE           = @exe@
+BUILD_DIR     = @build_dir@
+RECONFIGURE   = $(PERL) @build_dir@/tools/dev/reconfigure.pl
+
+LIBPARROT     = @libparrot@
+
+CC_INC        = -I../../include
+C_LIBS        = @libs@
+CC_SHARED     = @cc_shared@
+CFLAGS        = $(CC_INC) @ccflags@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@ $(CC_SHARED)
+LINK_DYNAMIC  = @link_dynamic@
+LINK          = @link@
+LINKFLAGS     = @linkflags@ @link_debug@ @ld_debug@
+LD            = @ld@
+LDFLAGS       = @ldflags@ @ld_debug@
+
+SOURCES       = new/main.c \
+new/pirparser.c \
+new/pirlexer.c \
+new/pircompunit.c \
+new/pircompiler.c \
+new/pirsymbol.c \
+new/piremit.c \
+new/hdocprep.c \
+new/pirmacro.c \
+new/pirregalloc.c \
+new/bcgen.c
+
+OBJS          = \
+new/main$(O) \
+new/pirparser$(O) \
+new/pirlexer$(O) \
+new/pircompunit$(O) \
+new/pircompiler$(O) \
+new/pirsymbol$(O) \
+new/piremit$(O) \
+new/hdocprep$(O) \
+new/pirmacro$(O) \
+new/pirregalloc$(O) \
+new/bcgen$(O)
+
+.c$(O) :
+	@$(PERL) ../../tools/dev/cc_flags.pl -v ../../CFLAGS $(CC) "" $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+
+
+# the default target
+all: pirc$(EXE)
+
+
+pirc$(EXE): $(OBJS)
+	$(LINK) @ld_out@$@ \
+  $(OBJS) \
+	@rpath_blib@ @libparrot_ldflags@ $(C_LIBS) $(LINKFLAGS) $(LINK_DYNAMIC)
+
+new/pirparser$(O): new/pirparser.c new/pirparser.h
+new/pirlexer$(O): new/pirlexer.c new/pirlexer.h
+new/pircompunit$(O): new/pircompunit.c new/pircompunit.h
+new/pircompiler$(O): new/pircompiler.c new/pircompiler.h
+new/pirsymbol$(O): new/pirsymbol.c new/pirsymbol.h
+new/piremit$(O): new/piremit.c new/piremit.h
+new/hdocprep$(O): new/hdocprep.c new/hdocprep.l
+new/pirmacro$(O): new/pirmacro.c new/pirmacro.h
+new/pirregalloc$(O): new/pirregalloc.c new/pirregalloc.h
+new/bcgen$(O): new/bcgen.c new/bcgen.h
+
+test: all
+	podchecker $(SOURCES) \	
+	README.pod
+	perl t/harness
+
+# regenerate the Makefile
+Makefile: $(BUILD_DIR)/config/gen/makefiles/pirc.in
+	cd $(BUILD_DIR) && $(RECONFIGURE) --step=gen::makefiles --target=compilers/pirc/Makefile
+
+
+clean:
+	$(RM_F) *$(O)
+	$(RM_F) $(OBJS)
+	$(RM_F) pirc
+
+realclean: clean
+	$(RM_F) \
+Makefile \
+pirc$(EXE) \
+doc/*.html
+
+distclean: realclean

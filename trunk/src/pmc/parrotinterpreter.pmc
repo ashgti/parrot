@@ -1,0 +1,713 @@
+/*
+Copyright (C) 2001-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/parrotinterpreter.pmc - Parrot Interpreter
+
+=head1 DESCRIPTION
+
+These are the vtable functions for the ParrotInterpreter base class
+
+   getinterp P0
+   set P1, P0[.IGLOBALS_*]  # access interpreter globals
+   set I0, P0[x]            # interpinfo I0, x
+   set I0, P0[-1]           # get interpreter flags
+   set P0[-1], x            # set flags on interpreter
+                            # NOTE: this doesn't restart
+
+=head2 Functions
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+#include "parrot/embed.h"
+#include "parrot/dynext.h"
+#include "pmc_class.h"
+
+/*
+
+=item C<void
+clone_interpreter(Parrot_Interp dest, const Parrot_Interp source, INTVAL flags)>
+
+Clones the interpreter as specified by the flags.
+
+=cut
+
+*/
+
+void
+clone_interpreter(Parrot_Interp d, Parrot_Interp s, INTVAL flags)
+{
+    /* we block DOD runs while cloning since C<d> is not yet running */
+    Parrot_block_GC_mark(d);
+
+    d->scheduler = pmc_new(d, enum_class_Scheduler);
+    d->scheduler = VTABLE_share_ro(d, d->scheduler);
+
+    if (flags & PARROT_CLONE_RUNOPS)
+        d->run_core = s->run_core;
+
+    if (flags & PARROT_CLONE_INTERP_FLAGS) {
+        /* XXX setting of IS_THREAD? */
+        d->flags       = s->flags;
+        d->debug_flags = s->debug_flags;
+    }
+
+    if (flags & PARROT_CLONE_HLL) {
+        /* we'd like to share the HLL data. Give it a PMC_sync structure
+           if it doesn't have one already */
+        add_pmc_sync(s, s->HLL_info);
+        d->HLL_info = s->HLL_info;
+        Parrot_regenerate_HLL_namespaces(d);
+    }
+
+    if (flags & (PARROT_CLONE_LIBRARIES | PARROT_CLONE_CLASSES)) {
+        INTVAL i, last_remove;
+        const INTVAL start = d->n_vtable_max;
+
+        /* copy type registrations to keep type numbers the same */
+        d->class_hash   = Parrot_clone(d, s->class_hash);
+        d->n_vtable_max = s->n_vtable_max;
+
+        if (d->n_vtable_max > d->n_vtable_alloced)
+            parrot_realloc_vtables(d);
+
+        last_remove = s->n_vtable_max;
+
+        for (i = s->n_vtable_max - 1; i >= start; --i) {
+            if (s->vtables[i] && s->vtables[i]->pmc_class &&
+                PObj_is_class_TEST(s->vtables[i]->pmc_class)) {
+                STRING * const class_name =
+                    VTABLE_get_string(s, s->vtables[i]->pmc_class);
+                PARROT_ASSERT(VTABLE_exists_keyed_str(d,
+                    d->class_hash, class_name));
+
+                VTABLE_delete_keyed_str(d, d->class_hash, class_name);
+
+                if (last_remove == i + 1) {
+                    --d->n_vtable_max;
+                    last_remove = i;
+                }
+            }
+        }
+    }
+
+    if (flags & PARROT_CLONE_LIBRARIES) {
+        PMC   * const libs     = VTABLE_get_pmc_keyed_int(s, s->iglobals,
+            IGLOBALS_DYN_LIBS);
+        PMC   * const lib_iter = VTABLE_get_iter(s, libs);
+        const INTVAL n         = VTABLE_elements(s, libs);
+        INTVAL i;
+
+        for (i = 0; i < n; ++i) {
+            STRING * const key     = VTABLE_shift_string(s, lib_iter);
+            PMC    * const lib_pmc = VTABLE_get_pmc_keyed_str(s, libs, key);
+            PMC    * const ignored = Parrot_clone_lib_into(d, s, lib_pmc);
+            UNUSED(ignored);
+        }
+    }
+
+    if (flags & PARROT_CLONE_CLASSES) {
+        INTVAL i;
+        for (i = 0; i < s->n_vtable_max; ++i) {
+            if (s->vtables[i] && s->vtables[i]->pmc_class &&
+                    PObj_is_class_TEST(s->vtables[i]->pmc_class)) {
+                /* Cloning the class into the new interpreter ought
+                 * to be sufficient to instantiate the class.  */
+                 PMC          *source       = s->vtables[i]->pmc_class;
+                 PMC          *dest         = Parrot_clone(d, source);
+                 Parrot_Class_attributes *source_class = PARROT_CLASS(source);
+                 Parrot_Class_attributes *dest_class   = PARROT_CLASS(dest);
+                 dest_class->name           = string_copy(d, source_class->name);
+                 dest_class->_namespace     = VTABLE_clone(d, source_class->_namespace);
+            }
+        }
+    }
+
+    if (flags & PARROT_CLONE_CODE)
+        pt_clone_code(d, s);
+
+    if (flags & PARROT_CLONE_GLOBALS)
+        pt_clone_globals(d, s);
+
+    Parrot_unblock_GC_sweep(d);
+}
+
+
+/*
+
+=item C<static void
+create_interp(PMC *self, Parrot_Interp parent)>
+
+Creates a new child interpreter of C<parent>.
+
+=cut
+
+*/
+
+static void
+create_interp(PMC *self, Parrot_Interp parent)
+{
+    Interp_flags flag  = PARROT_NO_FLAGS;
+    Parrot_Interp new_interp;
+
+    if (self->vtable->base_type == enum_class_ParrotThread)
+        flag = PARROT_IS_THREAD;
+
+    new_interp     = make_interpreter(parent, (INTVAL)flag);
+    PMC_data(self) = new_interp;
+
+    VTABLE_set_pmc_keyed_int(new_interp, new_interp->iglobals,
+        (INTVAL) IGLOBALS_INTERPRETER, self);
+
+    new_interp->current_cont = NEED_CONTINUATION;
+}
+
+static int
+recursion_limit(Parrot_Interp interp, PMC *self, int l)
+{
+    const int ret           = interp->recursion_limit;
+    interp->recursion_limit = l;
+    return ret;
+}
+
+pmclass ParrotInterpreter need_ext no_ro {
+
+/*
+
+=back
+
+=head2 Methods
+
+=over 4
+
+=item C<void class_init()>
+
+Class initialization.
+
+=cut
+
+*/
+
+    void class_init() {
+        const int typ = enum_class_ParrotInterpreter;
+
+        if (pass) {
+            /* TODO unify and fix signatures */
+            register_nci_method(INTERP, typ,
+                    F2DPTR(pt_thread_yield), "yield", "v");
+
+            /* misc functions */
+            register_nci_method(INTERP, typ,
+                    F2DPTR(recursion_limit), "recursion_limit", "iJOi");
+        }
+    }
+
+/*
+
+=item C<void init()>
+
+Initializes the interpreter.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        /*
+         * init/init_pmc may be called internally (from thread creation in
+         * ParrotThread::init_pmc() or stand-alone
+         * so we check, if the interpreter is already setup
+         */
+        if (!PMC_data(SELF)) {
+            create_interp(SELF, INTERP);
+            PARROT_ASSERT(PMC_data(SELF));
+        }
+
+        PMC_struct_val(SELF) = NULL;
+        PMC_pmc_val(SELF)    = NULL;
+    }
+
+/*
+
+=item C<void init_pmc(PMC *parent)>
+
+Initializes a child interpreter with C<*parent> if C<parent> is
+a ParrotInterpreter instance. Otherwise takes the thread ID from
+C<parent> and uses that thread.
+
+=cut
+
+*/
+
+    VTABLE void init_pmc(PMC *parent) {
+        Parrot_Interp p = PMC_data_typed(parent, Parrot_Interp);
+
+        if (!PMC_data(SELF))
+            create_interp(SELF, p);
+
+        PMC_struct_val(SELF) = NULL;
+    }
+
+/*
+
+=item C<void set_pointer(void *value)>
+
+Sets C<struct_val> to C<*value>.
+
+=cut
+
+*/
+
+    VTABLE void set_pointer(void *value) {
+        PMC_struct_val(SELF) = value;
+    }
+
+/*
+
+=item C<void *get_pointer()>
+
+Returns C<struct_val>.
+
+=cut
+
+*/
+
+    VTABLE void *get_pointer() {
+        return PMC_struct_val(SELF);
+    }
+
+/*
+
+=item C<INTVAL get_integer()>
+
+Returns the thread id of the interpreter.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer() {
+        const Parrot_Interp i = PMC_data_typed(SELF, Parrot_Interp);
+        return (INTVAL)i->thread_data->tid;
+    }
+
+/*
+
+=item C<opcode_t *invoke(void *next)>
+
+Runs the interpreter's byte code.
+
+=cut
+
+*/
+
+    VTABLE opcode_t *invoke(void *next) {
+        Interp * const new_interp = PMC_data_typed(SELF, Interp *);
+
+        /* setup code */
+        pt_thread_prepare_for_run(new_interp, interp);
+
+        /* TODO pass arguments from parent (interp) to child (new_interp) by
+         * possibly clone of share the arguments r/o args can be passed as is */
+
+        /* calculate offset and run */
+        runops(new_interp, (size_t)((opcode_t *)PMC_struct_val(SELF) -
+            (opcode_t *)interp->code->base.data));
+
+        return (opcode_t *)next;
+    }
+
+/*
+
+=item C<PMC *get_pmc_keyed_int(INTVAL key)>
+
+Returns the PMC global value for C<key>.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_pmc_keyed_int(INTVAL key) {
+        Interp * const new_interp = PMC_data_typed(SELF, Interp *);
+
+        if (key >= 0 && key < IGLOBALS_SIZE)
+            return VTABLE_get_pmc_keyed_int(new_interp,
+                new_interp->iglobals, key);
+
+        /* quick hack to get the global stash */
+        if (key == -1)
+            return new_interp->root_namespace;
+
+        return PMCNULL;
+    }
+
+/*
+
+=item C<PMC *get_pmc_keyed(PMC *key)>
+
+Introspection interface. C<key> can be:
+
+  "sub"                     ... return Sub object of this subroutine
+  "continuation"            ... return Continuation PMC
+  "lexpad"                  ... return lexpad PMC for this sub
+  "namespace"               ... return namespace PMC for this sub
+  "outer"                   ... return outer sub of this closure
+  "<item>"; level           ... same for caller <level>
+  "outer"; "<item>"         ... same for outer level 1
+  "outer"; "<item>"; level  ... same for outer <level>
+  "globals"                 ... return global stash
+
+=cut
+
+*/
+
+    VTABLE PMC *get_pmc_keyed(PMC *key) {
+        PMC    *nextkey, *cont;
+        STRING *outer = NULL;
+        STRING *item  = key_string(interp, key);
+        STRING *s     = CONST_STRING(interp, "globals");
+        int     level = 0;
+
+        Parrot_Context *ctx;
+
+        if (string_equal(interp, item, s) == 0)
+            return interp->root_namespace;
+
+        s     = CONST_STRING(interp, "outer");
+
+        if (string_equal(interp, item, s) == 0) {
+            outer   = item;
+            nextkey = key_next(INTERP, key);
+
+            if (nextkey && (PObj_get_FLAGS(nextkey) & KEY_string_FLAG)) {
+                key  = nextkey;
+                item = VTABLE_get_string(interp, key);
+            }
+        }
+
+        nextkey = key_next(INTERP, key);
+
+        if (nextkey)
+            level = key_integer(interp, nextkey);
+        else if (outer)
+            level = 1;
+
+        if (level < 0)
+            Parrot_ex_throw_from_c_args(interp, NULL, CONTROL_ERROR,
+                "No such caller depth");
+
+        ctx = CONTEXT(interp);
+
+        if (outer) {
+            for (; level; --level) {
+                ctx = ctx->outer_ctx;
+                if (!ctx)
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                        CONTROL_ERROR, "No such outer depth");
+            }
+        }
+        else {
+            for (; level; --level) {
+                cont = ctx->current_cont;
+
+                if (PMC_IS_NULL(cont) || !PMC_cont(cont)->seg)
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                        CONTROL_ERROR, "No such caller depth");
+
+                ctx = PMC_cont(cont)->to_ctx;
+
+                if (!ctx->current_sub)
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                        CONTROL_ERROR, "No such caller depth");
+            }
+        }
+
+        if (item == outer)
+            return ctx->current_sub;
+
+        s = CONST_STRING(interp, "sub");
+
+        if (string_equal(interp, item, s) == 0)
+            return ctx->current_sub;
+
+        s = CONST_STRING(interp, "lexpad");
+
+        if (string_equal(interp, item, s) == 0)
+            return ctx->lex_pad;
+
+        s = CONST_STRING(interp, "namespace");
+
+        if (string_equal(interp, item, s) == 0)
+            return ctx->current_namespace;
+
+        s = CONST_STRING(interp, "continuation");
+
+        if (string_equal(interp, item, s) == 0)
+            return VTABLE_clone(interp, ctx->current_cont);
+
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ATTRIB_NOT_FOUND,
+                "No such item %Ss", item);
+    }
+
+/*
+
+=item C<INTVAL get_integer_keyed_int(INTVAL key)>
+
+Returns the interpreter info for C<key>.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
+        Interp * const new_interp = PMC_data_typed(SELF, Interp *);
+
+        if (key == -1)
+            return (INTVAL)new_interp->flags;
+
+        return interpinfo(new_interp, key);
+    }
+
+/*
+
+=item C<void set_integer_keyed_int(INTVAL key, INTVAL val)>
+
+Sets the interpreter info for C<key> to C<val>.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_keyed_int(INTVAL key, INTVAL val) {
+        Interp * const new_interp = PMC_data_typed(SELF, Interp *);
+
+        /* set interpreter flags */
+        if (key == -1) {
+            const INTVAL allowed = PARROT_BOUNDS_FLAG | PARROT_PROFILE_FLAG |
+                             PARROT_GC_DEBUG_FLAG;
+            Parrot_clear_flag(new_interp, allowed);
+            Parrot_set_flag(new_interp, val & allowed);
+        }
+    }
+
+/*
+
+=item C<PMC *clone()>
+
+First attempt to make things running, and to see, where problems may
+arise. Only minimal items are done yet.
+
+XXX this should of course call C<Parrot_clone()> and use freeze/thaw.
+
+=cut
+
+*/
+
+    VTABLE PMC *clone() {
+        PMC * const dest = pmc_new(INTERP, SELF->vtable->base_type);
+
+        clone_interpreter((Parrot_Interp)PMC_data(dest),
+                          (Parrot_Interp)PMC_data(SELF), PARROT_CLONE_DEFAULT);
+
+        return dest;
+    }
+
+/*
+
+=item C<INTVAL is_equal(PMC *val)>
+
+Returns whether the interpreter is equal to C<*val>.
+
+Two interpreters (threads) are equal if both are non-threaded or they
+have the same thread id.
+
+=cut
+
+*/
+
+    VTABLE INTVAL is_equal(PMC *val) {
+        Parrot_Interp self  = PMC_data_typed(SELF, Parrot_Interp);
+        Parrot_Interp other = PMC_data_typed(val, Parrot_Interp);
+
+        if (!self->thread_data && !other->thread_data)
+            return 1;
+
+        if (self->thread_data && other->thread_data &&
+            self->thread_data->tid == other->thread_data->tid)
+            return 1;
+
+        return 0;
+    }
+
+/*
+
+=item C<void visit(visit_info *info)>
+
+This is used by freeze/thaw to visit the contents of the interpreter.
+
+C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
+
+=item C<void freeze(visit_info *info)>
+
+Used to archive the interpreter. Actually not the whole interpreter is
+frozen but the state of the interpreter, which includes everything that
+has changes since creating an empty interpreter.
+
+=item C<void thaw(visit_info *info)>
+
+Used to unarchive the interpreter. This merges the changes into this
+interpreter instance.
+
+=item C<void thawfinish(visit_info *info)>
+
+Finish thawing.
+
+=cut
+
+*/
+
+    VTABLE void visit(visit_info *info) {
+        PMC **pos;
+        /*
+         * the information frozen here is part of all PBCs
+         * we probably need to freeze all dynamic extensible
+         * mappings (or at least the dynamic part)
+         * e.g.
+         *    charsets   idx - name
+         *    encodings  idx - name
+         *    pmc types  idx - name
+         *    dynamic oplibs    opcode nr - opname
+         *
+         * The machine thawing this info still needs to load
+         * these extensions, but the order of loading could be
+         * relaxed.
+         *
+         * creating all these info as standard PMCs would vastly
+         * simplify this process
+         *
+         * thaw would then need a merge operation:
+         *  - compare existing for sanity
+         *  - extend new
+         */
+
+        /*  HLL_info */
+        if (info->what == VISIT_THAW_NORMAL ||
+                info->what == VISIT_THAW_CONSTANTS) {
+            pos = &PMC_pmc_val(SELF);
+        }
+        else
+            pos = &INTERP->HLL_info;
+
+        info->thaw_ptr = pos;
+        (info->visit_pmc_now)(INTERP, *pos, info);
+    }
+
+    VTABLE void thaw(visit_info *info) {
+        if (info->extra_flags == EXTRA_IS_PROP_HASH) {
+            SUPER(info);
+        }
+        else if (info->extra_flags == EXTRA_IS_NULL) {
+            PMC_data(SELF) = INTERP;
+            info->what     = VISIT_THAW_CONSTANTS;
+        }
+    }
+
+    void thawfinish(visit_info *info) {
+        PMC * const new_info = PMC_pmc_val(SELF);
+        const INTVAL  m      = VTABLE_elements(INTERP, new_info);
+        INTVAL  i;
+
+        PMC_pmc_val(SELF) = NULL;
+
+        /* merge new_info */
+        /* TODO compare old entries */
+
+        for (i = 0; i < m; ++i) {
+            PMC * const entry    = VTABLE_get_pmc_keyed_int(INTERP, new_info, i);
+            PMC * const lib_pmc  = VTABLE_get_pmc_keyed_int(INTERP, entry, e_HLL_lib);
+            PMC * const name_pmc = VTABLE_get_pmc_keyed_int(INTERP, entry, e_HLL_name);
+            PMC * const typemap  = VTABLE_get_pmc_keyed_int(INTERP, entry, e_HLL_typemap);
+            INTVAL hll_id = - 1;
+
+            if (!PMC_IS_NULL(name_pmc)) {
+                STRING * const hll_name = VTABLE_get_string(INTERP, name_pmc);
+
+                hll_id           = Parrot_register_HLL(INTERP, hll_name);
+            }
+
+            if (!PMC_IS_NULL(lib_pmc)) {
+                STRING *lib_name = VTABLE_get_string(INTERP, lib_pmc);
+                PMC    *ignored;
+
+                if (!STRING_IS_EMPTY(lib_name)) {
+                    INTVAL id;
+                    ignored      = Parrot_load_lib(INTERP, lib_name, NULL);
+                    id           = Parrot_register_HLL_lib(INTERP, lib_name);
+                    UNUSED(id);
+                }
+
+                UNUSED(ignored);
+            }
+
+            if (hll_id >= 0 && !PMC_IS_NULL(typemap)) {
+                PMC   *iter = VTABLE_get_iter(INTERP, typemap);
+                INTVAL e    = VTABLE_get_integer(INTERP, typemap);
+                INTVAL i;
+
+                for (i = 0; i < e; ++i) {
+                    PMC * const key        = VTABLE_shift_pmc(INTERP, iter);
+                    const INTVAL core_type = VTABLE_get_integer(INTERP, key);
+                    const INTVAL hll_type  =
+                        VTABLE_get_integer_keyed_int(INTERP, typemap, core_type);
+
+                    Parrot_register_HLL_type(INTERP, hll_id,
+                        core_type, hll_type);
+                }
+            }
+        }
+    }
+
+    METHOD run_gc() {
+        Parrot_do_dod_run(PMC_data_typed(SELF, Parrot_Interp), 0);
+    }
+/*
+
+=item METHOD hll_map(PMC core_type,PMC hll_type)
+
+Finish thawing.
+
+=cut
+
+*/
+
+    METHOD hll_map(PMC *core_type, PMC *hll_type) {
+        INTVAL core_type_id = VTABLE_type(INTERP, core_type);
+        INTVAL hll_type_id  = VTABLE_type(INTERP, hll_type);
+        INTVAL hll_id       = CONTEXT(interp)->current_HLL;
+        Parrot_register_HLL_type(INTERP, hll_id, core_type_id, hll_type_id);
+    }
+
+
+}
+
+/*
+
+=back
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

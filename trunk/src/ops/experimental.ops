@@ -1,0 +1,424 @@
+/*
+ * $Id$
+** experimental.ops
+*/
+
+VERSION = PARROT_VERSION;
+
+=head1 NAME
+
+experimental.ops - Experimental Operations
+
+=cut
+
+=head1 DESCRIPTION
+
+This file contains operations that are in an experimental state. Do not
+rely upon the existence of the ops in this file when writing production code.
+No decision has yet been made as to whether they are accepted as regular
+Parrot ops or not. They are included here for testing purposes only!
+
+=cut
+
+###############################################################################
+
+=head2 Mathematical operations
+
+Implementations of various mathematical operations
+
+=over 4
+
+=cut
+
+########################################
+
+=item B<gcd>(out INT, in NUM, in NUM)
+
+Greatest Common divisor of $2 and $3.
+
+=item B<gcd>(out INT, out INT, out INT, in INT, in INT)
+
+Given $4 and $5, it calculates $1, $2 and $3 so that
+
+$1 = gcd($4, $5) = $2 * $4 + $3 * $5 (d = gcd(a, b) = x*a + y*b)
+
+=cut
+
+inline op gcd(out INT, in NUM, in NUM) :advanced_math {
+
+  FLOATVAL q     = 0;
+  FLOATVAL c     = 0;
+  FLOATVAL temp2 = fabs($2);
+  FLOATVAL temp3 = fabs($3);
+
+  while (!FLOAT_IS_ZERO(temp3)) {
+    q     = floor((FLOATVAL)temp2/temp3);
+    c     = temp2 - temp3*q;
+    temp2 = temp3;
+    temp3 = c;
+  }
+
+  $1 = (INTVAL)temp2;
+}
+
+inline op gcd(out INT, out INT, out INT, in INT, in INT) :advanced_math {
+  /* r0 = q1*r1 + r2 */
+  INTVAL r0 = $4 < 0 ? -$4 : $4;
+  INTVAL r1 = $5 < 0 ? -$5 : $5;
+  INTVAL r2 = 0;
+  INTVAL q1 = 0;
+
+  INTVAL xkm1 = 1;
+  INTVAL xk = 0;
+  INTVAL xkp1 = 0;
+
+  INTVAL ykm1 = 0;
+  INTVAL yk = 1;
+  INTVAL ykp1 = 0;
+
+  INTVAL n = 1;
+
+  INTVAL x;
+  INTVAL y;
+
+  while (1) {
+    q1 = r0/r1;
+    r2 = r0 - q1*r1;
+    if (r2 == 0) {
+      break;
+    }
+    r0 = r1;
+    r1 = r2;
+
+    xkp1 = q1*xk + xkm1;
+    xkm1 = xk;
+    xk = xkp1;
+
+    ykp1 = q1*yk + ykm1;
+    ykm1 = yk;
+    yk = ykp1;
+  }
+  $1 = r1;
+  $2 = (INTVAL)(xk * pow(-1, n));
+  $3 = (INTVAL)(yk * pow(-1, n+1));
+
+  x = $2 * $4;
+  y = $3 * $5;
+
+  /* correct the sign (can be wrong because we used abs($4) and abs($5) */
+  if (x + y == r1) {
+    /* no correction necessary */
+  }
+  else if (x + y == -r1) {
+    $2 = -$2;
+    $3 = -$3;
+  }
+  else if (x - y == r1) {
+    $3 = -$3;
+  }
+  else if (-x + y == r1) {
+    $2 = -$2;
+  }
+}
+
+=back
+
+=cut
+
+###############################################################################
+
+=head2 Misc other ops
+
+=over 4
+
+=cut
+
+=item B<splice>(invar PMC, invar PMC, in INT, in INT)
+
+Replace $4 values at offset $3 in aggregate $1 with the PMCs in aggregate $2.
+The values are put into the aggregate by a shallow copy. If the values would
+be reused, they have to be B<clone>d.
+
+=cut
+
+inline op splice(invar PMC, invar PMC, in INT, in INT) {
+    VTABLE_splice(interp, $1, $2, $3, $4);
+}
+
+
+=item B<slice>(out PMC, invar PMC, in KEY)
+
+Return a new Iterator PMC $1 for aggregate $2 and Slice PMC $3.
+
+=item B<slice>(out PMC, invar PMC, in KEY, inconst INT)
+
+Return a new list PMC $1 for aggregate $2 and Slice PMC $3.
+
+This is a Python opcode. Range is i <= k < j. $4 must be 1.
+May change and move to python.ops.
+
+=item B<iter>(out PMC, invar PMC)
+
+Return a new Iterator PMC $1 for aggregate $2.
+
+=cut
+
+inline op slice(out PMC, invar PMC, in KEY) :base_core {
+    $1 = VTABLE_slice(interp, $2, $3, 0);
+}
+
+inline op slice(out PMC, invar PMC, in KEY, inconst INT) :python {
+    $1 = VTABLE_slice(interp, $2, $3, $4);
+}
+
+inline op iter(out PMC, invar PMC) :base_core {
+    $1 = VTABLE_get_iter(interp, $2);
+}
+
+########################################
+
+=item B<morph>(invar PMC, in STR)
+
+Have $1 turn itself into a PMC of type $2.
+
+=cut
+
+inline op morph(invar PMC, in STR) {
+  INTVAL type = pmc_type(interp, $2);
+  VTABLE_morph(interp, $1, type);
+}
+
+=item B<exec>(in STR)
+
+Execute the passed-in command. Completely tosses the current process
+image and replaces it with the command. Doesn't exit (the program
+ends, after all), though it does throw an exception if something goes
+wrong.
+
+=cut
+
+inline op exec(in STR) {
+  Parrot_Exec_OS_Command(interp, $1);
+}
+
+
+=item B<classname>(out PMC, invar PMC)
+
+Get the class name for the class in $2 and put it in $1. Note that $1 will be
+a Key PMC that you can use with "new", for example.
+
+=cut
+
+op classname(out PMC, invar PMC) :object_base {
+    PMC *ns = Parrot_ns_get_name(interp,
+                                    VTABLE_get_namespace(interp, $2));
+    if (PMC_IS_NULL(ns) || VTABLE_elements(interp, ns) < 2) {
+        opcode_t *handler = Parrot_ex_throw_from_op_args(interp, expr NEXT(),
+             EXCEPTION_NO_CLASS,
+            "Attempt to get class name of a non-class.");
+        goto ADDRESS(handler);
+    }
+    else {
+        PMC *key_tail, *key;
+        STRING *tmp;
+        int i, max;
+
+        /* Need to turn list of strings into a key. Note that we are not
+           including the first item in the array, since that is the HLL. */
+        tmp = VTABLE_get_string_keyed_int(interp, ns, 1);
+        $1 = key_tail = key_new_string(interp, tmp);
+        max = VTABLE_elements(interp, ns);
+        for (i = 2; i < max; i++)
+        {
+            tmp = VTABLE_get_string_keyed_int(interp, ns, i);
+            key = key_new_string(interp, tmp);
+            key_append(interp, key_tail, key);
+            key_tail = key;
+        }
+    }
+}
+
+=back
+
+=head2 More Experimental Ops
+
+=over 4
+
+=item C<trap>
+
+Break into debugger. Implementation notes:
+
+ - x86/gcc ... works with gdb
+ - ppc/gcc ... works with gdb, to proceed: gdb> p $pc = $pc + 4
+ - TODO
+
+For other architectures, this is a C<noop>.
+
+=cut
+
+op trap() {
+#if defined(__GNUC__) && defined(i386)
+    __asm__("int3");       /* opcode 0xcc */
+#endif
+#if defined(__GNUC__) && defined(PPC)
+    __asm__("trap");       /* opcode tr 31, 0, 0 */
+#endif
+}
+
+=item B<pow>(out NUM, in NUM, in INT)
+
+Set $1 to $2 raised to the power $3.
+
+=cut
+
+inline op pow(out NUM, in NUM, in INT) :base_core {
+    FLOATVAL n2 = $2;
+    FLOATVAL res = 1.0;
+    INTVAL   e  = $3;
+    int s = 1;
+    if (e != 0) {
+        if (e < 0) {
+            s = -1;
+            e = -e;
+        }
+    }
+    while (e) {
+        if (e & 1) {
+            res *= n2;
+        }
+        n2 *= n2;
+        e >>= 1;
+    }
+    if (s < 0) {
+        res = 1.0/res;
+    }
+    $1 = res;
+}
+
+########################################
+
+=item B<add_io_event>(invar PMC, invar PMC, invar PMC, inconst INT)
+
+Call the sub $2 for PIO $1 with user data $3 on ready state of $4.
+RT#42376 The only handled $4 = IO_THR_MSG_ADD_SELECT_RD aka 2 for now.
+
+=cut
+
+op add_io_event(invar PMC, invar PMC, invar PMC, inconst INT) {
+    Parrot_event_add_io_event(interp, $1, $2, $3, $4);
+}
+
+=item B<need_finalize>(invar PMC)
+
+The ParrotObject $1 needs the __finalize method during GC.
+
+=cut
+
+op need_finalize(invar PMC) {
+    PMC* pmc = $1;
+    if (PObj_is_object_TEST(pmc)) {
+        PObj_get_FLAGS(pmc) |= PObj_need_finalize_FLAG;
+    }
+}
+
+#########################################
+
+=item B<setstdout>(invar PMC)
+
+Sets the standard output for a bare C<print> op to go to the supplied ParrotIO
+PMC.  Call C<getstdout> first if you care about retaining the previous PMC.
+
+=item B<setstderr>(invar PMC)
+
+Sets the standard error for a bare C<printerr> op to go to the supplied
+ParrotIO PMC.  Call C<getstderr> first if you care about retaining the previous
+PMC.
+
+=cut
+
+inline op setstdout(invar PMC) :base_io {
+        _PIO_STDOUT(interp) = $1;
+}
+
+inline op setstderr(invar PMC) :base_io {
+        _PIO_STDERR(interp) = $1;
+}
+
+
+########################################
+
+=item B<runinterp>(invar PMC, in PMC)
+
+Invokes the PMC $2 using interp $1.
+
+=cut
+
+op runinterp(invar PMC, in PMC) {
+    Interp * const new_interp = (Interp *)PMC_data($1);
+    opcode_t *pc;
+    Interp_flags_SET(new_interp, PARROT_EXTERN_CODE_FLAG);
+    pc = (opcode_t *)VTABLE_invoke(new_interp, $2, NULL);
+    UNUSED(pc);
+    Parrot_runops_fromc_args(new_interp, $2, "P");
+}
+
+########################################
+
+=item B<substr_r>(out STR, in STR, in INT, in INT)
+
+Make $1 refer to the given part of $2, basically like above, but it
+is reusing the given destination string and does not care if the
+source string is changed later. This I<is changed> includes
+also GC runs, which will move the referenced string. This also
+means that $1 has to be reset before any GC may happen.
+
+This opcode should really be just used to quickly refer to a substring of
+another part, e.g. for printing and is a temporary hack.
+
+B<Handle with care.>
+
+=cut
+
+inline op substr_r(out STR, in STR, in INT, in INT) :base_core {
+  STRING *dest = $1;
+  if (!dest)
+    dest = new_string_header(interp, 0);
+  $1 = string_substr(interp, $2, $3, $4, &dest, 1);
+}
+
+=item C<find_sub_not_null>(out PMC, in STR)
+
+inline op find_sub_not_null(out PMC, in STR) :base_core {
+    opcode_t *dest = expr NEXT();
+    PMC *sub = Parrot_find_name_op(interp, $2, dest);
+
+    if (PMC_IS_NULL(sub)) {
+        opcode_t *handler = Parrot_ex_throw_from_op_args(interp, dest,
+                       EXCEPTION_GLOBAL_NOT_FOUND,
+                       "Could not find non-existent sub %Ss", $2);
+        goto ADDRESS(handler);
+    }
+
+    $1 = sub;
+}
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright (C) 2001-2008, The Perl Foundation.
+
+=head1 LICENSE
+
+This program is free software. It is subject to the same license
+as the Parrot interp itself.
+
+=cut
+
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

@@ -1,0 +1,49 @@
+# Copyright (C) 2001-2006, The Perl Foundation.
+# $Id$
+
+# Setup of some commands
+PERL   = @perl@
+RM_F   = @rm_f@
+MKPATH = @mkpath@
+CHMOD  = @chmod@
+PERLDOC = @perldoc@
+
+# long list of .pod files
+POD = @pod@
+
+#
+# Targets
+#
+
+# The default target
+all: doc-prep packfile-c.pod $(POD)
+
+# This is a listing of all targets, that are meant to be called by users
+# Most of them are proxied in the root makefile parrot/Makefile
+help :
+	@echo ""
+	@echo "Following targets are available to the user:"
+	@echo ""
+	@echo "  all:               Generate documentation from .pod files or from the sources."
+	@echo "                     This is the default target."
+	@echo "  clean:             Remove the generated documentation."
+	@echo "  html:              Generate HTML documentation."
+	@echo "  html-clean:        Remove the generated HTML documentation."
+	@echo ""
+
+doc-prep:
+	$(MKPATH) ops
+
+packfile-c.pod: ../src/packfile.c
+#CONDITIONED_LINE(new_perldoc):	$(PERLDOC) -ud packfile-c.pod ../src/packfile.c 
+#INVERSE_CONDITIONED_LINE(new_perldoc):	$(PERLDOC) -u ../src/packfile.c > packfile-c.pod
+
+clean:
+	$(RM_F) packfile-c.pod $(POD)
+
+html:
+	$(PERL) -I../lib ../tools/docs/write_docs.pl --silent
+
+html-clean:
+	$(PERL) -I../lib -MParrot::Distribution -e "Parrot::Distribution->new()->delete_html_docs()"
+

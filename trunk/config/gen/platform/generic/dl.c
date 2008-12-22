@@ -1,0 +1,127 @@
+/*
+ * $Id$
+ * Copyright (C) 2004-2006, The Perl Foundation.
+ */
+
+/*
+
+=head1 NAME
+
+config/gen/platform/generic/dl.c
+
+=head1 DESCRIPTION
+
+Dynlib stuff
+
+=head2 Functions
+
+=over 4
+
+=cut
+
+*/
+
+#ifdef PARROT_HAS_HEADER_DLFCN
+#  include <dlfcn.h>
+#endif
+
+#define PARROT_DLOPEN_FLAGS RTLD_LAZY
+
+/*
+
+=item C<void *
+Parrot_dlopen(const char *filename)>
+
+RT#48260: Not yet documented!!!
+
+=cut
+
+*/
+
+void *
+Parrot_dlopen(const char *filename)
+{
+#ifdef PARROT_HAS_HEADER_DLFCN
+    return dlopen(filename, PARROT_DLOPEN_FLAGS);
+#else
+    return 0;
+#endif
+}
+
+/*
+
+=item C<const char *
+Parrot_dlerror(void)>
+
+RT#48260: Not yet documented!!!
+
+=cut
+
+*/
+
+const char *
+Parrot_dlerror(void)
+{
+#ifdef PARROT_HAS_HEADER_DLFCN
+    return dlerror();
+#else
+    return 0;
+#endif
+}
+
+/*
+
+=item C<void *
+Parrot_dlsym(void *handle, const char *symbol)>
+
+RT#48260: Not yet documented!!!
+
+=cut
+
+*/
+
+void *
+Parrot_dlsym(void *handle, const char *symbol)
+{
+#ifdef PARROT_HAS_HEADER_DLFCN
+    return dlsym(handle, symbol);
+#else
+    return 0;
+#endif
+}
+
+/*
+
+=item C<int
+Parrot_dlclose(void *handle)>
+
+RT#48260: Not yet documented!!!
+
+=cut
+
+*/
+
+int
+Parrot_dlclose(void *handle)
+{
+#ifdef PARROT_HAS_HEADER_DLFCN
+    return dlclose(handle);
+#else
+    return -1;
+#endif
+}
+
+/*
+
+=back
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

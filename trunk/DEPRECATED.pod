@@ -1,0 +1,168 @@
+# $Id$
+
+=head1 Deprecation in Parrot
+
+This is a list of currently deprecated features of Parrot.  Every deprecation
+has an associated RT ticket.  Each item indicates the last release it's
+guaranteed to appear in.
+
+When deprecated items are removed, all usage of the feature in the
+repository should be updated or removed; including documentation.
+
+When deprecating opcodes, in addition to the ticket, be sure to mark the
+opcode with the :deprecated flag; this will allow users to enable deprecation
+warnings selectively with:
+
+ .include 'include/warnings.pasm'
+ warningson .PARROT_WARNINGS_DEPRECATED_FLAG
+
+And then receive runtime warnings if they are using any deprecated opcodes.
+The C<-w> command line option for parrot can also be used to enable all
+warnings. You can use C<make warnings_tests> to run the standard test suite
+with this option.
+
+=head1 vtable entries
+
+=over 4
+
+=item * C<new_from_string> [post 0.5.0]
+
+See RT #47011.
+
+=back
+
+=head1 Opcodes
+
+=over 4
+
+=item * C<store_global> [post 0.5.0]
+
+See RT #48016. Replace usage with set_[hll,root]_global variants.
+
+=item * C<find_global> [post 0.5.0]
+
+See RT #48018. Replace usage with get_[hll,root]_global variants.
+
+=item * C<get_mro> [post 0.5.0]
+
+See RT #47976.
+
+=item * C<n_*> math opcode variants [post 0.7.1]
+
+See RT #58410.
+
+=item * C<open> opcode mode string [post 0.8.2]
+
+The C<open> opcode will change from Perl-style mode-strings to 'r' for read,
+'w' for write, 'a' for append, and 'p' for pipe.
+
+=item * C<infix> and C<n_infix> opcodes [post 0.8.2]
+
+These opcodes were only used by the old MMD system. See TT #7.
+
+=item * C<slice> [post 0.8.2]
+
+The C<slice> opcode's implementation is experimental. Its use cases and
+implementation should be reconsidered. The current implementation will
+be removed.
+
+=item * C<add_io_event> [post 0.8.2]
+
+The C<add_io_event> opcode is experimental and non-functional. The current
+implementation will be removed.
+
+=back
+
+=head1 Class Features
+
+=over 4
+
+=item * PMC union struct [post 0.5.0]
+
+See RT #48014. This will be removed once all core PMCs have been updated.
+
+=item * :anon and :vtable named parameters to add_method [post 0.8.2]
+
+If you want to override a vtable method/function when building a Class, then
+use the method C<add_vtable_override> instead of calling C<add_method> with
+one or both of these flags.
+
+=back
+
+=head1 PIR syntax
+
+=over 4
+
+=item * Assignment syntax with opcodes [post 0.8.2]
+
+See RT #36283.  When the first argument of an opcode is C<OUT>, then
+the assignment syntax will be allowed, as it is today.
+
+In any other case (i.e. C<INOUT>, C<IN>), this will become
+a syntax error. For example:
+
+    $S0 = print
+    $P0 = substr 1, 2, "x"
+
+Will have to be:
+
+    print $S0
+    substr $P0, 1, 2, "x"
+
+=item * Exception Handlers won't automatically be disabled [post 0.8.1]
+
+Exception handlers won't be automatically disabled after 0.8.1.
+Any exception handlers that currently rely on this feature will need to
+either be more specific about what they catch or rethrow exceptions they
+don't recognize.
+
+See RT #60640.
+
+=back
+
+=head1 Functions
+
+=over 4
+
+=item Old-style MMD functions [post 0.7.1]
+
+mmd_cvt_to_types.
+
+See RT #60626.
+
+=item src/pic.c and src/pic_jit.c [post 0.8.1]
+
+These two files were a thin prototype implementation of Polymorphic Inline
+Caching that only ever applied to 4 opcodes, one of which has now been removed.
+The files (and all functions in them) are deprecated, and will be removed. See
+RT #60048.
+
+=item * Subs marked with C<:vtable>/C<:method> aren't in namespace [post 0.8.2]
+
+Subs marked with C<:vtable> or C<:method> flags are no longer given a
+namespace entry by default.  Use the C<:nsentry> flag to cause this
+to happen.  See RT #60586 and RT #53302.
+
+=item * Bytecode packfile segment will use subid not sub name [post 0.8.1]
+
+See RT #60590.
+
+=back
+
+=head1 Compiler Tools
+
+=over 4
+
+=item 'get_string', 'get_bool', etc. named vtable functions [post 0.8.1]
+
+All of the named vtable functions in PCT and PGE will lose
+their names and effectively become anonymous.  See RT #60384.
+
+=item Capture_PIR class [post 0.8.2]
+
+The Capture_PIR class in runtime/parrot/library/Parrot/Capture_PIR.pir
+is deprecated and will be removed.
+
+=back
+
+=cut

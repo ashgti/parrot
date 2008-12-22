@@ -1,0 +1,634 @@
+/*
+Copyright (C) 2001-2008, The Perl Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/resizablestringarray.pmc - resizable array for strings only
+
+=head1 DESCRIPTION
+
+ResizableStringArray implements a resizeable array which stores Parrot strings
+only. Any ints or floats assigned to elements of the array will first be
+converted to String PMCs and then to native Parrot strings.  PMCs assigned to
+to elements of the array will be stringified by having their C<get_string>
+method called.
+
+=head2 Functions
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/parrot.h"
+
+pmclass ResizableStringArray extends FixedStringArray need_ext provides array {
+
+/*
+
+=item C<STRING *get_string_keyed_int(INTVAL key)>
+
+Returns the Parrot string value of the element at index C<key>.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string_keyed_int(INTVAL key) {
+        STRING **data;
+
+        if (key < 0) {
+            INTVAL size = SELF.elements();
+            if (key < -size)
+                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: index out of bounds!");
+            else
+                key += size;
+        }
+
+        if (key >= PMC_int_val(SELF))
+            return string_from_literal(INTERP, "");
+
+        data = (STRING**)PMC_data(SELF);
+
+        if (!data[key])
+            data[key] = string_from_cstring(interp, NULL, 0);
+
+        return data[key];
+    }
+
+/*
+
+=item C<void set_string_keyed_int(INTVAL key, STRING *value)>
+
+Sets the Parrot string value of the element at index C<key> to C<value>.
+
+=cut
+
+*/
+
+    VTABLE void set_string_keyed_int(INTVAL key, STRING *value) {
+        STRING **data;
+
+        if (key < 0) {
+            INTVAL size = SELF.elements();
+            if (key < -size)
+                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: index out of bounds!");
+            else
+                key += size;
+        }
+
+        if (key >= PMC_int_val(SELF))
+            SELF.set_integer_native(key+1);
+
+        data      = (STRING **)PMC_data(SELF);
+        GC_WRITE_BARRIER(INTERP, SELF, data[key], value);
+        data[key] = value;
+    }
+
+/*
+
+=item C<void push_string(STRING *value)>
+
+Extends the array by adding an element of value C<*value> to the end of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void push_string(STRING *value) {
+        INTVAL nextix = SELF.elements();
+        SELF.set_string_keyed_int(nextix, value);
+    }
+
+/*
+
+=item C<STRING *pop_string()>
+
+Removes and returns the last element in the array.
+
+=cut
+
+*/
+
+    VTABLE STRING *pop_string() {
+        INTVAL  size = PMC_int_val(SELF);
+        STRING *value;
+
+        if (size == 0) {
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: Can't pop from an empty array!");
+        }
+
+        value = SELF.get_string_keyed_int(size - 1);
+        SELF.set_integer_native(size - 1);
+        return value;
+    }
+
+/*
+
+=item C<PMC *pop_pmc()>
+
+Removes and returns the last element in the array.
+
+=cut
+
+*/
+
+    VTABLE PMC *pop_pmc() {
+        STRING *strval = SELF.pop_string();
+        PMC    *value  = pmc_new(INTERP, enum_class_String);
+
+        VTABLE_set_string_native(INTERP, value, strval);
+
+        return value;
+    }
+
+/*
+
+=item C<INTVAL pop_integer()>
+
+Removes and returns the last element in the array.
+
+=cut
+
+*/
+
+    VTABLE INTVAL pop_integer() {
+        PMC *pmcval = SELF.pop_pmc();
+        return VTABLE_get_integer(INTERP, pmcval);
+    }
+
+/*
+
+=item C<FLOATVAL pop_float()>
+
+Removes and returns the last element in the array.
+
+=cut
+
+*/
+
+    VTABLE FLOATVAL pop_float() {
+        PMC *pmcval = SELF.pop_pmc();
+        return VTABLE_get_number(INTERP, pmcval);
+    }
+
+/*
+
+=item C<void set_integer_native(INTVAL size)>
+
+Resizes the array to C<size> elements.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_native(INTVAL size) {
+        if (size < 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: Can't resize!");
+
+        if (!PMC_data(SELF)) {
+            /* empty - used fixed routine */
+            if (size < 8) {
+                SUPER(8);
+                PMC_int_val(SELF)  = size;
+                PMC_int_val2(SELF) = 8;
+            }
+            else {
+                SUPER(size);
+                PMC_int_val2(SELF) = size;
+            }
+        }
+        else if (size <= PMC_int_val2(SELF)) {
+            /* zero out anything that was previously allocated
+             * if we're growing the array */
+            INTVAL oldsize = PMC_int_val(SELF);
+            if (size > oldsize) {
+                STRING **data   = (STRING**)PMC_data(SELF);
+                INTVAL i;
+                for (i=oldsize; i<size; i++)
+                    data[i] = NULL;
+            }
+
+            PMC_int_val(SELF) = size;
+            /* we could shrink here if necessary */
+            return;
+        }
+        else {
+            INTVAL i   = PMC_int_val2(SELF);
+            INTVAL cur = i;
+
+            if (cur < 8192)
+                cur = size < 2 * cur ? 2 * cur : size;
+            else {
+                cur = size + 4096;
+                cur &= ~0xfff;
+            }
+
+            PMC_data(SELF) = mem_sys_realloc(PMC_data(SELF),
+                    cur * sizeof (STRING*));
+
+            for (; i < cur; i++)
+                ((STRING **)PMC_data(SELF))[i] = NULL;
+
+            PMC_int_val2(SELF) = cur;
+            PMC_int_val(SELF)  = size;
+        }
+    }
+
+/*
+
+=item C<PMC *clone()>
+
+Creates and returns a copy of the array.
+
+=cut
+
+*/
+
+    VTABLE PMC *clone() {
+        PMC *copy = SUPER();
+        /* copy trimmed extra space */
+        PMC_int_val2(copy) = PMC_int_val(SELF);
+        return copy;
+    }
+
+/*
+
+=item C<STRING *shift_string()>
+
+Removes and returns an item from the start of the array.
+
+=cut
+
+*/
+
+    VTABLE STRING *shift_string() {
+        INTVAL  size = PMC_int_val(SELF);
+        STRING *value;
+
+        if (size == 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: Can't shift from an empty array!");
+
+        value = SELF.get_string_keyed_int(0);
+        SELF.delete_keyed_int(0);
+        return value;
+    }
+
+/*
+
+=item C<PMC *shift_pmc()>
+
+Removes and returns the first element in the array.
+
+=cut
+
+*/
+
+    VTABLE PMC *shift_pmc() {
+        STRING *strval = SELF.shift_string();
+        PMC    *value  = pmc_new(INTERP, enum_class_String);
+
+        VTABLE_set_string_native(INTERP, value, strval);
+
+        return value;
+    }
+
+/*
+
+=item C<INTVAL shift_integer()>
+
+Removes and returns the first element in the array.
+
+=cut
+
+*/
+
+    VTABLE INTVAL shift_integer() {
+        PMC *pmcval = SELF.shift_pmc();
+        return VTABLE_get_integer(INTERP, pmcval);
+    }
+
+/*
+
+=item C<FLOATVAL shift_float()>
+
+Removes and returns the first element in the array.
+
+=cut
+
+*/
+
+    VTABLE FLOATVAL shift_float() {
+        PMC *pmcval = SELF.shift_pmc();
+        return VTABLE_get_number(INTERP, pmcval);
+    }
+
+
+/*
+
+=item C<void push_pmc(PMC *value)>
+
+Extends the array by adding an element of value C<*value> to the end of
+the array.
+
+=cut
+
+*/
+
+    void push_pmc(PMC *value) {
+        STRING *strvalue = VTABLE_get_string(INTERP, value);
+        SELF.push_string(strvalue);
+    }
+
+/*
+
+=item C<void push_integer(INTVAL value)>
+
+Extends the array by adding an element of value C<*value> to the end of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void push_integer(INTVAL value) {
+        PMC    *ret = pmc_new(INTERP, enum_class_String);
+        STRING *val;
+
+        VTABLE_set_integer_native(INTERP, ret, value);
+        val = VTABLE_get_string(INTERP, ret);
+        SELF.push_string(val);
+    }
+
+/*
+
+=item C<void push_float(FLOAT value)>
+
+Extends the array by adding an element of value C<*value> to the end of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void push_float(FLOATVAL value) {
+        PMC    *ret = pmc_new(INTERP, enum_class_String);
+        STRING *val;
+
+        VTABLE_set_number_native(INTERP, ret, value);
+        val = VTABLE_get_string(INTERP, ret);
+        SELF.push_string(val);
+    }
+
+/*
+
+=item C<PMC *shift_pmc()>
+
+Removes and returns a String PMC from the start of the array.
+
+=cut
+
+*/
+
+    VTABLE PMC *shift_pmc() {
+        INTVAL  size = PMC_int_val(SELF);
+        PMC    *ret;
+        STRING *value;
+
+        if (size == 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    "ResizableStringArray: Can't shift from an empty array!");
+
+        value = SELF.get_string_keyed_int(0);
+        ret   = pmc_new(INTERP, enum_class_String);
+
+        VTABLE_set_string_native(INTERP, ret, value);
+        SELF.delete_keyed_int(0);
+
+        return ret;
+    }
+
+/*
+
+=item C<void unshift_string(STRING *value)>
+
+Extends the array by adding an element of value C<*value> to the start
+of the array.
+
+=cut
+
+*/
+
+    VTABLE void unshift_string(STRING *value) {
+        STRING **data = PMC_data_typed(SELF, STRING **);
+        INTVAL   size = PMC_int_val(SELF);
+        INTVAL   i;
+
+
+        SELF.set_integer_native(size + 1);
+
+        data = PMC_data_typed(SELF, STRING **);
+
+        for (i = size; i; --i)
+            data[i] = data[i - 1];
+
+        SELF.set_string_keyed_int(0, value);
+    }
+
+
+/*
+
+=item C<void unshift_pmc(PMC *value)>
+
+Extends the array by adding an element of value C<*value> to the front of
+the array.
+
+=cut
+
+*/
+
+    void unshift_pmc(PMC *value) {
+        STRING *strvalue = VTABLE_get_string(INTERP, value);
+        SELF.unshift_string(strvalue);
+    }
+
+/*
+
+=item C<void unshift_integer(INTVAL value)>
+
+Extends the array by adding an element of value C<*value> to the front of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void unshift_integer(INTVAL value) {
+        PMC    *ret = pmc_new(INTERP, enum_class_String);
+        STRING *val;
+
+        VTABLE_set_integer_native(INTERP, ret, value);
+        val = VTABLE_get_string(INTERP, ret);
+        SELF.unshift_string(val);
+    }
+
+/*
+
+=item C<void unshift_float(FLOAT value)>
+
+Extends the array by adding an element of value C<*value> to the front of
+the array.
+
+=cut
+
+*/
+
+    VTABLE void unshift_float(FLOATVAL value) {
+        PMC    *ret = pmc_new(INTERP, enum_class_String);
+        STRING *val;
+
+        VTABLE_set_number_native(INTERP, ret, value);
+        val = VTABLE_get_string(INTERP, ret);
+        SELF.unshift_string(val);
+    }
+
+/*
+
+=item C<void delete_keyed_int(INTVAL key)>
+
+Converts C<key> to a PMC key and calls C<delete_keyed()> with it.
+
+=cut
+
+*/
+
+    VTABLE void delete_keyed_int(INTVAL key) {
+        STRING **data = PMC_data_typed(SELF, STRING **);
+        INTVAL   size = PMC_int_val(SELF);
+        INTVAL   i;
+
+        for (i = key; i < size - 1; ++i)
+            data[i] = data[i + 1];
+
+        SELF.set_integer_native(size - 1);
+    }
+
+/*
+
+=item C<void delete_keyed(PMC *key)>
+
+Removes the element at C<*key>.
+
+=cut
+
+*/
+
+    VTABLE void delete_keyed(PMC *key) {
+        INTVAL   idx  = key_integer(INTERP, key);
+        STRING **data = PMC_data_typed(SELF, STRING **);
+        INTVAL   size = PMC_int_val(SELF);
+        INTVAL   i;
+
+        for (i = idx; i < size - 1; ++i)
+            data[i] = data[i + 1];
+
+        SELF.set_integer_native(size - 1);
+    }
+
+/*
+
+=item C<void splice(PMC *value, INTVAL offset, INTVAL count)>
+
+Replaces C<count> elements starting at C<offset> with the elements in
+C<value>.
+
+Note that the C<value> PMC can be of any of the various array types.
+
+Note that this implementation can be *VERY *inefficient as it manipulates
+everything via the VTABLE api.
+
+=cut
+
+*/
+
+    void splice(PMC *value, INTVAL offset, INTVAL count) {
+        INTVAL length, elems, shift, i;
+
+        if (value->vtable->base_type != SELF->vtable->base_type &&
+                value->vtable->base_type != enum_class_FixedStringArray)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
+                    "ResizableStringArray: illegal type for splice!");
+
+        length = VTABLE_elements(INTERP, SELF);
+        elems  = VTABLE_elements(INTERP, value);
+        shift  = elems - count;
+
+        /* start from end? */
+        if (offset < 0)
+            offset += length;
+
+        if (offset < 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                "illegal splice offset\n");
+
+        /* shrink the array */
+        if (shift < 0) {
+            /* start at offset so we don't overwrite values we'll need */
+            for (i = offset+count; i < length; i++)
+                VTABLE_set_pmc_keyed_int(INTERP, SELF, i + shift,
+                    VTABLE_get_pmc_keyed_int(INTERP, SELF, i));
+
+            SELF.set_integer_native(length + shift);
+        }
+
+        /* grow the array */
+        else if (shift > 0) {
+            SELF.set_integer_native(length + shift);
+
+            /* move the existing values */
+            /* start at length-1 so we don't overwrite values we'll need */
+            for (i = length - 1; i >= offset; i--)
+                VTABLE_set_pmc_keyed_int(INTERP, SELF, i + shift,
+                    VTABLE_get_pmc_keyed_int(INTERP, SELF, i));
+        }
+
+        /* copy the new values */
+        for (i = 0; i < elems; i++)
+            VTABLE_set_pmc_keyed_int(INTERP, SELF, i + offset,
+                VTABLE_get_pmc_keyed_int(INTERP, value, i));
+    }
+}
+
+/*
+
+=back
+
+=head1 SEE ALSO
+
+F<docs/pdds/pdd17_basic_types.pod>.
+
+=head1 HISTORY
+
+Initial version                  - Matt Fowles 2004-06-11
+Changed allocator to double size - Matt Fowles 2004-06-15
+Added push_string                - Bernhard Schmalhofer 2004-10-17
+moved available size to int_val2 - Matt Fowles 2005-07-22
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
