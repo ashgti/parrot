@@ -49,7 +49,7 @@ as the Perl 6 C<Str> class.
 .end
 
 
-.sub 'reverse' :method :multi('String')
+.sub 'reverse' :method :multi('String') :nsentry
     .local pmc retv
 
     retv = self.'split'('')
@@ -105,7 +105,7 @@ Returns a Perl representation of the Str.
 
 =cut
 
-.sub 'sprintf' :method
+.sub 'sprintf' :method :nsentry
     .param pmc args            :slurpy
     args.'!flatten'()
     $P0 = new 'Str'

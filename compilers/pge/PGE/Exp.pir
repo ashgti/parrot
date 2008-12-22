@@ -161,7 +161,7 @@ tree as a PIR code object that can be compiled.
     .local string returnop
     returnop = '.yield'
     code.'emit'(<<"        CODE", name, subid, namecorou, .INTERPINFO_CURRENT_SUB)
-      .sub %0 :method %1
+      .sub %0 :nsentry(%0) :method %1
           .param pmc adverbs   :slurpy :named
           .local pmc mob
           .const 'Sub' corou = %2
@@ -190,7 +190,7 @@ tree as a PIR code object that can be compiled.
     ##   Initial code for a rule that cannot be backtracked into.
     returnop = '.return'
     code.'emit'(<<"        CODE", name, subid)
-      .sub %0 :method %1
+      .sub %0 :nsentry(%0) :method %1
           .param pmc adverbs      :unique_reg :slurpy :named
           .local pmc mob
           .local string target    :unique_reg

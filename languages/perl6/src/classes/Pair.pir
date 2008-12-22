@@ -56,7 +56,7 @@ Return key and value as a 2-element List.
 =cut
 
 .namespace ['Perl6Pair']
-.sub 'kv' :method
+.sub 'kv' :method :nsentry
     $P0 = self.'key'()
     $P1 = self.'value'()
     .tailcall 'list'($P0, $P1)

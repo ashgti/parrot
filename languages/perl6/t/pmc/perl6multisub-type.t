@@ -22,10 +22,10 @@ Tests for type based dispatch using the Perl 6 MultiSub PMC.
     .include 'include/test_more.pir'
     load_bytecode "perl6.pbc"
 
-    plan(13)
+    plan(11)
 
     'basic_class'()
-    'role'()
+#    'role'()
     'ordered_class'()
 .end
 

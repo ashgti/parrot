@@ -69,7 +69,7 @@ See also slurp.
 =cut
 
 .namespace ['IO']
-.sub 'lines' :method :multi('IO')
+.sub 'lines' :method :multi('IO') :nsentry
     .local pmc PIO, res, chomper
     PIO = getattribute self, "$!PIO"
     res = new 'List'
@@ -133,7 +133,7 @@ Reads a line from the file handle.
 
 =cut
 
-.sub 'readline' :method
+.sub 'readline' :method :nsentry
     $P0 = get_hll_global 'IOIterator'
     $P0 = $P0.'new'('IO' => self)
     .return ($P0)

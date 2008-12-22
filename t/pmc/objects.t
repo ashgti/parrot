@@ -1390,7 +1390,7 @@ l1:
 
 .namespace [ 'Foo41' ]
 
-.sub '__get_string' :method
+.sub 'get_string' :method :vtable
     .return('Hello world')
 .end
 

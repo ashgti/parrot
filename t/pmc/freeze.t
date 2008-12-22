@@ -765,7 +765,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw a Conure" );
 .end
 
 .namespace ['Conure']
-.sub __init :method
+.sub 'init' :method :vtable
     $P0 = new 'Integer'
     $P0 = 37
     setattribute self, 'temperature', $P0
@@ -792,7 +792,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "freeze/thaw obj of class w Hash attrs" );
 
 .namespace [ "OPTable" ]
 
-.sub "__init" :method
+.sub "init" :vtable
     .local pmc keytable, klentable
     keytable = new 'Hash'
     klentable = new 'Hash'

@@ -1340,8 +1340,11 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         else
             sub->ns_entry_name = sub->name;
     }
+    else if (unit->is_method || unit->is_vtable_method)
+        sub->ns_entry_name = string_from_cstring(interp, "", 0);
     else
         sub->ns_entry_name = sub->name;
+
 
 
     Parrot_store_sub_in_namespace(interp, sub_pmc);

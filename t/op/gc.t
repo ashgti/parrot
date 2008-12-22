@@ -180,7 +180,7 @@ pir_output_is( <<'CODE', <<OUTPUT, "vanishing return continuation in method call
     print "back from _inc\n"
 .end
 
-.sub __increment :method
+.sub increment :method :vtable
     print "inc\n"
     sweep 1
 .end

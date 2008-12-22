@@ -402,7 +402,7 @@ diagnostic message).
 
 
 .namespace ['ABC']
-.sub 'foo' :method
+.sub 'foo' :method :nsentry
     .return ('ABC::foo')
 .end
 

@@ -187,7 +187,7 @@ Tests the PMCProxy PMC.
     is($P3, 42, "the magic overriding sub was called")
     ok(1, 'Called non-overridden method, which called overridden vtable method')
 .end
-.sub always42 :method
+.sub always42 :method :nsentry
     .param string what
     $P0 = new 'Integer'
     $P0 = 42

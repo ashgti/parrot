@@ -72,7 +72,7 @@ OK_3:
     print "ok 5 - called method composed from role\n"
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     print "Badger!\n"
 .end
 CODE
@@ -117,13 +117,13 @@ pir_output_is( <<'CODE', <<'OUT', 'two roles and a class, a method each, no conf
     print "ok 7 - called method from class\n"
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     print "Badger!\n"
 .end
-.sub mushroom :method
+.sub mushroom :method :nsentry
     print "Mushroom!\n"
 .end
-.sub snake :method
+.sub snake :method :nsentry
     print "Snake!\n"
 .end
 CODE
@@ -227,13 +227,13 @@ pir_output_is( <<'CODE', <<'OUT', 'conflict resolution by exclusion' );
     print "ok 4 - called method from role that wasn't excluded\n"
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     print "Badger!\n"
 .end
-.sub badger2 :method
+.sub badger2 :method :nsentry
     print "Oops, wrong badger.\n"
 .end
-.sub snake :method
+.sub snake :method :nsentry
     print "Snake!\n"
 .end
 CODE
@@ -276,13 +276,13 @@ pir_output_is( <<'CODE', <<'OUT', 'conflict resolution by aliasing and exclude' 
     print "ok 5 - called method from role that was aliased\n"
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     print "Badger!\n"
 .end
-.sub badger2 :method
+.sub badger2 :method :nsentry
     print "Aliased badger!\n"
 .end
-.sub snake :method
+.sub snake :method :nsentry
     print "Snake!\n"
 .end
 CODE
@@ -332,13 +332,13 @@ ok_2:
     print "ok 6 - called method from role that wasn't resolved\n"
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     print "Badger!\n"
 .end
-.sub badger2 :method
+.sub badger2 :method :nsentry
     print "Oops, wrong badger.\n"
 .end
-.sub snake :method
+.sub snake :method :nsentry
     print "Snake!\n"
 .end
 CODE

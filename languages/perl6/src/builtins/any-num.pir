@@ -35,7 +35,7 @@ the size of that file down and to emphasize their generic,
 =cut
 
 .namespace ['Any']
-.sub 'abs' :method :multi(_)
+.sub 'abs' :method :multi(_) :nsentry
     $N0 = self
     $N1 = abs $N0
     .return ($N1)
@@ -46,7 +46,7 @@ the size of that file down and to emphasize their generic,
 =cut
 
 .namespace ['Any']
-.sub 'chr' :method :multi(_)
+.sub 'chr' :method :multi(_) :nsentry
     $I0 = self
     $S0 = chr $I0
     .return ($S0)
@@ -57,12 +57,12 @@ the size of that file down and to emphasize their generic,
 =cut
 
 .namespace ['Any']
-.sub 'cis' :method :multi(_)
+.sub 'cis' :method :multi(_) :nsentry
     .tailcall 'unpolar'(1.0, self)
 .end
 
 
-.sub 'int' :method :multi(_)
+.sub 'int' :method :multi(_) :nsentry
     .tailcall self.'truncate'()
 .end
 
@@ -76,7 +76,7 @@ error.
 
 =cut
 
-.sub 'log' :method :multi(_)
+.sub 'log' :method :multi(_) :nsentry
     if self == 0 goto fail
     $N0 = self
     $N1 = ln $N0
@@ -91,7 +91,7 @@ error.
 =cut
 
 .namespace ['Any']
-.sub 'polar' :method :multi(_)
+.sub 'polar' :method :multi(_) :nsentry
     $N0 = self
     .tailcall 'list'($N0, 0)
 .end
@@ -128,7 +128,7 @@ error.
 =cut
 
 .namespace ['Any']
-.sub 'sqrt' :method :multi(_)
+.sub 'sqrt' :method :multi(_) :nsentry
     $N0 = self
     $N1 = sqrt $N0
     .return ($N1)
@@ -169,7 +169,7 @@ error.
 =cut
 
 .namespace ['Any']
-.sub 'truncate' :method :multi(_)
+.sub 'truncate' :method :multi(_) :nsentry
     $N0 = self
     if $N0 == 0 goto done
     if $N0 < 0 goto num_ceil
@@ -187,7 +187,7 @@ error.
 
 =cut
 
-.sub 'unpolar' :method
+.sub 'unpolar' :method :nsentry
     .param num angle
     .local num mag
     .local pmc result

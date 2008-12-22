@@ -41,10 +41,10 @@ pir_output_is( <<'CODE', <<'OUT', 'single parent' );
     $P0.'bar'()
 .end
 
-.sub testA :method
+.sub testA :method :nsentry
     print "Method from A called\n"
 .end
-.sub testB :method
+.sub testB :method :nsentry
     print "Method from B called\n"
 .end
 CODE
@@ -79,13 +79,13 @@ pir_output_is( <<'CODE', <<'OUT', 'grandparent' );
     $P0.'baz'()
 .end
 
-.sub testA :method
+.sub testA :method :nsentry
     print "Method from A called\n"
 .end
-.sub testB :method
+.sub testB :method :nsentry
     print "Method from B called\n"
 .end
-.sub testC :method
+.sub testC :method :nsentry
     print "Method from C called\n"
 .end
 CODE
@@ -121,13 +121,13 @@ pir_output_is( <<'CODE', <<'OUT', 'multiple inheritance' );
     $P0.'baz'()
 .end
 
-.sub testA :method
+.sub testA :method :nsentry
     print "Method from A called\n"
 .end
-.sub testB :method
+.sub testB :method :nsentry
     print "Method from B called\n"
 .end
-.sub testC :method
+.sub testC :method :nsentry
     print "Method from C called\n"
 .end
 CODE
@@ -173,16 +173,16 @@ pir_output_is( <<'CODE', <<'OUT', 'diamond inheritance' );
     $P0.'wag'()
 .end
 
-.sub testA :method
+.sub testA :method :nsentry
     print "Method from A called\n"
 .end
-.sub testB :method
+.sub testB :method :nsentry
     print "Method from B called\n"
 .end
-.sub testC :method
+.sub testC :method :nsentry
     print "Method from C called\n"
 .end
-.sub testD :method
+.sub testD :method :nsentry
     print "Method from D called\n"
 .end
 CODE

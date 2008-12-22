@@ -26,7 +26,7 @@ Returns a list element or slice.
 =cut
 
 .namespace ['Associative']
-.sub 'postcircumfix:{ }' :method
+.sub 'postcircumfix:{ }' :method :nsentry
     .param pmc args            :slurpy
     .param pmc options         :slurpy :named
     .local pmc result

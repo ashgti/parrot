@@ -399,6 +399,26 @@ Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
 
 /*
 
+=item C<INTVAL Parrot_get_vtable_name>
+
+Return name if C<index> is a valid vtable slot index.
+
+=cut
+
+*/
+
+PARROT_PURE_FUNCTION
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+STRING *
+Parrot_get_vtable_name(PARROT_INTERP, ARGIN(INTVAL index))
+{
+  PARROT_ASSERT((index > PARROT_VTABLE_LOW) && (index < (NUM_VTABLE_FUNCTIONS + PARROT_VTABLE_LOW)));
+  return string_from_cstring(interp, Parrot_vtable_slot_names[index], 0);
+}
+
+/*
+
 =item C<const char* Parrot_MMD_method_name>
 
 Return the method name for the given MMD enum.

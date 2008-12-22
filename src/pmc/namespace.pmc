@@ -71,8 +71,10 @@ ns_insert_sub_keyed_str(PARROT_INTERP, PMC *self, STRING *key, PMC *value)
 
     if (sub->vtable_index != -1) {
         /* Insert it in class, if there is a class */
-        if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj))
-            VTABLE_add_vtable_override(interp, classobj, key, value);
+        if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj)) {
+            STRING *vtable_entry_name = Parrot_get_vtable_name(interp, sub->vtable_index);
+            VTABLE_add_vtable_override(interp, classobj, vtable_entry_name, value);
+        }
 
         /* Otherwise, store it in the namespace for the class to
          * retrieve later */

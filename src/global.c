@@ -819,8 +819,13 @@ If no multisub by that name currently exists, we create one.
 static void
 store_sub_in_multi(PARROT_INTERP, ARGIN(PMC *sub), ARGIN(PMC *ns))
 {
-    STRING * const ns_entry_name = PMC_sub(sub)->ns_entry_name;
-    PMC    *multisub = VTABLE_get_pmc_keyed_str(interp, ns, ns_entry_name);
+    STRING * entry_name = PMC_sub(sub)->method_name;
+    PMC    *multisub;
+
+    if (0 == string_equal(interp, entry_name, CONST_STRING(interp, "")))
+      entry_name = PMC_sub(sub)->ns_entry_name;
+     
+    multisub = VTABLE_get_pmc_keyed_str(interp, ns, entry_name);
 
     /* is there an existing MultiSub PMC? or do we need to create one? */
     if (PMC_IS_NULL(multisub)) {
@@ -828,7 +833,7 @@ store_sub_in_multi(PARROT_INTERP, ARGIN(PMC *sub), ARGIN(PMC *ns))
         /* we have to push the sub onto the MultiSub before we try to store
         it because storing requires information from the sub */
         VTABLE_push_pmc(interp, multisub, sub);
-        VTABLE_set_pmc_keyed_str(interp, ns, ns_entry_name, multisub);
+        VTABLE_set_pmc_keyed_str(interp, ns, entry_name, multisub);
     }
     else
         VTABLE_push_pmc(interp, multisub, sub);

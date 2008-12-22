@@ -112,6 +112,14 @@ INTVAL Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_PURE_FUNCTION
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+STRING *
+Parrot_get_vtable_name(PARROT_INTERP, ARGIN(INTVAL index))
+        __attribute__nonnull__(1);
+
+
 PARROT_EXPORT
 void Parrot_invalidate_method_cache(PARROT_INTERP,
     ARGIN_NULLOK(STRING *_class),

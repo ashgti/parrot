@@ -396,7 +396,7 @@ loop:
     .tailcall $P0($P1, self, removep, blockp)
 .end
 
-.sub _fetchHead :method
+.sub _fetchHead :method :nsentry
     .param int removep
     .param int blockp
     .local pmc i
@@ -452,7 +452,7 @@ normal_return:
     .return ($P2)
 .end
 
-.sub _addTail :method
+.sub _addTail :method :nsentry 
     .param pmc what
     .param int blockp
 
