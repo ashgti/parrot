@@ -460,6 +460,10 @@ continuation.
 
 Return from the sub or method via the current continuation.
 
+=item B<capture_lex>(invar PMC)
+
+Capture the current lexical state of the inner subroutine PMC.
+
 =item B<newclosure>(out PMC, invar PMC)
 
 Create a closure of the given subroutine PMC by cloning the sub's state.
@@ -509,6 +513,10 @@ inline op returncc() :flow {
     opcode_t * const dest = (opcode_t *)p->vtable->invoke(interp,
             p, expr NEXT());
     goto ADDRESS(dest);
+}
+
+inline op capture_lex(invar PMC) {
+    Parrot_capture_lex(interp, $1);
 }
 
 inline op newclosure(out PMC, invar PMC) {
@@ -597,7 +605,7 @@ op get_params(inconst PMC) :flow {
         ctx->caller_ctx = caller_ctx->caller_ctx;
         /* ordinarily, this will free the context immediately, but not if the
            sub created a closure (or continuation, or . . .).  */
-        Parrot_free_context(interp, caller_ctx, 0);
+        Parrot_free_context(interp, caller_ctx, 1);
         interp->current_args = NULL;
     }
     argc = SIG_ELEMS(signature);
@@ -836,6 +844,11 @@ inline op throw(invar PMC) :flow {
     opcode_t *dest;
     opcode_t *const ret    = expr NEXT();
     PMC            *resume = new_ret_continuation_pmc(interp, ret);
+    /*
+     * We might return here after handling the exception, so mark the
+     * current context appropriately.
+     */
+    Parrot_context_ref(interp, CONTEXT(interp));
     VTABLE_set_attr_str(interp, $1, const_string(interp, "resume"), resume);
     dest = Parrot_ex_throw_from_op(interp, $1, ret);
     goto ADDRESS(dest);
@@ -1344,7 +1357,6 @@ op dlfunc(out PMC, invar PMC, in STR, in STR) {
 op dlvar(out PMC, invar PMC, in STR) {
     char * const name = string_to_cstring(interp, ($3));
     void * const p = Parrot_dlsym(PMC_IS_NULL($2) ? NULL : PMC_data($2), name);
-    string_cstring_free(name);
     if (p == NULL) {
         const char * const err = Parrot_dlerror();
         Parrot_warn(interp, PARROT_WARNINGS_UNDEF_FLAG,
@@ -1357,6 +1369,7 @@ op dlvar(out PMC, invar PMC, in STR) {
         $1 = pmc_new(interp, enum_class_UnManagedStruct);
         PMC_data($1) = p;
     }
+    string_cstring_free(name);
 }
 
 inline op compreg(in STR, invar PMC) {

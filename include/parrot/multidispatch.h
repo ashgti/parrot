@@ -51,11 +51,12 @@ typedef struct _multi_func_list {
         funcptr_t func_ptr;
 } multi_func_list;
 
+#define MMD_Cache Hash
 
 /* HEADERIZER BEGIN: src/multidispatch.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 funcptr_t get_mmd_dispatch_type(PARROT_INTERP,
@@ -67,7 +68,7 @@ funcptr_t get_mmd_dispatch_type(PARROT_INTERP,
         __attribute__nonnull__(5)
         FUNC_MODIFIES(*is_pmc);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_build_sig_object_from_varargs(PARROT_INTERP,
@@ -76,13 +77,7 @@ PMC* Parrot_build_sig_object_from_varargs(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
-void Parrot_mmd_add_function(PARROT_INTERP,
-    INTVAL func_nr,
-    NULLOK(funcptr_t function))
-        __attribute__nonnull__(1);
-
-PARROT_API
+PARROT_EXPORT
 void Parrot_mmd_add_multi_from_c_args(PARROT_INTERP,
     ARGIN(const char *sub_name),
     ARGIN(const char *short_sig),
@@ -94,7 +89,7 @@ void Parrot_mmd_add_multi_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_mmd_add_multi_from_long_sig(PARROT_INTERP,
     ARGIN(STRING *sub_name),
     ARGIN(STRING *long_sig),
@@ -104,18 +99,89 @@ void Parrot_mmd_add_multi_from_long_sig(PARROT_INTERP,
         __attribute__nonnull__(3)
         __attribute__nonnull__(4);
 
-PARROT_API
+PARROT_EXPORT
 void Parrot_mmd_add_multi_list_from_c_args(PARROT_INTERP,
     ARGIN(const multi_func_list *mmd_info),
     INTVAL elements)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
-void Parrot_mmd_destroy(PARROT_INTERP)
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC* Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP,
+    ARGIN(PMC *sig_obj))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+MMD_Cache * Parrot_mmd_cache_create(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_API
+PARROT_EXPORT
+void Parrot_mmd_cache_destroy(PARROT_INTERP, ARGMOD(MMD_Cache *cache))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC * Parrot_mmd_cache_lookup_by_types(PARROT_INTERP,
+    ARGMOD(MMD_Cache *cache),
+    ARGIN(const char *name),
+    ARGIN(PMC *types))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC * Parrot_mmd_cache_lookup_by_values(PARROT_INTERP,
+    ARGMOD(MMD_Cache *cache),
+    ARGIN(const char *name),
+    ARGIN(PMC *values))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
+void Parrot_mmd_cache_mark(PARROT_INTERP, ARGMOD(MMD_Cache *cache))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
+void Parrot_mmd_cache_store_by_types(PARROT_INTERP,
+    ARGMOD(MMD_Cache *cache),
+    ARGIN(const char *name),
+    ARGIN(PMC *types),
+    ARGIN(PMC *chosen))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
+void Parrot_mmd_cache_store_by_values(PARROT_INTERP,
+    ARGMOD(MMD_Cache *cache),
+    ARGIN(const char *name),
+    ARGIN(PMC *values),
+    ARGIN(PMC *chosen))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5)
+        FUNC_MODIFIES(*cache);
+
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_mmd_find_multi_from_long_sig(PARROT_INTERP,
@@ -125,7 +191,7 @@ PMC * Parrot_mmd_find_multi_from_long_sig(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_mmd_find_multi_from_sig_obj(PARROT_INTERP,
@@ -135,7 +201,7 @@ PMC* Parrot_mmd_find_multi_from_sig_obj(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void Parrot_mmd_multi_dispatch_from_c_args(PARROT_INTERP,
     ARGIN(const char *name),
@@ -145,41 +211,14 @@ void Parrot_mmd_multi_dispatch_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_API
-void Parrot_mmd_register(PARROT_INTERP,
-    INTVAL func_nr,
-    INTVAL left_type,
-    INTVAL right_type,
-    NULLOK(funcptr_t funcptr))
-        __attribute__nonnull__(1);
-
-PARROT_API
-void Parrot_mmd_register_sub(PARROT_INTERP,
-    INTVAL func_nr,
-    INTVAL left_type,
-    INTVAL right_type,
-    ARGIN(const PMC *sub))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(5);
-
-PARROT_API
-PARROT_CANNOT_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
-PMC * Parrot_MMD_search_default_infix(PARROT_INTERP,
-    ARGIN(STRING *meth),
-    INTVAL left_type,
-    INTVAL right_type)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_mmd_sort_manhattan(PARROT_INTERP, ARGIN(PMC *candidates))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_mmd_sort_manhattan_by_sig_pmc(PARROT_INTERP,

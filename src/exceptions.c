@@ -32,9 +32,17 @@ Define the the core subsystem for exceptions.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_CANNOT_RETURN_NULL
+static PMC * build_exception_from_args(PARROT_INTERP,
+    int ex_type,
+    ARGIN(const char *format),
+    va_list arglist)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3);
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-static PMC * find_exception_handler(PARROT_INTERP, ARGIN(PMC *exception))
+static PMC * die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -63,7 +71,7 @@ Constructs a new exception object from the passed in arguments.
 =cut
 
 */
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC *
 Parrot_ex_build_exception(PARROT_INTERP, INTVAL severity,
@@ -71,10 +79,8 @@ Parrot_ex_build_exception(PARROT_INTERP, INTVAL severity,
 {
     PMC *exception = pmc_new(interp, enum_class_Exception);
 
-    VTABLE_set_integer_keyed_str(interp, exception,
-            CONST_STRING(interp, "severity"), severity);
-    VTABLE_set_integer_keyed_str(interp, exception,
-            CONST_STRING(interp, "type"), error);
+    VTABLE_set_integer_keyed_str(interp, exception, CONST_STRING(interp, "severity"), severity);
+    VTABLE_set_integer_keyed_str(interp, exception, CONST_STRING(interp, "type"), error);
     if (msg)
         VTABLE_set_string_native(interp, exception, msg);
 
@@ -83,9 +89,9 @@ Parrot_ex_build_exception(PARROT_INTERP, INTVAL severity,
 
 /*
 
-=item C<static PMC * find_exception_handler>
+=item C<static PMC * die_from_exception>
 
-Find the exception handler for C<exception>.
+Print a stack trace for C<exception>, a message if there is one, and then exit.
 
 =cut
 
@@ -94,61 +100,55 @@ Find the exception handler for C<exception>.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static PMC *
-find_exception_handler(PARROT_INTERP, ARGIN(PMC *exception))
+die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
 {
-    PMC * const handler = Parrot_cx_find_handler_local(interp, exception);
-    if (!PMC_IS_NULL(handler)) {
-        return handler;
+    STRING * const message     = VTABLE_get_string(interp, exception);
+    INTVAL         exit_status = 1;
+    const INTVAL   severity    = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "severity"));
+
+    /* flush interpreter output to get things printed in order */
+    Parrot_io_flush(interp, Parrot_io_STDOUT(interp));
+    Parrot_io_flush(interp, Parrot_io_STDERR(interp));
+
+    if (interp->debugger) {
+        Parrot_io_flush(interp->debugger, Parrot_io_STDOUT(interp->debugger));
+        Parrot_io_flush(interp->debugger, Parrot_io_STDERR(interp->debugger));
+    }
+
+    if (string_equal(interp, message, CONST_STRING(interp, "")) == 1) {
+        Parrot_io_eprintf(interp, "%S\n", message);
+
+        /* caution against output swap (with PDB_backtrace) */
+        fflush(stderr);
+        PDB_backtrace(interp);
+    }
+    else if (severity == EXCEPT_exit) {
+        /* TODO: get exit status based on type */
+        exit_status = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "exit_code"));
     }
     else {
-        STRING * const message = VTABLE_get_string(interp, exception);
-        INTVAL exit_status = 1;
-        const INTVAL severity = VTABLE_get_integer_keyed_str(interp,
-                exception, CONST_STRING(interp, "severity"));
-
-        /* flush interpreter output to get things printed in order */
-        PIO_flush(interp, PIO_STDOUT(interp));
-        PIO_flush(interp, PIO_STDERR(interp));
-
-        if (interp->debugger) {
-            PIO_flush(interp->debugger, PIO_STDOUT(interp->debugger));
-            PIO_flush(interp->debugger, PIO_STDERR(interp->debugger));
-        }
-
-        if (string_equal(interp, message, CONST_STRING(interp, "")) == 1) {
-                fprintf(stderr, "%s\n", string_to_cstring(interp, message));
-                fflush(stderr); /* caution against output swap (with PDB_backtrace) */
-                PDB_backtrace(interp);
-        }
-        else if (severity == EXCEPT_exit) {
-            /* TODO: get exit status based on type */
-            exit_status = VTABLE_get_integer_keyed_str(interp,
-                    exception, CONST_STRING(interp, "exit_code"));
-        }
-        else {
-                PIO_eprintf(interp, "No exception handler and no message\n");
-                fflush(stderr); /* caution against output swap (with PDB_backtrace) */
-                PDB_backtrace(interp);
-        }
-
-        /*
-         * returning NULL from here returns resume address NULL to the
-         * runloop, which will terminate the thread function finally
-         *
-         * RT #45917 this check should better be in Parrot_exit
-         */
-
-        /* no exception handler, but this is not the main thread */
-        if (interp->thread_data && interp->thread_data->tid)
-            pt_thread_detach(interp->thread_data->tid);
-
-        /*
-         * only main should run the destroy functions - exit handler chain
-         * is freed during Parrot_exit
-         */
-        Parrot_exit(interp, exit_status);
+        Parrot_io_eprintf(interp, "No exception handler and no message\n");
+        /* caution against output swap (with PDB_backtrace) */
+        fflush(stderr);
+        PDB_backtrace(interp);
     }
 
+    /*
+     * returning NULL from here returns resume address NULL to the
+     * runloop, which will terminate the thread function finally
+     *
+     * RT #45917 this check should better be in Parrot_exit
+     */
+
+    /* no exception handler, but this is not the main thread */
+    if (interp->thread_data && interp->thread_data->tid)
+        pt_thread_detach(interp->thread_data->tid);
+
+    /*
+     * only main should run the destroy functions - exit handler chain
+     * is freed during Parrot_exit
+     */
+    Parrot_exit(interp, exit_status);
 }
 
 /*
@@ -163,7 +163,7 @@ the handler code.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_ex_add_c_handler(PARROT_INTERP, ARGIN(Parrot_runloop *jp))
 {
@@ -184,16 +184,36 @@ Runs the exception handler.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 opcode_t *
 Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void *dest))
 {
     opcode_t   *address;
-    PMC * const handler = find_exception_handler(interp, exception);
+    PMC * const handler = Parrot_cx_find_handler_local(interp, exception);
+    if (PMC_IS_NULL(handler)) {
+        STRING * const message     = VTABLE_get_string(interp, exception);
+        const INTVAL   severity    = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "severity"));
+        PMC *dead;
+        if (severity < EXCEPT_error) {
+            PMC *resume = VTABLE_get_attr_str(interp, exception, CONST_STRING(interp, "resume"));
+            if (string_equal(interp, message, CONST_STRING(interp, "")) == 1) {
+                Parrot_io_eprintf(interp, "%S\n", message);
+            }
+            else {
+                Parrot_io_eprintf(interp, "%S\n", CONST_STRING(interp, "Warning"));
+            }
 
-    if (!handler)
-        return NULL;
+            /* caution against output swap (with PDB_backtrace) */
+            fflush(stderr);
+            /* PDB_backtrace(interp); */
+
+            if (!PMC_IS_NULL(resume)) {
+                return VTABLE_invoke(interp, resume, NULL);
+            }
+        }
+        dead = die_from_exception(interp, exception);
+    }
 
     address    = VTABLE_invoke(interp, handler, dest);
 
@@ -263,14 +283,17 @@ the exception can be stored in the exception's payload.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void
 Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
 {
-    PMC * const        handler      = find_exception_handler(interp, exception);
+    PMC * const handler = Parrot_cx_find_handler_local(interp, exception);
     RunProfile * const profile      = interp->profile;
     Parrot_runloop    *return_point = interp->current_runloop;
+    if (PMC_IS_NULL(handler)) {
+        PMC *dead = die_from_exception(interp, exception);
+    }
 
     /* If profiling, remember end time of lastop and generate entry for
      * exception. */
@@ -284,10 +307,10 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     }
 
     if (Interp_debug_TEST(interp, PARROT_BACKTRACE_DEBUG_FLAG)) {
-        int exitcode = VTABLE_get_integer_keyed_str(interp, exception,
-                CONST_STRING(interp, "exit_code"));
-        STRING *msg = VTABLE_get_string(interp, exception);
-        PIO_eprintf(interp,
+        STRING *msg      = VTABLE_get_string(interp, exception);
+        int     exitcode = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "exit_code"));
+
+        Parrot_io_eprintf(interp,
             "Parrot_ex_throw_from_c (severity:%d error:%d): %Ss\n",
             EXCEPT_error, exitcode, msg);
         PDB_backtrace(interp);
@@ -323,7 +346,7 @@ C<exit_fatal()>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 opcode_t *
 Parrot_ex_throw_from_op_args(PARROT_INTERP, ARGIN_NULLOK(void *dest),
@@ -355,7 +378,7 @@ C<exit_fatal()>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void
 Parrot_ex_throw_from_c_args(PARROT_INTERP, ARGIN_NULLOK(void *ret_addr),
@@ -381,7 +404,7 @@ Rethrow the exception.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 opcode_t *
@@ -406,7 +429,7 @@ that this is called from within a handler setup with C<new_c_exception>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void
 Parrot_ex_rethrow_from_c(PARROT_INTERP, ARGIN(PMC *exception))
@@ -426,12 +449,11 @@ Mark an exception as unhandled, as part of rethrowing it.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_ex_mark_unhandled(PARROT_INTERP, ARGIN(PMC *exception))
 {
-    VTABLE_set_integer_keyed_str(interp, exception,
-            CONST_STRING(interp, "handled"), -1);
+    VTABLE_set_integer_keyed_str(interp, exception, CONST_STRING(interp, "handled"), -1);
 }
 
 /*
@@ -446,7 +468,7 @@ the runloop.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 size_t
 Parrot_ex_calc_handler_offset(PARROT_INTERP)
 {
@@ -479,7 +501,7 @@ A better version of assert() that gives a backtrace.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN_WHEN_FALSE
 void
 Parrot_assert(INTVAL condition, ARGIN(const char *condition_string),
@@ -499,7 +521,7 @@ Prints a backtrace and message for a failed assertion.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void
 Parrot_confess(ARGIN(const char *cond), ARGIN(const char *file), unsigned int line)
@@ -537,21 +559,20 @@ Parrot_print_backtrace(void)
             size, BACKTRACE_DEPTH);
 #  ifndef BACKTRACE_VERBOSE
     for (i = 0; i < size; i++) {
-        Dl_info frameInfo;
-        int found;
+        Dl_info   frameInfo;
+        const int found  = dladdr(array[i], &frameInfo);
 
         /* always indent */
-        const int indent = 2 + (2*i);
+        const int indent = 2 + (2 * i);
 
         fprintf(stderr, "%*s", indent, "");
-        found = dladdr(array[i], &frameInfo);
-        if (0 == found || NULL == frameInfo.dli_sname) {
-            fprintf(stderr, "(unknown)\n");
-        }
-        else {
+
+        if (found && frameInfo.dli_sname)
             fprintf(stderr, "%s\n", frameInfo.dli_sname);
-        }
+        else
+            fprintf(stderr, "(unknown)\n");
     }
+
 #  else
     { /* Scope for strings */
         char ** strings = backtrace_symbols(array, size);
@@ -584,7 +605,7 @@ require an interpreter).
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_DOES_NOT_RETURN
 void
 exit_fatal(int exitcode, ARGIN(const char *format), ...)

@@ -179,7 +179,7 @@ the exceptions system, or the concurrency scheduler.
 
 =item Compiler Developer
 
-Compiler Develoeprs develop and maintain one or more Parrot front-end
+Compiler Developers develop and maintain one or more Parrot front-end
 compilers such as IMCC, PIRC, PGE and TGE.
 
 =item High Level Language Developer
@@ -253,7 +253,7 @@ X<Spier, Robert>
 Last, but not least, is the glue that holds the project together.
 BjE<oslash>rn Hansen and Robert Spier manage the email, revision
 control, and bug-tracking systems, as well as the web sites for Parrot,
-U<http://www.parrot.org> and now U<http://www.parrot.org>. Without
+U<http://www.parrotcode.org> and now U<http://www.parrot.org>. Without
 these systems, the project would grind to a screeching halt.
 
 In the end, it is the developers themselves who hold the project
@@ -267,16 +267,17 @@ X<Parrot;mailing lists>
 Mailing lists are an important tool for communication, and the Parrot
 Development team maintains a special-purpose mailing list to coordinate
 the efforts of the many team members. The mailing list for Parrot is
-called "Parrot-Porters", and you can subscribe to it by sending a blank
-email message to  U<perl6-internals-subscribe@perl.org>. The list is
-archived at U<http://www.nntp.perl.org/group/perl.perl6.internals>
-and available via NNTP at U<nntp://nntp.perl.org/perl.perl6.internals>.
-Despite the presence of the term "perl6" in the list name, the list is
-not used to talk about Perl 6. The name is just a historical throw-back
-to the time when the Perl 6 and Parrot projects were one and the same.
+called "parrot-dev", and you can subscribe to it by sending a blank
+email message to  U<parrot-dev-subscribe@parrot.org>. The list is
+archived at U<http://dir.gmane.org/gmane.comp.compilers.parrot.devel>
+and available via NNTP at
+U<nntp://news.gmane.org/gmane.comp.compilers.parrot.devel>.
+This list was previously called "parrot-porters", and even earlier
+"perl6-internals". If you want to access posts from earlier in Parrot's
+history, search for internet archives of those lists.
 
-You can also read the Parrot-Porters list via Google Groups at
-U<http://groups-beta.google.com/group/perl.perl6.internals>
+You can also read the parrot-dev list via Google Groups at
+U<http://groups.google.com/group/parrot-dev>
 
 X<Parrot;sites>
 Parrot information and documentation can be accessed on the web in a
@@ -285,7 +286,7 @@ Parrot information you need to get started:
 
 =over 4
 
-=item * U<http://www.parrotcode.org>
+=item * U<http://www.parrot.org>
 
 =item * U<http://dev.perl.org/perl6>
 
@@ -363,7 +364,7 @@ Parrot information you need to get started:
 #  Tables
 #  ......
 #  A 2x2 table with top header row looks like this:
-#  
+#
 #  =begin table An Example Table
 #  =headrow
 #  =row

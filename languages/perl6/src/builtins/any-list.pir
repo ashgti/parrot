@@ -21,9 +21,8 @@ the size of that file down and to emphasize their generic,
 .namespace ['Any']
 .sub 'onload' :anon :init :load
     $P0 = get_hll_namespace ['Any']
-    '!EXPORT'('abs', 'from'=>$P0)
+    '!EXPORT'('end', 'from'=>$P0)
 .end
-
 
 =item elems()
 
@@ -53,8 +52,80 @@ the size of that file down and to emphasize their generic,
     list = self.'list'()
     $I0 = list.'elems'()
     dec $I0
-    $P0 = list[$I0]
-    .return ($P0)
+    .return ($I0)
+.end
+
+=item first(...)
+
+=cut
+
+.namespace []
+.sub 'first' :multi('Sub')
+    .param pmc test
+    .param pmc values :slurpy
+
+    .tailcall values.'first'(test)
+.end
+
+.namespace ['Any']
+.sub 'first' :method :multi(_, 'Sub')
+    .param pmc test
+    .local pmc retv
+    .local pmc iter
+    .local pmc block_res
+    .local pmc block_arg
+
+    iter = self.'iterator'()
+  loop:
+    unless iter goto nomatch
+    block_arg = shift iter
+    block_res = test(block_arg)
+    if block_res goto matched
+    goto loop
+
+  matched:
+    retv = block_arg
+    goto done
+
+  nomatch:
+    retv = '!FAIL'('Undefined value - first list match of no matches')
+
+  done:
+    .return(retv)
+.end
+
+=item grep(...)
+
+=cut
+
+.namespace []
+.sub 'grep' :multi('Sub')
+    .param pmc test
+    .param pmc values          :slurpy
+    .tailcall values.'grep'(test)
+.end
+
+.namespace ['Any']
+.sub 'grep' :method :multi(_, 'Sub')
+    .param pmc test
+    .local pmc retv
+    .local pmc iter
+    .local pmc block_res
+    .local pmc block_arg
+
+    retv = new 'List'
+    iter = self.'iterator'()
+  loop:
+    unless iter goto done
+    block_arg = shift iter
+    block_res = test(block_arg)
+
+    unless block_res goto loop
+    retv.'push'(block_arg)
+    goto loop
+
+  done:
+    .return(retv)
 .end
 
 =item join
@@ -81,6 +152,59 @@ the size of that file down and to emphasize their generic,
     .return ($S0)
 .end
 
+=item map()
+
+=cut
+
+.namespace []
+.sub 'map' :multi('Sub')
+    .param pmc expression
+    .param pmc values          :slurpy
+    .tailcall values.'map'(expression)
+.end
+
+.namespace ['Any']
+.sub 'map' :method :multi(_, 'Sub')
+    .param pmc expression
+    .local pmc res, elem, block, mapres, iter, args
+    .local int i, arity
+
+    arity = expression.'arity'()
+    if arity > 0 goto body
+    arity = 1
+  body:
+    res = new 'List'
+    iter = self.'iterator'()
+  map_loop:
+    unless iter goto done
+
+    # Creates arguments for closure
+    args = new 'ResizablePMCArray'
+
+    i = 0
+  args_loop:
+    if i == arity goto invoke
+    unless iter goto elem_undef
+    elem = shift iter
+    goto push_elem
+  elem_undef:
+    elem = new 'Failure'
+  push_elem:
+    push args, elem
+    inc i
+    goto args_loop
+
+  invoke:
+    (mapres :slurpy) = expression(args :flat)
+    unless mapres goto map_loop
+    mapres.'!flatten'()
+    $I0 = elements res
+    splice res, mapres, $I0, 0
+    goto map_loop
+
+  done:
+    .return(res)
+.end
 
 =item min
 
@@ -122,7 +246,9 @@ the size of that file down and to emphasize their generic,
     result = $P0
     goto loop
   fail:
-    result = 'undef'()
+    .local num failres
+    failres = "+Inf"
+    .return (failres)
   done:
     .return (result)
 .end
@@ -164,7 +290,9 @@ the size of that file down and to emphasize their generic,
     result = $P0
     goto loop
   fail:
-    result = 'undef'()
+    .local num failres
+    failres = "-Inf"
+    .return (failres)
   done:
     .return (result)
 .end
@@ -255,6 +383,66 @@ the size of that file down and to emphasize their generic,
     .tailcall self.'pick'($I0)
 .end
 
+=item reduce(...)
+
+=cut
+
+.namespace []
+.sub 'reduce' :multi('Sub')
+    .param pmc expression
+    .param pmc values          :slurpy
+    .tailcall values.'reduce'(expression)
+.end
+
+.namespace ['Any']
+.sub 'reduce' :method :multi(_, 'Sub')
+    .param pmc expression
+    .local pmc retv
+    .local pmc iter
+    .local pmc elem
+    .local pmc args
+    .local int i, arity
+
+    arity = expression.'arity'()
+    if arity < 2 goto error
+
+    iter = self.'iterator'()
+    unless iter goto empty
+    retv = shift iter
+  loop:
+    unless iter goto done
+
+    # Create arguments for closure
+    args = new 'ResizablePMCArray'
+    # Start with 1. First argument is result of previous call
+    i = 1
+
+  args_loop:
+    if i == arity goto invoke
+    unless iter goto elem_undef
+    elem = shift iter
+    goto push_elem
+  elem_undef:
+    elem = 'undef'()
+
+  push_elem:
+    push args, elem
+    inc i
+    goto args_loop
+
+  invoke:
+    retv = expression(retv, args :flat)
+    goto loop
+
+  empty:
+    .tailcall '!FAIL'('Cannot reduce an empty list')
+
+  error:
+    'die'('Cannot reduce() using a unary or nullary function.')
+
+  done:
+    .return(retv)
+.end
 
 =item reverse()
 
@@ -293,7 +481,7 @@ Parrot's built-in sort algorithm.
 .sub 'sort' :multi()
     .param pmc values          :slurpy
     .local pmc by
-    by = get_hll_global 'infix:cmp'
+    by = find_name 'infix:cmp'
     unless values goto have_by
     $P0 = values[0]
     $I0 = isa $P0, 'Sub'
@@ -308,30 +496,79 @@ Parrot's built-in sort algorithm.
     .param pmc by              :optional
     .param int has_by          :opt_flag
     if has_by goto have_by
-    by = get_hll_global 'infix:cmp'
+    by = find_name 'infix:cmp'
   have_by:
 
-    .local pmc list, fpa
+    ##  prepare self for sorting
+    .local pmc list
     .local int elems
-
     list = self.'list'()
-    list.'!flatten'()
     elems = list.'elems'()
-    fpa = new 'FixedPMCArray'
-    fpa = elems
+    ##  If there are fewer than two elements, no need to sort.
+    unless elems < 2 goto do_sort
+    .return (list)
 
-    .local int i
-    i = 0
+  do_sort:
+    ##  Get the comparison function to use.  We don't use C<by>
+    ##  directly, because FPA's sort doesn't work with MultiSub
+    ##  functions and isn't stable.  !COMPARESUB expects to be
+    ##  sorting indexes into C<list>, and also handles generation
+    ##  of values for subs with arity < 2.
+    .local pmc cmp
+    cmp = '!COMPARESUB'(list, by)
+
+    ##  create a FPA of indexes to be sorted using cmp
+    .local pmc fpa
+    fpa = new 'FixedPMCArray'
+    assign fpa, elems
+    $I0 = 0
   fpa_loop:
-    unless i < elems goto fpa_end
-    $P0 = list[i]
-    fpa[i] = $P0
-    inc i
+    unless $I0 < elems goto fpa_done
+    fpa[$I0] = $I0
+    inc $I0
     goto fpa_loop
-  fpa_end:
-    fpa.'sort'(by)
-    .tailcall 'list'(fpa)
+  fpa_done:
+    fpa.'sort'(cmp)
+    .tailcall list.'postcircumfix:[ ]'(fpa)
 .end
+
+.sub '!COMPARESUB' :anon
+    .param pmc list
+    .param pmc by
+    $I0 = can by, 'arity'
+    unless $I0 goto have_list
+    $I0 = by.'arity'()
+    unless $I0 < 2 goto have_list
+    list = list.'map'(by)
+    by = find_name 'infix:cmp'
+  have_list:
+    ##  Because of TT #56, we can't store Sub PMCs directly into
+    ##  the namespace.  So, we create an array to hold it for us.
+    set_global '@!compare', list
+    $P0 = new 'ResizablePMCArray'
+    push $P0, by
+    set_global '@!compare_by', $P0
+    .const 'Sub' $P99 = '!COMPARE_DO'
+    .return ($P99)
+.end
+
+.sub '!COMPARE_DO' :anon
+    .param int a
+    .param int b
+    .local pmc list, by
+    list = get_global '@!compare'
+    $P0  = get_global '@!compare_by'
+    by   = $P0[0]
+
+    $P0 = list[a]
+    $P1 = list[b]
+    $I0 = by($P0, $P1)
+    unless $I0 == 0 goto done
+    $I0 = cmp a, b
+  done:
+    .return ($I0)
+.end
+
 
 =back
 

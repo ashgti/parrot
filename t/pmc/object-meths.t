@@ -356,7 +356,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "methods: self w arg and ret" );
     B."blah"()
     self."blah"()
     .begin_return
-    .return B
+    .set_return B
     .end_return
 
 .end
@@ -727,7 +727,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "method cache invalidation" );
     subclass cl, cl, "Bar"
     o = new "Bar"
     print o
-    $P0 = global "ok2"
+    $P0 = find_global "ok2"
     cl.'add_method'('get_string', $P0, 'vtable' => 1)
     print o
 .end
@@ -757,8 +757,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', "callmethod - method name" );
 .namespace ["Foo"]
 .sub meth :method
     print "in meth\n"
-    getinterp P0
-    $P1 = P0["sub"]
+    getinterp $P0
+    $P1 = $P0["sub"]
     print $P1
     print "\n"
     .return ()

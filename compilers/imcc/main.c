@@ -445,7 +445,7 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
                 exit(EX_USAGE);
                 break;
             case OPT_RUNTIME_PREFIX:
-                PIO_printf(interp, "%Ss\n",
+                Parrot_io_printf(interp, "%Ss\n",
                     Parrot_get_runtime_path(interp));
                 exit(EXIT_SUCCESS);
             case 'V':
@@ -591,7 +591,6 @@ do_pre_process(PARROT_INTERP)
             case RESULT:        printf(".result "); break;
             case RETURN:        printf(".return "); break;
             case NAMESPACE:     printf(".namespace "); break;
-            case ENDNAMESPACE:  printf(".endnamespace"); break;
             case CONST:         printf(".const "); break;
             case PARAM:         printf(".param "); break;
             /* RT#46147: print out more information about the macro */

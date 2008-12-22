@@ -7,7 +7,7 @@ use lib ("lib/");
 use Parrot::OpLib::core;
 use Parrot::OpsFile;
 use File::Spec;
-use IO::File;
+use IO::File ();
 
 =head1 NAME
 
@@ -133,7 +133,7 @@ sub new {
     my $sym_export =
         $flagref->{dynamic}
         ? 'PARROT_DYNEXT_EXPORT'
-        : 'PARROT_API';
+        : 'PARROT_EXPORT';
 
     my $ops;
     if ( $flagref->{core} ) {

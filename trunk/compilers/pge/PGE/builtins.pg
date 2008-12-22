@@ -1,4 +1,0 @@
-grammar PGE::Grammar;
-
-token name { <ident> [ \:\: <ident> ]* }
-

@@ -16,9 +16,23 @@ php_API.pir - PHP API Library
 .include 'languages/pipp/src/common/php_MACRO.pir'
 
 .sub '__onload' :anon :load :init
+
     # symbol table for constants
     new $P0, 'Hash'
     set_hll_global 'php_constants', $P0
+
+    # set up error codes
+    .local pmc cst
+    .GET_CONSTANTS(cst)
+    .REGISTER_LONG_CONSTANT(cst, 'E_ERROR', E_ERROR)
+    .REGISTER_LONG_CONSTANT(cst, 'E_WARNING', E_WARNING)
+    .REGISTER_LONG_CONSTANT(cst, 'E_CORE', E_CORE)
+
+    # set up default error_reporting
+    $P1 = new 'PhpInteger'
+    $I1 = E_ERROR | E_WARNING
+    $P1 = $I1
+    error_reporting( $P1 )
 .end
 
 =item C<error>
@@ -28,10 +42,18 @@ php_API.pir - PHP API Library
 .sub 'error'
     .param int level
     .param pmc args :slurpy
-    .local string msg
-    msg = join '', args
-    msg .= "\n"
-    printerr msg
+
+    ($P0) = error_reporting()
+    $P1 = new 'PhpInteger'
+    $P1 = level
+    $P2 = $P0 & $P1      # check the mask for error reporting
+    unless $P2 goto L1
+        .local string msg
+        msg = join '', args
+        msg .= "\n"
+
+        printerr msg
+  L1:     # print no message
 .end
 
 
@@ -42,10 +64,11 @@ php_API.pir - PHP API Library
 .sub 'fetch_resource'
     .param pmc val
     .param string type
+
     $I0 = isa val, 'PhpResource'
     if $I0 goto L1
     $P0 = getinterp
-    $P1 = $P0['sub', 1]
+    $P1 = $P0['sub'; 1]
     error(E_WARNING, $P1, "(): supplied argument is not a valid ", type, " resource")
     null $P0
     .return ($P0)
@@ -56,7 +79,7 @@ php_API.pir - PHP API Library
     .return ($P0)
   L2:
     $P0 = getinterp
-    $P1 = $P0['sub', 1]
+    $P1 = $P0['sub'; 1]
     error(E_WARNING, $P1, "(): supplied resource is not a valid ", type, " resource")
     null $P0
     .return ($P0)
@@ -71,6 +94,7 @@ DUMMY IMPLEMENTATION.
 
 .sub 'get_module_version'
     .param string ext
+
     .return ('')
 .end
 
@@ -82,8 +106,9 @@ STILL INCOMPLETE (see parse_arg_impl).
 =cut
 
 .sub 'parse_parameters'
-   .param string fmt
-   .param pmc args :slurpy
+    .param string fmt
+    .param pmc args :slurpy
+
     .local int num_args
     .local int min_num_args
     .local int max_num_args
@@ -106,7 +131,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     $I0 = index '!/', $S0
     if $I0 > -1 goto L1
     $P0 = getinterp
-    $P1 = $P0['sub', 1]
+    $P1 = $P0['sub'; 1]
     error(E_WARNING, $P1, '(): bad type specifier while parsing parameters')
     .return (0)
   L2:
@@ -118,7 +143,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     goto L7
   L6:
     $P0 = getinterp
-    $P1 = $P0['sub', 1]
+    $P1 = $P0['sub'; 1]
     unless min_num_args == max_num_args goto L8
     $S1 = 'exactly'
     goto L9
@@ -175,7 +200,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     (expected_type, $P1, $I2) = parse_arg_impl(arg, fmt, ifmt)
     if expected_type == '' goto L1
     $P0 = getinterp
-    $P1 = $P0['sub', 2]
+    $P1 = $P0['sub'; 2]
     $S3 = typeof arg
     error(E_WARNING, $P1, '() expects parameter ', iarg, ' to be ', expected_type, ', ', $S3, ' given')
     .return (0)
@@ -208,7 +233,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'l' goto not_long
     $I0 = isa arg, 'PhpInteger'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     if $I0 goto L11
     $I0 = isa arg, 'PhpFloat'
     if $I0 goto L11
@@ -235,7 +260,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'd' goto not_double
     $I0 = isa arg, 'PhpFloat'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     if $I0 goto L21
     $I0 = isa arg, 'PhpInteger'
     if $I0 goto L21
@@ -263,7 +288,7 @@ STILL INCOMPLETE (see parse_arg_impl).
 #    $I0 = isa arg, 'PhpString'
     $I0 = isa arg, 'String'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     if $I0 goto L31
     $I0 = isa arg, 'PhpFloat'
     if $I0 goto L31
@@ -285,7 +310,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'b' goto not_boolean
     $I0 = isa arg, 'PhpBoolean'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     if $I0 goto L41
     $I0 = isa arg, 'PhpFloat'
     if $I0 goto L41
@@ -305,7 +330,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'r' goto not_resource
     $I0 = isa arg, 'PhpResource'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     unless $I0 goto L51
     unless return_null goto L51
     goto L5
@@ -315,7 +340,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'a' goto not_array
     $I0 = isa arg, 'PhpArray'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     unless $I0 goto L61
     unless return_null goto L61
     goto L5
@@ -325,7 +350,7 @@ STILL INCOMPLETE (see parse_arg_impl).
     unless c == 'h' goto not_hash
     $I0 = isa arg, 'PhpArray'
     if $I0 goto L5
-    $I0 = isa arg, 'PhpUndef'
+    $I0 = isa arg, 'PhpNull'
     unless $I0 goto L71
     unless return_null goto L71
     goto L5
@@ -366,7 +391,7 @@ STILL INCOMPLETE (see parse_arg_impl).
 
 .sub 'wrong_param_count'
     $P0 = getinterp
-    $P1 = $P0['sub', 1]
+    $P1 = $P0['sub'; 1]
     error(E_WARNING, 'Wrong parameter count for ', $P1, '()')
 .end
 
@@ -404,8 +429,20 @@ STILL INCOMPLETE (see parse_arg_impl).
     .param string mode
     .param int options
     .param pmc context :optional
-    $P0 = open path, mode
+
+    # for now ignore failures
+    push_eh catch
+
+    $P0 = new 'FileHandle'
+    $P0.'open'( path, mode )
+
+    pop_eh
+
     .return ($P0)
+
+catch:
+    .RETURN_FALSE()
+
 .end
 
 =item C<stream_passthru>

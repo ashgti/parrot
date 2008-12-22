@@ -42,7 +42,7 @@ etc.).
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 string_set_data_directory(PARROT_INTERP, ARGIN(const char *dir))
 {
@@ -78,7 +78,7 @@ sequence, right after the \.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 Parrot_UInt4
 string_unescape_one(PARROT_INTERP, ARGMOD(UINTVAL *offset),
         ARGMOD(STRING *string))
@@ -315,7 +315,7 @@ C<Parrot_char_is_digit()> returns false.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CONST_FUNCTION
 INTVAL
 Parrot_char_digit_value(SHIM_INTERP, UINTVAL character)
@@ -340,7 +340,7 @@ out of memory.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 char *
@@ -352,6 +352,35 @@ str_dup(ARGIN(const char *old))
 #ifdef MEMDEBUG
     debug(interp, 1, "line %d str_dup %s [%x]\n", line, old, copy);
 #endif
+    return copy;
+}
+
+/*
+
+=item C<char * str_dup>
+
+Duplicates a C string.  Just like strdup(), except it dies if it runs out of
+memory.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_MALLOC
+PARROT_CANNOT_RETURN_NULL
+char *
+str_dup_remove_quotes(ARGIN(const char *old))
+{
+    const size_t oldlen = strlen(old) + 1;
+
+    /* 2 for the beginning and ending quote chars */
+    const size_t newlen = oldlen - 2;
+    char * const copy   = (char *)mem_sys_allocate(newlen);
+
+    memcpy(copy, old + 1, newlen);
+    copy[newlen - 1] = 0;
+
     return copy;
 }
 

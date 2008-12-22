@@ -204,8 +204,7 @@ init_class_from_hash(PARROT_INTERP, PMC *self, PMC *info)
                 "Failed to set namespace for class.");
 
         /* Set the name of the class to the name of the innermost namespace
-         * associated with the class.
-         */
+         * associated with the class.  */
         new_name = VTABLE_get_string(interp, new_namespace);
 
         if (STRING_IS_NULL(new_name) || STRING_IS_EMPTY(new_name))
@@ -694,6 +693,25 @@ Adds the given sub PMC as a method with the given name.
 
 /*
 
+=item C<void remove_method(STRING *name, PMC *sub)>
+
+Removes the method with the given name.
+
+=cut
+
+*/
+    VTABLE void remove_method(STRING *name) {
+        Parrot_Class_attributes * const _class = PARROT_CLASS(SELF);
+        if (VTABLE_exists_keyed_str(interp, _class->methods, name))
+            VTABLE_delete_keyed_str(interp, _class->methods, name);
+        else
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "No method named '%S' to remove in class '%S'.",
+                name, VTABLE_get_string(interp, SELF));
+    }
+
+/*
+
 =item C<void add_vtable_override(STRING *name, PMC *sub)>
 
 Adds the given sub PMC as a vtable override with the given name.
@@ -1119,30 +1137,6 @@ Creates a new PMC object of the type of the class and calls init().
             }
         }
 
-        /* If we have parents that are out of this class universe, find them
-         * in the MRO and create instances of them. */
-        if (CLASS_has_alien_parents_TEST(SELF)) {
-            const INTVAL mro_length = VTABLE_elements(interp, _class->all_parents);
-            int i;
-
-            for (i = 0; i < mro_length; i++) {
-                PMC * const class_check = VTABLE_get_pmc_keyed_int(interp,
-                    _class->all_parents, i);
-
-                if (!VTABLE_isa(interp, class_check, class_str)) {
-                    /* From another universe. Create instance... */
-                    PMC * const parent_ins = VTABLE_instantiate(interp, class_check, PMCNULL);
-
-                    /* Associate it with this class as the real self. */
-                    parent_ins->real_self = object;
-
-                    /* ...and tack on end of the attribute store (after all the
-                     * slots for attributes). */
-                    VTABLE_push_pmc(interp, obj_guts->attrib_store, parent_ins);
-                }
-            }
-        }
-
         /* Check for overrides on the init or init_pmc vtable function and call
          * them if they exist */
         if (PMC_IS_NULL(init))
@@ -1166,7 +1160,6 @@ Returns whether the class is or inherits from C<*class>.
 
     VTABLE INTVAL isa_pmc(PMC *lookup) {
         Parrot_Class_attributes * const _class    = PARROT_CLASS(SELF);
-        STRING       *classname, *self_name;
         PMC          *classobj;
         INTVAL        i, num_classes;
 
@@ -1184,21 +1177,26 @@ Returns whether the class is or inherits from C<*class>.
         /* Check if the class object is the same as self's class object */
         if (VTABLE_is_same(interp, SELF, classobj))
             return 1;
+        else {
+            STRING *classname = VTABLE_get_string(interp, classobj);
+            INTVAL  is_proxy  = SELF->vtable->base_type == enum_class_PMCProxy
+                               ? 1 : 0;
 
-        classname = VTABLE_get_string(interp, classobj);
+            /* avoid the expensive string copy, if possible */
+            STRING *self_name = is_proxy
+                               ? VTABLE_get_string(interp, SELF)
+                               : make_class_name(interp, SELF);
 
-        /* avoid the expensive string copy, if possible */
-        self_name = SELF->vtable->base_type != enum_class_PMCProxy
-                  ? make_class_name(interp, SELF)
-                  : VTABLE_get_string(interp, SELF);
+            /* Check if the passed name is the same as the stored short name. */
+            INTVAL name_match = string_equal(interp, classname, self_name) == 0;
 
-        /* Check if the passed name is the same as the stored short name. */
-        if (string_equal(interp, classname, self_name) == 0)
-            return 1;
+            string_free(interp, classname);
+            if (is_proxy)
+                string_free(interp, self_name);
 
-        /* Check if the passed name is the same as the fully qualified name. */
-        if (string_equal(interp, classname, VTABLE_get_string(interp, SELF)) == 0)
-            return 1;
+            if (name_match)
+                return 1;
+        }
 
         /* Iterate over all the parents and check if they respond true
          * for 'isa' on the original comparison. */
@@ -1663,6 +1661,34 @@ C<add_method> vtable method.
         /* Provided it's not anonymous, add it to the methods list. */
         if (!has_anon || !anon)
             SELF.add_method(name, sub);
+    }
+
+/*
+
+=item C<void add_vtable_override(STRING *name, PMC *sub)>
+
+Adds the given sub PMC as a vtable override with the given name. Delegates to
+the C<add_vtable_override> vtable method.
+
+=cut
+
+*/
+    METHOD add_vtable_override(STRING *name, PMC *sub) {
+        VTABLE_add_vtable_override(interp, SELF, name, sub);
+    }
+
+/*
+
+=item C<void remove_method(STRING *name)>
+
+Removes the method with the given name.
+
+=cut
+
+*/
+    METHOD remove_method(STRING *name)
+    {
+        VTABLE_remove_method(interp, SELF, name);
     }
 
 /*

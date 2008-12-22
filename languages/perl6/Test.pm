@@ -11,6 +11,8 @@ our $num_of_tests_planned;
 our $todo_upto_test_num = 0;
 our $todo_reason = '';
 
+our $*WARNINGS = 0;
+
 # for running the test suite multiple times in the same process
 our $testing_started;
 
@@ -140,6 +142,48 @@ multi sub eval_lives_ok($code, $reason) is export() {
 }
 multi sub eval_lives_ok($code) is export() {
     eval_lives_ok($code, '');
+}
+
+
+multi sub is_deeply($this, $that, $reason) {
+    my $val = _is_deeply( $this, $that );
+    proclaim($val, $reason);
+}
+
+multi sub is_deeply($this, $that) {
+    my $val = _is_deeply( $this, $that );
+    proclaim($val, '');
+}
+
+sub _is_deeply( $this, $that) {
+
+    if $this ~~ Array && $that ~~ Array {
+        return if +$this.values != +$that.values;
+        for $this Z $that -> $a, $b {
+            return if ! _is_deeply( $a, $b );
+        }
+        return True;
+    }
+    elsif $this ~~ Hash && $that ~~ Hash {
+        return if +$this.keys != +$that.keys;
+        for $this.keys.sort Z $that.keys.sort -> $a, $b {
+            return if $a ne $b;
+            return if ! _is_deeply( $this{$a}, $that{$b} );
+        }
+        return True;
+    }
+    elsif $this ~~ Str | Num | Int && $that ~~ Str | Num | Int {
+        return $this eq $that;
+    }
+    elsif $this ~~ Pair && $that ~~ Pair {
+        return $this.key eq $that.key
+               && _is_deeply( $this.value, $this.value );
+    }
+    elsif $this ~~ undef && $that ~~ undef && $this.WHAT eq $that.WHAT {
+        return True;
+    }
+
+    return;
 }
 
 

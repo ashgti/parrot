@@ -1,5 +1,5 @@
 Name:           parrot
-Version:        0.8.0
+Version:        0.8.2
 Release:        1%{?dist}
 Summary:        Parrot Virtual Machine
 License:        Artistic 2.0
@@ -55,7 +55,7 @@ Parrot Virtual Machine development headers and libraries.
     --sysconfdir=%{_sysconfdir} \
     --infodir=%{_datadir}/info \
     --mandir=%{_mandir} \
-    --cc=%{__cc} \
+    --cc="%{__cc}" \
     --cxx=%{__cxx} \
     --optimize="$RPM_OPT_FLAGS -maccumulate-outgoing-args" \
     --parrot_is_shared \
@@ -132,6 +132,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Dec 16 2008 Whiteknight <wknight8111@gmail.com> 0.8.2
+- updated to 0.8.2
+
+* Tue Nov 18 2008 chromatic <chromatic@parrot.org> 0.8.1
+- updated to 0.8.1
+
 * Tue Oct 21 2008 particle <particle@parrot.org> 0.8.0
 - updated to 0.8.0
 

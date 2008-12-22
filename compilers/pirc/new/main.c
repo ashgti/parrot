@@ -15,6 +15,7 @@
 #include "pirlexer.h"
 #include "pirheredoc.h"
 #include "pirregalloc.h"
+#include "piremit.h"
 
 /* global variable to set parser in debug mode.
  * It is not clear to me whether the global can be replaced
@@ -66,8 +67,9 @@ print_help(char const * const program_name)
 {
     fprintf(stderr, "Usage: %s [options] <file>\n", program_name);
     fprintf(stderr, "Options:\n\n"
-    "  -E        run heredoc and macro preprocessors only\n"
+    "  -b        generate bytecode\n"
     "  -d        show debug messages of parser\n"
+    "  -E        run heredoc and macro preprocessors only\n"
     "  -h        show this help message\n"
     "  -H        heredoc preprocessing only\n"
     "  -m <size> specify initial macro buffer size; default is 4096 bytes\n"
@@ -179,18 +181,18 @@ parse_file(int flexdebug, FILE *infile, char * const filename, int flags, int th
             lexer->outfile = stdout;
         }
 
-        /* if register allocation was requested, do that now */
-        if (TEST_FLAG(lexer->flags, LEXER_FLAG_REGALLOC))
-            linear_scan_register_allocation(lexer->lsr);
-
         if (TEST_FLAG(lexer->flags, LEXER_FLAG_NOOUTPUT)) /* handy for testing the compiler */
             fprintf(stdout, "ok\n");
         else if (TEST_FLAG(lexer->flags, LEXER_FLAG_PREPROCESS))
             emit_pir_subs(lexer);
-        else {
+        else if (TEST_FLAG(lexer->flags, LEXER_FLAG_OUTPUTPBC))
+            emit_pbc(lexer);
+        else
+            /*
             fprintf(stderr, "Parse successful!\n");
+            */
             print_subs(lexer);
-        }
+
 
         fclose(lexer->outfile);
 
@@ -206,9 +208,14 @@ parse_file(int flexdebug, FILE *infile, char * const filename, int flags, int th
     fclose(infile);
 
 
+    /* XXX just want to make sure pirc doesn't segfault when doing bytecode stuff. */
+    if (TEST_FLAG(lexer->flags, LEXER_FLAG_OUTPUTPBC))
+        fprintf(stderr, "pirc ok\n");
+
     /* clean up after playing */
     release_resources(lexer);
     yypirlex_destroy(yyscanner);
+
 }
 
 /*
@@ -267,6 +274,9 @@ main(int argc, char *argv[]) {
      * the standard funtion for that, right now. This is a TODO. */
     while (argc > 0 && argv[0][0] == '-') {
         switch (argv[0][1]) {
+            case 'b':
+                SET_FLAG(flags, LEXER_FLAG_OUTPUTPBC);
+                break;
             case 'E':
                 SET_FLAG(flags, LEXER_FLAG_PREPROCESS);
                 break;
@@ -436,7 +446,7 @@ yypirerror(yyscan_t yyscanner, NOTNULL(lexer_state * const lexer),
     char const * const current_token = yypirget_text(yyscanner);
     va_list arg_ptr;
 
-    fprintf(stderr, "\nError in file '%s' (line %d)\n\n", lexer->filename,
+    fprintf(stderr, "\nError in file '%s' (line %d)\n\t", lexer->filename,
             yypirget_lineno(yyscanner));
 
     va_start(arg_ptr, message);
@@ -447,7 +457,7 @@ yypirerror(yyscan_t yyscanner, NOTNULL(lexer_state * const lexer),
 
     /* print current token if it doesn't contain a newline token. */
     if (!strstr(current_token, "\n"))
-        fprintf(stderr, "\ncurrent token: '%s'", current_token);
+        fprintf(stderr, "\n\tcurrent token: '%s'", current_token);
 
     fprintf(stderr, "\n\n");
 

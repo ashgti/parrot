@@ -33,6 +33,13 @@ php_info.pir - PHP info Standard Library
     .REGISTER_STRING_CONSTANT(cst, 'PHP_EXTRA_VERSION', " on Parrot")
     .REGISTER_LONG_CONSTANT(cst, 'PHP_VERSION_ID', 50300)
     .REGISTER_LONG_CONSTANT(cst, 'PHP_ZTS', 0)
+
+    .REGISTER_STRING_CONSTANT(cst, 'DEFAULT_INCLUDE_PATH', '.')
+
+    # register NULL
+    new $P0, 'PhpNull'
+    cst['NULL'] = $P0
+
 .end
 
 .sub 'logo_guid' :anon

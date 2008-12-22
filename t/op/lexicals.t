@@ -7,7 +7,14 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 47;
+use Parrot::Test;
+
+$ENV{TEST_PROG_ARGS} ||= '';
+
+plan( skip_all => 'lexicals not thawed properly from PBC, RT #60652' )
+    if $ENV{TEST_PROG_ARGS} =~ /-r/;
+
+plan( tests => 47 );
 
 =head1 NAME
 
@@ -34,7 +41,7 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', '.lex parsing - PIR' );
 .sub main
-    .lex "$a", P0
+    .lex "$a", $P0
     print "ok\n"
 .end
 CODE
@@ -194,16 +201,16 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set var via pad' );
     .local pmc pad, interp
     interp = getinterp
     pad = interp["lexpad"]
-    .lex '$a', P0
+    .lex '$a', $P0
     unless null pad goto ok
     print "pad is NULL\n"
     end
 ok:
     print "ok\n"
-    P1 = new 'Integer'
-    P1 = 13013
-    pad['$a'] = P1
-    print P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    pad['$a'] = $P1
+    print $P0
     print "\n"
     end
 .end
@@ -214,8 +221,8 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set two vars via pad (2 lex -> 2 pmc)' );
 .sub main
-    .lex '$a', P0
-    .lex '$b', P2
+    .lex '$a', $P0
+    .lex '$b', $P2
     .local pmc pad, interp
     interp = getinterp
     pad = interp["lexpad"]
@@ -225,14 +232,14 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexpad - set two vars via pad (2 lex -
     end
 ok:
     print "ok\n"
-    P1 = new 'Integer'
-    P1 = 13013
-    pad['$a'] = P1
-    print P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    pad['$a'] = $P1
+    print $P0
     print "\n"
-    P1 = 42
-    pad['$b'] = P1
-    print P2
+    $P1 = 42
+    pad['$b'] = $P1
+    print $P2
     print "\n"
     end
 .end
@@ -244,11 +251,11 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'synopsis example' );
 .sub main
-    .lex '$a', P0
-    P1 = new 'Integer'
-    P1 = 13013
-    store_lex '$a', P1
-    print P0
+    .lex '$a', $P0
+    $P1 = new 'Integer'
+    $P1 = 13013
+    store_lex '$a', $P1
+    print $P0
     print "\n"
     end
 .end
@@ -321,7 +328,7 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'get_lexinfo from pad' );
 .sub main
-    .lex '$a', P0
+    .lex '$a', $P0
     .local pmc pad, interp, info
     interp = getinterp
     pad = interp["lexpad"]
@@ -1263,6 +1270,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure (RT
 .sub 'bar' :outer('foo')
     .param pmc b
     .lex '$b', b
+    .const 'Sub' $P0 = 'bar_inner'
+    capture_lex $P0
     .local pmc a
     a = find_lex '$a'
     print a
@@ -1289,7 +1298,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398:  Patrick's request" );
     foo('try 3')
 .end
 
-.sub 'foo' :lexid('foo')
+.sub 'foo' :subid('foo')
     .param pmc x
     .lex '$x', x
     print "outer foo "

@@ -1,18 +1,146 @@
 # $Id$
 
-New in the November 2008 release
-- Implementation
-  + remove the pseudo PIR opcode 'addr'
+New in January 2009 release
 - Compilers
+  + IMCC
+    - removed keyed string indexing, e.g. $S0[1].
+    - removed slice syntax, e.g. $P0[1..2]
+    - removed .namespace <ident>/.endnamespace <ident> pair
   + PIRC
-    - Integrated macro processing in PIRC's lexer
-    - Integrated heredoc lexer in PIRC executable
-    - Added preprocess and heredoc-preprocess commandline options
-    - Integrated the PASM grammar into PIRC
-    - Added a register allocator to optimize the built-in vanilla allocator
-    - code cleanups and documentation
+    - refactoring of data structures
+    - various bug fixes and updates
+- Languages
+  + Pipp
+    - added support for 'elsif'
+
+New in 0.8.2
+- Implementation
+  + fixed lexical semantics
+  + added the 'capture_lex' opcode
+  + added automatic resume for nonfatal exceptions
+  + added multidispatch cache
+  + applied miscellaneous performance improvements, including startup time
+  + fixed several bugs and leaks found by Coverity Scan
+  + removed race conditions from parallel testing
+- Compilers
+  + IMCC
+    - removed undocumented .param int <stringc> => <ident> syntax
+    - .line directive now only takes an integer argument
+    - new .file directive to specify the file name being compiled
+  + PCT
+    - properly handles lexical generation and closure semantics
+    - uses :subid instead of name lookups to reference PAST::Block nodes
+    - added PAST::Control node type (exception handlers)
+  + PGE
+    - add support for <?{{...}}> and <!{{...}}> assertions
+    - Match objects use Capture PMC instead of Capture_PIR
+  + PIRC
+    - add macro handling to PASM mode
+    - disable vanilla register allocation in PASM mode, but do allow optimization
+    - add tests and bug fixes
+    - first bits of bytecode generation. No sub calling/returning yet.
+- Languages
+  + Rakudo
+    - fixed lexical handling and recursion
+    - refactored subtypes implementation
+    - support for quotes with multi-character delimiters
+    - implemented list slices (Positional role)
+    - list assignment
+    - reduction meta operators
+    - hyper meta operators
+    - cross meta operators
+    - more builtin functions
+    - added Nil type
+    - basic support for protos
+    - iterator on filehandle objects
+    - basic support for exception handlers
+    - warn
+  + Lua
+    - added complex & mathx libraries
+    - merged LuaClosure & LuaFunction PMC
+  + Pipp
+    - added support for a return value from user defined functions
+    - added incomplete implemention of 'require_once'
+  + Ecmascript
+    - parser fixes, parses spidermonkey's top level test/shell.js
 - Deprecations
-    + PARROT_API has changed to PARROT_EXPORT
+  + PARROT_API is now PARROT_EXPORT
+  + PIR
+    - :lexid is now :subid
+    - .arg is now .set_arg
+    - .result is now .get_result
+    - .yield (in .begin/end_yield) is now .set_yield
+    - .return (in .begin/end_return) is now .set_return
+    - .namespace x / .endnamespace x syntax is removed
+  + Capture_PIR (runtime/parrot/library/Parrot/Capture_PIR.pir)
+
+New in 0.8.1
+- Implementation
+  + added CPAN module Storable 2.12 as a configuration and build dependency
+  + removed the pseudo PIR opcode 'addr'
+  + added the 'box' opcode
+  + fixed 'pop_eh' handling in PIR libraries and examples
+  + removed usage of .return for tailcalls (use .tailcall instead)
+  + removed 'get_hash' and 'get_array' from Capture PMC and Capture_PIR
+  + improved debugger and HLL coordination
+  + allowed MMD primitive autoboxing
+  + fixed all known memory leaks in PIR "Hello, world!"
+  + NCI signatures now JITted on x86-32 platforms (Windows and Linux)
+  + made the .const directive take a quoted type name instead of a constant
+  + made IMCC more re-entrant
+- Languages
+  + Rakudo
+    - refactored Junctions implementation
+    - added "fire and forget" tool to rebase/rebuild/test Parrot and Rakudo
+    - updated container/reference semantics
+    - added more builtin methods and functions
+    - improved support for multilevel namespaces
+    - added support for .Str, .succ, .pred in user-defined classes
+    - implemented pointy blocks on if/loops
+    - increased STD.pm convergence
+    - added %*VM hash
+    - improved MMD candidate sorting
+    - improved integration of Num and Int
+    - implemented increment on protoobjects
+    - added initial support for MAIN subs
+    - added .PARROT method
+  + Pipp
+    - added some predefined constants
+    - added implemention of the function basename()
+  + Cardinal (Ruby)
+    - Added initial support for the classes Proc, Continuation, Queue, Dir, File, and FileStat
+    - fixed various minor bugs
+    - fixed broken Regexes
+- Compilers
+  + PCT
+    - added '.isa' method to PCT::Node
+    - cleaned up 'immediate block' handling
+    - allowed arguments to immediate blocks in loops/conditionals
+    - metaclass objects can now 'add_method'
+  + PIRC
+    - integrated macro processing in PIRC's lexer
+    - integrated heredoc lexer in PIRC executable
+    - added preprocess and heredoc-preprocess commandline options
+    - integrated the PASM grammar into PIRC
+    - added a register allocator to optimize the built-in vanilla allocator
+    - code cleanups and documentation
+    - added 'make test' target
+   + TGE
+    - updated to work with new namespace/classname syntax
+- Deprecations
+  + PARROT_API will become PARROT_EXPORT
+  + :lexid will become :subid
+- Miscellaneous
+  + Documentation
+    - updates and additions to the Parrot book (see docs/book/)
+  + OpenGL
+    - minor fixes to Parrot's base OpenGL bindings
+    - converted OpenGL PIR examples to Perl 6 (two complete, one WIP)
+    - added simplified OpenGL PIR example for NCI JIT testing
+  + Tests
+    - further improvements to parallel tests
+    - tests no longer leave filesystem breadcrumbs
+    - more thorough testing of Parrot::Test itself
 
 New in 0.8.0
 - Implementation

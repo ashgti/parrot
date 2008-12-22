@@ -497,9 +497,18 @@ class and their strings are aliases of the same internal string.
 
 */
     VTABLE INTVAL is_same(PMC *value) {
-        const STRING * const s = VTABLE_get_string(INTERP, SELF);
-        const STRING * const v = VTABLE_get_string(INTERP, value);
-        return (INTVAL)(value->vtable == SELF->vtable && s == v);
+        if (PMC_IS_NULL(value)) {
+            return 0;
+        }
+        else {
+            if (value->vtable == SELF->vtable) {
+                const STRING * const s = VTABLE_get_string(INTERP, SELF);
+                const STRING * const v = VTABLE_get_string(INTERP, value);
+                return (INTVAL)(s == v);
+            }
+            else
+                return 0;
+        }
     }
 
 /*

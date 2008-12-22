@@ -139,7 +139,6 @@ NONGEN_HEADERS   = @TEMP_nongen_headers@
 GEN_MAKEFILES = \
     Makefile \
 #CONDITIONED_LINE(has_perldoc):    docs/Makefile \
-    compilers/bcg/Makefile \
     compilers/json/Makefile \
     compilers/ncigen/Makefile \
     compilers/nqp/Makefile \
@@ -229,6 +228,7 @@ GEN_SOURCES = \
     $(SRC_DIR)/null_config.c \
     $(SRC_DIR)/install_config.c \
     $(SRC_DIR)/exec_cpu.c \
+    $(SRC_DIR)/jit_defs.c \
     $(SRC_DIR)/extend_vtable.c
 
 GEN_MODULES = \
@@ -354,16 +354,14 @@ ENCODING_O_FILES  = @TEMP_encoding_o@
 
 
 IO_O_FILES = \
-    $(IO_DIR)/io$(O) \
-    $(IO_DIR)/io_buf$(O) \
-    $(IO_DIR)/io_layers$(O) \
-    $(IO_DIR)/io_unix$(O) \
-    $(IO_DIR)/io_utf8$(O) \
-    $(IO_DIR)/io_mmap$(O) \
-    $(IO_DIR)/io_win32$(O) \
-    $(IO_DIR)/io_stdio$(O) \
-    $(IO_DIR)/io_string$(O) \
-    $(IO_DIR)/io_passdown$(O)
+    $(IO_DIR)/core$(O) \
+    $(IO_DIR)/api$(O) \
+    $(IO_DIR)/utf8$(O) \
+    $(IO_DIR)/buffer$(O) \
+    $(IO_DIR)/unix$(O) \
+    $(IO_DIR)/win32$(O) \
+    $(IO_DIR)/portable$(O) \
+    $(SRC_DIR)/io$(O)
 
 INTERP_O_FILES = \
     $(SRC_DIR)/string$(O) \
@@ -584,7 +582,7 @@ STR_FILES = \
     $(SRC_DIR)/inter_cb.str \
     $(SRC_DIR)/inter_create.str \
     $(SRC_DIR)/inter_misc.str \
-    $(SRC_DIR)/io/io.str \
+    $(SRC_DIR)/io/api.str \
     $(SRC_DIR)/key.str \
     $(SRC_DIR)/library.str \
     $(SRC_DIR)/multidispatch.str \
@@ -684,6 +682,7 @@ help :
 	@echo "  codingstd_tests:   Test pdd07_codingstd."
 	@echo "  testexec:          Testing the exec runcore."
 	@echo "  benchmark_tests:   Run all benchmarks."
+	@echo "  warnings_tests:    Run standard test suite with warnings enabled."
 	@echo "  manitest:          Check for new and missing files."
 	@echo "  doc_tests:         Check POD syntax of all files containing POD."
 	@echo "  buildtools_tests:  Test build tool pmc2c.pl."
@@ -691,13 +690,8 @@ help :
 	@echo "  examples_tests:    Test the example scripts."
 	@echo ""
 	@echo "Smoke Testing:"
-	@echo "  smoke:             Run the test suite and send smoke.html to "
-	@echo "                     http:////smoke.parrotcode.org/"
-	@echo "  smokej:            Same as smoke, but with JIT runcore"
-	@echo "  smokeexec:         Same as smoke, but generate first executables"
-	@echo "                     with the exec runcore"
-	@echo "  smoke-clean:       clean up smoke.html"
 	@echo "  smolder_test:      Run the test suite and send report to the smolder server"
+	@echo "  smoke:             Alias for smolder_test"
 	@echo ""
 	@echo "Benchmarks:"
 	@echo "  mopsbench:         Million operations"
@@ -726,7 +720,6 @@ help :
 	@echo "  languages-test:    Proxy for target 'test' of languages/Makefile"
 	@echo "  languages-test-unified:  Proxy for target 'test-unified' of languages/Makefile"
 	@echo "  languages-test-separate: Proxy for target 'test-separate' of languages/Makefile"
-	@echo "  languages-smoke:   Proxy for target 'smoke' of languages/Makefile"
 	@echo "  languages-clean:   Proxy for target 'clean' of languages/Makefile"
 	@echo ""
 	@echo "Fetch from source repository:"
@@ -741,7 +734,7 @@ help :
 	@echo "  sunlint:           Code checking with Sun Studio's sunlint."
 	@echo "  splint:            Code checking with splint."
 	@echo "  headerizer:        Recreate header files for C-source files"
-	@echo "  apilist:           Show list of PARROT_API functions"
+	@echo "  apilist:           Show list of PARROT_EXPORT functions"
 	@echo "  malloclist:        Show list of PARROT_MALLOC functions"
 	@echo "  cover:             Run test suite coverage analysis."
 	@echo "  tags-vi:           Create tags for the vi editor."
@@ -804,8 +797,6 @@ $(PERL6) : compilers $(PBC_TO_EXE)
 	$(CHMOD) 0755 $(PERL6)
 	$(PERL6) -e"say 'Hello, world.'"
 
-
-# TODO build the real miniparrot
 $(MINIPARROT) : $(SRC_DIR)/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
     lib/Parrot/OpLib/core.pm $(SRC_DIR)/null_config$(O)
 	$(LINK) @ld_out@$@ $(SRC_DIR)/main$(O) $(SRC_DIR)/null_config$(O) \
@@ -911,7 +902,7 @@ $(PDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT)
     @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
 #CONDITIONED_LINE(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
-$(INSTALLABLEPDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT)
+$(INSTALLABLEPDB) : $(SRC_DIR)/parrot_debugger$(O) $(LIBPARROT) $(SRC_DIR)/parrot_config$(O)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/parrot_debugger$(O) \
     $(SRC_DIR)/parrot_config$(O) \
@@ -981,7 +972,7 @@ $(PBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT) $(SRC_DIR)/parrot_config$(O)
     @rpath_blib@ $(ALL_PARROT_LIBS) $(LINK_DYNAMIC) $(LINKFLAGS)
 #CONDITIONED_LINE(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
-$(INSTALLABLEPBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT)
+$(INSTALLABLEPBCMERGE) : $(SRC_DIR)/pbc_merge$(O) $(LIBPARROT) $(INSTALLABLECONFIG)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/pbc_merge$(O) \
     $(SRC_DIR)/install_config$(O) \
@@ -1066,6 +1057,8 @@ $(SRC_DIR)/exec_dep$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h
 
 $(SRC_DIR)/exec_cpu$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h
 
+$(SRC_DIR)/jit_defs$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h
+
 $(INC_DIR)/extend_vtable.h $(SRC_DIR)/extend_vtable.c $(SRC_DIR)/vtable.h : src/vtable.tbl $(BUILD_TOOLS_DIR)/vtable_extend.pl lib/Parrot/Vtable.pm
 	$(PERL) $(BUILD_TOOLS_DIR)/vtable_extend.pl
 
@@ -1131,7 +1124,8 @@ $(SRC_DIR)/inter_cb$(O) : $(SRC_DIR)/inter_cb.c $(GENERAL_H_FILES) \
 $(SRC_DIR)/inter_misc$(O) : $(SRC_DIR)/inter_misc.c $(GENERAL_H_FILES) \
     $(SRC_DIR)/inter_misc.str
 
-$(SRC_DIR)/inter_create$(O) : $(SRC_DIR)/inter_create.c $(GENERAL_H_FILES)
+$(SRC_DIR)/inter_create$(O) : $(SRC_DIR)/inter_create.c $(GENERAL_H_FILES) \
+    $(SRC_DIR)/inter_create.str
 
 $(SRC_DIR)/inter_run$(O) : $(SRC_DIR)/inter_run.c $(GENERAL_H_FILES)
 
@@ -1212,6 +1206,8 @@ $(SRC_DIR)/charset$(O) : $(SRC_DIR)/charset.c $(GENERAL_H_FILES)
 
 $(SRC_DIR)/pbc_merge$(O) : $(SRC_DIR)/pbc_merge.c $(GENERAL_H_FILES)
 
+$(SRC_DIR)/io$(O) : $(SRC_DIR)/pmc/pmc_filehandle.h $(SRC_DIR)/io/io_private.h
+
 $(OPS_DIR)/core_ops$(O) : $(GENERAL_H_FILES) $(OPS_DIR)/core_ops.c
 
 # core_ops depends upon config.h so that it gets updated along with
@@ -1253,6 +1249,8 @@ $(SRC_DIR)/exec_dep.h : $(SRC_DIR)/jit/@jitcpuarch@/exec_dep.h
 $(SRC_DIR)/jit_cpu.c : lib/Parrot/OpLib/core.pm $(SRC_DIR)/jit_emit.h \
     $(SRC_DIR)/jit/@jitcpuarch@/core.jit $(JIT_BUILD_TOOL)
 	$(PERL) $(JIT_BUILD_TOOL) @jitcpuarch@ $(SRC_DIR)/jit_cpu.c
+$(SRC_DIR)/jit_defs.c : $(SRC_DIR)/jit/@jitcpuarch@/jit_emit.h
+	$(CP) $(SRC_DIR)/jit/@jitcpuarch@/jit_defs.c $(SRC_DIR)/jit_defs.c
 $(SRC_DIR)/exec_cpu.c : lib/Parrot/OpLib/core.pm $(SRC_DIR)/jit_emit.h \
     $(SRC_DIR)/jit/@jitcpuarch@/core.jit @TEMP_exec_h@ $(SRC_DIR)/exec_dep.h $(JIT_BUILD_TOOL)
 	$(PERL) $(JIT_BUILD_TOOL) @jitcpuarch@ $(SRC_DIR)/exec_cpu.c
@@ -1372,9 +1370,6 @@ languages-test-unified :
 languages-test-separate :
 	$(MAKE) languages test-separate
 
-languages-smoke :
-	$(MAKE) languages smoke
-
 languages-clean :
 	$(MAKE) languages clean
 
@@ -1432,7 +1427,7 @@ SRC_TEST_FILES = \
 TOOLS_TEST_FILES = \
     t/tools/*.t
 PMC2CUTILS_DIR = t/tools/pmc2cutils
-OPS2PMUTILS_DIR = t/tools/ops2pmutils
+OPS2PMUTILS_DIR = t/tools/ops2pm
 OPS2CUTILS_DIR = t/tools/ops2cutils
 REVISIONUTILS_DIR = t/tools/revision
 HARNESS_DIR = t/pharness
@@ -1470,10 +1465,11 @@ test : test_prep
 smolder_test : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) --archive --send-to-smolder
 
+smoke : smolder_test
+
 # "core tests" -- test basic functionality but not ancillaries
 coretest : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) --core-tests
-
 
 # automake compatibility
 check : test
@@ -1482,22 +1478,22 @@ check : test
 # 'testC', 'testg' and 'testj' are tested only
 # when the needed runcores are available
 fulltest :
-	-@make@ testb
-#CONDITIONED_LINE(cg_flag):	-@make@ testC
-	-@make@ testf
-#CONDITIONED_LINE(cg_flag):	-@make@ testg
-#CONDITIONED_LINE(cg_flag):	-@make@ testj
-	-@make@ testr
-	-@make@ testS
-	-@make@ src_tests
-	-@make@ run_tests
-	-@make@ perl_tests
-	-@make@ codetest
-	-@make@ benchmark_tests
-	-@make@ doc_tests
-	-@make@ distro_tests
-	-@make@ manifest_tests
-	-@make@ examples_tests
+	-@make@ testb \
+#CONDITIONED_LINE(cg_flag):	testC \
+	testf \
+#CONDITIONED_LINE(cg_flag):	testg \
+#CONDITIONED_LINE(cg_flag):	testj \
+	testr \
+	testS \
+	src_tests \
+	run_tests \
+	perl_tests \
+	codetest \
+	benchmark_tests \
+	doc_tests \
+	manifest_tests \
+	examples_tests \
+	distro_tests
 
 # bounds checking, slow core
 testb : test_prep
@@ -1558,6 +1554,10 @@ codetest :
 codingstd_tests :
 	$(PERL) t/harness $(CODINGSTD_TEST_FILES)
 
+# Run standard test suite with warnings enabled.
+warnings_tests:
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) -w $(RUNCORE_TEST_FILES)
+
 buildtools_tests :
 	$(PERL) t/harness $(BUILDTOOLS_TEST_FILES)
 
@@ -1605,7 +1605,6 @@ clean : \
     examples-clean \
     imcc-clean \
     compilers-clean \
-    smoke-clean \
 #INVERSE_CONDITIONED_LINE(win32):    cover-clean \
     editor-clean
 	@TEMP_cg_r@
@@ -1678,6 +1677,7 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(SRC_DIR)/jit_emit.h \
     $(SRC_DIR)/jit_cpu.c \
     $(SRC_DIR)/exec_cpu.c \
+    $(SRC_DIR)/jit_defs.c \
     $(SRC_DIR)/exec_start$(O) \
     install_config.fpmc \
     $(SRC_DIR)/nci_test$(O) \
@@ -1834,7 +1834,7 @@ SUNLINT_HUSH_OPTS = \
 
 SUNLINT_OPTS_FOR_THE_FUTURE = -b -m -Xc
 
-# Lint options at: http://docs.sun.com/app/docs/doc/819-5265/6n7c29cli?a=view
+# Lint options at: http:////docs.sun.com//app//docs//doc//819-5265//6n7c29cli?a=view
 SUNLINTOPTS = \
     -b \
     -p \
@@ -1871,15 +1871,15 @@ bsdlint : $(PARROT)
 	rm -f *.ln
 	$(LINT) $(CC_INC) "-Isrc/pmc" $(BSD_LINT_FLAGS) $(BSD_LINT_EXCLUSIONS) $(LINTABLE_CFILES)
 
-# For checking with splint see also http://www.perlfoundation.org/parrot/index.cgi?splint
-# Splint: http://splint.org
+# For checking with splint see also http:////www.perlfoundation.org//parrot//index.cgi?splint
+# Splint: http:////splint.org
 SPLINT = splint
 
 # Temp directory for splint.  Add +keep to splintflags if you want work files
 # kept in there after completion.
 SPLINT_TMP = $(TMP)/splint
 
-# Splint flags: http://splint.org/manual/html/appB.html
+# Splint flags: http:////splint.org//manual//html//appB.html
 # The dashes in the names don't make any difference to Splint, but I've
 # made them match how they are in the manual.  Otherwise, you might be
 # looking for "declundef", except that it's "decl-undef" in the docs.
@@ -2177,9 +2177,11 @@ release : MANIFEST MANIFEST.generated
 	rm parrot-$(VERSION)
 
 rpms : release
-	sudo cp parrot-$(VERSION).tar.gz /usr/src/*/SOURCES
-	sudo cp parrot.spec /usr/src/*/SPECS
-	cd /usr/src/*/SPECS @make_and@ sudo rpmbuild -ba parrot.spec
+	mkdir -p rpmbuild/SOURCES rpmbuild/SPEC rpmbuild/BUILD rpmbuild/RPMS rpmbuild/SRPMS
+	cp parrot-$(VERSION).tar.gz rpmbuild/SOURCES
+	cp parrot.spec rpmbuild/SPEC
+	echo '%_topdir '`pwd`'/rpmbuild' > .rpmmacros
+	HOME=`pwd`; rpmbuild -ba parrot.spec
 
 win32-inno-installer : world installable
 	$(PERL) tools/dev/mk_inno.pl
@@ -2245,7 +2247,7 @@ tags.vi.dummy:
 
 # This target will eventually create all the headers automatically.  If you are
 # having problems with linkage in Win32 (or elsewhere), because something is
-# not PARROT_API but should be, then put PARROT_API in the C file and run "make
+# not PARROT_EXPORT but should be, then put PARROT_EXPORT in the C file and run "make
 # headerizer".  The .h file will get updated.
 
 HEADERIZER_O_FILES = \
@@ -2257,31 +2259,10 @@ headerizer : $(SRC_DIR)/core_pmcs.c
 	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl $(HEADERIZER_O_FILES) $(IMCC_DIR)/imcc.y
 
 apilist: $(SRC_DIR)/core_pmcs.c
-	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_API $(HEADERIZER_O_FILES)
+	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_EXPORT $(HEADERIZER_O_FILES)
 
 malloclist: $(SRC_DIR)/core_pmcs.c
 	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_MALLOC $(HEADERIZER_O_FILES)
-
-###############################################################################
-#
-# smoke:
-#
-###############################################################################
-
-smoke : all
-	$(PERL) t/harness --html $(EXTRA_TEST_ARGS)
-	$(PERL) tools/util/smokeserv-client.pl smoke.html
-
-smokej : all
-	$(PERL) t/harness --html $(EXTRA_TEST_ARGS) -j
-	$(PERL) tools/util/smokeserv-client.pl smoke.html
-
-smokeexec: all
-	$(PERL) t/harness --html $(EXTRA_TEST_ARGS) --run-exec $(RUNCORE_TEST_FILES)
-	$(PERL) tools/util/smokeserv-client.pl smoke.html
-
-smoke-clean :
-	$(RM_F) smoke.html
 
 #
 # Local variables:

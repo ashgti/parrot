@@ -929,22 +929,23 @@ IMCC_subst_constants(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *na
     };
 
     size_t i;
-    char fmt[64], op[20];
+    const char *fmt;
+    char op[20];
     const char *debug_fmt = NULL;   /* gcc -O uninit warn */
     int found, branched;
 
     /* construct a FLOATVAL_FMT with needed precision */
     switch (NUMVAL_SIZE) {
         case 8:
-            strcpy(fmt, "%0.16g");
+            fmt = "%0.16g";
             break;
         case 12:
-            strcpy(fmt, "%0.18Lg");
+            fmt = "%0.18Lg";
             break;
         default:
             IMCC_warning(interp, "subs_constants",
                     "used default FLOATVAL_FMT\n");
-            strcpy(fmt, FLOATVAL_FMT);
+            fmt = FLOATVAL_FMT;
             break;
     }
 
@@ -1058,10 +1059,15 @@ IMCC_subst_constants(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *na
                 r[1] = mk_const(interp, b, r[0]->set);
                 break;
             case 'S':
-                r[1] = mk_const(interp, string_to_cstring(interp,
-                        REG_STR(interp, 0)), r[0]->set);
+            {
+                char *name = string_to_cstring(interp, REG_STR(interp, 0));
+                r[1]       = mk_const(interp, name, r[0]->set);
+
                 snprintf(b, sizeof (b), "%p", REG_STR(interp, 0));
+                string_cstring_free(name);
+
                 break;
+            }
             default:
                 break;
         }
@@ -1506,7 +1512,7 @@ dead_code_remove(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
     /* Unreachable instructions */
 
-    for (last = unit->instructions, ins=last->next;
+    for (last = unit->instructions, last && (ins = last->next);
          last && ins;
          ins = ins->next) {
         if ((last->type & IF_goto) && !(ins->type & ITLABEL) &&
@@ -1559,7 +1565,13 @@ used_once(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
             if (r && (r->use_count == 1 && r->lhs_use_count == 1)) {
                 IMCC_debug(interp, DEBUG_OPT2, "used once '%I' deleted\n", ins);
                 ins = delete_ins(unit, ins);
-                ins = ins->prev ? ins->prev : unit->instructions;
+
+                /* find previous instruction or first instruction of this CU
+                 * ... but only the latter if it wasn't deleted */
+                ins = ins->prev
+                    ? ins->prev
+                    : opt ? unit->instructions : NULL;
+
                 unit->ostat.deleted_ins++;
                 unit->ostat.used_once++;
                 opt++;

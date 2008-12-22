@@ -34,7 +34,7 @@ PBC_TO_EXE    = $(BUILD_DIR)/pbc_to_exe$(EXE)
 #CONDITIONED_LINE(darwin):# MACOSX_DEPLOYMENT_TARGET must be defined for OS X compilation/linking
 #CONDITIONED_LINE(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
 
-all: perl6.pbc Test.pir
+all: perl6.pbc
 
 xmas: perl6$(EXE)
 
@@ -42,6 +42,7 @@ SOURCES = perl6.pir \
   src/gen_grammar.pir \
   src/gen_actions.pir \
   src/gen_builtins.pir \
+  src/gen_metaop.pir \
   src/gen_junction.pir \
   src/parser/expression.pir \
   src/parser/quote_expression.pir \
@@ -50,6 +51,11 @@ SOURCES = perl6.pir \
 
 BUILTINS_PIR = \
   src/classes/Object.pir \
+  src/classes/Abstraction.pir \
+  src/classes/Protoobject.pir \
+  src/classes/Positional.pir \
+  src/classes/Associative.pir \
+  src/classes/Callable.pir \
   src/classes/Any.pir \
   src/classes/Bool.pir \
   src/classes/Str.pir \
@@ -70,13 +76,14 @@ BUILTINS_PIR = \
   src/classes/Method.pir \
   src/classes/Junction.pir \
   src/classes/Failure.pir \
+  src/classes/Exception.pir \
+  src/classes/Nil.pir \
   src/classes/Role.pir \
   src/classes/Pair.pir \
   src/classes/Whatever.pir \
   src/classes/Capture.pir \
   src/classes/Match.pir \
   src/classes/Signature.pir \
-  src/classes/Subset.pir \
   src/classes/Grammar.pir \
   src/classes/Module.pir \
   src/builtins/globals.pir \
@@ -114,7 +121,7 @@ perl6$(EXE): perl6.pbc
 	$(PBC_TO_EXE) perl6.pbc
 
 # the default target
-perl6.pbc: $(PARROT) $(SOURCES)
+perl6.pbc: $(PARROT) $(SOURCES) $(BUILTINS_PIR)
 	$(PARROT) $(PARROT_ARGS) -o perl6.pbc perl6.pir
 
 installable_perl6$(EXE): perl6.pbc
@@ -132,8 +139,11 @@ src/gen_actions.pir: $(NQP) $(PCT) src/parser/actions.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=src/gen_actions.pir \
 	    --encoding=fixed_8 --target=pir src/parser/actions.pm
 
-src/gen_builtins.pir: $(BUILTINS_PIR)
-	$(CAT) $(BUILTINS_PIR) >src/gen_builtins.pir
+src/gen_builtins.pir: build/gen_builtins_pir.pl Makefile
+	$(PERL) build/gen_builtins_pir.pl $(BUILTINS_PIR) > src/gen_builtins.pir
+
+src/gen_metaop.pir: build/gen_metaop_pir.pl
+	$(PERL) build/gen_metaop_pir.pl > src/gen_metaop.pir
 
 src/gen_junction.pir: build/gen_junction_pir.pl
 	$(PERL) build/gen_junction_pir.pl src/gen_junction.pir
@@ -200,13 +210,13 @@ testclean:
 HARNESS_WITH_FUDGE = $(PERL) t/harness --fudge --keep-exit-code
 HARNESS_WITH_FUDGE_JOBS = $(HARNESS_WITH_FUDGE) --jobs
 
-spectest_full: all t/spec
+spectest_full: all Test.pir t/spec
 	-cd t/spec && svn up
 	$(HARNESS_WITH_FUDGE_JOBS) t/spec
 
 # Run the spectests that we know work.
 spectest_regression: spectest
-spectest: all t/spec t/spectest.data
+spectest: all Test.pir t/spec t/spectest.data
 	-cd t/spec && svn up
 	$(HARNESS_WITH_FUDGE_JOBS) --tests-from-file=t/spectest.data
 
@@ -226,7 +236,7 @@ sometests: all
 	@$(HARNESS_WITH_FUDGE_JOBS) $(TESTFILES)
 
 # Run a single test
-t/*.t t/*/*.t t/*/*/*.t: all
+t/*.t t/*/*.t t/*/*/*.t: all Test.pir
 	@$(HARNESS_WITH_FUDGE) --verbosity=1 $@
 
 t/localtest.data:
@@ -244,9 +254,7 @@ CLEANUPS = \
   perl6$(EXE) \
   installable_perl6$(EXE) \
   Test.pir \
-  src/gen_grammar.pir \
-  src/gen_actions.pir \
-  src/gen_builtins.pir \
+  src/gen_*.pir \
   $(PMC_DIR)/*.h \
   $(PMC_DIR)/*.c \
   $(PMC_DIR)/*.dump \

@@ -16,55 +16,43 @@ src/classes/Mapping.pir - Perl 6 hash class and related functions
     .local pmc p6meta, mappingproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     mappingproto = p6meta.'new_class'('Mapping', 'parent'=>'Hash Any')
+    $P0 = get_hll_global 'Associative'
+    p6meta.'add_role'($P0, 'to'=>mappingproto)
     p6meta.'register'('Hash', 'parent'=>mappingproto, 'protoobject'=>mappingproto)
     $P0 = get_hll_namespace ['Mapping']
-    '!EXPORT'('keys kv values reverse', $P0)
+    '!EXPORT'('keys,kv,values,reverse', $P0)
 .end
 
 
 =item Scalar
 
-When we're going to be stored as an item, become a Hash and then return
-ourself in a ObjectRef.
+When we're going to be stored as an item, become a Hash and
+return an ObjectRef to it.
 
 =cut
 
+.namespace ['Mapping']
 .sub 'Scalar' :method
-    # Create a hash with our values.
-    .local pmc hash, it
-    hash = get_hll_global "Hash"
-    hash = hash.'new'()
-    it = iter self
-  it_loop:
-    unless it goto it_loop_end
-    $P0 = shift it
-    $P1 = self[$P0]
-    hash[$P0] = $P1
-    goto it_loop
-  it_loop_end:
-
-    # Wrap it up in an object ref and return it.
-    .local pmc ref
-    ref = new 'ObjectRef', hash
-    .return (ref)
+    $P0 = self.'Hash'()
+    $P0 = new 'ObjectRef', $P0
+    .return ($P0)
 .end
 
 
-.sub 'get_string' :method :vtable
-    $S0 = ''
-    .local pmc iter
-    iter = new 'Iterator', self
-  loop:
-    unless iter goto end
-    $S1 = shift iter
-    $S2 = iter[$S1]
-    $S0 = concat $S0, $S1
-    concat $S0, "\t"
-    concat $S0, $S2
-    concat $S0, "\n"
-    goto loop
-  end:
-    .return ($S0)
+.sub '' :vtable('get_string') :method
+    .local string result
+    result = ''
+    $P0 = self.'pairs'()
+    .local pmc it
+    it = iter $P0
+  it_loop:
+    unless it goto it_done
+    $S0 = shift it
+    result .= $S0
+    result .= "\n"
+    goto it_loop
+  it_done:
+    .return (result)
 .end
 
 
@@ -75,17 +63,28 @@ Return invocant as a Hash
 =cut
 
 .sub 'hash' :method
-    .local pmc result, iter
+    .local pmc result, it
     result = new 'Perl6Hash'
-    iter = new 'Iterator', self
+    it = iter self
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
+    unless it goto iter_end
+    $S0 = shift it
     $P0 = self[$S0]
     result[$S0] = $P0
     goto iter_loop
   iter_end:
     .return (result)
+.end
+
+
+=item list()
+
+Return invocant as a List of Pairs.
+
+=cut
+
+.sub 'list' :method
+    .tailcall self.'pairs'()
 .end
 
 
@@ -126,15 +125,15 @@ Returns elements of hash as array of C<Pair(key, value)>
 =cut
 
 .sub 'kv' :method :multi('Hash')
-    .local pmc iter
+    .local pmc it
     .local pmc rv
-    iter = new 'Iterator', self
+    it = iter self
     rv   = new 'List'
   loop:
-    unless iter goto end
-    $S1 = shift iter
+    unless it goto end
+    $S1 = shift it
     push rv, $S1
-    $P1 = iter[$S1]
+    $P1 = it[$S1]
     push rv, $P1
     goto loop
   end:
@@ -148,15 +147,16 @@ Returns elements of hash as array of C<Pairs>
 =cut
 
 .sub 'pairs' :method :multi('Hash')
-    .local pmc iter
+    .local pmc it
     .local pmc rv
-    iter = new 'Iterator', self
-    rv   = 'list'()
+    it = iter self
+    $P0 = get_hll_global 'list'
+    rv  = $P0()
     $P3 = get_hll_global 'Perl6Pair'
   loop:
-    unless iter goto end
-    $P1 = shift iter
-    $P2 = iter[$P1]
+    unless it goto end
+    $P1 = shift it
+    $P2 = it[$P1]
     $P4 = $P3.'new'('key' => $P1, 'value' => $P2)
     push rv, $P4
     goto loop
@@ -210,13 +210,13 @@ every pair, joined by newlines or an explicitly given separator.
 
 
 .sub 'keys' :method :multi('Hash')
-    .local pmc iter
+    .local pmc it
     .local pmc rv
-    iter = new 'Iterator', self
+    it = iter self
     rv   = new 'List'
   loop:
-    unless iter goto end
-    $S1 = shift iter
+    unless it goto end
+    $S1 = shift it
     push rv, $S1
     goto loop
   end:
@@ -228,12 +228,12 @@ every pair, joined by newlines or an explicitly given separator.
 =cut
 
 .sub 'reverse' :method :multi('Hash')
-    .local pmc result, iter
+    .local pmc result, it
     result = new 'Perl6Hash'
-    iter = new 'Iterator', self
+    it = iter self
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
+    unless it goto iter_end
+    $S0 = shift it
     $S1 = self[$S0]
     result[$S1] = $S0
     goto iter_loop
@@ -243,14 +243,14 @@ every pair, joined by newlines or an explicitly given separator.
 
 
 .sub 'values' :method :multi('Hash')
-    .local pmc iter
+    .local pmc it
     .local pmc rv
-    iter = new 'Iterator', self
+    it = iter self
     rv   = new 'List'
   loop:
-    unless iter goto end
-    $S1 = shift iter
-    $P1 = iter[$S1]
+    unless it goto end
+    $S1 = shift it
+    $P1 = it[$S1]
     push rv, $P1
     goto loop
   end:
@@ -258,65 +258,10 @@ every pair, joined by newlines or an explicitly given separator.
 .end
 
 
-=back
+.sub '!flatten' :method
+    .tailcall self.'pairs'()
+.end
 
-=head1 Functions
-
-=over 4
-
-=back
-
-=head1 TODO: Functions
-
-=over 4
-
-=cut
-
-.namespace []
-
-=item delete
-
- our List  multi method Hash::delete ( *@keys )
- our Scalar multi method Hash::delete ( $key ) is default
-
-Deletes the elements specified by C<$key> or C<$keys> from the invocant.
-returns the value(s) that were associated to those keys.
-
-=item exists
-
- our Bool multi method Hash::exists ( $key )
-
-True if invocant has an element whose key matches C<$key>, false
-otherwise.
-
-=cut
-
-
-=item values
-
- multi Int|List Hash::keys ( %hash : MatchTest *@keytests )
- multi Int|List Hash::kv ( %hash : MatchTest *@keytests )
- multi Int|(List of Pair) Hash::pairs  (%hash : MatchTest *@keytests )
- multi Int|List Hash::values ( %hash : MatchTest *@keytests )
-
-Iterates the elements of C<%hash> in no apparent order, but the order
-will be the same between successive calls to these functions, as long as
-C<%hash> doesn't change.
-
-If C<@keytests> are provided, only elements whose keys evaluate
-C<$key ~~ any(@keytests)> as true are iterated.
-
-What is returned at each element of the iteration varies with function.
-C<keys> only returns the key; C<values> the value; C<kv> returns both as
-a 2 element list in (key, value) order, C<pairs> a C<Pair(key, value)>.
-
-Note that C<kv %hash> returns the same as C<zip(keys %hash; values %hash)>
-
-In Scalar context, they all return the count of elements that would have
-been iterated.
-
-The lvalue form of C<keys> is not longer supported. Use the C<.buckets>
-property instead.
 
 =back
 

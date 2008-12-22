@@ -30,6 +30,9 @@ D: Named arguments support and recovery support on PIR parser
 S: Braga, Portugal
 W: http://alfarrabio.di.uminho.pt/~albie/
 
+N: Ahmed Zawawi
+D: Rakudo builtins
+
 N: Aldo Calpini
 D: Debugging tutorial
 D: Porting to PDA
@@ -73,8 +76,9 @@ D: typo squisher
 E: yDNA@cpan.org
 
 N: Andrew Whitworth
-D: PDD09 Garbage Collector
+D: Internals development
 D: Documentation
+D: Release manager for 0.8.2
 E: wknight8111@gmail.com
 
 N: Andy Dougherty
@@ -179,9 +183,8 @@ D: Pipp
 E: christoph@mksig.org
 
 N: chromatic
-D: SDL library and examples; PIR Test::*; test suite cleanup
-D: Parrot::Embed; Pheme
-D: lead philosopher -- "Why doesn't this work?"
+D: SDL library and examples; PIR Test::*; test suite cleanup; Parrot::Embed
+D: freaky bugs; cool features; Pheme
 E: chromatic@wgz.org
 W: http://wgz.org/chromatic/
 
@@ -200,6 +203,8 @@ E: ckuskie@sterling.net
 
 N: Cory Spencer
 D: Peek opcode and PIO implementation
+D: Rakudo builtins
+E: cspencer@sprocket.org
 
 N: Curtis Rawls
 D: imcc optimizer and register allocator patches and tests
@@ -363,7 +368,7 @@ S: Seattle, WA
 
 N: Jimmy Zhuo
 E: zhuomingliang@yahoo.com.cn
-D: Various patches for Pipp.
+D: Bugfixes
 
 N: John J. Trammell
 E: trammell@el-swifto.com
@@ -450,6 +455,11 @@ N: Leopold Toetsch
 D: Patchmonster & pumpking emeritus (0.0.13 - 0.4.5)
 E: lt@toetsch.at
 S: Herrnbaumgarten, Austria
+
+N: Luca Barbato
+D: fix to make installable
+E: lu_zero@gentoo.org
+
 
 N: Luke Palmer
 D: Many fixes

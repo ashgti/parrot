@@ -4,11 +4,11 @@
 
 =head1 NAME
 
-languages/pipp/t/pmc/array.t - test the PhpArray PMC
+t/pmc/array.t - test the PhpArray PMC
 
 =head1 SYNOPSIS
 
-% prove languages/pipp/t/pmc/array.t
+    perl t/harness t/pmc/array.t
 
 =head1 DESCRIPTION
 
@@ -16,7 +16,7 @@ Tests the PhpArray PMC.
 
 =cut
 
-.HLL 'PHP', 'php_group'
+.loadlib 'php_group'
 
 .sub main :main
     .include 'include/test_more.pir'
@@ -299,7 +299,7 @@ ii_end:
     s = get_repr p
     is(s, '{-1: x}', "string->int conversion converts '-1'")
 
-    p = new 'PhpArray' 
+    p = new 'PhpArray'
     p['99999999999999999999999'] = 'x' #check for overflow
     s = get_repr p
     is(s, '{"99999999999999999999999": x}', "string->int conversion doesn't convert '99999999999999999999999'")

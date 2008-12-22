@@ -60,11 +60,13 @@ enum USAGE {
     U_GLOBAL        = 1 << 3,       /* symbol is global (fixup) */
     U_LEXICAL       = 1 << 4,       /* symbol is lexical */
     U_FIXUP         = 1 << 5,       /* maybe not global, force fixup */
-    U_NON_VOLATILE  = 1 << 6        /* needs preserving */
+    U_NON_VOLATILE  = 1 << 6,       /* needs preserving */
+    U_SUBID_LOOKUP  = 1 << 7        /* .const 'Sub' lookup is done by subid */
 };
 
 typedef struct _SymReg {
     char                *name;
+    char                *subid;
     INTVAL               type;          /* Variable type */
     INTVAL               usage;         /* s. USAGE above */
     int                  set;           /* parent register set/file */

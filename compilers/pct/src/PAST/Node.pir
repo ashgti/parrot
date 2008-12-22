@@ -22,6 +22,7 @@ for compiling programs in Parrot.
     p6meta.'new_class'('PAST::Val', 'parent'=>base)
     p6meta.'new_class'('PAST::Var', 'parent'=>base)
     p6meta.'new_class'('PAST::Block', 'parent'=>base)
+    p6meta.'new_class'('PAST::Control', 'parent'=>base)
     p6meta.'new_class'('PAST::VarList', 'parent'=>base)
 
     .return ()
@@ -101,6 +102,26 @@ Accessor method -- sets/returns the "flatten" flag on arguments.
     .tailcall self.'attr'('flat', value, has_value)
 .end
 
+.sub 'handlers' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('handlers', value, has_value)
+.end
+
+
+=item lvalue([flag])
+
+Get/set the C<lvalue> attribute, which indicates whether this
+variable is being used in an lvalue context.
+
+=cut
+
+.sub 'lvalue' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('lvalue', value, has_value)
+.end
+
 
 =back
 
@@ -123,6 +144,22 @@ Get/set the constant value for this node.
 .sub 'value' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
+    .tailcall self.'attr'('value', value, has_value)
+.end
+
+=item lvalue([value])
+
+Throw an exception if we try to make a PAST::Val into an lvalue.
+
+=cut
+
+.sub 'lvalue' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    unless has_value goto normal
+    unless value goto normal
+    die "Unable to set lvalue on PAST::Val node"
+  normal:
     .tailcall self.'attr'('value', value, has_value)
 .end
 
@@ -168,20 +205,6 @@ Otherwise, the node refers to a lexical variable from an outer scope.
     .param pmc value           :optional
     .param int has_value       :opt_flag
     .tailcall self.'attr'('isdecl', value, has_value)
-.end
-
-
-=item lvalue([flag])
-
-Get/set the C<lvalue> attribute, which indicates whether this
-variable is being used in an lvalue context.
-
-=cut
-
-.sub 'lvalue' :method
-    .param pmc value           :optional
-    .param int has_value       :opt_flag
-    .tailcall self.'attr'('lvalue', value, has_value)
 .end
 
 
@@ -583,10 +606,8 @@ favor of the C<symbol> method above.
 
 =item lexical([flag])
 
-Get/set whether the block is a lexical block.  A block
-with this attribute set to false is not lexically scoped
-inside of its parent, and will not act as an outer lexical
-scope for any nested blocks within it.
+Get/set whether the block is lexically nested within
+the block that contains it.
 
 =cut
 
@@ -636,6 +657,21 @@ Get/set any pirflags for this block.
     .param pmc value           :optional
     .param int has_value       :opt_flag
     .tailcall self.'attr'('pirflags', value, has_value)
+.end
+
+
+.namespace [ 'PAST';'Control' ]
+
+.sub 'handle_types' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('handle_types', value, has_value)
+.end
+
+.sub 'handle_types_except' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('handle_types_except', value, has_value)
 .end
 
 

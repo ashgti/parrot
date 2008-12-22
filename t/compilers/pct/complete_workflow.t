@@ -8,9 +8,9 @@ use lib qw(t . lib ../lib ../../lib ../../../lib);
 
 use Test::More;
 
-use Parrot::Test tests => 4 * 9;
+use Parrot::Test tests => 6 * 9;
 use Parrot::Test::Util 'create_tempfile';
-use Parrot::Config;
+use Parrot::Config qw(%PConfig);
 
 =head1 NAME
 
@@ -31,7 +31,9 @@ After that the generated compiler is tested against a sample input.
 =cut
 
 {
-    test_pct( 'sanity', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+    test_pct( 'sanity', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+thingy
+IN
 token TOP   { 'thingy' {*} }
 GRAMMAR
 
@@ -54,9 +56,11 @@ OUT
 }
 
 {
-    test_pct( 'key', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+    test_pct( 'key', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+thingy
+IN
 token TOP   { 'thingy' {*}  #= key_for_thingy
-            | 'stuff'  {*}  #= key_for_stuff  
+            | 'stuff'  {*}  #= key_for_stuff
             }
 GRAMMAR
 
@@ -79,18 +83,22 @@ OUT
 }
 
 {
-    test_pct( 'our down', <<'GRAMMAR', <<'ACTIONS', <<'OUT', todo => 'RT# 60554, our vars get lost' );
+    test_pct( '"our" var in thingy()', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+thingy
+IN
 token TOP    { <thingy> {*} }
 token thingy { 'thingy' {*} }
 GRAMMAR
 
 method TOP($/) {
-    our $?MY_OUR_VAR := 'was passed down';
+    # thingy() is executed before TOP.
+    # So setting $?MY_OUR_VAR here won't affect the generated PAST
+    our $?MY_OUR_VAR := 'was set in method TOP';
     make $( $<thingy> );
 }
 
 method thingy($/) {
-    our $?MY_OUR_VAR;
+    our $?MY_OUR_VAR := 'was set in method thingy';
     my $past  := PAST::Stmts.new(
                      PAST::Op.new(
                          PAST::Val.new(
@@ -104,19 +112,21 @@ method thingy($/) {
     make $past;
 }
 ACTIONS
-our var was passed down
+our var was set in method thingy
 OUT
 }
 
 {
-    test_pct( 'our up', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+    test_pct( '"our" var passed up', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+thingy
+IN
 token TOP    { <thingy> {*} }
 token thingy { 'thingy' {*} }
 GRAMMAR
 
 method TOP($/) {
     our $?MY_OUR_VAR;
-    my $past := $( $<thingy> ); # $?MY_OUR_VAR will be set
+    my $past := $( $<thingy> ); # $?MY_OUR_VAR has been set in thingy()
     $past[0][0].value( 'our var ' ~ $?MY_OUR_VAR );
 
     make $past;
@@ -139,11 +149,159 @@ our var was passed up
 OUT
 }
 
+{
+    test_pct( 'scoping', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+<a>thingy</a><b>thingy</b>
+IN
+token TOP {
+    <scope_a> <scope_b> {*}
+}
+token scope_a {
+    <.INIT_SCOPE_A>
+    '<a>'
+    <thingy>
+    '</a>'  {*}
+}
+token scope_b {
+    <.INIT_SCOPE_B>
+    '<b>'
+    <thingy>
+    '</b>'  {*}
+}
+token INIT_SCOPE_A {
+  {*}
+}
+token INIT_SCOPE_B {
+  {*}
+}
+token thingy {
+    'thingy' {*}
+}
+GRAMMAR
 
-# 10 test cases in this sub
+method TOP($/) {
+    my $past := PAST::Stmts.new();
+    $past.push( $( $<scope_a> ) );
+    $past.push( $( $<scope_b> ) );
+
+    make $past;
+}
+
+method scope_a($/) {
+   make $( $<thingy> );
+}
+
+method scope_b($/) {
+   make $( $<thingy> );
+}
+
+method INIT_SCOPE_A($/) {
+   our $?MY_OUR_VAR := 'scope a';
+}
+
+method INIT_SCOPE_B($/) {
+   our $?MY_OUR_VAR := 'scope b';
+}
+
+method thingy($/) {
+    our $?MY_OUR_VAR;
+    make PAST::Op.new(
+             PAST::Val.new(
+                 :value( '$?MY_OUR_VAR is in ' ~ $?MY_OUR_VAR ),
+                 :returns('String')
+             ),
+             :pirop('say'),
+         );
+}
+ACTIONS
+$?MY_OUR_VAR is in scope a
+$?MY_OUR_VAR is in scope b
+OUT
+}
+
+{
+    test_pct( 'our and key', <<'IN', <<'GRAMMAR', <<'ACTIONS', <<'OUT' );
+thingy
+IN
+token TOP {
+    <thingy_or_stuff>+
+    {*}
+}
+token thingy_or_stuff {
+      <THINGY> {*}  #= THINGY
+    | <STUFF>  {*}  #= STUFF
+}
+token THINGY {
+    'thingy'
+    {*}
+}
+token STUFF {
+    'stuff'
+    {*}
+}
+GRAMMAR
+
+method TOP($/) {
+    my $past := PAST::Stmts.new();
+    for $<thingy_or_stuff> {
+        $past.push( $( $_ ) );
+    }
+
+    our $?MY_OUR_VAR;
+    $past.unshift( $?MY_OUR_VAR );
+
+    make $past;
+}
+
+method thingy_or_stuff($/,$key) {
+    make $( $/{$key} );
+}
+
+method THINGY($/) {
+    our $?MY_OUR_VAR := PAST::Op.new(
+                           PAST::Val.new(
+                               :value( '$?MY_OUR_VAR was set in THINGY' ),
+                               :returns('String')
+                           ),
+                           :pirop('say'),
+                       );
+    make PAST::Op.new(
+             PAST::Val.new(
+                 :value( 'matched: ' ~ ~$/ ),
+                 :returns('String')
+             ),
+             :pirop('say'),
+         );
+}
+
+method STUFF($/) {
+    our $?MY_OUR_VAR := PAST::Op.new(
+                           PAST::Val.new(
+                               :value( '$?MY_OUR_VAR was set in THINGY' ),
+                               :returns('String')
+                           ),
+                           :pirop('say'),
+                       );
+    make PAST::Op.new(
+             PAST::Val.new(
+                 :value( 'matched: ' ~ ~$/ ),
+                 :returns('String')
+             ),
+             :pirop('say'),
+         );
+}
+
+ACTIONS
+$?MY_OUR_VAR was set in THINGY
+matched: thingy
+OUT
+}
+
+
+# 9 test cases in this sub
 sub test_pct
 {
-    my ( $name, $grammar, $actions, $output, @other ) = @_;
+    my ( $test_name, $in, $grammar, $actions, $out, @other ) = @_;
 
     # Do not assume that . is in $PATH
     # places to look for things
@@ -154,8 +312,17 @@ sub test_pct
     my $PERL6GRAMMAR  = "$PGE_LIBRARY/Perl6Grammar.pbc";
     my $NQP           = "$BUILD_DIR/compilers/nqp/nqp.pbc";
 
+    my $tempfile_opts = {
+         DIR      => $TEST_DIR,
+         UNLINK   => 1,
+    };
+
     # this will be passed to pir_output_is()
-    my $pir_code = <<'EOT';
+    my $pir_code = <<"EOT";
+#------------------------------#
+# The compiler mainline code   #
+#------------------------------#
+
 .namespace [ 'TestGrammar'; 'Compiler' ]
 
 .sub 'onload' :anon :load :init
@@ -167,14 +334,14 @@ sub test_pct
     .local pmc args
     args = new 'ResizableStringArray'
     push args, "test_program"
-    push args, "t/compilers/pct/sample.txt"
+    push args, "$TEST_DIR/complete_workflow_sample_input.txt"
 
-    $P0 = new ['PCT'; 'HLLCompiler']
-    $P0.'language'('TestGrammar')
-    $P0.'parsegrammar'('TestGrammar::Grammar')
-    $P0.'parseactions'('TestGrammar::Grammar::Actions')
+    \$P0 = new ['PCT'; 'HLLCompiler']
+    \$P0.'language'('TestGrammar')
+    \$P0.'parsegrammar'('TestGrammar::Grammar')
+    \$P0.'parseactions'('TestGrammar::Grammar::Actions')
 
-    $P1 = $P0.'command_line'(args)
+    \$P1 = \$P0.'command_line'(args)
 
     .return()
 .end
@@ -182,8 +349,8 @@ sub test_pct
 EOT
 
     # set up a file with the grammar
-    my ($PG, $pg_fn) = create_tempfile( SUFFIX => '.pg', DIR => $TEST_DIR, UNLINK => 1 );
-    print $PG <<"EOT";
+    my (undef, $pg_fn) = create_tempfile( SUFFIX => '.pg', %$tempfile_opts );
+    Parrot::Test::write_code_to_file( <<"EOT", $pg_fn );
 # DO NOT EDIT.
 # This file was generated by t/compilers/pct/complete_workflow.t
 
@@ -193,22 +360,21 @@ $grammar
 
 EOT
 
-    ok( $pg_fn, "$name: got name of grammar file" );
-    ok( -e $pg_fn, "$name: grammar file exists" );
+    ok( $pg_fn, "$test_name: got name of grammar file" );
+    ok( -e $pg_fn, "$test_name: grammar file exists" );
 
     # compile the grammar
     # For easier debugging, the generated pir is appended to the PIR
     # that is passed to pir_output_is().
     ( my $gen_parser_fn = $pg_fn ) =~s/pg$/pir/;
     my $rv = Parrot::Test::run_command(
-       qq{$PARROT $PERL6GRAMMAR $pg_fn},
-       STDOUT => $gen_parser_fn,
-       STDERR => $gen_parser_fn,
+       qq{$PARROT $PERL6GRAMMAR --output=$gen_parser_fn $pg_fn},
     );
-    is( $rv, 0, "$name: generated PIR successfully" );
-    ok( -e $gen_parser_fn, "$name: generated parser exist" );
+    is( $rv, 0, "$test_name: generated PIR successfully" );
+    ok( -e $gen_parser_fn, "$test_name: generated parser file exists" );
     my $gen_parser = slurp_file($gen_parser_fn);
     unlink $gen_parser_fn;
+
     $pir_code .= <<"EOT";
 #------------------------------#
 # The generated parser         #
@@ -220,8 +386,8 @@ EOT
 
 
     # set up a file with the actions
-    my ($PM, $pm_fn) = create_tempfile( SUFFIX => '.pm', DIR => $TEST_DIR, UNLINK => 1 );
-    print $PM <<"EOT";
+    my (undef, $pm_fn) = create_tempfile( SUFFIX => '.pm', %$tempfile_opts );
+    Parrot::Test::write_code_to_file( <<"EOT", $pm_fn );
 # DO NOT EDIT.
 # This file was generated by t/compilers/pct/complete_workflow.t
 
@@ -231,18 +397,16 @@ $actions
 
 EOT
 
-    ok( $pm_fn, "$name: got name of action file" );
-    ok( -e $pm_fn, "$name: action file exists" );
+    ok( $pm_fn, "$test_name: got name of action file" );
+    ok( -e $pm_fn, "$test_name: action file exists" );
 
     # compile the actions
-    ( my $gen_actions_fn = $pm_fn ) =~s/nqp$/pir/;
+    ( my $gen_actions_fn = $pm_fn ) =~s/pm$/pir/;
     $rv = Parrot::Test::run_command(
-       qq{$PARROT $NQP --target=pir $pm_fn},
-       STDOUT => $gen_actions_fn,
-       STDERR => $gen_actions_fn,
+        qq{$PARROT $NQP --target=pir --output=$gen_actions_fn $pm_fn},
     );
-    is( $rv, 0, "$name: generated PIR successfully" );
-    ok( -e $gen_actions_fn, "$name: generated actions exist" );
+    is( $rv, 0, "$test_name: generated PIR successfully" );
+    ok( -e $gen_actions_fn, "$test_name: generated actions file exists" );
     my $gen_actions = slurp_file($gen_actions_fn);
     unlink $gen_actions_fn;
 
@@ -258,7 +422,13 @@ $gen_actions
 
 EOT
 
-    pir_output_is( $pir_code, $output , "$name: output of compiler", @other );
+    # create the input file and run the compiled code
+    my $sample_fn = "$TEST_DIR/complete_workflow_sample_input.txt";
+    Parrot::Test::write_code_to_file( $in, $sample_fn );
+
+    pir_output_is( $pir_code, $out, "$test_name: output of compiler", @other );
+
+    unlink $sample_fn;
 
     return;
 }

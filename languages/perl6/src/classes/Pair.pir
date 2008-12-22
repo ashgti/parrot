@@ -49,6 +49,28 @@ Gets the key of the pair.
     .return ($P0)
 .end
 
+=item kv
+
+Return key and value as a 2-element List.
+
+=cut
+
+.namespace ['Perl6Pair']
+.sub 'kv' :method
+    $P0 = self.'key'()
+    $P1 = self.'value'()
+    .tailcall 'list'($P0, $P1)
+.end
+
+
+=item pairs
+
+=cut
+
+.sub 'pairs' :method
+    .tailcall self.'list'()
+.end
+
 
 =item value
 
@@ -60,6 +82,7 @@ Gets the value of the pair.
     $P0 = getattribute self, '$!value'
     .return ($P0)
 .end
+
 
 
 =item get_string()  (vtable method)
@@ -134,6 +157,22 @@ Returns a Perl code representation of the pair.
     value = value.'item'()
     $P0 = get_hll_global 'Pair'
     .tailcall $P0.'new'('key'=>key, 'value'=>value)
+.end
+
+
+.sub 'infix:cmp' :multi(['Perl6Pair'], ['Perl6Pair'])
+    .param pmc a
+    .param pmc b
+    $P0 = a.'key'()
+    $P1 = b.'key'()
+    $I0 = 'infix:cmp'($P0, $P1)
+    unless $I0 == 0 goto done
+    $P0 = a.'value'()
+    $P1 = b.'value'()
+    $I0 = 'infix:cmp'($P0, $P1)
+  done:
+    $P0 = 'infix:<=>'($I0, 0)
+    .return ($P0)
 .end
 
 

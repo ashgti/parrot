@@ -17,6 +17,9 @@ v    ptt
 v    Jtiiipt
 p    JttPP
 P    Jtpi
+i    Vppp
+v    JpPP
+v    pt
 
 v
 v    Jiiip    # examples/japh/japh11.pasm
@@ -376,3 +379,15 @@ i    pppi
 i    pppii
 i    pppiiii
 i    ppppiiiiii
+
+# Testing OpenGL
+v    fff
+
+# Testing Pointer PMC use
+v    V
+
+# Testing SQLite
+i    tV
+i    ptiVp
+i    pid
+i    pitii

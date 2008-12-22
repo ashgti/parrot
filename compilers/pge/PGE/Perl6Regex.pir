@@ -218,7 +218,9 @@ needed for compiling regexes.
     optable.'newtok'('term:<commit>', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Cut')
 
     $P0 = get_global 'parse_closure'
-    optable.'newtok'("term:{{",       'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'("term:{{",   'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'("term:<?{{", 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
+    optable.'newtok'("term:<!{{", 'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
 
     $P0 = get_global 'parse_action'
     optable.'newtok'("term:{*}",      'equiv'=>'term:', 'nows'=>1, 'parsed'=>$P0)
@@ -593,7 +595,7 @@ combinations.
     .return (mob)
 
   err_closure:
-    parse_error(mob, pos, "Error in closure quantifier")
+    'parse_error'(mob, pos, "Error in closure quantifier")
 .end
 
 
@@ -607,7 +609,7 @@ Throw an exception for quantifiers in term position.
     .param pmc mob
     .local int pos
     pos = mob.'to'()
-    parse_error(mob, pos, "Quantifier follows nothing in regex")
+    'parse_error'(mob, pos, "Quantifier follows nothing in regex")
 .end
 
 
@@ -1054,6 +1056,7 @@ Parse a modifier.
   name:
     pos = find_not_cclass .CCLASS_WORD, target, pos, lastpos
     $I1 = pos - $I0
+    if $I1 == 0 goto err_null_cut
     $S0 = substr target, $I0, $I1
     mob['key'] = $S0
     mob.'result_object'(value)
@@ -1069,11 +1072,16 @@ Parse a modifier.
     ### XXX pos = find_not_cclass .CCLASS_WHITESPACE, target, pos, lastpos
     mob.'to'(pos)
     .return (mob)
+  err_null_cut:
+    'parse_quant_error'(mob)
+    .return (mob)
 .end
 
 
 .sub 'parse_closure'
     .param pmc mob
+    .local pmc key
+    key = mob['KEY']
     .local string target
     .local int pos, len
     (mob, pos, target) = mob.'new'(mob, 'grammar'=>'PGE::Exp::Closure')
@@ -1085,8 +1093,19 @@ Parse a modifier.
     inc pos
     goto init
   body:
-    $S0 = repeat "}", len
-    $I0 = index target, $S0, pos
+    .local string close
+    close = repeat "}", len
+    if key == '<?{{' goto assert_pos
+    if key == '<!{{' goto assert_neg
+    goto have_close
+  assert_neg:
+    mob['isnegated'] = 1
+  assert_pos:
+    mob['iszerowidth'] = 1
+    concat close, '>'
+    inc len
+  have_close:
+    $I0 = index target, close, pos
     if $I0 < pos goto err_noclose
     $I1 = $I0 - pos
     $S1 = substr target, pos, $I1
@@ -1212,10 +1231,16 @@ Parse a modifier.
     isarray = pad['isarray']
     pad['isarray'] = 1
     exp0 = self[0]
+    $I0 = isa exp0, ['PGE';'Exp';'WS']
+    if $I0 goto err_parse_quant
     exp0['isquant'] = 1
     exp0 = exp0.'perl6exp'(pad)
     self[0] = exp0
     pad['isarray'] = isarray
+    .return (self)
+  err_parse_quant:
+    $P0 = get_hll_global ['PGE';'Perl6Regex'], 'parse_quant_error'
+    $P0(self)
     .return (self)
 .end
 
@@ -1441,6 +1466,9 @@ Parse a modifier.
     .local pmc exp0, exp1
 
     exp0 = self[0]
+    $I0 = isa exp0, ['PGE';'Exp';'Scalar']
+    unless $I0 goto err_no_lvalue
+
     cname = exp0['cname']
     exp1 = self[1]
 
@@ -1481,6 +1509,11 @@ Parse a modifier.
   end:
     exp1 = exp1.'perl6exp'(pad)
     .return (exp1)
+
+  err_no_lvalue:
+    $P0 = get_hll_global ['PGE';'Perl6Regex'], 'parse_error'
+    $I0 = self.'from'()
+    $P0(self, $I0, 'LHS of alias must be lvalue')
 .end
 
 

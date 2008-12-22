@@ -1,9 +1,10 @@
-# Copyright (C) 2004-2006, The Perl Foundation.
+# Copyright (C) 2004-2008, The Perl Foundation.
 # $Id$
 package Parrot::Pmc2c::Pmc2cMain;
 use strict;
 use warnings;
-use Storable 2.13;
+
+use Storable;
 use Parrot::PMC ();
 use Parrot::Pmc2c::VTable ();
 use Parrot::Pmc2c::Dumper;
@@ -18,6 +19,7 @@ use Parrot::Pmc2c::PMC::Ref ();
 use Parrot::Pmc2c::PMC::SharedRef ();
 use Parrot::Pmc2c::PMC::STMRef ();
 use Parrot::Pmc2c::PMC::Object ();
+use File::Spec ();
 use Carp;
 
 $SIG{'__WARN__'} = sub { use Carp; warn $_[0]; Carp::confess; };

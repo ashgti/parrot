@@ -196,11 +196,11 @@ pir_output_is( <<'CODE', <<'OUTPUT', ".get_results() - PIR" );
 .sub main :main
     print "main\n"
     push_eh _handler
-    new P1, 'Exception'
-    new P2, 'String'
-    set P2, "just pining"
-    setattribute P1, 'message', P2
-    throw P1
+    new $P1, 'Exception'
+    new $P2, 'String'
+    set $P2, "just pining"
+    setattribute $P1, 'message', $P2
+    throw $P1
     print "not reached\n"
     end
 _handler:
@@ -209,12 +209,12 @@ _handler:
     .get_results (e)
     s = e
     print "caught it\n"
-    typeof S1, e
-    print S1
+    typeof $S1, e
+    print $S1
     print "\n"
     print s
     print "\n"
-    null P5
+    null $P5
 .end
 CODE
 main
@@ -534,7 +534,11 @@ at_exit, flag = 1
 No exception handler/
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "exit_handler via exit exception" );
+$ENV{TEST_PROG_ARGS} ||= '';
+my @todo = $ENV{TEST_PROG_ARGS} =~ /-r/
+    ? ( todo => '.tailcall and lexical maps not thawed from PBC, RT #60650' )
+    : ();
+pir_output_is( <<'CODE', <<'OUTPUT', "exit_handler via exit exception", @todo );
 .sub main :main
     .local pmc a
     .lex 'a', a
@@ -591,9 +595,7 @@ something broke
 current inst/
 OUTPUT
 
-SKIP: {
-    skip("TODO test causes infinite loop in new exception implementation", 1);
-pir_output_is(<<'CODE', <<'OUTPUT', "taking a continuation promotes RetCs", todo => 'see RT #56458');
+pir_output_is(<<'CODE', <<'OUTPUT', "taking a continuation promotes RetCs");
 ## This test creates a continuation in a inner sub and re-invokes it later.  The
 ## re-invocation signals an error, which is caught by an intermediate sub.
 ## Returning from the "test" sub the second time failed in r28794; invoking
@@ -601,46 +603,46 @@ pir_output_is(<<'CODE', <<'OUTPUT', "taking a continuation promotes RetCs", todo
 ## prematurely.  For some reason, it is necessary to signal the error in order
 ## to expose the bug.
 .sub main :main
-	.local int redux
-	.local pmc cont
-	## debug 0x80
-	redux = 0
-	print "calling test\n"
-	cont = test()
-	print "back from test\n"
-	if redux goto done
-	redux = 1
-	print "calling cont\n"
-	cont()
-	print "never.\n"
+    .local int redux
+    .local pmc cont
+    ## debug 0x80
+    redux = 0
+    print "calling test\n"
+    cont = test()
+    print "back from test\n"
+    if redux goto done
+    redux = 1
+    print "calling cont\n"
+    cont()
+    print "never.\n"
 done:
-	print "done.\n"
+    print "done.\n"
 .end
 .sub test
-	## Push a handler around the foo() call.
-	push_eh handle_errs
-	print "  calling foo\n"
-	.local pmc cont
-	cont = foo()
-	pop_eh
-	print "  returning from test.\n"
-	.return (cont)
+    ## Push a handler around the foo() call.
+    push_eh handle_errs
+    print "  calling foo\n"
+    .local pmc cont
+    cont = foo()
+    print "  returning from test.\n"
+    .return (cont)
 handle_errs:
-	print "  test:  caught error\n"
-	.return (cont)
+    pop_eh
+    print "  test:  caught error\n"
+    .return (cont)
 .end
 .sub foo
-	## Take a continuation.
-	.local pmc cont
-	cont = new 'Continuation'
-	set_addr cont, over_there
-	print "    returning from foo\n"
-	.return (cont)
+    ## Take a continuation.
+    .local pmc cont
+    cont = new 'Continuation'
+    set_addr cont, over_there
+    print "    returning from foo\n"
+    .return (cont)
 over_there:
-	print "    got over there.\n"
-	.local pmc ex
-	ex = new 'Exception'
-	throw ex
+    print "    got over there.\n"
+    .local pmc ex
+    ex = new 'Exception'
+    throw ex
 .end
 CODE
 calling test
@@ -654,7 +656,6 @@ calling cont
 back from test
 done.
 OUTPUT
-}
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "throw - no handler" );
 .sub main :main

@@ -100,25 +100,25 @@ pasm_output_is( <<"CODE", <<'OUT', "set int, get double" );
      new P0, 'BigInt'
      set P0, 999999
      set N1, P0
-     .fp_eq(N1, 999999.0, OK1)
+     .fp_eq_pasm(N1, 999999.0, OK1)
      print "not "
 OK1: print "ok 1\\n"
 
      set P0, -999999
      set N1, P0
-     .fp_eq(N1, -999999.0, OK2)
+     .fp_eq_pasm(N1, -999999.0, OK2)
      print "not "
 OK2: print "ok 2\\n"
 
      set P0, 2147483646
      set N1, P0
-     .fp_eq(N1, 2.147483646e9, OK3)
+     .fp_eq_pasm(N1, 2.147483646e9, OK3)
      print "not "
 OK3: print "ok 3\\n"
 
      set P0, -2147483646
      set N1, P0
-     .fp_eq(N1, -2.147483646e9, OK4)
+     .fp_eq_pasm(N1, -2.147483646e9, OK4)
      print "not "
 OK4: print "ok 4\\n"
      end
@@ -405,14 +405,14 @@ for my $op ( "/", "%" ) {
     for my $type ( "BigInt", "Integer" ) {
         pir_output_is( <<"CODE", <<OUTPUT, "bigint $op by zero $type" );
 .sub _main :main
-    P0 = new 'BigInt'
-    set P0, "1000000000000000000000"
-    P1 = new 'BigInt'
+    \$P0 = new 'BigInt'
+    set \$P0, "1000000000000000000000"
+    \$P1 = new 'BigInt'
     ## divide by a zero $type
-    P2 = new '$type'
-    set P2, 0
+    \$P2 = new '$type'
+    set \$P2, 0
     push_eh OK
-    P1 = P0 $op P2
+    \$P1 = \$P0 $op \$P2
     print "fail\\n"
     pop_eh
 OK:

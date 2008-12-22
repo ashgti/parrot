@@ -1,32 +1,24 @@
 <?php
 
-# This file is for checking whether the test functions are working.
+# Copyright (C) 2008, The Perl Foundation.
+# $Id$
 
-function plan() {
-    echo "1..4\n";
-}
+require_once 'Test.php';
 
-function ok() {
-    echo "ok 1 - dummy implemetation of ok()\n";  
-}
+plan( 4 );
+$count = 1;
 
-function nok() {
-    echo "ok 2 - dummy implemetation of nok()\n";  
-}
+ok(42, 'fortytwo', $count);
+$count++;
 
-function is() {
-    echo "ok 3 - dummy implemetation of is()\n";  
-}
+nok(0, 'zero', $count);
+$count++;
 
-function isnt() {
-    echo "ok 4 - dummy implemetation of isnt()\n";  
-}
+is('a', 'a', 'a is a', $count);
+$count++;
 
-plan();
-ok();
-nok();
-is();
-isnt();
+isnt('a', 'b', "a isn't b", $count);
+$count++;
 
 # vim: expandtab shiftwidth=4 ft=php:
 ?>

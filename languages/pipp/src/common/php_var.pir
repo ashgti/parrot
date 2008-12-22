@@ -84,92 +84,102 @@ Dumps a string representation of variable to output
 
 # TODO: pass in indent_level, proper escaping
 .sub var_dump
-    .param pmc a
+    .param pmc args :slurpy
+    .local int argc
+
+    argc = args
+    unless argc != 1 goto L0
+    wrong_param_count()
+    .return()
+  L0:
+    .local pmc a
+    a = shift args
+    if null a goto set_null_type
 
     .local string type_of_pmc
     type_of_pmc = typeof a
+    unless type_of_pmc == 'string' goto L1
+    .local int string_len
 
-    ne type_of_pmc, 'string', not_a_string
-        .local int string_len
+    string_len = elements a
+    print 'string('
+    print string_len
+    print ') "'
+    print a
+    print '"'
+    say ''
 
-        string_len = elements a
-        print 'string('
-        print string_len
-        print ') "'
-        print a
-        print '"'
-        say ''
+    .return()
 
-       .return()
+  L1:
+    unless type_of_pmc == 'array' goto L2
+    .local int num_elements
+    num_elements = elements a
+    string_len = elements a
+    print 'array('
+    print num_elements
+    say ') {'
 
-not_a_string:
+    .local pmc    it, val, key
+    .local string indent, key_str
+    .local int    key_starts_with_digit
+    indent = '  '
+    it = iter a
+  iter_loop:
+    unless it goto iter_end
+    shift key, it
+    key_str = key
+    key_starts_with_digit = is_cclass .CCLASS_NUMERIC, key_str, 0
+    print indent
+    print '['
+    if key_starts_with_digit goto key_is_an_integer_1
+    print '"'
+  key_is_an_integer_1:
+    print key
+    if key_starts_with_digit goto key_is_an_integer_2
+    print '"'
+  key_is_an_integer_2:
+    say ']=>'
+    print indent
+    val = a[key]
+    var_dump(val)
 
-    ne type_of_pmc, 'array', not_a_hash
+    branch iter_loop
+  iter_end:
+    say '}'
+    .return()
+  L2:
+    unless type_of_pmc == 'integer' goto L3
+    print 'int('
+    print a
+    say ')'
 
-        .local int num_elements
-        num_elements = elements a
-        string_len = elements a
-        print 'array('
-        print num_elements
-        say ') {'
+    .return()
+  L3:
+    unless type_of_pmc == 'boolean' goto L4
+    print 'bool('
+    if a goto a_is_true
+    print 'false'
+    say ')'
 
-        .local pmc    it, val, key
-        .local string indent, key_str
-        .local int    key_starts_with_digit
-        indent = '  '
-        it = iter a
-iter_loop:
-    unless it, iter_end
-        shift key, it
-        key_str = key
-        key_starts_with_digit = is_cclass .CCLASS_NUMERIC, key_str, 0
-        print indent
-        print '['
-        if key_starts_with_digit goto key_is_an_integer_1
-            print '"'
-key_is_an_integer_1:
-        print key
-        if key_starts_with_digit goto key_is_an_integer_2
-            print '"'
-key_is_an_integer_2:
-        say ']=>'
-        print indent
-        val = a[key]
-        var_dump(val)
+    .return()
+  a_is_true:
+    print 'true'
+    say ')'
 
-        branch iter_loop
-iter_end:
+    .return()
+  set_null_type:
+    type_of_pmc = 'NULL'
+  L4:
+    unless type_of_pmc == 'NULL' goto L5
+    say type_of_pmc
 
-
-        say '}'
-       .return()
-
-not_a_hash:
-
-    ne type_of_pmc, 'integer', not_a_integer
-
-        print 'int('
-        print a
-        say ')'
-
-       .return()
-
-not_a_integer:
-
-    ne type_of_pmc, 'boolean', not_a_bool
-
-        print 'bool('
-        if a goto a_is_true
-            print 'false'
-            say ')'
-           .return()
-a_is_true:
-            print 'true'
-            say ')'
-           .return()
-
-not_a_bool:
-
+    .return()
+  L5:
+    # this should never happen
+    print 'unexpectedly encountered a '
+    print type_of_pmc
+    print " PMC\n"
     _dumper(a)
 
     .return()

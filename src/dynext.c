@@ -304,7 +304,7 @@ ParrotLibrary PMC object that represents the initialized library.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 Parrot_init_lib(PARROT_INTERP,
@@ -464,20 +464,24 @@ C<d>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 Parrot_clone_lib_into(ARGMOD(Interp *d), ARGMOD(Interp *s), ARGIN(PMC *lib_pmc))
 {
+    STRING * const filename = CONST_STRING(s, "_filename");
+    STRING * const libname  = CONST_STRING(s, "_lib_name");
+    STRING * const type_str = CONST_STRING(s, "_type");
+    STRING * const ops      = CONST_STRING(s, "Ops");
+
     STRING * const wo_ext = clone_string_into(d, s,
-        VTABLE_getprop(s, lib_pmc, CONST_STRING(s, "_filename")));
+        VTABLE_getprop(s, lib_pmc, filename));
     STRING * const lib_name = clone_string_into(d, s,
-        VTABLE_getprop(s, lib_pmc, CONST_STRING(s, "_lib_name")));
+        VTABLE_getprop(s, lib_pmc, libname));
     void * const handle = PMC_data(lib_pmc);
     STRING * const type =
-        VTABLE_get_string(s, VTABLE_getprop(s, lib_pmc, CONST_STRING(s, "_type")));
-    STRING * const ops  = CONST_STRING(s, "Ops");
+        VTABLE_get_string(s, VTABLE_getprop(s, lib_pmc, type_str));
 
     if (!string_equal(s, type, ops)) {
         /* we can't clone oplibs in the normal way, since they're actually
@@ -539,7 +543,7 @@ TODO: fetch Parrot_lib load/init handler exceptions
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC *

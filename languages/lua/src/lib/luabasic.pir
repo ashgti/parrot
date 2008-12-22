@@ -18,7 +18,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.1>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'basic' ]
 
 .sub 'luaopen_basic'
@@ -256,8 +257,8 @@ default for C<f> is 1.
     if f == zero goto L2
   L1:
     f = getfunc(f, 1)
-    $I0 = isa f, 'LuaClosure'
-    if $I0 goto L3
+    $P0 = f.'get_outer'()
+    unless null $P0 goto L3
   L2:
     res = get_hll_global '_G'
     .return (res)
@@ -270,8 +271,6 @@ default for C<f> is 1.
     .param int opt
     if null f goto L1
     $I0 = isa f, 'LuaFunction'
-    if $I0 goto L2
-    $I0 = isa f, 'LuaClosure'
     if $I0 goto L2
   L1:
     .local int level
@@ -292,7 +291,11 @@ default for C<f> is 1.
   L2:
     .return (f)
   _handler:
-    lua_argerror(1, "invalid level")
+    .local pmc e
+    .get_results (e)
+    $S0 = lua_x_argerror(1, "invalid level")
+    e = $S0
+    rethrow e
 .end
 
 =item C<getmetatable (object)>
@@ -712,8 +715,8 @@ STILL INCOMPLETE.
     .return ()
   L1:
     f = getfunc(f, 0)
-    $I0 = isa f, 'LuaFunction'
-    if $I0 goto L2
+    $P0 = f.'get_outer'()
+    if null $P0 goto L2
     $I0 = lua_setfenv(f, table)
     unless $I0 goto L2
     .return (f)
@@ -921,13 +924,10 @@ error, C<xpcall> returns false plus the result from C<err>.
   _handler:
     set status, 0
     $I0 = isa err_, 'LuaFunction'
-    if $I0 goto L1
-    $I0 = isa err_, 'LuaClosure'
-    unless $I0 goto L2
-  L1:
+    unless $I0 goto L1
     (res :slurpy) = err_()
     .return (status, res :flat)
-  L2:
+  L1:
     .return (status)
 .end
 

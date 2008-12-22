@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 30;
+use Parrot::Test tests => 31;
 
 =head1 NAME
 
@@ -131,9 +131,9 @@ pir_output_is( <<'CODE', <<'OUTPUT', ".get_results() - PIR" );
 .sub main :main
     print "main\n"
     push_eh _handler
-    new P1, 'Exception'
-    set P1, "just pining"
-    throw P1
+    new $P1, 'Exception'
+    set $P1, "just pining"
+    throw $P1
     print "not reached\n"
     end
 _handler:
@@ -142,12 +142,12 @@ _handler:
     .get_results (e)
     s = e
     print "caught it\n"
-    typeof S1, e
-    print S1
+    typeof $S1, e
+    print $S1
     print "\n"
     print s
     print "\n"
-    null P5
+    null $P5
 .end
 CODE
 main
@@ -423,7 +423,11 @@ CODE
 No exception handler/
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "exit_handler via exit exception" );
+$ENV{TEST_PROG_ARGS} ||= '';
+my @todo = $ENV{TEST_PROG_ARGS} =~ /-r/
+    ? ( todo => '.tailcall and lexical maps not thawed from PBC, RT #60650' )
+    : ();
+pir_output_is( <<'CODE', <<'OUTPUT', "exit_handler via exit exception", @todo );
 .sub main :main
     .local pmc a
     .lex 'a', a
@@ -641,6 +645,37 @@ In the exception handler
 After throwing
 OUTPUT
 
+pir_output_is( <<'CODE', <<'OUTPUT', "Resumable exceptions from a different context");
+.sub main :main
+    push_eh catcher
+    'foo'()
+    pop_eh
+    say 'ok 4'
+    .return ()
+  catcher:
+    .get_results ($P0)
+    $P1 = $P0['resume']
+    say 'in the handler'
+    $P1()
+.end
+
+.sub 'foo'
+    say 'ok 1'
+    $P0 = new 'Exception'
+    throw $P0
+    say 'ok 2'
+    $P0 = new 'Exception'
+    throw $P0
+    say 'ok 3'
+.end
+CODE
+ok 1
+in the handler
+ok 2
+in the handler
+ok 3
+ok 4
+OUTPUT
 # Local Variables:
 #   mode: cperl
 #   cperl-indent-level: 4

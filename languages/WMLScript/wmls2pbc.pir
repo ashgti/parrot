@@ -19,8 +19,9 @@ wmlsd, wmls2pir, wmlsi
 
 =cut
 
+.HLL 'WMLScript'
+.loadlib 'wmls_group'
 .loadlib 'wmls_ops'
-.HLL 'WMLScript', 'wmls_group'
 
 .sub 'main' :main
     .param pmc argv
@@ -48,19 +49,19 @@ wmlsd, wmls2pir, wmlsi
     pir_comp = compreg 'PIR'
     pbc_out = pir_comp(gen_pir)
     save_pbc(pbc_out, filename)
-    end
-  _handler:
-    .local pmc e
-    .local string s
-    .get_results (e)
-    s = e
-    print s
-    print "\n"
+    pop_eh
   L1:
     end
   USAGE:
     printerr "Usage: parrot wmls2pir.pbc filename\n"
     exit -1
+  _handler:
+    .local pmc e
+    .local string msg
+    .get_results (e)
+    msg = e
+    say msg
+    end
 .end
 
 

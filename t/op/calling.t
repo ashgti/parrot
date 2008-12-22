@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 98;
+use Parrot::Test tests => 93;
 
 =head1 NAME
 
@@ -733,10 +733,10 @@ pir_output_is( <<'CODE', <<'OUTPUT', "pir uses no ops" );
 .end
 
 .sub foo
-    get_params "0, 0", I16, I17
-    print I16
+    get_params "0, 0", $I16, $I17
+    print $I16
     print "\n"
-    print I17
+    print $I17
     print "\n"
     set_returns ""
     returncc
@@ -923,11 +923,11 @@ pir_output_is( <<'CODE', <<'OUTPUT', "optional returns, void ret" );
 .sub main :main
     .local pmc f
     $I0 = 99
-    f = global "foo"
+    f = find_global "foo"
     .begin_call
     .call f
-    .result   $P0 :optional
-    .result   $I0 :opt_flag
+    .get_result   $P0 :optional
+    .get_result   $I0 :opt_flag
     .end_call
     unless $I0,  ex
     print "not "
@@ -1331,14 +1331,14 @@ pir_output_is( <<'CODE', <<'OUTPUT', "tailcall - overlapping Ix" );
 .end
 .sub foo
     .const 'Sub' b = "bar"
-    I0 = 10
-    I1 = 20
-    set_args "0,0", I1, I0
+    $I0 = 10
+    $I1 = 20
+    set_args "0,0", $I1, $I0
     tailcall b
 .end
 .sub bar
-    get_params "0,0", I0, I1
-    .return (I0, I1)
+    get_params "0,0", $I0, $I1
+    .return ($I0, $I1)
 .end
 CODE
 2010
@@ -1939,91 +1939,6 @@ CODE
 ok
 OUTPUT
 
-## Named
-pir_output_is( <<'CODE', <<'OUTPUT', " 'foo' => d syntax for parameters" );
-.sub main :main
-        foo ('a'=>20,'b'=>10)
-        print "ok\n"
-
-        end
-.end
-
-.sub foo
-        .param int "b" => d
-        .param int "a" => c
-
-        print d
-        print ' '
-        print c
-        print "\n"
-
-        .return ()
-.end
-CODE
-10 20
-ok
-OUTPUT
-
-## Named
-pir_output_is( <<'CODE', <<'OUTPUT', " 'foo' => d syntax for target list" );
-.sub main :main
-        ("b" => $I0 , "a" => $I1) = foo( "b" => 10 , "a" => 20)
-        print $I0
-        print ' '
-        print $I1
-        print "\n"
-        print "ok\n"
-
-        end
-.end
-
-.sub foo
-        .param int "a" => c
-        .param int "b" => d
-
-        print d
-        print ' '
-        print c
-        print "\n"
-
-        .return ( 10 :named("a"), 20 :named("b"))
-.end
-CODE
-10 20
-20 10
-ok
-OUTPUT
-
-## Named
-pir_output_is( <<'CODE', <<'OUTPUT', " 'foo' => d syntax for return" );
-.sub main :main
-        ("b" => $I0 , "a" => $I1) = foo( "b" => 10 , "a" => 20)
-        print $I0
-        print ' '
-        print $I1
-        print "\n"
-        print "ok\n"
-
-        end
-.end
-
-.sub foo
-        .param int "a" => c
-        .param int "b" => d
-
-        print d
-        print ' '
-        print c
-        print "\n"
-
-        .return ( "a" => 10, "b" => 20 )
-.end
-CODE
-10 20
-20 10
-ok
-OUTPUT
-
 pir_error_output_like( <<'CODE', <<'OUTPUT', "named => pos passing" );
 .sub main :main
         foo( "b" => 10 , "a" => 20)
@@ -2048,25 +1963,6 @@ pir_output_is( <<'CODE', <<'OUTPUT', "named optional - set" );
 .sub foo
         .param int d :named('b')
         .param int c :named('a') :optional
-        print d
-        print ' '
-        print c
-        print "\n"
-.end
-CODE
-10 20
-ok
-OUTPUT
-
-pir_output_is( <<'CODE', <<'OUTPUT', "named optional - set" );
-.sub main :main
-        foo ('a'=>20,'b'=>10)
-        print "ok\n"
-.end
-
-.sub foo
-        .param int 'b' => d
-        .param int 'a' => c  :optional
         print d
         print ' '
         print c
@@ -2156,21 +2052,6 @@ pir_output_is( <<'CODE', <<'OUTPUT', "named flat/slurpy" );
 CODE
 20 10
 ok
-OUTPUT
-
-pir_error_output_like( <<'CODE', <<'OUTPUT', "param .. 'a' => v :named('foo')" );
-.sub main :main
-        foo( "b" => 10, "a" => 20)
-        print "never\n"
-        end
-.end
-
-.sub foo
-        .param int "a" => c :named("foo")
-        .param int "b" => d
-.end
-CODE
-/Named parameter with more than one name/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "param .. 'a' => v :named('foo')" );
@@ -2422,33 +2303,33 @@ pir_output_is(
 .end
 
 .sub create_closure_and_run_it
-    P0 = new "Integer"
-    P0 = 3
-    .lex "val", P0
-    P2 = get_global "myclosure"
-    P1 = newclosure P2
+    $P0 = new "Integer"
+    $P0 = 3
+    .lex "val", $P0
+    $P2 = get_global "myclosure"
+    $P1 = newclosure $P2
     # There is a closure depending on our current context, so this shouldn't
     # free it.
-    .tailcall P1()
+    .tailcall $P1()
 .end
 
 .sub myclosure :outer(create_closure_and_run_it)
-    P1 = find_lex "val"
-    say P1
+    $P1 = find_lex "val"
+    say $P1
     donothing()
-    P1 = find_lex "val"
-    say P1
+    $P1 = find_lex "val"
+    say $P1
     .return ()
 .end
 
 .sub donothing
-    P0 = new "Integer"
-    P0 = 5
+    $P0 = new "Integer"
+    $P0 = 5
     # This creates a new binding that is not accessible by the
     # caller (myclosure)
-    .lex "val", P0
-    P2 = null
-    P1 = null
+    .lex "val", $P0
+    null $P2
+    null $P1
 .end
 CODE
 3

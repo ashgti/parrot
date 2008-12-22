@@ -29,8 +29,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'Integer_divide_Integer  10 / 3 = 1003' );
 
 .sub 'test' :main
     .local pmc divide
-    divide = global "Integer_divide_Integer"
-    add_multi "divide", "Integer,Integer", divide
+    divide = find_global "Integer_divide_Integer"
+    add_multi "divide", "Integer,Integer,Integer", divide
 
     $P0 = new 'Integer'
     $P1 = new 'Integer'
@@ -61,7 +61,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "1+1=3" );
 
 .sub _main
     .local pmc add
-    add = global "add"
+    add = find_global "add"
     add_multi "add", "Integer,Integer,Integer", add
 
     $P0 = new 'Integer'
@@ -93,7 +93,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "PASM divide - override builtin 10 / 3 = 42
 
 .sub _main
     .local pmc divide
-    divide = global "Integer_divide_Integer"
+    divide = find_global "Integer_divide_Integer"
     add_multi "divide", "Integer,Integer,Integer", divide
 
     $P0 = new 'Integer'
@@ -121,7 +121,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "INTVAL return numeq" );
 
 .sub _main
     .local pmc comp
-    comp = global "Float_cmp_Integer"
+    comp = find_global "Float_cmp_Integer"
     add_multi "cmp", "Float,Integer", comp
 
     $P1 = new 'Float'
@@ -137,7 +137,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "INTVAL return numeq" );
     .param pmc left
     .param pmc right
     .begin_return
-    .return -42
+    .set_return -42
     .end_return
 .end
 CODE
@@ -148,7 +148,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "find_multi" );
 
 .sub _main
     .local pmc comp
-    comp = global "Float_cmp_Integer"
+    comp = find_global "Float_cmp_Integer"
     add_multi "cmp_num", "Float,Integer", comp
     $P0 = find_multi "cmp_num", "Float,Integer"
     if_null $P0, nok
@@ -164,7 +164,7 @@ nok:
     .param pmc left
     .param pmc right
     .begin_return
-    .return -42
+    .set_return -42
     .end_return
 .end
 CODE
@@ -176,7 +176,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', "find_multi - invoke it" );
 
 .sub _main
     .local pmc comp
-    comp = global "Float_cmp_Integer"
+    comp = find_global "Float_cmp_Integer"
     add_multi "cmp_num", "Float,Integer", comp
     $P0 = find_multi "cmp_num", "Float,Integer"
     if_null $P0, nok
@@ -198,7 +198,7 @@ nok:
     .param pmc left
     .param pmc right
     .begin_return
-    .return -42
+    .set_return -42
     .end_return
 .end
 CODE
@@ -224,8 +224,8 @@ pir_output_is( <<"CODE", <<'OUTPUT', "PASM MMD divide - loaded sub" );
 .sub _main
     .local pmc divide
     load_bytecode "$temp_pir"
-    divide = global "Integer_divide_Integer"
-    add_multi "divide", "Integer,Integer", divide
+    divide = find_global "Integer_divide_Integer"
+    add_multi "divide", "Integer,Integer,Integer", divide
 
     \$P0 = new 'Integer'
     \$P1 = new 'Integer'
@@ -335,7 +335,7 @@ pir_output_is( <<'CODE', <<'OUT', "first dynamic MMD call" );
     ## push m, s
     ## s = get_global "Bar", "foo"
     ## push m, s
-    ## global "foo" = m
+    ## store_global "foo", m
     print "calling foo(f, b)\n"
     foo(f, b)
     print "calling foo(b, f)\n"

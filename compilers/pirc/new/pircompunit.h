@@ -13,19 +13,20 @@
 #ifndef PARROT_PIR_PIRCOMPUNIT_H_GUARD
 #define PARROT_PIR_PIRCOMPUNIT_H_GUARD
 
-/* the 4 parrot types; use explicit values, they are used to index an array,
- * so this way we can be sure that works properly.
- * (don't assume enum's start counting at 0).
+/* the 4 parrot types; use explicit values that match the values in
+ * PDD03_calling_conventions.pod.
  */
 typedef enum pir_types {
     INT_TYPE     = 0,
-    NUM_TYPE     = 1,
-    STRING_TYPE  = 2,
-    PMC_TYPE     = 3,
-    UNKNOWN_TYPE = 4  /* for uninitialized types */
+    STRING_TYPE  = 1,
+    PMC_TYPE     = 2,
+    NUM_TYPE     = 3,
+    UNKNOWN_TYPE = 4  /* for uninitialized types, handy to detect missing initializations. */
 
 } pir_type;
 
+/* Parrot has 4 types */
+#define NUM_PARROT_TYPES    4
 
 
 /* selector values for the expression value union */
@@ -81,7 +82,7 @@ typedef enum sub_flags {
     SUB_FLAG_VTABLE     = 1 << 8,  /* this sub overrides a vtable method */
     SUB_FLAG_LEX        = 1 << 9,  /* this sub needs a LexPad */
     SUB_FLAG_MULTI      = 1 << 10, /* this sub is a multi method/sub */
-    SUB_FLAG_LEXID      = 1 << 11, /* this sub has a namespace-unaware identifier
+    SUB_FLAG_SUBID      = 1 << 11, /* this sub has a namespace-unaware identifier
                                       XXX this flag needed? XXX */
     SUB_FLAG_INSTANCEOF = 1 << 12  /* this sub has an :instanceof flag. XXX document this XXX */
 
@@ -194,18 +195,13 @@ typedef struct key {
  * return values, it's a local variable (or register).
  */
 typedef struct target {
+    struct syminfo *info;           /* pointer to symbol/pir_reg's information */
+    target_flag     flags;          /* flags like :slurpy etc. */
+    char const     *alias;          /* if this is a named parameter, this is the alias */
+    char const     *lex_name;       /* if this is a lexical, this field contains the name */
+    struct key     *key;            /* the key of this target, i.e. $P0[$P1], $P1 is key. */
 
-    union sym_union {
-        struct symbol  *sym;
-        struct pir_reg *reg;
-    } s;
-
-    target_flag    flags;          /* flags like :slurpy etc. */
-    char const    *alias;          /* if this is a named parameter, this is the alias */
-    char const    *lex_name;       /* if this is a lexical, this field contains the name */
-    struct key    *key;            /* the key of this target, i.e. $P0[$P1], $P1 is key. */
-
-    struct target *next;
+    struct target  *next;
 
 } target;
 
@@ -303,12 +299,14 @@ typedef struct subroutine {
     key                *name_space;    /* this sub's namespace */
     char const         *sub_name;      /* this sub's name */
     char const         *outer_sub;     /* this sub's outer subroutine, if any */
-    char const         *lex_id;        /* this sub's lex_id, if any */
-    char const         *vtable_method; /* name of vtable method that this sub's overriding if any */
+    char const         *subid;         /* this sub's subid, if any */
+    int                 vtable_index;  /* index of vtable method this sub's overriding, if any */
     char const         *instanceof;    /* XXX document this XXX */
     char const         *nsentry;       /* name by which the sub is stored in the namespace */
     char const         *methodname;    /* name of this sub by which it's stored as a method */
     int                 flags;         /* this sub's flags */
+    int                 startoffset;   /* start offset in bytecode where this sub starts */
+    int                 endoffset;     /* end offset in bytecode where this sub ends */
 
     /* XXX the whole multi stuff must be implemented */
     char              **multi_types;   /* data types of parameters if this is a multi sub */
@@ -339,7 +337,7 @@ void set_namespace(struct lexer_state * const lexer, key * const ns);
 /* various set functions to set the value of a subroutine flag */
 void set_sub_outer(struct lexer_state * const lexer, char const * const outersub);
 void set_sub_vtable(struct lexer_state * const lexer, char const * vtablename);
-void set_sub_lexid(struct lexer_state * const lexer, char const * const lexid);
+void set_sub_subid(struct lexer_state * const lexer, char const * const subid);
 void set_sub_instanceof(struct lexer_state * const lexer, char const * const classname);
 void set_sub_nsentry(struct lexer_state * const lexer, char const * const nsentry);
 void set_sub_methodname(struct lexer_state * const lexer, char const * const methodname);
@@ -358,6 +356,8 @@ constant *new_named_const(struct lexer_state * const lexer, pir_type type,
                           char const * const name, ...);
 
 constant *new_const(struct lexer_state * const lexer, pir_type type, ...);
+
+constant *new_pmc_const(char const * const type, char const * const name, constant * const value);
 
 /* conversion functions, each wrapping its argument in an expression node */
 expression *expr_from_const(struct lexer_state * const lexer, constant * const c);
@@ -386,9 +386,9 @@ void set_target_key(target * const t, key * const k);
 
 /* functions for creating an invocation node and setting various fields */
 invocation *invoke(struct lexer_state * const lexer, invoke_type, ...);
-void set_invocation_type(invocation * const inv, invoke_type type);
-void set_invocation_args(invocation * const inv, argument * const args);
-void set_invocation_results(invocation * const inv, target * const results);
+invocation *set_invocation_type(invocation * const inv, invoke_type type);
+invocation *set_invocation_args(invocation * const inv, argument * const args);
+invocation *set_invocation_results(invocation * const inv, target * const results);
 
 /* conversion functions that wrap their arguments into a target node */
 target *target_from_symbol(struct lexer_state * const lexer, struct symbol * const sym);
@@ -445,7 +445,8 @@ void fixup_global_labels(struct lexer_state * const lexer);
 void set_op_labelflag(struct lexer_state * const lexer, int flag);
 void convert_inv_to_instr(struct lexer_state * const lexer, invocation * const inv);
 
-void generate_get_params(struct lexer_state * const lexer);
+void update_sub_register_usage(struct lexer_state * const lexer,
+                               unsigned reg_usage[NUM_PARROT_TYPES]);
 
 void panic(struct lexer_state * lexer, char const * const message);
 

@@ -190,7 +190,7 @@ newline or semicolon after an end keyword."
     "n_infix" "ne" "needs_destroy" "neg" "new" "new_callback" "newclass"
     "newclosure" "nors" "not" "null"
     "open" "or" "ord"
-    "peek" "pin" "pioctl" "poll" "pop" "popmark" "pow" "print" "printerr"
+    "peek" "pin" "poll" "pop" "popmark" "pow" "print" "printerr"
     "profile" "prophash" "push" "push_eh" "pushaction" "pushmark"
     "read" "readline" "recv" "register" "removeattribute" "removeparent"
     "repeat" "restore" "result_info" "ret" "rethrow" "returncc"
@@ -221,7 +221,7 @@ newline or semicolon after an end keyword."
 (defvar pir-dollar-register-regexp "\\$[INPS][0-9]+")
 
 (defvar pir-directives
-  '(":anon" ":flat" ":init" ":lex" ":lexid" ":load" ":main" ":method" ":multi"
+  '(":anon" ":flat" ":init" ":lex" ":subid" ":load" ":main" ":method" ":multi"
     ":named" ":opt_count" ":opt_flag" ":optional" ":outer" ":postcomp"
     ":slurpy" ":unique_reg" ":vtable" ":wrap"))
 

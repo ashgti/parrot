@@ -8,7 +8,7 @@ t/pmc/boolean.t - Boolean PMC
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/boolean.t
+    % perl t/harness t/pmc/boolean.t
 
 =head1 DESCRIPTION
 
@@ -16,7 +16,7 @@ Tests C<PhpBoolean> PMC.
 
 =cut
 
-.HLL "PHP", "php_group"
+.loadlib "php_group"
 
 .sub 'main' :main
     .include "include/test_more.pir"

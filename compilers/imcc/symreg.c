@@ -71,7 +71,9 @@ static char * add_ns(PARROT_INTERP, ARGIN(const char *name))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static int int_overflows(const SymReg *r);
+static int int_overflows(ARGIN(const SymReg *r))
+        __attribute__nonnull__(1);
+
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 static SymReg * mk_pmc_const_2(PARROT_INTERP,
@@ -609,7 +611,7 @@ mk_pmc_const_2(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(SymReg *left),
         ARGMOD(SymReg *rhs))
 {
     /* XXX This always returns NULL.  Probably shouldn't return anything then. */
-    SymReg *r[2];
+    SymReg *r[3];
     char   *name;
     int     len;
 
@@ -735,7 +737,7 @@ _mk_const(ARGMOD(SymHash *hsh), ARGIN(const char *name), int t)
 }
 
 static int
-int_overflows(const SymReg *r)
+int_overflows(ARGIN(const SymReg *r))
 {
     INTVAL i;
     errno = 0;
@@ -853,26 +855,35 @@ _mk_address(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGIN(const char *name), int un
         _store_symreg(hsh, r);
     }
     else {
-        if (uniq == U_add_uniq_sub)
-            name = add_ns(interp, name);
+        /* Aux var to avoid the need of const casts */
+        char *aux_name = NULL;
+        const char * const sub_name = (uniq == U_add_uniq_sub)
+                       /* remember to free this name; add_ns malloc()s it */
+                       ? (aux_name= add_ns(interp, name))
+                       : (char *)name;
 
-        r = _get_sym(hsh, name);
+        r = _get_sym(hsh, sub_name);
 
         /* we use this for labels/subs */
         if (uniq && r && r->type == VTADDRESS && r->lhs_use_count) {
             if (uniq == U_add_uniq_label)
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
-                    "Label '%s' already defined\n", name);
-            else if (uniq == U_add_uniq_sub)
+                    "Label '%s' already defined\n", sub_name);
+            else if (uniq == U_add_uniq_sub) {
+                mem_sys_free(aux_name);
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                         "Subroutine '%s' already defined\n", name);
+            }
         }
 
-        r       = _mk_symreg(hsh, name, 0);
+        r       = _mk_symreg(hsh, sub_name, 0);
         r->type = VTADDRESS;
 
-        if (uniq)
+        if (uniq) {
             r->lhs_use_count++;
+            if (uniq == U_add_uniq_sub)
+                mem_sys_free(aux_name);
+        }
     }
 
     return r;
@@ -1156,6 +1167,7 @@ free_sym(ARGMOD(SymReg *r))
         }
     }
 
+    mem_sys_free(r->subid);
     mem_sys_free(r->name);
     mem_sys_free(r);
 }

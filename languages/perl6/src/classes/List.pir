@@ -4,137 +4,177 @@
 
 src/classes/List.pir - Perl 6 List class and related functions
 
-=head2 Object Methods
-
-=over 4
-
 =cut
 
-.sub 'onload' :anon :load :init
+.namespace []
+.sub '' :anon :load :init
     .local pmc p6meta, listproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
     listproto = p6meta.'new_class'('List', 'parent'=>'ResizablePMCArray Any')
+    $P0 = get_hll_global 'Positional'
+    p6meta.'add_role'($P0, 'to'=>listproto)
     p6meta.'register'('ResizablePMCArray', 'parent'=>listproto, 'protoobject'=>listproto)
 
     $P0 = get_hll_namespace ['List']
-    '!EXPORT'('first grep keys kv map pairs reduce values', $P0)
+    '!EXPORT'('keys,kv,pairs,values', $P0)
 .end
 
+=head2 Methods
 
-=item Scalar
+=over
 
-When we're going to be stored as an item, become an Array and then return
-ourself in a ObjectRef.
+=item ACCEPTS
+
+Smart-matches against the list.
 
 =cut
 
 .namespace ['List']
-.sub 'Scalar' :method
-    # promote the list to an Array and return its VALUE
-    $P0 = self.'item'()
-    .tailcall $P0.'Scalar'()
+.sub 'ACCEPTS' :method
+    .param pmc topic
+
+    # What do we have?
+    $I0 = isa topic, 'List' # Catches Array too
+    if $I0 goto array
+    goto default
+
+    # Array. Need to DWIM on *s.
+  array:
+    .local pmc whatever
+    whatever = get_hll_global 'Whatever'
+    .local pmc it_a, it_b, cur_a, cur_b
+    it_a = iter self
+    it_b = iter topic
+    unless it_a goto it_loop_end
+    unless it_b goto it_loop_end
+    cur_a = shift it_a
+  it_loop:
+    unless it_b goto it_loop_end
+    cur_b = shift it_b
+
+    # If there curent thing is Whatever, need special handling.
+    $I0 = isa cur_a, whatever
+    unless $I0 goto not_whatever
+
+    # If we don't have anything left other than the Whatever, it matches any
+    # ending. Otherwise, we see what we're next looking for, and keep pulling
+    # from the topic until we see it, or until we run out of topic in which
+    # case we can't get no satisfaction.
+  handle_whatever:
+    unless it_a goto true
+    .local pmc looking_for
+    looking_for = shift it_a
+  whatever_loop:
+    $P0 = 'infix:==='(looking_for, cur_b)
+    if $P0 goto found_looking_for
+    unless it_b goto false
+    cur_b = shift it_b
+    goto whatever_loop
+  found_looking_for:
+    unless it_a goto it_loop_end
+    cur_a = shift it_a
+    goto it_loop
+
+  not_whatever:
+    # Not whatever - check a against b, and pull another a for the next time
+    # around the loop, unless we've run out of b (note that if it's a whatever
+    # then it doesn't matter if we ran out of b; if it's not and we ran out of
+    # list b then we fail).
+    $I0 = 'infix:==='(cur_a, cur_b)
+    unless $I0 goto false
+    unless it_a goto it_loop_end
+    cur_a = shift it_a
+    $I0 = isa cur_a, whatever
+    if $I0 goto handle_whatever
+    unless it_b goto false
+    goto it_loop
+  it_loop_end:
+    if it_a goto false
+    if it_b goto false
+  true:
+    $P0 = get_hll_global [ 'Bool' ], 'True'
+    .return ($P0)
+  false:
+    $P0 = get_hll_global [ 'Bool' ], 'False'
+    .return ($P0)
+
+    # Something else. Just do a hyper ===, and check all the values are matches.
+  default:
+    topic = topic.'list'()
+    $P0 = '!HYPEROP'('infix:===', self, topic, 0, 0)
+    $P0 = 'all'($P0)
+    .tailcall 'prefix:?'($P0)
 .end
 
 
-=item clone()    (vtable method)
+=item item
 
-Return a clone of this list.  (Clones its elements also.)
-
-=cut
-
-.namespace ['List']
-.sub 'clone' :vtable :method
-    .local pmc p6meta, result, iter
-    $P0 = typeof self
-    result = new $P0
-    iter = self.'iterator'()
-  iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
-    $P0 = clone $P0
-    push result, $P0
-    goto iter_loop
-  iter_end:
-    .return (result)
-.end
-
-
-=item get_string()    (vtable method)
-
-Return the elements of the list joined by spaces.
-
-=cut
-
-.sub 'get_string' :vtable :method
-    $S0 = join ' ', self
-    .return ($S0)
-.end
-
-
-=item hash()
-
-Return the List invocant as a Hash.
-
-=cut
-
-.sub 'hash' :method
-    .local pmc result, iter
-    result = new 'Perl6Hash'
-    iter = self.'iterator'()
-  iter_loop:
-    unless iter goto iter_end
-    .local pmc elem, key, value
-    elem = shift iter
-    $I0 = does elem, 'hash'
-    if $I0 goto iter_hash
-    $I0 = isa elem, 'Perl6Pair'
-    if $I0 goto iter_pair
-    unless iter goto err_odd_list
-    value = shift iter
-    value = clone value
-    result[elem] = value
-    goto iter_loop
-  iter_hash:
-    .local pmc hashiter
-    hashiter = elem.'keys'()
-  hashiter_loop:
-    unless hashiter goto hashiter_end
-    $S0 = shift hashiter
-    value = elem[$S0]
-    result[$S0] = value
-    goto hashiter_loop
-  hashiter_end:
-    goto iter_loop
-  iter_pair:
-    key = elem.'key'()
-    value = elem.'value'()
-    result[key] = value
-    goto iter_loop
-  iter_end:
-    .return (result)
-
-  err_odd_list:
-    die "Odd number of elements found where hash expected"
-.end
-
-
-=item item()
-
-Return the List invocant in scalar context (i.e., an Array).
+A List in item context becomes an Array.
 
 =cut
 
 .namespace ['List']
 .sub 'item' :method
-    $P0 = new 'Perl6Array'
-    splice $P0, self, 0, 0
+    .tailcall self.'Array'()
+.end
+
+=item list
+
+A List in list context returns itself.
+
+=cut
+
+.namespace ['List']
+.sub 'list' :method
+    .return (self)
+.end
+
+.namespace []
+.sub 'list'
+    .param pmc values          :slurpy
+    .tailcall values.'!flatten'()
+.end
+
+=back
+
+=head2 Coercion methods
+
+=over
+
+=item Iterator
+
+=cut
+
+.namespace ['List']
+.sub 'Iterator' :method
+    self.'!flatten'()
+    $P0 = iter self
     .return ($P0)
 .end
 
 
-=item list()
+=item Scalar
 
-Return the List as a list.
+A list in Scalar context becomes an Array ObjectRef.
+
+=cut
+
+.sub 'Scalar' :method
+    $P0 = self.'Array'()
+    $P0 = new 'ObjectRef', $P0
+    .return ($P0)
+.end
+
+# FIXME:  :vtable('get_string') is wrong here.
+.sub 'Str' :method :vtable('get_string')
+    self.'!flatten'()
+    $S0 = join ' ', self
+    .return ($S0)
+.end
+
+=item ResizablePMCArray.list
+
+This version of list morphs a ResizablePMCArray into a List.
 
 =cut
 
@@ -150,11 +190,25 @@ Return the List as a list.
     .return (self)
 .end
 
-.namespace ['List']
-.sub 'list' :method
-    .return (self)
-.end
 
+=back
+
+=head2 Methods
+
+=over
+
+=item elems()
+
+Return the number of elements in the list.
+
+=cut
+
+.namespace ['List']
+.sub 'elems' :method :multi('ResizablePMCArray') :vtable('get_number')
+    self.'!flatten'()
+    $I0 = elements self
+    .return ($I0)
+.end
 
 =item perl()
 
@@ -184,7 +238,7 @@ Returns a Perl representation of a List.
 
 =back
 
-=head2 List methods
+=head2 Private methods
 
 =over 4
 
@@ -211,14 +265,14 @@ layer.  It will likely change substantially when we have lazy lists.
   flat_loop_1:
     .local pmc elem
     elem = self[i]
-    $I0 = defined elem
-    unless $I0 goto flat_next
+    $I0 = isa elem, 'Perl6Scalar'
+    unless $I0 goto no_deref
+    elem = deref elem
+  no_deref:
     $I0 = isa elem, 'ObjectRef'
     if $I0 goto flat_next
-    $I0 = isa elem, 'Range'
-    unless $I0 goto not_range
-    elem = elem.'list'()
-  not_range:
+    $I0 = can elem, '!flatten'
+    if $I0 goto flat_elem
     $I0 = does elem, 'array'
     unless $I0 goto flat_next
     splice self, elem, i, 1
@@ -226,6 +280,13 @@ layer.  It will likely change substantially when we have lazy lists.
     goto flat_loop
   flat_next:
     inc i
+    goto flat_loop
+  flat_elem:
+    elem = elem.'!flatten'()
+    splice self, elem, i, 1
+    $I0 = elements elem
+    i += $I0
+    len = elements self
     goto flat_loop
   flat_end:
     $I0 = isa self, 'List'
@@ -235,57 +296,6 @@ layer.  It will likely change substantially when we have lazy lists.
     .return (self)
 .end
 
-
-=item elems()
-
-Return the number of elements in the list.
-
-=cut
-
-.sub 'elems' :method :multi('ResizablePMCArray') :vtable('get_number')
-    self.'!flatten'()
-    $I0 = elements self
-    .return ($I0)
-.end
-
-
-=item first(...)
-
-=cut
-
-.sub 'first' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc test
-    .local pmc retv
-    .local pmc iter
-    .local pmc block_res
-    .local pmc block_arg
-
-    iter = self.'iterator'()
-  loop:
-    unless iter goto nomatch
-    block_arg = shift iter
-    block_res = test(block_arg)
-    if block_res goto matched
-    goto loop
-
-  matched:
-    retv = block_arg
-    goto done
-
-  nomatch:
-    retv = '!FAIL'('Undefined value - first list match of no matches')
-
-  done:
-    .return(retv)
-.end
-
-
-.sub 'first' :multi('Sub')
-    .param pmc test
-    .param pmc values :slurpy
-
-    .tailcall values.'first'(test)
-.end
 
 =item fmt
 
@@ -325,39 +335,6 @@ of the elements, then joined with spaces or an explicitly given separator.
     retv = 'join'(sep, res)
     .return(retv)
 .end
-
-=item grep(...)
-
-=cut
-
-.sub 'grep' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc test
-    .local pmc retv
-    .local pmc iter
-    .local pmc block_res
-    .local pmc block_arg
-
-    retv = new 'List'
-    iter = self.'iterator'()
-  loop:
-    unless iter goto done
-    block_arg = shift iter
-    block_res = test(block_arg)
-
-    unless block_res goto loop
-    retv.'push'(block_arg)
-    goto loop
-
-  done:
-    .return(retv)
-.end
-
-.sub 'grep' :multi('Sub')
-    .param pmc test
-    .param pmc values          :slurpy
-    .tailcall values.'grep'(test)
-.end
-
 
 =item iterator()
 
@@ -420,63 +397,6 @@ Return items in invocant as 2-element (index, value) lists.
     .tailcall values.'kv'()
 .end
 
-
-=item map()
-
-Map.
-
-=cut
-
-.sub 'map' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc expression
-    .local pmc res, elem, block, mapres, iter, args
-    .local int i, arity
-
-    arity = expression.'arity'()
-    if arity > 0 goto body
-    arity = 1
-  body:
-    res = new 'List'
-    iter = self.'iterator'()
-  map_loop:
-    unless iter goto done
-
-    # Creates arguments for closure
-    args = new 'ResizablePMCArray'
-
-    i = 0
-  args_loop:
-    if i == arity goto invoke
-    unless iter goto elem_undef
-    elem = shift iter
-    goto push_elem
-  elem_undef:
-    elem = new 'Failure'
-  push_elem:
-    push args, elem
-    inc i
-    goto args_loop
-
-  invoke:
-    (mapres :slurpy) = expression(args :flat)
-    unless mapres goto map_loop
-    mapres.'!flatten'()
-    $I0 = elements res
-    splice res, mapres, $I0, 0
-    goto map_loop
-
-  done:
-    .return(res)
-.end
-
-
-.sub 'map' :multi('Sub')
-    .param pmc expression
-    .param pmc values          :slurpy
-    .tailcall values.'map'(expression)
-.end
-
-
 =item pairs()
 
 Return a list of Pair(index, value) elements for the invocant.
@@ -506,69 +426,6 @@ Return a list of Pair(index, value) elements for the invocant.
     .tailcall values.'pairs'()
 .end
 
-
-=item reduce(...)
-
-=cut
-
-.sub 'reduce' :method :multi('ResizablePMCArray', 'Sub')
-    .param pmc expression
-    .local pmc retv
-    .local pmc iter
-    .local pmc elem
-    .local pmc args
-    .local int i, arity
-
-    arity = expression.'arity'()
-    if arity < 2 goto error
-
-    iter = self.'iterator'()
-    unless iter goto empty
-    retv = shift iter
-  loop:
-    unless iter goto done
-
-    # Create arguments for closure
-    args = new 'ResizablePMCArray'
-    # Start with 1. First argument is result of previous call
-    i = 1
-
-  args_loop:
-    if i == arity goto invoke
-    unless iter goto elem_undef
-    elem = shift iter
-    goto push_elem
-  elem_undef:
-    elem = new 'Failure'
-
-  push_elem:
-    push args, elem
-    inc i
-    goto args_loop
-
-  invoke:
-    retv = expression(retv, args :flat)
-    goto loop
-
-  empty:
-    retv = new 'Undef'
-    goto done
-
-  error:
-    'die'('Cannot reduce() using a unary or nullary function.')
-    goto done
-
-  done:
-    .return(retv)
-.end
-
-.sub 'reduce' :multi('Sub')
-    .param pmc expression
-    .param pmc values          :slurpy
-    .tailcall values.'reduce'(expression)
-.end
-
-
 =item uniq(...)
 
 =cut
@@ -588,28 +445,22 @@ Return a list of Pair(index, value) elements for the invocant.
     $P0 = get_hll_global 'List'
     ulist = $P0.'new'()
 
-    .local int lelems, uelems, l, u
-    lelems = self.'elems'()
-    uelems = 0
-    l = 0
+    .local pmc it_inner, it_outer, val
+    it_outer = iter self
   outer_loop:
-    unless l < lelems goto outer_done
-    .local pmc val
-    val = self[l]
-    u = 0
+    unless it_outer goto outer_done
+    val = shift it_outer
+    it_inner = iter ulist
   inner_loop:
-    unless u < uelems goto inner_done
-    $P0 = ulist[u]
-    $P0 = comparer(val, $P0)
-    if $P0 goto outer_next
-    inc u
+    unless it_inner goto inner_done
+    $P0 = shift it_inner
+    $P1 = comparer(val, $P0)
+    if $P1 goto outer_loop
     goto inner_loop
   inner_done:
     ulist.'push'(val)
-    inc uelems
-  outer_next:
-    inc l
     goto outer_loop
+
   outer_done:
     .return (ulist)
 .end
@@ -619,11 +470,13 @@ Return a list of Pair(index, value) elements for the invocant.
 .sub 'uniq' :multi(Sub)
     .param pmc comparer
     .param pmc values :slurpy
+    values.'!flatten'()
     .tailcall values.'uniq'(comparer)
 .end
 
 .sub 'uniq' :multi()
     .param pmc values :slurpy
+    values.'!flatten'()
     .tailcall values.'uniq'()
 .end
 
@@ -653,27 +506,16 @@ Returns a List containing the values of the invocant.
 
 =over 4
 
-=item C<list(...)>
-
-Build a List from its arguments.
-
-=cut
-
-.namespace []
-.sub 'list'
-    .param pmc values          :slurpy
-    .tailcall values.'!flatten'()
-.end
-
 =item C<infix:,(...)>
 
 Operator form for building a list from its arguments.
 
 =cut
 
+.namespace []
 .sub 'infix:,'
     .param pmc args            :slurpy
-    .tailcall args.'!flatten'()
+    .tailcall args.'list'()
 .end
 
 
@@ -684,57 +526,48 @@ The zip operator.
 =cut
 
 .sub 'infix:Z'
-    .param pmc args :slurpy
-    .local int num_args
-    num_args = elements args
+    .param pmc arglist :slurpy
+    .local pmc result
 
-    # Empty list of no arguments.
-    if num_args > 0 goto has_args
-    $P0 = new 'List'
-    .return($P0)
-has_args:
+    # create a list to hold the results
+    result = new 'List'
 
-    # Get minimum element count - what we'll zip to.
-    .local int min_elem
-    .local int i
-    i = 0
-    $P0 = args[0]
-    min_elem = elements $P0
-min_elems_loop:
-    if i >= num_args goto min_elems_loop_end
-    $P0 = args[i]
-    $I0 = elements $P0
-    unless $I0 < min_elem goto not_min
-    min_elem = $I0
-not_min:
-    inc i
-    goto min_elems_loop
-min_elems_loop_end:
+    unless arglist goto result_done
 
-    # Now build result list of lists.
-    .local pmc res
-    res = new 'List'
-    i = 0
-zip_loop:
-    if i >= min_elem goto zip_loop_end
-    .local pmc cur_list
-    cur_list = new 'List'
-    .local int j
-    j = 0
-zip_elem_loop:
-    if j >= num_args goto zip_elem_loop_end
-    $P0 = args[j]
-    $P0 = $P0[i]
-    cur_list[j] = $P0
-    inc j
-    goto zip_elem_loop
-zip_elem_loop_end:
-    res[i] = cur_list
-    inc i
-    goto zip_loop
-zip_loop_end:
+    # create a set of iterators, one per argument
+    .local pmc iterlist, arglist_it
+    iterlist = new 'ResizablePMCArray'
+    arglist_it = iter arglist
+  arglist_loop:
+    unless arglist_it goto arglist_done
+    .local pmc arg, arg_it
+    arg = shift arglist_it
+    arg_it = iter arg
+    push iterlist, arg_it
+    goto arglist_loop
+  arglist_done:
 
-    .return(res)
+    # repeatedly loop through the argument iterators in parallel,
+    # building result elements as we go.  When we reach
+    # an argument iterator with no more elements, we're done.
+
+  outer_loop:
+    .local pmc iterlist_it, reselem
+    iterlist_it = iter iterlist
+    reselem = new 'List'
+  iterlist_loop:
+    unless iterlist_it goto iterlist_done
+    arg_it = shift iterlist_it
+    unless arg_it goto result_done
+    $P0 = shift arg_it
+    reselem.'push'($P0)
+    goto iterlist_loop
+  iterlist_done:
+    result.'push'(reselem)
+    goto outer_loop
+
+  result_done:
+    .return (result)
 .end
 
 
@@ -747,79 +580,60 @@ The non-hyper cross operator.
 .sub 'infix:X'
     .param pmc args            :slurpy
     .local pmc res
+
+    .local pmc res, outer, inner, it, val
     res = new 'List'
 
-    # Algorithm: we'll maintain a list of counters for each list, incrementing
-    # the counter for the right-most list and, when it we reach its final
-    # element, roll over the counter to the next list to the left as we go.
-    .local pmc counters
-    .local pmc list_elements
-    .local int num_args
-    counters = new 'FixedIntegerArray'
-    list_elements = new 'FixedIntegerArray'
-    num_args = elements args
-    counters = num_args
-    list_elements = num_args
+    ##  if the are no arguments, result is empty list
+    unless args goto done
 
-    # Get element count for each list.
-    .local int i
-    .local pmc cur_list
-    i = 0
-elem_get_loop:
-    if i >= num_args goto elem_get_loop_end
-    cur_list = args[i]
-    $I0 = elements cur_list
-    list_elements[i] = $I0
-    inc i
-    goto elem_get_loop
-elem_get_loop_end:
+    ##  get the first arg in list context
+    outer = shift args
+    outer = 'list'(outer)
 
-    # Now we'll start to produce them.
-    .local int res_count
-    res_count = 0
-produce_next:
+    ##  if this argument is empty, result is empty list
+    unless outer goto done
 
-    # Start out by building list at current counters.
-    .local pmc new_list
-    new_list = new 'List'
-    i = 0
-cur_perm_loop:
-    if i >= num_args goto cur_perm_loop_end
-    $I0 = counters[i]
-    $P0 = args[i]
-    $P1 = $P0[$I0]
-    new_list[i] = $P1
-    inc i
-    goto cur_perm_loop
-cur_perm_loop_end:
-    res[res_count] = new_list
-    inc res_count
+    ##  if no more args, then build result from only arg
+    unless args goto one_arg
 
-    # Now increment counters.
-    i = num_args - 1
-inc_counter_loop:
-    $I0 = counters[i]
-    $I1 = list_elements[i]
-    inc $I0
-    counters[i] = $I0
+    ##  There are more args, so recursively compute their cross.
+    ##  If that list is empty, our cross is empty.
+    inner = 'infix:X'(args :flat)
+    unless inner goto done
 
-    # In simple case, we just increment this and we're done.
-    if $I0 < $I1 goto inc_counter_loop_end
+    ##  otherwise, loop through all elements of our first arg
+    it = iter outer
+  outer_loop:
+    unless it goto done
+    val = shift it
+    ##  add the value to a clone of each inner result list
+    $P1 = iter inner
+  inner_loop:
+    unless $P1 goto outer_loop
+    ##  get a result list, clone it
+    $P0 = shift $P1
+    $P0 = clone $P0
+    ##  add our outer value to the beginning
+    unshift $P0, val
+    ##  save it in the result list
+    push res, $P0
+    goto inner_loop
 
-    # Otherwise we have to carry.
-    counters[i] = 0
+    ##  if call to infix:X had only one argument, our result
+    ##  is a list of 1-element lists.
+  one_arg:
+    it = iter outer
+  one_arg_loop:
+    unless it goto done
+    val = shift it
+    $P0 = new 'List'
+    push $P0, val
+    push res, $P0
+    goto one_arg_loop
 
-    # If we're on the first element, all done.
-    if i == 0 goto all_done
-
-    # Otherwise, loop.
-    dec i
-    goto inc_counter_loop
-inc_counter_loop_end:
-    goto produce_next
-
-all_done:
-    .return(res)
+  done:
+    .return (res)
 .end
 
 
@@ -841,18 +655,15 @@ The min operator.
 have_args:
 
     # Find minimum.
-    .local pmc cur_min
-    .local int i
+    .local pmc cur_min, it
     cur_min = args[0]
-    i = 1
+    it = iter args
 find_min_loop:
-    if i >= elems goto find_min_loop_end
-    $P0 = args[i]
+    unless it goto find_min_loop_end
+    $P0 = shift it
     $I0 = 'infix:cmp'($P0, cur_min)
-    if $I0 != -1 goto not_min
+    unless $I0 < 0 goto find_min_loop
     set cur_min, $P0
-not_min:
-    inc i
     goto find_min_loop
 find_min_loop_end:
 
@@ -878,18 +689,15 @@ The max operator.
 have_args:
 
     # Find maximum.
-    .local pmc cur_max
-    .local int i
+    .local pmc cur_max, it
     cur_max = args[0]
-    i = 1
+    it = iter args
 find_max_loop:
-    if i >= elems goto find_max_loop_end
-    $P0 = args[i]
+    unless it goto find_max_loop_end
+    $P0 = shift it
     $I0 = 'infix:cmp'($P0, cur_max)
-    if $I0 != 1 goto not_max
+    unless $I0 > 0 goto find_max_loop
     set cur_max, $P0
-not_max:
-    inc i
     goto find_max_loop
 find_max_loop_end:
 

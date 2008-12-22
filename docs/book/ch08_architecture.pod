@@ -98,8 +98,8 @@ passed into the optimizer module, which processes the bytecode and
 produces bytecode that is hopefully faster than what the compiler
 emitted. Finally, the bytecode is handed off to the interpreter
 module, which interprets the bytecode. Since compilation and execution
-are so tightly woven in Perl, the control may well end up back at the
-parser to parse more code.
+are so tightly woven in dynamic languages such as Perl and Python, the
+control may well flow back to the parser to parse more code.
 
 X<Parrot;compiler module>
 Parrot's compiler module also has the capability to freeze bytecode to
@@ -115,9 +115,9 @@ small section.
 
 Z<CHP-7-SECT-2.1>
 
-The X<parser, Parrot>
+X<parser, Parrot>
 X<Parrot;parser module>
-parser module is responsible for source code in PASM, PIR, or one of
+The parser module is responsible for source code in PASM, PIR, or one of
 the high-level languages, and turning it into an X<AST (Abstract Syntax
 Tree)> X<Abstract Syntax Tree (AST)> Abstract Syntax Tree (AST). An AST
 is a digested form of the program, one that's much easier for Parrot to
@@ -165,18 +165,19 @@ appropriate way to describe things.
 Parrot does support independent parsers for cases where the Perl 6
 grammar engine isn't the appropriate choice. A language might already
 have an existing parser available, or different techniques might be in
-order. The Perl 5 parsing engine may get embedded this way, as it's
-easier to embed a quirky existing parser than it is to recreate all
-the quirks in a new parser.
+order. The quirky parsing engines such as the one for Perl 5 may get
+embedded this way, as it's easier to embed some quirky parsers than it
+is to recreate all the quirks in a new parser.
 
 =head2 Compiler
 
 Z<CHP-7-SECT-2.2>
 
-The parser outputs data in a form called an Abstract Syntax Tree (AST).
-The X<Parrot;compiler module>
+
+X<Parrot;compiler module>
 X<compiler module, Parrot>
-compiler module takes this AST and converts it into bytecode that the
+The parser outputs data in a form called an Abstract Syntax Tree (AST).
+The compiler module takes this AST and converts it into bytecode that the
 interpreter engine can execute. This translation is very straightforward
 and isn't too expensive in terms of operating time and resources. The
 tree is flattened, and is passed into a series of substitutions and
@@ -217,37 +218,38 @@ standard optimizer would turn that code into the single line:
   $a = 10000;
 
 and remove the loop entirely. Unfortunately, that's not necessarily
-appropriate for Perl. C<$a> could easily be tied, perhaps representing
-the state of some external hardware. If incrementing the variable
-ten thousand times smoothly moves a stepper motor from 0 to 10000 in
-increments of one, just assigning a value of 10000 to the variable
-might whip the motor forward in one step, damaging the hardware. A
-tied variable might also keep track of the number of times it has been
-accessed or modified. Either way, optimizing the loop away changes the
-semantics of the program in ways the original programmer didn't want.
+appropriate for these dynamic languages. C<$a> could easily be an
+active value, which creates side effects when it is accessed or
+incremented. If incrementing the variable ten thousand times causes
+a hardware stepper motor to rotate smoothly, then just assigning a
+value of 10000 to the variable might not only be incorrect but actually
+dangerous to bystanders. An active variable like this might also keep
+track of the number of times it has been accessed or modified. Either
+way, optimizing the loop away changes the semantics of the program in
+ways the original programmer didn't want.
 
 Because of the potential for active or tied data, especially for
-languages as dynamically typed as Perl, optimizing is a non-trivial
-task. Other languages, such as C or Pascal, are more statically typed
-and lack active data, so an aggressive optimizer is in order for them.
-Breaking out the optimizer into a separate module allows us to add in
-optimizations piecemeal without affecting the compiler.  There's a lot
-of exciting work going into the problem of optimizing dynamic
-languages, and we fully expect to take advantage of it where we can.
+languages as dynamically typed as Perl, Python, Ruby, and PHP,
+optimizing is a non-trivial task. Other languages, such as C or Pascal,
+are more statically typed and lack active data, so an aggressive
+optimizer is in order for them. Breaking out the optimizer into a
+separate module allows us to add in optimizations piecemeal without
+affecting the compiler.  There's a lot of exciting work going into
+the problem of optimizing dynamic languages, and we fully expect to
+take advantage of it where we can.
 
 Optimization is potentially an expensive operation, which is another
 good reason to have it in a separate module. Spending ten seconds
 optimizing a program that will run in five seconds is a huge waste of
-time when using Perl's traditional compile-and-go model--optimizing
-the code will make the program run slower. On the other hand, spending
-ten seconds to optimize a program makes sense if you save the
-optimized version to disk and use it over and over again. Even if you
-save only one second per program run, it doesn't take long for the
-ten-second optimization time to pay off. The default is to optimize
-heavily when freezing bytecode to disk and lightly when running
-directly, but this can be changed with a command-line switch.
+time. On the other hand, spending ten seconds to optimize a program
+makes sense if you save the optimized version to disk and use it over
+and over again. Even if you save only one second per program run, it
+doesn't take long for the ten-second optimization time to pay off. The
+default is to optimize heavily when freezing bytecode to disk and
+lightly when running directly, but this can be changed with a
+command-line switch.
 
-Perl 5, Python, and Ruby all lack a robust optimizer (outside their
+Perl, Python, and Ruby all lack a robust optimizer (outside their
 regular expression engines), so any optimizations we add will increase
 their performance. In fact, optimizations that we add might
 help improve the performance of all high-level languages that run on
@@ -255,14 +257,15 @@ Parrot. This, we feel, is a good thing.
 
 =head2 Interpreter
 
-Z<CHP-7-SECT-2.4>
+Z<CHP-8-SECT-2.4>
 
 The interpreter module is the part of the engine that executes the
 generated bytecode. Calling it an interpreter is something of a
 misnomer, since Parrot's core includes both a traditional bytecode
 interpreter module as well as a high-performance just-in-time (JIT)
 compiler engine, but that's a detail of the implementation that we
-don't need to discuss here at length.
+don't need to discuss here at length N<At least, we won't discuss it
+yet>.
 
 All the interesting things happen inside the interpreter, and the
 remainder of the chapter is dedicated to the interpreter and the
@@ -273,11 +276,12 @@ to feed bytecode to the interpreter.
 
 =head2 Bytecode Loader
 
-Z<CHP-7-SECT-2.5>
+Z<CHP-8-SECT-2.5>
 
-The X<Parrot;bytecode loader>
+X<Parrot;bytecode loader>
 X<bytecode, Parrot;loader>
-bytecode loader isn't part of our block diagram, but it is interesting
+The bytecode loader isn't part of our block diagram, but it is
+interesting 
 enough to warrant brief coverage.
 
 The bytecode loader handles loading in bytecode that's been frozen to
@@ -359,17 +363,15 @@ correct design decision.
 Z<CHP-7-SECT-3.1>
 
 X<interpreter, Parrot;registers>
-Parrot has four basic types of registers: PMC, string, integer, and
-floating-point numbers, one for each of the core data types in Parrot.
-PMCs, short for Parrot Magic Cookies, are the structures that represent high
-level variables such as arrays, hashes, scalars, and objects. We
-separate the register types for ease of implementation, garbage
-collection, and space efficiency. Since PMCs and strings are
-garbage-collectable entities, restricting what can access
-them--strings in string registers and PMCs in PMC registers--makes the
-garbage collector a bit faster and simpler. Having integers and floats
-in separate register sets makes sense from a space standpoint, since
-floats are normally larger than integers.
+As we've seen in previous chapers, Parrot has four basic types of
+registers: PMC, string, integer, and floating-point numbers, one for
+each of the core data types. We separate the register types for ease
+of implementation, garbage collection, and space efficiency. Since
+PMCs and strings are garbage-collectable entities, restricting what
+can access them--strings in string registers and PMCs in PMC registers
+--makes the garbage collector a bit faster and simpler. Integers and
+floats map directly to low-level machine data types and can be stored
+in sequential arrays to save space and increase access speed.
 
 =head2 Strings
 
@@ -378,29 +380,29 @@ Z<CHP-7-SECT-3.3>
 X<strings;Parrot>
 X<interpreter, Parrot;strings>
 Text data is deceptively complex, so Parrot has strings as a
-fundamental data type. We do this out of sheer practicality. We know
-strings are complex and error-prone, so we implement them only once.
-All languages that target Parrot can share the same implementation,
-and don't have to make their own mistakes.
+fundamental data type and tackles the problems head-on. We do this
+out of sheer practicality, because we know how complex and error-prone
+strings can get. We implement them one, and all languages that target
+Parrot can share that same implementation.
 
 The big problem with text is the vast number of human languages and
 the variety of conventions around the world for dealing with it. Long
-ago, 7-bit ASCII with 127 characters was sufficient. Computers were
-limited and mostly used in English, regardless of the user's native
-language. These heavy restrictions were acceptable because the
-machines of the day were so limited that any other option was too
-slow. Also, most people using computers at the time were fluent in
-English either as their native language or a comfortable second
-language.
+ago, 7-bit ASCII with 127 characters was sufficient N<And if that wasn't
+sufficient, too bad. It's all you had.>. Computers were limited and
+mostly used in English, regardless of the user's native language. These
+heavy restrictions were acceptable because the machines of the day were
+so limited that any other option was too slow. Also, most people using
+computers at the time were fluent in English either as their native or
+comfortable second language.
 
 That day passed quite a few years ago. Many different ways of
 representing text have sprung up, from the various multibyte Japanese
-and Chinese representations--designed for languages with many
-thousands of characters--to a half dozen or so European
-representations, which take only a byte but disagree on what
-characters fit into that byte. The Unicode consortium has been working
-for years on the Unicode standard to try and unify all the different
-schemes, but full unification is still years away, if it ever happens.
+and Chinese representations--designed for languages with many thousands
+of characters--to a half dozen or so European representations, which
+take only a byte but disagree on what characters fit into that byte.
+The Unicode consortium has been working for years on the Unicode standard
+to try and unify all the different schemes, but full unification is still
+years away, if it ever happens.
 
 In the abstract, strings are a series of integers with meaning
 attached to them, but getting from real-world data to abstract
@@ -435,7 +437,7 @@ exploit Parrot's core string capabilities, so any language that uses
 Parrot's built-in string functionality gets this for free. Since
 properly implementing even a single system like Unicode is fraught
 with peril, this makes the job of people writing languages that target
-Parrot (including Perl 6) much easier.
+Parrot much easier.
 
 While Parrot provides these facilities, languages aren't required to
 make use of them. Perl 6, for example, generally mandates that all
@@ -478,13 +480,11 @@ constructs.
 The first big issue that Parrot had to face was implementing these
 constructs. The second was doing it in a way that allowed Perl code to
 use Ruby objects, Ruby code to use Python objects, and Lisp code to
-use both.N<Or vice-versa> Parrot's solution is the PMC, or Parrot Magic
-Cookie.
+use both.N<Or vice-versa> Parrot's solution is the PMC datatype.
 
-A PMC is an abstract variable and a base data type--the same way that
-integers and floating-point numbers are base data types for hardware
-CPUs. The languages we're working to support--Perl, Python, and
-Ruby--have base variables that are far more complex than just an
+A PMC, as we've seen in previous chapers, is an abstract variable type.
+The languages we're working to support--Perl, Python, and Ruby for
+example--have base variables that are far more complex than just an
 integer or floating-point number.  If we want them to exchange any
 sort of real data, they must have a common base variable type. Parrot
 provides that with the PMC construct. Each language can build on this
@@ -496,13 +496,13 @@ variable should be able to do. You should, for example, be able to
 load or store a value, add or subtract it from another variable, call
 a method or set a property on it, get its integer or floating-point
 representation, and so on. What we did was make a list of these
-functions and make them mandatory.
+functions and turn them into a mandatory interface called the VTABLE.
 
-Each PMC has a vtable (short for "virtual table") attached to it. This
-table of function pointers is fixed--the list of functions, and where
-they are in the table, is the same for each PMC. All the common
-operations a program might perform on a variable--as well as all the
-operators that might be overloaded for a PMC--have vtable entries.
+Each PMC has a VTABLE attached to it. This table of function pointers
+is fixed--the list of functions, and where they are in the table, is
+the same for each PMC. All the common operations a program might
+perform on a variable, as well as all the operators that might be
+overloaded for a PMC, have VTABLE entries.
 
 =head2 Bytecode
 
@@ -573,9 +573,9 @@ design and implementation.
 Z<CHP-7-SECT-4.1>
 
 Parrot's base X<I/O;Parrot> I/O system is fully X<asynchronous I/O>
-asynchronous I/O with callbacks and per-request private data. Since this
+asynchronous with callbacks and per-request private data. Since this
 is massive overkill in many cases, we have a plain vanilla synchronous
-I/O layer that your programs can use if they don't need the extra power.
+I/O layer that programs can use if they don't need the extra power.
 
 Asynchronous I/O is conceptually pretty simple. Your program makes an
 I/O request. The system takes that request and returns control to your
@@ -583,7 +583,8 @@ program, which keeps running. Meanwhile the system works on satisfying
 the I/O request. Once satisfied, the system notifies your program in
 some way. Since there can be multiple requests outstanding, and you can't
 be sure exactly what your program will be doing when a request is
-satisfied, programs that make use of asynchronous I/O can be complex.
+satisfied, programs that make use of asynchronous I/O can become very
+complex.
 
 X<synchronous I/O>
 Synchronous I/O is even simpler. Your program makes a request to the
@@ -597,8 +598,7 @@ The big benefit of asynchronous I/O systems is that they generally
 have a much higher throughput than a synchronous system. They move
 data around much faster--in some cases three or four times faster.
 This is because the system can be busy moving data to or from disk
-while your program is busy processing data that it got from a previous
-request.
+while your program is busy processing the next set of data.
 
 For disk devices, having multiple outstanding requests--especially on
 a busy system--allows the system to order read and write requests to
@@ -654,35 +654,41 @@ programs that work well in a complex environment.
 
 Parrot's events are fairly simple. An event has an event type, some
 event data, an event handler, and a priority. Each thread has an event
-queue, and when an event happens it's put into the right thread's
-queue (or the default thread queue in those cases where we can't tell
-which thread an event was destined for) to wait for something to
-process it.
+queue, and when an event occurs it is put into the queue for the correct
+thread. Once in the queue, events must wait until an event handler gets
+a chance to process it. If there is no clear destination thread for the
+event, it is put into a default queue where it can be processed.
 
-Any operation that would potentially block drains the event queue
-while it waits, as do a number of the cleanup opcodes that Parrot uses
-to tidy up on scope exit. Parrot doesn't check each opcode for an
-outstanding event for pure performance reasons, as that check gets
-expensive quickly. Still, Parrot generally ensures timely event
-handling, and events shouldn't sit in a queue for more than a few
-milliseconds unless event handling has been explicitly disabled.
+Any operation that would potentially block normal operation, such as a
+C<sleep> command or the cleanup operations that Parrot calls when it exits
+a subroutine, causes the event handlers to process through the events
+in the queue. In this way, when your program thinks it is just waiting,
+it is actually getting a lot of work done in the background. Parrot
+doesn't check an outstanding event to handle during every opcode. This
+is a pure performance consideration: All those checks would get expensive
+very quickly. Parrot generally ensures timely event handling, and events
+shouldn't ever be ignored for more then a few milliseconds. N<Unless
+asynchronous event handling is explicitly disabled, and then events will
+stay ignored for as long as the programmer wants.>.
 
 When Parrot does extract an event from the event queue, it calls that
 event's event handler, if it has one. If an event doesn't have a
 handler, Parrot instead looks for a generic handler for the event type
 and calls it instead. If for some reason there's no handler for the
-event type, Parrot falls back to the generic event handler, which
-throws an exception when it gets an event it doesn't know how to
-handle.  You can override the generic event handler if you want Parrot
-to do something else with unhandled events, perhaps silently
-discarding them instead.
+event type Parrot falls back to the generic event handler which
+throws an exception as a last resort. You can override the generic event
+handler if you want Parrot to do something else with unhandled events,
+perhaps silently discard them instead.
 
 Because events are handled in mainline code, they don't have the
 restrictions commonly associated with interrupt-level code. It's safe
 and acceptable for an event handler to throw an exception, allocate
 memory, or manipulate thread or global state safely. Event handlers
-can even acquire locks if they need to, though it's not a good idea to
-have an event handler blocking on lock acquisition.
+can even acquire locks if they need to. Even though event handlers have
+all these capabilities, it doesn't mean they should be used with
+impugnity. An event handler blocking on a lock can easily deadlock a
+program that hasn't been properly designed. Parrot gives you plenty of
+rope, it's up to the programmer not to trip on it.
 
 Parrot uses the priority on events for two purposes. First, the
 priority is used to order the events in the event queue. Events for a
@@ -700,36 +706,44 @@ programmers should adjust event priorities with care. Adjusting the
 default priority of an event, or adjusting the current minimum
 priority level, is a rare occurrence.  It's almost always a mistake to
 change them, but the capability is there for those rare occasions
-where it's the correct thing to
-do.
+where it's the correct thing to do.
 
 =head2 Signals
 
 Z<CHP-7-SECT-4.3>
 
 X<signals, Parrot>
-Signals are a special form of event, based on the Unix signal mechanism.
-Parrot presents them as mildly special, as a remnant of Perl's Unix
-heritage, but under the hood they're not treated any differently from
-any other event.
+Signals are a special form of event, based on the standard Unix signal
+mechanism. Even though signals are occasionally described as being
+special in some way, under the hood they're treated like any other event.
+The primary difference between a signal and an event is that signals
+have names that Unix and Linux programmers will recognize. This can be
+a little confusing, especially when the Parrot signal doesn't use exactly
+the same semantics as the Unix signal does.
 
 The Unix signaling mechanism is something of a mash, having been
-extended and worked on over the years by a small legion of undergrad
-programmers. At this point, signals can be divided into two
-categories, those that are fatal, and those that aren't.
+extended and worked on over the years by a small legion of ambitious but
+underpaid programmers. There are generally two types of signals to deal
+with: those that are fatal, and those that are not.
 
 X<fatal signals> 
 Fatal signals are things like X<SIGKILL>
-SIGKILL, which unconditionally kills a process, or SIGSEGV, which
-indicates that the process has tried to access memory that isn't part
-of your process.  There's no good way for Parrot to catch these
-signals, so they remain fatal and will kill your process.  On some
-systems it's possible to catch some of the fatal signals, but
-Parrot code itself operates at too high a level for a user program to
-do anything with them--they must be handled with special-purpose code
-written in C or some other low-level language.  Parrot itself may
-catch them in special circumstances for its own use, but that's an
-implementation detail that isn't exposed to a user program.
+SIGKILL, which unconditionally kills a process, or X<SIGSEGV> SIGSEGV,
+which indicates that the process has tried to access memory that isn't
+part of your process. Most programmers will better know SIGSEGV as a
+"segmentation fault", something that should be avoided at all costs.
+There's no good way for Parrot to catch and handle these signals, since
+the occur at a lower level in the operating system and are typically
+presented to Parrot long after anything can be done about it. These
+signals will therefore always kill Parrot and whatever programs were
+running on t. On some systems it's possible to catch some of
+N<sometimes> the fatal signals, but Parrot code itself operates at too
+high a level for a user program to do anything with them. Any handlers
+for these kinds of signals would have to be written at the lowest levels
+in C or a similar language, something that cannot be accessed directly
+from PIR, PASM, or any of the high-level languages that run on Parrot.
+Parrot itself may try to catch these signals in special circumstances for
+its own use, but that functionality isn't exposed to a user program.
 
 X<non-fatal signals>
 Non-fatal signals are things like X<SIGCHLD> SIGCHLD, indicating that a
@@ -763,55 +777,73 @@ X<threads, Parrot>
 Threads are a means of splitting a process into multiple pieces that
 execute simultaneously.  It's a relatively easy way to get some
 parallelism without too much work. Threads don't solve all the
-parallelism problems your program may have. Sometimes multiple
-processes on a single system, multiple processes on a cluster, or
-processes on multiple separate systems are better. But threads do
-present a good solution for many common cases.
+parallelism problems your program may have N<And in fact, threading
+can cause it's own parallism problems, if you aren't careful>.
+Sometimes multiple processes on a single system, multiple processes
+on a cluster, or processes on multiple separate systems are better
+for parallelized tasks then using threads.
 
 All the resources in a threaded process are shared between threads.
-This is simultaneously the great strength and great weakness of
-threads. Easy sharing is fast sharing, making it far faster to
+This is simultaneously the great strength and great weakness of the
+method. Easy sharing is fast sharing, making it far faster to
 exchange data between threads or access shared global data than to
 share data between processes on a single system or on multiple
-systems. Easy sharing is dangerous, though, since without some sort of
-coordination between threads it's easy to corrupt that shared data.
+systems. Easy sharing of data can be dangerous, though, since data can
+be corrupted if the threads don't coordinate between themselves somehow.
 And, because all the threads are contained within a single process, if
-any one of them fails for some reason the entire process, with all its
-threads, dies.
+any one of them causes a fatal error, Parrot and all the programs and
+threads running on top of it dies.
 
 With a low-level language such as C, these issues are manageable. The
 core data types, integers, floats, and pointers are all small enough
-to be handled atomically. Composite data can be protected with
-mutexes, special structures that a thread can get exclusive access to.
-The composite data elements that need protecting can each have a mutex
-associated with them, and when a thread needs to touch the data it
-just acquires the mutex first. By default there's very little data
-that must be shared between threads, so it's relatively easy, barring
-program errors, to write thread-safe code if a little thought is given
-to the program structure.
+to be handled atomically. You never have to worry that two threads will
+try to write a value to the same integer variable, and the result will
+be a corrupted combination of the two. It will be one or the other value,
+depending on which thread wrote to the memory location last. Composite
+data structures, on the other hand, are not handled atomically. Two
+threads both accessing a large data structure can write incompatible data
+into different fields. To avoid this, these stuctures can be protected
+with special devices called mutexes. Mutexes N<depending on the exact
+implementation and semantics, Mutexes can also be known as locks,
+spinlocks, semaphores, or critical sections.> are special structures that
+a thread can get exclusive access to. Like a baton in a relay race, only
+one thread can own a mutex at a time, and by convention only the thread
+with the mutex can access the associated data. The composite data
+elements that need protecting can each have their own mutex, and when a
+thread tries to touch the data it must acquires the mutex first. If
+another thread already has the mutex, all other threads must wait before
+they can get the mutex and access the data. By default there's very
+little data that must be shared between threads, so it's relatively easy
+to write thread-safe code if a little thought is given to the program
+structure. Thread safety is far too big a topic to cover in this book,
+but trust us when we say it's something worth being concerned with.
 
 X<Parrot;native data type;;(see PMCs)>
 X<PMCs (Parrot Magic Cookies);Parrot's native data type> 
-Things aren't this easy for Parrot, unfortunately. A PMC, Parrot's
-native data type, is a complex structure, so we can't count on the
-hardware to provide us atomic access. That means Parrot has to provide
-atomicity itself, which is expensive. Getting and releasing a mutex
-isn't really that expensive in itself. It has been heavily optimized by
-platform vendors because they want threaded code to run quickly. It's
-not free, though, and when you consider that running flat-out Parrot
-does one PMC operation per 100 CPU cycles, even adding an additional 10
-cycles per operation can slow Parrot down by 10%.
+PMCs are complex structures, even the simplest ones. We can't count on
+the hardware or even the operating system to provide us atomic access.
+Parrot has to provide that atomicity itself, which is expensive. Getting
+and releasing a mutex is an inexpensive operations by itself, and has
+been heavily optimized by platform vendors because they want threaded
+code to run quickly. It's not free, though, and when you consider that
+Parrot must access hundreds or even thousands of PMCs for some programs,
+any operations that get performed for all accesses can impose a huge
+performance penalty.
 
-For any threading scheme, it's important that your program isn't
-hindered by the platform and libraries it uses. This is a common
-problem with writing threaded code in C, for example. Many libraries
-you might use aren't thread-safe, and if you aren't careful with them
-your program will crash. While we can't make low-level libraries any
-safer, we can make sure that Parrot itself won't be a danger. There is
-very little data shared between Parrot interpreters and threads, and
-access to all the shared data is done with coordinating mutexes. This
-is invisible to your program, and just makes sure that Parrot itself
-is thread-safe.
+=head3 External Libraries
+
+Even if your program is thread-safe, and Parrot itself is thread-safe,
+that doesn't mean there is no danger. Many libraries that Parrot uses
+or that your program taps into through NCI may not be thread safe, and
+may crash your program if you attempt to use them in a threaded
+environment. Parrot cannot make existing unsafe libraries any safer
+N<We can send nagging bug reports to the library developers.>, but at
+least Parrot itself won't introduce new problems. Whenever you're using
+an external library, you should double-check that it's safe to use with
+threading environments. If you aren't using threading in your programs,
+you don't need to worry about it.
+
+=head3 Threading Models
 
 When you think about it, there are really three different threading
 models. In the first one, multiple threads have no interaction among
@@ -830,25 +862,25 @@ communication between threads is much faster, and it's easier to pass
 around structured data.
 
 In the third threading model, multiple threads run and share data
-between themselves. While Parrot can't guarantee that data at the user
-level remains consistent, it can make sure that access to shared data
-is at least safe. We do this with two mechanisms.
+between themselves directly. While Parrot can't guarantee that data at
+the user level remains consistent, it can make sure that access to shared
+data is at least safe. We do this with two mechanisms.
 
 First, Parrot presents an advisory lock system to user code. Any piece
 of user code running in a thread can lock a variable. Any attempt to
 lock a variable that another thread has locked will block until the
 lock is released. Locking a variable only blocks other lock attempts.
-It does I<not> block plain access. This may seem odd, but it's the
-same scheme used by threading systems that obey the POSIX thread
-standard, and has been well tested in practice.
+It does I<not> block access. This may seem odd, but it's the same scheme
+used by threading systems that obey the POSIX thread standard, and has
+been well tested in practice.
 
 Secondly, Parrot forces all shared PMCs to be marked as such, and all
 access to shared PMCs must first acquire that PMC's private lock. This
-is done by installing an alternate vtable for shared PMCs, one that
+is done by installing an alternate VTABLE for shared PMCs, one that
 acquires locks on all its parameters. These locks are held only for
-the duration of the vtable function, but ensure that the PMCs affected
-by the operation aren't altered by another thread while the vtable
-function is in progress.
+the duration of the VTABLE interface call, but ensure that the PMCs
+affected by the operation aren't altered by another thread while the
+VTABLE operation is in progress.
 
 =head1 Objects
 

@@ -14,7 +14,7 @@
     .local pmc tmpdir
     tmpdir= new 'ResizableStringArray'
 
-    store_global '_tmpdir', tmpdir
+    set_global '_tmpdir', tmpdir
 .end
 
 
@@ -27,7 +27,7 @@
     .local pmc tmpdir
     tmpdir= new 'ResizableStringArray'
 
-    tmpdir= global '_tmpdir'
+    tmpdir= get_global '_tmpdir'
 
     .local int size
     size= tmpdir
@@ -73,7 +73,7 @@ add_more:
     push tmpdir, '/'
 
 store:
-    store_global '_tmpdir', tmpdir
+    set_global '_tmpdir', tmpdir
 return_cached:
     .return( tmpdir )
 .end
@@ -552,7 +552,7 @@ return:
 
 .sub 'VERSION' :method
     .local pmc version
-    version= global 'VERSION'
+    version= get_global 'VERSION'
     .return( version )
 .end
 

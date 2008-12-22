@@ -37,7 +37,7 @@ buffer.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 opcode_t
 PackFile_pack_size(PARROT_INTERP, ARGMOD(PackFile *self))
 {
@@ -80,7 +80,7 @@ Other pack routines are in F<src/packfile.c>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 PackFile_pack(PARROT_INTERP, ARGMOD(PackFile *self), ARGOUT(opcode_t *cursor))
 {
@@ -147,7 +147,7 @@ constant table into a contiguous region of memory.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 size_t
 PackFile_ConstTable_pack_size(PARROT_INTERP, ARGIN(PackFile_Segment *seg))
 {
@@ -176,7 +176,7 @@ C<PackFile_ConstTable_pack()>
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 opcode_t *
@@ -205,7 +205,7 @@ constant is in constant table, so we have to search for it.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 PackFile_find_in_const(PARROT_INTERP,
         ARGIN(const PackFile_ConstTable *ct), ARGIN(const PMC *key), int type)
@@ -218,7 +218,7 @@ PackFile_find_in_const(PARROT_INTERP,
         else if (type == PFC_NUMBER && ct->constants[i]->u.number ==
                  PMC_num_val(key))
             return i;
-    PIO_eprintf(NULL, "find_in_const: couldn't find const for key\n");
+    Parrot_io_eprintf(NULL, "find_in_const: couldn't find const for key\n");
     Parrot_exit(interp, 1);
 }
 
@@ -241,7 +241,7 @@ The data is zero-padded to an opcode_t-boundary, so pad bytes may be added.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 opcode_t *
@@ -325,7 +325,7 @@ PackFile_Constant_pack(PARROT_INTERP,
                     *cursor++ = PMC_int_val(key);
                     break;
                 default:
-                    PIO_eprintf(NULL, "PackFile_Constant_pack: "
+                    Parrot_io_eprintf(NULL, "PackFile_Constant_pack: "
                             "unsupported constant type\n");
                     Parrot_exit(interp, 1);
             }
@@ -334,7 +334,7 @@ PackFile_Constant_pack(PARROT_INTERP,
         break;
 
     default:
-        PIO_eprintf(NULL, "PackFile_Constant_pack: unsupported constant\n");
+        Parrot_io_eprintf(NULL, "PackFile_Constant_pack: unsupported constant\n");
         Parrot_exit(interp, 1);
         break;
     }

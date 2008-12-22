@@ -20,7 +20,8 @@ value of the comment is passed as the second argument to the method.
 class Pipp::Grammar::Actions;
 
 method TOP($/) {
-    my $past  := PAST::Stmts.new( :node($/) );
+    my $past := PAST::Stmts.new( :node($/) );
+
     for $<sea_or_code> {
         $past.push( $($_) );
     }
@@ -32,7 +33,7 @@ method sea_or_code($/,$key) {
     make $( $/{$key} );
 }
 
-# The sea, HTML, surrounding the island, code, is printed out
+# The sea, text, surrounding the island, code, is printed out
 method SEA($/) {
     make PAST::Op.new(
              PAST::Val.new(
@@ -100,6 +101,42 @@ method inline_sea_short_tag($/) {
         );
 }
 
+method namespace_statement($/) {
+    our $?NS := ~$<NAMESPACE_NAME>; 
+    my $past := PAST::Op.new(
+                    :pasttype('call'),
+                    :name('echo'),
+                    :node($/),
+                    PAST::Val.new(
+                        :value('Encountered namespace: ' ~ $?NS ~ "\n"),
+                        :returns('PhpString'),
+                    ),
+                );
+    make $past;
+}
+
+method return_statement($/) {
+    my $past := PAST::Op.new(
+                   :name('return'),
+                   :pasttype('call'),
+                   :node( $/ ),
+                   $( $/<expression> )
+               );
+
+    make $past;
+}
+
+method require_once_statement($/) {
+    my $past := PAST::Op.new(
+                   :name('require'),
+                   :pasttype('call'),
+                   :node( $/ ),
+                   $( $/<quote> )
+               );
+
+    make $past;
+}
+
 method echo_statement($/) {
     my $past := $( $<arguments> );
     $past.name( 'echo' );
@@ -152,6 +189,37 @@ method constant($/) {
          );
 }
 
+# can be mergerd with constant
+method class_constant($/) {
+    make PAST::Op.new(
+             :name('constant'),
+             PAST::Val.new(
+                 :returns('PhpString'),
+                 :value( ~$/ ),
+             )
+         );
+}
+
+# class constants could probably also be set in a class init block
+method class_constant_definition($/) {
+    my $past := PAST::Block.new( :name( 'class_constant_definition' ) );
+    my $loadinit := $past.loadinit();
+    $loadinit.unshift(
+       PAST::Op.new(
+           :pasttype('call'),
+           :name('define'),
+           :node( $/ ),
+           PAST::Val.new(
+               :value( 'Foo::' ~ ~$<CONSTANT_NAME> ),
+               :returns('PhpString'),
+           ),
+           $( $<literal> ),
+       )
+    );
+
+    make $past;
+}
+
 method arguments($/) {
     my $past := PAST::Op.new(
                     :pasttype('call'),
@@ -164,20 +232,59 @@ method arguments($/) {
     make $past;
 }
 
-method if_statement($/) {
+method conditional_expression($/) {
     my $past := PAST::Op.new(
                     $( $<expression> ),
                     $( $<block> ),
-                    :pasttype('if'),
                     :node($/)
                 );
-    for $<else_clause> {
-        $past.push( $( $_ ) );
-    }
-
     make $past;
 }
 
+method if_statement($/) {
+    my $past := $($<conditional_expression>);
+    $past.pasttype('if');
+        
+    my $else := undef;
+    if +$<else_clause> != 0 {
+            $else := $($<else_clause>[0]);
+    }
+    my $firsteif := undef;
+    if(+$<elseif_clause> != 0) {
+        my $count := +$<elseif_clause> - 1;
+        $firsteif := $($<elseif_clause>[$count]);
+        while $count != 0 {
+                my $eif := $($<elseif_clause>[$count]);
+                $count--;
+                my $eifchild := $($<elseif_clause>[$count]);
+                if($else) {
+                        $eif.push($else);
+                }
+                $eif.push($eifchild);
+        }
+        if($else && +$<elseif_clause> == 1) {
+                $firsteif.push($else);
+        }
+     }
+
+     if($firsteif) {
+             $past.push($firsteif);
+     }
+     elsif($else) {
+             $past.push($else);
+     }
+     make $past;
+}
+
+method else_clause($/) {
+        make $($<block>);
+}
+
+method elseif_clause($/) {
+        my $past := $($<conditional_expression>);
+        $past.pasttype('if');
+        make $past;
+}
 method var_assign($/) {
     make PAST::Op.new(
              $( $<var> ),
@@ -195,7 +302,7 @@ method array_elem($/) {
              $past_var_name,
              $( $<expression> ),
              :scope('keyed'),
-             :viviself('Undef'),
+             :viviself('PhpNull'),
              :lvalue(1)
          );
 }
@@ -205,11 +312,12 @@ method var($/,$key) {
 }
 
 method VAR_NAME($/) {
-    our $?PIPP_SCOPE;
+    our $?PIPP_CURRENT_SCOPE;
+
     make PAST::Var.new(
-             :scope( $?PIPP_SCOPE ?? $?PIPP_SCOPE !! 'package' ),
+             :scope( $?PIPP_CURRENT_SCOPE ?? $?PIPP_CURRENT_SCOPE !! 'package' ),
              :name(~$/),
-             :viviself('Undef'),
+             :viviself('PhpNull'),
              :lvalue(1),
          );
 }
@@ -226,18 +334,11 @@ method member($/) {
          );
 }
 
-method else_clause($/) {
-    make $( $<block> );
-}
 
 method while_statement($/) {
-    my $cond  := $( $<expression> );
-    my $block := $( $<block> );
-
-    make PAST::Op.new( $cond,
-                       $block,
-                       :pasttype('while'),
-                       :node($/) );
+    my $past := $($<conditional_expression>);
+    $past.pasttype('while');
+    make $past;
 }
 
 method for_statement($/) {
@@ -302,7 +403,7 @@ method FALSE($/) {
 method NULL($/) {
     make PAST::Val.new(
              :value( 0 ),
-             :returns('PhpUndef'),
+             :returns('PhpNull'),
              :node($/)
          );
 }
@@ -326,7 +427,7 @@ method NUMBER($/) {
 method function_definition($/) {
 
     # PHP has two scopes: local to functions and global
-    our $?PIPP_SCOPE := 'lexical';
+    our $?PIPP_CURRENT_SCOPE := 'lexical';
 
     # note that $<param_list> creates a new PAST::Block.
     my $past := $( $<param_list> );
@@ -335,12 +436,22 @@ method function_definition($/) {
     $past.control('return_pir');
     $past.push( $( $<block> ) );
 
-    $?PIPP_SCOPE := '';
+    $?PIPP_CURRENT_SCOPE := '';
 
     make $past;
 }
 
-method method_definition($/) {
+# nested functions are not supported yet
+method ENTER_FUNCTION_DEF($/) {
+    our $?PIPP_CURRENT_SCOPE;
+    $?PIPP_CURRENT_SCOPE := 'lexical';
+}
+method EXIT_FUNCTION_DEF($/) {
+    our $?PIPP_CURRENT_SCOPE;
+    $?PIPP_CURRENT_SCOPE := 'package';
+}
+
+method class_method_definition($/) {
 
     # note that $<param_list> creates a new PAST::Block.
     my $past := $( $<param_list> );
@@ -391,14 +502,21 @@ method class_definition($/) {
                         )
                     )
                 );
+
+    # nothing to do for $<const_definition,
+    # setup of class constants is done in the 'loadinit' node
+    for $<class_constant_definition> {
+       $past.push($($_));
+    }
+
     my $methods_block
         := PAST::Block.new(
                     :blocktype('immediate'),
            );
-    for $<member_definition> {
+    for $<class_member_definition> {
         $methods_block.symbol( ~$_<VAR_NAME><ident>, :scope('attribute') );
     }
-    for $<method_definition> {
+    for $<class_method_definition> {
         $methods_block.push( $($_) );
     }
     $past.push( $methods_block );

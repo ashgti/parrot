@@ -29,7 +29,8 @@ L<http://www.lua.org/manual/5.1/manual.html#5.4>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'string' ]
 
 .sub 'luaopen_string'
@@ -672,8 +673,6 @@ is replaced.
     if $I0 goto L1
     $I0 = isa repl, 'LuaString'
     if $I0 goto L1
-    $I0 = isa repl, 'LuaClosure'
-    if $I0 goto L1
     $I0 = isa repl, 'LuaFunction'
     if $I0 goto L1
     $I0 = isa repl, 'LuaTable'
@@ -728,12 +727,8 @@ is replaced.
     unless $I0 goto L2
     .tailcall add_s(b, s, match, repl)
   L2:
-    $I0 = isa repl, 'LuaClosure'
-    if $I0 goto L3
     $I0 = isa repl, 'LuaFunction'
-    if $I0 goto L3
-    goto L4
-  L3:
+    unless $I0 goto L4
     $P0 = captures(match, 1)
     ($P1) = repl($P0 :flat)
     goto L5

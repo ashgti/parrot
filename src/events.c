@@ -294,7 +294,7 @@ Only SIGHUP handled at the moment.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_init_signals(void)
 {
@@ -400,7 +400,7 @@ Initialize the event system.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_init_events(PARROT_INTERP)
 {
@@ -428,7 +428,7 @@ Create queue entry and insert event into task queue.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_schedule_event(PARROT_INTERP, ARGMOD(parrot_event* ev))
 {
@@ -493,7 +493,7 @@ and running the passed C<sub>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_new_timer_event(PARROT_INTERP, ARGIN_NULLOK(PMC *timer), FLOATVAL diff,
         FLOATVAL interval, int repeat, ARGIN_NULLOK(PMC *sub), parrot_event_type_enum typ)
@@ -525,7 +525,7 @@ Prepare and schedule a callback event.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_new_cb_event(PARROT_INTERP, ARGIN(PMC *cbi), ARGIN(char *ext))
 {
@@ -551,7 +551,7 @@ Deactivate the timer identified by C<timer>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_del_timer_event(PARROT_INTERP, ARGIN(const PMC *timer))
 {
@@ -586,7 +586,7 @@ event arrives.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_new_terminate_event(PARROT_INTERP)
 {
@@ -606,7 +606,7 @@ variable for GC to finish when the event arrives.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_new_suspend_for_gc_event(PARROT_INTERP)
 {
@@ -633,7 +633,7 @@ Schedule event-loop terminate event. This shuts down the event thread.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_kill_event_loop(PARROT_INTERP)
 {
@@ -653,7 +653,7 @@ checking for the interpreter.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_schedule_interp_qentry(PARROT_INTERP, ARGIN(struct QUEUE_ENTRY *entry))
 {
@@ -805,7 +805,7 @@ io_thread_ready_rd(ARGMOD(pending_io_events *ios), int ready_rd)
     for (i = 0; i < ios->n; ++i) {
         parrot_event * const ev  = ios->events[i];
         PMC          * const pio = ev->u.io_event.pio;
-        const int            fd  = PIO_getfd(NULL, pio);
+        const int            fd  = Parrot_io_getfd(ev->interp, pio);
 
         if (fd == ready_rd) {
             /* remove from event list */
@@ -909,7 +909,7 @@ io_thread(SHIM(void *data))
                                 case IO_THR_MSG_ADD_SELECT_RD:
                                     {
                                         PMC * const pio = buf.ev->u.io_event.pio;
-                                        const int fd = PIO_getfd(NULL, pio);
+                                        const int fd = Parrot_io_getfd(buf.ev->interp, pio);
                                         if (FD_ISSET(fd, &act_rfds)) {
                                             mem_sys_free(buf.ev);
                                             break;
@@ -986,7 +986,7 @@ Create new i/o event.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_event_add_io_event(PARROT_INTERP,
         ARGIN_NULLOK(PMC *pio), ARGIN_NULLOK(PMC *sub), ARGIN_NULLOK(PMC *data), INTVAL which)
@@ -1280,7 +1280,7 @@ Go to sleep. This is called from the C<sleep> opcode.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 opcode_t *
@@ -1322,7 +1322,7 @@ Explicitly C<sync> called by the check_event opcode from run loops.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 opcode_t *
@@ -1357,9 +1357,10 @@ event_to_exception(PARROT_INTERP, ARGIN(const parrot_event* event))
              * installed: set severity to EXCEPT_exit
              */
             {
-                PMC *exception = Parrot_ex_build_exception(interp,
-                        EXCEPT_exit, exit_code,
-                        CONST_STRING(interp, "Caught signal."));
+                STRING * const message = CONST_STRING(interp, "Caught signal.");
+                PMC           *exception = Parrot_ex_build_exception(interp,
+                                        EXCEPT_exit, exit_code, message);
+
                 Parrot_ex_throw_from_c(interp, exception);
             }
             break;
@@ -1443,7 +1444,7 @@ C<op_func_table>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 opcode_t *

@@ -48,11 +48,6 @@ sub _init {
 sub runstep {
     my ( $self, $conf ) = @_;
 
-    if ( $conf->options->get('miniparrot') ) {
-        $self->set_result('skipped');
-        return 1;
-    }
-
     my $verbose = $conf->options->get('verbose');
     $verbose and print "\n";
 
@@ -108,7 +103,7 @@ sub runstep {
         jitcapable  => 1,
         cc_hasjit   => " -DHAS_JIT -D\U$jitcpuarch",
         TEMP_jit_o =>
-'$(SRC_DIR)/jit$(O) $(SRC_DIR)/jit_cpu$(O) $(SRC_DIR)/jit_debug$(O) $(SRC_DIR)/jit_debug_xcoff$(O)'
+'$(SRC_DIR)/jit$(O) $(SRC_DIR)/jit_cpu$(O) $(SRC_DIR)/jit_debug$(O) $(SRC_DIR)/jit_debug_xcoff$(O) $(SRC_DIR)/jit_defs$(O)'
     );
 
     my $execcapable = $self->_first_probe_for_exec(

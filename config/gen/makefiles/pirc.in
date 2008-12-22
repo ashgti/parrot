@@ -35,7 +35,8 @@ new/pirsymbol.c \
 new/piremit.c \
 new/hdocprep.c \
 new/pirmacro.c \
-new/pirregalloc.c
+new/pirregalloc.c \
+new/bcgen.c
 
 OBJS          = \
 new/main$(O) \
@@ -47,7 +48,8 @@ new/pirsymbol$(O) \
 new/piremit$(O) \
 new/hdocprep$(O) \
 new/pirmacro$(O) \
-new/pirregalloc$(O)
+new/pirregalloc$(O) \
+new/bcgen$(O)
 
 .c$(O) :
 	@$(PERL) ../../tools/dev/cc_flags.pl -v ../../CFLAGS $(CC) "" $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
@@ -63,7 +65,7 @@ pirc$(EXE): $(OBJS)
 	@rpath_blib@ @libparrot_ldflags@ $(C_LIBS) $(LINKFLAGS) $(LINK_DYNAMIC)
 
 new/pirparser$(O): new/pirparser.c new/pirparser.h
-new/pirlexer$(O): new/pirlexer.c src/pirlexer.h
+new/pirlexer$(O): new/pirlexer.c new/pirlexer.h
 new/pircompunit$(O): new/pircompunit.c new/pircompunit.h
 new/pircompiler$(O): new/pircompiler.c new/pircompiler.h
 new/pirsymbol$(O): new/pirsymbol.c new/pirsymbol.h
@@ -71,12 +73,12 @@ new/piremit$(O): new/piremit.c new/piremit.h
 new/hdocprep$(O): new/hdocprep.c new/hdocprep.l
 new/pirmacro$(O): new/pirmacro.c new/pirmacro.h
 new/pirregalloc$(O): new/pirregalloc.c new/pirregalloc.h
+new/bcgen$(O): new/bcgen.c new/bcgen.h
 
 test: all
-	prove 
-	podchecker $(SOURCES) \
-	doc/design.pod \
-    README.pod
+	podchecker $(SOURCES) \	
+	README.pod
+	perl t/harness
 
 # regenerate the Makefile
 Makefile: $(BUILD_DIR)/config/gen/makefiles/pirc.in

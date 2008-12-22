@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 35;
+use Parrot::Test tests => 34;
 use Parrot::Config;
 
 =head1 NAME
@@ -193,10 +193,6 @@ END_EXPECTED
     '70_class_object.pir' => << 'END_EXPECTED',
 Hello
 5
-END_EXPECTED
-
-    '80_closure.pir' => << 'END_EXPECTED',
-27
 END_EXPECTED
 
     '81_continuation.pir' => << 'END_EXPECTED',

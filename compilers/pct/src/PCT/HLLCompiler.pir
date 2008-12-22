@@ -32,8 +32,7 @@ running compilers from a command line.
     $P0 = split ' ', 'e=s help|h target=s trace|t=s encoding=s output|o=s combine version|v'
     setattribute self, '@cmdoptions', $P0
 
-    $P1 = new 'String'
-    $P1 = <<'    USAGE'
+    $P1 = box <<'    USAGE'
   This compiler is based on PCT::HLLCompiler.
 
   Options:
@@ -57,8 +56,7 @@ running compilers from a command line.
     $S0  = $P0['revision']
   _handler:
     pop_eh
-    $P2 = new 'String'
-    $P2  = 'This compiler is built with the Parrot Compiler Toolkit, parrot revision '
+    $P2  = box 'This compiler is built with the Parrot Compiler Toolkit, parrot revision '
     $P2 .= $S0
     $P2 .= '.'
     setattribute self, '$version', $P2
@@ -379,6 +377,10 @@ to any options and return the resulting parse tree.
     unless null $P0 goto action_make
     $S0 = parseactions
     parseactions = split '::', $S0
+    push_eh err_bad_parseactions
+    $P0 = get_class parseactions
+    if null $P0 goto err_bad_parseactions
+    pop_eh
   action_make:
     action = new parseactions
   have_action:
@@ -392,6 +394,11 @@ to any options and return the resulting parse tree.
     .return ()
   err_failedparse:
     self.'panic'('Failed to parse source')
+    .return ()
+  err_bad_parseactions:
+    pop_eh
+    $P0 = self.'parseactions'()
+    self.'panic'('Unable to find action grammar ', $P0)
     .return ()
 .end
 
@@ -526,11 +533,10 @@ specifies the encoding to use for the input (e.g., "utf8").
     .local pmc stdin
     .local int has_readline
     stdin = getstdin
-    has_readline = stdin.'set_readline_interactive'(1)
     encoding = adverbs['encoding']
     if encoding == 'fixed_8' goto interactive_loop
     unless encoding goto interactive_loop
-    push stdin, encoding
+    stdin.'encoding'(encoding)
   interactive_loop:
     .local pmc code
     unless stdin goto interactive_end
@@ -544,10 +550,8 @@ specifies the encoding to use for the input (e.g., "utf8").
   have_prompt:
 
     ##  display a prompt ourselves if readline isn't present
-    if has_readline != -1 goto interactive_read
-    printerr prompt
   interactive_read:
-    code = stdin.'readline'(prompt)
+    code = stdin.'readline_interactive'(prompt)
     if null code goto interactive_end
     unless code goto interactive_loop
     concat code, "\n"
@@ -653,18 +657,16 @@ options are passed to the evaluator.
     .local string iname
     .local pmc ifh
     iname = shift iter
-    ifh = open iname, '<'
-    unless ifh goto err_infile
-    if encoding == 'fixed_8' goto iter_loop_1
-    unless encoding goto iter_loop_1
-    push ifh, encoding
+    ifh = new 'FileHandle'
+    unless encoding == 'utf8' goto iter_loop_1
+    ifh.'encoding'(encoding)
   iter_loop_1:
-    $S0 = ifh.'slurp'('')
+    $S0 = ifh.'readall'(iname)
     code .= $S0
     close ifh
     goto iter_loop
   iter_end:
-    $P0 = self.'eval'(code, adverbs :flat :named)
+    $P0 = self.'eval'(code, args :flat, adverbs :flat :named)
     if target == '' goto end
     if target == 'pir' goto end
     '_dumper'($P0, target)
@@ -743,16 +745,17 @@ Generic method for compilers invoked from a shell command line.
     $I0 = adverbs['version']
     if $I0 goto version
 
+
     $S0 = adverbs['e']
-    if $S0 goto eval_line
+    $I0 = exists adverbs['e']
+    if $I0 goto eval_line
 
     .local pmc result
-    result = new 'String'
-    result = ''
+    result = box ''
     unless args goto interactive
     $I0 = adverbs['combine']
     if $I0 goto combine
-    $S0 = shift args
+    $S0 = args[0]
     result = self.'evalfiles'($S0, args :flat, adverbs :flat :named)
     goto save_output
   combine:
@@ -777,7 +780,7 @@ Generic method for compilers invoked from a shell command line.
     output = adverbs['output']
     if output == '' goto save_output_1
     if output == '-' goto save_output_1
-    ofh = open output, '>'
+    ofh = open output, 'w'
     unless ofh goto err_output
   save_output_1:
     print ofh, result

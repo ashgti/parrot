@@ -133,9 +133,6 @@ CODE
 1234
 OUTPUT
 
-TODO: {
-    local $TODO = 'require calls the loader with a single argument: modname';
-
 unlink('../foo.lua') if ( -f '../foo.lua' );
 open $X, '>', '../foo.lua';
 print {$X} 'print("in foo.lua", ...)';
@@ -146,7 +143,6 @@ require "foo"
 CODE
 in foo.lua	foo
 OUTPUT
-}
 
 # clean up foo.lua
 unlink('../foo.lua') if ( -f '../foo.lua' );
@@ -205,7 +201,8 @@ unlink('../mod_foo.pbc') if ( -f '../mod_foo.pbc' );
 unlink('../mod_foo.pir') if ( -f '../mod_foo.pir' );
 open $X, '>', '../mod_foo.pir';
 print {$X} <<'PIR';
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 
 .sub '__onload' :anon :load
 #    print "__onload mod_foo\n"
@@ -216,7 +213,7 @@ print {$X} <<'PIR';
 .sub 'luaopen_mod_foo'
 #    print "luaopen_mod_foo\n"
     .local pmc _lua__GLOBAL
-    _lua__GLOBAL = global '_G'
+    _lua__GLOBAL = get_hll_global '_G'
     new $P1, 'LuaString'
     .local pmc _mod_foo
     new _mod_foo, 'LuaTable'

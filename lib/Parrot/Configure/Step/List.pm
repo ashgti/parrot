@@ -11,7 +11,6 @@ my @steps = qw(
     init::manifest
     init::defaults
     init::install
-    init::miniparrot
     init::hints
     init::headers
     inter::progs
@@ -52,7 +51,6 @@ my @steps = qw(
     auto::signal
     auto::socklen_t
     auto::env
-    auto::aio
     auto::gmp
     auto::readline
     auto::gdbm

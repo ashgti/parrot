@@ -10,13 +10,12 @@ This file implements match objects returned by the Parrot Grammar Engine.
 
 .namespace [ 'PGE';'Match' ]
 
-.sub '__onload' :load
+.sub '' :load
     load_bytecode 'P6object.pbc'
-    load_bytecode 'Parrot/Capture_PIR.pbc'
     load_bytecode 'PGE/Dumper.pir'                 # FIXME, XXX, etc.
     .local pmc p6meta
     p6meta = new 'P6metaclass'
-    p6meta.'new_class'('PGE::Match', 'parent'=>'Capture_PIR', 'attr'=>'$.target $.from $.pos &!corou')
+    p6meta.'new_class'('PGE::Match', 'parent'=>'Capture', 'attr'=>'$.target $.from $.pos &!corou $!item')
     .return ()
 .end
 
@@ -124,11 +123,9 @@ is set or implied.
     .local pmc mob, mfrom, mpos
     mob = new grammar_class
     setattribute mob, '$.target', target
-    mfrom = new 'Integer'
-    mfrom = pos
+    mfrom = box pos
     setattribute mob, '$.from', mfrom
-    mpos = new 'Integer'
-    mpos = -1
+    mpos = box -1
     setattribute mob, '$.pos', mpos
 
     .return (mob, pos, target, mfrom, mpos, iscont)
@@ -313,21 +310,13 @@ the position of the match object to C<cutvalue>.
     null $P0
     setattribute self, '$.target', $P0
     setattribute self, '&!corou', $P0
-    setattribute self, '@!list', $P0
     setattribute self, '$!item', $P0
-    .local pmc iter
-    iter = new 'Iterator', self
-  iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
-    delete self[$S0]
-    goto iter_loop
-  iter_end:
+    setref self, $P0
     .return ()
 .end
 
 
-=item C<__get_bool()>
+=item C<get_bool()>
 
 Returns 1 if this object successfully matched the target string,
 0 otherwise.
@@ -341,7 +330,7 @@ Returns 1 if this object successfully matched the target string,
     .return ($I1)
 .end
 
-=item C<__get_integer()>
+=item C<get_integer()>
 
 Returns the integer value of this match.
 
@@ -352,7 +341,7 @@ Returns the integer value of this match.
     .return ($I0)
 .end
 
-=item C<__get_number()>
+=item C<get_number()>
 
 Returns the numeric value of this match.
 
@@ -363,7 +352,7 @@ Returns the numeric value of this match.
     .return ($N0)
 .end
 
-=item C<__get_string()>
+=item C<get_string()>
 
 Returns the portion of the target string matched by this object.
 

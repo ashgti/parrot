@@ -26,8 +26,7 @@ PIR or an Eval PMC (bytecode).
     $P0 = new 'ResizablePMCArray'
     set_global '@!subcode', $P0
 
-    $P0 = new 'String'
-    $P0 = '[]'
+    $P0 = box '[]'
     set_global '$?NAMESPACE', $P0
     .return ()
 .end
@@ -208,16 +207,15 @@ the sub.
     name = node.'name'()
     pirflags = node.'pirflags'()
 
-  pirflags_lexid:
-    $I0 = index pirflags, ':lexid('
-    if $I0 >= 0 goto pirflags_lexid_done
-    .local string lexid
-    lexid = code.'unique'()
-    node.'lexid'(lexid)
-    pirflags = concat pirflags, ' :lexid("'
-    pirflags .= lexid
+  pirflags_subid:
+    $I0 = index pirflags, ':subid('
+    if $I0 >= 0 goto pirflags_subid_done
+    .local string subid
+    subid = node.'subid'()
+    pirflags = concat pirflags, ' :subid("'
+    pirflags .= subid
     pirflags .= '")'
-  pirflags_lexid_done:
+  pirflags_subid_done:
 
   pirflags_method:
     $I0 = index pirflags, ':method'
@@ -232,7 +230,7 @@ the sub.
     outerpost = node.'outer'()
     if null outerpost goto pirflags_done
     unless outerpost goto pirflags_done
-    outername = outerpost.'lexid'()
+    outername = outerpost.'subid'()
     $S0 = code.'escape'(outername)
     pirflags = concat pirflags, ' :outer('
     concat pirflags, $S0
@@ -300,6 +298,8 @@ the sub.
 
     options['target'] = 'pir'
     options['grammar'] = ''
+    $P0 = node.'subid'()
+    options['subid'] = $P0
     .local pmc source, compiler, pir
     source = node[0]
     $S0 = node.'compiler'()

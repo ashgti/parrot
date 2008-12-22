@@ -73,17 +73,18 @@ Tests for type based dispatch using the Perl 6 MultiSub PMC.
     push $P0, $P1
 
     # Couple of classes that do the roles.
-    .local pmc C1, C2
-    C1 = new 'Class'
-    addrole C1, R1
-    C2 = new 'Class'
-    addrole C2, R2
+    .local pmc C1, C2, p6meta
+    p6meta = get_hll_global ['Perl6Object'], '$!P6META'
+    C1 = p6meta.'new_class'('C1', 'parent'=>'Any')
+    p6meta.'add_role'(R1, 'to'=>C1)
+    C2 = p6meta.'new_class'('C2', 'parent'=>'Any')
+    p6meta.'add_role'(R2, 'to'=>C2)
 
     # Tests
-    $P1 = new C1
+    $P1 = C1.'new'()
     $I0 = $P0($P1)
     is($I0, 1, 'dispatch on a role')
-    $P1 = new C2
+    $P1 = C2.'new'()
     $I0 = $P0($P1)
     is($I0, 2, 'dispatch on a role')
 .end
@@ -172,6 +173,9 @@ Tests for type based dispatch using the Perl 6 MultiSub PMC.
     .param pmc types :slurpy
     
     # Make signature.
+    .local pmc true
+    true = new 'Integer'
+    true = 1
     $P0 = new 'Signature'
     $P1 = new 'Perl6Array'
     setattribute $P0, "@!params", $P1
@@ -184,6 +188,7 @@ Tests for type based dispatch using the Perl 6 MultiSub PMC.
     type = get_hll_global $S0
     $P2 = new 'Perl6Hash'
     $P2["type"] = type
+    $P2["multi_invocant"] = true
     push $P1, $P2
     goto param_loop
   param_loop_end:

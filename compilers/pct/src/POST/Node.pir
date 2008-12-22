@@ -194,10 +194,16 @@ Get/set the opcode type for this node.
 .end
 
 
-.sub 'lexid' :method
+.sub 'subid' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag
-    .tailcall self.'attr'('lexid', value, has_value)
+    if has_value goto getset_value
+    $I0 = exists self['subid']
+    if $I0 goto getset_value
+    value = self.'unique'()
+    has_value = 1
+  getset_value:
+    .tailcall self.'attr'('subid', value, has_value)
 .end
 
 

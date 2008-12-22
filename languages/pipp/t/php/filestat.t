@@ -7,7 +7,7 @@ t/php/filestat.t - Standard Library filestat
 
 =head1 SYNOPSIS
 
-    % perl -I../lib pipp/t/php/filestat.t
+    perl t/harness t/php/filestat.t
 
 =head1 DESCRIPTION
 
@@ -28,40 +28,40 @@ use Test::More     tests => 3;
 use Parrot::Test;
 
 
-unlink 'pipp/file.txt' if (-f 'pipp/file.txt');
+unlink 'file.txt' if (-f 'file.txt');
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'file_exists()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'file_exists()' );
 <?php
   echo file_exists('file.txt'), "\n";
 ?>
 CODE
 
-OUTPUT
+OUT
 
-open my $X, '>', 'pipp/file.txt';
+open my $X, '>', 'file.txt';
 binmode $X, ':raw';
 print {$X} "line 1\n";
 print {$X} "line 2\n";
 print {$X} "line 3\n";
 close $X;
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'file_exists()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'file_exists()' );
 <?php
   echo file_exists('file.txt'), "\n";
 ?>
 CODE
 1
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'filesize()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'filesize()' );
 <?php
   echo filesize('file.txt'), "\n";
 ?>
 CODE
 21
-OUTPUT
+OUT
 
-unlink 'pipp/file.txt' if (-f 'pipp/file.txt');
+unlink 'file.txt' if (-f 'file.txt');
 
 
 # Local Variables:

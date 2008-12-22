@@ -259,7 +259,7 @@ signature.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_init_arg_nci(PARROT_INTERP, ARGOUT(call_state *st),
     ARGIN(const char *sig))
@@ -288,7 +288,7 @@ signature.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig))
 {
@@ -330,7 +330,7 @@ These functions return 0 if no arguments are present, or 1 on success.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_init_arg_indexes_and_sig_pmc(SHIM_INTERP, ARGIN(Parrot_Context *ctx),
         ARGIN_NULLOK(opcode_t *indexes), ARGIN_NULLOK(PMC* sig_pmc),
@@ -377,7 +377,7 @@ of a C<get_*> or C<set_*> argument opcode.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_init_arg_op(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
     ARGIN_NULLOK(opcode_t *pc), ARGIN(call_state_item *sti))
@@ -406,7 +406,7 @@ const_table), registers, function signature, and arguments.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_init_arg_sig(SHIM_INTERP, ARGIN(Parrot_Context *ctx),
     ARGIN(const char *sig), ARGIN_NULLOK(void *ap),
@@ -662,7 +662,7 @@ name and the value.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_fetch_arg(PARROT_INTERP, ARGMOD(call_state *st))
 {
@@ -741,7 +741,7 @@ PMC which is then set as the PMC value of the call_state object.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_fetch_arg_nci(PARROT_INTERP, ARGMOD(call_state *st))
 {
@@ -1148,7 +1148,7 @@ to store more values then there are in the signature. Returns 1 otherwise.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 Parrot_store_arg(SHIM_INTERP, ARGIN(const call_state *st))
 {
@@ -1369,7 +1369,7 @@ slurpy parameters, and finally the named parameters.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_process_args(PARROT_INTERP, ARGMOD(call_state *st), arg_pass_t param_or_result)
 {
@@ -1576,7 +1576,7 @@ Converts a source argument to the expected destination type.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_convert_arg(PARROT_INTERP, ARGMOD(call_state *st))
 {
@@ -1619,7 +1619,7 @@ latter handles return values and yields.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 parrot_pass_args(PARROT_INTERP,
         ARGMOD(Parrot_Context *src_ctx), ARGMOD(Parrot_Context *dest_ctx),
@@ -2032,9 +2032,9 @@ count_signature_elements(PARROT_INTERP, ARGIN(const char *signature),
 
 =item C<static void commit_last_arg_sig_object>
 
-Called by Parrot_pcc_invoke_sub_from_sig_object when it reaches the end of each arg
-in the arg signature.  See C<Parrot_pcc_invoke_sub_from_sig_object> for signature
-syntax.
+Called by Parrot_pcc_invoke_sub_from_sig_object when it reaches the end of each
+arg in the arg signature.  See C<Parrot_pcc_invoke_sub_from_sig_object> for
+signature syntax.
 
 =cut
 
@@ -2339,7 +2339,7 @@ string and call arguments are converted to a CallSignature PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_pcc_invoke_sub_from_c_args(PARROT_INTERP, ARGIN(PMC *sub_obj),
         ARGIN(const char *sig), ...)
@@ -2409,7 +2409,7 @@ invokes a PMC method
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
         ARGIN(const char *signature), ...)
@@ -2559,8 +2559,7 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
     interp->current_object       = pmc;
     interp->current_cont         = NEED_CONTINUATION;
     ctx->current_cont            = ret_cont;
-    PMC_cont(ret_cont)->from_ctx = ctx;
-    ctx->ref_count++;
+    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
     pccinvoke_meth               = VTABLE_find_method(interp, pmc, method_name);
 
     if (PMC_IS_NULL(pccinvoke_meth))
@@ -2590,7 +2589,7 @@ signature string and call arguments are passed in a CallSignature PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_pcc_invoke_sub_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         ARGIN(PMC *sig_obj))
@@ -2607,11 +2606,10 @@ Parrot_pcc_invoke_sub_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     /* create the signature string, and the various PMCs that are needed to
        store all the parameters and parameter counts. */
     char *signature         = string_to_cstring(interp, VTABLE_get_string(interp, sig_obj));
-    PMC * const args_sig    = pmc_new(interp, enum_class_FixedIntegerArray);
-    PMC * const results_sig = pmc_new(interp, enum_class_FixedIntegerArray);
+    PMC * const args_sig    = temporary_pmc_new(interp, enum_class_FixedIntegerArray);
+    PMC * const results_sig = temporary_pmc_new(interp, enum_class_FixedIntegerArray);
     PMC * const ret_cont    = new_ret_continuation_pmc(interp, NULL);
-    PMC * const result_list = VTABLE_get_attr_str(interp, sig_obj,
-            CONST_STRING(interp, "returns"));
+    PMC * const result_list = VTABLE_get_attr_str(interp, sig_obj, CONST_STRING(interp, "returns"));
 
     Parrot_Context *ctx;
     opcode_t         *dest;
@@ -2655,19 +2653,21 @@ Parrot_pcc_invoke_sub_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     interp->current_object       = PMCNULL;
     interp->current_cont         = NEED_CONTINUATION;
     ctx->current_cont            = ret_cont;
-    PMC_cont(ret_cont)->from_ctx = ctx;
-    ctx->ref_count++;
+    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
 
     /* PIR Subs need runops to run their opcodes. */
     if (sub_obj->vtable->base_type == enum_class_Sub) {
-        /* can't re-enter the runloop from here with CGP: RT #60048 */
         INTVAL old_core  = interp->run_core;
         opcode_t offset  = dest - interp->code->base.data;
-        if (interp->run_core == PARROT_CGP_CORE)
+
+        /* can't re-enter the runloop from here with PIC cores: RT #60048 */
+        if (interp->run_core == PARROT_CGP_CORE
+        ||  interp->run_core == PARROT_SWITCH_CORE)
             interp->run_core = PARROT_SLOW_CORE;
+
         runops(interp, offset);
         interp->run_core = old_core;
     }
@@ -2676,8 +2676,8 @@ Parrot_pcc_invoke_sub_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
        caller's context */
     set_context_sig_returns(interp, ctx, indexes, ret_x, result_list);
 
-    PObj_live_CLEAR(args_sig);
-    PObj_live_CLEAR(results_sig);
+    temporary_pmc_free(interp, args_sig);
+    temporary_pmc_free(interp, results_sig);
 
     interp->current_args   = save_current_args;
     interp->args_signature = save_args_signature;

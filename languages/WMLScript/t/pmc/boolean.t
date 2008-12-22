@@ -24,7 +24,7 @@ use Test::More;
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check inheritance' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
     .local int bool1
@@ -43,7 +43,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check interface' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
     .local int bool1
@@ -70,7 +70,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check name' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
     .local string str1
@@ -85,7 +85,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check get_string' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
     pmc1 = 0
@@ -103,7 +103,7 @@ OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check clone' );
 .sub _main
-    loadlib P1, "wmls_group"
+    loadlib $P1, "wmls_group"
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
     pmc1 = 1
@@ -130,7 +130,8 @@ false
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check HLL' );
-.HLL "WMLScript", "wmls_group"
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .sub _main
     .local pmc pmc1
     pmc1 = new "WmlsBoolean"
@@ -149,8 +150,9 @@ true
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check istrue' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
     .const "WmlsBoolean" cst1 = "1"
     print cst1
@@ -169,8 +171,9 @@ WmlsBoolean
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check typeof' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
     .const "WmlsBoolean" cst1 = "1"
     print cst1
@@ -189,8 +192,9 @@ WmlsInteger
 OUTPUT
 
 pir_output_is( << 'CODE', << 'OUTPUT', 'check defined' );
+.HLL "WMLScript"
+.loadlib "wmls_group"
 .loadlib "wmls_ops"
-.HLL "WMLScript", "wmls_group"
 .sub _main
     .const "WmlsBoolean" cst1 = "1"
     print cst1

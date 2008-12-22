@@ -47,6 +47,9 @@ typedef struct live_interval {
         struct   live_interval *preva;
 /*    } prev; */
 
+    /* pointer to next on the cached objects list. */
+    struct live_interval *nextc;
+
 } live_interval;
 
 /* structure to store a second-hand register, so we can re-use it later. */
@@ -56,7 +59,8 @@ typedef struct free_reg {
 
 } free_reg;
 
-
+/* forward declaration */
+struct lexer_state;
 
 typedef struct linear_scan_register_allocator {
     unsigned       r[4];
@@ -67,12 +71,19 @@ typedef struct linear_scan_register_allocator {
     /* reusable registers; were used by variables, which are now "dead"; (1 list per type) */
     free_reg      *free_regs[4];
 
+    /* list of cached intervals; don't malloc/free objects, but keep them on a list
+     * and re-used malloc()ed objects. Only free them when destroying the lsr.
+     */
+    live_interval *cached_intervals;
+
     /* list of free_reg objects that we can re-use, to save memory allocations. */
     free_reg      *cached_regs;
 
+    struct lexer_state *lexer;
+
 } lsr_allocator;
 
-lsr_allocator *new_linear_scan_register_allocator(void);
+lsr_allocator *new_linear_scan_register_allocator(struct lexer_state *lexer);
 
 void destroy_linear_scan_regiser_allocator(lsr_allocator *lsr);
 

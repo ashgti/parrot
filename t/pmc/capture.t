@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 9;
+use Parrot::Test tests => 8;
 
 =head1 NAME
 
@@ -258,19 +258,13 @@ Hash
 OUTPUT
 
 pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_integer not implemented' );
-    I0 = capt
+    $I0 = capt
 CODE
 /get_integer\(\) not implemented in class 'Capture'/
 OUT
 
-pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_string not implemented' );
-    S0 = capt
-CODE
-/get_string\(\) not implemented in class 'Capture'/
-OUT
-
 pir_error_output_like( $PRE . <<'CODE'. $POST, <<'OUT', 'get_number not implemented' );
-    N0 = capt
+    $N0 = capt
 CODE
 /get_number\(\) not implemented in class 'Capture'/
 OUT

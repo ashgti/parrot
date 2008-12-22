@@ -18,3 +18,12 @@ D: Generate the Makefile from Makefile.in
 N: Bernhard Schmalhofer
 E: Bernhard.Schmalhofer@gmx.de
 D: Maintainer
+
+N: Jimmy Zhuo
+E: zhuomingliang@yahoo.com.cn
+D: Bugfixes
+D: Implementation of functions
+D: Code beautification
+
+N: Daniel Keane
+D: Implementation of 'elsif'

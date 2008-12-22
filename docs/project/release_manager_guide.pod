@@ -9,13 +9,25 @@ To prepare a release:
 
 =item 0.
 
-Announce the new release to parrot-dev@lists.parrot.org and to the IRC channel #parrot
-at least a couple days in advance. Ask whether there are any showstopping bugs.
-It's also good to ask for updates to F<NEWS>, F<CREDITS>, F<PLATFORMS>,
-F<RESPONSIBLE_PARTIES> and F<LANGUAGES_STATUS>.
+As soon as you become the release manager: review the goals for the release on
+the Parrot roadmap (L<https://trac.parrot.org/parrot/wiki/ParrotRoadmap>) and
+announce the tasks to the Parrot mailing list.  Make sure everyone knows what
+they've committed to accomplish in time for the release.  Ask the previous
+release manager to review PAUSE permissions so that PARROTRE owns all files.
+
+A couple of weeks in advance: Ask people to run C<make fulltest> and report
+(and hopefully fix!) any problems they find.
+
+A couple of days in advance: announce the new release to
+parrot-dev@lists.parrot.org and to the IRC channel #parrot.  Ask whether there
+are any showstopping bugs.  It's also good to ask for updates to F<NEWS>,
+F<CREDITS>, F<PLATFORMS>, F<RESPONSIBLE_PARTIES> and F<LANGUAGES_STATUS>.
 
 You might also select a name for your release. For example, you could
 select a name from L<http://en.wikipedia.org/wiki/List_of_parrots>.
+
+Set up your account on L<http://www.parrot.org/> and ask one of Allison, Jerry,
+Jeff, Will, or chromatic to bestow you story-creating powers.
 
 =item 1.
 
@@ -72,16 +84,6 @@ The date of the next release is in L<Appendix 2|"Appendix 2 - Upcoming releases"
 =item C<bugday.date>
 
 Enter the date of the Saturday before the next release.
-
-=item C<rt.tracking>
-
-Create a new RT-ticket for the next release.
-Please use the release month in the ticket, and *do not*
-use the release number. Releases are date-based, while release numbers are
-feature-based. Project team members agree on the release number near the
-actual release, based on the features available in trunk at the time.
-Mark the ticket for the next release as dependent on the current release. 
-Change the URL fragment in rt.tracking to use the number of the ticket for the next release.
 
 =item C<wiki.bugday>
 
@@ -170,6 +172,10 @@ See also L<Appendix 1|"Appendix 1 - Releasing from a branch"> below.
 
 =item 8.
 
+=over 4
+
+=item a. CPAN
+
 In PAUSE, assign yourself co-maintainer permissions on all modules owned by
 PARROTRE.
 
@@ -186,6 +192,39 @@ added in this release will list your PAUSE ID as the "owner". Change the owner
 to PARROTRE.
 
 See F<docs/project/pause_guide.pod> for more details.
+
+=item b. FTP
+
+SSH to ftp-osl.osuosl.org. (If you don't have the necessary login information,
+get it from one of the previous release managers.)
+
+ $ ssh -l <USERNAME> ftp-osl.osuosl.org
+
+If the release is a monthly development release, create a new directory under
+F<~/ftp/releases/devel>.
+
+ $ mkdir ~/ftp/releases/devel/a.b.c
+
+If the release is in the stable series (1.0, 1.5, 2.0, 2.5, etc) create
+the new directory in F<~/ftp/releases/stable> instead.
+
+ $ mkdir ~/ftp/releases/stable/a.b.c
+
+Copy the tarball from your machine into the new directory.
+
+ $ scp parrot-a.b.c.tar.gz ftp-osl.osuosl.org:~/ftp/releases/devel/a.b.c/.
+
+(Or using C<wget> or whatever tool you prefer.)
+
+When you're finished making changes, run the trigger script to push the changes
+out to the FTP mirrors.
+
+  ~/trigger-parrot
+
+Check your changes at F<ftp://ftp.parrot.org/pub/parrot/releases>. It should
+only take a few minutes for the mirrors to sync.
+
+=back
 
 =item 9.
 
@@ -235,9 +274,9 @@ are checked.
 
 =item e
 
-Send an email to webmaster@parrotcode.org requesting that they update the
-C</.htredirects> file for release/devel to point to the proper CPAN URL. [This
-step will change in the near future.]
+Under "Administer" -> "Site building" -> "URL Redirects", change the URL for
+"release/current" to the FTP directory for the new release (for example,
+F<ftp://ftp.parrot.org/pub/parrot/releases/devel/0.8.1>).
 
 =back
 
@@ -280,15 +319,25 @@ Update the next planned release date on the wiki at L<http://www.perlfoundation.
 
 Update the Wikipedia entry at L<http://en.wikipedia.org/wiki/Parrot_virtual_machine>.
 
+=item f
+
+Update the C2 wiki entry at L<http://c2.com/cgi/wiki?ParrotCode>.
+
 =back
 
 =item 12.
 
-Close any release-related tickets in RT. If they are not yet resolved,
-migrate the critical ones to the next milestone release ticket.
-Non-critical unresolved tickets can be simply unlinked.
+Close any release-related tickets in trac. Migrate any critical tickets
+to the next milestone; non-critical tickets can have their milestone unset.
 
 =item 13.
+
+Add the version to trac so new bug reports can be filed against your
+buggy code. L<https://trac.parrot.org/parrot/admin/ticket/versions>
+
+Remove any sufficiently old versions listed there.
+
+=item 14.
 
 You're done! Help yourself to a beer, cola, or other celebratory drink.
 
@@ -364,8 +413,7 @@ the 3rd Tuesday of each month. Version numbers for each release will be
 determined each month, and will depend on the features actually present in
 that release.
 
- - November 18th, 2008  - chromatic
- - December 16th, 2008  - Andrew Whitworth
+ - January 20th, 2009   - chromatic
 
 =cut
 

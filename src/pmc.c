@@ -26,15 +26,29 @@ src/pmc.c - The base vtable calling functions
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static PMC* create_class_pmc(PARROT_INTERP, INTVAL type)
+static PMC * create_class_pmc(PARROT_INTERP, INTVAL type)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static PMC* get_new_pmc_header(PARROT_INTERP,
+static PMC * get_new_pmc_header(PARROT_INTERP,
     INTVAL base_type,
     UINTVAL flags)
         __attribute__nonnull__(1);
+
+static void pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pmc);
+
+static void pmc_free_to_pool(PARROT_INTERP,
+    ARGMOD(PMC *pmc),
+    ARGMOD(Small_Object_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*pmc)
+        FUNC_MODIFIES(*pool);
 
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -54,9 +68,9 @@ Tests if the given pmc is null.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
-PMC_is_null(SHIM_INTERP, NULLOK(const PMC *pmc))
+PMC_is_null(SHIM_INTERP, ARGIN_NULLOK(const PMC *pmc))
 {
 #if PARROT_CATCH_NULL
     return pmc == PMCNULL || pmc == NULL;
@@ -78,7 +92,7 @@ method to perform any other necessary initialization.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -112,7 +126,7 @@ turned into a PMC of a singleton type.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
@@ -192,7 +206,7 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
 
 /*
 
-=item C<static PMC* get_new_pmc_header>
+=item C<static PMC * get_new_pmc_header>
 
 Gets a new PMC header.
 
@@ -299,7 +313,7 @@ allocation and initialization for continuations.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 pmc_new_noinit(PARROT_INTERP, INTVAL base_type)
@@ -323,7 +337,7 @@ Creates a new constant PMC of type C<base_type>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 constant_pmc_new_noinit(PARROT_INTERP, INTVAL base_type)
@@ -342,7 +356,7 @@ Creates a new constant PMC of type C<base_type>, then calls its C<init>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 constant_pmc_new(PARROT_INTERP, INTVAL base_type)
@@ -363,7 +377,7 @@ As C<pmc_new()>, but passes C<init> to the PMC's C<init_pmc()> vtable entry.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 pmc_new_init(PARROT_INTERP, INTVAL base_type, ARGOUT(PMC *init))
@@ -391,7 +405,7 @@ entry.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 constant_pmc_new_init(PARROT_INTERP, INTVAL base_type, ARGIN_NULLOK(PMC *init))
@@ -404,7 +418,7 @@ constant_pmc_new_init(PARROT_INTERP, INTVAL base_type, ARGIN_NULLOK(PMC *init))
 
 /*
 
-=item C<PMC * temporary_pmc_new(PARROT_INTERP, INTVAL base_type)>
+=item C<PMC * temporary_pmc_new>
 
 Creates a new temporary PMC of type C<base_type>, the call C<init>.  B<You> are
 responsible for freeing this PMC when it goes out of scope with
@@ -420,7 +434,7 @@ C<pmc_new()> instead.
 (Why do these functions even exist?  Used judiciously, they can reduce GC
 pressure in hotspots tremendously.  If you haven't audited the code carefully
 -- including profiling and benchmarking -- then use C<pmc_new()> instead, and
-never B<ever> add C<PARROT_API> to either function.)
+never B<ever> add C<PARROT_EXPORT> to either function.)
 
 =cut
 
@@ -449,12 +463,10 @@ tempted to use this.
 
 */
 
-void
-temporary_pmc_free(PARROT_INTERP, PMC *pmc)
+static void
+pmc_free_to_pool(PARROT_INTERP, ARGMOD(PMC *pmc),
+    ARGMOD(Small_Object_Pool *pool))
 {
-    Arenas            *arena_base = interp->arena_base;
-    Small_Object_Pool *pool       = arena_base->constant_pmc_pool;
-
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
@@ -464,6 +476,22 @@ temporary_pmc_free(PARROT_INTERP, PMC *pmc)
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
     pool->add_free_object(interp, pool, (PObj *)pmc);
     pool->num_free_objects++;
+}
+
+
+void
+temporary_pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    Small_Object_Pool *pool = interp->arena_base->constant_pmc_pool;
+    pmc_free_to_pool(interp, pmc, pool);
+}
+
+static void
+pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    Small_Object_Pool *pool = interp->arena_base->pmc_pool;
+    pmc_free_to_pool(interp, pmc, pool);
+
 }
 
 
@@ -478,7 +506,7 @@ representing that type.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 pmc_register(PARROT_INTERP, ARGIN(STRING *name))
 {
@@ -519,7 +547,7 @@ Returns the PMC type for C<name>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL
 pmc_type(PARROT_INTERP, ARGIN_NULLOK(STRING *name))
@@ -553,7 +581,7 @@ Returns the PMC type for C<name>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 pmc_type_p(PARROT_INTERP, ARGIN(PMC *name))
 {
@@ -628,7 +656,7 @@ Create the MRO (method resolution order) array for this type.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_create_mro(PARROT_INTERP, INTVAL type)
 {
@@ -637,9 +665,11 @@ Parrot_create_mro(PARROT_INTERP, INTVAL type)
     PMC    *mro_list = vtable->mro;
     INTVAL  i, count;
 
+    /* this should never be PMCNULL */
+    PARROT_ASSERT(!PMC_IS_NULL(mro_list));
+
     /* multithreaded: has already mro */
-    if (mro_list
-    &&  mro_list->vtable->base_type != enum_class_ResizableStringArray)
+    if (mro_list->vtable->base_type != enum_class_ResizableStringArray)
         return;
 
     mro         = pmc_new(interp, enum_class_ResizablePMCArray);
@@ -696,7 +726,7 @@ Registers the PMC with the interpreter's DOD registry.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 dod_register_pmc(PARROT_INTERP, ARGIN(PMC *pmc))
 {

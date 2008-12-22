@@ -180,12 +180,13 @@ static int pass_pmc(SHIM_INTERP,
         __attribute__nonnull__(6)
         FUNC_MODIFIES(*dest_base);
 
-static int pass_str(SHIM_INTERP,
+static int pass_str(PARROT_INTERP,
     ARGIN(const PMC *sig),
     ARGIN(const char *src_base),
     ARGIN(const void **src),
     ARGOUT(char *dest_base),
     ARGIN(void * const *dest))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
@@ -441,7 +442,7 @@ RT #48260: Not yet documented!!!
 */
 
 static int
-pass_str(SHIM_INTERP, ARGIN(const PMC *sig), ARGIN(const char *src_base),
+pass_str(PARROT_INTERP, ARGIN(const PMC *sig), ARGIN(const char *src_base),
         ARGIN(const void **src), ARGOUT(char *dest_base), ARGIN(void * const *dest))
 {
     int i;
@@ -449,8 +450,9 @@ pass_str(SHIM_INTERP, ARGIN(const PMC *sig), ARGIN(const char *src_base),
 
     for (i = 2; n; ++i, --n) {
         STRING * const arg = *(STRING* const *)(src_base + ((const opcode_t*)src)[i]);
-        *(STRING* *)(dest_base + ((const opcode_t*)dest)[i])= arg;
+        *(STRING* *)(dest_base + ((const opcode_t*)dest)[i]) = arg;
     }
+
     return i;
 }
 
@@ -525,14 +527,20 @@ pass_mixed(PARROT_INTERP, ARGIN(const PMC *sig), ARGIN(const char *src_base),
                 break;
             case PARROT_ARG_STRING:
                 {
-                STRING * const argS = *(STRING * const *)(src_base + ((const opcode_t*)src)[i]);
-                *(STRING* *)(dest_base + ((const opcode_t*)dest)[i])= argS;
+                STRING *argS = *(STRING * const *)(src_base + ((const opcode_t *)src)[i]);
+
+                if (argS && PObj_constant_TEST(argS))
+                    argS = Parrot_make_COW_reference(interp, argS);
+
+                *(STRING **)(dest_base + ((const opcode_t*)dest)[i]) = argS;
                 }
                 break;
             case PARROT_ARG_STRING|PARROT_ARG_CONSTANT:
                 {
-                STRING * const argS = (STRING*)(src)[i];
-                *(STRING* *)(dest_base + ((const opcode_t*)dest)[i])= argS;
+                STRING *argS = (STRING *)(src)[i];
+                if (argS && PObj_constant_TEST(argS))
+                    argS = Parrot_make_COW_reference(interp, argS);
+                *(STRING **)(dest_base + ((const opcode_t *)dest)[i]) = argS;
                 }
                 break;
             case PARROT_ARG_PMC:
@@ -899,56 +907,7 @@ void
 parrot_pic_find_infix_v_pp(PARROT_INTERP, ARGIN(PMC *left), ARGIN(PMC *right),
                 ARGOUT(Parrot_MIC *mic), ARGOUT(opcode_t *cur_opcode))
 {
-    funcptr_t func;
-    int is_pmc;
-    INTVAL left_type, right_type;
-    PARROT_ASSERT(0);
-    /*
-     * if 2 threads are entering here, there is a chance
-     * that one moves the lru structure under the other thread
-     * and vv - just lock in case
-     *
-     * TODO
-     *
-     * if (TRY_LOCK_INTERPRETER(i) == EBUSY)
-     *      return;  - reexec
-     */
-    LOCK_INTERPRETER(interp);
-
-    /* move entries back and set topmost entry */
-    parrot_pic_move(interp, mic);
-
-    /* get real dispatch function */
-    left_type  = VTABLE_type(interp, left);
-    right_type = VTABLE_type(interp, right);
-    func       = get_mmd_dispatch_type(interp,
-                    mic->m.func_nr, left_type, right_type, &is_pmc);
-
-    if (is_pmc) {
-        const size_t offs = cur_opcode - (opcode_t *)interp->code->prederef.code;
-        opcode_t* const real_op = interp->code->base.data + offs + 1;
-
-        /* set prederef code address to orig slot for now */
-        ((void**)cur_opcode)[0] =
-            parrot_pic_opcode(interp, PARROT_OP_infix_ic_p_p);
-
-        /* restore 1st operand i.e. .MMD_func_nr */
-        ((void**)cur_opcode)[1] = (void*)*real_op;
-        mic->lru.f.sub = (PMC*)F2DPTR(func);
-    }
-    else {
-        INTVAL op = PARROT_OP_pic_infix___ic_p_p;
-
-#if ENABLE_INLINING
-        if (func == (funcptr_t)Parrot_Integer_i_subtract_Integer && !mic->pic)
-            op = PARROT_OP_pic_inline_sub___ic_p_p;
-#endif
-        ((void**)cur_opcode)[0] =
-            parrot_pic_opcode(interp, op);
-        mic->lru.f.real_function = func;
-    }
-    mic->lru.u.type = (left_type << 16) | right_type;
-    UNLOCK_INTERPRETER(interp);
+    /* unused; deprecated */
 }
 
 /*

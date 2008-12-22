@@ -105,7 +105,14 @@ sub find_attrs {
 
         # type
         \s+
-        (INTVAL|FLOATVAL|STRING\s+\*|PMC\s+\*|(?:struct\s+)?\w+\s+\*+|Parrot_\w*)
+        (   INTVAL
+          | FLOATVAL
+          | STRING\s+\*
+          | PMC\s+\*
+          | (?:struct\s+)?\w+\s+\*+
+          | (?:unsigned\s+)?char\s+\*+
+          | \w*
+        )
 
         # name
         \s*
@@ -123,7 +130,7 @@ sub find_attrs {
     (/\*.*?\*/)?
     }sx;
 
-    while ($pmcbody =~ s/($attr_re)//) {
+    while ($pmcbody =~ s/($attr_re)//o) {
         my ($type, $name, @modifiers, $comment);
         $type = $2;
         $name = $3;
@@ -179,7 +186,7 @@ sub find_methods {
         \s*
     }sx;
 
-    while ( $pmcbody =~ s/($signature_re)// ) {
+    while ( $pmcbody =~ s/($signature_re)//o ) {
         my ( $decorators, $marker, $methodname, $parameters, $rawattrs ) =
             ( $2, $3, $4, $5, $6 );
         my $attrs = defined $rawattrs ? parse_method_attrs($rawattrs) : {};
@@ -513,8 +520,8 @@ sub extract_balanced {
     my $code       = shift;
     my $unbalanced = 0;
 
-    die "Unexpected whitespace, expecting" if $code =~ /^\s+/;
-    die "bad block open: ", substr( $code, 0, 40 ), "..." unless $code =~ /^\{/;
+    die 'Unexpected whitespace, expecting' if $code =~ /^\s+/;
+    die 'bad block open: ', substr( $code, 0, 40 ), '...' unless $code =~ /^\{/;
 
     # create a copy and remove strings and comments so that
     # unbalanced {} can be used in them in PMCs, being careful to

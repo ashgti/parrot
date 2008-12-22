@@ -9,7 +9,8 @@
     .param string target
     .param int pos
     .local string brackets, start, stop
-    brackets = unicode:"<>[](){}\xab\xbb"
+    brackets = unicode:"<>[](){}\xab\xbb\u0f3a\u0f3b\u0f3c\u0f3d\u169b\u169c\u2045\u2046\u207d\u207e\u208d\u208e\u2329\u232a\u2768\u2769\u276a\u276b\u276c\u276d\u276e\u276f\u2770\u2771\u2772\u2773\u2774\u2775\u27c5\u27c6\u27e6\u27e7\u27e8\u27e9\u27ea\u27eb\u2983\u2984\u2985\u2986\u2987\u2988\u2989\u298a\u298b\u298c\u298d\u298e\u298f\u2990\u2991\u2992\u2993\u2994\u2995\u2996\u2997\u2998\u29d8\u29d9\u29da\u29db\u29fc\u29fd\u3008\u3009\u300a\u300b\u300c\u300d\u300e\u300f\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019\u301a\u301b\u301d\u301e\ufd3e\ufd3f\ufe17\ufe18\ufe35\ufe36\ufe37\ufe38\ufe39\ufe3a\ufe3b\ufe3c\ufe3d\ufe3e\ufe3f\ufe40\ufe41\ufe42\ufe43\ufe44\ufe47\ufe48\ufe59\ufe5a\ufe5b\ufe5c\ufe5d\ufe5e\uff08\uff09\uff3b\uff3d\uff5b\uff5d\uff5f\uff60\uff62\uff63"
+
     start = substr target, pos, 1
     stop = start
     $I0 = index brackets, start
@@ -21,6 +22,16 @@
   bracket_valid:
     inc $I0
     stop = substr brackets, $I0, 1
+    .local int len
+    len = 0
+  bracket_loop:
+    inc pos
+    inc len
+    $S0 = substr target, pos, 1
+    if $S0 == start goto bracket_loop
+    if len == 1 goto end
+    start = repeat start, len
+    stop  = repeat stop, len
   end:
     .return (start, stop)
 .end
@@ -41,13 +52,13 @@
     action = options['action']
 
     ##  set up options based on flags
-    .local pmc flagarray, iter
+    .local pmc flagarray, it
     flagarray = split ' ', flags
-    iter = new 'Iterator', flagarray
+    it = iter flagarray
   iter_loop:
-    unless iter goto iter_end
+    unless it goto iter_end
     .local string oname
-    oname = shift iter
+    oname = shift it
     oname = substr oname, 1
     options[oname] = 1
     if oname == 'ww' goto opt_ww
@@ -84,11 +95,15 @@
     lastpos -= stoplen
     options['stop'] = stop
 
-    ##  handle :regex parsing
     .local pmc p6regex, quote_regex
     $I0 = options['regex']
-    unless $I0 goto word_start
+    if $I0 goto regex_start
+    $I0 = options['PIR']
+    if $I0 goto pir_start
+    goto word_start
+
   regex_start:
+    ##  handle :regex parsing
     p6regex = get_root_global ['parrot';'PGE';'Perl6Regex'], 'regex'
     mob.'to'(pos)
     quote_regex = p6regex(mob, options :flat :named)
@@ -97,6 +112,18 @@
     .local string key
     key = 'quote_regex'
     mob[key] = quote_regex
+    goto succeed
+
+  pir_start:
+    ##  scan to closing brackets
+    $I0 = index target, stop, pos
+    if $I0 < 0 goto fail
+    .local string pir
+    $I1 = $I0 - pos
+    pir = substr target, pos, $I1
+    pos = $I0
+    key = 'quote_pir'
+    mob[key] = pir
     goto succeed
 
     ##  handle word parsing
@@ -128,11 +155,11 @@
     ##  using an iterator to do it.
     ##  wwdoubleopts = clone options
             wwdoubleopts = new 'Hash'
-            .local pmc iter2
-            iter2 = new 'Iterator', options
+            .local pmc it2
+            it2 = iter options
           iter2_loop:
-            unless iter2 goto iter2_end
-            $S0 = shift iter2
+            unless it2 goto iter2_end
+            $S0 = shift it2
             $P0 = options[$S0]
             wwdoubleopts[$S0] = $P0
             goto iter2_loop
@@ -375,7 +402,7 @@
     if backchar == stop1 goto add_backchar
     unless optb goto add_litchar
     ##  handle :b options
-    $I0 = index "0abefnrtxdo123456789", backchar
+    $I0 = index "0abefnrtxco123456789", backchar
     if $I0 < 0 goto add_backchar
     if $I0 >= 11 goto fail_backchar_digit
     if $I0 >= 8 goto scan_xdo
@@ -400,13 +427,13 @@
     goto scan_loop
 
   scan_xdo:
-    ##  handle \x, \d, and \o escapes.  start by converting
+    ##  handle \x, \c, and \o escapes.  start by converting
     ##  the backchar into 8, 10, or 16 (yes, it's a hack
     ##  but it works).  Then loop through the characters
     ##  that follow to compute the decimal value of codepoints,
     ##  and add the codepoints to our literal.
     .local int base, decnum, isbracketed
-    base = index '        o d     x', backchar
+    base = index '        o c     x', backchar
     decnum = 0
     pos += 2
     $S0 = substr target, pos, 1

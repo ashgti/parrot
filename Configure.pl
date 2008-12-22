@@ -168,7 +168,7 @@ Used in combination with C<--step=gen::languages> to regenerate makefiles.
 
 =item C<--ask>
 
-This turns on the user prompts during configuraion.  Available only in
+This turns on the user prompts during configuration.  Available only in
 Command-Line interface.  Not available in Configuration-File interface.
 
 =item C<--test>
@@ -186,7 +186,7 @@ configuration has begun.
 =item C<--test=build>
 
 Run tests found in F<t/postconfigure/>, F<t/tools/pmc2cutils/>,
-F<t/tools/ops2cutils/> and F<t/tools/ops2pmutils/> I<after> configuration has
+F<t/tools/ops2cutils/> and F<t/tools/ops2pm/> I<after> configuration has
 completed.  These tests demonstrate (a) that certain of Parrot's configuration
 tools are working properly post-configuration; and (b) that certain of
 Parrot's build tools will work properly once you call F<make>.
@@ -379,10 +379,6 @@ E.g.
 Use this option if you want imcc's parser and lexer files to be generated.
 Needs a working parser and lexer.
 
-=item C<--miniparrot>
-
-Build parrot assuming only pure ANSI C is available.
-
 =back
 
 =head1 CONFIGURATION-FILE INTERFACE
@@ -570,7 +566,6 @@ configuration file.
     init::manifest nomanicheck
     init::defaults
     init::install
-    init::miniparrot
     init::hints verbose-step
     init::headers
     inter::progs
@@ -611,7 +606,6 @@ configuration file.
     auto::signal
     auto::socklen_t
     auto::env
-    auto::aio
     auto::gmp
     auto::readline
     auto::gdbm

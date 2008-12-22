@@ -47,6 +47,8 @@ and is populated with the current class.
 
 NOTE: No doubt we will need other things later; this is a start.
 
+=cut
+
 */
 
 #include "parrot/parrot.h"
@@ -114,6 +116,7 @@ Initializes a PMCProxy PMC.
     VTABLE void init_pmc(PMC *init_data) {
         const INTVAL type_num = VTABLE_get_integer(interp, init_data);
         Parrot_Class_attributes *proxy_info;
+        INTVAL mro_length, i;
 
         /* Ensure that it's a valid type number. */
         if (type_num > interp->n_vtable_max || type_num <= 0)
@@ -129,15 +132,29 @@ Initializes a PMCProxy PMC.
         proxy_info->name       = interp->vtables[type_num]->whoami;
         proxy_info->_namespace = interp->vtables[type_num]->_namespace;
 
-        /* XXX Parents and MRO still todo. */
+        /* Build MRO (skip ourself). */
+        mro_length = VTABLE_elements(interp, interp->vtables[type_num]->mro);
+        for (i = 1; i < mro_length; i++) {
+            PMC    *pclass = VTABLE_get_pmc_keyed_int(interp, interp->vtables[type_num]->mro, i);
+            STRING *cname  = pclass->vtable->whoami;
+            if (string_equal(interp, cname, CONST_STRING(interp, "scalar")) != 0) {
+                PMC *pproxy = Parrot_oo_get_class_str(interp, cname);
+                VTABLE_push_pmc(interp, proxy_info->all_parents, pproxy);
+            }
+        }
+
+        /* PMCs just do single inheritance, so we'll assume that if we have a
+         * second entry in our MRO, it goes in the parents list. */
+        if (VTABLE_elements(interp, proxy_info->all_parents) >= 2)
+            VTABLE_push_pmc(interp, proxy_info->parents,
+                    VTABLE_get_pmc_keyed_int(interp, proxy_info->all_parents, 1));
 
         if (!PMC_IS_NULL(proxy_info->_namespace) &&
             PMC_IS_NULL(VTABLE_get_class(interp, proxy_info->_namespace))) {
 
             /* Link the proxy and the namespace, caching the proxy object for
              * later retrieval on class lookup. */
-             Parrot_PCCINVOKE(interp, proxy_info->_namespace,
-                CONST_STRING(interp, "set_class"), "P->", SELF);
+             Parrot_PCCINVOKE(interp, proxy_info->_namespace, CONST_STRING(interp, "set_class"), "P->", SELF);
 
             /* Extract any methods from the namespace */
             Parrot_oo_extract_methods_from_namespace(interp, SELF,
@@ -257,6 +274,10 @@ Returns whether the class is or inherits from C<*classname>.
         if (string_equal(interp, classname, VTABLE_get_string(interp, SELF)) == 0)
             return 1;
 
+        /* Look in the isa hash. */
+        if (parrot_hash_exists(interp, interp->vtables[_proxy->id]->isa_hash, classname))
+            return 1;
+
         /* Iterate over all the parents and check if they respond true
          * for 'isa' on the original comparison. */
         num_classes = VTABLE_elements(interp, _proxy->parents);
@@ -282,12 +303,20 @@ Returns whether the class is or inherits from C<*classname>.
 */
 
     VTABLE INTVAL isa(STRING *classname) {
+        Parrot_Class_attributes * const _proxy = PARROT_CLASS(SELF);
         const STRING * const pmc_proxy = CONST_STRING(interp, "PMCProxy");
 
         if (string_equal(INTERP, classname, pmc_proxy) == 0)
             return 1;
 
-        return SUPER(classname);
+        if (SUPER(classname))
+            return 1;
+
+        /* Look in the isa hash. */
+        if (parrot_hash_exists(interp, interp->vtables[_proxy->id]->isa_hash, classname))
+            return 1;
+
+        return 0;
     }
 
 /*
@@ -342,16 +371,22 @@ inspect_str.
     {
         /* Create a hash, then use inspect_str to get all of the data to
          * fill it up with. */
+        STRING * const name_str    = CONST_STRING(interp, "name");
+        STRING * const ns_str      = CONST_STRING(interp, "namespace");
+        STRING * const meth_str    = CONST_STRING(interp, "methods");
+        STRING * const parents_str = CONST_STRING(interp, "parents");
+
         PMC * const metadata = pmc_new(interp, enum_class_Hash);
 
-        VTABLE_set_pmc_keyed_str(interp, metadata, CONST_STRING(interp, "name"),
-            VTABLE_inspect_str(interp, SELF, CONST_STRING(interp, "name")));
-        VTABLE_set_pmc_keyed_str(interp, metadata, CONST_STRING(interp, "namespace"),
-            VTABLE_inspect_str(interp, SELF, CONST_STRING(interp, "namespace")));
-        VTABLE_set_pmc_keyed_str(interp, metadata, CONST_STRING(interp, "methods"),
-            VTABLE_inspect_str(interp, SELF, CONST_STRING(interp, "methods")));
-        VTABLE_set_pmc_keyed_str(interp, metadata, CONST_STRING(interp, "parents"),
-            VTABLE_inspect_str(interp, SELF, CONST_STRING(interp, "parents")));
+        VTABLE_set_pmc_keyed_str(interp, metadata, name_str,
+            VTABLE_inspect_str(interp, SELF, name_str));
+        VTABLE_set_pmc_keyed_str(interp, metadata, ns_str,
+            VTABLE_inspect_str(interp, SELF, ns_str));
+        VTABLE_set_pmc_keyed_str(interp, metadata, meth_str,
+            VTABLE_inspect_str(interp, SELF, meth_str));
+        VTABLE_set_pmc_keyed_str(interp, metadata, parents_str,
+            VTABLE_inspect_str(interp, SELF, parents_str));
+
         return metadata;
     }
 

@@ -88,8 +88,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
        return;
 
     /* Import any methods. */
-    Parrot_PCCINVOKE(interp, ns,
-        CONST_STRING(interp, "get_associated_methods"), "->P", &methods);
+    Parrot_PCCINVOKE(interp, ns, CONST_STRING(interp, "get_associated_methods"), "->P", &methods);
 
     if (!PMC_IS_NULL(methods)) {
         PMC * const iter = VTABLE_get_iter(interp, methods);
@@ -103,8 +102,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
     }
 
     /* Import any vtable methods. */
-    Parrot_PCCINVOKE(interp, ns,
-        CONST_STRING(interp, "get_associated_vtable_methods"), "->P", &vtable_overrides);
+    Parrot_PCCINVOKE(interp, ns, CONST_STRING(interp, "get_associated_vtable_methods"), "->P", &vtable_overrides);
 
     if (!PMC_IS_NULL(vtable_overrides)) {
         PMC * const iter = VTABLE_get_iter(interp, vtable_overrides);
@@ -119,8 +117,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
             STRING     *vtable_name   = string_from_cstring(interp, meth_c, 0);
 
             /* Strip leading underscores in the vtable name */
-            if (string_str_index(interp, vtable_name,
-                CONST_STRING(interp, "__"), 0) == 0) {
+            if (string_str_index(interp, vtable_name, CONST_STRING(interp, "__"), 0) == 0) {
                 vtable_name = string_substr(interp, vtable_name, 2,
                     string_length(interp, vtable_name) - 2, NULL, 0);
             }
@@ -166,7 +163,7 @@ Lookup a class object from a namespace, string, or key PMC.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -229,7 +226,7 @@ Lookup a class object from a builtin string.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -368,7 +365,7 @@ Return index if C<name> is a valid vtable slot name.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 INTVAL
 Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
 {
@@ -382,8 +379,7 @@ Parrot_get_vtable_index(PARROT_INTERP, ARGIN(const STRING *name))
         const INTVAL       mid    = (low + high) / 2;
         const char * const meth_c = Parrot_vtable_slot_names[mid];
 
-        /* RT #45965 slot_names still have __ in front */
-        const INTVAL cmp = strcmp(name_c, meth_c + 2);
+        const INTVAL cmp = strcmp(name_c, meth_c);
 
         if (cmp == 0) {
             string_cstring_free(name_c);
@@ -413,7 +409,7 @@ Return the method name for the given MMD enum.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_PURE_FUNCTION
 PARROT_CAN_RETURN_NULL
 const char*
@@ -439,7 +435,7 @@ Otherwise it returns C<PMCNULL>.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -596,7 +592,7 @@ RT #50646
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
@@ -762,7 +758,7 @@ all classes are invalidated.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_invalidate_method_cache(PARROT_INTERP, ARGIN_NULLOK(STRING *_class), ARGIN(STRING *meth))
 {
@@ -808,7 +804,7 @@ interpreter, and name of the method. Don't use a possible method cache.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -821,8 +817,7 @@ Parrot_find_method_direct(PARROT_INTERP, ARGIN(PMC *_class), ARGIN(STRING *metho
 
 
     if (!string_equal(interp, method_name, CONST_STRING(interp, "__get_string")))
-        return find_method_direct_1(interp, _class,
-            CONST_STRING(interp, "__get_repr"));
+        return find_method_direct_1(interp, _class, CONST_STRING(interp, "__get_repr"));
 
     return PMCNULL;
 }
@@ -844,7 +839,7 @@ the name in the global stash.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -957,7 +952,7 @@ debug_trace_find_meth(PARROT_INTERP, ARGIN(const PMC *_class),
         result = "no";
 
     tracer = interp->debugger ? interp->debugger : interp;
-    PIO_eprintf(tracer, "# find_method class '%Ss' method '%Ss': %s\n",
+    Parrot_io_eprintf(tracer, "# find_method class '%Ss' method '%Ss': %s\n",
             class_name, name, result);
 }
 
@@ -1113,7 +1108,7 @@ Computes the C3 linearization for the given class.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
@@ -1187,7 +1182,7 @@ the default implementation.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
                         ARGIN(PMC *exclude), int got_exclude,
@@ -1209,8 +1204,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
             return;
 
     /* Get the methods from the role. */
-    Parrot_PCCINVOKE(interp, role,
-        CONST_STRING(interp, "methods"), "->P", &methods);
+    Parrot_PCCINVOKE(interp, role, CONST_STRING(interp, "methods"), "->P", &methods);
 
     if (PMC_IS_NULL(methods))
         return;
@@ -1326,8 +1320,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
      * that it did itself. Note that we already have the correct methods
      * as roles "flatten" the methods they get from other roles into their
      * own method list. */
-    Parrot_PCCINVOKE(interp, role,
-        CONST_STRING(interp, "roles"), "->P", &roles_of_role);
+    Parrot_PCCINVOKE(interp, role, CONST_STRING(interp, "roles"), "->P", &roles_of_role);
     roles_of_role_count = VTABLE_elements(interp, roles_of_role);
 
     for (i = 0; i < roles_of_role_count; i++) {

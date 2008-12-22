@@ -794,7 +794,7 @@ runops_cgp(PARROT_INTERP, ARGIN(opcode_t *pc))
 
 #else
     UNUSED(pc);
-    PIO_eprintf(interp,
+    Parrot_io_eprintf(interp,
             "Computed goto unavailable in this configuration.\n");
     Parrot_exit(interp, 1);
 #endif
@@ -1290,7 +1290,7 @@ XXX This is only implemented for the function core at present.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 disable_event_checking(PARROT_INTERP)
 {
@@ -1315,7 +1315,7 @@ XXX This is only implemented for the function core at present.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 enable_event_checking(PARROT_INTERP)
 {

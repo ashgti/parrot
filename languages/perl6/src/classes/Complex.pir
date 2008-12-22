@@ -27,7 +27,7 @@ Implementation is a bit different from other basic objects (Int...) because
     p6meta.'register'('Complex', 'parent'=>complexproto, 'protoobject'=>complexproto)
 
     $P0 = get_hll_namespace ['Perl6Complex']
-    '!EXPORT'('log polar', 'from'=>$P0)
+    '!EXPORT'('log,polar', 'from'=>$P0)
 .end
 
 
@@ -98,6 +98,29 @@ Returns a Perl representation of the Complex.
     .return ($P0)
 .end
 
+.namespace [ 'Any' ]
+
+=item Complex
+
+Casts a value to a complex number.
+
+=cut
+
+.sub 'Complex' :method :multi(_)
+    $I0 = isa self, 'Complex'
+    unless $I0 goto cast
+    $I0 = isa self, 'ObjectRef'
+    if $I0 goto deref
+    .return (self)
+  deref:
+    $P0 = deref self
+    .return ($P0)
+  cast:
+    $P0 = new 'Complex'
+    $N0 = self
+    $P0[0] = $N0
+    .return ($P0)
+.end
 
 =back
 
@@ -128,7 +151,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:+' :multi('Complex', _)
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    b = b.'Complex'()
     add $P0, a, b
     .return ($P0)
 .end
@@ -136,7 +159,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:+' :multi(_, 'Complex')
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    a = a.'Complex'()
     add $P0, a, b
     .return ($P0)
 .end
@@ -157,7 +180,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:-' :multi('Complex', _)
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    b = b.'Complex'()
     sub $P0, a, b
     .return ($P0)
 .end
@@ -165,7 +188,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:-' :multi(_, 'Complex')
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    a = a.'Complex'()
     sub $P0, a, b
     .return ($P0)
 .end
@@ -188,7 +211,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:*' :multi('Complex', _)
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    b = b.'Complex'()
     mul $P0, a, b
     .return ($P0)
 .end
@@ -196,7 +219,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:*' :multi(_, 'Complex')
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    a = a.'Complex'()
     mul $P0, a, b
     .return ($P0)
 .end
@@ -209,7 +232,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:/' :multi('Complex', _)
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    b = b.'Complex'()
     div $P0, a, b
     .return ($P0)
 .end
@@ -217,7 +240,7 @@ Returns a Perl representation of the Complex.
 .sub 'infix:/' :multi(_, 'Complex')
     .param pmc a
     .param pmc b
-    $P0 = new 'Complex'
+    a = a.'Complex'()
     div $P0, a, b
     .return ($P0)
 .end

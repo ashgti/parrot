@@ -30,7 +30,6 @@ PMCS = \
  luaany \
  luaboolean \
  luabytecode \
- luaclosure \
  luafunction \
  luanil \
  luanumber \
@@ -44,7 +43,6 @@ PMC_FILES = \
  $(PMCDIR)/luaany.pmc \
  $(PMCDIR)/luaboolean.pmc \
  $(PMCDIR)/luabytecode.pmc \
- $(PMCDIR)/luaclosure.pmc \
  $(PMCDIR)/luafunction.pmc \
  $(PMCDIR)/luanil.pmc \
  $(PMCDIR)/luanumber.pmc \
@@ -104,6 +102,7 @@ all: \
  alarm.pbc \
  base64.pbc \
  bc.pbc \
+ bit.pbc \
  bitlib.pbc \
  complex.pbc \
  $(LIBPATH)/gl.pbc \
@@ -112,6 +111,7 @@ all: \
  lfs.pbc \
  lpeg.pbc \
  markdown.pbc \
+ mathx.pbc \
  md5.pbc \
  random.pbc \
  sha1.pbc \
@@ -207,6 +207,9 @@ base64.pbc: $(LIBPATH)/base64.pir
 bc.pbc: $(LIBPATH)/bc.pir
 	-$(PARROT) --output=bc.pbc $(LIBPATH)/bc.pir
 
+bit.pbc: $(LIBPATH)/bit.pir
+	-$(PARROT) --output=bit.pbc $(LIBPATH)/bit.pir
+
 bitlib.pbc: $(LIBPATH)/bitlib.pir
 	-$(PARROT) --output=bitlib.pbc $(LIBPATH)/bitlib.pir
 
@@ -233,6 +236,9 @@ lpeg.pbc: $(LIBPATH)/lpeg.pir
 
 markdown.pbc: $(LIBPATH)/markdown.pir
 	-$(PARROT) --output=markdown.pbc $(LIBPATH)/markdown.pir
+
+mathx.pbc: $(LIBPATH)/mathx.pir
+	-$(PARROT) --output=mathx.pbc $(LIBPATH)/mathx.pir
 
 md5.pbc: $(LIBPATH)/md5.pir
 	-$(PARROT) --output=md5.pbc $(LIBPATH)/md5.pir

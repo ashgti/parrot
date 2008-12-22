@@ -51,6 +51,8 @@ rule formal_parameter_list {
 ##
 
 rule statement {
+##tewk  added function_expression, don't know if it should go here though
+    | <function_expression> {*}   #= function_expression
     | <expression_statement> {*}  #= expression_statement
     | <block> {*}                 #= block
     | <variable_statement> {*}    #= variable_statement
@@ -59,9 +61,9 @@ rule statement {
     | <while_statement> {*}       #= while_statement
     | <do_while_statement> {*}    #= do_while_statement
     | <for1_statement> {*}        #= for1_statement
-    #| <for2_statement> {*}        #= for2_statement
-    #| <for3_statement> {*}        #= for3_statement
-    #| <for4_statement> {*}        #= for4_statement
+    | <for2_statement> {*}        #= for2_statement
+    | <for3_statement> {*}        #= for3_statement
+    | <for4_statement> {*}        #= for4_statement
     | <continue_statement> {*}    #= continue_statement
     | <break_statement> {*}       #= break_statement
     | <return_statement> {*}      #= return_statement
@@ -171,6 +173,11 @@ rule variable_statement {
     {*}
 }
 
+rule variable_declaration_list {
+    <variable_declaration> [',' <variable_declaration>]*
+    {*}
+}
+
 rule variable_declaration {
     <identifier> ['=' <assignment_expression>]?
     {*}
@@ -182,12 +189,14 @@ rule empty_statement {
 
 rule expression_statement {
     ##<!['{'|'function']> ## is this necessary? isn't this fixed automatically by PGE?
+    #<!before \w>
+    #<!['{'|'function']>
     <expression> ';'
     {*}
 }
 
 token return_statement {
-    'return' \N <expression>?  ';'
+    'return' [\N <expression>]?  ';'
     {*}
 }
 
@@ -239,33 +248,83 @@ rule primary_expression {
     | <identifier> {*}          #= identifier
     | <object_literal> {*}      #= object_literal
     | '(' <expression> ')' {*}  #= expression
+    | <regular_expression_literal> {*} #= regular_expression_literal
+}
+
+#RegularExpressionLiteral :: See section 7.8.5
+#/ RegularExpressionBody / RegularExpressionFlags
+token regular_expression_literal {
+  '/' <regular_expression_body> '/' <regular_expression_flags>? {*}
+}
+#RegularExpressionBody :: See section 7.8.5
+#RegularExpressionFirstChar RegularExpressionChars
+token regular_expression_body {
+  <regular_expression_first_char> <regular_expression_char>*
+}
+
+#RegularExpressionChars :: See section 7.8.5
+#[empty]
+#RegularExpressionChars RegularExpressionChar
+
+#RegularExpressionFirstChar :: See section 7.8.5
+#NonTerminator but not * or \ or /
+#BackslashSequence
+token regular_expression_first_char {
+  | <-[\n*\\/]>
+  | '\\' \N
+}
+
+#RegularExpressionChar :: See section 7.8.5
+#NonTerminator but not \ or /
+#BackslashSequence
+token regular_expression_char {
+  | <-[\n\\/]>
+  | '\\' \N
+}
+
+#BackslashSequence :: See section 7.8.5
+#\ NonTerminator
+#token backslash_sequence {
+#  '\\' \N
+#}
+#
+#token NonTerminator :: See section 7.8.5
+#SourceCharacter but not LineTerminator
+#token non_terminator {
+#  \N
+#}
+
+#RegularExpressionFlags :: See section 7.8.5
+#[empty]
+#RegularExpressionFlags IdentifierPart
+token regular_expression_flags {
+  <identifier_part>+
 }
 
 token this { 'this' {*} }
 
 rule array_literal {
-    '['
-    [
-    | <elision>
-    | <element_list> [',' <elision>]?
-    ]
-    ']'
+    '[' <elision>? <element_list>? [',' <elision>]?  ']'
     {*}
 }
 
 rule element_list {
-    <elision> <assignment_expression> [',' <elision> <assignment_expression>]*
+    <elision>? <assignment_expression> [',' <elision>? <assignment_expression>]*
     {*}
 }
 
 rule elision {
-    [$<comma>=',']* {*}
+    [$<comma>=',']+ {*}
 }
 
 token identifier {
     <!reserved_word>
     <alpha> [<alpha>|<digit>|_]*
     {*}
+}
+
+token <identifier_part> {
+    [<alpha>|<digit>|_]
 }
 
 token literal {
@@ -286,12 +345,12 @@ token false { 'false' {*} }
 token null { 'null' {*} }
 
 rule object_literal {
-    '{' [<property> [',' <property>]* ]? '}'
+    '{' [ <property> [',' <property> ]* ]? '}'
     {*}
 }
 
 rule property {
-    <property_name> ':' <expression>
+    <property_name> ':' <assignment_expression>
     {*}
 }
 
@@ -302,8 +361,8 @@ token property_name {
 }
 
 token numeric_literal {
-    | <decimal_literal> {*}        #= decimal_literal
     | <hex_integer_literal> {*}    #= hex_integer_literal
+    | <decimal_literal> {*}        #= decimal_literal
 }
 
 token hex_integer_literal {
@@ -313,13 +372,13 @@ token hex_integer_literal {
 token hex_digits { <[0..9 a..f A..F]> }
 
 token decimal_literal {
-    | <integer_number> {*}         #= integer_number
     | <floating_point_number> {*}  #= floating_point_number
+    | <integer_number> {*}         #= integer_number
 }
 
 token floating_point_number {
     [
-    | <decimal_integer_literal> '.' <digit>+? <exponent_part>?
+    | <decimal_integer_literal> '.' <digit>* <exponent_part>?
     | '.' <digit>+ <exponent_part>?
     ]
     {*}
@@ -369,6 +428,23 @@ token reserved_word {
     <keyword> | <future_reserved_word>
 }
 
+token singlelinecomment { '//' \N* }    # end of line comment like Unix shell and C++
+
+token multilinecomment  { '/*' .*?  '*/' }         # C-like multiline comment
+
+token ws_all {
+    | \h
+    | \v
+    | <singlelinecomment>
+    | <multilinecomment>
+}
+
+# whitespace rule used implicity by rules
+token ws {
+    | <!ww> <ws_all>+
+    | <ws_all>*
+}
+
 #### whitespace
 #token ws {
 #    | <.whitespace>
@@ -390,43 +466,59 @@ token reserved_word {
 
 #token comment {
 #    <.singlelinecomment>
+#    <.multilinecomment>
 #}
 
 
 ## comments
 
-token multilinecomment {
-    '/*' .*? '*/'
-}
+#token multilinecomment {
+#    '/*' .*? '*/'
+#}
 
-token singlelinecomment {
-    '//' \N* \n
-}
+#token singlelinecomment {
+#    '//' \N* \n
+#}
 
 rule expression {
     <assignment_expression> [',' <assignment_expression>]*
     {*}
 }
 
-rule assignment_expression {
-    [<lhs_expression> <assignop>]* <conditional_expression>
-    {*}
-}
+#rule assignment_expression {
+#   [<lhs_expression> <assignop>]* <conditional_expression>
+#    {*}
+#}
 
-token assignop {
-    $<op>=['='|'*='|'/='|'%='|'+='|'-='|'<<='|'>>='|'>>>='|'&='|'^='|'|=']
-}
+#token assignop {
+#    $<op>=['='|'*='|'/='|'%='|'+='|'-='|'<<='|'>>='|'>>>='|'&='|'^='|'|=']
+#}
 
-rule conditional_expression {
-    <logical_or_expression>
-    ['?' $<then>=<assignment_expression>
-     ':' $<else>=<assignment_expression>]?
-    {*}
-}
+#rule conditional_expression {
+#    <logical_or_expression>
+#    ['?' $<then>=<assignment_expression>
+#     ':' $<else>=<assignment_expression>]?
+#    {*}
+#}
 
-rule 'logical_or_expression' is optable { ... }
+rule 'assignment_expression' is optable { ... }
 
-proto 'infix:||'  is precedence('1') is pasttype('unless') { ... }
+proto 'infix:=' is precedence('1') is pasttype('copy') is lvalue(1)     { ... }
+
+proto 'infix:+=' is equiv('infix:=') { ... } 
+proto 'infix:-=' is equiv('infix:=') { ... } 
+proto 'infix:/=' is equiv('infix:=') is pirop('div')        { ... } 
+proto 'infix:*=' is equiv('infix:=') is pirop('mul')        { ... } 
+proto 'infix:%=' is equiv('infix:=') is pirop('mul')        { ... } 
+proto 'infix:|=' is equiv('infix:=')    { ... } 
+proto 'infix:&=' is equiv('infix:=')    { ... } 
+proto 'infix:~=' is equiv('infix:=')    { ... } 
+proto infix:«>>=» is equiv('infix:=') is pirop('rsh')       { ... } 
+proto infix:«<<=» is equiv('infix:=') is pirop('lsh')       { ... } 
+proto infix:«>>>=» is equiv('infix:=') is pirop('rsh')       { ... } 
+proto 'ternary:? :' is tighter('infix:=') is pirop('if')      { ... } 
+
+proto 'infix:||'  is tighter('ternary:? :') is pasttype('unless') { ... }
 
 proto 'infix:&&'  is tighter('infix:||') is pasttype('if') { ... }
 
@@ -436,28 +528,28 @@ proto 'infix:^'   is tighter('infix:|')  { ... }
 
 proto 'infix:&'   is tighter('infix:^')  { ... }
 
-proto 'infix:=='  is tighter('infix:&')  { ... }
-proto 'infix:!='  is equiv('infix:==')   { ... }
-proto 'infix:===' is equiv('infix:==')   { ... }
-proto 'infix:!==' is equiv('infix:==')   { ... }
+proto 'infix:!='  is tighter('infix:&')  { ... }
+proto 'infix:=='  is equiv('infix:!=')   { ... }
+proto 'infix:===' is equiv('infix:!=')   { ... }
+proto 'infix:!==' is equiv('infix:!=')   { ... }
 
-proto 'infix:<'   is tighter('infix:==') { ... }
-proto 'infix:>'   is equiv('infix:<')    { ... }
-proto 'infix:<='  is equiv('infix:<')    { ... }
-proto 'infix:>='  is equiv('infix:<')    { ... }
-proto 'infix:instanceof' is equiv('infix:<') { ... }
-proto 'infix:in'  is equiv('infix:<')    { ... }
+proto infix:«<»   is tighter('infix:!=') { ... }
+proto infix:«>»   is equiv(infix:«<»)    { ... }
+proto infix:«<=»  is equiv(infix:«<»)    { ... }
+proto infix:«>=»  is equiv(infix:«<»)    { ... }
+proto 'infix:instanceof' is equiv(infix:«<») { ... }
+proto 'infix:in'  is equiv(infix:«<»)    { ... }
 
-proto 'infix:<<'  is tighter('infix:<')  { ... }
-proto 'infix:>>'  is equiv('infix:<<')   { ... }
-proto 'infix:>>>' is equiv('infix:<<')   { ... }
+proto infix:«<<»  is tighter(infix:«<»)  { ... }
+proto infix:«>>»  is equiv(infix:«<<»)   { ... }
+proto infix:«>>>» is equiv(infix:«<<»)   { ... }
 
-proto 'infix:+' is tighter('infix:<<') is pirop('n_add') { ... }
-proto 'infix:-' is equiv('infix:+')    is pirop('n_sub') { ... }
+proto 'infix:+' is tighter(infix:«<<») is pirop('add') { ... }
+proto 'infix:-' is equiv('infix:+')    is pirop('sub') { ... }
 
-proto 'infix:*' is tighter('infix:+')  is pirop('n_mul') { ... }
-proto 'infix:/' is equiv('infix:*')    is pirop('n_div') { ... }
-proto 'infix:%' is equiv('infix:*')    is pirop('n_mod') { ... }
+proto 'infix:*' is tighter('infix:+')  is pirop('mul') { ... }
+proto 'infix:/' is equiv('infix:*')    is pirop('div') { ... }
+proto 'infix:%' is equiv('infix:*')    is pirop('mod') { ... }
 
 
 rule unary_expression {
@@ -482,18 +574,20 @@ rule lhs_expression {
 }
 
 rule new_expression {
-    [$<sym>='new']* <member_expression>
+    [$<sym>='new']* <member_expression> <arguments>?
     {*}
 }
 
 rule member_expression {
-    [ 'new' <member> <arguments>
-    | <member>
-    ]
-    {*}
+    <member_prefix> <member_suffix>* {*}
 }
 
-rule index {
+rule member_prefix {
+    | <primary_expression> {*}      #= primary_expression
+    | <function_expression> {*}     #= function_expression
+}
+
+rule member_suffix {
     | '[' <expression> ']' {*} #= expression
     | <identifier_field> {*}   #= identifier_field
 }
@@ -502,24 +596,14 @@ rule identifier_field {
     '.' <identifier> {*}
 }
 
-rule member {
-    <member_prefix> <index>*
-    {*}
-}
-
-rule member_prefix {
-    | <primary_expression> {*}      #= primary_expression
-    | <function_expression> {*}     #= function_expression
-}
-
 rule call_expression {
     <member_expression> <arguments> <post_call_expr>*
     {*}
 }
 
 rule post_call_expr {
-    | <arguments> {*}   #= arguments
-    | <index> {*}       #= index
+    | <arguments>     {*}   #= arguments
+    | <member_suffix> {*}   #= member_suffix
 }
 
 

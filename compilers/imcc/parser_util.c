@@ -65,6 +65,10 @@ static void * imcc_compile_file(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*error_message);
 
+static void imcc_destroy_macro_values(ARGMOD(void *value))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*value);
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static const char * try_rev_cmp(ARGIN(const char *name), ARGMOD(SymReg **r))
@@ -183,7 +187,7 @@ op_fullname(ARGOUT(char *dest), ARGIN(const char *name),
 
 #if IMC_TRACE_HIGH
     char *full = dest;
-    PIO_eprintf(NULL, "op %s", name);
+    Parrot_io_eprintf(NULL, "op %s", name);
 #endif
 
     strcpy(dest, name);
@@ -194,7 +198,7 @@ op_fullname(ARGOUT(char *dest), ARGIN(const char *name),
         *dest++ = '_';
         if (args[i]->type == VTADDRESS) {
 #if IMC_TRACE_HIGH
-            PIO_eprintf(NULL, " (address)%s", args[i]->name);
+            Parrot_io_eprintf(NULL, " (address)%s", args[i]->name);
 #endif
             *dest++ = 'i';
             *dest++ = 'c';
@@ -203,7 +207,7 @@ op_fullname(ARGOUT(char *dest), ARGIN(const char *name),
         /* if one ever wants num keys, they go with 'S' */
         if (keyvec & KEY_BIT(i)) {
 #if IMC_TRACE_HIGH
-            PIO_eprintf(NULL, " (key)%s", args[i]->name);
+            Parrot_io_eprintf(NULL, " (key)%s", args[i]->name);
 #endif
             *dest++ = 'k';
             if (args[i]->set=='S' || args[i]->set=='N' || args[i]->set=='K') {
@@ -221,18 +225,20 @@ op_fullname(ARGOUT(char *dest), ARGIN(const char *name),
 
         if (args[i]->type & (VTCONST|VT_CONSTP)) {
 #if IMC_TRACE_HIGH
-            PIO_eprintf(NULL, " (%cc)%s", tolower((unsigned char)args[i]->set), args[i]->name);
+            Parrot_io_eprintf(NULL, " (%cc)%s",
+                    tolower((unsigned char)args[i]->set), args[i]->name);
 #endif
             *dest++ = 'c';
         }
 #if IMC_TRACE_HIGH
         else
-            PIO_eprintf(NULL, " (%c)%s", tolower((unsigned char)args[i]->set), args[i]->name);
+            Parrot_io_eprintf(NULL, " (%c)%s",
+                    tolower((unsigned char)args[i]->set), args[i]->name);
 #endif
     }
     *dest = '\0';
 #if IMC_TRACE_HIGH
-    PIO_eprintf(NULL, " -> %s\n", full);
+    Parrot_io_eprintf(NULL, " -> %s\n", full);
 #endif
 }
 
@@ -353,12 +359,6 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     ||  (STREQ(name, "get_params"))
     ||  (STREQ(name, "set_returns")))
         return var_arg_ins(interp, unit, name, r, n, emit);
-
-#if 0
-    ins = multi_keyed(interp, unit, name, r, n, keyvec, emit);
-    if (ins)
-        return ins;
-#endif
 
     op_fullname(fullname, name, r, n, keyvec);
     op = interp->op_lib->op_code(fullname, 1);
@@ -545,7 +545,7 @@ TODO: Needs to be documented!!!
 
 */
 
-PARROT_API
+PARROT_EXPORT
 int
 do_yylex_init(PARROT_INTERP, ARGOUT(yyscan_t* yyscanner))
 {
@@ -665,6 +665,8 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
         sub_data->start_offs = 0;
         sub_data->end_offs   = new_cs->base.size;
         sub_data->name       = string_from_cstring(interp, name, 0);
+
+        *error_message = NULL;
     }
     else {
         *error_message = IMCC_INFO(interp)->error_message;
@@ -689,7 +691,8 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     yylex_destroy(yyscanner);
 
     /* Now run any :load/:init subs. */
-    PackFile_fixup_subs(interp, PBC_MAIN, sub);
+    if (!*error_message)
+        PackFile_fixup_subs(interp, PBC_MAIN, sub);
 
     /* restore old byte_code, */
     if (old_cs)
@@ -1193,120 +1196,6 @@ try_rev_cmp(ARGIN(const char *name), ARGMOD(SymReg **r))
     return NULL;
 }
 
-/*
-
-=item C<Instruction * multi_keyed>
-
-TODO: Needs to be documented!!!
-
-=cut
-
-*/
-
-PARROT_CAN_RETURN_NULL
-Instruction *
-multi_keyed(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
-            ARGIN(SymReg **r), int nr, int keyvec, int emit)
-{
-    int i, keyf, n;
-    SymReg      *preg[3];    /* px, py, pz */
-    SymReg      *nreg[3];
-    Instruction *ins       = 0;
-    Instruction *unused_ins = 0;
-    static      int p       = 0;
-
-    /* count keys in keyvec */
-    int kv = keyvec;
-
-    for (i = keyf = 0; i < nr; i++, kv >>= 1)
-        if (kv & 1)
-            keyf++;
-
-    if (keyf <= 1)
-        return NULL;
-
-    /* XXX what to do, if we don't emit instruction? */
-    PARROT_ASSERT(emit);
-    UNUSED(emit);
-
-    /* OP  _p_k    _p_k_p_k =>
-     * set      py, p_k
-     * set      pz,     p_k
-     * new px, .Undef
-     * OP  px, py, pz
-     * set _p_k_px
-     */
-
-    kv = keyvec;
-    for (i = n = 0; i < nr; i++, kv >>= 1, n++) {
-        char buf[16];
-
-        if (kv & 1)
-            IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "illegal key operand\n");
-
-        /* make a new P symbol */
-        do {
-            snprintf(buf, sizeof (buf), "$P%d", ++p);
-        } while (get_sym(interp, buf));
-
-        preg[n] = mk_symreg(interp, buf, 'P');
-        kv    >>= 1;
-
-        if (kv & 1) {
-            /* we have a keyed operand */
-            if (r[i]->set != 'P')
-                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "not an aggregate\n");
-
-            /* don't emit LHS yet */
-            if (i == 0) {
-                nreg[0] = r[i];
-                nreg[1] = r[i+1];
-                nreg[2] = preg[n];
-
-                /* set p_k px */
-                ins     = INS(interp, unit, "set", 0, nreg, 3, KEY_BIT(1), 0);
-            }
-            else {
-                nreg[0] = preg[n];
-                nreg[1] = r[i];
-                nreg[2] = r[i+1];
-
-                /* set py|z p_k */
-                INS(interp, unit, "set", 0, nreg, 3, KEY_BIT(2), 1);
-            }
-
-            i++;
-        }
-        /* non keyed */
-        else {
-            if (i == 0) {
-                nreg[0] = r[i];
-                nreg[1] = preg[n];
-
-                /* set n, px */
-                ins     = INS(interp, unit, "set", 0, nreg, 2, 0, 0);
-            }
-            else {
-                nreg[0] = preg[n];
-                nreg[1] = r[i];
-
-                /* set px, n */
-                INS(interp, unit, "set", 0, nreg, 2, 0, 1);
-            }
-        }
-    }
-    /* make a new undef */
-    unused_ins = iNEW(interp, unit, preg[0], str_dup("Undef"), NULL, 1);
-    UNUSED(unused_ins);
-
-    /* emit the operand */
-    INS(interp, unit, name, 0, preg, 3, 0, 1);
-
-    /* emit the LHS op */
-    emitb(interp, unit, ins);
-
-    return ins;
-}
 
 /*
 
@@ -1456,7 +1345,7 @@ TODO: Needs to be documented!!!
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 imcc_init(PARROT_INTERP)
 {
@@ -1469,6 +1358,33 @@ imcc_init(PARROT_INTERP)
 
 /*
 
+=item C<void imcc_destroy_macro_values(void *)>
+
+A callback for parrot_chash_destroy_values() to free all macro-allocated memory.
+
+=cut
+
+*/
+
+static void
+imcc_destroy_macro_values(ARGMOD(void *value))
+{
+    macro_t *m = (macro_t *)value;
+    int      i;
+
+    for (i = 0; i < m->params.num_param; ++i) {
+        char *name = m->params.name[i];
+        if (name)
+            mem_sys_free(name);
+    }
+
+    mem_sys_free(m->expansion);
+    mem_sys_free(m);
+}
+
+
+/*
+
 =item C<void imcc_destroy>
 
 TODO: Needs to be documented!!!
@@ -1477,14 +1393,14 @@ TODO: Needs to be documented!!!
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 imcc_destroy(PARROT_INTERP)
 {
     Hash * const macros = IMCC_INFO(interp)->macros;
 
     if (macros)
-        parrot_chash_destroy(interp, macros);
+        parrot_chash_destroy_values(interp, macros, imcc_destroy_macro_values);
 
     if (IMCC_INFO(interp)->globals)
         mem_sys_free(IMCC_INFO(interp)->globals);

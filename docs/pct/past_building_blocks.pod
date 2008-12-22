@@ -18,7 +18,13 @@ PAST::Node is the base class of all other PAST classes.
 
 =head3 C<:node>
 
-{{XXX why do all nodes need this?}}
+Sets this node's C<source> and C<pos> attributes.  These indicate which part of
+the source code generated this node.  The C<node> attribute can be set using
+another node or a Match object.
+
+The C<:node> attribute is needed for annotating a source line. If a source line
+is represented by several nodes, i.e. a subtree of the whole AST, then only the
+root of that subtree needs to have the C<:node> attribute.
 
 =head2 Methods
 

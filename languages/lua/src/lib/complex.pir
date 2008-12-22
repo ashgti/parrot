@@ -17,7 +17,8 @@ This implementation is based on F<src/pmc/complex.pmc>.
 
 =cut
 
-.HLL 'Lua', 'lua_group'
+.HLL 'Lua'
+.loadlib 'lua_group'
 .namespace [ 'complex' ]
 
 .sub '__onload' :anon :load
@@ -220,8 +221,9 @@ LIST
     .param pmc z :optional
     .param pmc extra :slurpy
     $P1 = get(1, z)
-    $P0 = new $P1
-    .tailcall newcomplex($P0)
+    $P0 = neg $P1
+    $P0 = newcomplex($P0)
+    .return ($P0)
 .end
 
 
@@ -233,9 +235,7 @@ LIST
     .param pmc z :optional
     .param pmc extra :slurpy
     $P1 = get(1, z)
-    $N0 = $P1.'abs'()
-    new $P0, 'LuaNumber'
-    set $P0, $N0
+    $P0 = abs $P1
     .return ($P0)
 .end
 
@@ -440,7 +440,6 @@ NOT YET IMPLEMENTED.
 =cut
 
 .sub 'pow'
-    .param pmc extra :slurpy
     .param pmc z :optional
     .param pmc w :optional
     .param pmc extra :slurpy

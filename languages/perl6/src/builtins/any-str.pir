@@ -21,7 +21,7 @@ the size of that file down and to emphasize their generic,
 .namespace []
 .sub 'onload' :anon :init :load
     $P0 = get_hll_namespace ['Any']
-    '!EXPORT'('capitalize chop chomp chars :e index lc lcfirst rindex ord substr uc ucfirst', 'from'=>$P0)
+    '!EXPORT'('capitalize,chop,chomp,chars,:e,index,lc,lcfirst,rindex,ord,substr,uc,ucfirst', 'from'=>$P0)
 .end
 
 
@@ -45,7 +45,7 @@ C<s:g/(\w+)/{ucfirst $1}/> on it.
     .local pmc retv
     .local int len
 
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     tmps = self
 
     len = length tmps
@@ -94,7 +94,7 @@ Returns string with one Char removed from the end.
 
     tmps = self
     chopn tmps, 1
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     retv = tmps
     .return(retv)
 .end
@@ -119,8 +119,11 @@ Returns string with one Char removed from the end.
     lastchar = substr tmps,-1
     if lastchar != "\n" goto done
     chopn tmps, 1
+    lastchar = substr tmps,-1
+    if lastchar != "\r" goto done
+    chopn tmps, 1
   done:
-       retv = new 'Perl6Str'
+       retv = new 'Str'
        retv = tmps
        .return (retv)
 .end
@@ -264,7 +267,7 @@ form, if uppercase.
     tmps = self
     downcase tmps
 
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     retv = tmps
 
     .return(retv)
@@ -284,7 +287,7 @@ Like C<lc>, but only affects the first character.
     .local pmc retv
     .local int len
 
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     tmps = self
 
     len = length tmps
@@ -514,13 +517,21 @@ B<Note:> partial implementation only
     len = self.'chars'()
   have_len:
     if len >= 0 goto len_done
+    if start < 0 goto neg_start
     $I0 = self.'chars'()
     len += $I0
+  neg_start:
     len -= start
   len_done:
     $S0 = self
+    push_eh fail
     $S1 = substr $S0, start, len
+    pop_eh
     .return ($S1)
+  fail:
+    .get_results($P0)
+    pop_eh
+    .tailcall '!FAIL'($P0)
 .end
 
 =item trans()
@@ -553,7 +564,7 @@ B<Note:> partial implementation only
     .return(retval)
 .end
 
-# TODO: Note the multisub type here should be 'Perl6Str' or 'Str', but mapping
+# TODO: Note the multisub type here should be 'Str' or 'Str', but mapping
 # issues currently prevent this from working correctly unless 'String' is used
 
 .sub '!transtable' :multi('String')
@@ -591,7 +602,7 @@ B<Note:> partial implementation only
   process_pstring:
     unless prior, start_range
     $S2 = shift prior
-    next_str = new 'Perl6Str'
+    next_str = new 'Str'
     next_str = $S2
     push retval, next_str
     goto process_pstring
@@ -603,7 +614,7 @@ B<Note:> partial implementation only
     # If needed we can switch this over to use a true string Range
     if $I0 > $I1 goto next_loop
     $S2 = chr $I0
-    next_str = new 'Perl6Str'
+    next_str = new 'Str'
     next_str = $S2
     push retval, next_str
     inc $I0
@@ -625,7 +636,7 @@ B<Note:> partial implementation only
   process_lstring:
     unless prior, check_rval
     $S0 = shift prior
-    next_str = new 'Perl6Str'
+    next_str = new 'Str'
     next_str = $S0
     push retval, next_str
     goto process_lstring
@@ -659,7 +670,7 @@ B<Note:> partial implementation only
     by = get_hll_global 'infix:<=>'
     # itable maps matching positions to key, value array
     itable = new 'Perl6Hash'
-    retv = new 'Perl6Str'
+    retv = new 'Str'
 
   init_pair_loop:
     .local pmc pair, pkey, pval, pairlist
@@ -717,7 +728,7 @@ B<Note:> partial implementation only
     val = lastval
     goto init_index_loop
   get_prev2:
-    val = new 'Perl6Str'
+    val = new 'Str'
     val = ''
   init_index_loop:
     nhits = 0
@@ -813,7 +824,7 @@ B<Note:> partial implementation only
   st_trans:
     .local int k_isa_match, v_isa_closure, pass_match
     .local pmc lastmatch, v
-    lastmatch = new 'Perl6Str'
+    lastmatch = new 'Str'
     lastmatch = ''
     pos = 0 # original unadjusted position
     pr_pos = 0 # prior unadjusted position
@@ -834,7 +845,7 @@ B<Note:> partial implementation only
     # skip matches between pos and end of llm
     llm = pos + klen
     val = itable[pos;1]
-    v_isa_closure = isa val, 'Closure'
+    v_isa_closure = isa val, 'Sub'
     pass_match = k_isa_match && v_isa_closure
     unless v_isa_closure, not_closure
     unless pass_match, simple_closure
@@ -886,86 +897,192 @@ Partial implementation. The :g modifier on regexps doesn't work, for example.
 
 =cut
 
-.sub subst :method :multi(_, _, _)
+.sub 'subst' :method :multi(_, _, _)
     .param string substring
     .param string replacement
-    .local int pos
-    .local int pos_after
-    .local pmc retv
+    .param pmc options         :slurpy :named
 
-    retv = new 'Perl6Str'
+    .local pmc global_flag
+    global_flag = options['global']
+    unless null global_flag goto have_global
+    global_flag = options['g']
+    unless null global_flag goto have_global
+    global_flag = get_hll_global ['Bool'], 'False'
+  have_global:
 
-    $S0 = self
-    pos = index $S0, substring
-    if pos < 0 goto no_match
+    .local int times                    # how many times to substitute
+    times = 1                           # the default is to substitute once
+    unless global_flag goto check_x
+    times = -1                          # a negative number means all of them (:global)
+  check_x:
 
-    pos_after = pos
-    $I0 = length substring
-    add pos_after, $I0
+    .local pmc x_opt
+    x_opt = options['x']
+    if null x_opt goto check_nth
+    times = x_opt
+    if times < 0 goto x_fail
+  check_nth:
 
-    $S1 = substr $S0, 0, pos
-    $S2 = substr $S0, pos_after
-    concat retv, $S1
-    concat retv, replacement
-    concat retv, $S2
+    .local pmc nth_opt
+    nth_opt = options['nth']
+    unless null nth_opt goto check_global
+    nth_opt = get_hll_global ['Bool'], 'True'
+  check_global:
 
-    goto done
 
-  no_match:
-    retv = self
+    .local string result
+    result = self
+    result = clone result
 
-  done:
-    .return(retv)
+    if times == 0 goto subst_done
+
+    .local int startpos, pos, substringlen, replacelen
+    startpos = 0
+    pos = 0
+    substringlen = length substring
+    replacelen = length replacement
+    .local int n_cnt, x_cnt
+    n_cnt = 0
+    x_cnt = 0
+  subst_loop:
+    pos = index result, substring, startpos
+    startpos = pos + substringlen
+    if pos < 0 goto subst_done
+
+    n_cnt += 1
+    $P0 = nth_opt.'ACCEPTS'(n_cnt)
+    unless $P0 goto subst_loop
+
+    if times < 0 goto skip_times
+
+    x_cnt += 1
+    if x_cnt > times goto subst_done
+  skip_times:
+
+    substr result, pos, substringlen, replacement
+    startpos = pos + replacelen
+    goto subst_loop
+  subst_done:
+    .return (result)
+
+  nth_fail:
+    die "Must pass a non-negative integer to :nth()"
+
+  x_fail:
+    die "Must pass a non-negative integer to :x()"
 .end
 
-.sub subst :method :lex :multi(_, 'Sub', _)
-    .param pmc regexp
+
+.sub 'subst' :method :multi(_, 'Sub', _)
+    .param pmc regex
     .param pmc replacement
-    .local int pos
-    .local int pos_after
-    .local pmc retv
-    .local pmc match
+    .param pmc options         :slurpy :named
 
-    retv = new 'Perl6Str'
+    .local pmc global_flag
+    global_flag = options['global']
+    unless null global_flag goto have_global
+    global_flag = options['g']
+    unless null global_flag goto have_global
+    global_flag = get_hll_global ['Bool'], 'False'
+  have_global:
 
-    new $P14, "Perl6Scalar"
-    .lex "$/", $P14
 
-    match = regexp.'ACCEPTS'(self)
-    unless match goto no_match
-    pos = match.'from'()
-    pos_after = match.'to'()
+    .local int times                    # how many times to substitute
+    times = 1                           # the default is to substitute once
+    unless global_flag goto check_x
+    times = -1                          # a negative number means all of them (:global)
+  check_x:
 
-    $S0 = self
-    $S1 = substr $S0, 0, pos
-    $S2 = substr $S0, pos_after
-    # pre-match
-    concat retv, $S1
+    .local pmc x_opt
+    x_opt = options['x']
+    if null x_opt goto check_nth
+    times = x_opt
+    if times < 0 goto x_fail
+  check_nth:
 
-    # match
+    .local pmc nth_opt
+    nth_opt = options['nth']
+    unless null nth_opt goto build_matches
+    nth_opt = get_hll_global ['Bool'], 'True'
+
+  build_matches:
+    .local string result
+    result = self
+    result = clone result
+
+    if times == 0 goto subst_done
+
+    # build a list of matches
+    .local pmc matchlist, match
+    .local int n_cnt, x_cnt
+    n_cnt = 0
+    x_cnt = 0
+    matchlist = new 'ResizablePMCArray'
+    match = regex(result)
+    unless match goto matchlist_done
+
+  matchlist_loop:
+    n_cnt += 1
+    $P0 = nth_opt.'ACCEPTS'(n_cnt)
+    unless $P0 goto skip_push
+
+    if times < 0 goto skip_times
+
+    x_cnt += 1
+    if x_cnt > times goto matchlist_done
+  skip_times:
+
+    push matchlist, match
+  skip_push:
+
+    $I0 = match.'to'()
+    match = regex(match, 'continue'=>$I0)
+    unless match goto matchlist_done
+    goto matchlist_loop
+  matchlist_done:
+
+    # get caller's lexpad
+    .local pmc lexpad
+    $P0 = getinterp
+    lexpad = $P0['lexpad';1]
+
+    # now, perform substitutions on matchlist until done
+    .local int offset
+    offset = 0
+  subst_loop:
+    unless matchlist goto subst_done
+    match = shift matchlist
+    lexpad['$/'] = match
+    # get substitution string
+    .local string replacestr
     $I0 = isa replacement, 'Sub'
-    unless $I0 goto is_string
+    if $I0 goto replacement_sub
+    replacestr = replacement
+    goto have_replacestr
+  replacement_sub:
+    $S0 = match
+    replacestr = replacement($S0)
+  have_replacestr:
+    # perform the replacement
+    $I0 = match.'from'()
+    $I1 = match.'to'()
+    $I2 = $I1 - $I0
+    $I0 += offset
+    substr result, $I0, $I2, replacestr
+    $I3 = length replacestr
+    $I3 -= $I2
+    offset += $I3
+    goto subst_loop
+  subst_done:
+    .return (result)
 
-    $S3 = match.'text'()
-    $S3 = replacement($S3)
-    concat retv, $S3
-    goto repl_done
+  nth_fail:
+    die "Must pass a non-negative integer to :nth()"
 
-  is_string:
-    concat retv, replacement
-
-  repl_done:
-    # post-match
-    concat retv, $S2
-
-    goto done
-
-  no_match:
-    retv = self
-
-  done:
-    .return(retv)
+  x_fail:
+    die "Must pass a non-negative integer to :x()"
 .end
+
 
 =item ord()
 
@@ -996,7 +1113,7 @@ full "uppercase".
     tmps = self
     upcase tmps
 
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     retv = tmps
 
     .return(retv)
@@ -1016,7 +1133,7 @@ Performs a Unicode "titlecase" operation on the first character of the string.
     .local pmc retv
     .local int len
 
-    retv = new 'Perl6Str'
+    retv = new 'Str'
     tmps = self
 
     len = length tmps

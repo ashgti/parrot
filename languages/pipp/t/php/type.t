@@ -7,7 +7,7 @@ t/php/type.t - Standard Library type
 
 =head1 SYNOPSIS
 
-    % perl -I../lib pipp/t/php/type.t
+    perl t/harness t/php/type.t
 
 =head1 DESCRIPTION
 
@@ -20,16 +20,19 @@ See L<http://www.php.net/manual/en/ref.var.php>.
 
 use strict;
 use warnings;
-
 use FindBin;
 use lib "$FindBin::Bin/../../../../lib", "$FindBin::Bin/../../lib";
 
-use Test::More     tests => 18;
-use Parrot::Test;
+use Test::More;
+use Parrot::Test   tests => 18;
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'floatval()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'floatval()' );
 <?php
   echo floatval(TRUE), "\n";
+  echo floatval(tRUE), "\n";
+  echo floatval(TrUE), "\n";
+  echo floatval(tRue), "\n";
+  echo floatval(true), "\n";
   echo floatval(NULL), "\n";
   echo floatval(3), "\n";
   echo floatval('3.14'), "\n";
@@ -39,65 +42,69 @@ language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'floatval()' );
 ?>
 CODE
 1
+1
+1
+1
+1
 0
 3
 3.14
 3.14
 3.14
 0
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype(TRUE)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype(TRUE)' );
 <?php
   echo gettype(TRUE), "\n";
 ?>
 CODE
 boolean
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype(NULL)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype(NULL)' );
 <?php
   echo gettype(NULL), "\n";
 ?>
 CODE
 NULL
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype(42)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype(42)' );
 <?php
   echo gettype(42), "\n";
 ?>
 CODE
 integer
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype(3.14)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype(3.14)' );
 <?php
   echo gettype(3.14), "\n";
 ?>
 CODE
 double
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype("str")' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype("str")' );
 <?php
   echo gettype('str'), "\n";
 ?>
 CODE
 string
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'gettype($array)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'gettype($array)' );
 <?php
   $hello['world'] = 'hi';
   echo gettype($hello), "\n";
 ?>
 CODE
 array
-OUTPUT
+OUT
 
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'intval()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'intval()' );
 <?php
   echo intval(TRUE), "\n";
   echo intval(NULL), "\n";
@@ -121,49 +128,74 @@ CODE
 3
 3
 0
-OUTPUT
+OUT
 
-language_output_like( 'Pipp', <<'CODE', <<'OUTPUT', 'is_bool() no args' );
+language_output_like( 'Pipp', <<'CODE', <<'OUT', 'is_bool() no args' );
 <?php
   echo is_bool(), "\n";
 ?>
 CODE
 /Only one argument expected/
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_bool(TRUE)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_bool(TRUE)' );
 <?php
   echo is_bool(TRUE), "\n";
+  echo is_bool(FALSE), "\n";
+  echo is_bool(fALSE), "\n";
+  echo is_bool(falsE), "\n";
+  echo is_bool(false), "\n";
+  echo is_bool(NULL), "\n";
 ?>
 CODE
 1
-OUTPUT
+1
+1
+1
+1
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_float(3.14)' );
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_float(3.14)' );
 <?php
   echo is_float(3.14), "\n";
+  echo is_float(''), "\n";
+  echo is_float(3), "\n";
 ?>
 CODE
 1
-OUTPUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_long(42)' );
+
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_long(42)' );
 <?php
   echo is_long(42), "\n";
+  echo is_long(''), "\n";
+  echo is_long(3.14), "\n";
 ?>
 CODE
 1
-OUTPUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_null(NULL)' );
+
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_null(NULL)' );
 <?php
+
   echo is_null(NULL), "\n";
+  echo is_null($undef_var), "\n";
+  $a = 'first letter';
+  echo is_null($a), "\n";
+  
 ?>
 CODE
 1
-OUTPUT
+1
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_numeric()' );
+OUT
+
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_numeric()' );
 <?php
   echo is_numeric(3), "\n";
   echo is_numeric(3.14), "\n";
@@ -187,9 +219,9 @@ CODE
 1
 
 
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_scalar()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_scalar()' );
 <?php
   echo is_scalar(NULL), "\n";
   echo is_scalar(TRUE), "\n";
@@ -203,21 +235,21 @@ CODE
 1
 1
 1
-OUTPUT
+OUT
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'is_string("str")' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'is_string("str")' );
 <?php
   echo is_string('str'), "\n";
 ?>
 CODE
 1
-OUTPUT
+OUT
 
 TODO:
 {
     local $TODO = 'update compiler';
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'settype()' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'settype()' );
 <?php
   $var = 3.14;
   echo settype($var, 'int'), "\n";
@@ -226,17 +258,17 @@ language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'settype()' );
 CODE
 1
 3
-OUTPUT
+OUT
 
 }
 
-language_output_is( 'Pipp', <<'CODE', <<'OUTPUT', 'strval(TRUE)' );
+language_output_is( 'Pipp', <<'CODE', <<'OUT', 'strval(TRUE)' );
 <?php
   echo strval(TRUE), "\n";
 ?>
 CODE
 1
-OUTPUT
+OUT
 
 
 # Local Variables:

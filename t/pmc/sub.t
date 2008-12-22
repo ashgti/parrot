@@ -660,7 +660,7 @@ CODE
 /too few arguments passed \(1\) - 2 params expected/
 OUTPUT
 
-($TEMP, $temp_pasm) = create_tempfile();
+($TEMP, $temp_pasm) = create_tempfile(UNLINK => 1);
 print $TEMP <<'EOF';
 .sub _sub1 :load
   say "in sub1"
@@ -681,7 +681,7 @@ in sub1
 back
 OUTPUT
 
-($TEMP, $temp_pasm) = create_tempfile();
+($TEMP, $temp_pasm) = create_tempfile(UNLINK => 1);
 print $TEMP <<'EOF';
 .sub _foo
   print "error\n"
@@ -930,11 +930,11 @@ pir_output_like( <<'CODE', <<'OUTPUT', ':anon' );
 .sub main :main
     "foo"()
     print "ok\n"
-    $P0 = global "new"
+    $P0 = find_global "new"
     $I0 = defined $P0
     print $I0
     print "\n"
-    $P0 = global "foo"
+    $P0 = find_global "foo"
     unless null $P0 goto foo
     print "nofoo\n"
   foo:
@@ -993,7 +993,7 @@ pir_output_is( <<"CODE", <<'OUTPUT', 'multiple :load' );
     load_bytecode "$l1_pir"
     load_bytecode "$l2_pir"
     say "main 2"
-    load_bytecode "$l1_pbc"	# these have to be ignored
+    load_bytecode "$l1_pbc" # these have to be ignored
     load_bytecode "$l2_pbc"
     say "main 3"
 .end
@@ -1077,11 +1077,11 @@ pir_output_is( <<'CODE', <<'OUTPUT', "__get_regs_used 2" );
     .local pmc m
     .include "interpinfo.pasm"
     m = interpinfo .INTERPINFO_CURRENT_SUB
-    set N0, 1.0
-    set N7, 1.0
-    add N7, N7, N0
-    set I9, 1
-    add I10, I9, I9
+    set $N0, 1.0
+    set $N7, 1.0
+    add $N7, $N7, $N0
+    set $I9, 1
+    add $I10, $I9, $I9
     $I0 = m."__get_regs_used"('N')
     print $I0
     $I0 = m."__get_regs_used"('I')
@@ -1106,8 +1106,8 @@ pir_output_like(
     _f1()
 .end
 .sub _f1
-    P0 = new 'Undef'
-    print P0
+    \$P0 = new 'Undef'
+    print \$P0
 .end
 CODE
 /uninit/
@@ -1117,8 +1117,8 @@ pir_output_is( <<"CODE", <<'OUTPUT', 'warn on in sub' );
 .sub 'test' :main
 .include "warnings.pasm"
     _f1()
-    P0 = new 'Undef'
-    print P0
+    \$P0 = new 'Undef'
+    print \$P0
     say "ok"
 .end
 .sub _f1
@@ -1133,16 +1133,16 @@ pir_output_like(
 .sub 'test' :main
 .include "warnings.pasm"
     _f1()
-    P0 = new 'Undef'
+    \$P0 = new 'Undef'
     say "back"
-    print P0
+    print \$P0
     say "ok"
 .end
 .sub _f1
     warningson .PARROT_WARNINGS_UNDEF_FLAG
     _f2()
-    P0 = new 'Undef'
-    print P0
+    \$P0 = new 'Undef'
+    print \$P0
 .end
 .sub _f2
     warningsoff .PARROT_WARNINGS_UNDEF_FLAG
@@ -1469,7 +1469,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', ':outer with identical sub names' );
 .end
 
 .namespace ['ABC']
-.sub 'outer' :lexid('abc_outer')
+.sub 'outer' :subid('abc_outer')
     .param pmc x
     .lex '$abc', x
     say 'ABC::outer'
@@ -1483,7 +1483,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', ':outer with identical sub names' );
 .end
 
 .namespace ['DEF']
-.sub 'outer' :lexid('def_outer')
+.sub 'outer' :subid('def_outer')
     .param pmc x
     .lex '$def', x
     say 'DEF::outer'
@@ -1504,7 +1504,7 @@ DEF::inner
 DEF lex
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', ':lexid and identical string constants' );
+pir_output_is( <<'CODE', <<'OUTPUT', ':subid and identical string constants' );
 .sub 'main'
     'foo'()
     'bar'()
@@ -1516,7 +1516,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', ':lexid and identical string constants' );
     say $P0
 .end
 
-.sub 'bar'  :lexid("abc")
+.sub 'bar'  :subid("abc")
     new $P0, "String"
     assign $P0, "abc"
     say $P0

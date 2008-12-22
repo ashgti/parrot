@@ -29,7 +29,7 @@ it understands how to properly merge C<MultiSub> PMCs.
   have_to:
 
     .local pmc list
-    list = split ' ', symbols
+    list = split ',', symbols
   list_loop:
     unless list goto list_end
     .local string symbol
@@ -58,54 +58,6 @@ it understands how to properly merge C<MultiSub> PMCs.
 .end
 
 
-=item !OUTER(name [,'max'=>max])
-
-Helper function to obtain the lexical C<name> from the
-caller's outer scope.  (Note that it never finds a lexical
-in the caller's lexpad -- use C<find_lex> for that.)  The
-C<max> parameter specifies the maximum outer to search --
-the default value of 1 will search the caller's immediate
-outer scope and no farther.  If the requested lexical is
-not found, C<!OUTER> returns null.
-
-=cut
-
-.sub '!OUTER'
-    .param string name
-    .param int max             :named('max') :optional
-    .param int has_max         :opt_flag
-
-    if has_max goto have_max
-    max = 1
-  have_max:
-
-    .local int min
-    min = 1
-
-    ##  the depth we use here is one more than the minimum,
-    ##  because we want min/max to be relative to the caller's
-    ##  context, not !OUTER itself.
-    .local int depth
-    depth = min + 1
-    .local pmc lexpad, value
-    $P0 = getinterp
-    null value
-  loop:
-    lexpad = $P0['lexpad', depth]
-    if null lexpad goto next
-    value = lexpad[name]
-    unless null value goto done
-  next:
-    # depth goes from min + 1 to max + 1
-    if depth > max goto done
-    inc depth
-    goto loop
-  done:
-  outer_err:
-    .return (value)
-.end
-
-
 =item !VAR
 
 Helper function for implementing the VAR and .VAR macros.
@@ -120,6 +72,24 @@ Helper function for implementing the VAR and .VAR macros.
     .return ($P0)
   nothing:
     .return (variable)
+.end
+
+
+=item !COPYPARAM
+
+Copies a param for the is copy trait, taking account of any ObjectRef and
+dereferencing it so we really do copy the underlying value.
+
+=cut
+
+.sub '!COPYPARAM'
+    .param pmc target
+    .param pmc source
+    $I0 = isa source, 'ObjectRef'
+    unless $I0 goto no_deref
+    source = deref source
+  no_deref:
+    .tailcall 'infix:='(target, source)
 .end
 
 
@@ -157,7 +127,13 @@ Checks the type of a parameter.
 
     $I0 = type.'ACCEPTS'(value)
     if $I0 goto ok
-    'die'('Parameter type check failed')
+    $P0 = getinterp
+    $P0 = $P0['sub' ; 1]
+    $S0 = $P0
+    if $S0 goto have_name
+    $S0 = '<anon>'
+  have_name:
+    'die'('Parameter type check failed in call to ', $S0)
 ok:
 .end
 
@@ -208,6 +184,74 @@ subtyping relations, etc).
 .end
 
 
+=item !CREATE_SUBSET_TYPE
+
+Creates a subset type. Basically, we make an anonymous subclass of the
+original type, attach the refinement and override ACCEPTS. We also chase up
+to find a real, non-subtype and stash that away for fast access later.
+
+=cut
+
+.sub '!CREATE_SUBSET_TYPE'
+    .param pmc refinee
+    .param pmc refinement
+
+    .local pmc p6meta
+    p6meta = get_hll_global ['Perl6Object'], '$!P6META'
+
+    # Check if the refinee is a refinement type itself; if so, get the real
+    # base type we're refining.
+    .local pmc real_type, real_type_pc
+    real_type = getprop 'subtype_realtype', refinee
+    unless null $P0 goto got_real_type
+    real_type = refinee
+  got_real_type:
+
+    # Create subclass, register it with the real type's proto.
+    .local pmc parrot_class, subset
+    parrot_class = p6meta.'get_parrotclass'(refinee)
+    subset = subclass parrot_class
+    p6meta.'register'(subset, 'protoobject' => real_type)
+
+    # Override accepts.
+    .local pmc parrotclass
+    .const 'Sub' $P0 = "!SUBTYPE_ACCEPTS"
+    subset.'add_method'('ACCEPTS', $P0)
+
+    # Instantiate it - we'll only ever create this one instance.
+    subset = subset.'new'()
+
+    # Mark it a subtype and stash away real type, refinee  and refinement.
+    setprop subset, 'subtype_realtype', real_type
+    setprop subset, 'subtype_refinement', refinement
+    setprop subset, 'subtype_refinee', refinee
+
+    .return (subset)
+.end
+.sub "!SUBTYPE_ACCEPTS" :anon :method
+    .param pmc topic
+
+    # Get refinement and check against that.
+    .local pmc refinement
+    refinement = getprop 'subtype_refinement', self
+    $P0 = refinement(topic)
+    unless $P0 goto false
+
+    # Recurse up the tree.
+    .local pmc refinee
+    refinee = getprop 'subtype_refinee', self
+    $P0 = refinee.'ACCEPTS'(topic)
+    unless $P0 goto false
+
+  true:
+    $P0 = get_hll_global ['Bool'], 'True'
+    .return ($P0)
+  false:
+    $P0 = get_hll_global ['Bool'], 'False'
+    .return ($P0)
+.end
+
+
 =item !TOPERL6MULTISUB
 
 At the moment, we don't have the abilility to have Parrot use our own MultiSub
@@ -230,9 +274,7 @@ first). So for now we just transform multis in user code like this.
     $S0 = typeof current_thing
     if $S0 == 'MultiSub' goto not_perl6_multisub
     .return()
-
-    # It's not a Perl6MultiSub, create one, shift contents and install in
-    # the namespace.
+    # It's not a Perl6MultiSub, create one and put contents into it.
   not_perl6_multisub:
     .local pmc p6multi, sub_iter
     p6multi = new 'Perl6MultiSub'
@@ -243,6 +285,17 @@ first). So for now we just transform multis in user code like this.
     push p6multi, $P0
     goto iter_loop
   iter_loop_end:
+
+    # If the namespace is associated with a class, need to remove the method
+    # entry in that; inserting the new multi into the namespace will then
+    # also add it back to the class.
+    .local pmc class
+    class = get_class namespace
+    if null class goto no_class
+    class.'remove_method'(name)
+  no_class:
+
+    # Make new namespace entry.
     namespace[name] = p6multi
     .return()
 
@@ -251,31 +304,35 @@ first). So for now we just transform multis in user code like this.
 .end
 
 
-=item !SETUP_ARGS
-
-Sets up the @*ARGS global. We could possibly use the args pmc coming directly
-from Parrot, but currently Parrot provides it as a ResizableStringArray and we
-need Undefs for non-existent elements (RSA gives empty strings).
+=item !UNIT_START
 
 =cut
 
-.sub '!SETUP_ARGS'
-    .param pmc args_str
-    .param int strip_program_name
-    .local pmc args, iter
-    args = new 'List'
-    iter = new 'Iterator', args_str
-  args_loop:
-    unless iter goto args_end
-    $P0 = shift iter
-    push args, $P0
-    goto args_loop
-  args_end:
-    unless strip_program_name goto done
+.sub '!UNIT_START'
+    .param pmc unitmain
+    .param pmc args
+
+    args = 'list'(args)
+    if args goto start_main
+    .tailcall unitmain()
+
+  start_main:
+    ## We're running as main program
+    ## Remove program argument (0) and set up @ARGS global
     $P0 = shift args
-  done:
+    args = args.'Array'()
     set_hll_global '@ARGS', args
-    .return (args)
+    ## run unitmain
+    .local pmc result, MAIN
+    result = unitmain()
+    ## if there's a MAIN sub in unitmain's namespace, run it also
+    $P0 = unitmain.'get_namespace'()
+    MAIN = $P0['MAIN']
+    if null MAIN goto done
+    args = get_hll_global '@ARGS'
+    result = MAIN(args :flat)
+  done:
+    .return (result)
 .end
 
 
@@ -288,7 +345,7 @@ Internal helper method to create a class.
 .sub '!keyword_class'
     .param string name   :optional
     .param int have_name :opt_flag
-    .local pmc class, resolve_list, methods, iter
+    .local pmc class, resolve_list, methods, it
 
     # Create class.
     if have_name goto named
@@ -301,11 +358,11 @@ Internal helper method to create a class.
 
     # Set resolve list to include all methods of the class.
     methods = inspect class, 'methods'
-    iter = new 'Iterator', methods
+    it = iter methods
     resolve_list = new 'ResizableStringArray'
   resolve_loop:
-    unless iter goto resolve_loop_end
-    $P0 = shift iter
+    unless it goto resolve_loop_end
+    $P0 = shift it
     push resolve_list, $P0
     goto resolve_loop
   resolve_loop_end:
@@ -324,20 +381,22 @@ Internal helper method to create a role.
     .param string name
     .local pmc info, role
 
-    # Need to make sure it ends up attached to the right
-    # namespace.
+    # Need to make sure it ends up attached to the right namespace.
+    .local pmc ns
+    ns = split '::', name
+    name = ns[-1]
     info = new 'Hash'
     info['name'] = name
-    $P0 = new 'ResizablePMCArray'
-    $P0[0] = name
-    info['namespace'] = $P0
+    info['namespace'] = ns
 
     # Create role.
     role = new 'Role', info
 
     # Stash in namespace.
-    $P0 = new 'ResizableStringArray'
-    set_hll_global $P0, name, role
+    $I0 = elements ns
+    dec $I0
+    ns = $I0
+    set_hll_global ns, name, role
 
     .return(role)
 .end
@@ -350,18 +409,10 @@ Internal helper method to create a grammar.
 
 .sub '!keyword_grammar'
     .param string name
-    .local pmc info, grammar
+    .local pmc grammar
 
-    # Need to make sure it ends up attached to the right
-    # namespace.
-    info = new 'Hash'
-    info['name'] = name
-    $P0 = new 'ResizablePMCArray'
-    $P0[0] = name
-    info['namespace'] = $P0
-
-    # Create grammar class..
-    grammar = new 'Class', info
+    $P0 = split "::", name
+    grammar = newclass $P0
 
     .return(grammar)
 .end
@@ -467,6 +518,55 @@ Adds an attribute with the given name to the class or role.
     .return ()
   with_type:
     class.'add_attribute'(attr_name, type)
+.end
+
+
+=item !ADD_TO_WHENCE
+
+Adds a key/value mapping to what will become the WHENCE on a proto-object (we
+don't have a proto-object to stick them on yet, so we put a property on the
+class temporarily, then attach it as the WHENCE clause later).
+
+=cut
+
+.sub '!ADD_TO_WHENCE'
+    .param pmc class
+    .param pmc attr_name
+    .param pmc value
+
+    # Get hash if we have it, if not make it.
+    .local pmc whence_hash
+    whence_hash = getprop '%!WHENCE', class
+    unless null whence_hash goto have_hash
+    whence_hash = new 'Perl6Hash'
+    setprop class, '%!WHENCE', whence_hash
+
+    # Make entry.
+  have_hash:
+    whence_hash[attr_name] = value
+.end
+
+
+=item !PROTOINIT
+
+Called after a new proto-object has been made for a new class or grammar. It
+finds any WHENCE data that we may need to add.
+
+=cut
+
+.sub '!PROTOINIT'
+    .param pmc proto
+
+    # See if there's any attribute initializers.
+    .local pmc p6meta, WHENCE
+    p6meta = get_hll_global ['Perl6Object'], '$!P6META'
+    $P0 = p6meta.'get_parrotclass'(proto)
+    WHENCE = getprop '%!WHENCE', $P0
+    if null WHENCE goto no_whence
+
+    setprop proto, '%!WHENCE', WHENCE
+  no_whence:
+    .return (proto)
 .end
 
 

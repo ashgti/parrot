@@ -21,7 +21,7 @@ pir_output_is( <<'CODE', <<'OUT', "low-level syntax" );
     .set_arg y
     .call sub
     .local string z
-    .result z
+    .get_result z
     .end_call
     print z
     end
@@ -87,7 +87,7 @@ OUT
 pir_output_is( <<'CODE', <<'OUT', "_func() syntax with var - global" );
 .sub test :main
     .local pmc the_sub
-    the_sub = global "_sub"
+    the_sub = get_global "_sub"
     the_sub(10, 20)
     end
 .end
@@ -399,15 +399,15 @@ OUT
 
 pir_output_is( <<'CODE', <<'OUT', "\:main defined twice" );
 .sub foo :main
-        set S0, 'not ok'
-        print S0
+        set $S0, 'not ok'
+        print $S0
         print "\r\n"
         end
 .end
 
 .sub bar :main
-        set S0, 'ok'
-        print S0
+        set $S0, 'ok'
+        print $S0
         print "\r\n"
         end
 .end

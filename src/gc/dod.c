@@ -177,7 +177,7 @@ the particular garbage collector in use.
 
 */
 
-PARROT_API
+PARROT_EXPORT
 void
 pobject_lives(PARROT_INTERP, ARGMOD(PObj *obj))
 {
@@ -255,8 +255,10 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
 {
     Arenas           * const arena_base = interp->arena_base;
     Parrot_Context   *ctx;
+    PObj             *obj;
 
     /* note: adding locals here did cause increased DOD runs */
+    mark_context_start();
 
     if (trace_stack == 2) {
         trace_system_areas(interp);
@@ -275,6 +277,11 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
 
     /* mark it as used  */
     pobject_lives(interp, (PObj *)interp->iglobals);
+
+    /* mark the current continuation */
+    obj = (PObj *)interp->current_cont;
+    if (obj && obj != (PObj *)NEED_CONTINUATION)
+        pobject_lives(interp, obj);
 
     /* mark the current context. */
     ctx = CONTEXT(interp);
@@ -319,12 +326,16 @@ Parrot_dod_trace_root(PARROT_INTERP, int trace_stack)
     if (interp->thread_data && interp->thread_data->stm_log)
         Parrot_STM_mark_transaction(interp);
 
+    /* Mark the MMD cache. */
+    if (interp->op_mmd_cache)
+        Parrot_mmd_cache_mark(interp, interp->op_mmd_cache);
+
     /* Walk the iodata */
     Parrot_IOData_mark(interp, interp->piodata);
 
     /* quick check if we can already bail out */
-    if (arena_base->lazy_dod && arena_base->num_early_PMCs_seen >=
-            arena_base->num_early_DOD_PMCs)
+    if (arena_base->lazy_dod
+    &&  arena_base->num_early_PMCs_seen >= arena_base->num_early_DOD_PMCs)
         return 0;
 
     /* Find important stuff on the system stack */
@@ -587,13 +598,13 @@ Parrot_dod_sweep(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 #if GC_VERBOSE
     if (Interp_trace_TEST(interp, 1)) {
         Interp * const tracer = interp->debugger;
-        PMC *pio       = PIO_STDERR(interp);
+        PMC *pio       = Parrot_io_STDERR(interp);
 
-        PIO_flush(interp, pio);
+        Parrot_io_flush(interp, pio);
 
         if (tracer) {
-            pio = PIO_STDERR(tracer);
-            PIO_flush(tracer, pio);
+            pio = Parrot_io_STDERR(tracer);
+            Parrot_io_flush(tracer, pio);
         }
     }
 #endif
@@ -1119,6 +1130,15 @@ Parrot_dod_ms_run(PARROT_INTERP, UINTVAL flags)
         clear_live_bits(interp->arena_base->pmc_pool);
         clear_live_bits(interp->arena_base->constant_pmc_pool);
 
+        /* keep the scheduler and its kids alive for Task-like PMCs to destroy
+         * themselves; run a sweep to collect them */
+        if (interp->scheduler) {
+            pobject_lives(interp, (PObj *)interp->scheduler);
+            VTABLE_mark(interp, interp->scheduler);
+            Parrot_dod_sweep(interp, interp->arena_base->pmc_pool);
+        }
+
+        /* now sweep everything that's left */
         Parrot_dod_sweep(interp, interp->arena_base->pmc_pool);
         Parrot_dod_sweep(interp, interp->arena_base->constant_pmc_pool);
 
