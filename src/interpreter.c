@@ -274,8 +274,6 @@ do_prederef(void **pc_prederef, PARROT_INTERP, int type)
 
     opinfo = &interp->op_info_table[*pc];
 
-    /* first arguments - PIC needs it */
-
     /* check for RT#58044 */
     PARROT_ASSERT(CONTEXT(interp)->n_regs_used);
 
@@ -286,7 +284,6 @@ do_prederef(void **pc_prederef, PARROT_INTERP, int type)
         case PARROT_SWITCH_JIT_CORE:
         case PARROT_CGP_CORE:
         case PARROT_CGP_JIT_CORE:
-            parrot_PIC_prederef(interp, *pc, pc_prederef, type);
             break;
         default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -513,19 +510,11 @@ init_prederef(PARROT_INTERP, int which)
 
             ADD_OP_VAR_PART(interp, interp->code, pc, n);
 
-            /* count ops that need a PIC */
-            if (parrot_PIC_op_is_cached(*pc))
-                n_pics++;
-
             pc += n;
             i  += n;
         }
 
         interp->code->prederef.code = temp;
-
-        /* allocate pic store, which starts from 1 */
-        if (n_pics)
-            parrot_PIC_alloc_store(interp->code, n_pics + 1);
     }
 }
 
