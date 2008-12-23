@@ -1964,21 +1964,11 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
         constant_folding(interp, unit);
         store_sub_size(interp, code_size, ins_size);
 
-        /*
-         * allocate code and pic_index
-         *
-         * pic_index is half the size of the code, as one PIC-cachable opcode
-         * is at least two opcodes wide - see below how to further decrease
-         * this storage
-         */
+        /*allocate code */
         interp->code->base.data       = (opcode_t *)
             mem_sys_realloc(interp->code->base.data, bytes);
 
-        interp->code->pic_index->data = (opcode_t *)
-            mem_sys_realloc(interp->code->pic_index->data, bytes / 2);
-
         interp->code->base.size       = oldsize + code_size;
-        interp->code->pic_index->size = (oldsize + code_size) / 2;
 
         IMCC_INFO(interp)->pc  = (opcode_t *)interp->code->base.data + oldsize;
         IMCC_INFO(interp)->npc = 0;
@@ -2058,21 +2048,6 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
                 (opcode_t)ins->line;
 
         op = (opcode_t)ins->opnum;
-
-        /* add PIC idx */
-        if (parrot_PIC_op_is_cached(op)) {
-            const size_t offs = IMCC_INFO(interp)->pc - interp->code->base.data;
-            /*
-             * for pic_idx fitting into a short, we could
-             * further reduce the size by storing shorts
-             * the relation code_size / pic_index_size could
-             * indicate the used storage
-             *
-             * drawback: if we reach 0xffff, we'd have to resize again
-             */
-            interp->code->pic_index->data[offs / 2] =
-                ++IMCC_INFO(interp)->globals->cs->pic_idx;
-        }
 
         /* Start generating the bytecode */
         *(IMCC_INFO(interp)->pc)++   = op;

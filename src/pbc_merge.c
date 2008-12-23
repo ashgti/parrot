@@ -139,19 +139,6 @@ static PackFile* pbc_merge_loadpbc(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void pbc_merge_pic_index(PARROT_INTERP,
-    ARGMOD(pbc_merge_input **inputs),
-    int num_inputs,
-    ARGMOD(PackFile *pf),
-    ARGMOD(PackFile_ByteCode *bc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(4)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*inputs)
-        FUNC_MODIFIES(*pf)
-        FUNC_MODIFIES(*bc);
-
 static void pbc_merge_write(PARROT_INTERP,
     ARGMOD(PackFile *pf),
     ARGIN(const char *filename))
@@ -603,57 +590,6 @@ pbc_merge_debugs(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
 
 /*
 
-=item C<static void pbc_merge_pic_index>
-
-This function merges the pic_index segments from the input PBC files.
-
-=cut
-
-*/
-
-static void
-pbc_merge_pic_index(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
-                 int num_inputs, ARGMOD(PackFile *pf), ARGMOD(PackFile_ByteCode *bc))
-{
-    int i;
-    PackFile_Segment *pic_index;
-    size_t size;
-    opcode_t cursor = 0;
-    opcode_t start = 0;
-    opcode_t last = 0;
-
-    /* calc needed size */
-    for (i = 0, size = 0; i < num_inputs; i++) {
-        PackFile_Segment * const in_seg  = inputs[i]->pf->cur_cs->pic_index;
-        size   += in_seg->size;
-    }
-    pic_index = PackFile_Segment_new_seg(interp,
-              &pf->directory, PF_UNKNOWN_SEG, "PIC_idx_MERGED", 1);
-    pic_index->data
-        = (opcode_t *)mem_sys_allocate_zeroed(size * sizeof (opcode_t));
-    pic_index->size = size;
-
-    for (i = 0, size = 0; i < num_inputs; i++) {
-        PackFile_Segment * const in_seg = inputs[i]->pf->cur_cs->pic_index;
-        size_t j;
-        /*
-         * pic_index is 0 or an ever increasing (by 1) number
-         */
-        for (j = 0; j < in_seg->size; j++) {
-            const opcode_t k = in_seg->data[j];
-            if (k) {
-                pic_index->data[cursor] = k + start;
-                last = k;
-            }
-            cursor++;
-        }
-        start = last;
-    }
-    bc->pic_index = pic_index;
-}
-
-/*
-
 =item C<static void pbc_merge_ctpointers>
 
 This function corrects the pointers into the constants table found in the
@@ -766,7 +702,6 @@ pbc_merge_begin(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs), int num_inputs)
 
     pbc_merge_fixups(interp, inputs, num_inputs, merged, bc);
     pbc_merge_debugs(interp, inputs, num_inputs, merged, bc);
-    pbc_merge_pic_index(interp, inputs, num_inputs, merged, bc);
 
     /* Walk bytecode and fix ops that reference the constants table. */
     pbc_merge_ctpointers(interp, inputs, num_inputs, bc);

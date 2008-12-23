@@ -411,8 +411,6 @@ INTERP_O_FILES = \
     $(SRC_DIR)/oo$(O) \
     $(SRC_DIR)/packfile$(O) \
     $(SRC_DIR)/packout$(O) \
-    $(SRC_DIR)/pic_jit$(O) \
-    $(SRC_DIR)/pic$(O) \
     $(SRC_DIR)/platform$(O) \
     $(SRC_DIR)/pmc_freeze$(O) \
     $(SRC_DIR)/pmc$(O) \
@@ -1151,10 +1149,6 @@ $(IO_DIR)/io_passdown$(O) : $(GENERAL_H_FILES) $(IO_DIR)/io_private.h
 $(SRC_DIR)/gc/memory$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/main$(O) : $(SRC_DIR)/main.c $(GENERAL_H_FILES)
-
-$(SRC_DIR)/pic$(O) : $(GENERAL_H_FILES)
-
-$(SRC_DIR)/pic_jit$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/multidispatch$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/multidispatch.str
 
