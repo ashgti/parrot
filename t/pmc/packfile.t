@@ -165,7 +165,7 @@ pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'PackfileDirectory.elements' )
     say $I0
 .end
 CODE
-5
+4
 OUT
 
 
