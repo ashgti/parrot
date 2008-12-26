@@ -282,9 +282,14 @@ do_prederef(void **pc_prederef, PARROT_INTERP, int type)
     switch (type) {
         case PARROT_SWITCH_CORE:
         case PARROT_SWITCH_JIT_CORE:
+            *pc_prederef = (void **)*pc;
+            break;
+
         case PARROT_CGP_CORE:
         case PARROT_CGP_JIT_CORE:
+            *pc_prederef = ((void **)interp->op_lib->op_func_table)[*pc];
             break;
+
         default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                 "Tried to prederef wrong core");
