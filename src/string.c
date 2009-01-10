@@ -1585,7 +1585,7 @@ string_bitwise_and(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
     return res;
 }
 
-#define BITWISE_XOR_STRINGS(type1, type2, restype, s1, s2, res, maxlen) \
+#define BITWISE_OPERATE_STRINGS(type1, type2, restype, s1, s2, res, maxlen, OP) \
 do { \
     const type1 *curr1   = NULL; \
     const type2 *curr2   = NULL; \
@@ -1609,7 +1609,7 @@ do { \
     for (; _index < (maxlen) ; ++curr1, ++curr2, ++dp, ++_index) { \
         if (_index < length1) { \
             if (_index < length2) \
-                *dp = *curr1 ^ *curr2; \
+                *dp = *curr1 OP *curr2; \
             else \
                 *dp = *curr1; \
         } \
@@ -1621,39 +1621,10 @@ do { \
 
 
 #define BITWISE_OR_STRINGS(type1, type2, restype, s1, s2, res, maxlen) \
-do { \
-    const type1 *curr1   = NULL; \
-    const type2 *curr2   = NULL; \
-    size_t       length1 = 0; \
-    size_t       length2 = 0; \
-    restype     *dp; \
-    size_t       _index; \
- \
-    if (s1) { \
-        curr1   = (type1 *)(s1)->strstart; \
-        length1 = (s1)->strlen; \
-    } \
-    if (s2) { \
-        curr2   = (type2 *)(s2)->strstart; \
-        length2 = (s2)->strlen; \
-    } \
- \
-    dp = (restype *)(res)->strstart; \
-    _index = 0; \
- \
-    for (; _index < (maxlen) ; ++curr1, ++curr2, ++dp, ++_index) { \
-        if (_index < length1) { \
-            if (_index < length2) \
-                *dp = *curr1 | *curr2; \
-            else \
-                *dp = *curr1; \
-        } \
-        else if (_index < length2) { \
-            *dp = *curr2; \
-        } \
-    } \
-} while (0)
+    BITWISE_OPERATE_STRINGS(type1, type2, restype, s1, s2, res, maxlen, | )
 
+#define BITWISE_XOR_STRINGS(type1, type2, restype, s1, s2, res, maxlen) \
+    BITWISE_OPERATE_STRINGS(type1, type2, restype, s1, s2, res, maxlen, ^ )
 
 /*
 
