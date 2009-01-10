@@ -362,11 +362,11 @@ AGAIN:
             case ECONNRESET:
                 /* XXX why close it on err return result is -1 anyway */
                 close(io->fd);
-                *s = string_make_empty(interp, enum_stringrep_one, 0);
+                *s = string_make_empty(interp, 0);
                 return -1;
             default:
                 close(io->fd);
-                *s = string_make_empty(interp, enum_stringrep_one, 0);
+                *s = string_make_empty(interp, 0);
                 return -1;
         }
     }

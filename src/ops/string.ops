@@ -338,11 +338,11 @@ Allocate a new empty string of length $2 (optional).
 =cut
 
 inline op new(out STR) :base_mem {
-  $1 = string_make_empty(interp, enum_stringrep_one, 0);
+  $1 = string_make_empty(interp, 0);
 }
 
 inline op new(out STR, in INT) :base_mem {
-    $1 = string_make_empty(interp, enum_stringrep_one, $2);
+    $1 = string_make_empty(interp, $2);
 }
 
 

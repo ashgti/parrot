@@ -54,8 +54,7 @@ members, beside setting C<bufstart>/C<buflen> for external strings.
 
 static void make_writable(PARROT_INTERP,
     ARGMOD(STRING **s),
-    const size_t len,
-    parrot_string_representation_t representation)
+    const size_t len)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
@@ -389,16 +388,10 @@ Creates and returns an empty Parrot string.
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING *
-string_make_empty(PARROT_INTERP,
-    parrot_string_representation_t representation, UINTVAL capacity)
+string_make_empty(PARROT_INTERP, UINTVAL capacity)
 {
     ASSERT_ARGS(string_make_empty)
     STRING * const s = new_string_header(interp, 0);
-
-    /* TODO adapt string creation functions */
-    if (representation != enum_stringrep_one)
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_CHARTYPE,
-            "Unsupported representation");
 
     s->charset  = PARROT_DEFAULT_CHARSET;
     s->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, s);
@@ -628,34 +621,6 @@ string_from_cstring(PARROT_INTERP, ARGIN_NULLOK(const char * const buffer), cons
                               PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
                               0); /* Force an 8-bit encoding at some
                                      point? */
-}
-
-/*
-
-=item C<const char* string_primary_encoding_for_representation>
-
-Returns the primary encoding for the specified representation.
-
-This is needed for packfile unpacking, unless we just always use UTF-8 or BOCU.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-const char*
-string_primary_encoding_for_representation(PARROT_INTERP,
-    parrot_string_representation_t representation)
-{
-    ASSERT_ARGS(string_primary_encoding_for_representation)
-    if (representation == enum_stringrep_one)
-        return "ascii";
-
-    Parrot_ex_throw_from_c_args(interp, NULL,
-        EXCEPTION_INVALID_STRING_REPRESENTATION,
-        "string_primary_encoding_for_representation: "
-        "invalid string representation");
 }
 
 /*
@@ -1153,7 +1118,7 @@ string_substr(PARROT_INTERP,
 
         /* Allow regexes to return $' easily for "aaa" =~ /aaa/ */
         if (offset == (INTVAL)string_length(interp, src) || length < 1)
-            return string_make_empty(interp, enum_stringrep_one, 0);
+            return string_make_empty(interp, 0);
 
         if (offset < 0)
             true_offset = (UINTVAL)(src->strlen + offset);
@@ -1527,12 +1492,11 @@ created.
 */
 
 static void
-make_writable(PARROT_INTERP, ARGMOD(STRING **s),
-    const size_t len, parrot_string_representation_t representation)
+make_writable(PARROT_INTERP, ARGMOD(STRING **s), const size_t len)
 {
     ASSERT_ARGS(make_writable)
     if (!*s)
-        *s = string_make_empty(interp, representation, len);
+        *s = string_make_empty(interp, len);
     else if ((*s)->strlen < len)
         string_grow(interp, *s, (UINTVAL)(len - (*s)->strlen));
     else if (PObj_is_cowed_TESTALL(*s))
@@ -1601,7 +1565,7 @@ string_bitwise_and(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
         Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, minlen, enum_stringrep_one);
+    make_writable(interp, &res, minlen);
 
     { /* bitwise AND the strings */
         const Parrot_UInt1 *curr1 = (Parrot_UInt1 *)s1->strstart;
@@ -1753,7 +1717,7 @@ string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
         Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, maxlen, enum_stringrep_one);
+    make_writable(interp, &res, maxlen);
 
     BITWISE_OR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
             s1, s2, res, maxlen);
@@ -1828,7 +1792,7 @@ string_bitwise_xor(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
         Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, maxlen, enum_stringrep_one);
+    make_writable(interp, &res, maxlen);
 
     BITWISE_XOR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
             s1, s2, res, maxlen);
@@ -1906,7 +1870,7 @@ string_bitwise_not(PARROT_INTERP, ARGIN_NULLOK(const STRING *s),
         Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, len, enum_stringrep_one);
+    make_writable(interp, &res, len);
 
     res->strlen = res->bufused = len;
 
@@ -3031,7 +2995,7 @@ string_compose(PARROT_INTERP, ARGIN_NULLOK(STRING *src))
         return NULL;
 
     if (!src->strlen)
-        return string_make_empty(interp, enum_stringrep_one, 0);
+        return string_make_empty(interp, 0);
 
     return CHARSET_COMPOSE(interp, src);
 }
@@ -3061,7 +3025,7 @@ string_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
     int i;
 
     if (ar_len == 0)
-        return string_make_empty(interp, enum_stringrep_one, 0);
+        return string_make_empty(interp, 0);
 
     s   = VTABLE_get_string_keyed_int(interp, ar, 0);
     res = s ? string_copy(interp, s) : NULL;

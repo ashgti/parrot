@@ -148,7 +148,7 @@ Returns an empty string.
 */
 
     VTABLE STRING *get_string() {
-        return string_make_empty(INTERP, enum_stringrep_one, 0);
+        return string_make_empty(INTERP, 0);
     }
 
 /*

@@ -1793,7 +1793,7 @@ create_image(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGMOD(visit_info *info))
     else
         len = FREEZE_BYTES_PER_ITEM;
 
-    info->image = string_make_empty(interp, enum_stringrep_one, len);
+    info->image = string_make_empty(interp, len);
 }
 
 /*

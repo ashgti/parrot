@@ -356,9 +356,7 @@ STRING * string_make_direct(PARROT_INTERP,
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
-STRING * string_make_empty(PARROT_INTERP,
-    parrot_string_representation_t representation,
-    UINTVAL capacity)
+STRING * string_make_empty(PARROT_INTERP, UINTVAL capacity)
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
@@ -376,12 +374,6 @@ void string_pin(PARROT_INTERP, ARGMOD(STRING *s))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
-
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-const char* string_primary_encoding_for_representation(PARROT_INTERP,
-    parrot_string_representation_t representation)
-        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
@@ -664,9 +656,6 @@ STRING* uint_to_str(PARROT_INTERP,
 #define ASSERT_ARGS_string_pin __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_string_primary_encoding_for_representation \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_string_printf __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(format)

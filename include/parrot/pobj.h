@@ -110,13 +110,6 @@ typedef struct Buffer_alloc_unit {
 #  define PObj_bufrefcountptr(b) ((INTVAL *)PObj_bufallocstart(b))
 #endif
 
-typedef enum {
-    enum_stringrep_unknown = 0,
-    enum_stringrep_one     = 1,
-    enum_stringrep_two     = 2,
-    enum_stringrep_four    = 4
-} parrot_string_representation_t;
-
 struct parrot_string_t {
     UnionVal    cache;
     Parrot_UInt flags;
@@ -125,7 +118,6 @@ struct parrot_string_t {
     UINTVAL     strlen;
     UINTVAL     hashval; /* cached hash value computation */
 
-    /*    parrot_string_representation_t representation;*/
     const struct _encoding *encoding;
     const struct _charset  *charset;
 };

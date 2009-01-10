@@ -35,7 +35,7 @@ Initializes the string.
 */
 
     VTABLE void init() {
-        PMC_str_val(SELF) = string_make_empty(INTERP, enum_stringrep_one, 0);
+        PMC_str_val(SELF) = string_make_empty(INTERP, 0);
         PObj_custom_mark_SET(SELF);
     }
 

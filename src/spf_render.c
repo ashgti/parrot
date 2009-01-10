@@ -329,7 +329,7 @@ Parrot_sprintf_format(PARROT_INTERP,
     HUGEINTVAL num;
 
     /* start with a buffer; double the pattern length to avoid realloc #1 */
-    STRING *targ = string_make_empty(interp, enum_stringrep_one, pat_len << 1);
+    STRING *targ = string_make_empty(interp, pat_len << 1);
 
     /* ts is used almost universally as an intermediate target;
      * tc is used as a temporary buffer by uint_to_string and

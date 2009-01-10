@@ -410,7 +410,7 @@ Return a representation of the hash contents.
          *      (--leo)
          */
         if (!b)
-            return string_make_empty(INTERP, enum_stringrep_one, 0);
+            return string_make_empty(INTERP, 0);
 
         return VTABLE_get_string(INTERP, (PMC*) b->value);
     }
@@ -456,7 +456,7 @@ Returns the string value for the element at C<*key>.
          *      (--leo)
          */
         if (!b)
-            return string_make_empty(INTERP, enum_stringrep_one, 0);
+            return string_make_empty(INTERP, 0);
 
         nextkey = key_next(INTERP, key);
         valpmc  = (PMC *)b->value;

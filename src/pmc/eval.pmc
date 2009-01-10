@@ -255,8 +255,7 @@ for writing to disc and later loading via C<load_bytecode>.
          * effect
          */
         aligned_size = size + 15;
-        res          = string_make_empty(INTERP, enum_stringrep_one,
-                                         aligned_size);
+        res          = string_make_empty(INTERP, aligned_size);
         res->strlen  = res->bufused = size;
 
         if ((size_t)(res->strstart) & 0xf) {

@@ -564,10 +564,6 @@ the encoding by the number of characters requested.
 
 The following string functions are slated to be deprecated.
 
-=head3 string_primary_encoding_for_representation
-
-Not useful, it only ever returned ASCII.
-
 =head3 string_rep_compatible
 
 Only useful on a very narrow set of string encodings/character sets.

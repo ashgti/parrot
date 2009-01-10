@@ -432,7 +432,7 @@ filehandle when finished.
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
                                 "Cannot readall without a file name or open filehandle");
             }
-            result = string_make_empty(INTERP, enum_stringrep_one, 0);
+            result = string_make_empty(INTERP, 0);
 
             /* Do line buffering on the filehandle */
             if (!(PARROT_FILEHANDLE(SELF)->flags & PIO_F_LINEBUF))
