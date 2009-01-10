@@ -1626,11 +1626,13 @@ do { \
 #define BITWISE_XOR_STRINGS(type1, type2, restype, s1, s2, res, maxlen) \
     BITWISE_OPERATE_STRINGS(type1, type2, restype, s1, s2, res, maxlen, ^ )
 
+enum string_bitops_t { BITWISE_OR, BITWISE_XOR };
+
 /*
 
-=item C<STRING * string_bitwise_or>
+=item C<STRING * string_bitwise_operate>
 
-Performs a bitwise C<OR> on two Parrot strings, performing type and encoding
+Performs a bitwise operation on two Parrot strings, performing type and encoding
 conversions if necessary. If the third string is not C<NULL>, then it is
 reused.  Otherwise a new Parrot string is created.
 
@@ -1638,20 +1640,18 @@ reused.  Otherwise a new Parrot string is created.
 
 */
 
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
+static
 STRING *
-string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
-        ARGIN_NULLOK(const STRING *s2), ARGOUT_NULLOK(STRING **dest))
+string_bitwise_operate(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
+ARGIN_NULLOK(const STRING *s2), ARGOUT_NULLOK(STRING **dest), ARGIN(enum string_bitops_t bitop))
 {
-    ASSERT_ARGS(string_bitwise_or)
     STRING *res;
     size_t  maxlen = 0;
 
     if (s1) {
         if (s1->encoding != Parrot_fixed_8_encoding_ptr)
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
-                "string bitwise_or (%s/%s) unsupported",
+                "string bitwise_operate (%s/%s) unsupported",
                 s1->encoding->name, nonnull_encoding_name(s2));
 
         maxlen = s1->bufused;
@@ -1660,7 +1660,7 @@ string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
     if (s2) {
         if (s2->encoding != Parrot_fixed_8_encoding_ptr)
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
-                "string bitwise_or (%s/%s) unsupported",
+                "string bitwise_operate (%s/%s) unsupported",
                 nonnull_encoding_name(s1), s2->encoding->name);
 
         if (s2->bufused > maxlen)
@@ -1690,8 +1690,15 @@ string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
 
     make_writable(interp, &res, maxlen);
 
-    BITWISE_OR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
-            s1, s2, res, maxlen);
+    switch(bitop) {
+        case BITWISE_XOR:
+            BITWISE_XOR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1, s1, s2, res, maxlen);
+            break;
+        case BITWISE_OR:
+        default:
+            BITWISE_OR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1, s1, s2, res, maxlen);
+    };
+
     res->bufused = res->strlen = maxlen;
 
     if (dest)
@@ -1700,6 +1707,28 @@ string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
     return res;
 }
 
+
+/*
+
+=item C<STRING * string_bitwise_or>
+
+Performs a bitwise C<OR> on two Parrot strings, performing type and encoding
+conversions if necessary. If the second string is not C<NULL>, then it is
+reused.  Otherwise a new Parrot string is created.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+STRING *
+string_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
+        ARGIN_NULLOK(const STRING *s2), ARGOUT_NULLOK(STRING **dest))
+{
+    ASSERT_ARGS(string_bitwise_or)
+    return string_bitwise_operate(interp, s1, s2, dest, BITWISE_OR);
+}
 
 /*
 
@@ -1717,62 +1746,10 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING *
 string_bitwise_xor(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
-        ARGIN_NULLOK(const STRING *s2), ARGOUT_NULLOK(STRING **dest))
+       ARGIN_NULLOK(const STRING *s2), ARGOUT_NULLOK(STRING **dest))
 {
     ASSERT_ARGS(string_bitwise_xor)
-    STRING *res;
-    size_t  maxlen = 0;
-
-    if (s1) {
-        if (s1->encoding != Parrot_fixed_8_encoding_ptr)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
-                "string bitwise_xor (%s/%s) unsupported",
-                s1->encoding->name, nonnull_encoding_name(s2));
-
-        maxlen = s1->bufused;
-    }
-
-    if (s2) {
-        if (s2->encoding != Parrot_fixed_8_encoding_ptr)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
-                "string bitwise_xor (%s/%s) unsupported",
-                nonnull_encoding_name(s1), s2->encoding->name);
-
-        if (s2->bufused > maxlen)
-            maxlen = s2->bufused;
-    }
-
-    if (dest && *dest) {
-        res           = *dest;
-        res->encoding = Parrot_fixed_8_encoding_ptr;
-        res->charset  = Parrot_binary_charset_ptr;
-    }
-    else
-        res = string_make_direct(interp, NULL, maxlen,
-                Parrot_fixed_8_encoding_ptr, Parrot_binary_charset_ptr, 0);
-
-    if (!maxlen) {
-        res->bufused = 0;
-        res->strlen  = 0;
-        return res;
-    }
-
-#if ! DISABLE_GC_DEBUG
-    /* trigger GC for debug */
-    if (interp && GC_DEBUG(interp))
-        Parrot_do_dod_run(interp, GC_trace_stack_FLAG);
-#endif
-
-    make_writable(interp, &res, maxlen);
-
-    BITWISE_XOR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
-            s1, s2, res, maxlen);
-    res->bufused = res->strlen = maxlen;
-
-    if (dest)
-        *dest = res;
-
-    return res;
+    return string_bitwise_operate(interp, s1, s2, dest, BITWISE_XOR);
 }
 
 
