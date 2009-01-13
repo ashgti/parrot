@@ -953,7 +953,6 @@ include/parrot/settings.h                                   [main]include
 include/parrot/slice.h                                      [main]include
 include/parrot/stacks.h                                     [main]include
 include/parrot/stat.h                                       [main]include
-include/parrot/stm/backend.h                                [main]include
 include/parrot/string.h                                     [main]include
 include/parrot/string_funcs.h                               [main]include
 include/parrot/string_primitives.h                          [main]include
@@ -3170,10 +3169,6 @@ src/scheduler.c                                             []
 src/spf_render.c                                            []
 src/spf_vtable.c                                            []
 src/stacks.c                                                []
-src/stm/backend.c                                           []
-src/stm/stm_internal.h                                      []
-src/stm/stm_waitlist.h                                      []
-src/stm/waitlist.c                                          []
 src/string.c                                                []
 src/string_primitives.c                                     []
 src/sub.c                                                   []
