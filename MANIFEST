@@ -527,11 +527,6 @@ docs/resources/perl.css                                     [main]doc
 docs/resources/up.gif                                       [main]doc
 docs/running.pod                                            [main]doc
 docs/stability.pod                                          [main]doc
-docs/stm/atomic.pod                                         [main]doc
-docs/stm/howto.pod                                          [main]doc
-docs/stm/internals.pod                                      [main]doc
-docs/stm/stm_frontend.pod                                   [main]doc
-docs/stm/thread-issues.pod                                  [main]doc
 docs/submissions.pod                                        [main]doc
 docs/tests.pod                                              [main]doc
 docs/user/pir/pp001-intro.pod                               [main]doc
