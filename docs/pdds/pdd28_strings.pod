@@ -406,11 +406,6 @@ integer length isn't passed, the function will calculate the length.
 {{NOTE: the integer length isn't really necessary, and is under consideration
 for deprecation.}}
 
-=head3 Parrot_string_new
-
-Return a new string with the default encoding and character set. Accepts one
-argument, a C string (C<char *>) to initialize the value of the string.
-
 =head3 Parrot_string_new_noinit (was string_make_empty)
 
 Returns a new empty string with the default encoding and chararacter set.
