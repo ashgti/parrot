@@ -3,7 +3,7 @@
 =head1 Deprecation in Parrot
 
 This is a list of currently deprecated features of Parrot.  Every deprecation
-has an associated RT ticket.  Each item indicates the last release it's
+has an associated RT or TT ticket.  Each item indicates the last release it's
 guaranteed to appear in.
 
 When deprecated items are removed, all usage of the feature in the
@@ -35,17 +35,19 @@ See RT #47011.
 
 =over 4
 
-=item * C<store_global> [post 0.5.0]
-
-See RT #48016. Replace usage with set_[hll,root]_global variants.
-
-=item * C<find_global> [post 0.5.0]
-
-See RT #48018. Replace usage with get_[hll,root]_global variants.
-
 =item * C<n_*> math opcode variants [post 0.7.1]
 
 See RT #58410.
+
+=back
+
+=head1 PMCS
+
+=over 4
+
+=item * Remove VtableCache PMC [post 0.9.0]
+
+See TT #6
 
 =back
 
@@ -62,6 +64,8 @@ See RT #48014. This will be removed once all core PMCs have been updated.
 If you want to override a vtable method/function when building a Class, then
 use the method C<add_vtable_override> instead of calling C<add_method> with
 one or both of these flags.
+
+See TT #158
 
 =back
 
@@ -98,6 +102,8 @@ if the arg is a ResizableStringArray
 if the arg is a Namespace or Class PMC
   The passed in class or the class attatched to the passed in namespace.
 
+See TT #159
+
 =back
 
 =head1 Functions
@@ -132,7 +138,7 @@ to happen.  See RT #60586 and RT #53302.
 =item P6protoobject stringification [post 0.9.0]
 
 Stringification of protoobjects will return the full name of the type
-and parentheses, per Synopsis 12.
+and parentheses, per Synopsis 12.  See TT #168
 
 =back
 

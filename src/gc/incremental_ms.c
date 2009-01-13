@@ -1,10 +1,10 @@
 /*
-Copyright (C) 2001-2008, The Perl Foundation.
+Copyright (C) 2001-2009, The Perl Foundation.
 $Id$
 
 =head1 NAME
 
-src/gc/gc_ims.c - Incremental mark and sweep garbage collection
+src/gc/incremental_ms.c - Incremental mark and sweep garbage collection
 
 =head1 DESCRIPTION
 
@@ -155,7 +155,7 @@ The graph of all objects found live during the last collection.
 
 The work area of the collector. During marking live objects are "moved"
 from the from-space into the to-space. This is the same as the text_for_GC
-list used in src/dod.c. The to-space is initially empty. During marking
+list used in src/gc/api.c. The to-space is initially empty. During marking
 it gets greyed and finally all reachable objects are black.
 
 =item free-list
@@ -334,9 +334,10 @@ a sleep opcode.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/dod.h"
+#include "parrot/gc_api.h"
+#include "parrot/gc_mark_sweep.h"
 
-/* HEADERIZER HFILE: include/parrot/dod.h */
+/* HEADERIZER HFILE: include/parrot/gc_api.h */
 
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -700,13 +701,13 @@ parrot_gc_ims_reinit(PARROT_INTERP)
     Arenas * const  arena_base = interp->arena_base;
 
     arena_base->lazy_dod = 0;
-    Parrot_dod_ms_run_init(interp);
+    Parrot_gc_ms_run_init(interp);
 
     /*
      * trace root set w/o system areas
      * TODO also skip volatile roots
      */
-    Parrot_dod_trace_root(interp, 0);
+    Parrot_gc_trace_root(interp, GC_TRACE_ROOT_ONLY);
 
     g_ims        = (Gc_ims_private *)arena_base->gc_private;
     g_ims->state = GC_IMS_MARKING;
@@ -747,7 +748,7 @@ parrot_gc_ims_mark(PARROT_INTERP)
     todo = (size_t)(g_ims->alloc_trigger * g_ims->throttle * work_factor);
 
     PARROT_ASSERT(arena_base->lazy_dod == 0);
-    Parrot_dod_trace_children(interp, todo);
+    Parrot_gc_trace_children(interp, todo);
 
     /* check if we are finished with marking -- the end is self-referential */
     next = arena_base->dod_mark_start;
@@ -770,12 +771,13 @@ Callback to sweep a header pool (see Parrot_forall_header_pools).
 static int
 sweep_cb(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool), int flag, ARGIN(void *arg))
 {
+    ASSERT_ARGS(sweep_cb)
     int * const n_obj = (int *)arg;
 
-    Parrot_dod_sweep(interp, pool);
+    Parrot_gc_sweep(interp, pool);
 
     if (interp->profile && (flag & POOL_PMC))
-        Parrot_dod_profile_end(interp, PARROT_PROF_DOD_cp);
+        Parrot_gc_profile_end(interp, PARROT_PROF_DOD_cp);
 
     *n_obj += pool->total_objects - pool->num_free_objects;
 
@@ -813,10 +815,11 @@ parrot_gc_ims_sweep(PARROT_INTERP)
      */
 
     /* TODO mark volatile roots */
-    Parrot_dod_trace_root(interp, g_ims->lazy ? 0 : (int)GC_trace_stack_FLAG);
+    Parrot_gc_trace_root(interp, g_ims->lazy ? GC_TRACE_ROOT_ONLY
+                                             : GC_TRACE_FULL);
 
     /* mark (again) rest of children */
-    Parrot_dod_trace_children(interp, (size_t) -1);
+    Parrot_gc_trace_children(interp, (size_t) -1);
 
     /* now sweep all */
     n_objects = 0;
@@ -825,7 +828,7 @@ parrot_gc_ims_sweep(PARROT_INTERP)
     UNUSED(ignored);
 
     if (interp->profile)
-        Parrot_dod_profile_end(interp, PARROT_PROF_DOD_cb);
+        Parrot_gc_profile_end(interp, PARROT_PROF_DOD_cb);
 
     g_ims->state           = GC_IMS_COLLECT;
     g_ims->n_objects       = n_objects;
@@ -906,7 +909,7 @@ parrot_gc_ims_collect(PARROT_INTERP, int check_only)
     int             ret;
 
     if (!check_only && interp->profile)
-        Parrot_dod_profile_start(interp);
+        Parrot_gc_profile_start(interp);
 
     g_ims = (Gc_ims_private *)arena_base->gc_private;
 
@@ -920,7 +923,7 @@ parrot_gc_ims_collect(PARROT_INTERP, int check_only)
         return 0;
 
     if (interp->profile)
-        Parrot_dod_profile_end(interp, PARROT_PROF_GC);
+        Parrot_gc_profile_end(interp, PARROT_PROF_GC);
 
     g_ims->state = GC_IMS_FINISHED;
 #endif
@@ -1039,9 +1042,9 @@ parrot_gc_ims_run(PARROT_INTERP, UINTVAL flags)
          * Be sure live bits are clear.
          */
         if (g_ims->state >= GC_IMS_RE_INIT || g_ims->state < GC_IMS_FINISHED)
-            Parrot_dod_clear_live_bits(interp);
+            Parrot_gc_clear_live_bits(interp);
 
-        Parrot_dod_sweep(interp, interp->arena_base->pmc_pool);
+        Parrot_gc_sweep(interp, interp->arena_base->pmc_pool);
         g_ims->state = GC_IMS_DEAD;
 
         return;
@@ -1111,7 +1114,7 @@ parrot_gc_ims_run(PARROT_INTERP, UINTVAL flags)
 
 /*
 
-=item C<void Parrot_dod_ims_wb>
+=item C<void Parrot_gc_ims_wb>
 
 Write barrier called by the GC_WRITE_BARRIER macro. Always when storing
 a white object into a black aggregate, either the object must
@@ -1124,9 +1127,9 @@ be greyed or the aggregate must be rescanned -- so grey it.
 #define DOD_IMS_GREY_NEW 1
 
 void
-Parrot_dod_ims_wb(PARROT_INTERP, ARGMOD(PMC *agg), ARGMOD(PMC *_new))
+Parrot_gc_ims_wb(PARROT_INTERP, ARGMOD(PMC *agg), ARGMOD(PMC *_new))
 {
-    ASSERT_ARGS(Parrot_dod_ims_wb)
+    ASSERT_ARGS(Parrot_gc_ims_wb)
 #if DOD_IMS_GREY_NEW
     IMS_DEBUG((stderr, "%d agg %p mark %p\n",
                 ((Gc_ims_private *)interp->arena_base->
@@ -1144,7 +1147,7 @@ Parrot_dod_ims_wb(PARROT_INTERP, ARGMOD(PMC *agg), ARGMOD(PMC *_new))
 
 =head1 SEE ALSO
 
-F<src/gc/dod.c>, F<include/parrot/dod.h>, F<include/parrot/pobj.h>,
+F<src/gc/api.c>, F<include/parrot/gc_api.h>, F<include/parrot/pobj.h>,
 
 =head1 HISTORY
 

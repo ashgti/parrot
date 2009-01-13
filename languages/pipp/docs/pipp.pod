@@ -29,11 +29,13 @@ A listing of things that Pipp does differently from the standard PHP.
 
 =item No old style constructors, where the constructor is named after the class.
 
+=item Only bracketed version of namespaces. No check for unnamespaced code.
+
 =back
 
 =head1 Implementation
 
-Pipp is based on the Parrot Compiler Toolkit.
+Pipp is based on the Parrot Compiler Toolkit. See L<internals.pod> for details.
 
 =head1 Status
 
@@ -61,21 +63,11 @@ Bernhard Schmalhofer - <Bernhard.Schmalhofer@gmx.de>
 
 =item L<http://phpcompiler.org/>
 
-=item L<http://en.wikipedia.org/wiki/Document_Object_Model>
-
 =item L<http://en.wikipedia.org/wiki/Abstract_syntax_tree>
-
-=item L<http://en.wikipedia.org/wiki/XSLT>
-
-=item L<http://search.cpan.org/dist/parrot/docs/glossary.pod>
-
-=item L<http://perl.overmeer.net/xml-compile/>
 
 =item L<http://en.wikipedia.org/wiki/Plum-headed_parakeet>
 
 =item L<http://www.parrotcode.org/docs/compiler_tools.html>
-
-=item L<http://www.antlr.org/v3/index.html>
 
 =back
 

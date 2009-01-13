@@ -44,6 +44,7 @@ S02-builtin_data_types/pair.t
 S02-builtin_data_types/range.t
 S02-builtin_data_types/subscripts_and_context.t
 S02-builtin_data_types/type.t
+S02-builtin_data_types/whatever.t
 S02-literals/array-interpolation.t
 S02-literals/autoref.t
 S02-literals/char-by-number.t
@@ -202,6 +203,7 @@ S12-class/is_also_instead.t
 S12-class/namespaced.t
 S12-class/open.t
 S12-class/parent_attributes.t
+S12-construction/new.t
 S12-enums/anonymous.t
 S12-enums/as-role.t
 S12-enums/basic.t
@@ -284,6 +286,7 @@ S29-str/rindex.t
 S29-str/split-simple.t
 S29-str/sprintf.t
 S29-str/substr.t
+S29-str/trim.t
 S29-str/ucfirst.t
 S29-str/uc.t
 S29-str/unpack.t

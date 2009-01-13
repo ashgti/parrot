@@ -776,7 +776,9 @@ method enum_declarator($/, $key) {
 
         # Now we need to create instances of each of these and install them
         # in a package starting with the enum's name, plus an alias to them
-        # in the current package.
+        # in the current package. Register the symbols in the current block
+        # as we go.
+        our @?BLOCK;
         for %values.keys() {
             # Instantiate with value.
             $class_past.push(PAST::Op.new(
@@ -799,6 +801,7 @@ method enum_declarator($/, $key) {
                     )
                 )
             ));
+            @?BLOCK[0].symbol($name ~ '::' ~ $_, :does_abstraction(1));
 
             # Add alias in current package.
             # XXX Need to do collision detection, once we've a registry.
@@ -814,11 +817,11 @@ method enum_declarator($/, $key) {
                     :scope('package')
                 )
             ));
+            @?BLOCK[0].symbol($_, :does_abstraction(1));
         }
 
         # Assemble all that we build into a statement list and then place it
         # into the init code.
-        our @?BLOCK;
         my $loadinit := @?BLOCK[0].loadinit();
         $loadinit.push($role_past);
         $loadinit.push($class_past);
@@ -1098,11 +1101,11 @@ method parameter($/) {
     elsif $<named> eq ':' {          # named
         $var.named(~$<param_var><identifier>);
         if $quant ne '!' {      #  required (optional is default)
-            $var.viviself('Nil');
+            $var.viviself(container_itype($sigil));
         }
     }
     elsif $quant eq '?' {           # positional optional
-        $var.viviself('Nil');
+        $var.viviself(container_itype($sigil));
     }
 
     ##  handle any default value
@@ -2082,16 +2085,60 @@ method quote_term($/, $key) {
 
 method term($/, $key) {
     my $past;
+
+    my @ns;
+    my $short_name;
+    if $<name> {
+        @ns := Perl6::Compiler.parse_name(~$<name>);
+        $short_name := @ns.pop();
+    }
+
     if $key eq 'noarg' {
-        $past := PAST::Op.new( :name( ~$<name> ), :pasttype('call') );
+        if @ns {
+            $past := PAST::Op.new(
+                PAST::Var.new(
+                    :name($short_name),
+                    :namespace(@ns),
+                    :scope('package')
+                ),
+                :pasttype('call')
+            );
+        }
+        else {
+            if $short_name eq 'print' || $short_name eq 'say' {
+                $/.panic($short_name ~ ' requires an argument');
+            }
+            $past := PAST::Op.new( :name( $short_name ), :pasttype('call') );
+        }
     }
     elsif $key eq 'args' {
         $past := $($<args>);
-        $past.name( ~$<name> );
+        if @ns {
+            $past.unshift(PAST::Var.new(
+                :name($short_name),
+                :namespace(@ns),
+                :scope('package')
+            ));
+        }
+        else {
+            if +@($past) == 0 && ($short_name eq 'print' || $short_name eq 'say') {
+                $/.panic($short_name ~ ' requires an argument');
+            }
+            $past.name( $short_name );
+        }
     }
     elsif $key eq 'func args' {
         $past := build_call( $( $<semilist> ) );
-        $past.name( ~$<name> );
+        if @ns {
+            $past.unshift(PAST::Var.new(
+                :name($short_name),
+                :namespace(@ns),
+                :scope('package')
+            ));
+        }
+        else {
+            $past.name( $short_name );
+        }
     }
     elsif $key eq 'VAR' {
         $past := PAST::Op.new(

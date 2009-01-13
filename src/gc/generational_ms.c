@@ -1,10 +1,10 @@
 /*
-Copyright (C) 2001-2007, The Perl Foundation.
+Copyright (C) 2001-2009, The Perl Foundation.
 $Id$
 
 =head1 NAME
 
-src/gc/gc_gms.c - Generational mark and sweep garbage collection
+src/gc/generational_ms.c - Generational mark and sweep garbage collection
 
 =head1 OVERVIEW
 
@@ -111,7 +111,8 @@ A chained list of headers used e.g. for the IGP list.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/dod.h"
+#include "parrot/gc_api.h"
+#include "parrot/gc_mark_sweep.h"
 
 #if PARROT_GC_GMS
 
@@ -119,7 +120,7 @@ typedef struct Gc_gms_private {
     UINTVAL current_gen_no;             /* the nursery generation number */
 } Gc_gms_private;
 
-/* HEADERIZER HFILE: include/parrot/dod.h */
+/* HEADERIZER HFILE: include/parrot/gc_api.h */
 
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -1350,7 +1351,7 @@ gc_gms_setto_gray(PARROT_INTERP, ARGIN(Gc_gms_hdr *h), int priority)
     ASSERT_ARGS(gc_gms_setto_gray)
     Small_Object_Pool * const pool = h->gen->pool;
     /*
-     * TODO high_priority like in src/dod.c
+     * TODO high_priority like in src/gc/api.c
      */
     /*
      * if the white is adjacent to gray, move pointer
@@ -1414,7 +1415,7 @@ gc_gms_setto_black(PARROT_INTERP, ARGMOD(Gc_gms_hdr *h), int priority)
     Small_Object_Pool * const pool = h->gen->pool;
 
     /*
-     * TODO high_priority like src/dod.c
+     * TODO high_priority like src/gc/api.c
      * TODO if h needs destructions insert in front of chain
      */
     /*
@@ -1574,7 +1575,7 @@ static int
 gc_gms_trace_root(PARROT_INTERP, int trace_stack)
 {
     ASSERT_ARGS(gc_gms_trace_root)
-    const int ret = Parrot_dod_trace_root(interp, trace_stack);
+    const int ret = Parrot_gc_trace_root(interp, trace_stack);
 
     if (ret == 0)
         return 0;
@@ -1958,8 +1959,8 @@ gms_debug_verify(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool), ARGIN(const cha
 
 =head1 SEE ALSO
 
-F<src/gc/dod.c>, F<include/parrot/dod.h>, F<include/parrot/pobj.h>,
-F<src/gc/gc_ims.c>
+F<src/gc/api.c>, F<include/parrot/gc_api.h>, F<include/parrot/pobj.h>,
+F<src/gc/incremental_ms.c>
 
 =head1 HISTORY
 

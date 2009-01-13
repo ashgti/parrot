@@ -161,13 +161,13 @@ Returns the global dumper instance used by the non object interface.
 TYPE_OK:
 
     errorsoff .PARROT_ERRORS_GLOBALS_FLAG
-    find_global self, "Data::Dumper", "global"
+    self = get_hll_global ['Data::Dumper'], 'global'
     errorson .PARROT_ERRORS_GLOBALS_FLAG
     if null self goto create_type
 
 create_type:
     new self, "Data::Dumper"
-    store_global "Data::Dumper", "global", self
+    set_hll_global ['Data::Dumper'], 'global', self
 
 END:
     .return( self )

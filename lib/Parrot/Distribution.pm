@@ -1,9 +1,9 @@
-# Copyright (C) 2004-2008, The Perl Foundation.
+# Copyright (C) 2004-2009, The Perl Foundation.
 # $Id$
 
 =head1 NAME
 
-Parrot::Distribution - Parrot Distribution Directory
+Parrot::Distribution - Info on the Parrot Distribution
 
 =head1 SYNOPSIS
 
@@ -34,6 +34,7 @@ use warnings;
 
 use ExtUtils::Manifest;
 use File::Spec;
+
 use lib qw( lib );
 use Parrot::BuildUtil ();
 
@@ -52,51 +53,52 @@ Raises an exception if the distribution root is not found.
 
 =cut
 
-## i'm a singleton
-my $dist;
+{
+    my $dist; ## i'm a singleton
 
-sub new {
-    my ($class) = @_;
+    sub new {
+        my ($class) = @_;
 
-    return $dist if defined $dist;
+        return $dist if defined $dist;
 
-    my $self = bless {}, $class;
+        my $self = bless {}, $class;
 
-    return $self->_initialize;
-}
+        return $self->_initialize;
+    }
 
-sub _initialize {
-    my ($self) = @_;
+    sub _initialize {
+        my ($self) = @_;
 
-    my $file = 'README';
-    my $path = '.';
+        my $file = 'README';
+        my $path = '.';
 
-    while ( $self = $self->SUPER::new($path) ) {
-        if (    $self->file_exists_with_name($file)
-            and $self->file_with_name($file)->read =~ m/^This is Parrot/os )
-        {
-            $dist = $self;
-            last;
+        while ( $self = $self->SUPER::new($path) ) {
+            if (    $self->file_exists_with_name($file)
+                and $self->file_with_name($file)->read =~ m/^This is Parrot/os )
+            {
+                $dist = $self;
+                last;
+            }
+
+            $path = $self->parent_path();
         }
 
-        $path = $self->parent_path();
+        # non-object call syntax since $self is undefined
+        _croak( undef, "Failed to find Parrot distribution root\n" )
+            unless $self;
+
+        if ( defined $dist ) {
+            $self->_dist_files(
+                [
+                    sort keys %{
+                        ExtUtils::Manifest::maniread( File::Spec->catfile( $self->path, "MANIFEST" ) )
+                        },
+                ]
+            );
+        }
+
+        return $self;
     }
-
-    # non-object call syntax since $self is undefined
-    _croak( undef, "Failed to find Parrot distribution root\n" )
-        unless $self;
-
-    if ( defined $dist ) {
-        $self->_dist_files(
-            [
-                sort keys %{
-                    ExtUtils::Manifest::maniread( File::Spec->catfile( $self->path, "MANIFEST" ) )
-                    },
-            ]
-        );
-    }
-
-    return $self;
 }
 
 sub _croak {
@@ -136,45 +138,59 @@ BEGIN {
 
 =item C<is_git_co()>
 
-=item C<c_source_file_directories()>
+Check the type of checkout.
 
 =item C<c_header_file_directories()>
 
-=item C<pmc_source_file_directories()>
-
-=item C<yacc_source_file_directories()>
+=item C<c_source_file_directories()>
 
 =item C<lex_source_file_directories()>
 
 =item C<ops_source_file_directories()>
 
+=item C<perl_source_file_directories()>
+
+=item C<pir_source_file_directories()>
+
+=item C<pmc_source_file_directories()>
+
+=item C<yacc_source_file_directories()>
+
 Returns the directories which contain source files of the appropriate filetype.
 
-=item C<c_source_file_with_name($name)>
+=item C<c_header_file_with_name()>
 
-=item C<c_header_file_with_name($name)>
+=item C<c_source_file_with_name()>
 
-=item C<pmc_source_file_with_name($name)>
+=item C<lex_source_file_with_name()>
 
-=item C<yacc_source_file_with_name($name)>
+=item C<ops_source_file_with_name()>
 
-=item C<lex_source_file_with_name($name)>
+=item C<perl_source_file_with_name()>
 
-=item C<ops_source_file_with_name($name)>
+=item C<pir_source_file_with_name()>
+
+=item C<pmc_source_file_with_name()>
+
+=item C<yacc_source_file_with_name()>
 
 Returns the source file with the specified name and of the appropriate filetype.
 
-=item C<c_source_files()>
-
 =item C<c_header_files()>
 
-=item C<pmc_source_files()>
-
-=item C<yacc_source_files()>
+=item C<c_source_files()>
 
 =item C<lex_source_files()>
 
 =item C<ops_source_files()>
+
+=item C<perl_source_files()>
+
+=item C<pir_source_files()>
+
+=item C<pmc_source_files()>
+
+=item C<yacc_source_files()>
 
 Returns a sorted list of the source files listed within the MANIFEST of
 Parrot.  Returns a list of Parrot::IO::File objects of the appropriate filetype.
@@ -477,7 +493,6 @@ sub get_perl_exemption_regexp {
     my @paths = map { File::Spec->catdir( $parrot_dir, File::Spec->canonpath($_) ) } qw{
         languages/regex/lib/Regex/Grammar.pm
         languages/pipp/src/pct/actions.pm
-        languages/hq9plus/src/parser/actions.pm
         compilers/nqp/
         compilers/ncigen/src/parser/actions.pm
         lib/Digest/Perl/
@@ -675,7 +690,6 @@ sub perl_module_file_directories {
         map( "languages/$_" => qw<
             APL/t
             BASIC/compiler
-            HQ9plus/lib/Parrot/Test
             WMLScript/build/SRM WMLScript/t/Parrot/Test
             bc/lib/Parrot/Test bc/lib/Parrot/Test/Bc
             dotnet/build/SRM dotnet/t
@@ -776,7 +790,7 @@ sub generated_files {
     my $self = shift;
 
     my $generated = ExtUtils::Manifest::maniread('MANIFEST.generated');
-    my $path      = $dist->path();
+    my $path      = $self->path();
 
     return {
         map { File::Spec->catfile( $path, $_ ) => $generated->{$_} }

@@ -27,16 +27,16 @@
         # XXX Used to use entrytype.  our naive fix here will eventually
 	#   fail, because of the two variable type arguments.
 
-	$P0 = find_global "PRINTCOL"
+	$P0 = get_global "PRINTCOL"
 	PRINTCOL = $P0["value"]
 
 	buf = ""
 NEXT:
 	if argc==0 goto END_DISPLAY
 	dec argc
-	$I0 = typeof printme
-	if $I0 == .String goto DISPSTRING
-	if $I0 != .Float  goto DISPERR
+	$S0 = typeof printme
+	if $S0 == 'String' goto DISPSTRING
+	if $S0 != 'Float'  goto DISPERR
 
 	# Now, do num
 	intver = printme
@@ -85,7 +85,7 @@ DISPNL:
 	goto NEXT
 END_DISPLAY:
 	$P0["value"] = PRINTCOL
-	store_global "PRINTCOL", $P0
+	set_global "PRINTCOL", $P0
 	print buf
 	.return(buf)
 DISPERR:
@@ -245,7 +245,7 @@ MIDDONE:
 .sub _BUILTIN_RND	# num rnd([num seed])
 	.param int argc
 	.local int RANDSEED
-	find_global $P0, "RANDSEED"
+	get_global $P0, "RANDSEED"
 	set RANDSEED, $P0["value"]
 	eq argc, 0, RND_GEN
 	.local num repeat
@@ -264,7 +264,7 @@ RND_REPEAT:
 RND_BAIL:
 
 	set $P0["value"], RANDSEED
-	store_global "RANDSEED", $P0
+	set_global "RANDSEED", $P0
 
 	.return($N0)
 .end
@@ -298,7 +298,7 @@ ENDINSTR:
 	.param string full
 	.param string substring
 
-	.return _BUILTIN_INSTR(argc,1.0,full,substring)
+	.tailcall _BUILTIN_INSTR(argc,1.0,full,substring)
 .end
 
 .sub _BUILTIN_UCASE_STRING	# string ucase$(string targ)
@@ -355,30 +355,6 @@ XCASE_DONE:
 FINISHED:
 	.return($N0)
 .end
-.sub _BUILTIN_STRING_STRING	# string string(num repeat, num ascii)
-	.param int argc
-	.param num repeatf
-
-	.local int repeat
-	set repeat, repeatf
-	.local string repeater
-	.local string target
-	set $I1, 0
-	set target, ""
-	entrytype $I0, 0
-	eq $I0, FLOAT, FLOATB
-	.local string thing
-	set repeater, thing
-	branch REP
-FLOATB:	.local num ascii
-	set $I0, ascii
-	chr repeater, $I0
-REP: 	ge $I1, repeat, BAIL
-	concat target, repeater
-	inc $I1
-	branch REP
-BAIL:	.return(target)
-.end
 .sub _BUILTIN_LOG		# num log(num op)
 	.param int argc
 	.param num op
@@ -430,7 +406,7 @@ ERR_RANGE:
 	.param int argc
 	.param num cols
 	.local int PRINTCOL
-	find_global $P0, "PRINTCOL"
+	get_global $P0, "PRINTCOL"
 	set PRINTCOL, $P0["value"]
 
 	set $I0, cols

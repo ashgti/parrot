@@ -10,9 +10,12 @@
 .sub "befunge" :main
     .param pmc argv
 
+    push_eh catch
+
     # disable buffering on stdout
-    #getstdout stdout
-    #pioctl I10, P10, 3, 0
+    .local pmc stdout
+    getstdout stdout
+    stdout.'buffer_type'("unbuffered")
 
     # parsing argv
     .local int debug
@@ -238,6 +241,11 @@
     status["y"] = y
     set_global "status", status
     goto TICK
+
+  catch:
+    .local pmc ex
+    .get_results (ex)
+    printerr ex
 
 .end
 

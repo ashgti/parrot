@@ -134,7 +134,8 @@ print_target(lexer_state * const lexer, target * const t) {
 =item C<void
 print_constant(lexer_state * const lexer, constant * const c)>
 
-Print the value of constant C<c>.
+Print the value of constant C<c>. Based on C<c>'s type, the appropriate
+value is printed.
 
 =cut
 
@@ -155,13 +156,12 @@ print_constant(lexer_state * const lexer, constant * const c) {
             fprintf(out, "\"%s\"", c->val.pval);
             break;
         case USTRING_VAL:
-            fprintf(out, "\"%s\"", c->val.ustr->contents); /* XXX also encoding? */
+            fprintf(out, "%c:\"%s\"", c->val.ustr->charset, c->val.ustr->contents);
             break;
         default:
             panic(lexer, "Unknown type detected in print_constant()");
             break;
     }
-
 }
 
 /*
@@ -169,7 +169,8 @@ print_constant(lexer_state * const lexer, constant * const c) {
 =item C<void
 print_expr(lexer_state * const lexer, expression * const expr)>
 
-Print the expression C<expr>.
+Print the expression C<expr>. This is a dispatch function, calling
+a specialized function based on C<expr>'s type.
 
 =cut
 
@@ -203,7 +204,9 @@ print_expr(lexer_state * const lexer, expression * const expr) {
 print_expressions(expression * const expr)>
 
 Print the list of expressions pointed to by C<expr>,
-if C<expr> is not NULL. Expressions are separated by commas.
+if C<expr> is not NULL. If C<expr> is NULL, the
+function does nothing and returns. Expressions are
+separated by commas.
 
 =cut
 
@@ -211,6 +214,7 @@ if C<expr> is not NULL. Expressions are separated by commas.
 void
 print_expressions(lexer_state * const lexer, expression * const expr) {
     expression *iter;
+
     if (expr == NULL)
         return;
 
@@ -230,6 +234,8 @@ print_expressions(lexer_state * const lexer, expression * const expr) {
 =item C<void
 print_instruction(lexer_state * const lexer, instruction * const ins)>
 
+Print the instruction C<ins>.
+
 =cut
 
 */
@@ -247,18 +253,13 @@ print_instruction(lexer_state * const lexer, instruction * const ins) {
     if (ins->opname) {
 
         if (TEST_FLAG(lexer->flags, LEXER_FLAG_EMIT_PASM)) {
-
             fprintf(out, "    %s ", ins->opinfo->name);
             print_expressions(lexer, ins->operands);
         }
         else {
             fprintf(out, "%04u   %s ", ins->offset, ins->opname);
-
             print_expressions(lexer, ins->operands);
-
             fprintf(out, "\t# op %d", ins->opcode);
-
-
         }
         fprintf(out, "\n");
     }
@@ -329,15 +330,13 @@ print_subs(struct lexer_state * const lexer) {
         fprintf(out, "\n");
 
         if (subiter->flags) {
-
-
+            int i;
             fprintf(out, ".pcc_sub ");
-
-            if (TEST_FLAG(subiter->flags, PIRC_SUB_FLAG_MAIN))
-                fprintf(out, ":main ");
-            if (TEST_FLAG(subiter->flags, PIRC_SUB_FLAG_METHOD))
-                fprintf(out, ":method ");
-                /* XXX and so on; check which ones are available in PASM mode. */
+            for (i = 0; i < BIT(i); i++) {
+                if (TEST_FLAG(subiter->flags, BIT(i))) {
+                    fprintf(out, " :%s", subflag_names[i]);
+                }
+            }
 
         }
 
@@ -354,7 +353,8 @@ print_subs(struct lexer_state * const lexer) {
 =item C<static void
 emit_pir_instruction(lexer_state * const lexer, instruction * const instr)>
 
-Print the PIR representation of C<instr>.
+Print the PIR representation of C<instr>. If C<instr> has a label, that
+is printed first.
 
 =cut
 
@@ -376,6 +376,10 @@ emit_pir_instruction(lexer_state * const lexer, instruction * const instr) {
 
 =item C<static void
 emit_pir_statement(lexer_state * const lexer, subroutine * const sub)>
+
+Emit all statements of the subroutine C<sub>. The statements
+are emitted in PIR format. If there are no statements in C<sub>,
+this function returns.
 
 =cut
 
@@ -403,7 +407,8 @@ emit_pir_statement(lexer_state * const lexer, subroutine * const sub) {
 emit_pir_subs(lexer_state * const lexer)>
 
 Print the PIR representation of all subroutines stored
-in the C<lexer>.
+in the C<lexer>. If there are no subroutines, thre function
+does nothing and returns.
 
 =cut
 
@@ -425,12 +430,10 @@ emit_pir_subs(lexer_state * const lexer, char const * const outfile) {
         lexer->outfile = stdout;
     }
 
-
     do {
         int i;
         fprintf(out, "\n.namespace ");
         print_key(lexer, subiter->name_space);
-
 
         fprintf(out, "\n.sub %s", subiter->info.subname);
 
@@ -548,29 +551,27 @@ in the actual PackFile. See C<store_key_bytecode()>.
 */
 static int
 emit_pbc_key(lexer_state * const lexer, key * const k) {
-    key_entry  *iter      = k->head;
-    int         keylength = 0;
-
+    key_entry  *iter;
     opcode_t   *key;
     opcode_t    keysize;    /* total size of key in bytecode */
     opcode_t   *pc;         /* cursor to write into key array */
     expression *operand;
     int         index;
 
-    fprintf(stderr, "emit pbc key\n");
-
-    /* create an array of opcode_t for storing the bytecode
-     * representation of the key. Initialize the cursor (pc)
-     * to write into this buffer.
+    /* create an array of opcode_t for storing the bytecode representation
+     * of the key. Initialize the cursor (pc) to write into this buffer.
+     * The size is 2 opcode_t's for each key plus 1 opcode_t for storing the size.
      */
-    pc = key = (opcode_t *)pir_mem_allocate(lexer, k->keylength * sizeof (opcode_t) * 2);
+    pc  =
+    key = (opcode_t *)pir_mem_allocate(lexer, (k->keylength * 2 + 1) * sizeof (opcode_t));
 
     /* store key length in slot 0 */
     *pc++ = k->keylength;
 
+    /* initialize iterator */
+    iter  = k->head;
 
     while (iter) {
-
         switch (iter->expr->type) {
             case EXPR_CONSTANT: {
                 constant *c = iter->expr->expr.c;
@@ -582,6 +583,11 @@ emit_pbc_key(lexer_state * const lexer, key * const k) {
                     case STRING_VAL:
                         *pc++ = PARROT_ARG_SC;
                         *pc++ = add_string_const(lexer->bc, c->val.sval, "ascii");
+                        break;
+                    case USTRING_VAL:
+                        *pc++ = PARROT_ARG_SC;
+                        *pc++ = add_string_const(lexer->bc, c->val.ustr->contents,
+                                                            c->val.ustr->charset);
                         break;
                     default:
                         panic(lexer, "wrong type of key");
@@ -618,28 +624,18 @@ emit_pbc_key(lexer_state * const lexer, key * const k) {
 
         }
 
-        /* count the number of keys*/
-        ++keylength;
         iter = iter->next;
     }
-
-/*
-    fprintf(stderr, "keylength is: %d, found keylength is: %d\n", k->keylength, keylength);
-    assert(keylength == k->keylength);
-*/
 
     /* calculate size of key in bytecode; each field has 2 INTVALs:
      * flags/types and the register/constant index.
      */
     keysize = pc - key;
 
-    fprintf(stderr, "key=[");
-    for (index = 0; index < keysize; index++) {
-        fprintf(stderr, "%d|", key[index]);
-    }
+    /* store the key, and emit the index at which it's stored into the code segment */
     index = store_key_bytecode(lexer->bc, key);
+    emit_int_arg(lexer->bc, index);
 
-    fprintf(stderr, "store_key_bytecode index=%d\n", index);
     return index;
 
 }
@@ -653,7 +649,7 @@ emit_pbc_target_arg(lexer_state * const lexer, target * const t)>
 Emit the assigned register of target C<t>. The assigned register is
 stored in the C<color> field, of either the C<pir_reg> or C<symbol>
 structure, depending on whether C<t> is a register or a symbol,
-respectively.
+respectively. If C<t> has a key, the key is emitted as well.
 
 =cut
 
@@ -662,14 +658,9 @@ static void
 emit_pbc_target_arg(lexer_state * const lexer, target * const t) {
     emit_int_arg(lexer->bc, t->info->color);
 
+    /* if t has a key, emit that as well */
     if (t->key) {
-
-        /* XXX should do emit_pbc_key... always? */
-        /*emit_pbc_key(lexer, t->key);
-        */
-        /* this works for integers: */
-        emit_pbc_expr(lexer, t->key->head->expr);
-
+        emit_pbc_key(lexer, t->key);
     }
 }
 
@@ -693,19 +684,13 @@ emit_pbc_expr(lexer_state * const lexer, expression * const operand) {
             break;
         case EXPR_TARGET:
             emit_pbc_target_arg(lexer, operand->expr.t);
-
-            if (operand->expr.t->key)
-                emit_pbc_key(lexer, operand->expr.t->key);
-
             break;
         case EXPR_LABEL:
             emit_pbc_label_arg(lexer, operand->expr.l);
             break;
-
         case EXPR_KEY:
             emit_pbc_key(lexer, operand->expr.k);
             break;
-
         default:
             break;
     }
@@ -798,7 +783,8 @@ optimize_instr(lexer_state * const lexer, instruction * const instr) {
 =item C<static void
 emit_pbc_instr(lexer_state * const lexer, instruction * const instr)>
 
-Emit PBC for one instruction.
+Emit PBC for one instruction. If the C<opinfo> attribute of C<instr>
+is NULL, the function does nothing and returns.
 
 =cut
 
@@ -809,8 +795,6 @@ emit_pbc_instr(lexer_state * const lexer, instruction * const instr) {
     expression *operand;
     opcode_t offset;
 
-    /* emit the opcode */
-
     if (instr->opinfo == NULL)
         return;
 
@@ -820,7 +804,7 @@ emit_pbc_instr(lexer_state * const lexer, instruction * const instr) {
      */
     optimize_instr(lexer, instr);
 
-
+    /* emit the opcode */
     offset = emit_opcode(lexer->bc, instr->opcode);
 
     /* the offset at which the instruction is written must be equal
@@ -883,7 +867,7 @@ emit_pbc_sub(lexer_state * const lexer, subroutine * const sub) {
     }
     while (iter != sub->statements->next);
 
-
+    /* run :immediate subs */
     if (TEST_FLAG(sub->flags, PIRC_SUB_FLAG_IMMEDIATE)) {
         PackFile_fixup_subs(lexer->interp, PBC_IMMEDIATE, NULL);
     }
@@ -895,7 +879,9 @@ emit_pbc_sub(lexer_state * const lexer, subroutine * const sub) {
 =item C<static void
 emit_pbc_annotations(lexer_state * const lexer)>
 
-Emit all annotations into the PackFile.
+Emit all annotations into the PackFile. First a new annotations
+segment is created. Then, for each annotation, its value is stored
+in the constants table.
 
 =cut
 
@@ -1003,7 +989,9 @@ emit_pbc(lexer_state * const lexer) {
     write_pbc_file(lexer->bc, "a.pbc");  /* XXX fix output file specified by user */
 
     /* XXX just make sure no seg. faults  happened */
+/*
     fprintf(stderr, "done writing pbc\n");
+*/
 }
 
 /*

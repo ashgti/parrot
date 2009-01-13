@@ -16,6 +16,8 @@
 
 =head1 DESCRIPTION
 
+This file implements the API for PIRC. A program that wants to use
+PIRC's services should use only these functions.
 
 =head1 FUNCTIONS
 
@@ -136,8 +138,10 @@ parse_file(PARROT_INTERP, int flexdebug, FILE *infile, char * const filename, in
 
 
     /* XXX just want to make sure pirc doesn't segfault when doing bytecode stuff. */
+/*
     if (TEST_FLAG(lexer->flags, LEXER_FLAG_OUTPUTPBC))
         fprintf(stderr, "pirc ok\n");
+*/
 
     /* clean up after playing */
     release_resources(lexer);
@@ -214,8 +218,10 @@ parse_string(PARROT_INTERP, char *pirstring, int flags, int pasminput, unsigned 
         emit_pbc(lexer);
     }
 
-
+/*
     fprintf(stderr, "ok\n");
+*/
+
     /* clean up after playing */
     release_resources(lexer);
 

@@ -1,7 +1,7 @@
 .sub _DEBUGGER_STOP_FOR_REAL	# void Debugger_stop(int line, Hash local_values)
 	.param int line
 	.param pmc locals
-	find_global $P25, "DEBUGGER"
+	get_global $P25, "DEBUGGER"
 
 	set $P0, $P25["code"]
 	set $S0, $P0[line]
@@ -34,7 +34,7 @@ DEBUGGER_COMMAND:
 	add $I0, $I0, $I1
 	eq $I0, 0, DEBUGGER_COMMAND  # If no step mode, and no input, re-prompt
 
-	$P1 = _SPLITLINE($S0,1)	# P1 will have array of values
+	$P1 = _SPLITLINE($S0,1)	# $P1 will have array of values
 
 	set $I0, $P1
 	add $I0, $I0, $I1
@@ -104,7 +104,7 @@ DEBUGGER_DELWATCH:
 	branch DEBUGGER_COMMAND
 
 DEBUGGER_DELALLWATCH:
-	$P0=new .ResizablePMCArray
+	$P0=new 'ResizablePMCArray'
 	set $P25["watch"], $P0
 	print "All watches cleared.\n"
 	branch DEBUGGER_COMMAND
@@ -143,18 +143,18 @@ DEBUGGER_ERR:
 
 
 DEBUG_CLEAR:
-	set P0, P25["watch"]
-	set I0, P0
-        eq I0, 0, DEBUG_CLEAREND
-        set I1, 0
+	set $P0, $P25["watch"]
+	set $I0, $P0
+        eq $I0, 0, DEBUG_CLEAREND
+        set $I1, 0
 DEBUG_CLEARLOOP:
-        eq I1, I0, DEBUG_CLEAREND
-        set S1, P0[I1]
-        eq S1, S0, DEBUG_CLEARBLANK
-        inc I1
+        eq $I1, $I0, DEBUG_CLEAREND
+        set $S1, $P0[$I1]
+        eq $S1, $S0, DEBUG_CLEARBLANK
+        inc $I1
         branch DEBUG_CLEARLOOP
 DEBUG_CLEARBLANK:
-        set P0[I1], ""
+        set $P0[$I1], ""
         branch DEBUG_CLEAREND
 DEBUG_CLEAREND:
         ret
@@ -199,7 +199,7 @@ DEBUG_PRINTEND:
 	ret
 
 DEBUGGER_DONE:
-	store_global "DEBUGGER", $P25
+	set_global "DEBUGGER", $P25
 	ret
 .end
 

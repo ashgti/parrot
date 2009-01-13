@@ -172,12 +172,32 @@ XXX what to do with "encoding"?
 */
 int
 add_string_const(bytecode * const bc, char const * const str, char const * charset) {
-    int                index    = new_pbc_const(bc);
-    PackFile_Constant *constant = bc->interp->code->const_table->constants[index];
+    STRING *parrotstr = string_make(bc->interp, str, strlen(str), charset, PObj_constant_FLAG);
+    int index         = 0;
+    int count         = bc->interp->code->const_table->const_count;
+    PackFile_Constant *constant;
+
+    /* check whether the string is already stored; if so, return that index */
+    while (index < count) {
+        constant = bc->interp->code->const_table->constants[index];
+        if (constant->type == PFC_STRING) {
+            if (string_compare(bc->interp, constant->u.string, parrotstr) == 0)
+                return index;
+        }
+        index++;
+    }
+
+    /* it wasn't stored yet, store it now, and return the index */
+    index    = new_pbc_const(bc);
+    constant = bc->interp->code->const_table->constants[index];
 
     constant->type     = PFC_STRING;
-    constant->u.string = string_make(bc->interp, str, strlen(str), charset, PObj_constant_FLAG);
+    constant->u.string = parrotstr;
+    /*
+    fprintf(stderr, "add_string_const (%s) at index: %d\n", str, index);
+    */
     return index;
+
 }
 
 
@@ -210,7 +230,8 @@ add_num_const(bytecode * const bc, double f) {
 =item C<int
 add_key_const(bytecode * const bc, PMC *key)>
 
-Add a key constant to the constants list.
+Add a key constant to the constants list. The index where C<key> is
+stored in the constants table is returned.
 
 =cut
 
@@ -311,23 +332,23 @@ PMC in the bytecode's constant table.
 bytecode *
 new_bytecode(Interp *interp, char const * const filename) {
     PMC      *self;
-    bytecode *bc      = (bytecode *)mem_sys_allocate(sizeof (bytecode));
+    bytecode *bc = (bytecode *)mem_sys_allocate(sizeof (bytecode));
 
     /* Create a new packfile and load it into the parrot interpreter */
-    bc->packfile      = PackFile_new(interp, 0);
+    bc->packfile = PackFile_new(interp, 0);
     Parrot_loadbc(interp, bc->packfile);
 
     /* store a pointer to the parrot interpreter, which saves passing around
      * the interp as an extra argument.
      */
-    bc->interp        = interp;
+    bc->interp   = interp;
 
     /* create segments */
     PARROT_ASSERT(filename != NULL);
-    interp->code      = PF_create_default_segs(interp, filename, 1);
+    interp->code = PF_create_default_segs(interp, filename, 1);
 
     /* add interpreter globals to bytecode. XXX Why is this? */
-    self              = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_INTERPRETER);
+    self         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_INTERPRETER);
     add_pmc_const(bc, self);
 
     return bc;
@@ -338,7 +359,9 @@ new_bytecode(Interp *interp, char const * const filename) {
 =item C<void
 create_codesegment(bytecode * const bc, int codesize)>
 
-Create a code segment of size C<codesize>.
+Create a code segment of size C<codesize>. C<bc>'s C<opcursor> attribute
+is initialized; this is the pointer used to write opcodes and operands
+into the code segment.
 
 =cut
 
@@ -457,7 +480,9 @@ PARROT_IGNORABLE_RESULT
 opcode_t
 emit_opcode(bytecode * const bc, opcode_t op) {
     *bc->opcursor = op;
-    fprintf(stderr, "[%d]", op);
+/*
+    fprintf(stderr, "\n[%d]", op);
+*/
     return (bc->opcursor++ - bc->interp->code->base.data);
 
 }
@@ -477,7 +502,9 @@ PARROT_IGNORABLE_RESULT
 opcode_t
 emit_int_arg(bytecode * const bc, int intval) {
     *bc->opcursor = intval;
+/*
     fprintf(stderr, "{%d}", intval);
+*/
     return (bc->opcursor++ - bc->interp->code->base.data);
 }
 
@@ -592,10 +619,11 @@ generate_multi_signature(bytecode * const bc, multi_type * const types, unsigned
                 VTABLE_set_string_native(bc->interp, sig_pmc, typestring);
                 break;
             }
-            case MULTI_TYPE_KEYED:
+            case MULTI_TYPE_KEYED: {
                 /* XXX implement this */
 
                 break;
+            }
             default:
                 fprintf(stderr, "invalid multi entry type");
                 break; /* XXX fatal; throw excpetion? */
@@ -719,27 +747,21 @@ is passed in C<ns>.
 */
 static PMC *
 get_namespace_pmc(bytecode * const bc, multi_type * const ns) {
-    PMC *namespace_pmc;
-
     if (ns == NULL)
         return NULL;
 
     switch (ns->entry_type) {
-        case MULTI_TYPE_IDENT:
-            namespace_pmc = constant_pmc_new(bc->interp, enum_class_String);
+        case MULTI_TYPE_IDENT: {
+            PMC *namespace_pmc         = constant_pmc_new(bc->interp, enum_class_String);
             PMC_str_val(namespace_pmc) = add_string_const_from_cstring(bc, ns->entry.ident);
             break;
+        }
         case MULTI_TYPE_KEYED:
-            namespace_pmc = NULL;
-            /* XXX implement this */
-
-            break;
         default:
-            fprintf(stderr, "unknown key type"); /* XXX exception? */
-            namespace_pmc = NULL;
+            fprintf(stderr, "keys are not supported for namespaces"); /* XXX exception? */
             break;
     }
-    return namespace_pmc;
+    return NULL;
 }
 
 

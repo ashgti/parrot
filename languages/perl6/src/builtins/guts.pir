@@ -71,7 +71,7 @@ from C<Any>.
 .sub '!CALLMETHOD'
     .param string method
     .param pmc obj
-    $I0 = isa obj, 'ObjectRef'
+    $I0 = isa obj, 'Perl6Scalar'
     if $I0 goto any_method
     $I0 = can obj, method
     unless $I0 goto any_method
@@ -102,6 +102,24 @@ Helper function for implementing the VAR and .VAR macros.
     .return ($P0)
   nothing:
     .return (variable)
+.end
+
+
+=item !DEREF
+
+Helper function to dereference any chains
+
+=cut
+
+.sub '!DEREF'
+    .param pmc x
+  loop:
+    $I0 = isa x, ['ObjectRef']
+    unless $I0 goto done
+    x = deref x
+    goto loop
+  done:
+    .return (x)
 .end
 
 
@@ -184,6 +202,10 @@ to find a real, non-subtype and stash that away for fast access later.
     .local pmc parrotclass
     .const 'Sub' $P0 = "!SUBTYPE_ACCEPTS"
     subset.'add_method'('ACCEPTS', $P0)
+
+    # It's an abstraction.
+    $P0 = get_hll_global 'Abstraction'
+    subset.'add_role'($P0)
 
     # Instantiate it - we'll only ever create this one instance.
     subset = subset.'new'()
@@ -369,6 +391,7 @@ is composed (see C<!meta_compose> below).
     metaclass = newclass ns
     $P0 = box type
     setprop metaclass, 'pkgtype', $P0
+    '!set_resolves_list'(metaclass)
     .return (metaclass)
   is_also:
     metaclass = get_class ns
@@ -641,6 +664,28 @@ in an ambiguous multiple dispatch.
   arg_done:
     ns = exportns.'make_namespace'('ALL')
     ns[blockname] = block
+.end
+
+
+=item !set_resolves_list(class)
+
+Gets all the methods that the class has and adds them to the resolves list.
+
+=cut
+
+.sub '!set_resolves_list'
+    .param pmc class
+    .local pmc meths, it, res_list
+    meths = class.'methods'()
+    it = iter meths
+    res_list = new 'ResizableStringArray'
+  it_loop:
+    unless it goto it_loop_end
+    $S0 = shift it
+    push res_list, $S0
+    goto it_loop
+  it_loop_end:
+    class.'resolve_method'(res_list)
 .end
 
 
