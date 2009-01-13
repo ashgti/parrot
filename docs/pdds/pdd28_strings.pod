@@ -396,20 +396,6 @@ return value is the same as the first string argument (modifying that argument
 in place). If the first argument is COW or read-only, then the return value is
 a new string.
 
-=head3 Parrot_string_from_cstring (was string_from_cstring)
-
-Create a Parrot string from a C string (a C<char *>). Takes four
-arguments, a C string, and an integer length of the string (number of
-characters), a character set structure and an encoding structure. If the
-integer length isn't passed, the function will calculate the length.
-
-{{NOTE: the integer length isn't really necessary, and is under consideration
-for deprecation.}}
-
-=head3 Parrot_string_new_noinit (was string_make_empty)
-
-Returns a new empty string with the default encoding and chararacter set.
-
 =head3 Parrot_string_new_init (was string_make_direct)
 
 Returns a new string of the requested encoding, character set, and
