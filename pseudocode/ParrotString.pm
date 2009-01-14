@@ -22,18 +22,13 @@ class ParrotEncoding::UTF16  {  };
 class ParrotEncoding::UTF32  {  };
 class ParrotEncoding::EBCDIC {  };
 class ParrotEncoding::Byte   {
-    method string_iterate ($str, $callback, $parameter) {
+    method string_grapheme_iterate ($str, $callback, $parameter) {
         for (0..$str.bufused-1) {
             $callback($str.buffer.[$_], $parameter);
         }
     }
 };
 
-sub Parrot_string_grapheme_copy ($src, $dst) { ... } 
-
-sub Parrot_string_set($src, $dst) { 
-    return Parrot_string_reuse_COW($src, $dst); # Isn't it?
-} 
 
 ## COW stuff
 sub Parrot_string_new_COW($src) { ... }
@@ -45,6 +40,9 @@ sub Parrot_string_write_COW($src) {
     $src.flags +&= +^ StringCOW;
     return $src;
 }
+sub Parrot_string_set($src, $dst) { 
+    return Parrot_string_reuse_COW($src, $dst); # Isn't it?
+} 
 
 ## String operations
 
@@ -77,9 +75,26 @@ sub Parrot_string_resize($str, $bytes) {
     }
 }
 
-sub Parrot_string_length($str) {
+sub Parrot_string_grapheme_length($str) {
     # This code written funny to be a bit more C-like
     my $data = 0; my $callback = sub ($char, $data is rw) { $data++ };
-    $str.encoding.string_iterate($str, $callback, $data);
+    $str.encoding.string_grapheme_iterate($str, $callback, $data);
     return $data;
 }
+
+sub Parrot_string_byte_length($str) { return $str.strlen }
+
+sub Parrot_string_index($str, $index) { ... }
+sub Parrot_string_grapheme_index($str, $index) { ... }
+sub Parrot_string_find_substr($str, $substr) { ... }
+
+sub Parrot_string_copy($src, $dst) { ... }
+sub Parrot_string_grapheme_copy ($src, $dst) { ... } 
+sub Parrot_string_repeat($src, $reps) { ... }
+sub Parrot_string_substr($src, $offset, $len) { ... }
+sub Parrot_string_grapheme_substr($src, $offset, $len) { ... }
+sub Parrot_string_replace($src, $offset, $len, $replacement) { ... }
+sub Parrot_string_grapheme_replace($src, $offset, $len, $replacement) { ... }
+sub Parrot_string_chopn($src, $count) { ... }
+sub Parrot_string_chopn_inplace($src, $count) { ... }
+sub Parrot_string_grapheme_chopn($src, $count) { ... }
