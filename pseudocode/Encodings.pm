@@ -50,8 +50,11 @@ class ParrotEncoding::ParrotNative {
     method char_at_index($str, $index) { return $str.buffer.[$index] }
 
     method grapheme_at_index($str, $index) {
-        $str.charset.normalize($str, ParrotNormalization::NFG);
-        return $str.buffer.[$index]
+        if (!$str.normalization) { 
+            $str.charset.normalize($str, ParrotNormalization::NFG);
+            return $str.buffer.[$index]
+        }
+        return $str.normalization.grapheme_at_index($str, $index);
     }
 };
 class ParrotEncoding::Byte is ParrotEncoding::ParrotNative; # Just a bit thinner
