@@ -76,7 +76,7 @@ sub Parrot_string_grapheme_length($str) {
 sub Parrot_string_byte_length($str) { return $str.strlen }
 
 sub Parrot_string_index($str, $index) { return $str.encoding.char_at_index($str, $index) }
-sub Parrot_string_grapheme_index($str, $index) { ... }
+sub Parrot_string_grapheme_index($str, $index) { return $str.encoding.grapheme_at_index($str, $index) }
 sub Parrot_string_find_substr($str, $substr) { ... }
 
 sub Parrot_string_copy($src, $dst) { ... }

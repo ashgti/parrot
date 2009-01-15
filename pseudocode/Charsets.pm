@@ -45,10 +45,10 @@ class ParrotCharset::Unicode {
         while $offset < $len {
             # Find end of current grapheme sequence
             my $e = 0+$offset; 
-            $e++ while $e+1 <= $len && is_combining($nfc[$e+1]);
+            $e++ while $e+1 <= $len && is_combining(@nfc[$e+1]);
             # Current grapheme sequence runs from $offset to $e.
             if ($e - $offset) == 0 { # Simple case first
-                push @nfg, $nfc[$offset];
+                push @nfg, @nfc[$offset];
            } else {
                 push @nfg, $str.normalization.get_grapheme_table_entry(@nfg[$offset..$e], $e-$offset)
            }

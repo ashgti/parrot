@@ -40,21 +40,31 @@ class ParrotEncoding::EBCDIC {  };
 class ParrotEncoding::ParrotNative {
 
     method string_char_iterate ($str, $callback, $parameter) {
-        for (0..$str.bufused-1) { $callback($str.buffer.[$_], $parameter); }
+        for (0..$str.bufused-1) { 
+            my $grapheme = grapheme_at_index($str, $_);
+            for (@( $grapheme )) {
+                $callback($str.buffer.[$_], $parameter); 
+            }
+        }
     }
 
     method string_grapheme_iterate($str, $callback, $parameter) {
         for (0..$str.bufused-1) { $callback($str.buffer.[$_], $parameter); }
     }
 
-    method char_at_index($str, $index) { return $str.buffer.[$index] }
+    method char_at_index($str, $index) { 
+        ...
+    }
 
     method grapheme_at_index($str, $index) {
         if (!$str.normalization) { 
             $str.charset.normalize($str, ParrotNormalization::NFG);
-            return $str.buffer.[$index]
         }
-        return $str.normalization.grapheme_at_index($str, $index);
+        my $c = $str.buffer[$index];
+        if $c >= 0 { return [ $c ]; }
+        return $str.charset.normalization.grapheme_table.[-$c];
+        # We are allowed to be pally with the normalization internals
+        # because NFG is specific to ParrotEncoding.
     }
 };
 class ParrotEncoding::Byte is ParrotEncoding::ParrotNative; # Just a bit thinner
