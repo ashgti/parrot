@@ -43,7 +43,7 @@ sub Parrot_string_new_init($s, $len, $charset, $encoding) {
     $news.charset  = $charset;
     $news.encoding = $encoding;
     $news.buffer   = map { ord $_ }, split("", $s);
-    $news.bufused = $news.strlen = $len || length($s);
+    $news.bufused = $news.strlen = $len || $s.chars;
     return $news;
 }
 
