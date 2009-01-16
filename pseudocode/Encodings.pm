@@ -1,6 +1,6 @@
 class ParrotEncoding::Base::Fixed {
     our $.width;
-    method string_length($str) { return $str.bufused / $str.encoding.width; }
+    method string_length($str) { return $str.strlen / $str.encoding.width; }
 
     method string_char_iterate($str, $callback, $parameter) {
         for (0..self.string_length($str)-1) { 
@@ -20,6 +20,8 @@ class ParrotEncoding::Base::Fixed {
             $callback($str.encoding.grapheme_at_index($str,$_), $parameter); 
         }
     }
+
+    method chopn_inplace($str, $n) { $str.strlen -= $n * $.width }
 }
 
 class ParrotEncoding::Base::Variable {

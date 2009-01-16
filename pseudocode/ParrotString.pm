@@ -85,7 +85,9 @@ sub Parrot_string_grapheme_substr($src, $offset, $len) { ... }
 sub Parrot_string_replace($src, $offset, $len, $replacement) { ... }
 sub Parrot_string_grapheme_replace($src, $offset, $len, $replacement) { ... }
 sub Parrot_string_chopn($src, $count) { ... }
-sub Parrot_string_chopn_inplace($src, $count) { ... }
+sub Parrot_string_chopn_inplace($str, $count) {
+    return $str.encoding.chopn_inplace($str, $count);
+}
 
 sub Parrot_string_grapheme_chopn($src, $count) { 
     return Parrot_string_replace($src, Parrot_string_grapheme_length($src) - $count, $count, undef);

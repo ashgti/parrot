@@ -1,12 +1,15 @@
 use Test;
 use ParrotString;
-plan 8;
+plan 10;
 
 my $str = Parrot_string_new_init("flurble", 4, ParrotCharset::ASCII, ParrotEncoding::Byte);
 ok($str.charset ~~ ParrotCharset::ASCII, "Charset set properly");
-is(Parrot_string_grapheme_length($str), 4, "String length correct");
+is(Parrot_string_grapheme_length($str), 4, "Grapheme length correct");
 is(Parrot_string_byte_length($str), 4, "String length correct");
 is(Parrot_string_index($str, 1), ord("l"), "String indexing");
+Parrot_string_chopn_inplace($str, 2);
+is(Parrot_string_grapheme_length($str), 2, "Grapheme length correct post-chop");
+is(Parrot_string_byte_length($str), 2, "String length correct post-chop");
 
 $str = Parrot_string_new_init("\xce\xb3\xce\xb5\xce\xb9\xce\xac \xcf\x83\xce\xbf\xcf\x85 \xce\xba\xcf\x8c\xcf\x83\xce\xbc\xce\xbf\xcf\x82", 28, ParrotCharset::Unicode, ParrotEncoding::UTF8);
 ok($str.charset ~~ ParrotCharset::Unicode, "We're unicode");
