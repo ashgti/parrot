@@ -4,19 +4,70 @@
 
 src/classes/Role.pir - methods for the Role class
 
+=head1 Description
+
+This class represents a role in Perl 6. It is not substitutable for a Parrot
+role, nor does it subclass it. Instead, it provides a way to get at a Parrot
+level role through a multiple dispatch (or perhaps from a cache). You can see
+it as a kind of "role factory", which manufactures roles of a particular
+short name for a particular set of parameters.
+
 =head1 Methods
 
 =over 4
 
 =cut
 
-.namespace ['Role']
+.namespace ['Perl6Role']
 
 .sub 'onload' :anon :init :load
     .local pmc p6meta, roleproto
     p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    roleproto = p6meta.'new_class'('Perl6Role', 'parent'=>'Role Any', 'name'=>'Role')
-    p6meta.'register'('Role', 'parent'=>roleproto, 'protoobject'=>roleproto)
+    roleproto = p6meta.'new_class'('Perl6Role', 'parent'=>'Any', 'name'=>'Role', 'attr'=>'$!selector @!created')
+    p6meta.'register'('Role', 'proto'=>'roleproto')
+.end
+
+
+=item !add_variant
+
+Adds a parameterized variant of the role.
+
+=cut
+
+.sub '!add_variant' :method
+    .param pmc variant
+    .local pmc selector
+    selector = getattribute self, '$!selector'
+    unless null selector goto have_selector
+    selector = new 'Perl6MultiSub'
+    setattribute self, '$!selector', selector
+  have_selector:
+    push selector, variant
+.end
+
+
+=item !select
+
+Selects a variant of the role to do based upon the supplied parameters.
+
+=cut
+
+.sub '!select' :method
+    .param pmc pos_args  :slurpy
+    .param pmc name_args :slurpy :named
+
+    # XXX We need to look through the parameters we have and keep track
+    # of variants we did already initialize/parameterize with.
+    .local pmc selector, result, created_list
+    selector = getattribute self, '$!selector'
+    result = selector(pos_args :flat, name_args :flat :named)
+    created_list = getattribute self, '@!created'
+    unless null created_list goto got_created_list
+    created_list = new 'ResizablePMCArray'
+    setattribute self, '@!created', created_list
+  got_created_list:
+    push created_list, result
+    .return (result)
 .end
 
 
@@ -36,9 +87,52 @@ Checks if the given topic does the role.
     topic = topic.'WHAT'()
   no_proto:
 
-    $I0 = does topic, self
+    # Now go over the roles we've created and see if one of them is done.
+    .local pmc created, it
+    created = getattribute self, '@!created'
+    if null created goto it_loop_end
+    it = iter created
+    $I0 = 0
+  it_loop:
+    unless it goto it_loop_end
+    $P0 = shift it
+    $I0 = does topic, $P0
+    if $I0 == 0 goto it_loop
+  it_loop_end:
+
     $P0 = 'prefix:?'($I0)
     .return ($P0)
+.end
+
+
+=item postcircumfix:<[ ]>
+
+Selects a role based upon type.
+
+=cut
+
+.sub 'postcircumfix:[ ]' :method
+    .param pmc pos_args  :slurpy
+    .param pmc name_args :slurpy :named
+
+    # Need to unwrap the arguments (they are wrapped by postcircumfix:[ ]
+    # multi), then call !select.
+    pos_args = pos_args[0]
+    .tailcall self.'!select'(pos_args :flat, name_args :flat :named)
+.end
+
+
+=item elements (vtable method)
+
+Gives the number of possible parameterized roles we can select from (but really
+just here so postcircumfix:[ ] doesn't explode).
+
+=cut
+
+.sub 'elements' :vtable
+    $P0 = getattribute self, '$!selector'
+    $I0 = elements $P0
+    .return ($I0)
 .end
 
 =back

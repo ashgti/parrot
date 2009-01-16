@@ -11,22 +11,21 @@ use Parrot::Config;
 
 =head1 NAME
 
-t/pmc/packfileconstanttable.t - test the PackfileConstantTable PMC
+t/pmc/packfilefixuptable.t - test the PackfileFixupTable PMC
 
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/packfileconstanttable.t
+    % prove t/pmc/packfilefixuptable.t
 
 =head1 DESCRIPTION
 
-Tests the PackfileConstantTable PMC.
+Tests the PackfileFixupTable PMC.
 
 =cut
 
 # Having some known data would be helpful, here.  For now, just make sure
-# the values returned from get_type look right, and that the corresponding
-# fetches for the found types don't crash.
+# the values returned have the right types.
 
 
 # common setup code for later tests
@@ -50,7 +49,7 @@ my $get_uuid_pbc = <<'EOF';
 EOF
 
 
-# sanity check we have a PackfileConstantTable
+# sanity check we have a PackfileFixupTable
 
 pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'sanity' );
 .sub 'test' :main
@@ -58,16 +57,16 @@ pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'sanity' );
     .local string name
     pf      = _pbc()
     pfdir   = pf.'get_directory'()
-    pftable = pfdir[2]
+    pftable = pfdir[1]
     name    = typeof pftable
     say name
 .end
 CODE
-PackfileConstantTable
+PackfileFixupTable
 OUT
 
 
-# PackfileConstantTable.elements
+# PackfileFixupTable.elements
 
 pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'elements' );
 .sub 'test' :main
@@ -75,7 +74,7 @@ pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'elements' );
     .local int size
     pf      = _pbc()
     pfdir   = pf.'get_directory'()
-    pftable = pfdir[2]
+    pftable = pfdir[1]
     size    = elements pftable
     gt size, 0, DONE
     say 'not '
@@ -87,48 +86,32 @@ greater
 OUT
 
 
-# PackfileConstantTable.get_type and PackfileConstantTable.get_*_keyed_int
+# PackfileFixupTable.get_pmc_keyed_int
 
-pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'get_type, get_*_keyed_int' );
+pir_output_is( <<'CODE' . $get_uuid_pbc, <<'OUT', 'get_pmc_keyed_int' );
 .sub 'test' :main
-    .local pmc pf, pfdir, pftable
-    .local int size, this, type
+    .local pmc pf, pfdir, pftable, pfentry
+    .local int size, this
+    .local string type
     pf      = _pbc()
     pfdir   = pf.'get_directory'()
-    pftable = pfdir[2]
+    pftable = pfdir[1]
     size    = elements pftable
     this    = 0
     LOOP:
-    type = pftable.'get_type'(this)
-    eq type, 0x00, NEXT
-    eq type, 0x6E, CONST_NUM
-    eq type, 0x73, CONST_STR
-    eq type, 0x70, CONST_PMC
-    eq type, 0x6B, CONST_KEY
-    goto BAD
-    CONST_NUM:
-    $N0 = pftable[this]
-    goto NEXT
-    CONST_STR:
-    $S0 = pftable[this]
-    goto NEXT
-    CONST_PMC:
-    $P0 = pftable[this]
-    goto NEXT
-    CONST_KEY:
-    $P0 = pftable[this]
-    $S0 = typeof $P0
-    eq $S0, 'Key', NEXT
-    print 'constant Key with wrong type: '
-    say $S0
-    goto BAD
+    pfentry = pftable[this]
+    type    = typeof pfentry
+    eq type, "PackfileFixupEntry", NEXT
+    print "PackfileFixupTable["
+    print this
+    print "] returned an object of type: "
+    say type
+    goto DONE
     NEXT:
     this = this + 1
     ge this, size, DONE
     goto LOOP
     gt size, 0, DONE
-    BAD:
-    say 'unknown constant type found!'
     DONE:
     say 'done.'
 .end

@@ -4,7 +4,7 @@
  */
 #include <stdio.h>
 #include <assert.h>
-
+#include "pirsymbol.h"
 
 #include "parrot/parrot.h"
 
@@ -181,21 +181,26 @@ add_string_const(bytecode * const bc, char const * const str, char const * chars
     while (index < count) {
         constant = bc->interp->code->const_table->constants[index];
         if (constant->type == PFC_STRING) {
-            if (string_compare(bc->interp, constant->u.string, parrotstr) == 0)
+            if (string_equal(bc->interp, constant->u.string, parrotstr) == 0) {
+                fprintf(stderr, "found string %s at index %d\n", str, index);
                 return index;
+            }
         }
-        index++;
+        ++index;
     }
 
+    /* fprintf(stderr, "string '%s' not found, storing...\n", str);
+    */
     /* it wasn't stored yet, store it now, and return the index */
     index    = new_pbc_const(bc);
     constant = bc->interp->code->const_table->constants[index];
 
     constant->type     = PFC_STRING;
     constant->u.string = parrotstr;
-    /*
-    fprintf(stderr, "add_string_const (%s) at index: %d\n", str, index);
+
+    /*fprintf(stderr, "add_string_const (%s) at index: %d\n", str, index);
     */
+
     return index;
 
 }
@@ -224,7 +229,6 @@ add_num_const(bytecode * const bc, double f) {
 }
 
 
-
 /*
 
 =item C<int
@@ -238,10 +242,31 @@ stored in the constants table is returned.
 */
 int
 add_key_const(bytecode * const bc, PMC *key) {
-    int index                   = new_pbc_const(bc);
-    PackFile_Constant *constant = bc->interp->code->const_table->constants[index];
-    constant->type              = PFC_KEY;
-    constant->u.key             = key;
+    PackFile_Constant *constant;
+    int count  = bc->interp->code->const_table->const_count;
+    int index  = 0;
+    STRING *s1 = key_set_to_string(bc->interp, key);
+
+    /* iterate over all constants; if a constant is a key, compare the string representations */
+    while (index < count) {
+        constant = bc->interp->code->const_table->constants[index];
+
+        if (constant->type == PFC_KEY) {
+            STRING *s2 = key_set_to_string(bc->interp, constant->u.key);
+            if (string_equal(bc->interp, s1, s2) == 0) {
+                fprintf(stderr, "found equal key (%d)\n", index);
+                return index;
+            }
+        }
+        ++index;
+    }
+
+    /* key wasn't found, so add it now */
+    index            = new_pbc_const(bc);
+    constant         = bc->interp->code->const_table->constants[index];
+    constant->type   = PFC_KEY;
+    constant->u.key  = key;
+    fprintf(stderr, "new key const (%d)\n", index);
     return index;
 }
 
@@ -480,9 +505,8 @@ PARROT_IGNORABLE_RESULT
 opcode_t
 emit_opcode(bytecode * const bc, opcode_t op) {
     *bc->opcursor = op;
-/*
+
     fprintf(stderr, "\n[%d]", op);
-*/
     return (bc->opcursor++ - bc->interp->code->base.data);
 
 }
@@ -502,9 +526,10 @@ PARROT_IGNORABLE_RESULT
 opcode_t
 emit_int_arg(bytecode * const bc, int intval) {
     *bc->opcursor = intval;
-/*
+
     fprintf(stderr, "{%d}", intval);
-*/
+
+
     return (bc->opcursor++ - bc->interp->code->base.data);
 }
 
@@ -640,7 +665,7 @@ generate_multi_signature(bytecode * const bc, multi_type * const types, unsigned
 /*
 
 =item C<static PMC *
-create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int lexflag)>
+create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int needlex)>
 
 Create a lexinfo PMC for the sub C<sub>. If there are no lexicals,
 but the C<:lex> flag was specified, or the sub has an C<:outer> flag,
@@ -650,12 +675,10 @@ then a lexinfo is created after all. The created lexinfo is returned.
 
 */
 static PMC *
-create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int lexflag) {
+create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int needlex) {
     lexical      * lexiter     = lexicals;
     INTVAL   const lex_info_id = Parrot_get_ctx_HLL_type(bc->interp, enum_class_LexInfo);
     STRING * const method      = string_from_literal(bc->interp, "declare_lex_preg");
-
-    int      outer = 0; /* change type of this */
 
     /* create a lexinfo PMC */
     PMC * lex_info             = pmc_new_noinit(bc->interp, lex_info_id);
@@ -666,12 +689,12 @@ create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int lex
         STRING *lexname = string_from_cstring(bc->interp, lexiter->name, strlen(lexiter->name));
 
         /* declare the .lex as such */
-        /*
-        fprintf(stderr, "Create lexinfo: color of .lex '%s' is: %d\n", lexiter->name,
-                lexiter->info->color);
-        */
 
-        Parrot_PCCINVOKE(bc->interp, lex_info, method, "SI->", lexname, lexiter->color);
+        fprintf(stderr, "Create lexinfo: color of .lex '%s' is: %d\n", lexiter->name,
+                *lexiter->color);
+
+
+        Parrot_PCCINVOKE(bc->interp, lex_info, method, "SI->", lexname, *lexiter->color);
 
         lexiter = lexiter->next;
     }
@@ -680,7 +703,7 @@ create_lexinfo(bytecode * const bc, PMC * sub, lexical * const lexicals, int lex
      * and doesn't need a lex_info. If, however, the sub has an :outer or a
      * :lex flag, then create the lex_info anyway.
      */
-    if (lex_info == NULL && (outer || lexflag)) {
+    if (lex_info == NULL && needlex) {
         lex_info = pmc_new_noinit(bc->interp, lex_info_id);
         VTABLE_init_pmc(bc->interp, lex_info, sub);
     }
@@ -695,26 +718,47 @@ find_outer_sub(bytecode * const bc, char const * const outername)>
 
 Find the outer sub that has name C<outername>. If not found, NULL is returned.
 
+XXX this function needs access to C<lexer>, which adds a dependency.
+XXX This should be fixed, to make bcgen.c a complete independent module.
+
 =cut
 
 */
 static PMC *
-find_outer_sub(bytecode * const bc, char const * const outername) {
-    PMC    *current;
-    STRING *cur_name;
-    size_t  len;
+find_outer_sub(bytecode * const bc, char const * const outername, struct lexer_state * const lexer)
+{
+    PMC          *current;
+    STRING       *cur_name;
+    size_t        len;
+    global_label *outersub;
+
 
     /* if sub has no :outer, leave */
     if (outername == NULL)
         return NULL;
 
-
+    /* if outername is an empty string, leave */
     len = strlen(outername);
     if (len == 0)
         return NULL;
 
+    /* find the outer sub */
+    outersub = find_global_label(lexer, outername);
 
-    /* XXX go here through the global labels, and check whether it can be found */
+    if (outersub) {
+        int const num_constants = bc->interp->code->const_table->const_count;
+
+        /* sanity check for const_table_index */
+        if (outersub->const_table_index >= 0 && outersub->const_table_index < num_constants)
+        {
+            PackFile_Constant *subconst
+                       = bc->interp->code->const_table->constants[outersub->const_table_index];
+            /* set a flag on that outer sub that it's an outer sub */
+            PObj_get_FLAGS(subconst->u.key) |= SUB_FLAG_IS_OUTER;
+            return subconst->u.key;
+        }
+
+    }
 
     /* could be eval too; check if :outer is the current sub */
     current = CONTEXT(bc->interp)->current_sub;
@@ -726,6 +770,7 @@ find_outer_sub(bytecode * const bc, char const * const outername) {
 
     cur_name = PMC_sub(current)->name;
 
+    /* XXX can't this be a call to string_compare() ? */
     if (cur_name->strlen == len && (memcmp((char *)cur_name->strstart, outername, len) == 0))
         return current;
 
@@ -833,7 +878,9 @@ The C<subpragmas> parameter encode flags such as C<:immediate> etc.
 
 */
 int
-add_sub_pmc(bytecode * const bc, sub_info * const info, int needlex, int subpragmas) {
+add_sub_pmc(bytecode * const bc, sub_info * const info, int needlex, int subpragmas,
+            struct lexer_state * const lexer)
+{
     PMC                   *sub_pmc;        /* the "Sub" pmc, or a variant, such as "Coroutine" */
     Parrot_sub            *sub;
     int                    subconst_index; /* index in const table for the sub pmc */
@@ -853,8 +900,11 @@ add_sub_pmc(bytecode * const bc, sub_info * const info, int needlex, int subprag
     sub->end_offs         = info->endoffset;
     sub->namespace_name   = get_namespace_pmc(bc, info->name_space);
     sub->HLL_id           = CONTEXT(bc->interp)->current_HLL;
-    sub->lex_info         = create_lexinfo(bc, sub_pmc, info->lexicals, needlex);
-    sub->outer_sub        = find_outer_sub(bc, info->outersub);
+    /* create a lexinfo object, if needlex is true, or this sub has an :outer */
+    sub->lex_info         = create_lexinfo(bc, sub_pmc, info->lexicals,
+                                           needlex | (info->outersub != NULL));
+
+    sub->outer_sub        = find_outer_sub(bc, info->outersub, lexer);
 
     /* Set the vtable index; if this .sub was declared as :vtable, its vtable
      * index was found during the parse; otherwise it's -1.

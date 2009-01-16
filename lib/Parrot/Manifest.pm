@@ -13,19 +13,20 @@ sub new {
     my $self = bless( {}, $class );
 
     my %data = (
-        id     => '$' . 'Id$',
-        time   => scalar gmtime,
-        cmd    => -d '.svn' ? 'svn' : 'svk',
-        script => $argsref->{script},
-        file   => $argsref->{file} ? $argsref->{file} : q{MANIFEST},
-        skip   => $argsref->{skip} ? $argsref->{skip} : q{MANIFEST.SKIP},
+        id         => '$' . 'Id$',
+        time       => scalar gmtime,
+        cmd        => -d '.svn' ? 'svn' : 'svk',
+        script     => $argsref->{script},
+        file       => $argsref->{file}      ? $argsref->{file}      : q{MANIFEST},
+        skip       => $argsref->{skip}      ? $argsref->{skip}      : q{MANIFEST.SKIP},
+        gitignore  => $argsref->{gitignore} ? $argsref->{gitignore} : q{.gitignore},
     );
 
     my $status_output_ref = [qx($data{cmd} status -v)];
 
     # grab the versioned resources:
-    my @versioned_files  = ();
-    my @dirs             = ();
+    my @versioned_files;
+    my @dirs;
     my @versioned_output = grep !/^[?D]/, @{$status_output_ref};
     for my $line (@versioned_output) {
         my @line_info = split( /\s+/, $line );
@@ -50,36 +51,37 @@ sub new {
 
     # initialize the object from the prepared values (Damian, p. 98)
     %$self = %data;
+
     return $self;
 }
 
 sub prepare_manifest {
     my $self = shift;
-    my %manifest_lines;
 
+    my %manifest_lines;
     for my $file ( @{ $self->{versioned_files} } ) {
         $manifest_lines{$file} = _get_manifest_entry($file);
     }
+
     return \%manifest_lines;
 }
 
 sub determine_need_for_manifest {
     my $self               = shift;
     my $proposed_files_ref = shift;
-    if ( !-f $self->{file} ) {
-        return 1;
+
+    return 1 unless -f $self->{file};
+
+    my $current_files_ref        = $self->_get_current_files();
+    my $different_patterns_count = 0;
+    foreach my $cur ( keys %{$current_files_ref} ) {
+        $different_patterns_count++ unless $proposed_files_ref->{$cur};
     }
-    else {
-        my $current_files_ref        = $self->_get_current_files();
-        my $different_patterns_count = 0;
-        foreach my $cur ( keys %{$current_files_ref} ) {
-            $different_patterns_count++ unless $proposed_files_ref->{$cur};
-        }
-        foreach my $pro ( keys %{$proposed_files_ref} ) {
-            $different_patterns_count++ unless $current_files_ref->{$pro};
-        }
-        $different_patterns_count ? return 1 : return;
+    foreach my $pro ( keys %{$proposed_files_ref} ) {
+        $different_patterns_count++ unless $current_files_ref->{$pro};
     }
+
+    $different_patterns_count ? return 1 : return;
 }
 
 my $text_file_coda = <<'CODA';
@@ -92,6 +94,7 @@ CODA
 sub print_manifest {
     my $self               = shift;
     my $manifest_lines_ref = shift;
+
     my $print_str          = <<"END_HEADER";
 # ex: set ro:
 # $self->{id}
@@ -112,11 +115,13 @@ END_HEADER
         or croak "Unable to open $self->{file} for writing";
     print $MANIFEST $print_str;
     close $MANIFEST or croak "Unable to close $self->{file} after writing";
+
     return 1;
 }
 
 sub _get_manifest_entry {
     my $file    = shift;
+
     my $special = _get_special();
     my $loc     = '[]';
     for ($file) {
@@ -136,6 +141,7 @@ sub _get_manifest_entry {
             : m[^(apps/\w+)/] ? "[$1]"
             :                   '[]';
     }
+
     return $loc;
 }
 
@@ -180,53 +186,51 @@ sub _get_special {
         tools/build/revision_c.pl                       [devel]
         src/vtable.tbl                                  [devel]
     );
+
     return \%special;
 }
 
 sub _get_current_files {
     my $self          = shift;
-    my %current_files = ();
+
+    my %current_files;
     open my $FILE, "<", $self->{file}
         or die "Unable to open $self->{file} for reading";
     while ( my $line = <$FILE> ) {
         chomp $line;
+
         next if $line =~ /^\s*$/o;
+
         next if $line =~ /^#/o;
-        my @els = split /\s+/, $line;
-        $current_files{ $els[0] }++;
+
+        my ($file) = split /\s+/, $line;
+        $current_files{ $file }++;
     }
     close $FILE or die "Unable to close $self->{file} after reading";
+
     return \%current_files;
 }
 
 sub prepare_manifest_skip {
     my $self      = shift;
-    my $svnignore = `$self->{cmd} propget svn:ignore @{ $self->{dirs} }`;
 
-    # cope with trailing newlines in svn:ignore output
-    $svnignore =~ s/\n{3,}/\n\n/g;
-    my %ignore;
-    my @ignore = split( /\n\n/, $svnignore );
-    foreach (@ignore) {
-        my @cnt = m/( - )/g;
-        if ($#cnt) {
-            my @a = split /\n(?=(?:.*?) - )/, $_;
-            foreach (@a) {
-                m/^\s*(.*?) - (.+)/sm;
-                $ignore{$1} = $2 if $2;
-            }
-        }
-        else {
-            m/^(.*) - (.+)/sm;
-            $ignore{$1} = $2 if $2;
-        }
-    }
-    return $self->_compose_print_str( \%ignore );
+    my $ignores_ref = $self->_get_ignores();
+
+    return $self->_compose_manifest_skip($ignores_ref);
+}
+
+sub prepare_gitignore {
+    my $self      = shift;
+
+    my $ignores_ref = $self->_get_ignores();
+
+    return $self->_compose_gitignore($ignores_ref);
 }
 
 sub determine_need_for_manifest_skip {
     my $self      = shift;
     my $print_str = shift;
+
     if ( !-f $self->{skip} ) {
         return 1;
     }
@@ -240,6 +244,7 @@ sub determine_need_for_manifest_skip {
         foreach my $pro ( keys %{$proposed_skips_ref} ) {
             $different_patterns_count++ unless $current_skips_ref->{$pro};
         }
+
         $different_patterns_count ? return 1 : return;
     }
 }
@@ -247,18 +252,94 @@ sub determine_need_for_manifest_skip {
 sub print_manifest_skip {
     my $self      = shift;
     my $print_str = shift;
+
     open my $MANIFEST_SKIP, '>', $self->{skip}
         or die "Unable to open $self->{skip} for writing";
     $print_str .= $text_file_coda;
     print $MANIFEST_SKIP $print_str;
     close $MANIFEST_SKIP
         or die "Unable to close $self->{skip} after writing";
+
     return 1;
 }
 
-sub _compose_print_str {
+sub print_gitignore {
+    my $self      = shift;
+    my $print_str = shift;
+
+    open my $GITIGNORE, '>', $self->{gitignore}
+        or die "Unable to open $self->{gitignore} for writing";
+    $print_str .= $text_file_coda;
+    print $GITIGNORE $print_str;
+    close $GITIGNORE
+        or die "Unable to close $self->{gitignore} after writing";
+
+    return 1;
+}
+
+sub _get_ignores {
+    my $self      = shift;
+
+    my $svnignore = `$self->{cmd} propget svn:ignore @{ $self->{dirs} }`;
+
+    # cope with trailing newlines in svn:ignore output
+    $svnignore =~ s/\n{3,}/\n\n/g;
+    my %ignores;
+    my @ignore = split( /\n\n/, $svnignore );
+    foreach (@ignore) {
+        my @cnt = m/( - )/g;
+        if ($#cnt) {
+            my @a = split /\n(?=(?:.*?) - )/, $_;
+            foreach (@a) {
+                m/^\s*(.*?) - (.+)/sm;
+                $ignores{$1} = $2 if $2;
+            }
+        }
+        else {
+            m/^(.*) - (.+)/sm;
+            $ignores{$1} = $2 if $2;
+        }
+    }
+
+    return \%ignores;
+}
+
+sub _compose_gitignore {
+    my $self        = shift;
+    my $ignores_ref = shift;
+
+    my $print_str  = <<"END_HEADER";
+# ex: set ro:
+# $self->{id}
+# generated by $self->{script} $self->{time} UT
+#
+# This file should contain a transcript of the svn:ignore properties
+# of the directories in the Parrot subversion repository.
+# The .gitignore file is a convenience for developers  working with git-svn.
+# See http://www.kernel.org/pub/software/scm/git/docs/gitignore.html for the
+# format of this file.
+#
+END_HEADER
+
+    foreach my $directory ( sort keys %{$ignores_ref} ) {
+        my $dir = $directory;
+        $dir =~ s!\\!/!g;
+        $print_str .= "# generated from svn:ignore of '$dir/'\n";
+        foreach ( sort split /\n/, $ignores_ref->{$directory} ) {
+            $print_str .=
+                ( $dir ne '.' )
+                ? "/$dir/$_\n"
+                : "/$_\n";
+        }
+    }
+
+    return $print_str;
+}
+
+sub _compose_manifest_skip {
     my $self       = shift;
     my $ignore_ref = shift;
+
     my %ignore     = %{$ignore_ref};
     my $print_str  = <<"END_HEADER";
 # ex: set ro:
@@ -292,12 +373,14 @@ END_HEADER
                 : "^$_\$\n^$_/\n";
         }
     }
+
     return $print_str;
 }
 
 sub _get_current_skips {
     my $self          = shift;
-    my %current_skips = ();
+
+    my %current_skips;
     open my $SKIP, "<", $self->{skip}
         or die "Unable to open $self->{skip} for reading";
     while ( my $line = <$SKIP> ) {
@@ -307,11 +390,13 @@ sub _get_current_skips {
         $current_skips{$line}++;
     }
     close $SKIP or die "Unable to close $self->{skip} after reading";
+
     return \%current_skips;
 }
 
 sub _get_proposed_skips {
     my $print_str      = shift;
+
     my @proposed_lines = split /\n/, $print_str;
     my %proposed_skips = ();
     for my $line (@proposed_lines) {
@@ -319,6 +404,7 @@ sub _get_proposed_skips {
         next if $line =~ /^#/o;
         $proposed_skips{$line}++;
     }
+
     return \%proposed_skips;
 }
 
@@ -337,12 +423,15 @@ Parrot::Manifest - Re-create MANIFEST and MANIFEST.SKIP
     $mani = Parrot::Manifest->new($0);
 
     $manifest_lines_ref = $mani->prepare_manifest();
-    $need_for_files = $mani->determine_need_for_manifest($manifest_lines_ref);
+    $need_for_files     = $mani->determine_need_for_manifest($manifest_lines_ref);
     $mani->print_manifest($manifest_lines_ref) if $need_for_files;
 
-    $print_str = $mani->prepare_manifest_skip();
+    $print_str     = $mani->prepare_manifest_skip();
     $need_for_skip = $mani->determine_need_for_manifest_skip($print_str);
     $mani->print_manifest_skip($print_str) if $need_for_skip;
+
+    $print_str     = $mani->prepare_gitignore();
+    $mani->print_gitignore($print_str) if $need_for_skip;
 
 =head1 SEE ALSO
 

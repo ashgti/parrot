@@ -343,11 +343,6 @@ Parrot_gc_trace_root(PARROT_INTERP, Parrot_gc_trace_type trace)
     PARROT_ASSERT(interp->DOD_registry);
     pobject_lives(interp, (PObj *)interp->DOD_registry);
 
-    /* Mark the transaction log */
-    /* XXX do this more generically? */
-    if (interp->thread_data && interp->thread_data->stm_log)
-        Parrot_STM_mark_transaction(interp);
-
     /* Mark the MMD cache. */
     if (interp->op_mmd_cache)
         Parrot_mmd_cache_mark(interp, interp->op_mmd_cache);
@@ -672,7 +667,7 @@ mark_special(PARROT_INTERP, ARGIN(PMC *obj))
             arena_base->dod_mark_ptr = PMC_next_for_GC(obj) = obj;
         }
     }
-    else if (PObj_custom_mark_TEST(obj)) {
+    if (PObj_custom_mark_TEST(obj)) {
         PObj_get_FLAGS(obj) |= PObj_custom_GC_FLAG;
         VTABLE_mark(interp, obj);
     }
@@ -961,8 +956,6 @@ Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)
     const int      lazy_dod   = arena_base->lazy_dod;
     PMC           *current    = arena_base->dod_mark_start;
 
-    const UINTVAL mask = PObj_data_is_PMC_array_FLAG | PObj_custom_mark_FLAG;
-
     /*
      * First phase of mark is finished. Now if we are the owner
      * of a shared pool, we must run the mark phase of other
@@ -978,7 +971,6 @@ Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)
     pt_DOD_mark_root_finished(interp);
 
     do {
-        const UINTVAL bits = PObj_get_FLAGS(current) & mask;
         PMC *next;
 
         if (lazy_dod && arena_base->num_early_PMCs_seen >=
@@ -999,17 +991,9 @@ Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)
         if (PMC_metadata(current))
             pobject_lives(interp, (PObj *)PMC_metadata(current));
 
-        /* Start by checking if there's anything at all. This assumes that the
-         * largest percentage of PMCs won't have anything in their data
-         * pointer that we need to trace. */
-        if (bits) {
-            if (bits == PObj_data_is_PMC_array_FLAG)
-                Parrot_gc_trace_pmc_data(interp, current);
-            else {
-                /* All that's left is the custom */
-                PARROT_ASSERT(!PObj_on_free_list_TEST(current));
-                VTABLE_mark(interp, current);
-            }
+         if (PObj_custom_mark_TEST(current)) {
+            PARROT_ASSERT(!PObj_on_free_list_TEST(current));
+            VTABLE_mark(interp, current);
         }
 
         next = PMC_next_for_GC(current);
@@ -1028,37 +1012,6 @@ Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)
 
     return 1;
 }
-
-
-/*
-
-=item C<void Parrot_gc_trace_pmc_data>
-
-If the PMC is an array of PMCs, trace all elements in the array as children.
-Touches each object in the array to mark it as being alive. To determine
-whether a PMC is an array to be marked in this way, it is tested for the
-C<PObj_data_is_PMC_array_FLAG> flag.
-
-=cut
-
-*/
-
-void
-Parrot_gc_trace_pmc_data(PARROT_INTERP, ARGIN(PMC *p))
-{
-    ASSERT_ARGS(Parrot_gc_trace_pmc_data)
-    /* malloced array of PMCs */
-    PMC ** const data = PMC_data_typed(p, PMC **);
-
-    if (data) {
-        INTVAL i;
-
-        for (i = PMC_int_val(p) - 1; i >= 0; --i)
-            if (data[i])
-                pobject_lives(interp, (PObj *)data[i]);
-    }
-}
-
 
 /*
 

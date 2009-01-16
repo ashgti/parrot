@@ -400,6 +400,8 @@ src/builtins/op.pir - Perl 6 builtin operators
     .local pmc derived
     derived = new 'Class'
     addparent derived, parrot_class
+    $I0 = isa role, 'Perl6Role'
+    if $I0 goto one_role_select
     $I0 = isa role, 'Role'
     if $I0 goto one_role
     $I0 = isa role, 'List'
@@ -407,6 +409,8 @@ src/builtins/op.pir - Perl 6 builtin operators
   error:
     'die'("'does' expects a role or a list of roles")
 
+  one_role_select:
+    role = role.'!select'()
   one_role:
     '!keyword_does'(derived, role)
     goto added_roles
@@ -418,23 +422,32 @@ src/builtins/op.pir - Perl 6 builtin operators
     unless role_it goto roles_loop_end
     cur_role = shift role_it
     $I0 = isa cur_role, 'Role'
+    if $I0 goto have_parrot_role
+    $I0 = isa cur_role, 'Perl6Role'
     unless $I0 goto error
+    cur_role = cur_role.'!select'()
+  have_parrot_role:
     '!keyword_does'(derived, cur_role)
     goto roles_loop
   roles_loop_end:
   added_roles:
 
-    # Register proto-object.
-    .local pmc p6meta, proto
-    p6meta = get_hll_global ['Perl6Object'], '$!P6META'
-    proto = var.'WHAT'()
-    p6meta.'register'(derived, 'protoobject'=>proto)
-
     # Instantiate the class to make it form itself.
     $P0 = new derived
 
+    # Create a new meta-class, but associate with existing proto-object.
+    .local pmc p6meta, old_proto, new_proto
+    p6meta = get_hll_global ['Perl6Object'], '$!P6META'
+    new_proto = p6meta.'register'(derived)
+    $P0 = new_proto.'HOW'()
+    old_proto = var.'WHAT'()
+    setattribute $P0, 'protoobject', old_proto
+
     # Re-bless the object into the subclass.
     rebless_subclass var, derived
+
+    # We need to set any initial attribute values up.
+    new_proto.'BUILD'(var)
 
     # If we were given something to initialize with, do so.
     unless have_init_value goto no_init
@@ -445,9 +458,9 @@ src/builtins/op.pir - Perl 6 builtin operators
     $I0 = elements attrs
     if $I0 != 1 goto attr_error
     attr_name = attrs[0]
-    attr_name = substr attr_name, 2 # lop of sigil and twigil
+    attr_name = substr attr_name, 2 # lop off sigil and twigil
     $P0 = var.attr_name()
-    assign $P0, init_value
+    'infix:='($P0, init_value)
   no_init:
 
     # We're done - return.
@@ -465,25 +478,19 @@ attr_error:
     .param int have_value :opt_flag
 
     # First off, is the role actually a role?
+    $I0 = isa role, 'Perl6Role'
+    if $I0 goto have_role
     $I0 = isa role, 'Role'
     if $I0 goto have_role
 
     # If not, it may be an enum. If we don't have a value, get the class of
     # the thing passed as a role and find out.
     if have_value goto error
-    .local pmc the_class, prop, role_list
+    .local pmc the_class
     push_eh error
     the_class = class role
-    prop = getprop 'enum', the_class
-    if null prop goto error
-    unless prop goto error
-
-    # We have an enum; get the one role of the class and set the value.
-    role_list = inspect the_class, 'roles'
-    value = role
-    role = role_list[0]
-    pop_eh
-    goto have_role
+    role = getprop 'enum', the_class
+    unless null role goto have_role
 
     # Did anything go wrong?
   error:

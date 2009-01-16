@@ -1,6 +1,6 @@
 ##! perl
 # $Id$
-# Copyright (C) 2006-2009, The Perl Foundation.
+# Copyright (C) 2009, The Perl Foundation.
 
 use strict;
 use warnings;
@@ -12,15 +12,10 @@ my $script = $0;
 
 my $mani = Parrot::Manifest->new( { script => $script, } );
 
-my $manifest_lines_ref = $mani->prepare_manifest();
-my $need_for_files     = $mani->determine_need_for_manifest($manifest_lines_ref);
-$mani->print_manifest($manifest_lines_ref) if $need_for_files;
+my $print_str     = $mani->prepare_gitignore();
+$mani->print_gitignore($print_str);
 
-my $print_str     = $mani->prepare_manifest_skip();
-my $need_for_skip = $mani->determine_need_for_manifest_skip($print_str);
-$mani->print_manifest_skip($print_str) if $need_for_skip;
-
-#################### DOCUMENTATION ####################
+__END__
 
 =head1 NAME
 

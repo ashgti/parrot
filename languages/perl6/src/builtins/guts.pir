@@ -205,6 +205,7 @@ to find a real, non-subtype and stash that away for fast access later.
 
     # It's an abstraction.
     $P0 = get_hll_global 'Abstraction'
+    $P0 = $P0.'!select'()
     subset.'add_role'($P0)
 
     # Instantiate it - we'll only ever create this one instance.
@@ -355,6 +356,43 @@ of captures.
 .end
 
 
+=item !ADDTOROLE
+
+Adds a given role initializing multi-variant to a Role object, creating it
+and putting it in the namespace if it doesn't already exist.
+
+=cut
+
+.sub '!ADDTOROLE'
+    .param pmc variant
+
+    # Get short name of role.
+    .local pmc ns
+    .local string short_name
+    ns = variant.'get_namespace'()
+    ns = ns.'get_name'()
+    short_name = pop ns
+    $I0 = index short_name, '['
+    if $I0 == -1 goto have_short_name
+    short_name = substr short_name, 0, $I0
+  have_short_name:
+
+    # See if we have a Role object already.
+    .local pmc role_obj
+    role_obj = get_root_global ns, short_name
+    if null role_obj goto need_role_obj
+    $I0 = isa role_obj, 'NameSpace'
+    unless $I0 goto have_role_obj
+  need_role_obj:
+    role_obj = new 'Perl6Role'
+    set_root_global ns, short_name, role_obj
+  have_role_obj:
+
+    # Add this variant.
+    role_obj.'!add_variant'(variant)
+.end
+
+
 =item !meta_create(type, name, also)
 
 Create a metaclass object for C<type> with the given C<name>.
@@ -398,16 +436,37 @@ is composed (see C<!meta_compose> below).
     .return (metaclass)
 
   role:
+    # This is a little fun. We only want to create the Parrot role and suck
+    # in the methods once per role definition. We do this and it is attached to
+    # the namespace. Then we attach this "master role" to a new one we create
+    # per invocation, so the methods can be newclosure'd and added into it in
+    # the body.
     .local pmc info, metarole
+    ns = get_hll_namespace nsarray
+    metarole = get_class ns
+    unless null metarole goto have_role
+
     info = new 'Hash'
     $P0 = nsarray[-1]
     info['name'] = $P0
     info['namespace'] = nsarray
     metarole = new 'Role', info
-    nsarray = clone nsarray
-    $S0 = pop nsarray
-    set_hll_global nsarray, $S0, metarole
-    .return (metarole)
+  have_role:
+
+    # Copy list of roles done by the metarole.
+    .local pmc result, tmp, it
+    result = new 'Role'
+    setprop result, '$!orig_role', metarole
+    tmp = metarole.'roles'()
+    it = iter tmp
+  roles_loop:
+    unless it goto roles_loop_end
+    tmp = shift it
+    result.'add_role'(tmp)
+    goto roles_loop
+  roles_loop_end:
+
+    .return (result)
 .end
 
 
@@ -457,6 +516,7 @@ Default meta composer -- does nothing.
 .sub '!meta_compose' :multi()
     .param pmc metaclass
     # Currently, nothing to do.
+    .return (metaclass)
 .end
 
 
@@ -470,6 +530,8 @@ Add a trait with the given C<type> and C<name> to C<metaclass>.
     .param pmc metaclass
     .param string type
     .param string name
+    .param pmc pos_args   :slurpy
+    .param pmc named_args :slurpy :named
 
     if type == 'trait_auxiliary:is' goto is
     if type == 'trait_auxiliary:does' goto does
@@ -487,11 +549,14 @@ Add a trait with the given C<type> and C<name> to C<metaclass>.
     .return ()
 
   does:
-    ##  get the role to be composed
+    ##  get the Role object for the role to be composed
     $P0 = compreg 'Perl6'
     $P0 = $P0.'parse_name'(name)
     $S0 = pop $P0
     $P0 = get_hll_global $P0, $S0
+
+    ##  select the correct role based upon any parameters
+    $P0 = $P0.'!select'(pos_args :flat, named_args :flat :named)
 
     ##  add it to the class.
     metaclass.'add_role'($P0)
@@ -699,10 +764,11 @@ Helper method to compose the attributes of a role into a class.
     .param pmc class
     .param pmc role
 
-    .local pmc role_attrs, class_attrs, ra_iter
+    .local pmc role_attrs, class_attrs, ra_iter, fixup_list
     .local string cur_attr
-    role_attrs = inspect role, "attributes"
-    class_attrs = inspect class, "attributes"
+    role_attrs = role."attributes"()
+    class_attrs = class."attributes"()
+    fixup_list = new ["ResizableStringArray"]
     ra_iter = iter role_attrs
   ra_iter_loop:
     unless ra_iter goto ra_iter_loop_end
@@ -737,9 +803,30 @@ Helper method to compose the attributes of a role into a class.
 
   no_conflict:
     addattribute class, cur_attr
+    push fixup_list, cur_attr
   merge:
     goto ra_iter_loop
   ra_iter_loop_end:
+
+    # Now we need, for any merged in attributes, to copy property data.
+    .local pmc fixup_iter, class_props, role_props, props_iter
+    class_attrs = class."attributes"()
+    fixup_iter = iter fixup_list
+  fixup_iter_loop:
+    unless fixup_iter goto fixup_iter_loop_end
+    cur_attr = shift fixup_iter
+    role_props = role_attrs[cur_attr]
+    class_props = class_attrs[cur_attr]
+    props_iter = iter role_props
+  props_iter_loop:
+    unless props_iter goto props_iter_loop_end
+    $S0 = shift props_iter
+    $P0 = role_props[$S0]
+    class_props[$S0] = $P0
+    goto props_iter_loop
+  props_iter_loop_end:
+    goto fixup_iter_loop
+  fixup_iter_loop_end:
 .end
 
 
@@ -751,26 +838,38 @@ Internal helper method to create a role.
 
 .sub '!keyword_role'
     .param string name
-    .local pmc info, role
+    .local pmc info, role, helper
 
-    # Need to make sure it ends up attached to the right namespace.
+    # Create Parrot-level role. Need to make sure it gets its methods from
+    # the right namespace.
     .local pmc ns
     ns = split '::', name
     name = ns[-1]
     info = new 'Hash'
     info['name'] = name
     info['namespace'] = ns
-
-    # Create role.
     role = new 'Role', info
 
-    # Stash in namespace.
-    $I0 = elements ns
-    dec $I0
-    ns = $I0
-    set_hll_global ns, name, role
+    # Now we need to wrap it up as a Perl6Role.
+    helper = find_name '!keyword_role_helper'
+    helper = clone helper
+    setprop helper, '$!metarole', role
+    $P0 = new ["Signature"]
+    setprop helper, '$!signature', $P0
+    role = new ["Perl6Role"]
+    role.'!add_variant'(helper)
 
+    # Store it in the namespace.
+    ns = clone ns
+    $S0 = pop ns
+    set_hll_global ns, $S0, role
     .return(role)
+.end
+.sub '!keyword_role_helper'
+    $P0 = new 'ParrotInterpreter'
+    $P0 = $P0['sub']
+    $P0 = getprop '$!metarole', $P0
+    .return ($P0)
 .end
 
 
@@ -813,51 +912,10 @@ Internal helper method to implement the functionality of the does keyword.
     'die'('does keyword can only be used with roles.')
   role_ok:
 
-    # Get Parrot to compose the role for us (handles the methods).
+    # Get Parrot to compose the role for us (handles the methods), then call
+    # attribute composer.
     addrole class, role
-
-    # Parrot doesn't handle composing the attributes; we do that here for now.
-    .local pmc role_attrs, class_attrs, ra_iter
-    .local string cur_attr
-    role_attrs = inspect role, "attributes"
-    class_attrs = inspect class, "attributes"
-    ra_iter = iter role_attrs
-  ra_iter_loop:
-    unless ra_iter goto ra_iter_loop_end
-    cur_attr = shift ra_iter
-
-    # Check that this attribute doesn't conflict with one already in the class.
-    $I0 = exists class_attrs[cur_attr]
-    unless $I0 goto no_conflict
-
-    # We have a name conflict. Let's compare the types. If they match, then we
-    # can merge the attributes.
-    .local pmc class_attr_type, role_attr_type
-    $P0 = class_attrs[cur_attr]
-    if null $P0 goto conflict
-    class_attr_type = $P0['type']
-    if null class_attr_type goto conflict
-    $P0 = role_attrs[cur_attr]
-    if null $P0 goto conflict
-    role_attr_type = $P0['type']
-    if null role_attr_type goto conflict
-    $I0 = '!SAMETYPE_EXACT'(class_attr_type, role_attr_type)
-    if $I0 goto merge
-
-  conflict:
-    $S0 = "Conflict of attribute '"
-    $S0 = concat cur_attr
-    $S0 = concat "' in composition of role '"
-    $S1 = role
-    $S0 = concat $S1
-    $S0 = concat "'"
-    'die'($S0)
-
-  no_conflict:
-    addattribute class, cur_attr
-  merge:
-    goto ra_iter_loop
-  ra_iter_loop_end:
+    '!compose_role_attributes'(class, role)
 .end
 
 
@@ -873,10 +931,9 @@ Adds an attribute with the given name to the class or role.
     .param pmc type     :optional
     .param int got_type :opt_flag
     if got_type goto with_type
-    class.'add_attribute'(attr_name)
-    .return ()
+    .tailcall '!meta_attribute'(class, attr_name, 'Perl6Scalar')
   with_type:
-    class.'add_attribute'(attr_name, type)
+    .tailcall '!meta_attribute'(class, attr_name, 'Perl6Scalar', 'type'=>type)
 .end
 
 

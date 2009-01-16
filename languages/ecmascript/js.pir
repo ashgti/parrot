@@ -65,6 +65,10 @@ js is a compiler for ECMAScript-262 (3rd edition) running on Parrot.
     #jsmeta = get_hll_global ['JSObject'], '!JSMETA'
     #jsmeta.'new_class'('JS::Compiler', 'parent'=>'PCT::HLLCompiler')
 
+    #.local pmc jsmeta
+    #jsmeta = get_hll_global ['JSObject'], '!JSMETA'
+    #jsmeta.'new_class'('JS::Compiler', 'parent'=>'PCT::HLLCompiler')
+
     $P0 = get_hll_global ['PCT'], 'HLLCompiler'
     $P1 = $P0.'new'()
     $P1.'language'('JS')
