@@ -422,7 +422,7 @@ string is calculated internally.
 Resize the string buffer of the given string adding the number of bytes passed
 in the integer argument. If the argument is negative, remove the given number
 of bytes. Throws an exception if shrinking the string buffer size will
-truncate the string (if C<strlen> will be longer than C<buflen>).
+truncate the string (if C<strlen> will be longer than C<bufused>).
 
 =head3 Parrot_string_length (was string_compute_strlen)
 
