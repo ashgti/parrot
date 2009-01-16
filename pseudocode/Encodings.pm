@@ -32,7 +32,7 @@ class ParrotEncoding::Base::Variable {
     }
 }
 
-class ParrotEncoding::UTF8   {  
+class ParrotEncoding::UTF8 is ParrotEncoding::Base::Variable {  
     sub _skip($c) {
         if $c <= 191 { return 1 }
         if 191 < $c < 224 { return 2 }

@@ -60,10 +60,7 @@ sub Parrot_string_resize($str, $bytes) {
 }
 
 sub Parrot_string_length($str) {
-    # This code written funny to be a bit more C-like
-    my $data = 0; my $callback = sub ($char, $data is rw) { $data++ };
-    $str.encoding.string_char_iterate($str, $callback, $data);
-    return $data;
+    return $str.encoding.string_length($str); # Let fixies optimize themselves
 }
 
 sub Parrot_string_grapheme_length($str) {
