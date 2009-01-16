@@ -1,3 +1,37 @@
+class ParrotEncoding::Base::Fixed {
+    our $.width;
+    method string_length($str) { return $str.bufused / $str.encoding.width; }
+
+    method string_char_iterate($str, $callback, $parameter) {
+        for (0..self.string_length($str)-1) { 
+            $callback(self.char_at_index($str,$_), $parameter); 
+        }
+    }
+
+    # We assume in the base case that grapheme==char, which is true for
+    # legacy, non-Unicode fixed width formats. Unicode fixed width
+    # formats that care about graphemes can override.
+   
+    method grapheme_at_index($str, $index) { 
+        return [ self.char_at_index($str, $index) ]; 
+    }
+    method string_grapheme_iterate($str, $callback, $parameter) {
+        for (0..self.string_length($str)-1) { 
+            $callback($str.encoding.grapheme_at_index($str,$_), $parameter); 
+        }
+    }
+}
+
+class ParrotEncoding::Base::Variable {
+    method string_length($str) {
+        # This code written funny to be a bit more C-like
+        my $data = 0; 
+        my $callback = sub ($char, $data is rw) { $data++ };
+        $str.encoding.string_char_iterate($str, $callback, $data);
+        return $data;
+    }
+}
+
 class ParrotEncoding::UTF8   {  
     sub _skip($c) {
         if $c <= 191 { return 1 }
@@ -37,7 +71,9 @@ class ParrotEncoding::UTF8   {
 class ParrotEncoding::UTF16  {  };
 class ParrotEncoding::UTF32  {  };
 class ParrotEncoding::EBCDIC {  };
-class ParrotEncoding::ParrotNative {
+
+class ParrotEncoding::ParrotNative is ParrotEncoding::Base::Fixed {
+    our $.width = 1;
 
     method string_char_iterate ($str, $callback, $parameter) {
         for (0..$str.bufused-1) { 
@@ -48,11 +84,10 @@ class ParrotEncoding::ParrotNative {
         }
     }
 
-    method string_grapheme_iterate($str, $callback, $parameter) {
-        for (0..$str.bufused-1) { $callback($str.buffer.[$_], $parameter); }
-    }
-
     method char_at_index($str, $index) { 
+        # We need to look inside each grapheme, since NFG stores individual
+        # graphemes and graphemes are composed of multiple characters - 
+        # this could be improved with caching later but we will 
         ...
     }
 
@@ -67,5 +102,8 @@ class ParrotEncoding::ParrotNative {
         # because NFG is specific to ParrotEncoding.
     }
 };
-class ParrotEncoding::Byte is ParrotEncoding::ParrotNative; # Just a bit thinner
 
+class ParrotEncoding::Byte is ParrotEncoding::Base::Fixed {
+    our $.width = 1;
+    method char_at_index($str, $index) { return $str.buffer[$index]; }
+};
