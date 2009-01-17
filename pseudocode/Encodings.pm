@@ -59,6 +59,38 @@ class ParrotEncoding::UTF8 is ParrotEncoding::Base::Variable {
             $callback(char_at_byteoffset($str, $index), $parameter);
         }
     }
+    method string_grapheme_iterate ($str, $callback, $parameter) {
+        if ($str.charset !~~ ParrotCharset::Unicode) {
+            # Although why you'd store non-Unicode in UTF8 is beyond me
+            my $to_unicode = sub ($c, $subcallback) {
+                $subcallback.[0].( [ $str.charset.to_unicode($c) ], $subcallback.[1]);
+            };
+            self.string_char_iterate($str, $to_unicode, [ $callback, $parameter ]);
+        }
+        # Collect characters into graphemes in a roughly O(n) way...
+        my $index = 0;
+        while ($index < $str.bufused-1) {
+            my $c = char_at_byteoffset($str, $index);
+
+            # If we're the last character, do the callback and give up
+            if ($index >= $str.bufused) { $callback([$c], $parameter); return; }
+
+            # At this point we know there is at least one following character.
+            # How many of them are combining?
+            my @grapheme = ( $c );
+            my $next_char;
+            my $nc_index = $index;
+            my $end_of_grapheme_sequence = $index;
+            while ($nc_index <= $str.bufused and
+                   $next_char = char_at_byteoffset($str, $nc_index)
+                   and ParrotCharset::Unicode::is_combining($next_char)) {
+                   $end_of_grapheme_sequence = $nc_index;
+                   push @grapheme, @([ $next_char ]); # Work around horrible push/copy bug
+           }
+           $callback([@grapheme], $parameter);
+           $index = $end_of_grapheme_sequence;
+        }
+    }
 
     # We're not going to cache this because if it's worth caching it's
     # worth converting to a Parrot native string rather than keeping
