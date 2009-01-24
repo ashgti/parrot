@@ -1,5 +1,6 @@
 class ParrotEncoding::Base::Fixed {
     our $.width;
+    method setup($str) { }
     method string_length($str) { return $str.strlen / $str.encoding.width; }
 
     method string_char_iterate($str, $callback, $parameter) {
@@ -25,6 +26,7 @@ class ParrotEncoding::Base::Fixed {
 }
 
 class ParrotEncoding::Base::Variable {
+    method setup($str) { }
     method string_length($str) {
         # This code written funny to be a bit more C-like
         my $data = 0; 
@@ -109,6 +111,19 @@ class ParrotEncoding::EBCDIC {  };
 class ParrotEncoding::ParrotNative is ParrotEncoding::Base::Fixed {
     our $.width = 1;
 
+    method setup($str) { $str.normalization = ParrotNormalization::NFG.new(); }
+    method append_grapheme ($str, $g) {
+        my $item;
+        if (@($g) > 1) {
+            $item = $str.normalization.get_grapheme_table_entry(@($g));
+        } else {
+            ($item) = @($g);
+        }
+        $str.buffer.push($item);
+        $str.bufused++;
+        $str.strlen++;
+    }
+
     method string_char_iterate ($str, $callback, $parameter) {
         for (0..$str.bufused-1) { 
             my $grapheme = grapheme_at_index($str, $_);
@@ -131,7 +146,7 @@ class ParrotEncoding::ParrotNative is ParrotEncoding::Base::Fixed {
         }
         my $c = $str.buffer[$index];
         if $c >= 0 { return [ $c ]; }
-        return $str.charset.normalization.grapheme_table.[-$c];
+        return $str.normalization.grapheme_table.[-$c];
         # We are allowed to be pally with the normalization internals
         # because NFG is specific to ParrotEncoding.
     }

@@ -22,7 +22,7 @@ class ParrotCharset::Unicode {
         # want, but it's easier than that: the forms are hierarchical;
         # to go to NFC you have to go through NFD, and to go to NFG you
         # have to go through NFC. So...
-        if (!$str.normalization or $str.normalization !~~ Normalization::NFD) {
+        if (!$str.normalization or $str.normalization !~~ ParrotNormalization::NFD) {
             # Everyone starts in fully decomposed form (NFD)
             # This is code-heavy and we'll do it in ICU in Parrot.
             # Here, we just pretend we've already done it.

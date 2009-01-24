@@ -1,6 +1,6 @@
 use Test;
 use ParrotString;
-plan 10;
+plan 11;
 
 my $str = Parrot_string_new_init("flurble", 4, ParrotCharset::ASCII, ParrotEncoding::Byte);
 ok($str.charset ~~ ParrotCharset::ASCII, "Charset set properly");
@@ -21,3 +21,4 @@ is(Parrot_string_index($str, 3), 0x3ac, "UTF8 string indexing");
 $str = Parrot_string_new_init("ABC \xd0\xb8\xcc\x8f", 8, ParrotCharset::Unicode, ParrotEncoding::UTF8);
 my $str2 = Parrot_string_new_init("", 0, ParrotCharset::Unicode, ParrotEncoding::ParrotNative);
 Parrot_string_grapheme_copy($str, $str2);
+is(Parrot_string_grapheme_length($str2), 5, "Four UTF8 bytes = one grapheme");

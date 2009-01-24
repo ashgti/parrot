@@ -8,11 +8,12 @@ class ParrotString {
     has $.hashval is rw;
     has ParrotString::Encoding      $.encoding is rw;
     has ParrotString::Charset       $.charset  is rw;
-    has ParrotString::Normalization $.normalization is rw;
+    has $.normalization is rw;
 };
 
 use Charsets;
 use Encodings;
+use Normalizations;
 
 ## COW stuff
 sub Parrot_string_new_COW($src) { ... }
@@ -42,6 +43,7 @@ sub Parrot_string_new_init($s, $len, $charset, $encoding) {
     my $news = ParrotString.new();
     $news.charset  = $charset;
     $news.encoding = $encoding;
+    $news.encoding.setup($news);
     $news.buffer   = map { ord $_ }, split("", $s);
     $news.bufused = $news.strlen = $len || $s.chars;
     return $news;
@@ -81,7 +83,7 @@ sub Parrot_string_grapheme_copy ($src, $dst) {
      if ($src.encoding ~~ $dst.encoding and $src.charset ~~ $dst.charset) {
         return Parrot_string_append($src, $dst);
      }
-     my $append_to = sub ($g, $dst) { $dst.encoding.append_grapheme($src, $g) };
+     my $append_to = sub ($g, $dst) { $dst.encoding.append_grapheme($dst, $g) };
      $src.encoding.string_grapheme_iterate($src, $append_to, $dst);
      return $src;
 }
