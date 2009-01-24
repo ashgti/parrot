@@ -42,25 +42,52 @@ class ParrotEncoding::UTF8 is ParrotEncoding::Base::Variable {
         if 191 < $c < 224 { return 2 }
         return 3
     }
+    sub _bytes_needed($c) {
+        if $c < 0x80 { return 1 }
+        if $c < 0x0800 { return 2 }
+        return 3;
+    }
     sub char_at_byteoffset ($str, $offset is rw) { # Private helper
+        if ($offset > $str.strlen) { Parrot_debug_string($str); die "BUG: Asked for a byte "~$offset~" that's not there" };
         my $c = $str.buffer.[$offset++];
         if 191 < $c < 224 {
-            # XXX Guard
+            if ($offset + 1 > $str.strlen) { die "BUG: UTF8 encoding ran off end of string" }
             $c = (($c +& 31) +< 6) +| ( $str.buffer.[$offset++] +& 63 );
         } elsif $c >= 224 {
-            # XXX Guard
+            if ($offset + 2 > $str.strlen) { die "BUG: UTF8 encoding ran off end of string" }
             $c = (($c +& 15) +< 12) 
                 +| (( $str.buffer.[$offset++] +& 63 ) +< 6);
             $c  +|= $str.buffer.[$offset++] +& 63;
         }
         return $c;
     }
+
+    method append_char($str, $c) {
+        $str.bufused += _bytes_needed($c);
+        $str.strlen  += _bytes_needed($c);
+        if ($c < 0x80) {
+            push $str.buffer, $c;
+        } elsif ($c < 0x0800) {
+            push $str.buffer, $c +> 6 +| 0xc0;
+            push $str.buffer, $c +& 0x3f +| 0x80;
+        } else {
+            push $str.buffer, $c +> 12 +| 0xe0;
+            push $str.buffer, $c +> 6 +& 0x3f +| 0x80;
+            push $str.buffer, $c +& 0x3f +| 0x80;
+        }
+    }
+
+    method append_grapheme($str, $g) { 
+        for (@($g)) { self.append_char($str, $_) }
+    }
+
     method string_char_iterate ($str, $callback, $parameter) {
         my $index = 0;
-        while ($index < $str.bufused-1) {
+        while ($index < $str.bufused) {
             $callback(char_at_byteoffset($str, $index), $parameter);
         }
     }
+
     method string_grapheme_iterate ($str, $callback, $parameter) {
         if ($str.charset !~~ ParrotCharset::Unicode) {
             # Although why you'd store non-Unicode in UTF8 is beyond me
@@ -71,7 +98,7 @@ class ParrotEncoding::UTF8 is ParrotEncoding::Base::Variable {
         }
         # Collect characters into graphemes in a roughly O(n) way...
         my $index = 0;
-        while ($index < $str.bufused-1) {
+        while ($index < $str.bufused) {
             my $c = char_at_byteoffset($str, $index);
 
             # If we're the last character, do the callback and give up
@@ -83,7 +110,7 @@ class ParrotEncoding::UTF8 is ParrotEncoding::Base::Variable {
             my $next_char;
             my $nc_index = $index;
             my $end_of_grapheme_sequence = $index;
-            while ($nc_index <= $str.bufused and
+            while ($nc_index < $str.bufused and
                    $next_char = char_at_byteoffset($str, $nc_index)
                    and ParrotCharset::Unicode::is_combining($next_char)) {
                    $end_of_grapheme_sequence = $nc_index;
@@ -113,13 +140,13 @@ class ParrotEncoding::ParrotNative is ParrotEncoding::Base::Fixed {
 
     method setup($str) { $str.normalization = ParrotNormalization::NFG.new(); }
     method append_grapheme ($str, $g) {
-        my $item;
         if (@($g) > 1) {
+            my $item;
             $item = $str.normalization.get_grapheme_table_entry(@($g));
+            $str.buffer.push($item);
         } else {
-            ($item) = @($g);
+            $str.buffer.push(@( $g ));
         }
-        $str.buffer.push($item);
         $str.bufused++;
         $str.strlen++;
     }
@@ -146,7 +173,7 @@ class ParrotEncoding::ParrotNative is ParrotEncoding::Base::Fixed {
         }
         my $c = $str.buffer[$index];
         if $c >= 0 { return [ $c ]; }
-        return $str.normalization.grapheme_table.[-$c];
+        return $str.normalization.grapheme_table.[-$c - 1];
         # We are allowed to be pally with the normalization internals
         # because NFG is specific to ParrotEncoding.
     }

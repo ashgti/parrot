@@ -100,3 +100,29 @@ sub Parrot_string_chopn_inplace($str, $count) {
 sub Parrot_string_grapheme_chopn($src, $count) { 
     return Parrot_string_replace($src, Parrot_string_grapheme_length($src) - $count, $count, undef);
 }
+
+sub Parrot_debug_string($src) {
+    say "String charset: "~$src.charset;
+    say "String encoding: "~$src.encoding;
+    say "String normalization: "~$src.normalization;
+    say "String buffer used: "~$src.bufused;
+    say "String length: "~$src.strlen;
+    say "String buffer contents: ";
+    for ( $src.buffer) { print " ["~$_~"]"; }
+    say "";
+}
+
+sub Parrot_string_byte_equal($one, $two) {
+    if ($one.strlen != $two.strlen) { return 0; }
+    for (0 .. $one.strlen-1) {
+        if ($one.buffer.[$_] != $two.buffer.[$_]) { 
+            say "Oops, byte "~$_~" differed";
+            return 0 
+        }
+    }
+    return 1;
+}
+sub Parrot_string_character_equal($one, $two) {
+    say "Not implemented yet";
+    return 0;
+}
