@@ -6,14 +6,14 @@ class ParrotString {
     has $.flags is rw;
     has $.bufused is rw;
     has $.hashval is rw;
-    has ParrotString::Encoding      $.encoding is rw;
-    has ParrotString::Charset       $.charset  is rw;
+    has $.encoding is rw;
+    has $.charset  is rw;
     has $.normalization is rw;
 };
 
 use Charsets;
-use Encodings;
 use Normalizations;
+use Encodings;
 
 ## COW stuff
 sub Parrot_string_new_COW($src) { ... }
