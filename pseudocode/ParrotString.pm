@@ -116,13 +116,16 @@ sub Parrot_string_byte_equal($one, $two) {
     if ($one.strlen != $two.strlen) { return 0; }
     for (0 .. $one.strlen-1) {
         if ($one.buffer.[$_] != $two.buffer.[$_]) { 
-            say "Oops, byte "~$_~" differed";
             return 0 
         }
     }
     return 1;
 }
 sub Parrot_string_character_equal($one, $two) {
-    say "Not implemented yet";
-    return 0;
+    my $l = Parrot_string_length($one);
+    return 0 if $l != Parrot_string_length($two);
+    for (0.. $l-1) {
+        return 0 if Parrot_string_index($one, $_) != Parrot_string_index($two, $_);
+    }
+    return 1;
 }
