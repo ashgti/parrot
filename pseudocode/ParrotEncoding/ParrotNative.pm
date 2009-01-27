@@ -42,7 +42,20 @@ class ParrotEncoding::ParrotNative {
         # graphemes and graphemes are composed of multiple characters - 
         # this could be improved with caching later but we will 
         # do it the slow stupid way for now 
-        ...
+        my $i = $index;
+        my $grapheme_index = 0;
+        my $c;
+        while ($i >= 0) {
+            my $g = self.grapheme_at_index($str, $grapheme_index++);
+            #say "i is "~$i~" and grapheme is "~$g.perl;
+            for (@( $g )) {
+                #say " Char is "~$_~" and i is "~$i;
+                return $_ if $i == 0;
+                $i--;
+            }
+        }
+        Parrot_debug_string($str);
+        die "char_at_index walked off the end of the string";
     }
 
     method grapheme_at_index($str, $index) {

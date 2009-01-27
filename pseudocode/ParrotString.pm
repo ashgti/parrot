@@ -124,8 +124,11 @@ sub Parrot_string_byte_equal($one, $two) {
 sub Parrot_string_character_equal($one, $two) {
     my $l = Parrot_string_length($one);
     return 0 if $l != Parrot_string_length($two);
-    for (0.. $l-1) {
-        return 0 if Parrot_string_index($one, $_) != Parrot_string_index($two, $_);
+    for (0.. $l-1) -> $char {
+        my $savechar = 0 + $char; # Work around rakudo weirdness
+        my $a = Parrot_string_index($one, $char);
+        my $b = Parrot_string_index($two, $savechar);
+        return 0 if $a != $b;
     }
     return 1;
 }
