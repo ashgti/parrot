@@ -583,47 +583,47 @@ to the elements of the signature array.
 
 
 op set_args(inconst PMC) :flow {
-    opcode_t * const _this = CUR_OPCODE;
+    opcode_t * const raw_args = CUR_OPCODE;
     PMC * const signature = $1;
     INTVAL argc;
 
-    /* for now just point to the opcode */
-    interp->current_args = _this;
+    CONTEXT(interp)->current_sig =
+            Parrot_pcc_build_sig_object_from_op(interp,
+            CONTEXT(interp)->current_sig, signature, raw_args);
+
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }
 
 op get_results(inconst PMC) :flow {
-    opcode_t * const _this = CUR_OPCODE;
+    opcode_t * const raw_returns = CUR_OPCODE;
     PMC * const signature = $1;
     INTVAL argc;
 
-    CONTEXT(interp)->current_results = _this;
+    CONTEXT(interp)->current_sig =
+            Parrot_pcc_build_sig_object_returns_from_op(interp,
+            CONTEXT(interp)->current_sig, signature, raw_returns);
+
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }
 
 op get_params(inconst PMC) :flow {
-    opcode_t * const _this = CUR_OPCODE;
+    opcode_t * const raw_params = CUR_OPCODE;
     Parrot_Context *caller_ctx, *ctx;
-    PMC * ccont;
+    PMC *ccont, *call_object;
     PMC * const signature = $1;
     INTVAL argc;
-    opcode_t *src_indexes, *dst_indexes;
+    opcode_t *raw_args;
 
-    interp->current_params = _this;
     ctx = CONTEXT(interp);
     ccont = ctx->current_cont;
 
     caller_ctx = ctx->caller_ctx;
+    call_object = caller_ctx->current_sig;
 
-    src_indexes = interp->current_args;
-    dst_indexes = interp->current_params;
-    /* the args and params are now 'used.' */
-    interp->current_args = NULL;
-    interp->current_params = NULL;
+    Parrot_pcc_fill_params_from_op(interp, call_object, signature, raw_params);
 
-    parrot_pass_args(interp, caller_ctx, ctx, src_indexes, dst_indexes, PARROT_PASS_PARAMS);
     if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
         --ctx->recursion_depth;
@@ -638,39 +638,20 @@ op get_params(inconst PMC) :flow {
 }
 
 op set_returns(inconst PMC) :flow {
-    opcode_t * const _this = CUR_OPCODE;
-    Parrot_Context *ctx;
-    PMC *ccont;
+    opcode_t * const raw_returns = CUR_OPCODE;
+    Parrot_Context *ctx, *caller_ctx;
+    PMC *ccont, *call_object;
     PMC *signature = $1;
     INTVAL argc;
-    opcode_t *src_indexes, *dest_indexes;
 
-    interp->current_returns = _this;
     ctx = CONTEXT(interp);
     ccont = ctx->current_cont;
 
-    if (PMC_cont(ccont)->address) {
-        /* Call is from runops_fromc */
-        Parrot_Context * const caller_ctx = PMC_cont(ccont)->to_ctx;
-        if (! caller_ctx) {
-            /* there is no point calling Parrot_ex_throw_..., because
-               PDB_backtrace can't deal with a missing to_ctx either. */
-            exit_fatal(1, "No caller_ctx for continuation %p.", ccont);
-        }
+    caller_ctx = ctx->caller_ctx;
+    call_object = caller_ctx->current_sig;
 
-        src_indexes = interp->current_returns;
-        dest_indexes = caller_ctx->current_results;
-        interp->current_returns = NULL;
-        /* does this need to be here */
-        interp->current_args = NULL;
+    Parrot_pcc_fill_returns_from_op(interp, call_object, signature, raw_returns);
 
-        parrot_pass_args(interp, ctx, caller_ctx, src_indexes, dest_indexes, PARROT_PASS_RESULTS);
-    }
-    else if (ctx->caller_ctx->results_signature) {
-    /* We have a dynamic result signature, from pcc_invoke */
-        parrot_pass_args(interp, ctx, ctx->caller_ctx, interp->current_returns,
-                ctx->caller_ctx->current_results, PARROT_PASS_RESULTS);
-    }
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }

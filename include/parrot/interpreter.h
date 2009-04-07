@@ -224,6 +224,8 @@ struct Parrot_Context {
     INTVAL current_HLL;         /* see also src/hll.c */
     opcode_t *current_results;  /* ptr into code with get_results opcode */
     PMC *results_signature;     /* results signature pmc if it is non-const */
+    PMC *caller_sig;            /* CallSignature PMC that invoked this context*/
+    PMC *current_sig;           /* temporary CallSignature PMC for active call */
     PMC *handlers;              /* local handlers for the context */
     /* deref the constants - we need it all the time */
     struct PackFile_Constant ** constants;
