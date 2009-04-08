@@ -815,11 +815,12 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_params))
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_op)
-    INTVAL param_index, positional_index;
     Parrot_Context *ctx = CONTEXT(interp);
     INTVAL  positional_elements = VTABLE_elements(interp, call_object);
     INTVAL  param_count    = VTABLE_elements(interp, raw_sig);
     STRING *param_name     = NULL;
+    INTVAL  param_index    = 0;
+    INTVAL  positional_index = 0;
     INTVAL  named_count    = 0;
     INTVAL  slurpy_count   = 0;
     INTVAL  optional_count = 0;
@@ -962,6 +963,8 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                             EXCEPTION_INVALID_OPERATION, "invalid parameter type");
                     break;
             }
+
+            break; /* on to next parameter */
         }
 
         /* Otherwise, we have a positional argument to assign to the
