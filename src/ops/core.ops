@@ -614,7 +614,6 @@ op get_params(inconst PMC) :flow {
     PMC *ccont, *call_object;
     PMC * const signature = $1;
     INTVAL argc;
-    opcode_t *raw_args;
 
     ctx = CONTEXT(interp);
     ccont = ctx->current_cont;
