@@ -1021,9 +1021,9 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_returns))
 {
     ASSERT_ARGS(Parrot_pcc_fill_returns_from_op)
+    INTVAL return_list_elements;
     Parrot_Context *ctx = CONTEXT(interp);
     PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
-    INTVAL return_list_elements = VTABLE_elements(interp, return_list);
     INTVAL raw_return_count     = VTABLE_elements(interp, raw_sig);
     INTVAL return_index = 0;
     INTVAL return_list_index = 0;
@@ -1033,6 +1033,17 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
      * for parameters and return values. */
     if (PARROT_ERRORS_test(interp, PARROT_ERRORS_RESULT_COUNT_FLAG))
             err_check = 1;
+
+    if (PMC_IS_NULL(return_list)) {
+        if (err_check)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "too many return values: %d passed, 0 expected",
+                    raw_return_count, return_list_elements);
+        return;
+    }
+    else
+        return_list_elements = VTABLE_elements(interp, return_list);
+
 
     if (raw_return_count > return_list_elements) {
         if (err_check)
@@ -1048,6 +1059,10 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(return_flags);
         const INTVAL raw_index = raw_returns[return_index + 2];
         PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
+
+        /* Gracefully ignore extra returns when error checking is off. */
+        if (PMC_IS_NULL(result_item))
+            break; /* Go on to next return arg. */
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
