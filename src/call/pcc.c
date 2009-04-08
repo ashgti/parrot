@@ -1021,11 +1021,11 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_returns))
 {
     ASSERT_ARGS(Parrot_pcc_fill_returns_from_op)
-    INTVAL return_index, positional_index;
     Parrot_Context *ctx = CONTEXT(interp);
     PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     INTVAL return_list_elements = VTABLE_elements(interp, return_list);
     INTVAL raw_return_count     = VTABLE_elements(interp, raw_sig);
+    INTVAL return_index = 0;
     INTVAL return_list_index = 0;
     INTVAL err_check      = 0;
 
@@ -1045,24 +1045,39 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, return_index);
 
+        const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(return_flags);
         const INTVAL raw_index = raw_returns[return_index + 2];
         PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
-                VTABLE_set_integer_native(interp, result_item, CTX_REG_INT(ctx, raw_index));
+                if (constant)
+                    VTABLE_set_integer_native(interp, result_item, raw_index);
+                else
+                    VTABLE_set_integer_native(interp, result_item, CTX_REG_INT(ctx, raw_index));
                 return_list_index++;
                 break;
             case PARROT_ARG_FLOATVAL:
-                VTABLE_set_number_native(interp, result_item, CTX_REG_NUM(ctx, raw_index));
+                if (constant)
+                    VTABLE_set_number_native(interp, result_item,
+                            ctx->constants[raw_index]->u.number);
+                else
+                    VTABLE_set_number_native(interp, result_item, CTX_REG_NUM(ctx, raw_index));
                 return_list_index++;
                 break;
             case PARROT_ARG_STRING:
-                VTABLE_set_string_native(interp, result_item, CTX_REG_STR(ctx, raw_index));
+                if (constant)
+                    VTABLE_set_string_native(interp, result_item, Parrot_str_new_COW(interp,
+                                        ctx->constants[raw_index]->u.string));
+                else
+                    VTABLE_set_string_native(interp, result_item, CTX_REG_STR(ctx, raw_index));
                 return_list_index++;
                 break;
             case PARROT_ARG_PMC:
-                VTABLE_set_pmc(interp, result_item, CTX_REG_PMC(ctx, raw_index));
+                if (constant)
+                    VTABLE_set_pmc(interp, result_item, ctx->constants[raw_index]->u.key);
+                else
+                    VTABLE_set_pmc(interp, result_item, CTX_REG_PMC(ctx, raw_index));
                 return_list_index++;
                 break;
             default:
