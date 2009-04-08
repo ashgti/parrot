@@ -312,6 +312,8 @@ init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
     ctx->gc_mark           = 0;
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
+    ctx->current_sig       = NULL;
+    ctx->caller_sig        = NULL;
     ctx->lex_pad           = PMCNULL;
     ctx->outer_ctx         = NULL;
     ctx->current_cont      = NULL;
@@ -609,6 +611,8 @@ Parrot_free_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx), int deref)
          * tries to use it later. */
         ctx->current_results   = (opcode_t *)0xbeefcafe;
         ctx->results_signature = (PMC *)0xbeefcafe;
+        ctx->current_sig       = (PMC *)0xbeefcafe;
+        ctx->caller_sig        = (PMC *)0xbeefcafe;
         ctx->lex_pad           = (PMC *)0xbeefcafe;
         ctx->outer_ctx         = (Parrot_Context *)0xbeefcafe;
         ctx->current_cont      = (PMC *)0xbeefcafe;
