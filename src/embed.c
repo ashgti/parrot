@@ -1009,7 +1009,7 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
     CONTEXT(interp)->current_sub = NULL;
     CONTEXT(interp)->constants   = interp->code->const_table->constants;
 
-    Parrot_runops_fromc_args(interp, main_sub, "vP", userargv);
+    Parrot_pcc_invoke_sub_from_c_args(interp, main_sub, "P->", userargv);
 }
 
 
