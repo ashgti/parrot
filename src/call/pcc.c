@@ -1005,6 +1005,272 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
 
 /*
 
+=item C<void Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, PMC *call_object,
+const char *signature, ...)>
+
+Gets args for the current function call and puts them into position.
+First it gets the positional non-slurpy parameters, then the positional
+slurpy parameters, then the named parameters, and finally the named
+slurpy parameters.
+
+The signature is a string in the format used for
+C<Parrot_pcc_invoke_from_sig_object>, but with no return arguments. The
+parameters are passed in as a list of references to the destination
+variables.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
+        ARGIN(const char *signature), ...)
+{
+    ASSERT_ARGS(Parrot_pcc_fill_params_from_c_args)
+    va_list args;
+    Parrot_Context *ctx = CONTEXT(interp);
+    INTVAL  positional_elements = VTABLE_elements(interp, call_object);
+    INTVAL  param_count      = 0;
+    STRING *param_name       = NULL;
+    INTVAL  param_index      = 0;
+    INTVAL  positional_index = 0;
+    INTVAL  named_count      = 0;
+    INTVAL  slurpy_count     = 0;
+    INTVAL  optional_count   = 0;
+    INTVAL  err_check        = 0;
+    INTVAL  got_optional     = -1;
+    PMC    *raw_sig  = PMCNULL;
+    PMC    *invalid_sig = PMCNULL;
+
+    parse_signature_string(interp, signature, &raw_sig, &invalid_sig);
+    if (!PMC_IS_NULL(invalid_sig))
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "returns should not be included in the parameter list");
+    param_count = VTABLE_elements(interp, raw_sig);
+
+    /* Check if we should be throwing errors. This is configured separately
+     * for parameters and return values. */
+    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_PARAM_COUNT_FLAG))
+            err_check = 1;
+
+    va_start(args, signature);
+    for (param_index = 0; param_index < param_count; param_index++) {
+        INTVAL param_flags = VTABLE_get_integer_keyed_int(interp,
+                    raw_sig, param_index);
+
+        /* opt_flag parameter */
+        if (param_flags & PARROT_ARG_OPT_FLAG) {
+            if (optional_count <= 0)
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "optional flag with no optional parameter");
+            if (got_optional < 0 || got_optional > 1)
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "unable to determine if optional argument was passed");
+
+            {
+                INTVAL * const int_pointer = va_arg(args, INTVAL*);
+                *int_pointer = got_optional;
+            }
+            got_optional = -1;
+            break; /* on to next parameter */
+        }
+        /* Collected ("slurpy") parameter */
+        else if (param_flags & PARROT_ARG_SLURPY_ARRAY) {
+            /* Collect named arguments into hash */
+            if (param_flags & PARROT_ARG_NAME) {
+                PMC * const collect_named = pmc_new(interp,
+                        Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
+
+                {
+                    PMC ** const pmc_pointer = va_arg(args, PMC**);
+                    *pmc_pointer = collect_named;
+                }
+                named_count += VTABLE_elements(interp, collect_named);
+            }
+            /* Collect positional arguments into array */
+            else {
+                PMC *collect_positional;
+                if (named_count > 0)
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION,
+                            "named parameters must follow all positional parameters");
+                collect_positional = pmc_new(interp,
+                        Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
+                for (; positional_index < positional_elements; positional_index++) {
+                    VTABLE_push_pmc(interp, collect_positional,
+                            VTABLE_get_pmc_keyed_int(interp, call_object, positional_index));
+                }
+                {
+                    PMC ** const pmc_pointer = va_arg(args, PMC**);
+                    *pmc_pointer = collect_positional;
+                }
+            }
+
+            break; /* on to next parameter */
+        }
+        /* Named non-collected */
+        else if (param_flags & PARROT_ARG_NAME) {
+            /* Just store the name for now (this parameter is only the
+             * name). The next parameter is the actual value. */
+            STRING ** const string_pointer = va_arg(args, STRING**);
+            param_name = *string_pointer;
+
+            break; /* on to next parameter */
+        }
+        else if (!STRING_IS_NULL(param_name)) {
+            /* The previous parameter was a parameter name. Now set the
+             * value of the named parameter.*/
+            if (VTABLE_exists_keyed_str(interp, call_object, param_name)) {
+                named_count++;
+
+                switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
+                    case PARROT_ARG_INTVAL:
+                        {
+                            INTVAL * const int_pointer = va_arg(args, INTVAL*);
+                            *int_pointer =
+                                VTABLE_get_integer_keyed_str(interp, call_object, param_name);
+                        }
+                        break;
+                    case PARROT_ARG_FLOATVAL:
+                        {
+                            FLOATVAL * const float_pointer = va_arg(args, FLOATVAL*);
+                            *float_pointer =
+                                VTABLE_get_number_keyed_str(interp, call_object, param_name);
+                        }
+                        break;
+                    case PARROT_ARG_STRING:
+                        {
+                            STRING ** const string_pointer = va_arg(args, STRING**);
+                            *string_pointer =
+                                VTABLE_get_string_keyed_str(interp, call_object, param_name);
+                        }
+                        break;
+                    case PARROT_ARG_PMC:
+                        {
+                            PMC ** const pmc_pointer = va_arg(args, PMC**);
+                            *pmc_pointer =
+                                VTABLE_get_pmc_keyed_str(interp, call_object, param_name);
+                        }
+                        break;
+                    default:
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION, "invalid parameter type");
+                        break;
+                }
+                param_name = NULL;
+                break; /* on to next parameter */
+            }
+
+            /* If the named parameter doesn't have a corresponding named
+             * argument, fall through to positional argument handling. */
+            param_name = NULL;
+        }
+
+        /* Positional non-collected */
+        if (named_count > 0)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named parameters must follow all positional parameters");
+        if (slurpy_count > 0)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "slurpy parameters must follow ordinary positional parameters");
+
+        /* No more positional arguments available to assign */
+        if (positional_index >= positional_elements) {
+            if (!param_flags & PARROT_ARG_OPTIONAL)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too few positional arguments: %d passed, %d (or more) expected",
+                        positional_elements, param_index + 1);
+
+            got_optional = 0;
+            optional_count++;
+            switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
+                case PARROT_ARG_INTVAL:
+                    {
+                        INTVAL * const int_pointer = va_arg(args, INTVAL*);
+                        *int_pointer = 0;
+                    }
+                    break;
+                case PARROT_ARG_FLOATVAL:
+                    {
+                        FLOATVAL * const float_pointer = va_arg(args, FLOATVAL*);
+                        *float_pointer = 0.0;
+                    }
+                    break;
+                case PARROT_ARG_STRING:
+                    {
+                        STRING ** const string_pointer = va_arg(args, STRING**);
+                        *string_pointer = NULL;
+                    }
+                    break;
+                case PARROT_ARG_PMC:
+                    {
+                        PMC ** const pmc_pointer = va_arg(args, PMC**);
+                        *pmc_pointer = PMCNULL;
+                    }
+                    break;
+                default:
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION, "invalid parameter type");
+                    break;
+            }
+
+            break; /* on to next parameter */
+        }
+
+        /* Otherwise, we have a positional argument to assign to the
+         * positional parameter, so go ahead and assign it. */
+        if (param_flags & PARROT_ARG_OPTIONAL) {
+            got_optional = 1;
+            optional_count++;
+        }
+
+        switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
+            case PARROT_ARG_INTVAL:
+                {
+                    INTVAL * const int_pointer = va_arg(args, INTVAL*);
+                    *int_pointer = 
+                        VTABLE_get_integer_keyed_int(interp, call_object, positional_index);
+                }
+                positional_index++;
+                break;
+            case PARROT_ARG_FLOATVAL:
+                {
+                    FLOATVAL * const float_pointer = va_arg(args, FLOATVAL*);
+                    *float_pointer = 
+                        VTABLE_get_number_keyed_int(interp, call_object, positional_index);
+                }
+                positional_index++;
+                break;
+            case PARROT_ARG_STRING:
+                {
+                    STRING ** const string_pointer = va_arg(args, STRING**);
+                    *string_pointer = 
+                        VTABLE_get_string_keyed_int(interp, call_object, positional_index);
+                }
+                positional_index++;
+                break;
+            case PARROT_ARG_PMC:
+                {
+                    PMC ** const pmc_pointer = va_arg(args, PMC**);
+                    *pmc_pointer = 
+                        VTABLE_get_pmc_keyed_int(interp, call_object, positional_index);
+                }
+                positional_index++;
+                break;
+            default:
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION, "invalid parameter type");
+                break;
+        }
+    }
+    va_end(args);
+}
+
+/*
+
 =item C<void Parrot_pcc_fill_returns_from_op(PARROT_INTERP, PMC *call_object,
 PMC *raw_sig, opcode_t *raw_returns)>
 
@@ -1101,6 +1367,109 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 break;
         }
     }
+}
+
+/*
+
+=item C<void Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, PMC
+*call_object, const char *signature, ...)>
+
+Sets return values for the current function call. First it sets the
+positional returns, then the named returns.
+
+The signature is a string in the format used for
+C<Parrot_pcc_invoke_from_sig_object>, but with only return arguments.
+The parameters are passed in as a list of INTVAL, FLOATVAL, STRING *, or
+PMC * variables.
+
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
+        ARGIN(const char *signature), ...)
+{
+    ASSERT_ARGS(Parrot_pcc_fill_returns_from_c_args)
+    va_list args;
+    INTVAL return_list_elements;
+    Parrot_Context *ctx = CONTEXT(interp);
+    PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    INTVAL raw_return_count = 0;
+    INTVAL return_index = 0;
+    INTVAL return_list_index = 0;
+    INTVAL err_check      = 0;
+
+    PMC *raw_sig = PMCNULL;
+    PMC *invalid_sig = PMCNULL;
+
+    parse_signature_string(interp, signature, &raw_sig, &invalid_sig);
+    if (!PMC_IS_NULL(invalid_sig))
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "parameters should not be included in the return signature");
+    raw_return_count = VTABLE_elements(interp, raw_sig);
+
+    /* Check if we should be throwing errors. This is configured separately
+     * for parameters and return values. */
+    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_RESULT_COUNT_FLAG))
+            err_check = 1;
+
+    if (PMC_IS_NULL(return_list)) {
+        if (err_check)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "too many return values: %d passed, 0 expected",
+                    raw_return_count, return_list_elements);
+        return;
+    }
+    else
+        return_list_elements = VTABLE_elements(interp, return_list);
+
+
+    if (raw_return_count > return_list_elements) {
+        if (err_check)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "too many return values: %d passed, %d expected",
+                    raw_return_count, return_list_elements);
+    }
+
+    va_start(args, signature);
+    for (return_index = 0; return_index < raw_return_count; return_index++) {
+        INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
+                    raw_sig, return_index);
+
+        PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
+
+        /* Gracefully ignore extra returns when error checking is off. */
+        if (PMC_IS_NULL(result_item))
+            break; /* Go on to next return arg. */
+
+        switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
+            case PARROT_ARG_INTVAL:
+                VTABLE_set_integer_native(interp, result_item, va_arg(args, INTVAL));
+                return_list_index++;
+                break;
+            case PARROT_ARG_FLOATVAL:
+                VTABLE_set_number_native(interp, result_item, va_arg(args, FLOATVAL));
+                return_list_index++;
+                break;
+            case PARROT_ARG_STRING:
+                VTABLE_set_string_native(interp, result_item,
+                        Parrot_str_new_COW(interp, va_arg(args, STRING *)));
+                return_list_index++;
+                break;
+            case PARROT_ARG_PMC:
+                VTABLE_set_pmc(interp, result_item, va_arg(args, PMC *));
+                return_list_index++;
+                break;
+            default:
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION, "invalid parameter type");
+                break;
+        }
+    }
+    va_end(args);
 }
 
 
@@ -3214,13 +3583,14 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
         /* parse arg adverbs */
         else if (islower((unsigned char)*x)) {
             switch (*x) {
-                case 'n': flags |= PARROT_ARG_NAME;         break;
+                case 'c': flags |= PARROT_ARG_CONSTANT;     break;
                 case 'f': flags |= PARROT_ARG_FLATTEN;      break;
-                case 's': flags |= PARROT_ARG_SLURPY_ARRAY; break;
+                case 'i': flags |= PARROT_ARG_INVOCANT;     break;
+                case 'l': flags |= PARROT_ARG_LOOKAHEAD;    break;
+                case 'n': flags |= PARROT_ARG_NAME;         break;
                 case 'o': flags |= PARROT_ARG_OPTIONAL;     break;
                 case 'p': flags |= PARROT_ARG_OPT_FLAG;     break;
-                case 'l': flags |= PARROT_ARG_LOOKAHEAD;    break;
-                case 'i': flags |= PARROT_ARG_INVOCANT;     break;
+                case 's': flags |= PARROT_ARG_SLURPY_ARRAY; break;
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         EXCEPTION_INVALID_OPERATION,
