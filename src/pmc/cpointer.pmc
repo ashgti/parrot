@@ -89,19 +89,6 @@ pointer.
 
         if (data->sig)
             pobject_lives(interp, (PObj *)data->sig);
-
-        if (data->pointer) {
-            if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "P"))) {
-                PMC ** const pmc_pointer = (PMC **) data->pointer;
-                PARROT_ASSERT(*pmc_pointer);
-                pobject_lives(interp, (PObj *) *pmc_pointer);
-            }
-            else if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "S"))) {
-                STRING ** const str_pointer = (STRING **) data->pointer;
-                PARROT_ASSERT(*str_pointer);
-                pobject_lives(interp, (PObj *) *str_pointer);
-            }
-        }
     }
 
 /*
