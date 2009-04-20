@@ -488,6 +488,14 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
 
     }
 
+    /* Check if we have an invocant, and add it to the front of the arguments */
+/*    if (!PMC_IS_NULL(interp->current_object)) {
+        string_sig = Parrot_str_concat(interp, CONST_STRING(interp, "Pi"), string_sig, 0);
+        VTABLE_set_string_native(interp, call_object, string_sig);
+        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
+    }
+*/
+
     return call_object;
 }
 
@@ -786,6 +794,13 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                         "Multiple Dispatch: invalid argument type %c!", type);
             }
         }
+    }
+
+    /* Check if we have an invocant, and add it to the front of the arguments */
+    if (!PMC_IS_NULL(obj)) {
+        string_sig = Parrot_str_concat(interp, CONST_STRING(interp, "Pi"), string_sig, 0);
+        VTABLE_set_string_native(interp, call_object, string_sig);
+        VTABLE_unshift_pmc(interp, call_object, obj);
     }
 
     /* Build a type_tuple for multiple dispatch */
@@ -3806,168 +3821,23 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
         ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_PCCINVOKE)
-#define PCC_ARG_MAX 1024
-    /* variables from PCCINVOKE impl in PCCMETHOD.pm */
-    /* args INSP, returns INSP */
-    INTVAL n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    PMC *sig_obj;
+    PMC *sub_obj;
+    va_list args;
+    va_start(args, signature);
+    sig_obj = Parrot_pcc_build_sig_object_from_varargs(interp, pmc, signature, args);
+    va_end(args);
 
-    /* Each of these is 8K. Do we want 16K on the stack? */
-    opcode_t arg_indexes[PCC_ARG_MAX];
-    opcode_t result_indexes[PCC_ARG_MAX];
+    /* Find the subroutine object as a named method on pmc */
+    sub_obj = VTABLE_find_method(interp, pmc, method_name);
+    if (PMC_IS_NULL(sub_obj))
+         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_METHOD_NOT_FOUND,
+             "Method '%Ss' not found", method_name);
 
-    PMC * const args_sig    = pmc_new(interp, enum_class_FixedIntegerArray);
-    PMC * const results_sig = pmc_new(interp, enum_class_FixedIntegerArray);
-    PMC * const ret_cont    = new_ret_continuation_pmc(interp, NULL);
-
-    Parrot_Context *ctx;              /* The newly created context */
-    PMC              *pccinvoke_meth;
-
-    opcode_t         *save_current_args;
-    PMC              *save_args_signature;
-    PMC              *save_current_object;
-
-    /* temporary state vars for building PCC index and PCC signature arrays. */
-
-    /* arg_indexes, result_indexes */
-    opcode_t   *indexes[2];
-
-    /* args_sig, results_sig */
-    PMC        *sigs[2];
-
-    int         seen_arrow = 0;
-
-    const char *x;
-    const char *ret_x = NULL;
-    int         index = -1;
-    int         cur   =  0;
-
-    va_list list;
-    va_start(list, signature);
-
-    indexes[0] = arg_indexes;
-    indexes[1] = result_indexes;
-    sigs[0]    = args_sig;
-    sigs[1]    = results_sig;
-
-    /* account for passing invocant in-band */
-    if (!pmc)
-        Parrot_ex_throw_from_c_args(interp, NULL, 1,
-            "NULL PMC passed into Parrot_PCCINVOKE");
-
-    ctx = count_signature_elements(interp, signature, args_sig, results_sig, 1);
-
-    /* second loop through signature to build all index and arg_flag
-     * loop also assigns args(up to the ->) to registers */
-
-    /* account for passing invocant in-band */
-    indexes[0][0] = 0;
-
-    VTABLE_set_integer_keyed_int(interp, sigs[0], 0, PARROT_ARG_PMC);
-    CTX_REG_PMC(ctx, 0) = pmc;
-
-    n_regs_used[REGNO_PMC]++;
-    index = 0;
-
-    for (x = signature; *x != '\0'; x++) {
-        /* detect -> separator */
-        if (*x == '-') {
-
-            /* skip '>' */
-            x++;
-
-            /* allows us to jump directly to the result signature portion
-             * during results assignment */
-            ret_x = x;
-
-            /* save off pointer to results */
-            ret_x++;
-
-            if (index >= 0)
-                commit_last_arg(interp, index, cur, n_regs_used, seen_arrow,
-                    sigs, indexes, ctx, pmc, &list);
-
-            /* reset parsing state so we can now handle results */
-            seen_arrow =  1;
-            index      = -1;
-
-            /* reset n_regs_used for reuse during result index allocation */
-            n_regs_used[0] = 0;
-            n_regs_used[1] = 0;
-            n_regs_used[2] = 0;
-            n_regs_used[3] = 0;
-        }
-        /* parse arg type */
-        else if (isupper((unsigned char)*x)) {
-            if (index >= 0)
-                commit_last_arg(interp, index, cur, n_regs_used, seen_arrow,
-                    sigs, indexes, ctx, pmc, &list);
-
-            index++;
-
-            switch (*x) {
-                case 'I': cur = PARROT_ARG_INTVAL;   break;
-                case 'N': cur = PARROT_ARG_FLOATVAL; break;
-                case 'S': cur = PARROT_ARG_STRING;   break;
-                case 'P': cur = PARROT_ARG_PMC;      break;
-                default:
-                  Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_OPERATION,
-                    "Parrot_PCCINVOKE: invalid reg type %c!", *x);
-            }
-
-        }
-        /* parse arg adverbs */
-        else if (islower((unsigned char)*x)) {
-            switch (*x) {
-                case 'n': cur |= PARROT_ARG_NAME;         break;
-                case 'f': cur |= PARROT_ARG_FLATTEN;      break;
-                case 's': cur |= PARROT_ARG_SLURPY_ARRAY; break;
-                case 'o': cur |= PARROT_ARG_OPTIONAL;     break;
-                case 'p': cur |= PARROT_ARG_OPT_FLAG;     break;
-                /* case 'l': cur |= PARROT_ARG_LOOKAHEAD;    break; */
-                default:
-                    Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "Parrot_PCCINVOKE: invalid adverb type %c!", *x);
-            }
-        }
-    }
-
-    if (index >= 0)
-        commit_last_arg(interp, index, cur, n_regs_used, seen_arrow, sigs,
-            indexes, ctx, pmc, &list);
-
-    /* code from PCCINVOKE impl in PCCMETHOD.pm */
-    save_current_args      = interp->current_args;
-    save_args_signature    = interp->args_signature;
-    save_current_object    = interp->current_object;
-
-    interp->current_args   = arg_indexes;
-    interp->args_signature = args_sig;
-    ctx->current_results   = result_indexes;
-    ctx->results_signature = results_sig;
-
-    /* arg_accessors assigned in loop above */
-
-    interp->current_object       = pmc;
-    interp->current_cont         = NEED_CONTINUATION;
-    ctx->current_cont            = ret_cont;
-    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
-    pccinvoke_meth               = VTABLE_find_method(interp, pmc, method_name);
-
-    if (PMC_IS_NULL(pccinvoke_meth))
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_METHOD_NOT_FOUND,
-            "Method '%Ss' not found", method_name);
-    else
-        VTABLE_invoke(interp, pccinvoke_meth, NULL);
-
-    set_context_sig_returns_varargs(interp, ctx, indexes, ret_x, list);
-    PObj_live_CLEAR(args_sig);
-    PObj_live_CLEAR(results_sig);
-    interp->current_args   = save_current_args;
-    interp->args_signature = save_args_signature;
-    interp->current_object = save_current_object;
-    va_end(list);
+    /* Invoke the subroutine object with the given CallSignature object */
+    interp->current_object = pmc;
+    Parrot_pcc_invoke_from_sig_object(interp, sub_obj, sig_obj);
+    gc_unregister_pmc(interp, sig_obj);
 }
 
 /*
