@@ -103,9 +103,10 @@ Generates the C header file code for the PMC.
 =cut
 
 sub generate_h_file {
-    my ($self) = @_;
-    my $h      = $self->{emitter};
-    my $name   = uc $self->name;
+    my ($self)  = @_;
+    my $h       = $self->{emitter};
+    my $name    = uc $self->name;
+    my $lc_name = $self->name;
 
     $h->emit( dont_edit( $self->filename ) );
     $h->emit(<<"EOH");
@@ -120,6 +121,7 @@ EOH
     $h->emit( $self->{ro}->hdecls ) if ( $self->{ro} );
     $self->gen_attributes;
     $h->emit(<<"EOH");
+    PARROT_EXPORT VTABLE * Parrot_${lc_name}_update_vtable(VTABLE *);
 
 #endif /* PARROT_PMC_${name}_H_GUARD */
 
@@ -715,6 +717,22 @@ EOC
     } /* pass */
 } /* Parrot_${classname}_class_init */
 EOC
+
+    my $vtable_updates = '';
+    for my $name ( @{ $self->vtable->names } ) {
+        if (exists $self->{has_method}{$name}) {
+            $vtable_updates .= "    vt->$name = Parrot_${classname}_${name};\n";
+        }
+    }   
+
+    $cout .= <<"EOC";
+
+PARROT_EXPORT VTABLE *Parrot_${classname}_update_vtable(VTABLE *vt) {
+$vtable_updates
+    return vt;
+}
+EOC
+
     if ( $self->is_dynamic ) {
         $cout .= dynext_load_code( $classname, $classname => {} );
     }
