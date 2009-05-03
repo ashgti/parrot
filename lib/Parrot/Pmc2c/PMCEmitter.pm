@@ -90,6 +90,8 @@ sub generate_c_file {
 
     $c->emit("#include \"pmc_default.h\"\n");
 
+    $c->emit( $self->update_vtable_func );
+    $c->emit( $self->get_vtable_func );
     $c->emit( $self->init_func );
     $c->emit( $self->postamble );
 
@@ -160,8 +162,11 @@ sub hdecls {
     $hout .= 'PARROT_DYNEXT_EXPORT ' if ( $self->is_dynamic );
     $hout .= "void Parrot_${name}_class_init(PARROT_INTERP, int, int);\n";
 
-    $hout .= 'PARROT_DYNEXT_EXPORT ' if ( $self->is_dynamic );
-    $hout .= "VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n";
+    $hout .= $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : 'PARROT_EXPORT';
+    $hout .= " VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n";
+
+    $hout .= $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : 'PARROT_EXPORT';
+    $hout .= " VTABLE* Parrot_${lc_name}_get_vtable(PARROT_INTERP);\n";
 
     $self->{hdecls} .= $hout;
 
@@ -480,7 +485,6 @@ sub init_func {
     my $classname = $self->name;
 
     my $enum_name   = $self->is_dynamic ? -1 : "enum_class_$classname";
-    my $vtable_decl = $self->vtable_decl( 'temp_base_vtable', $enum_name );
 
     my $multi_funcs = $self->find_multi_functions();
     my $multi_list = join( ",\n        ",
@@ -505,16 +509,6 @@ sub init_func {
 
     my %extra_vt;
     $extra_vt{ro} = $self->{ro} if $self->{ro};
-
-    $cout .= <<"EOC";
-PARROT_EXPORT VTABLE* Parrot_${classname}_update_vtable(VTABLE*);
-VTABLE* Parrot_${classname}_get_vtable(PARROT_INTERP);
-EOC
-
-    for my $k (keys %extra_vt) {
-        $cout .= "PARROT_EXPORT VTABLE* Parrot_${classname}_update_${k}_vtable(VTABLE*);\n";
-        $cout .= "VTABLE* Parrot_${classname}_get_${k}_vtable(PARROT_INTERP);\n";
-    }
 
     $cout .= <<"EOC";
 void
@@ -551,14 +545,6 @@ EOC
     }
 
     $cout .= "\";\n";
-    $cout .= <<"EOC";
-$vtable_decl    
-EOC
-
-    for my $k ( keys %extra_vt ) {
-        $cout .= $extra_vt{$k}->vtable_decl( "temp_${k}_vtable", $enum_name );
-    }
-
 
     my $const = ( $self->{flags}{dynpmc} ) ? " " : " const ";
     if ( @$multi_funcs ) {
@@ -582,7 +568,7 @@ EOC
         Hash          *isa_hash;
         /* create vtable - clone it - we have to set a few items */
         VTABLE * vt = Parrot_${classname}_get_vtable(interp);
-        vt->base_type = enum_class_$classname;
+        vt->base_type = $enum_name;
         vt->flags = $flags;
         vt->attribute_defs = attr_defs;
 
@@ -590,8 +576,8 @@ EOC
     for my $k ( keys %extra_vt ) {
         my $k_flags = $self->$k->vtable_flags;
         $cout .= <<"EOC";
-        vt_${k} = Parrot_${classname}_get_${k}_vtable(interp);
-        vt_$k->base_type = enum_class_$classname;
+        vt_${k} = Parrot_${classname}_${k}_get_vtable(interp);
+        vt_$k->base_type = $enum_name;
         vt_$k->flags = $k_flags;
         vt_$k->attribute_defs = attr_defs;
 
@@ -758,6 +744,25 @@ EOC
 } /* Parrot_${classname}_class_init */
 EOC
 
+    if ( $self->is_dynamic ) {
+        $cout .= dynext_load_code( $classname, $classname => {} );
+    }
+
+    $cout;
+}
+
+=item C<update_vtable_func()>
+
+Returns the C code for the PMC's update_vtable method.
+
+=cut
+
+sub update_vtable_func {
+    my ($self) = @_;
+
+    my $cout      = "";
+    my $classname = $self->name;
+
     my $vtable_updates = '';
     for my $name ( @{ $self->vtable->names } ) {
         if (exists $self->{has_method}{$name}) {
@@ -771,8 +776,11 @@ PARROT_EXPORT VTABLE *Parrot_${classname}_update_vtable(VTABLE *vt) {
 $vtable_updates
     return vt;
 }
+
 EOC
 
+    my %extra_vt;
+    $extra_vt{ro} = $self->{ro} if $self->{ro};
 
     for my $k (keys %extra_vt) {
 
@@ -786,56 +794,68 @@ EOC
 
         $cout .= <<"EOC";
 
-PARROT_EXPORT VTABLE *Parrot_${classname}_update_${k}_vtable(VTABLE *vt) {
+PARROT_EXPORT VTABLE *Parrot_${classname}_${k}_update_vtable(VTABLE *vt) {
 $vtable_updates
     return vt;
 }
+
 EOC
     }
+
+    $cout;
+}
+
+=item C<get_vtable_func()>
+
+Returns the C code for the PMC's update_vtable method.
+
+=cut
+
+sub get_vtable_func {
+    my ($self) = @_;
+
+    my $cout      = "";
+    my $classname = $self->name;
 
     my $get_vtable = '';
     foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
-        unless ($parent_name eq 'default') {
-            $get_vtable .= "    vt = Parrot_${parent_name}_update_vtable(vt);\n";
+        if ($parent_name eq 'default') {
+            $get_vtable = "Parrot_default_get_vtable(interp)";
+        }
+        else {
+            $get_vtable = "Parrot_${parent_name}_update_vtable($get_vtable)";
         }
     }
-    my $set_default = '';
-    foreach my $vtable_func ( @{ $self->vtable->names } ) {
-        $set_default .= "    vt->$vtable_func = Parrot_default_$vtable_func;\n";
-    }
+
     $cout .= <<"EOC";
-
+PARROT_EXPORT
 VTABLE* Parrot_${classname}_get_vtable(PARROT_INTERP) {
-
-    VTABLE *vt = Parrot_new_vtable(interp);
-$set_default
-$get_vtable
-    return vt;
+    return $get_vtable;
 }
+
 EOC
+
+    my %extra_vt;
+    $extra_vt{ro} = $self->{ro} if $self->{ro};
 
     for my $k (keys %extra_vt) {
         my $get_extra_vtable = '';
         foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
-            unless ($parent_name eq 'default') {
-                $get_extra_vtable .= "    vt = Parrot_${parent_name}_update_vtable(vt);\n";
-                $get_extra_vtable .= "    vt = Parrot_${parent_name}_update_${k}_vtable(vt);\n";
+            if ($parent_name eq 'default') {
+                $get_extra_vtable = "Parrot_default_${k}_get_vtable(PARROT_INTERP)";
+            }
+            else {
+                $get_extra_vtable = "Parrot_${parent_name}_${k}_update_vtable($get_vtable)";
             }
         }
+    
         $cout .= <<"EOC";
-
-VTABLE* Parrot_${classname}_get_${k}_vtable(PARROT_INTERP) {
-
-    VTABLE *vt = Parrot_new_vtable(interp);
-$set_default
-$get_extra_vtable
-    return vt;
+PARROT_EXPORT
+VTABLE* Parrot_${classname}_${k}_get_vtable(PARROT_INTERP) {
+    return $get_extra_vtable;
 }
-EOC
-    }
 
-    if ( $self->is_dynamic ) {
-        $cout .= dynext_load_code( $classname, $classname => {} );
+EOC
     }
 
     $cout;
