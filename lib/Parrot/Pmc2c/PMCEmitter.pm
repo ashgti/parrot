@@ -513,6 +513,7 @@ EOC
 
     for my $k (keys %extra_vt) {
         $cout .= "PARROT_EXPORT VTABLE* Parrot_${classname}_update_${k}_vtable(VTABLE*);\n";
+        $cout .= "VTABLE* Parrot_${classname}_get_${k}_vtable(PARROT_INTERP);\n";
     }
 
     $cout .= <<"EOC";
@@ -573,7 +574,7 @@ EOC
     if (pass == 0) {
 EOC
     for my $k ( keys %extra_vt ) {
-        $cout .= "    VTABLE *vt_$k;\n";
+        $cout .= "        VTABLE *vt_$k;\n";
     }
 
     my $flags = $self->vtable_flags;
@@ -584,14 +585,16 @@ EOC
         vt->base_type = enum_class_$classname;
         vt->flags = $flags;
         vt->attribute_defs = attr_defs;
+
 EOC
     for my $k ( keys %extra_vt ) {
         my $k_flags = $self->$k->vtable_flags;
         $cout .= <<"EOC";
-        vt_${k} = Parrot_${classname}_get_vtable(interp);
+        vt_${k} = Parrot_${classname}_get_${k}_vtable(interp);
         vt_$k->base_type = enum_class_$classname;
         vt_$k->flags = $k_flags;
         vt_$k->attribute_defs = attr_defs;
+
 EOC
     }
 
@@ -774,11 +777,12 @@ EOC
     for my $k (keys %extra_vt) {
 
         my $vtable_updates = '';
-        for my $name ( @{ $self->$k->vtable->names } ) {
-            if (exists $self->$k->{has_method}{$name}) {
-                $vtable_updates .= "    vt->$name = Parrot_${classname}_${k}_${name};\n";
-            }
-        }   
+        foreach my $vt_method ( @{ $self->$k->vtable->names} ) {
+
+            next unless ($self->$k->implements_vtable($vt_method));
+            
+            $vtable_updates .= "    vt->$vt_method = Parrot_${classname}_${k}_${vt_method};\n";
+        }
 
         $cout .= <<"EOC";
 
@@ -801,7 +805,6 @@ EOC
     }
     $cout .= <<"EOC";
 
-
 VTABLE* Parrot_${classname}_get_vtable(PARROT_INTERP) {
 
     VTABLE *vt = Parrot_new_vtable(interp);
@@ -810,6 +813,26 @@ $get_vtable
     return vt;
 }
 EOC
+
+    for my $k (keys %extra_vt) {
+        my $get_extra_vtable = '';
+        foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
+            unless ($parent_name eq 'default') {
+                $get_extra_vtable .= "    vt = Parrot_${parent_name}_update_vtable(vt);\n";
+                $get_extra_vtable .= "    vt = Parrot_${parent_name}_update_${k}_vtable(vt);\n";
+            }
+        }
+        $cout .= <<"EOC";
+
+VTABLE* Parrot_${classname}_get_${k}_vtable(PARROT_INTERP) {
+
+    VTABLE *vt = Parrot_new_vtable(interp);
+$set_default
+$get_extra_vtable
+    return vt;
+}
+EOC
+    }
 
     if ( $self->is_dynamic ) {
         $cout .= dynext_load_code( $classname, $classname => {} );
