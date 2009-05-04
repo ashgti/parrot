@@ -250,7 +250,7 @@ sub rewrite_vtable_method {
             \bDYNSUPER\b      # Macro: DYNSUPER
             \(\s*(.*?)\)      # capture argument list
           }x,
-            sub { "interp->vtables[$supertype].$name(" . full_arguments($1) . ')' }
+            sub { "interp->vtables[$supertype]->$name(" . full_arguments($1) . ')' }
         );
 
         # Rewrite OtherClass.SUPER(args...)
@@ -260,7 +260,7 @@ sub rewrite_vtable_method {
             \.SUPER\b         # Macro: SUPER
             \(\s*(.*?)\)      # capture argument list
           }x,
-            sub { "Parrot_${1}_$name(" . full_arguments($2) . ')' }
+            sub { "interp->vtables[enum_class_${1}]->$name(" . full_arguments($2) . ')' }
         );
 
         # Rewrite SUPER(args...)
@@ -269,7 +269,7 @@ sub rewrite_vtable_method {
             \bSUPER\b         # Macro: SUPER
             \(\s*(.*?)\)      # capture argument list
           }x,
-            sub { "$supermethod(" . full_arguments($1) . ')' }
+            sub { "interp->vtables[$supertype]->$name(" . full_arguments($1) . ')' }
         );
     }
 
