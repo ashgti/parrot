@@ -820,17 +820,19 @@ sub get_vtable_func {
     my $get_vtable = '';
     foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
         if ($parent_name eq 'default') {
-            $get_vtable = "Parrot_default_get_vtable(interp)";
+            $get_vtable .= "    vt = Parrot_default_get_vtable(interp);\n";
         }
         else {
-            $get_vtable = "Parrot_${parent_name}_update_vtable($get_vtable)";
+            $get_vtable .= "    Parrot_${parent_name}_update_vtable(vt);\n";
         }
     }
 
     $cout .= <<"EOC";
 PARROT_EXPORT
 VTABLE* Parrot_${classname}_get_vtable(PARROT_INTERP) {
-    return $get_vtable;
+    VTABLE *vt;
+$get_vtable
+    return vt;
 }
 
 EOC
@@ -842,17 +844,20 @@ EOC
         my $get_extra_vtable = '';
         foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
             if ($parent_name eq 'default') {
-                $get_extra_vtable = "Parrot_default_${k}_get_vtable(PARROT_INTERP)";
+                $get_extra_vtable .= "    vt = Parrot_default_get_vtable(interp);\n";
             }
             else {
-                $get_extra_vtable = "Parrot_${parent_name}_${k}_update_vtable($get_vtable)";
+                $get_extra_vtable .= "    Parrot_${parent_name}_update_vtable(vt);\n";
+                $get_extra_vtable .= "    Parrot_${parent_name}_${k}_update_vtable(vt);\n";
             }
         }
     
         $cout .= <<"EOC";
 PARROT_EXPORT
 VTABLE* Parrot_${classname}_${k}_get_vtable(PARROT_INTERP) {
-    return $get_extra_vtable;
+    VTABLE *vt;
+$get_extra_vtable
+    return vt;
 }
 
 EOC
