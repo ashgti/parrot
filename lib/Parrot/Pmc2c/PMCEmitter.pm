@@ -158,12 +158,17 @@ sub hdecls {
         $hout .= $method->generate_headers($self);
     }
 
-    my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : '';
+    my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : '';
 
     # class init decl
-    $hout .= "$export void    Parrot_${name}_class_init(PARROT_INTERP, int, int);\n";
-    $hout .= "$export VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n";
-    $hout .= "$export VTABLE* Parrot_${lc_name}_get_vtable(PARROT_INTERP);\n";
+    $hout .= "${export}void    Parrot_${name}_class_init(PARROT_INTERP, int, int);\n";
+
+    $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT ';
+
+    $hout .= "${export}VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n"
+        unless $name eq 'default';
+
+    $hout .= "${export}VTABLE* Parrot_${lc_name}_get_vtable(PARROT_INTERP);\n";
 
     $self->{hdecls} .= $hout;
 
