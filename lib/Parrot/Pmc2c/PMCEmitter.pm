@@ -158,15 +158,12 @@ sub hdecls {
         $hout .= $method->generate_headers($self);
     }
 
+    my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : '';
+
     # class init decl
-    $hout .= 'PARROT_DYNEXT_EXPORT ' if ( $self->is_dynamic );
-    $hout .= "void Parrot_${name}_class_init(PARROT_INTERP, int, int);\n";
-
-    $hout .= $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : 'PARROT_EXPORT';
-    $hout .= " VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n";
-
-    $hout .= $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT' : 'PARROT_EXPORT';
-    $hout .= " VTABLE* Parrot_${lc_name}_get_vtable(PARROT_INTERP);\n";
+    $hout .= "$export void    Parrot_${name}_class_init(PARROT_INTERP, int, int);\n";
+    $hout .= "$export VTABLE* Parrot_${lc_name}_update_vtable(VTABLE*);\n";
+    $hout .= "$export VTABLE* Parrot_${lc_name}_get_vtable(PARROT_INTERP);\n";
 
     $self->{hdecls} .= $hout;
 
@@ -462,7 +459,7 @@ sub vtable_decl {
         NULL,       /* isa_hash */
         NULL,       /* class */
         NULL,       /* mro */
-        attr_defs,  /* attribute_defs */
+        NULL,       /* attribute_defs */
         NULL,       /* ro_variant_vtable */
         $methlist
     };
@@ -565,21 +562,20 @@ EOC
 
     my $flags = $self->vtable_flags;
     $cout .= <<"EOC";
-        Hash          *isa_hash;
-        /* create vtable - clone it - we have to set a few items */
-        VTABLE * vt = Parrot_${classname}_get_vtable(interp);
-        vt->base_type = $enum_name;
-        vt->flags = $flags;
+        Hash   * isa_hash;
+        VTABLE * vt        = Parrot_${classname}_get_vtable(interp);
+        vt->base_type      = $enum_name;
+        vt->flags          = $flags;
         vt->attribute_defs = attr_defs;
 
 EOC
     for my $k ( keys %extra_vt ) {
         my $k_flags = $self->$k->vtable_flags;
         $cout .= <<"EOC";
-        vt_${k} = Parrot_${classname}_${k}_get_vtable(interp);
-        vt_$k->base_type = $enum_name;
-        vt_$k->flags = $k_flags;
-        vt_$k->attribute_defs = attr_defs;
+        vt_${k}                 = Parrot_${classname}_${k}_get_vtable(interp);
+        vt_${k}->base_type      = $enum_name;
+        vt_${k}->flags          = $k_flags;
+        vt_${k}->attribute_defs = attr_defs;
 
 EOC
     }
@@ -588,8 +584,8 @@ EOC
     if ( $self->is_dynamic ) {
         $cout .= <<"EOC";
         vt->base_type    = entry;
-        vt->whoami       = string_make(interp, "$classname", @{[length($classname)]}, "ascii",
-            PObj_constant_FLAG|PObj_external_FLAG);
+        vt->whoami       = string_make(interp, "$classname", @{[length($classname)]}, 
+                                       "ascii", PObj_constant_FLAG|PObj_external_FLAG);
         vt->provides_str = Parrot_str_append(interp, vt->provides_str,
             string_make(interp, " $provides", @{[length($provides) + 1]}, "ascii",
             PObj_constant_FLAG|PObj_external_FLAG));
@@ -605,7 +601,7 @@ EOC
         vt->provides_str = CONST_STRING_GEN(interp, "$provides");
 
         /* set up isa hash */
-        isa_hash = parrot_new_hash(interp);
+        isa_hash         = parrot_new_hash(interp);
         vt->isa_hash     = isa_hash;
 EOC
     }
@@ -618,16 +614,16 @@ EOC
 EOC
     }
 
-    if ( $extra_vt{ro} ) {
+    for my $k ( keys %extra_vt ) {
         $cout .= <<"EOC";
-        vt->ro_variant_vtable    = vt_ro;
-        vt_ro->ro_variant_vtable = vt;
-        vt_ro->isa_hash          = isa_hash;
+        vt->${k}_variant_vtable    = vt_${k};
+        vt_${k}->${k}_variant_vtable = vt;
+        vt_${k}->isa_hash          = isa_hash;
 EOC
     }
 
     $cout .= <<"EOC";
-        interp->vtables[entry]         = vt;
+        interp->vtables[entry] = vt;
 EOC
 
     for my $isa ($classname, @isa) {
@@ -666,8 +662,8 @@ EOC
 
         $cout .= <<"EOC";
         {
-            PMC           *mro      = pmc_new(interp, enum_class_ResizableStringArray);
-            VTABLE * const vt = interp->vtables[entry];
+            PMC    *       mro = pmc_new(interp, enum_class_ResizableStringArray);
+            VTABLE * const vt  = interp->vtables[entry];
 
             vt->mro = mro;
 
@@ -685,7 +681,7 @@ EOC
     $cout .= <<"EOC";
         }
 
-        /* setup MRO and _namespace */
+        /* set up MRO and _namespace */
         Parrot_create_mro(interp, entry);
 EOC
 
