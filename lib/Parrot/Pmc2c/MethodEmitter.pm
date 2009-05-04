@@ -47,7 +47,7 @@ sub generate_body {
         $self->rewrite_nci_method($pmc);
     }
 
-    $emit->( $pmc->export . ' ' . $self->decl( $pmc, 'CFILE' ) );
+    $emit->( $self->decl( $pmc, 'CFILE' ) );
     $emit->("{\n");
     $emit->($body);
     $emit->("}\n");
@@ -98,14 +98,12 @@ sub decl {
     $args = ", $args" if $args =~ /\S/;
     $args =~ s/(\w+)\s*(\*)\s*/$1 $2/g;
 
-    my ( $export, $extern, $newl, $semi );
+    my ( $extern, $newl, $semi );
     if ( $for_header eq 'HEADER' ) {
-        $export = $pmc->export;
         $newl   = ' ';
         $semi   = ';';
     }
     else {
-        $export = '';
         $newl   = "\n";
         $semi   = '';
     }
@@ -113,7 +111,7 @@ sub decl {
     $pmcarg    = "SHIM($pmcarg)" if $self->pmc_unused;
 
     return <<"EOC";
-$decs$export $ret${newl}Parrot_${pmcname}_$meth(PARROT_INTERP, $pmcarg$args)$semi
+$decs $ret${newl}Parrot_${pmcname}_$meth(PARROT_INTERP, $pmcarg$args)$semi
 EOC
 }
 
