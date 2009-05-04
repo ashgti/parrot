@@ -63,7 +63,7 @@ sub get_vtable_func {
 
     $cout .= <<"EOC";
 
-VTABLE* Parrot_default_get_vtable(PARROT_INTERP) {
+PARROT_EXPORT VTABLE* Parrot_default_get_vtable(PARROT_INTERP) {
 
     static const char attr_defs [] = "";
 

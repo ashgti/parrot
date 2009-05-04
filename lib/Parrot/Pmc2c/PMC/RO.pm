@@ -82,7 +82,7 @@ sub new {
             else {
                 $find_method_parent = $parent->{super}{$vt_method_name};
             }
-            my $real_findmethod = 'Parrot_' . $find_method_parent . '_find_method';
+            my $real_findmethod = 'interp->vtables[enum_class_' . $find_method_parent . ']->find_method';
             my $body            = <<"EOC";
     PMC *const method = $real_findmethod(interp, pmc, method_name);
     if (!PMC_IS_NULL(VTABLE_getprop(interp, method, CONST_STRING_GEN(interp, "write"))))
