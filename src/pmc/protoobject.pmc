@@ -278,7 +278,7 @@ stringification.
         }
         else {
             PMC *longname = VTABLE_getprop(interp, SELF, CONST_STRING(interp, "longname"));
-            return VTABLE_get_string(interp, longname); /* concat () */
+            return Parrot_str_concat(interp, VTABLE_get_string(interp, longname), CONST_STRING(interp, "()"), 0);
         }
     }
 
