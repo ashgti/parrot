@@ -1,0 +1,339 @@
+/*
+$Id$
+Copyright (C) 2009, The Parrot Foundation.
+
+=head1 NAME
+
+src/pmc/protoobject.pmc - Protoobject PMC
+
+=head1 DESCRIPTION
+
+Subclass of Object that provides more prototype-ish semantics.
+
+=back
+
+=head1 ATTRIBUTES
+
+Two attributes are inherited from the standard Object.
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
+*/
+
+pmclass Protoobject extends Object need_ext {
+
+/*
+
+=item C<void init()>
+
+Creates a completely new Protoobject for defining a new class.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        Parrot_Protoobject_attributes *po = mem_allocate_typed(Parrot_Protoobject_attributes*);
+        PMC_data(SELF) = po;
+        po->_class = pmc_new(interp, enum_class_Class);
+        po->attrib_store = PMCNULL;
+         
+        /* Set custom GC mark and destroy on the object. */
+        PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
+
+        /* Flag that it is an object and can also serve as a class. */
+        PObj_is_object_SET(SELF);
+        PObj_is_class_SET(SELF);
+    }
+
+/*
+
+=item C<void init_pmc(PMC *init)>
+
+Creates a completely new Protoobject for defining a new class, and initializes
+the underlying class with what is supplied.
+
+=cut
+
+*/
+
+    VTABLE void init_pmc(PMC *init) {
+        Parrot_Protoobject_attributes *po = mem_allocate_typed(Parrot_Protoobject_attributes);
+        PMC_data(SELF) = po;
+        po->_class = pmc_new_init(interp, enum_class_Class, init);
+        po->attrib_store = PMCNULL;
+         
+        /* Set custom GC mark and destroy on the object. */
+        PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
+
+        /* Flag that it is an object and can also serve as a class. */
+        PObj_is_object_SET(SELF);
+        PObj_is_class_SET(SELF);
+    }
+
+/*
+
+=item C<void instantiate(PMC *init)>
+
+Creates a new instance from this proto-object.
+
+=cut
+
+*/
+
+    VTABLE PMC *instantiate(PMC *init) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        return VTABLE_instantiate(interp, po->_class, init);
+    }
+
+/*
+
+=item C<INTVAL type()>
+
+Returns the integer type of the underlying class.
+
+=cut
+
+*/
+
+    VTABLE INTVAL type() {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        return VTABLE_type(interp, po->_class);
+    }
+
+/*
+
+=item C<void add_attribute(STRING *name, PMC *type)>
+
+Adds an attribute. Forwards to the underlying class.
+
+=cut
+
+*/
+
+    VTABLE void add_attribute(STRING *name, PMC *type) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_add_attribute(interp, po->_class, name, type);
+    }
+
+/*
+
+=item C<void remove_attribute(STRING *name)>
+
+Removes an attribute. Forwards to the underlying class.
+
+=cut
+
+*/
+
+    VTABLE void remove_attribute(STRING *name) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_remove_attribute(interp, po->_class, name);
+    }
+
+/*
+
+=item C<void add_method(STRING *name, PMC *sub)>
+
+Adds the given sub PMC as a method. Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE void add_method(STRING *name, PMC *sub) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_add_method(interp, po->_class, name, sub);
+    }
+
+/*
+
+=item C<void remove_method(STRING *name, PMC *sub)>
+
+Removes the method with the given name. Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE void remove_method(STRING *name) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_remove_method(interp, po->_class, name);
+    }
+
+/*
+
+=item C<void add_vtable_override(STRING *name, PMC *sub)>
+
+Adds the given sub PMC as a vtable override with the given name. Forwards to
+the underlying class.
+
+=cut
+
+*/
+    VTABLE void add_vtable_override(STRING *name, PMC *sub) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_add_vtable_override(interp, po->_class, name, sub);
+    }
+
+/*
+
+=item C<void add_parent(PMC *parent)>
+
+Adds the supplied PMC to the list of parents. Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE void add_parent(PMC *parent) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (VTABLE_isa(interp, parent, CONST_STRING(interp, "Protoobject"))) {
+            Parrot_Protoobject_attributes *pop = (Parrot_Protoobject_attributes*)PMC_data(parent);
+            parent = pop->_class;
+        }
+        VTABLE_add_parent(interp, po->_class, parent);
+    }
+
+/*
+
+=item C<void remove_parent(PMC *parent)>
+
+Remove the supplied class object from the list of parents for the class.
+Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE void remove_parent(PMC *parent) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (VTABLE_isa(interp, parent, CONST_STRING(interp, "Protoobject"))) {
+            Parrot_Protoobject_attributes *pop = (Parrot_Protoobject_attributes*)PMC_data(parent);
+            parent = pop->_class;
+        }
+        VTABLE_remove_parent(interp, po->_class, parent);
+    }
+
+/*
+
+=item C<void add_role(PMC *role)>
+
+Adds the supplied PMC to the list of roles for the class, provided there are
+no conflicts. Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE void add_role(PMC *role) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        VTABLE_add_role(interp, po->_class, role);
+    }
+
+/*
+
+=item C<PMC *inspect_str(STRING *what)>
+
+Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE PMC *inspect_str(STRING *what) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        return VTABLE_inspect_str(interp, po->_class, what);
+    }
+
+/*
+
+=item C<PMC *inspect()>
+
+Forwards to the underlying class.
+
+=cut
+
+*/
+    VTABLE PMC *inspect() {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        return VTABLE_inspect(interp, po->_class);
+    }
+
+/*
+
+=item get_string()
+
+For the proto-object, returns the "longname" of the protoobject's class
+and parens. For instances, delegates to whatever the instances defines for
+stringification.
+
+=cut
+
+*/
+    VTABLE STRING *get_string() {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (!PMC_IS_NULL(po->attrib_store)) {
+            return SUPER();
+        }
+        else {
+            PMC *longname = VTABLE_getprop(interp, SELF, CONST_STRING(interp, "longname"));
+            return VTABLE_get_string(interp, longname); /* concat () */
+        }
+    }
+
+/*
+
+=item defined()
+
+Protoobjects are always treated as being undefined. Otherwise delegates up to
+the instance.
+
+=cut
+
+*/
+
+    VTABLE INTVAL defined() {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (!PMC_IS_NULL(po->attrib_store))
+            return SUPER();
+        else
+            return 0;
+    }
+
+/*
+
+=item name()
+
+For the proto-object, returns the "longname" of the protoobject's class
+and parens. For instances, delegates to whatever the instances defines.
+
+=cut
+
+*/
+    VTABLE STRING *name() {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (!PMC_IS_NULL(po->attrib_store)) {
+            return SUPER();
+        }
+        else {
+            PMC *longname = VTABLE_getprop(interp, SELF, CONST_STRING(interp, "longname"));
+            return VTABLE_get_string(interp, longname);
+        }
+    }
+}
+
+/*
+
+=back
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
