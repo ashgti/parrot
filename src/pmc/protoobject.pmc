@@ -321,6 +321,14 @@ and parens. For instances, delegates to whatever the instances defines.
             return VTABLE_get_string(interp, longname);
         }
     }
+
+    VTABLE INTVAL does(STRING *check) {
+        Parrot_Protoobject_attributes *po = (Parrot_Protoobject_attributes*)PMC_data(SELF);
+        if (PMC_IS_NULL(po->attrib_store))
+            if (Parrot_str_equal(interp, check, CONST_STRING(interp, "abstraction")))
+                return 1;
+        return SUPER(check);
+    }
 }
 
 /*
