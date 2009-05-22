@@ -251,7 +251,7 @@ Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
 
 /*
 
-=item C<PMC * Parrot_oo_clone_object(PARROT_INTERP, PMC * pmc, PMC * to)>
+=item C<PMC * Parrot_oo_clone_object(PARROT_INTERP, PMC * pmc, PMC * dest)>
 
 =cut
 
@@ -261,7 +261,7 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
 Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC * pmc),
-    ARGIN_NULLOK(PMC * to))
+    ARGIN_NULLOK(PMC * dest))
 {
     Parrot_Object_attributes * const obj = PARROT_OBJECT(pmc);
     Parrot_Class_attributes  * const _class    = PARROT_CLASS(obj->_class);
@@ -270,7 +270,14 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC * pmc),
     Parrot_Object_attributes * cloned_guts;
     INTVAL i, num_attrs;
 
-    cloned = pmc_new_noinit(interp, enum_class_Object);
+    if(!PMC_IS_NULL(dest)) {
+        dest->vtable = pmc->vtable;
+        if(!dest->pmc_ext)
+            Parrot_gc_add_pmc_ext(interp, dest);
+        cloned = dest;
+    }
+    else
+        cloned = pmc_new_noinit(interp, enum_class_Object);
 
     /* Set custom GC mark and destroy on the object. */
     PObj_custom_mark_SET(cloned);

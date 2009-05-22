@@ -135,7 +135,7 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_oo_clone_object(PARROT_INTERP,
     ARGIN(PMC * pmc),
-    ARGIN_NULLOK(PMC * to))
+    ARGIN_NULLOK(PMC * dest))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
