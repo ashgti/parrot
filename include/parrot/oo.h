@@ -131,6 +131,14 @@ void init_object_cache(PARROT_INTERP)
 void mark_object_cache(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC * Parrot_oo_clone_object(PARROT_INTERP,
+    ARGIN(PMC * pmc),
+    ARGIN_NULLOK(PMC * to))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 void Parrot_oo_extract_methods_from_namespace(PARROT_INTERP,
     ARGIN(PMC *self),
     ARGIN(PMC *ns))
@@ -213,6 +221,9 @@ INTVAL Parrot_oo_register_type(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_mark_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_oo_clone_object __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_Parrot_oo_extract_methods_from_namespace \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
