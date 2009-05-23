@@ -49,10 +49,10 @@ static void pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
 
 static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP,
     ARGMOD(PMC * pmc),
-    ARGIN(VTABLE * new_vtable))
+    INTVAL newflags,
+    INTVAL flags)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
         FUNC_MODIFIES(* pmc);
 
 #define ASSERT_ARGS_check_pmc_reuse_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -66,8 +66,7 @@ static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP,
     || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_pmc_reuse_check_pmc_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(new_vtable)
+    || PARROT_ASSERT_ARG(pmc)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -156,7 +155,7 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
 {
     ASSERT_ARGS(pmc_reuse)
     VTABLE *new_vtable;
-    INTVAL  has_ext, new_flags;
+    INTVAL  has_ext, new_flags = 0;
 
     if (pmc->vtable->base_type == new_type)
         return pmc;
@@ -170,8 +169,7 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    if(pmc_reuse_check_pmc_ext(interp, pmc, new_vtable))
-        new_flags = PObj_is_PMC_EXT_FLAG;
+    new_flags = pmc_reuse_check_pmc_ext(interp, pmc, new_flags, new_vtable->flags);
 
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
@@ -221,8 +219,7 @@ pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC * pmc), ARGIN(PMC * class),
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    if(pmc_reuse_check_pmc_ext(interp, pmc, new_vtable))
-        new_flags |= PObj_is_PMC_EXT_FLAG;
+    new_flags = pmc_reuse_check_pmc_ext(interp, pmc, new_flags, new_vtable->flags);
 
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
@@ -275,8 +272,8 @@ check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags, UINTVAL destflags)
 
 /*
 
-=item C<static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP, PMC * pmc, VTABLE *
-new_vtable)>
+=item C<static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP, PMC * pmc, INTVAL
+newflags, INTVAL flags)>
 
 =cut
 
@@ -284,26 +281,30 @@ new_vtable)>
 
 static INTVAL
 pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
-    ARGIN(VTABLE * new_vtable))
+    INTVAL newflags, INTVAL flags)
 {
     /* Do we have an extension area? */
     INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc) && pmc->pmc_ext);
 
     /* Do we need one? */
-    if (new_vtable->flags & VTABLE_PMC_NEEDS_EXT) {
+    if (flags & VTABLE_PMC_NEEDS_EXT) {
         /* If we need an ext area, go allocate one */
         if (!has_ext)
             Parrot_gc_add_pmc_ext(interp, pmc);
-
-        return 1;
+        newflags |= PObj_is_PMC_EXT_FLAG;
+        PARROT_ASSERT(pmc->pmc_ext != NULL);
+        PARROT_ASSERT((newflags & PObj_is_PMC_EXT_FLAG) != 0);
     }
     else {
         if (has_ext)
             Parrot_gc_free_pmc_ext(interp, pmc);
-
+        pmc->pmc_ext = NULL;
         PMC_data(pmc) = NULL;
-        return 0;
+        newflags &= ~PObj_is_PMC_EXT_FLAG;
+        PARROT_ASSERT((newflags & PObj_is_PMC_EXT_FLAG) == 0);
+        PARROT_ASSERT(pmc->pmc_ext == NULL);
     }
+    return newflags;
 }
 
 /*
