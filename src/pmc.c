@@ -191,8 +191,9 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
 =item C<PMC * pmc_reuse_by_class(PARROT_INTERP, PMC * pmc, PMC * class, UINTVAL
 flags)>
 
-Reuse a PMC as an Object PMC. Takes the PMC to reuse and the associated
-Class PMC to make the conversion.
+Reuse an existing PMC. Convert it to the type specified by the given Class
+PMC. At the moment, this means we can only use this function to reuse PMCs
+into types with Classes (not built-in PMCs).
 
 =cut
 
@@ -203,12 +204,12 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_IGNORABLE_RESULT
 PMC *
 pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC * pmc), ARGIN(PMC * class),
-    SHIM(UINTVAL flags))
+    UINTVAL flags)
 {
     ASSERT_ARGS(pmc_reuse_by_class)
     const INTVAL new_type = PARROT_CLASS(class)->id;
     VTABLE * const new_vtable = interp->vtables[new_type];
-    INTVAL new_flags = 0;
+    INTVAL new_flags = flags;
 
     if (pmc->vtable->base_type == new_type)
         return pmc;
@@ -221,20 +222,13 @@ pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC * pmc), ARGIN(PMC * class),
         VTABLE_destroy(interp, pmc);
 
     if(pmc_reuse_check_pmc_ext(interp, pmc, new_vtable))
-        new_flags = PObj_is_PMC_EXT_FLAG;
+        new_flags |= PObj_is_PMC_EXT_FLAG;
 
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
 
     /* Set the right vtable */
     pmc->vtable = new_vtable;
-
-    /* We have an Object here, not a normal PMC. We can't call init on it,
-       so we call the clone function instead. */
-    {
-        const PMC * const dummy = Parrot_oo_clone_object(interp, pmc, class, pmc);
-        PARROT_ASSERT(pmc == dummy);
-    }
 
     return pmc;
 }

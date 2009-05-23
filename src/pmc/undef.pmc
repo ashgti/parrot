@@ -40,11 +40,15 @@ appropriate type.
 */
 
     VTABLE void set_pmc(PMC *other) {
-        if(!PObj_is_object_TEST(other))
+        if(!PObj_is_object_TEST(other)) {
             pmc_reuse(INTERP, SELF, other->vtable->base_type, 0);
-        else
-            pmc_reuse_by_class(INTERP, SELF, PARROT_OBJECT(other)->_class, 0);
-        VTABLE_set_pmc(INTERP, SELF, other);
+            VTABLE_set_pmc(INTERP, SELF, other);
+        }
+        else {
+            PMC * const class = PARROT_OBJECT(other)->_class;
+            pmc_reuse_by_class(INTERP, SELF, class, PObj_is_object_FLAG);
+            Parrot_oo_clone_object(interp, other, class, SELF);
+        }
     }
 
 /*
