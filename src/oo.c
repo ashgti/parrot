@@ -251,33 +251,39 @@ Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
 
 /*
 
-=item C<PMC * Parrot_oo_clone_object(PARROT_INTERP, PMC * pmc, PMC * dest)>
+=item C<PMC * Parrot_oo_clone_object(PARROT_INTERP, PMC * pmc, PMC * class, PMC
+* dest)>
 
 =cut
 
 */
 
 PARROT_CANNOT_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
 PMC *
 Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC * pmc),
-    ARGIN_NULLOK(PMC * dest))
+    ARGMOD_NULLOK(PMC * class), ARGMOD_NULLOK(PMC * dest))
 {
-    Parrot_Object_attributes * const obj = PARROT_OBJECT(pmc);
-    Parrot_Class_attributes  * const _class    = PARROT_CLASS(obj->_class);
-    const int num_classes = VTABLE_elements(interp, _class->all_parents);
+    Parrot_Object_attributes * obj;
+    Parrot_Class_attributes  * _class;
+    int num_classes;
     PMC * cloned;
     Parrot_Object_attributes * cloned_guts;
     INTVAL i, num_attrs;
 
     if(!PMC_IS_NULL(dest)) {
-        dest->vtable = pmc->vtable;
-        if(!dest->pmc_ext)
-            Parrot_gc_add_pmc_ext(interp, dest);
+        PARROT_ASSERT(!PMC_IS_NULL(class));
+        PARROT_ASSERT(class->vtable->base_type == enum_class_Class);
+        obj = (Parrot_Object_attributes *)
+            Parrot_oo_new_object_attrs(interp, class);
         cloned = dest;
     }
-    else
+    else {
+        obj = PARROT_OBJECT(pmc);
         cloned = pmc_new_noinit(interp, enum_class_Object);
+    }
+    _class = PARROT_CLASS(obj->_class);
+    PARROT_ASSERT(_class);
+    num_classes = VTABLE_elements(interp, _class->all_parents);
 
     /* Set custom GC mark and destroy on the object. */
     PObj_custom_mark_SET(cloned);
@@ -318,6 +324,25 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC * pmc),
 
     /* And we have ourselves a clone. */
     return cloned;
+}
+
+/*
+
+=item C<void * Parrot_oo_new_object_attrs(PARROT_INTERP, PMC * class)>
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_oo_new_object_attrs(PARROT_INTERP, ARGIN(PMC * class))
+{
+    Parrot_Object_attributes * const obj_guts =
+        mem_allocate_zeroed_typed(Parrot_Object_attributes);
+    obj_guts->_class       = class;
+    obj_guts->attrib_store = pmc_new(interp, enum_class_ResizablePMCArray);
+    return (void *)obj_guts;
 }
 
 /*

@@ -18,11 +18,17 @@ src/pmc.c - The base vtable calling functions
 
 #include "parrot/parrot.h"
 #include "pmc.str"
+#include "pmc/pmc_class.h"
 
 /* HEADERIZER HFILE: include/parrot/pmc.h */
 
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void check_pmc_reuse_flags(PARROT_INTERP,
+    UINTVAL srcflags,
+    UINTVAL destflags)
+        __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
@@ -41,6 +47,16 @@ static void pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
+static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP,
+    ARGMOD(PMC * pmc),
+    ARGIN(VTABLE * new_vtable))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(* pmc);
+
+#define ASSERT_ARGS_check_pmc_reuse_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_create_class_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_get_new_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -48,6 +64,10 @@ static void pmc_free(PARROT_INTERP, ARGMOD(PMC *pmc))
 #define ASSERT_ARGS_pmc_free __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc)
+#define ASSERT_ARGS_pmc_reuse_check_pmc_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(pmc) \
+    || PARROT_ASSERT_ARG(new_vtable)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -144,57 +164,14 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
     new_vtable = interp->vtables[new_type];
 
     /* Singleton/const PMCs/types are not eligible */
-
-    if ((pmc->vtable->flags      | new_vtable->flags)
-    &   (VTABLE_PMC_IS_SINGLETON | VTABLE_IS_CONST_FLAG))
-    {
-        /* First, is the destination a singleton? No joy for us there */
-        if (new_vtable->flags & VTABLE_PMC_IS_SINGLETON)
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_ALLOCATION_ERROR,
-                "Parrot VM: Can't turn to a singleton type!\n");
-
-        /* First, is the destination a constant? No joy for us there */
-        if (new_vtable->flags & VTABLE_IS_CONST_FLAG)
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_ALLOCATION_ERROR,
-                "Parrot VM: Can't turn to a constant type!\n");
-
-        /* Is the source a singleton? */
-        if (pmc->vtable->flags & VTABLE_PMC_IS_SINGLETON)
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_ALLOCATION_ERROR,
-                "Parrot VM: Can't modify a singleton\n");
-
-        /* Is the source constant? */
-        if (pmc->vtable->flags & VTABLE_IS_CONST_FLAG)
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_ALLOCATION_ERROR,
-                "Parrot VM: Can't modify a constant\n");
-    }
+    check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
 
     /* Does the old PMC need any resources freed? */
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    /* Do we have an extension area? */
-    has_ext = (PObj_is_PMC_EXT_TEST(pmc) && pmc->pmc_ext);
-
-    /* Do we need one? */
-    if (new_vtable->flags & VTABLE_PMC_NEEDS_EXT) {
-        /* If we need an ext area, go allocate one */
-        if (!has_ext)
-            Parrot_gc_add_pmc_ext(interp, pmc);
-
+    if(pmc_reuse_check_pmc_ext(interp, pmc, new_vtable))
         new_flags = PObj_is_PMC_EXT_FLAG;
-    }
-    else {
-        if (has_ext)
-            Parrot_gc_free_pmc_ext(interp, pmc);
-
-        PMC_data(pmc) = NULL;
-        new_flags = 0;
-    }
 
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
@@ -202,12 +179,138 @@ pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
     /* Set the right vtable */
     pmc->vtable = new_vtable;
 
-    /* Call the base init for the redone pmc */
+    /* Call the base init for the redone pmc. Warning, this should not
+       be called on Object PMCs. */
     VTABLE_init(interp, pmc);
 
     return pmc;
 }
 
+/*
+
+=item C<PMC * pmc_reuse_by_class(PARROT_INTERP, PMC * pmc, PMC * class, UINTVAL
+flags)>
+
+Reuse a PMC as an Object PMC. Takes the PMC to reuse and the associated
+Class PMC to make the conversion.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PARROT_IGNORABLE_RESULT
+PMC *
+pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC * pmc), ARGIN(PMC * class),
+    SHIM(UINTVAL flags))
+{
+    ASSERT_ARGS(pmc_reuse_by_class)
+    const INTVAL new_type = PARROT_CLASS(class)->id;
+    VTABLE * const new_vtable = interp->vtables[new_type];
+    INTVAL new_flags = 0;
+
+    if (pmc->vtable->base_type == new_type)
+        return pmc;
+
+    /* Singleton/const PMCs/types are not eligible */
+    check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
+
+    /* Does the old PMC need any resources freed? */
+    if (PObj_active_destroy_TEST(pmc))
+        VTABLE_destroy(interp, pmc);
+
+    if(pmc_reuse_check_pmc_ext(interp, pmc, new_vtable))
+        new_flags = PObj_is_PMC_EXT_FLAG;
+
+    /* we are a PMC + maybe is_PMC_EXT */
+    PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
+
+    /* Set the right vtable */
+    pmc->vtable = new_vtable;
+
+    /* We have an Object here, not a normal PMC. We can't call init on it,
+       so we call the clone function instead. */
+    {
+        const PMC * const dummy = Parrot_oo_clone_object(interp, pmc, class, pmc);
+        PARROT_ASSERT(pmc == dummy);
+    }
+
+    return pmc;
+}
+
+/*
+
+=item C<static void check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags,
+UINTVAL destflags)>
+
+=cut
+
+*/
+
+static void
+check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags, UINTVAL destflags)
+{
+    if ((srcflags | destflags) & (VTABLE_PMC_IS_SINGLETON | VTABLE_IS_CONST_FLAG))
+    {
+        /* First, is the destination a singleton? No joy for us there */
+        if (destflags & VTABLE_PMC_IS_SINGLETON)
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_ALLOCATION_ERROR,
+                "Parrot VM: Can't turn to a singleton type!\n");
+
+        /* Is the destination a constant? No joy for us there */
+        if (destflags & VTABLE_IS_CONST_FLAG)
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_ALLOCATION_ERROR,
+                "Parrot VM: Can't turn to a constant type!\n");
+
+        /* Is the source a singleton? */
+        if (srcflags & VTABLE_PMC_IS_SINGLETON)
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_ALLOCATION_ERROR,
+                "Parrot VM: Can't modify a singleton\n");
+
+        /* Is the source constant? */
+        if (srcflags & VTABLE_IS_CONST_FLAG)
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_ALLOCATION_ERROR,
+                "Parrot VM: Can't modify a constant\n");
+    }
+}
+
+/*
+
+=item C<static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP, PMC * pmc, VTABLE *
+new_vtable)>
+
+=cut
+
+*/
+
+static INTVAL
+pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
+    ARGIN(VTABLE * new_vtable))
+{
+    /* Do we have an extension area? */
+    INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc) && pmc->pmc_ext);
+
+    /* Do we need one? */
+    if (new_vtable->flags & VTABLE_PMC_NEEDS_EXT) {
+        /* If we need an ext area, go allocate one */
+        if (!has_ext)
+            Parrot_gc_add_pmc_ext(interp, pmc);
+
+        return 1;
+    }
+    else {
+        if (has_ext)
+            Parrot_gc_free_pmc_ext(interp, pmc);
+
+        PMC_data(pmc) = NULL;
+        return 0;
+    }
+}
 
 /*
 

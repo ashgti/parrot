@@ -659,7 +659,7 @@ Creates a clone of the object.
         }
 
         /* If we get here, no custom clone. Create a new object PMC. */
-        return Parrot_oo_clone_object(interp, SELF, NULL);
+        return Parrot_oo_clone_object(interp, SELF, obj->_class, NULL);
     }
 
 /*
