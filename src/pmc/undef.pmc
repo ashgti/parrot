@@ -40,7 +40,7 @@ appropriate type.
 */
 
     VTABLE void set_pmc(PMC *other) {
-        if(!PObj_is_object_TEST(other)) {
+        if (!PObj_is_object_TEST(other)) {
             pmc_reuse(INTERP, SELF, other->vtable->base_type, 0);
             VTABLE_set_pmc(INTERP, SELF, other);
         }

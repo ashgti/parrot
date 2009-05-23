@@ -138,9 +138,11 @@ flags)>
 
 Reuse an existing PMC, turning it into an empty PMC of the new type. Any
 required internal structure will be put in place (such as the extension area)
-and the PMC will be ready to go. This will throw an exception if the PMC is
-constant or of a singleton type (such as the environment PMC) or is being
-turned into a PMC of a singleton type.
+and the PMC will be ready to go.
+
+Cannot currently handle converting a non-Object PMC into an Object. Use
+C<pmc_reuse_by_class> for that.
+
 
 =cut
 
@@ -191,7 +193,8 @@ flags)>
 
 Reuse an existing PMC. Convert it to the type specified by the given Class
 PMC. At the moment, this means we can only use this function to reuse PMCs
-into types with Classes (not built-in PMCs).
+into types with Classes (not built-in PMCs). Use C<pmc_reuse> if you need
+to convert to a built-in PMC type.
 
 =cut
 
@@ -235,6 +238,11 @@ pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC * pmc), ARGIN(PMC * class),
 =item C<static void check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags,
 UINTVAL destflags)>
 
+We're converting one PMC type to another, either in C<pmc_reuse> or
+C<pmc_reuse_by_class>. Check to make sure that neither the existing PMC
+or the intended target PMC type are singletons or constants. We throw an
+exception if we are attempting an illegal operation.
+
 =cut
 
 */
@@ -242,6 +250,7 @@ UINTVAL destflags)>
 static void
 check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags, UINTVAL destflags)
 {
+    ASSERT_ARGS(check_pmc_reuse_flags)
     if ((srcflags | destflags) & (VTABLE_PMC_IS_SINGLETON | VTABLE_IS_CONST_FLAG))
     {
         /* First, is the destination a singleton? No joy for us there */
@@ -275,6 +284,11 @@ check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags, UINTVAL destflags)
 =item C<static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP, PMC * pmc, INTVAL
 newflags, INTVAL flags)>
 
+We are converting one PMC type into another, such as in C<pmc_reuse> or
+C<pmc_reuse_by_class>. Check to make sure that we have a pmc_ext if we need
+one, and that we don't have it if we don't need it. Returns the updated
+flags field with the C<PObj_is_PMC_EXT> flag set if necessary.
+
 =cut
 
 */
@@ -283,6 +297,7 @@ static INTVAL
 pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
     INTVAL newflags, INTVAL flags)
 {
+    ASSERT_ARGS(pmc_reuse_check_pmc_ext)
     /* Do we have an extension area? */
     INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc) && pmc->pmc_ext);
 
