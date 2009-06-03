@@ -351,7 +351,7 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     }
 
     /* Run the handler. */
-    Parrot_runops_fromc_args(interp, handler, "vP", exception);
+    Parrot_pcc_invoke_sub_from_c_args(interp, handler, "P->", exception);
 
     /* After handling a C exception, you don't want to resume at the point
      * where the C exception was thrown, you want to resume the next outer

@@ -3842,6 +3842,43 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
 
 /*
 
+=item C<void Parrot_pcc_invoke_method_object_from_c_args(PARROT_INTERP, PMC* pmc,
+PMC *method_obj, const char *signature, ...)>
+
+Makes a method call given the name of the method and the arguments as a
+C variadic argument list. C<pmc> is the invocant, C<method_obj> is the
+invocable method object, C<signature> is a C string describing the
+signature of the invocation, according to the Parrot calling
+conventions.  The variadic argument list contains the input arguments
+followed by the output results in the same order that they appear in the
+function signature.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_invoke_method_object_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
+        ARGIN(PMC *method_obj),
+        ARGIN(const char *signature), ...)
+{
+    ASSERT_ARGS(Parrot_pcc_invoke_method_object_from_c_args)
+    PMC *sig_obj;
+    va_list args;
+    va_start(args, signature);
+    sig_obj = Parrot_pcc_build_sig_object_from_varargs(interp, pmc, signature, args);
+    va_end(args);
+
+    /* Invoke the subroutine object with the given CallSignature object */
+    interp->current_object = pmc;
+    Parrot_pcc_invoke_from_sig_object(interp, method_obj, sig_obj);
+    gc_unregister_pmc(interp, sig_obj);
+
+}
+
+/*
+
 =item C<void Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, PMC* pmc,
 STRING *method_name, const char *signature, ...)>
 
@@ -3916,6 +3953,9 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
+    if (!dest)
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PARROT_USAGE_ERROR,
+            "Subroutine returned a NULL address");
 
     /* PIR Subs need runops to run their opcodes. Methods and NCI subs
      * don't. */
@@ -3925,12 +3965,12 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         const opcode_t offset = dest - interp->code->base.data;
 
         /* can't re-enter the runloop from here with PIC cores: RT #60048 */
-        if (interp->run_core == PARROT_CGP_CORE
+/*        if (interp->run_core == PARROT_CGP_CORE
         ||  interp->run_core == PARROT_SWITCH_CORE)
-            interp->run_core = PARROT_SLOW_CORE;
+            interp->run_core = PARROT_SLOW_CORE;*/
 
         runops(interp, offset);
-        interp->run_core = old_core;
+/*        interp->run_core = old_core; */
     }
 
 }

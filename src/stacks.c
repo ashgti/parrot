@@ -544,7 +544,7 @@ run_cleanup_action(PARROT_INTERP, ARGIN(Stack_Entry_t *e))
      * stack - run the action subroutine with an INTVAL arg of 0
      */
     PMC * const sub = UVal_pmc(e->entry);
-    Parrot_runops_fromc_args(interp, sub, "vI", 0);
+    Parrot_pcc_invoke_sub_from_c_args(interp, sub, "I->", 0);
 }
 
 /*

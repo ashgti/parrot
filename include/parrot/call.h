@@ -269,6 +269,17 @@ void Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP,
         FUNC_MODIFIES(*method_name);
 
 PARROT_EXPORT
+void Parrot_pcc_invoke_method_object_from_c_args(PARROT_INTERP,
+    ARGIN(PMC* pmc),
+    ARGIN(PMC *method_obj),
+    ARGIN(const char *signature),
+    ...)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4);
+
+PARROT_EXPORT
 void Parrot_pcc_invoke_sub_from_c_args(PARROT_INTERP,
     ARGIN(PMC *sub_obj),
     ARGIN(const char *sig),
@@ -423,6 +434,12 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc) \
     || PARROT_ASSERT_ARG(method_name) \
+    || PARROT_ASSERT_ARG(signature)
+#define ASSERT_ARGS_Parrot_pcc_invoke_method_object_from_c_args \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(pmc) \
+    || PARROT_ASSERT_ARG(method_obj) \
     || PARROT_ASSERT_ARG(signature)
 #define ASSERT_ARGS_Parrot_pcc_invoke_sub_from_c_args \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
