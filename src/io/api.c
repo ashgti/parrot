@@ -113,7 +113,6 @@ object instead of creating a new FileHandle.
 */
 
 PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC *
 Parrot_io_open(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
