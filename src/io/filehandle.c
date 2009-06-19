@@ -202,11 +202,10 @@ it can be cleanly changed later.
 
 PARROT_EXPORT
 void
-Parrot_io_set_flags(SHIM_INTERP, ARGIN(PMC *filehandle), INTVAL flags)
+Parrot_io_set_flags(PARROT_INTERP, ARGIN(PMC *filehandle), INTVAL flags)
 {
     ASSERT_ARGS(Parrot_io_set_flags)
-    Parrot_FileHandle_attributes *handle_struct = PARROT_FILEHANDLE(filehandle);
-    handle_struct->flags = flags;
+    SETATTR_FileHandle_flags(interp, filehandle, flags);
 }
 
 /*
@@ -227,11 +226,11 @@ it can be cleanly changed later.
 
 PARROT_EXPORT
 INTVAL
-Parrot_io_get_flags(SHIM_INTERP, ARGIN(PMC *filehandle))
+Parrot_io_get_flags(PARROT_INTERP, ARGIN(PMC *filehandle))
 {
     ASSERT_ARGS(Parrot_io_get_flags)
-    Parrot_FileHandle_attributes *handle_struct = PARROT_FILEHANDLE(filehandle);
-    INTVAL flags = handle_struct->flags;
+    INTVAL flags;
+    GETATTR_FileHandle_flags(interp, filehandle, flags);
     return flags;
 }
 
@@ -611,11 +610,12 @@ INTVAL
 Parrot_io_is_encoding(PARROT_INTERP, ARGIN(PMC *filehandle), ARGIN(STRING *value))
 {
     ASSERT_ARGS(Parrot_io_is_encoding)
-    Parrot_FileHandle_attributes *handle_struct = PARROT_FILEHANDLE(filehandle);
-    if (STRING_IS_NULL(handle_struct->encoding))
+    STRING * encoding;
+    GETATTR_FileHandle_encoding(interp, filehandle, encoding);
+    if (STRING_IS_NULL(encoding))
         return 0;
 
-    if (Parrot_str_equal(interp, value, handle_struct->encoding))
+    if (Parrot_str_equal(interp, value, encoding))
         return 1;
 
     return 0;

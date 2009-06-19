@@ -52,7 +52,8 @@ Catched
 OUTPUT
 
 TODO: {
-local $TODO = 'Unimplemented in this platform, TT #661' unless $^O =~ /linux|darwin|MSWin32/;
+#local $TODO = 'Unimplemented in this platform, TT #661' unless $^O =~ /linux|darwin|MSWin32/;
+local $TODO = "Pipes are being redone";
 
 pir_output_like( <<'CODE', <<'OUTPUT', 'open pipe for reading' );
 .include 'iglobals.pasm'
@@ -92,7 +93,8 @@ OUTPUT
 }
 
 TODO: {
-local $TODO = 'Unimplemented in this platform, TT #661' unless $^O =~ /linux|darwin|MSWin32/;
+#local $TODO = 'Unimplemented in this platform, TT #661' unless $^O =~ /linux|darwin|MSWin32/;
+local $TODO = "Pipes are being redone";
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'open pipe for writing' );
 .include 'iglobals.pasm'
