@@ -600,18 +600,24 @@ Parrot_io_seek_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
     if (pos >= 0) {
         switch (whence) {
             case SEEK_SET:
+            /* This doesn't do anything */
+            /*
                 if (offset > Parrot_io_get_file_size(interp, filehandle)) {
                     Parrot_io_set_file_size(interp, filehandle, offset);
                 }
+            */
                 break;
             case SEEK_CUR:
                 {
+                    /* This doesn't do anything */
+                    /*
                     const PIOOFF_T avail = offset
                             + Parrot_io_get_buffer_next(interp, filehandle)
                             - Parrot_io_get_buffer_start(interp, filehandle);
                     if (avail > Parrot_io_get_file_size(interp, filehandle)) {
                         Parrot_io_set_file_size(interp, filehandle, avail);
                     }
+                    */
                 }
                 break;
             case SEEK_END:

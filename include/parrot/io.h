@@ -229,7 +229,6 @@ PMC * Parrot_io_new_pmc(PARROT_INTERP, INTVAL flags)
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC * Parrot_io_open(PARROT_INTERP,
     ARGIN_NULLOK(PMC *pmc),
@@ -609,10 +608,6 @@ PIOOFF_T Parrot_io_get_file_position(SHIM_INTERP, ARGIN(PMC *filehandle))
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-PIOOFF_T Parrot_io_get_file_size(SHIM_INTERP, ARGIN(PMC *filehandle))
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
 INTVAL Parrot_io_get_flags(SHIM_INTERP, ARGIN(PMC *filehandle))
         __attribute__nonnull__(2);
 
@@ -650,12 +645,6 @@ PARROT_EXPORT
 void Parrot_io_set_file_position(SHIM_INTERP,
     ARGIN(PMC *filehandle),
     PIOOFF_T file_pos)
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
-void Parrot_io_set_file_size(SHIM_INTERP,
-    ARGIN(PMC *filehandle),
-    PIOOFF_T file_size)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
@@ -727,8 +716,6 @@ void Parrot_io_set_buffer_start(SHIM_INTERP,
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_get_file_position __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
-#define ASSERT_ARGS_Parrot_io_get_file_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_get_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_get_last_file_position \
@@ -747,8 +734,6 @@ void Parrot_io_set_buffer_start(SHIM_INTERP,
 #define ASSERT_ARGS_Parrot_io_parse_open_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_io_set_file_position __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(filehandle)
-#define ASSERT_ARGS_Parrot_io_set_file_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_set_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
