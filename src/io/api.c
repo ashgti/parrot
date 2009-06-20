@@ -32,6 +32,7 @@ src/io/io_string.c.
 #include "api.str"
 #include "../pmc/pmc_filehandle.h"
 #include "../pmc/pmc_stringhandle.h"
+#include "../pmc/pmc_socket.h"
 
 #include <stdarg.h>
 
@@ -216,6 +217,14 @@ Parrot_io_close(PARROT_INTERP, ARGMOD(PMC *pmc))
     }
     else if (pmc->vtable->base_type == enum_class_StringHandle)
         SETATTR_StringHandle_read_offset(interp, pmc, 0);
+    else if (pmc->vtable->base_type == enum_class_Socket)
+    {
+        PIOHANDLE os_handle;
+        GETATTR_Socket_os_handle(interp, pmc, os_handle);
+        if (os_handle != PIO_INVALID_HANDLE)
+            result = Parrot_io_close_piohandle(interp, os_handle);
+        SETATTR_Socket_os_handle(interp, pmc, PIO_INVALID_HANDLE);
+    }
     else
         Parrot_PCCINVOKE(interp, pmc, CONST_STRING(interp, "close"), "->I", &result);
 

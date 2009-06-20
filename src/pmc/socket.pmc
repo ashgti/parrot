@@ -206,13 +206,8 @@ Close a socket.
 
     METHOD close() {
         INTVAL result = -1;
-        if (PARROT_SOCKET(SELF)) {
-            Parrot_Socket_attributes *data_struct = PARROT_SOCKET(SELF);
-
-            if (data_struct->os_handle != PIO_INVALID_HANDLE)
-                result = Parrot_io_close_piohandle(interp, data_struct->os_handle);
-            data_struct->os_handle = PIO_INVALID_HANDLE;
-        }
+        if (PARROT_SOCKET(pmc))
+            result = Parrot_io_close(INTERP, SELF);
         RETURN(INTVAL result);
     }
 
