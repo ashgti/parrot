@@ -280,6 +280,8 @@ Parrot_io_is_closed(PARROT_INTERP, ARGMOD(PMC *pmc))
         GETATTR_StringHandle_stringhandle(interp, pmc, stringhandle);
         result = STRING_IS_NULL(stringhandle);
     }
+    else if (pmc->vtable->base_type == enum_class_Socket)
+        result = Parrot_io_socket_is_closed(pmc);
     else
         Parrot_PCCINVOKE(interp, pmc, CONST_STRING(interp, "is_closed"), "->I", &result);
 
