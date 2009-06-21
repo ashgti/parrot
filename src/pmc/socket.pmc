@@ -117,7 +117,7 @@ Returns whether the Socket is currently open.
 */
 
     VTABLE INTVAL get_bool() {
-        return !Parrot_io_socket_is_closed(SELF);
+        return !Parrot_io_socket_is_closed(INTERP, SELF);
     }
 
 /*

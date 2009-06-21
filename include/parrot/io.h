@@ -608,7 +608,8 @@ PIOOFF_T Parrot_io_get_file_position(SHIM_INTERP, ARGIN(PMC *filehandle))
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-INTVAL Parrot_io_get_flags(SHIM_INTERP, ARGIN(PMC *filehandle))
+INTVAL Parrot_io_get_flags(PARROT_INTERP, ARGIN(PMC *filehandle))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
@@ -648,7 +649,10 @@ void Parrot_io_set_file_position(SHIM_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-void Parrot_io_set_flags(SHIM_INTERP, ARGIN(PMC *filehandle), INTVAL flags)
+void Parrot_io_set_flags(PARROT_INTERP,
+    ARGIN(PMC *filehandle),
+    INTVAL flags)
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
@@ -717,7 +721,8 @@ void Parrot_io_set_buffer_start(SHIM_INTERP,
 #define ASSERT_ARGS_Parrot_io_get_file_position __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_get_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(filehandle)
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_get_last_file_position \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
@@ -736,7 +741,8 @@ void Parrot_io_set_buffer_start(SHIM_INTERP,
 #define ASSERT_ARGS_Parrot_io_set_file_position __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_set_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(filehandle)
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_set_os_handle __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(filehandle)
 #define ASSERT_ARGS_Parrot_io_clear_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -844,8 +850,9 @@ INTVAL Parrot_io_socket(PARROT_INTERP,
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-INTVAL Parrot_io_socket_is_closed(ARGMOD(PMC *socket))
+INTVAL Parrot_io_socket_is_closed(PARROT_INTERP, ARGMOD(PMC *socket))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*socket);
 
 #define ASSERT_ARGS_Parrot_io_accept __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -878,7 +885,8 @@ INTVAL Parrot_io_socket_is_closed(ARGMOD(PMC *socket))
 #define ASSERT_ARGS_Parrot_io_socket __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_io_socket_is_closed __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(socket)
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(socket)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/io/socket_api.c */
 
