@@ -80,3 +80,5 @@ parrotobject.pmc    51
 
 os.pmc    52
 file.pmc    53
+
+context.pmc 54
