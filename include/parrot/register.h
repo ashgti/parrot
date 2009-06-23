@@ -79,16 +79,6 @@ PARROT_EXPORT
 void Parrot_clear_s(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-Parrot_Context * Parrot_context_ref_trace(PARROT_INTERP,
-    ARGMOD(Parrot_Context *ctx),
-    ARGIN(const char *file),
-    int line)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*ctx);
 
 PARROT_EXPORT
 void Parrot_free_context(PARROT_INTERP,
@@ -146,10 +136,6 @@ Parrot_Context * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_clear_s __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_context_ref_trace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx) \
-    || PARROT_ASSERT_ARG(file)
 #define ASSERT_ARGS_Parrot_free_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)

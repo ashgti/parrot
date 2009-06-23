@@ -544,17 +544,6 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const Parrot_Conte
             if (VTABLE_exists_keyed_str(interp, lex_pad, lex_name))
                 return lex_pad;
 
-#if CTX_LEAK_DEBUG
-        if (outer == ctx) {
-            /* This is a bug; a context can never be its own :outer context.
-             * Detecting it avoids an unbounded loop, which is difficult to
-             * debug, though we'd rather not pay the cost of detection in a
-             * production release.
-             */
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                "Bug:  Context %p :outer points back to itself.", ctx);
-        }
-#endif
         ctx = outer;
     }
 }
@@ -679,12 +668,6 @@ Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
     Parrot_Context *to_ctx       = cc->to_ctx;
     Parrot_Context *from_ctx     = CONTEXT(interp);
 
-#if CTX_LEAK_DEBUG
-    if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG))
-        fprintf(stderr,
-                "[invoke cont    %p, to_ctx %p, from_ctx %p (refs %d)]\n",
-                (const void *)pmc, (void *)to_ctx, (void *)from_ctx, (int)from_ctx->ref_count);
-#endif
     if (!to_ctx)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                        "Continuation invoked after deactivation.");

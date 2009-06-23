@@ -186,13 +186,6 @@ typedef union {
     INTVAL       *regs_i;
 } Regs_ni;
 
-/* If CTX_LEAK_DEBUG is enabled, then turning on PARROT_CTX_DESTROY_DEBUG_FLAG
-   will print tons of detail about when Parrot_Context structures are allocated
-   and deallocated to stderr.  If CTX_LEAK_DEBUG is disabled, then all of the
-   relevant code is omitted, and PARROT_CTX_DESTROY_DEBUG_FLAG has no effect.
- */
-#define CTX_LEAK_DEBUG 1
-
 struct Parrot_Context {
     /* common header with Interp_Context */
     struct Parrot_Context *caller_ctx;      /* caller context */
@@ -701,11 +694,7 @@ void Parrot_setup_event_func_ptrs(PARROT_INTERP);
 PARROT_EXPORT void disable_event_checking(PARROT_INTERP);
 PARROT_EXPORT void enable_event_checking(PARROT_INTERP);
 
-#if CTX_LEAK_DEBUG
-#  define Parrot_context_ref(a, b) Parrot_context_ref_trace((a), (b), __FILE__, __LINE__)
-#else /* !CTX_LEAK_DEBUG */
-#  define Parrot_context_ref(a, b) (((b)->ref_count++), (b))
-#endif /* CTX_LEAK_DEBUG */
+#define Parrot_context_ref(a, b) (((b)->ref_count++), (b))
 
 #else /* !PARROT_IN_CORE */
 

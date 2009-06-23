@@ -107,14 +107,6 @@ Destroys the continuation.
     VTABLE void destroy() {
         Parrot_cont * const cc = PMC_cont(SELF);
         if (cc) {
-#if CTX_LEAK_DEBUG
-            if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
-                fprintf(stderr,
-                        "[destroy cont    %p, to_ctx %p, from_ctx %p]\n",
-                        (void *)SELF, (void *)cc->to_ctx, (void *)cc->from_ctx);
-            }
-
-#endif
             if (cc->from_ctx)
                 Parrot_free_context(interp, cc->from_ctx, 1);
 

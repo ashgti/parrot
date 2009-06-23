@@ -21,17 +21,6 @@ is determined by the PASM/PIR compiler in the register allocation pass
 #include "parrot/register.h"
 #include "../pmc/pmc_sub.h"
 
-
-/* set CTX_LEAK_DEBUG_FULL to 1 for enhanced context debugging.
- * When set (1) freed contexts are "poisoned" so that any dangling
- * references produce segfaults, and (2) contexts are not recycled
- * so that later allocations don't suddenly restore a dangling
- * reference to a "working" condition.
- */
-#define CTX_LEAK_DEBUG_FULL 0
-
-
-
 /* HEADERIZER HFILE: include/parrot/register.h */
 
 /* HEADERIZER BEGIN: static */
@@ -396,13 +385,6 @@ Parrot_pop_context(PARROT_INTERP)
     Parrot_Context * const ctx = CONTEXT(interp);
     Parrot_Context * const old = ctx->caller_ctx;
 
-#if CTX_LEAK_DEBUG
-    if (ctx->ref_count > 0 &&
-            Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
-        fprintf(stderr, "[force recycle of context %p (%d refs)]\n",
-            (void *)ctx, ctx->ref_count);
-    }
-#endif
     ctx->ref_count = 0;
     Parrot_free_context(interp, ctx, 0);
 
@@ -488,12 +470,6 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     ctx->n_regs_used[REGNO_STR] = number_regs_used[REGNO_STR];
     ctx->n_regs_used[REGNO_PMC] = number_regs_used[REGNO_PMC];
 
-#if CTX_LEAK_DEBUG
-    if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
-        fprintf(stderr, "[alloc ctx %p]\n", ctx);
-    }
-#endif
-
     ctx->regs_mem_size = reg_alloc;
 
     /* regs start past the context */
@@ -563,17 +539,8 @@ Parrot_free_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx), int deref)
      * calling chain (such as a continuation or outer scope) wants to
      * preserve the context.  The field is decremented when
      * Parrot_free_context is called with the C<deref> flag set true.
-     * To trace context handling and check for leaks,
-     * (a) disable NDEBUG, (b) enable CTX_LEAK_DEBUG in interpreter.h,
-     * and (c) execute "debug 0x80" in a (preferably small) test case.
-     *
      */
     if (deref) {
-#if CTX_LEAK_DEBUG
-        if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
-            fprintf(stderr, "[reference to context %p released]\n", (void*)ctx);
-        }
-#endif
         ctx->ref_count--;
     }
 
@@ -610,21 +577,6 @@ Parrot_free_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx), int deref)
         ctx->n_regs_used[REGNO_STR] = 0;
         ctx->n_regs_used[REGNO_PMC] = 0;
 
-#if CTX_LEAK_DEBUG_FULL
-        /* for debugging, poison the freed context in case anything
-         * tries to use it later. */
-        ctx->current_results   = (opcode_t *)0xbeefcafe;
-        ctx->results_signature = (PMC *)0xbeefcafe;
-        ctx->lex_pad           = (PMC *)0xbeefcafe;
-        ctx->outer_ctx         = (Parrot_Context *)0xbeefcafe;
-        ctx->current_cont      = (PMC *)0xbeefcafe;
-        ctx->current_object    = (PMC *)0xbeefcafe;
-        ctx->current_HLL       = -1;
-        ctx->handlers          = (PMC *)0xbeefcafe;
-        ctx->constants         = (struct PackFile_Constant **)0xbeefcafe;
-        ctx->current_namespace = (PMC *)0xbeefcafe;
-#endif
-
         /* don't put the same context on the free list multiple times; we don't
          * have the re-use versus multiple ref count semantics right yet */
         if (ctx->ref_count < 0)
@@ -637,49 +589,10 @@ Parrot_free_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx), int deref)
         ptr             = ctx;
         slot            = CALCULATE_SLOT_NUM(ctx->regs_mem_size);
 
-#if CTX_LEAK_DEBUG_FULL
-        slot = 0;
-#endif
-
         PARROT_ASSERT(slot < interp->ctx_mem.n_free_slots);
         *(void **)ptr                   = interp->ctx_mem.free_list[slot];
         interp->ctx_mem.free_list[slot] = ptr;
     }
-}
-
-
-/*
-
-=item C<Parrot_Context * Parrot_context_ref_trace(PARROT_INTERP, Parrot_Context
-*ctx, const char *file, int line)>
-
-Helper function to trace references when CTX_LEAK_DEBUG is set.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-Parrot_Context *
-Parrot_context_ref_trace(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
-        ARGIN(const char *file), int line)
-{
-    ASSERT_ARGS(Parrot_context_ref_trace)
-    if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
-        const char *name = "unknown";
-        Parrot_sub *sub;
-
-        PMC_get_sub(interp, ctx->current_sub, sub);
-        if (ctx->current_sub)
-            name = (char *)(sub->name->strstart);
-
-        fprintf(stderr, "[reference to context %p ('%s') taken at %s:%d]\n",
-                (void *)ctx, name, file, line);
-    }
-
-    ctx->ref_count++;
-    return ctx;
 }
 
 
