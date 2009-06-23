@@ -102,10 +102,8 @@ Free structures.
 
 */
     VTABLE void destroy() {
-        const PIOHANDLE os_handle = Parrot_io_get_os_handle(INTERP, SELF);
-        if (os_handle != PIO_INVALID_HANDLE)
-            Parrot_io_close_piohandle(interp, os_handle);
-        Parrot_io_set_os_handle(INTERP, SELF, PIO_INVALID_HANDLE);
+        if (PARROT_SOCKET(SELF))
+            mem_sys_free(PARROT_SOCKET(SELF));
     }
 
 /*

@@ -119,8 +119,7 @@ Free structures.
     VTABLE void destroy() {
         if (PARROT_FILEHANDLE(SELF)) {
             Parrot_FileHandle_attributes *data_struct = PARROT_FILEHANDLE(SELF);
-
-            mem_sys_free(PARROT_FILEHANDLE(SELF));
+            mem_sys_free(data_struct);
             PMC_data(SELF) = NULL;
         }
     }
