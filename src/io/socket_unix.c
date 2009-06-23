@@ -156,7 +156,7 @@ INTVAL
 Parrot_io_connect_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGIN(PMC *r))
 {
     ASSERT_ARGS(Parrot_io_connect_unix)
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
 
     if (!r)
         return -1;
@@ -164,7 +164,7 @@ Parrot_io_connect_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGIN(PMC *r))
     PARROT_SOCKET(socket)->remote = r;
 
 AGAIN:
-    if ((connect(io->os_handle, (struct sockaddr *)SOCKADDR_REMOTE(socket),
+    if ((connect(os_handle, (struct sockaddr *)SOCKADDR_REMOTE(socket),
             sizeof (struct sockaddr_in))) != 0) {
         switch (errno) {
             case EINTR:
@@ -195,7 +195,7 @@ INTVAL
 Parrot_io_bind_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGMOD(PMC *sockaddr))
 {
     ASSERT_ARGS(Parrot_io_bind_unix)
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
     struct sockaddr_in * saddr;
 
     if (!sockaddr)
@@ -205,7 +205,7 @@ Parrot_io_bind_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGMOD(PMC *sockaddr))
 
     saddr = SOCKADDR_LOCAL(socket);
 
-    if ((bind(io->os_handle, (struct sockaddr *) saddr,
+    if ((bind(os_handle, (struct sockaddr *) saddr,
             sizeof (struct sockaddr_in))) == -1) {
         return -1;
     }
@@ -225,11 +225,11 @@ C<SEQ> sockets.
 */
 
 INTVAL
-Parrot_io_listen_unix(SHIM_INTERP, ARGMOD(PMC *socket), INTVAL sec)
+Parrot_io_listen_unix(PARROT_INTERP, ARGMOD(PMC *socket), INTVAL sec)
 {
     ASSERT_ARGS(Parrot_io_listen_unix)
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
-    if ((listen(io->os_handle, sec)) == -1) {
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
+    if ((listen(os_handle, sec)) == -1) {
         return -1;
     }
     return 0;
@@ -251,7 +251,7 @@ PMC *
 Parrot_io_accept_unix(PARROT_INTERP, ARGMOD(PMC *socket))
 {
     ASSERT_ARGS(Parrot_io_accept_unix)
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
     PMC * newio   = Parrot_io_new_socket_pmc(interp,
             PIO_F_SOCKET | PIO_F_READ|PIO_F_WRITE);
     Parrot_Socklen_t    addrlen = sizeof (struct sockaddr_in);
@@ -262,13 +262,13 @@ Parrot_io_accept_unix(PARROT_INTERP, ARGMOD(PMC *socket))
     PARROT_SOCKET(newio)->remote = pmc_new(interp, enum_class_Sockaddr);
     saddr                        = SOCKADDR_REMOTE(newio);
 
-    newsock = accept(io->os_handle, (struct sockaddr *)saddr, &addrlen);
+    newsock = accept(os_handle, (struct sockaddr *)saddr, &addrlen);
 
     if (newsock == -1) {
         return PMCNULL;
     }
 
-    PARROT_SOCKET(newio)->os_handle = newsock;
+    Parrot_io_set_os_handle(interp, newio, newsock);
 
     /* XXX FIXME: Need to do a getsockname and getpeername here to
      * fill in the sockaddr_in structs for local and peer */
@@ -290,11 +290,11 @@ Send the message C<*s> to C<*io>'s connected socket.
 */
 
 INTVAL
-Parrot_io_send_unix(SHIM_INTERP, ARGMOD(PMC *socket), ARGMOD(STRING *s))
+Parrot_io_send_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_io_send_unix)
     int error, bytes, byteswrote;
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
 
     bytes = s->bufused;
     byteswrote = 0;
@@ -302,7 +302,7 @@ AGAIN:
     /*
      * Ignore encoding issues for now.
      */
-    if ((error = send(io->os_handle, (char *)s->strstart + byteswrote,
+    if ((error = send(os_handle, (char *)s->strstart + byteswrote,
                     bytes, 0)) >= 0) {
         byteswrote += error;
         bytes -= error;
@@ -324,7 +324,7 @@ AGAIN:
 #    endif
             case EPIPE:
                 /* XXX why close it here and not below */
-                close(io->os_handle);
+                close(os_handle);
                 return -1;
             default:
                 return -1;
@@ -349,10 +349,10 @@ Parrot_io_recv_unix(PARROT_INTERP, ARGMOD(PMC *socket), ARGOUT(STRING **s))
     int error;
     unsigned int bytesread = 0;
     char buf[2048];
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
 
 AGAIN:
-    if ((error = recv(io->os_handle, buf, 2048, 0)) >= 0) {
+    if ((error = recv(os_handle, buf, 2048, 0)) >= 0) {
         bytesread += error;
         /* The charset should probably be 'binary', but right now httpd.pir
          * only works with 'ascii'
@@ -373,11 +373,11 @@ AGAIN:
 #    endif
             case ECONNRESET:
                 /* XXX why close it on err return result is -1 anyway */
-                close(io->os_handle);
+                close(os_handle);
                 *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
                 return -1;
             default:
-                close(io->os_handle);
+                close(os_handle);
                 *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
                 return -1;
         }
@@ -406,27 +406,27 @@ the read buffer.
 */
 
 INTVAL
-Parrot_io_poll_unix(SHIM_INTERP, ARGMOD(PMC *socket), int which, int sec,
+Parrot_io_poll_unix(PARROT_INTERP, ARGMOD(PMC *socket), int which, int sec,
     int usec)
 {
     ASSERT_ARGS(Parrot_io_poll_unix)
     fd_set r, w, e;
     struct timeval t;
-    Parrot_Socket_attributes * io = PARROT_SOCKET(socket);
+    const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
 
     t.tv_sec = sec;
     t.tv_usec = usec;
     FD_ZERO(&r); FD_ZERO(&w); FD_ZERO(&e);
     /* These should be defined in header */
-    if (which & 1) FD_SET(io->os_handle, &r);
-    if (which & 2) FD_SET(io->os_handle, &w);
-    if (which & 4) FD_SET(io->os_handle, &e);
+    if (which & 1) FD_SET(os_handle, &r);
+    if (which & 2) FD_SET(os_handle, &w);
+    if (which & 4) FD_SET(os_handle, &e);
 AGAIN:
-    if ((select(io->os_handle+1, &r, &w, &e, &t)) >= 0) {
+    if ((select(os_handle+1, &r, &w, &e, &t)) >= 0) {
         int n;
-        n = (FD_ISSET(io->os_handle, &r) ? 1 : 0);
-        n |= (FD_ISSET(io->os_handle, &w) ? 2 : 0);
-        n |= (FD_ISSET(io->os_handle, &e) ? 4 : 0);
+        n = (FD_ISSET(os_handle, &r) ? 1 : 0);
+        n |= (FD_ISSET(os_handle, &w) ? 2 : 0);
+        n |= (FD_ISSET(os_handle, &e) ? 4 : 0);
         return n;
     }
     else {

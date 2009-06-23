@@ -31,18 +31,12 @@ extern "C" {
 #endif
 #endif
 
-pmclass FileHandle extends Handle {
+pmclass FileHandle {
+    ATTR PMC *os_handle;              /* encapsulated OS handle       */
     ATTR INTVAL flags;                /* Filehandle flags             */
     ATTR STRING *filename;            /* The opened path and filename */
     ATTR STRING *mode;                /* The mode string used in open */
     ATTR STRING *encoding;            /* The encoding for read/write  */
-    ATTR PIOOFF_T file_pos;           /* Current real file pointer    */
-    ATTR PIOOFF_T last_pos;           /* Last file position           */
-    ATTR size_t buffer_size;          /* Buffer size                  */
-    ATTR INTVAL buffer_flags;         /* Buffer flags                 */
-    ATTR unsigned char *buffer_start; /* Start of buffer              */
-    ATTR unsigned char *buffer_end;   /* End of buffer                */
-    ATTR unsigned char *buffer_next;  /* Current read/write pointer   */
 
 /*
 
@@ -63,16 +57,9 @@ Initializes a newly created FileHandle object.
         data_struct->filename      = NULL;
         data_struct->mode          = NULL;
         data_struct->encoding      = NULL;
-        data_struct->file_pos      = piooffsetzero;
-        data_struct->last_pos      = piooffsetzero;
-        data_struct->buffer_size   = 0;
-        data_struct->buffer_flags  = 0;
-        data_struct->buffer_start  = NULL;
-        data_struct->buffer_end    = NULL;
-        data_struct->buffer_next   = NULL;
 
-        /* Initialize the os_handle to the platform-specific value for closed. */
-        data_struct->os_handle     = (PIOHANDLE) PIO_INVALID_HANDLE;
+        /* Create the handle pmc */
+        data_struct->os_handle     = Parrot_io_make_os_handle_pmc(INTERP);
 
         PObj_custom_mark_SET(SELF);
         PObj_active_destroy_SET(SELF);
@@ -93,7 +80,7 @@ Create a copy of the filehandle.
         PMC * const copy = Parrot_io_new_pmc(interp, old_struct->flags);
         Parrot_FileHandle_attributes * const data_struct = PARROT_FILEHANDLE(copy);
 
-        data_struct->os_handle    = Parrot_dup(old_struct->os_handle);
+        data_struct->os_handle = VTABLE_clone(INTERP, old_struct->os_handle);
 
         return copy;
     }
@@ -116,6 +103,8 @@ Mark active filehandle data as live.
             Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->filename);
         if (data_struct->encoding)
             Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->encoding);
+        if (data_struct->os_handle)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->os_handle);
     }
 
 /*
@@ -130,16 +119,6 @@ Free structures.
     VTABLE void destroy() {
         if (PARROT_FILEHANDLE(SELF)) {
             Parrot_FileHandle_attributes *data_struct = PARROT_FILEHANDLE(SELF);
-
-            if (!Parrot_io_is_closed_filehandle(INTERP, SELF)) {
-                if (data_struct->flags & PIO_F_SHARED)
-                    Parrot_io_flush_filehandle(INTERP, SELF);
-                else
-                    Parrot_io_close_filehandle(INTERP, SELF);
-            }
-
-            if (data_struct->buffer_start)
-                mem_sys_free(data_struct->buffer_start);
 
             mem_sys_free(PARROT_FILEHANDLE(SELF));
             PMC_data(SELF) = NULL;
@@ -616,7 +595,7 @@ platforms that use integer file descriptors).
     METHOD get_fd() {
 #ifndef PIO_OS_STDIO
         INTVAL os_handle;
-        GET_ATTR_os_handle(INTERP, SELF, os_handle);
+        os_handle = Parrot_io_get_os_handle(INTERP, SELF);
         RETURN(INTVAL os_handle);
 #endif /*PIO_OS_STDIO*/
 

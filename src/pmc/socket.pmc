@@ -20,9 +20,10 @@ The Socket PMC performs network I/O operations.
 
 #include "../src/io/io_private.h"
 
-pmclass Socket extends Handle {
+pmclass Socket {
     ATTR PMC *local;           /* Local addr                   */
     ATTR PMC *remote;          /* Remote addr                  */
+    ATTR PMC *os_handle;       /* encapuslated handle type     */
 
 /*
 
@@ -41,6 +42,7 @@ Initializes a newly created Socket object.
         PMC_data(SELF)      = data_struct;
         data_struct->local  = PMCNULL;
         data_struct->remote = PMCNULL;
+        data_struct->os_handle = Parrot_io_make_os_handle_pmc(INTERP);
 
         PObj_custom_mark_destroy_SETALL(SELF);
     }
@@ -85,6 +87,9 @@ Mark active socket handle data as live.
 
             if (data->remote)
                 Parrot_gc_mark_PObj_alive(interp, (PObj *)data->remote);
+
+            if (data->os_handle)
+                Parrot_gc_mark_PObj_alive(interp, (PObj *)data->os_handle);
         }
     }
 /*
@@ -97,13 +102,10 @@ Free structures.
 
 */
     VTABLE void destroy() {
-        if (PARROT_SOCKET(SELF)) {
-            Parrot_Socket_attributes *data_struct = PARROT_SOCKET(SELF);
-
-            if (data_struct->os_handle != PIO_INVALID_HANDLE)
-                Parrot_io_close_piohandle(interp, data_struct->os_handle);
-            data_struct->os_handle = PIO_INVALID_HANDLE;
-        }
+        const PIOHANDLE os_handle = Parrot_io_get_os_handle(INTERP, SELF);
+        if (os_handle != PIO_INVALID_HANDLE)
+            Parrot_io_close_piohandle(interp, os_handle);
+        Parrot_io_set_os_handle(INTERP, SELF, PIO_INVALID_HANDLE);
     }
 
 /*
