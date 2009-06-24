@@ -203,7 +203,7 @@ Parrot_io_flush_buffer(PARROT_INTERP, ARGMOD(PMC *handle))
         fake.bufused = to_write;
         wrote = PIO_WRITE(interp, handle, &fake);
         if (wrote == (long)to_write) {
-            data_struct->buffer_start = buffer_start;
+            data_struct->buffer_next = buffer_start;
             /* Release buffer */
             data_struct->buffer_flags = (buffer_flags & ~PIO_BF_WRITEBUF);
             return 0;
