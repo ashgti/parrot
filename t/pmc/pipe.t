@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-t/pmc/pipe.t - test the Pipe and PipeHandle PMCs
+t/pmc/pipe.t - test the Pipe PMC
 
 
 =head1 SYNOPSIS
@@ -13,7 +13,7 @@ t/pmc/pipe.t - test the Pipe and PipeHandle PMCs
 
 =head1 DESCRIPTION
 
-Tests the Pipe and PipeHandle PMCs.  Creates some pipes, tries some basic I/O.
+Tests the Pipe and PMC.  Creates some pipes, tries some basic I/O.
 
 =cut
 
