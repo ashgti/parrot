@@ -67,7 +67,7 @@ static void get_sockaddr_in(PARROT_INTERP, ARGIN(PMC * sockaddr),
 
 =head2 Networking
 
-Define C<PARROT_NET_DEVEL> to enable networking.
+Define C<PARROT_NETWORKING_SUPPORT> to enable networking.
 
 These could be native extensions but they probably should be here if we
 wish to make them integrated with the async IO system.
@@ -109,9 +109,6 @@ Parrot_io_sockaddr_in(PARROT_INTERP, ARGIN(STRING *addr), INTVAL port)
     free(s);
     return sockaddr;
 }
-
-
-#  if PARROT_NET_DEVEL
 
 /*
 
@@ -484,7 +481,6 @@ get_sockaddr_in(PARROT_INTERP, ARGIN(PMC * sockaddr), ARGIN(const char* host),
     sa->sin_family = family;
     sa->sin_port = htons(port);
 }
-#  endif
 
 
 #endif /* PIO_OS_UNIX */

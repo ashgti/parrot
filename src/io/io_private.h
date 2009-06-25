@@ -27,11 +27,11 @@ Some ideas from AT&T SFIO.
 
 #define PARROT_IN_IO 1
 #define PARROT_ASYNC_DEVEL 0
-#define PARROT_NET_DEVEL 1
+#define PARROT_NETWORKING_SUPPORT 1
 
 #include <parrot/io.h>
 
-#if PARROT_NET_DEVEL
+#if PARROT_NETWORKING_SUPPORT
 /* XXX: Parrot config is currently not probing for all headers so
  * I'm sticking here rather than parrot.h
  */
@@ -43,7 +43,7 @@ Some ideas from AT&T SFIO.
 #    include <winsock.h>
 #  endif
 
-#endif /* PARROT_NET_DEVEL */
+#endif /* PARROT_NETWORKING_SUPPORT */
 
 /* IO object flags */
 #define PIO_F_READ      00000001

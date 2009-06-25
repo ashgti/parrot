@@ -51,8 +51,6 @@ static void get_sockaddr_in(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
-#  if PARROT_NET_DEVEL
-
 /* Helper macros to get sockaddr_in */
 #    define SOCKADDR_LOCAL(p) ((struct sockaddr_in*)VTABLE_get_pointer(interp, \
                 PARROT_SOCKET((p))->local))
@@ -452,8 +450,6 @@ Parrot_io_sockaddr_in(PARROT_INTERP, ARGIN(STRING *addr), INTVAL port)
     free(s);
     return sockaddr;
 }
-
-#  endif /* PARROT_NET_DEVEL */
 
 #endif /* PIO_OS_WIN32 */
 

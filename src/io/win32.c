@@ -133,7 +133,7 @@ Parrot_io_init_win32(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_io_init_win32)
     HANDLE h;
-#  if PARROT_NET_DEVEL
+#  if PARROT_NETWORKING_SUPPORT
     struct WSAData sockinfo;
     int ret;
 #  endif
@@ -156,7 +156,7 @@ Parrot_io_init_win32(PARROT_INTERP)
     else {
         _PIO_STDERR(interp) = PMCNULL;
     }
-#  if PARROT_NET_DEVEL
+#  if PARROT_NETWORKING_SUPPORT
     /* Start Winsock
      * no idea where or whether destroy it
      */
