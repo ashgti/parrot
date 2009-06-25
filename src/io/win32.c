@@ -28,7 +28,6 @@ Win32 System Programming, 2nd Edition.
 
 #include "parrot/parrot.h"
 #include "io_private.h"
-#include "../pmc/pmc_handle.h"
 
 #ifdef PIO_OS_WIN32
 
@@ -353,10 +352,6 @@ Parrot_io_close_win32(PARROT_INTERP, ARGMOD(PMC *filehandle))
 
 Test whether the filehandle has been closed.
 
-=item C<INTVAL Parrot_io_is_closed_handle_win32(PARROT_INTERP, PMC* handle)>
-
-Test whether the Handle has been closed.
-
 =cut
 
 */
@@ -368,15 +363,6 @@ Parrot_io_is_closed_win32(PARROT_INTERP, ARGIN(PMC *filehandle))
     if (Parrot_io_get_os_handle(interp, filehandle) == INVALID_HANDLE_VALUE)
         return 1;
 
-    return 0;
-}
-
-INTVAL
-Parrot_io_is_closed_handle_win32(PARROT_INTERP, ARGIN(PMC* handle))
-{
-    ASSERT_ARGS(Parrot_io_is_closed_handle_portable)
-    if (PARROT_HANDLE(handle)->os_handle = INVALID_HANDLE_VALUE)
-        return 1;
     return 0;
 }
 
@@ -405,10 +391,6 @@ io_is_tty_win32(PIOHANDLE fd)
 
 Calls C<FlushFileBuffers()> to flush C<*io>'s file descriptor.
 
-=item C<INTVAL Parrot_io_flush_handle_win32(PARROT_INTERP, PMC * handle)>
-
-Flushes the low-level file descriptor from a Handle PMC.
-
 =cut
 
 */
@@ -430,14 +412,6 @@ Parrot_io_flush_win32(PARROT_INTERP, ARGMOD(PMC *filehandle))
      * The function returns TRUE, but it does nothing.
      */
     return FlushFileBuffers(Parrot_io_get_os_handle(interp, filehandle));
-}
-
-INTVAL
-Parrot_io_flush_handle_win32(PARROT_INTERP, ARGMOD(PMC * handle))
-{
-    ASSERT_ARGS(Parrot_io_flush_handle_unix)
-    PIOHANDLE fd = PARROT_HANDLE(handle)->os_handle;
-    return FlushFileBuffers(fd);
 }
 
 /*
@@ -490,7 +464,7 @@ Parrot_io_read_win32(PARROT_INTERP,
 
 /*
 
-=item C<size_t Parrot_io_write_win32(PARROT_INTERP, PMC *handle, STRING *s)>
+=item C<size_t Parrot_io_write_win32(PARROT_INTERP, PMC *filehandle, STRING *s)>
 
 Calls C<WriteFile()> to write C<len> bytes from the memory starting at
 C<buffer> to C<*io>'s file descriptor. Returns C<(size_t)-1> on
@@ -502,7 +476,7 @@ failure.
 
 size_t
 Parrot_io_write_win32(PARROT_INTERP,
-        ARGIN(PMC *handle),
+        ARGIN(PMC *filehandle),
         ARGIN(STRING *s))
 {
     ASSERT_ARGS(Parrot_io_write_win32)
@@ -510,17 +484,15 @@ Parrot_io_write_win32(PARROT_INTERP,
     DWORD err;
     void * const buffer = s->strstart;
     DWORD len = (DWORD) s->bufused;
-    PIOHANDLE os_handle = PARROT_HANDLE(handle)->os_handle;
-    INTVAL flags = PARROT_HANDLE(handle)->flags;
+    PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, filehandle);
 
     /* do it by hand, Win32 hasn't any specific flag */
-    if (flags & PIO_F_APPEND) {
+    if (Parrot_io_get_flags(interp, filehandle) & PIO_F_APPEND) {
         LARGE_INTEGER p;
         p.LowPart = 0;
         p.HighPart = 0;
         p.LowPart = SetFilePointer(os_handle, p.LowPart,
                                    &p.HighPart, FILE_END);
-        /* XXX: This doesn't look right. We set p.LowPart to 0 above */
         if (p.LowPart == 0xFFFFFFFF && (GetLastError() != NO_ERROR)) {
             /* Error - exception */
             return (size_t)-1;

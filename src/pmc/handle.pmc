@@ -25,50 +25,18 @@ This is the base-class for all IO-related PMCs.
 #include "parrot/parrot.h"
 #include "../src/io/io_private.h"
 
-pmclass Handle {
+pmclass Handle provides Handle {
+    /* TODO: Consider encapsulating PIOHANDLE as a PMC type, for subclassing */
     ATTR PIOHANDLE os_handle;         /* Low level OS descriptor      */
-    ATTR PIOOFF_T file_pos;           /* Current real file pointer    */
-    ATTR PIOOFF_T last_pos;           /* Last file position           */
-    ATTR INTVAL flags;                /* A copy of the flags          */
-    ATTR size_t buffer_size;          /* Buffer size                  */
-    ATTR INTVAL buffer_flags;         /* Buffer flags                 */
-    ATTR unsigned char *buffer_start; /* Start of buffer              */
-    ATTR unsigned char *buffer_end;   /* End of buffer                */
-    ATTR unsigned char *buffer_next;  /* Current read/write pointer   */
 
     VTABLE void init() {
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "Handle cannot be instantiated directly from PIR.");
+            "Handle cannot be instantiated directly.");
     }
 
     VTABLE void init_pmc(PMC * init) {
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "Handle cannot be instantiated directly from PIR.");
-    }
-
-    VTABLE PMC* clone() {
-        PMC * const newhandle = Parrot_io_make_os_handle_pmc(INTERP);
-        PARROT_HANDLE(newhandle)->os_handle = Parrot_dup(PARROT_HANDLE(SELF)->os_handle);
-        return newhandle;
-    }
-
-    VTABLE void destroy() {
-        Parrot_Handle_attributes * data_struct = PARROT_HANDLE(SELF);
-        if (data_struct) {
-            if (!PIO_IS_CLOSED_HANDLE(INTERP, SELF)) {
-                Parrot_io_flush_buffer(INTERP, SELF);
-                PIO_FLUSH_HANDLE(INTERP, SELF);
-                if (!(data_struct->flags & PIO_F_SHARED))
-                    Parrot_io_close_piohandle(INTERP, data_struct->os_handle);
-            }
-
-            if (data_struct->buffer_start) {
-                mem_sys_free(data_struct->buffer_start);
-                data_struct->buffer_start = NULL;
-            }
-            mem_sys_free(data_struct);
-            PMC_data(SELF) = NULL;
-        }
+            "Handle cannot be instantiated directly.");
     }
 }
 

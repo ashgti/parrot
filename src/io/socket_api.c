@@ -113,7 +113,8 @@ INTVAL
 Parrot_io_socket_is_closed(PARROT_INTERP, ARGMOD(PMC *socket))
 {
     ASSERT_ARGS(Parrot_io_socket_is_closed)
-    PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, socket);
+    PIOHANDLE os_handle;
+    GETATTR_Socket_os_handle(interp, socket, os_handle);
 #ifdef PIO_OS_WIN32
     return (os_handle == (PIOHANDLE)INVALID_HANDLE_VALUE);
 #endif

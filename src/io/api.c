@@ -19,6 +19,10 @@ process.
 The C<FileHandle> PMC provides the class-based interface for filehandles that
 is used in Parrot ops.
 
+TODO: Where possible, extract some of the filehandle-related details into
+src/io/filehandle.c, and extract the stringhandle details into
+src/io/io_string.c.
+
 =cut
 
 */
@@ -29,7 +33,6 @@ is used in Parrot ops.
 #include "../pmc/pmc_filehandle.h"
 #include "../pmc/pmc_stringhandle.h"
 #include "../pmc/pmc_socket.h"
-#include "../pmc/pmc_handle.h"
 
 #include <stdarg.h>
 
@@ -214,11 +217,13 @@ Parrot_io_close(PARROT_INTERP, ARGMOD(PMC *pmc))
     }
     else if (pmc->vtable->base_type == enum_class_StringHandle)
         SETATTR_StringHandle_read_offset(interp, pmc, 0);
-    else if (pmc->vtable->base_type == enum_class_Socket) {
-        const PIOHANDLE os_handle = Parrot_io_get_os_handle(interp, pmc);
+    else if (pmc->vtable->base_type == enum_class_Socket)
+    {
+        PIOHANDLE os_handle;
+        GETATTR_Socket_os_handle(interp, pmc, os_handle);
         if (os_handle != PIO_INVALID_HANDLE)
             result = Parrot_io_close_piohandle(interp, os_handle);
-        Parrot_io_set_os_handle(interp, pmc, PIO_INVALID_HANDLE);
+        SETATTR_Socket_os_handle(interp, pmc, PIO_INVALID_HANDLE);
     }
     else
         Parrot_PCCINVOKE(interp, pmc, CONST_STRING(interp, "close"), "->I", &result);
@@ -304,8 +309,9 @@ Parrot_io_flush(PARROT_INTERP, ARGMOD(PMC *pmc))
 
     if (pmc->vtable->base_type == enum_class_FileHandle)
         Parrot_io_flush_filehandle(interp, pmc);
-    else if (pmc->vtable->base_type == enum_class_StringHandle)
+    else if (pmc->vtable->base_type == enum_class_StringHandle) {
         SETATTR_StringHandle_stringhandle(interp, pmc, NULL);
+    }
     else
         Parrot_PCCINVOKE(interp, pmc, CONST_STRING(interp, "flush"), "->");
 }
@@ -916,93 +922,6 @@ Parrot_io_make_offset_pmc(PARROT_INTERP, ARGMOD(PMC *pmc))
     return VTABLE_get_integer(interp, pmc);
 }
 
-/*
-
-=item C<PMC * Parrot_io_make_os_handle_pmc(PARROT_INTERP)>
-
-Initialize a new low-level handle type
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-PMC *
-Parrot_io_make_os_handle_pmc(PARROT_INTERP)
-{
-    PMC * handle = pmc_new_noinit(interp, enum_class_Handle);
-    Parrot_Handle_attributes *ds = mem_allocate_typed(Parrot_Handle_attributes);
-    ds->os_handle = (PIOHANDLE) PIO_INVALID_HANDLE;
-    ds->buffer_size  = 0;
-    ds->buffer_flags = 0;
-    ds->buffer_start = NULL;
-    ds->buffer_next  = NULL;
-    ds->buffer_end   = NULL;
-    ds->file_pos     = piooffsetzero;
-    ds->last_pos     = piooffsetzero;
-    PMC_data(handle) = ds;
-    PObj_active_destroy_SET(handle);
-    return handle;
-}
-
-/*
-
-=item C<PMC * Parrot_io_get_os_handle_pmc(PARROT_INTERP, PMC * pmc)>
-
-Get the Handle PMC that encapsulates the low-level OS handle for the given
-IO PMC
-
-=item C<PIOHANDLE Parrot_io_get_os_handle(PARROT_INTERP, PMC * pmc)>
-
-Get the low-level OS handle from the given IO PMC
-
-=item C<void Parrot_io_set_os_handle(PARROT_INTERP, PMC * pmc, PIOHANDLE
-os_handle)>
-
-Set he low-level OS handle to the given IO PMC
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CANNOT_RETURN_NULL
-PMC *
-Parrot_io_get_os_handle_pmc(PARROT_INTERP, ARGIN(PMC * pmc))
-{
-    PMC * handle = PMCNULL;
-    switch (pmc->vtable->base_type) {
-        case enum_class_FileHandle:
-            GETATTR_FileHandle_os_handle(interp, pmc, handle);
-            break;
-        case enum_class_Socket:
-            GETATTR_Socket_os_handle(interp, pmc, handle);
-            break;
-    }
-    if (PMC_IS_NULL(handle))
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
-                "Could not obtain Handle from IO pmc");
-    return handle;
-}
-
-PARROT_EXPORT
-PIOHANDLE
-Parrot_io_get_os_handle(PARROT_INTERP, ARGIN(PMC * pmc))
-{
-    const PMC * const handle = Parrot_io_get_os_handle_pmc(interp, pmc);
-    /* TODO: If we don't have a valid handle at this point, throw a
-             meaningful exception */
-    return PARROT_HANDLE(handle)->os_handle;
-}
-
-PARROT_EXPORT
-void
-Parrot_io_set_os_handle(PARROT_INTERP, ARGIN(PMC * pmc), PIOHANDLE os_handle)
-{
-    PMC * const handle = Parrot_io_get_os_handle_pmc(interp, pmc);
-    PARROT_HANDLE(handle)->os_handle = os_handle;
-}
 
 /*
 

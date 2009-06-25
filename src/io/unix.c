@@ -30,7 +30,6 @@ APitUE - W. Richard Stevens, AT&T SFIO, Perl 5 (Nick Ing-Simmons)
 
 #include "parrot/parrot.h"
 #include "io_private.h"
-#include "../pmc/pmc_handle.h"
 
 #ifdef PIO_OS_UNIX
 
@@ -383,10 +382,6 @@ Parrot_io_close_piohandle_unix(SHIM_INTERP, PIOHANDLE handle)
 
 Test whether the filehandle has been closed.
 
-=item C<INTVAL Parrot_io_is_closed_handle_unix(PARROT_INTERP, PMC* handle)>
-
-Test whether the Handle has been closed
-
 =cut
 
 */
@@ -398,15 +393,6 @@ Parrot_io_is_closed_unix(PARROT_INTERP, ARGIN(PMC *filehandle))
     if (Parrot_io_get_os_handle(interp, filehandle) == -1)
         return 1;
 
-    return 0;
-}
-
-INTVAL
-Parrot_io_is_closed_handle_unix(PARROT_INTERP, ARGIN(PMC* handle))
-{
-    ASSERT_ARGS(Parrot_io_is_closed_handle_unix)
-    if (PARROT_HANDLE(handle)->os_handle == -1)
-        return 1;
     return 0;
 }
 
@@ -482,10 +468,6 @@ C<sync()>.
 
 XXX: Is it necessary to C<sync()> here?
 
-=item C<INTVAL Parrot_io_flush_handle_unix(PARROT_INTERP, PMC * handle)>
-
-Flush the Handle at the lowest level.
-
 =cut
 
 */
@@ -496,14 +478,6 @@ Parrot_io_flush_unix(PARROT_INTERP, ARGMOD(PMC *filehandle))
     ASSERT_ARGS(Parrot_io_flush_unix)
     PIOHANDLE file_descriptor = Parrot_io_get_os_handle(interp, filehandle);
     return fsync(file_descriptor);
-}
-
-INTVAL
-Parrot_io_flush_handle_unix(PARROT_INTERP, ARGMOD(PMC * handle))
-{
-    ASSERT_ARGS(Parrot_io_flush_handle_unix)
-    PIOHANDLE fd = PARROT_HANDLE(handle)->os_handle;
-    return fsync(fd);
 }
 
 /*
@@ -557,7 +531,7 @@ Parrot_io_read_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
 
 /*
 
-=item C<size_t Parrot_io_write_unix(PARROT_INTERP, PMC *handle, STRING *s)>
+=item C<size_t Parrot_io_write_unix(PARROT_INTERP, PMC *filehandle, STRING *s)>
 
 Calls C<write()> to write C<len> bytes from the memory starting at
 C<buffer> to the file descriptor in C<*io>.
@@ -567,10 +541,10 @@ C<buffer> to the file descriptor in C<*io>.
 */
 
 size_t
-Parrot_io_write_unix(PARROT_INTERP, ARGIN(PMC *handle), ARGMOD(STRING *s))
+Parrot_io_write_unix(PARROT_INTERP, ARGIN(PMC *filehandle), ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_io_write_unix)
-    PIOHANDLE file_descriptor = PARROT_HANDLE(handle)->os_handle;
+    PIOHANDLE file_descriptor = Parrot_io_get_os_handle(interp, filehandle);
     const char * const buffer = s->strstart;
     const char * ptr          = buffer;
 

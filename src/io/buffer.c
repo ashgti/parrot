@@ -20,7 +20,6 @@ This file implements a collection of utility functions for I/O buffering.
 
 #include "parrot/parrot.h"
 #include "io_private.h"
-#include "../pmc/pmc_handle.h"
 
 /* HEADERIZER HFILE: include/parrot/io.h */
 /* HEADERIZER BEGIN: static */
@@ -72,7 +71,6 @@ void
 Parrot_io_setbuf(PARROT_INTERP, ARGMOD(PMC *filehandle), size_t bufsize)
 {
     ASSERT_ARGS(Parrot_io_setbuf)
-    PMC * handle = Parrot_io_get_os_handle_pmc(interp, filehandle);
     INTVAL filehandle_flags = Parrot_io_get_flags(interp, filehandle);
     INTVAL         buffer_flags = Parrot_io_get_buffer_flags(interp, filehandle);
     unsigned char *buffer_start = Parrot_io_get_buffer_start(interp, filehandle);
@@ -81,7 +79,7 @@ Parrot_io_setbuf(PARROT_INTERP, ARGMOD(PMC *filehandle), size_t bufsize)
 
     /* If there is already a buffer, make sure we flush before modifying it. */
     if (buffer_start)
-        Parrot_io_flush_buffer(interp, handle);
+        Parrot_io_flush_buffer(interp, filehandle);
 
     /* Choose an appropriate buffer size for caller */
     switch (bufsize) {
@@ -163,33 +161,30 @@ Parrot_io_setlinebuf(PARROT_INTERP, ARGMOD(PMC *filehandle))
 
 /*
 
-=item C<INTVAL Parrot_io_flush_buffer(PARROT_INTERP, PMC *handle)>
+=item C<INTVAL Parrot_io_flush_buffer(PARROT_INTERP, PMC *filehandle)>
 
-Flush the I/O buffer for a given Handle PMC
+Flush the I/O buffer for a given filehandle object.
 
 =cut
 
 */
 
 INTVAL
-Parrot_io_flush_buffer(PARROT_INTERP, ARGMOD(PMC *handle))
+Parrot_io_flush_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle))
 {
     ASSERT_ARGS(Parrot_io_flush_buffer)
     long wrote;
     size_t to_write;
     STRING fake;
-    /* TODO: Encapsulate all this better */
-    Parrot_Handle_attributes *data_struct = PARROT_HANDLE(handle);
-    unsigned char *buffer_start = data_struct->buffer_start;
-    unsigned char *buffer_next  = data_struct->buffer_next;
-    INTVAL         buffer_flags = data_struct->buffer_flags;
-    INTVAL         flags        = data_struct->flags;
+    unsigned char *buffer_start = Parrot_io_get_buffer_start(interp, filehandle);
+    unsigned char *buffer_next  = Parrot_io_get_buffer_next(interp, filehandle);
+    INTVAL         buffer_flags = Parrot_io_get_buffer_flags(interp, filehandle);
 
     /*
      * Either buffering is null, disabled, or empty.
      */
     if (!buffer_start
-        || (flags & (PIO_F_BLKBUF | PIO_F_LINEBUF)) == 0
+        || (Parrot_io_get_flags(interp, filehandle) & (PIO_F_BLKBUF | PIO_F_LINEBUF)) == 0
         || (buffer_flags & (PIO_BF_WRITEBUF | PIO_BF_READBUF)) == 0)
         return 0;
     /*
@@ -201,11 +196,11 @@ Parrot_io_flush_buffer(PARROT_INTERP, ARGMOD(PMC *handle))
         /* Flush to next layer */
         fake.strstart = (char *)buffer_start;
         fake.bufused = to_write;
-        wrote = PIO_WRITE(interp, handle, &fake);
+        wrote = PIO_WRITE(interp, filehandle, &fake);
         if (wrote == (long)to_write) {
-            data_struct->buffer_next = buffer_start;
+            Parrot_io_set_buffer_next(interp, filehandle, buffer_start);
             /* Release buffer */
-            data_struct->buffer_flags = (buffer_flags & ~PIO_BF_WRITEBUF);
+            Parrot_io_set_buffer_flags(interp, filehandle, (buffer_flags & ~PIO_BF_WRITEBUF));
             return 0;
         }
         else {
@@ -217,9 +212,9 @@ Parrot_io_flush_buffer(PARROT_INTERP, ARGMOD(PMC *handle))
      * Read flush
      */
     else if (buffer_flags & PIO_BF_READBUF) {
-        data_struct->buffer_next = buffer_start;
+        Parrot_io_set_buffer_next(interp, filehandle, buffer_start);
         /* Release buffer */
-        data_struct->buffer_flags = (buffer_flags & ~PIO_BF_READBUF);
+        Parrot_io_set_buffer_flags(interp, filehandle, (buffer_flags & ~PIO_BF_READBUF));
     }
     return -1;
 }
@@ -287,7 +282,6 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
     STRING        *s;
     size_t         len;
     size_t         current      = 0;
-    PMC * handle = Parrot_io_get_os_handle_pmc(interp, filehandle);
     INTVAL         buffer_flags = Parrot_io_get_buffer_flags(interp, filehandle);
 
     /* write buffer flush */
@@ -418,12 +412,11 @@ Parrot_io_peek_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
     unsigned char *buffer_next;
     STRING * const s            = Parrot_io_make_string(interp, buf, 1);
     UINTVAL        len          = 1;
-    PMC * handle = Parrot_io_get_os_handle_pmc(interp, filehandle);
     INTVAL         buffer_flags = Parrot_io_get_buffer_flags(interp, filehandle);
 
     /* write buffer flush */
     if (buffer_flags & PIO_BF_WRITEBUF) {
-        Parrot_io_flush_buffer(interp, handle);
+        Parrot_io_flush_buffer(interp, filehandle);
         buffer_flags = Parrot_io_get_buffer_flags(interp, filehandle);
     }
 
@@ -579,7 +572,6 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
 {
     ASSERT_ARGS(Parrot_io_write_buffer)
     void          * const buffer       = s->strstart;
-    PMC * handle = Parrot_io_get_os_handle_pmc(interp, filehandle);
     unsigned char * const buffer_start = Parrot_io_get_buffer_start(interp, filehandle);
     unsigned char *       buffer_next  = Parrot_io_get_buffer_next(interp, filehandle);
     const size_t          buffer_size  = Parrot_io_get_buffer_size(interp, filehandle);
@@ -631,8 +623,8 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
         long wrote;
 
         /* Write through, skip buffer. */
-        Parrot_io_flush_buffer(interp, handle);
-        wrote = PIO_WRITE(interp, handle, s);
+        Parrot_io_flush_buffer(interp, filehandle);
+        wrote = PIO_WRITE(interp, filehandle, s);
 
         if (wrote == (long)len) {
             Parrot_io_set_file_position(interp, filehandle, (wrote +
@@ -666,7 +658,7 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
         Parrot_io_set_file_position(interp, filehandle, (avail +
                     Parrot_io_get_file_position(interp, filehandle)));
-        Parrot_io_flush_buffer(interp, handle);
+        Parrot_io_flush_buffer(interp, filehandle);
 
         buffer_flags |= PIO_BF_WRITEBUF;
         Parrot_io_set_buffer_flags(interp, filehandle, buffer_flags);
@@ -699,7 +691,6 @@ Parrot_io_seek_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
         PIOOFF_T offset, INTVAL whence)
 {
     ASSERT_ARGS(Parrot_io_seek_buffer)
-    PMC * handle = Parrot_io_get_os_handle_pmc(interp, filehandle);
     PIOOFF_T newpos;
     PIOOFF_T file_pos = Parrot_io_get_file_position(interp, filehandle);
     unsigned char *buffer_start = Parrot_io_get_buffer_start(interp, filehandle);
@@ -727,7 +718,7 @@ Parrot_io_seek_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
 
     if ((newpos < file_pos - (buffer_next - buffer_start))
         || (newpos >= file_pos + (buffer_end - buffer_next))) {
-        Parrot_io_flush_buffer(interp, handle);
+        Parrot_io_flush_buffer(interp, filehandle);
         newpos = PIO_SEEK(interp, filehandle, newpos, SEEK_SET);
     }
     else {

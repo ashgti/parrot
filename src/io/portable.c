@@ -25,7 +25,6 @@ of necessity.
 #include <stdio.h>
 #include "parrot/parrot.h"
 #include "io_private.h"
-#include "../pmc/pmc_handle.h"
 
 #ifdef PIO_OS_STDIO
 
@@ -247,10 +246,6 @@ Parrot_io_close_portable(PARROT_INTERP, ARGMOD(PMC *filehandle))
 
 Tests whether the filehandle has been closed.
 
-=item C<INTVAL Parrot_io_is_closed_handle_portable(PARROT_INTERP, PMC* handle)>
-
-Tests whether the Handle has been closed.
-
 =cut
 
 */
@@ -265,14 +260,6 @@ Parrot_io_is_closed_portable(PARROT_INTERP, ARGIN(PMC *filehandle))
     return 0;
 }
 
-INTVAL
-Parrot_io_is_closed_handle_portable(PARROT_INTERP, ARGIN(PMC* handle))
-{
-    ASSERT_ARGS(Parrot_io_is_closed_handle_portable)
-    if (PARROT_HANDLE(handle)->os_handle == (PIOHANDLE)NULL)
-        return 1;
-    return 0;
-}
 
 /*
 
@@ -357,10 +344,6 @@ Parrot_io_getblksize_portable(PIOHANDLE fptr)
 
 Flushes the underlying file descriptor of the given IO PMC.
 
-=item C<INTVAL Parrot_io_flush_handle_portable(PARROT_INTERP, PMC * handle)>
-
-Flushes the underlying file descriptor of the Handle PMC.
-
 =cut
 
 */
@@ -371,15 +354,6 @@ Parrot_io_flush_portable(SHIM_INTERP, SHIM(PMC *filehandle))
     ASSERT_ARGS(Parrot_io_flush_portable)
     return fflush((FILE *)Parrot_io_get_os_handle(interp, filehandle));
 }
-
-INTVAL
-Parrot_io_flush_handle_portable(PARROT_INTERP, ARGMOD(PMC * handle))
-{
-    ASSERT_ARGS(Parrot_io_flush_handle_unix)
-    PIOHANDLE fd = PARROT_HANDLE(handle)->os_handle;
-    return FlushFileBuffers(fd);
-}
-
 
 
 /*
@@ -419,7 +393,8 @@ Parrot_io_read_portable(PARROT_INTERP, SHIM(PMC *filehandle),
 
 /*
 
-=item C<size_t Parrot_io_write_portable(PARROT_INTERP, PMC *handle, STRING *s)>
+=item C<size_t Parrot_io_write_portable(PARROT_INTERP, PMC *filehandle, STRING
+*s)>
 
 Writes the given STRING to the provided IO PMC.
 
@@ -428,12 +403,12 @@ Writes the given STRING to the provided IO PMC.
 */
 
 size_t
-Parrot_io_write_portable(PARROT_INTERP, ARGIN(PMC *handle), ARGMOD(STRING *s))
+Parrot_io_write_portable(PARROT_INTERP, ARGIN(PMC *filehandle), ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_io_write_portable)
     void * const buffer = s->strstart;
-    FILE * file = PARROT_HANDLE(handle)->os_handle;
-    return fwrite(buffer, 1, s->bufused, file);
+    return fwrite(buffer, 1, s->bufused,
+                  (FILE *)Parrot_io_get_os_handle(interp, filehandle));
 }
 
 
