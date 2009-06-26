@@ -157,7 +157,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
 
     /* PANIC will fail until this is done */
     interp->piodata = NULL;
-    Parrot_io_init(interp);
+    Parrot_io_init_table(interp);
 
     if (is_env_var_set("PARROT_GC_DEBUG")) {
 #if ! DISABLE_GC_DEBUG
@@ -243,7 +243,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     setup_default_compreg(interp);
 
     /* setup stdio PMCs */
-    Parrot_io_init(interp);
+    Parrot_io_init_handles(interp);
 
     /* init IMCC compiler */
     imcc_init(interp);
