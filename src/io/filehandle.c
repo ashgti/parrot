@@ -140,11 +140,6 @@ file_descriptor)>
 Sets the C<os_handle> attribute of the FileHandle object, which stores the
 low-level filehandle for the OS.
 
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
-
 Possibly, this function should reset some characteristics of the object (like
 buffer and file positions) to their default values.
 
@@ -154,10 +149,10 @@ buffer and file positions) to their default values.
 
 PARROT_EXPORT
 void
-Parrot_io_set_os_handle(SHIM_INTERP, ARGIN(PMC *filehandle), PIOHANDLE file_descriptor)
+Parrot_io_set_os_handle(PARROT_INTERP, ARGIN(PMC *filehandle), PIOHANDLE file_descriptor)
 {
     ASSERT_ARGS(Parrot_io_set_os_handle)
-    PARROT_FILEHANDLE(filehandle)->os_handle = file_descriptor;
+    SETATTR_FileHandle_os_handle(interp, filehandle, file_descriptor);
 }
 
 /*
@@ -167,21 +162,18 @@ Parrot_io_set_os_handle(SHIM_INTERP, ARGIN(PMC *filehandle), PIOHANDLE file_desc
 Retrieve the C<os_handle> attribute of the FileHandle object, which stores the
 low-level filehandle for the OS.
 
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
-
 =cut
 
 */
 
 PARROT_EXPORT
 PIOHANDLE
-Parrot_io_get_os_handle(SHIM_INTERP, ARGIN(PMC *filehandle))
+Parrot_io_get_os_handle(PARROT_INTERP, ARGIN(PMC *filehandle))
 {
     ASSERT_ARGS(Parrot_io_get_os_handle)
-    return PARROT_FILEHANDLE(filehandle)->os_handle;
+    PIOHANDLE os_handle;
+    GETATTR_FileHandle_os_handle(interp, filehandle, os_handle);
+    return os_handle;
 }
 
 /*
@@ -190,11 +182,6 @@ Parrot_io_get_os_handle(SHIM_INTERP, ARGIN(PMC *filehandle))
 
 Set the C<flags> attribute of the FileHandle object, which stores bitwise flags
 marking filehandle characteristics.
-
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
 
 =cut
 
@@ -214,11 +201,6 @@ Parrot_io_set_flags(PARROT_INTERP, ARGIN(PMC *filehandle), INTVAL flags)
 
 Set the C<flags> attribute of the FileHandle object, which stores bitwise flags
 marking filehandle characteristics.
-
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
 
 =cut
 
@@ -394,21 +376,18 @@ Parrot_io_set_buffer_end(SHIM_INTERP, ARGIN(PMC *filehandle),
 Get the C<buffer_flags> attribute of the FileHandle object, which stores
 a collection of flags specific to the buffer.
 
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
-
 =cut
 
 */
 
 PARROT_CAN_RETURN_NULL
 INTVAL
-Parrot_io_get_buffer_flags(SHIM_INTERP, ARGIN(PMC *filehandle))
+Parrot_io_get_buffer_flags(PARROT_INTERP, ARGIN(PMC *filehandle))
 {
     ASSERT_ARGS(Parrot_io_get_buffer_flags)
-    return PARROT_FILEHANDLE(filehandle)->buffer_flags;
+    INTVAL buffer_flags;
+    GETATTR_FileHandle_buffer_flags(interp, filehandle, buffer_flags);
+    return buffer_flags;
 }
 
 /*
@@ -419,20 +398,15 @@ new_flags)>
 Set the C<buffer_flags> attribute of the FileHandle object, which stores
 a collection of flags specific to the buffer.
 
-Currently, this pokes directly into the C struct of the FileHandle PMC. This
-needs to change to a general interface that can be used by all subclasses and
-polymorphic equivalents of FileHandle. For now, hiding it behind a function, so
-it can be cleanly changed later.
-
 =cut
 
 */
 
 void
-Parrot_io_set_buffer_flags(SHIM_INTERP, ARGIN(PMC *filehandle), INTVAL new_flags)
+Parrot_io_set_buffer_flags(PARROT_INTERP, ARGIN(PMC *filehandle), INTVAL new_flags)
 {
     ASSERT_ARGS(Parrot_io_set_buffer_flags)
-    PARROT_FILEHANDLE(filehandle)->buffer_flags = new_flags;
+    SETATTR_FileHandle_buffer_flags(interp, filehandle, new_flags);
 }
 
 /*

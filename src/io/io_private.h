@@ -32,9 +32,7 @@ Some ideas from AT&T SFIO.
 #include <parrot/io.h>
 
 #if PARROT_NETWORKING_SUPPORT
-/* XXX: Parrot config is currently not probing for all headers so
- * I'm sticking here rather than parrot.h
- */
+
 #  ifdef UNIX
 #    include <sys/socket.h>
 #  endif
@@ -107,7 +105,6 @@ F<src/io/io_win32.c>.
 =cut
 
 */
-
 
 /*
  * Local variables:
