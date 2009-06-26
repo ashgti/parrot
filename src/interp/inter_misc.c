@@ -258,6 +258,9 @@ interpinfo(PARROT_INTERP, INTVAL what)
         case CURRENT_RUNCORE:
             ret = interp->run_core;
             break;
+        case NETWORKING_SUPPORT:
+            ret = Parrot_io_have_networking_support(interp);
+            break;
         default:        /* or a warning only? */
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");

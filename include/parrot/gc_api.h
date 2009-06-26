@@ -112,6 +112,7 @@ typedef enum {
     GC_LAZY_MARK_RUNS,
     EXTENDED_PMCS,
     CURRENT_RUNCORE,
+    NETWORKING_SUPPORT,
 
     /* interpinfo_p constants */
     CURRENT_SUB,

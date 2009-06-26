@@ -797,6 +797,9 @@ INTVAL Parrot_io_connect(PARROT_INTERP,
         FUNC_MODIFIES(*address);
 
 PARROT_EXPORT
+INTVAL Parrot_io_have_networking_support(SHIM_INTERP);
+
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL Parrot_io_listen(PARROT_INTERP, ARGMOD(PMC *pmc), INTVAL backlog)
         __attribute__nonnull__(1)
@@ -866,6 +869,8 @@ INTVAL Parrot_io_socket_is_closed(PARROT_INTERP, ARGMOD(PMC *socket))
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc) \
     || PARROT_ASSERT_ARG(address)
+#define ASSERT_ARGS_Parrot_io_have_networking_support \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
 #define ASSERT_ARGS_Parrot_io_listen __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc)

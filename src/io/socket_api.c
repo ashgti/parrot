@@ -29,6 +29,27 @@ These are the primary interface functions for working with socket objects.
 
 /*
 
+=item C<INTVAL Parrot_io_have_networking_support(PARROT_INTERP)>
+
+Determines whether Parrot has been built with networking support. Returns
+1 if it has support, returns 0 otherwise.
+
+Currently, this is based on a C preprocessor macro,
+C<PARROT_NETWORKING_SUPPORT>
+
+=cut
+
+*/
+
+PARROT_EXPORT
+INTVAL
+Parrot_io_have_networking_support(SHIM_INTERP)
+{
+    return PARROT_NETWORKING_SUPPORT == 0 ? 0 : 1;
+}
+
+/*
+
 =item C<INTVAL Parrot_io_socket_is_closed(PARROT_INTERP, PMC *socket)>
 
 Returns 1 if the socket is closed, 0 if it is open.
