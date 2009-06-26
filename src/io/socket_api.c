@@ -114,6 +114,12 @@ Parrot_io_socket_is_closed(PARROT_INTERP, ARGMOD(PMC *socket))
 {
     ASSERT_ARGS(Parrot_io_socket_is_closed)
     PIOHANDLE os_handle;
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     GETATTR_Socket_os_handle(interp, socket, os_handle);
 #ifdef PIO_OS_WIN32
     return (os_handle == (PIOHANDLE)INVALID_HANDLE_VALUE);
@@ -143,6 +149,12 @@ INTVAL
 Parrot_io_poll(PARROT_INTERP, ARGMOD(PMC *pmc), INTVAL which, INTVAL sec, INTVAL usec)
 {
     ASSERT_ARGS(Parrot_io_poll)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (PMC_IS_NULL(pmc))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
             "Can't poll a NULL socket object");
@@ -172,6 +184,11 @@ Parrot_io_socket(PARROT_INTERP, ARGMOD_NULLOK(PMC * socket), INTVAL fam,
 {
     ASSERT_ARGS(Parrot_io_socket)
     PMC *new_socket;
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
 
     /* convert Parrot's family to system family */
     if (fam < 0 || fam >= PIO_PF_MAX)
@@ -212,6 +229,12 @@ INTVAL
 Parrot_io_recv(PARROT_INTERP, ARGMOD(PMC *pmc), ARGOUT(STRING **buf))
 {
     ASSERT_ARGS(Parrot_io_recv)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return -1;
 
@@ -235,6 +258,12 @@ INTVAL
 Parrot_io_send(PARROT_INTERP, ARGMOD(PMC *pmc), ARGMOD(STRING *buf))
 {
     ASSERT_ARGS(Parrot_io_send)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return -1;
 
@@ -256,6 +285,12 @@ INTVAL
 Parrot_io_connect(PARROT_INTERP, ARGMOD(PMC *pmc), ARGMOD(PMC *address))
 {
     ASSERT_ARGS(Parrot_io_connect)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return -1;
 
@@ -278,6 +313,12 @@ INTVAL
 Parrot_io_bind(PARROT_INTERP, ARGMOD(PMC *pmc), ARGMOD(PMC *address))
 {
     ASSERT_ARGS(Parrot_io_bind)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return -1;
 
@@ -300,6 +341,12 @@ INTVAL
 Parrot_io_listen(PARROT_INTERP, ARGMOD(PMC *pmc), INTVAL backlog)
 {
     ASSERT_ARGS(Parrot_io_listen)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return -1;
 
@@ -324,6 +371,12 @@ PMC *
 Parrot_io_accept(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_io_accept)
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
+
     if (Parrot_io_socket_is_closed(interp, pmc))
         return PMCNULL;
 
@@ -349,6 +402,11 @@ Parrot_io_new_socket_pmc(PARROT_INTERP, INTVAL flags)
 {
     ASSERT_ARGS(Parrot_io_new_socket_pmc)
     PMC * const new_io = pmc_new(interp, enum_class_Socket);
+
+#if PARROT_NETWORKING_SUPPORT == 0
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+        "Parrot not built with networking support");
+#endif /* PARROT_NETWORKING_SUPPORT */
 
     Parrot_io_set_flags(interp, new_io, flags);
 
