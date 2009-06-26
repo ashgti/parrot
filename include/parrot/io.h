@@ -112,33 +112,6 @@ typedef struct _ParrotIOData ParrotIOData;
 
 extern INTVAL pio_errno;
 
-/* io/core.c - interpreter initialization/destruction functions */
-/* HEADERIZER BEGIN: src/io/core.c */
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-
-PARROT_EXPORT
-void Parrot_io_finish(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-PARROT_EXPORT
-void Parrot_io_init(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-PARROT_EXPORT
-void Parrot_IOData_mark(PARROT_INTERP, ARGIN(ParrotIOData *piodata))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-#define ASSERT_ARGS_Parrot_io_finish __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_io_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_IOData_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(piodata)
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-/* HEADERIZER END: src/io/core.c */
-
 /* io/api.c - Public API functions */
 /* HEADERIZER BEGIN: src/io/api.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
