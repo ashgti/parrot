@@ -21,15 +21,15 @@
  * Macros to make accessing registers more convenient/readable.
  */
 
-#define CTX_REG_NUM(ctx, x) (ctx)->bp.regs_n[-1L-(x)]
-#define CTX_REG_INT(ctx, x) (ctx)->bp.regs_i[x]
-#define CTX_REG_PMC(ctx, x) (ctx)->bp_ps.regs_p[-1L-(x)]
-#define CTX_REG_STR(ctx, x) (ctx)->bp_ps.regs_s[x]
+#define CTX_REG_NUM(interp, ctx, x) VTABLE_get_number_keyed_int((interp), (ctx), x)
+#define CTX_REG_INT(interp, ctx, x) VTABLE_get_integer_keyed_int((interp), (ctx), x)
+#define CTX_REG_PMC(interp, ctx, x) VTABLE_get_pmc_keyed_int((interp), (ctx), x)
+#define CTX_REG_STR(interp, ctx, x) VTABLE_get_string_keyed_int((interp), (ctx), x)
 
-#define REG_NUM(interp, x) CTX_REG_NUM(&(interp)->ctx, (x))
-#define REG_INT(interp, x) CTX_REG_INT(&(interp)->ctx, (x))
-#define REG_PMC(interp, x) CTX_REG_PMC(&(interp)->ctx, (x))
-#define REG_STR(interp, x) CTX_REG_STR(&(interp)->ctx, (x))
+#define REG_NUM(interp, x) CTX_REG_NUM((interp), &(interp)->ctx, (x))
+#define REG_INT(interp, x) CTX_REG_INT((interp), &(interp)->ctx, (x))
+#define REG_PMC(interp, x) CTX_REG_PMC((interp), &(interp)->ctx, (x))
+#define REG_STR(interp, x) CTX_REG_STR((interp), &(interp)->ctx, (x))
 
 /*
  * and a set of macros to access a register by offset, used

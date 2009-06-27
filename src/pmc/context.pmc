@@ -84,7 +84,6 @@ reusable items.
 #define ALIGNED_CTX_SIZE (((sizeof (Parrot_Context) + NUMVAL_SIZE - 1) \
         / NUMVAL_SIZE) * NUMVAL_SIZE)
 
-
 /*
 
 =item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
@@ -135,7 +134,7 @@ pmclass Context {
     ATTR void *    regs;        /* register storage */
 
     /* end common header */
-    ATTR INTVAL    n_regs_used[4];   /* INSP in PBC points to Sub */
+    ATTR INTVAL    n_regs_used[4];  /* INSP in PBC points to Sub */
     ATTR PMC      *lex_pad;         /* LexPad PMC */
     ATTR PMC      *outer_ctx;       /* outer context, if a closure */
 
@@ -318,7 +317,37 @@ current context
             VTABLE_set_string_keyed_int(INTERP, SELF, i, val);
     }
 
+    VTABLE INTVAL get_integer_keyed_int(INTVAL x) {
+        return PARROT_CONTEXT(SELF)->bp.regs_i[x];
+    }
 
+    VTABLE FLOATVAL get_number_keyed_int(INTVAL x) {
+        return PARROT_CONTEXT(SELF)->bp.regs_n[-1L-x];
+    }
+
+    VTABLE PMC* get_pmc_keyed_int(INTVAL x) {
+        return PARROT_CONTEXT(SELF)->bp_ps.regs_p[-1L-x];
+    }
+
+    VTABLE STRING* get_string_keyed_int(INTVAL x) {
+        return PARROT_CONTEXT(SELF)->bp_ps.regs_s[x];
+    }
+
+    VTABLE void set_integer_keyed_int(INTVAL key, INTVAL val) {
+        PARROT_CONTEXT(SELF)->bp.regs_i[key] = val;
+    }
+
+    VTABLE void set_number_keyed_int(INTVAL x, FLOATVAL val) {
+        PARROT_CONTEXT(SELF)->bp.regs_n[-1L-x] = val;
+    }
+
+    VTABLE void set_pmc_keyed_int(INTVAL x, PMC * val) {
+        PARROT_CONTEXT(SELF)->bp_ps.regs_p[-1L-x] = val;
+    }
+
+    VTABLE void set_string_keyed_int(INTVAL x, STRING *val) {
+        PARROT_CONTEXT(SELF)->bp_ps.regs_s[x] = val;
+    }
 
     VTABLE void set_pointer(void *number_regs_used) {
         Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
@@ -344,6 +373,23 @@ current context
         ctx->bp.regs_i = (INTVAL *)((char *)ctx->regs + size_n);
         /* ctx.bp_ps points to S0, which has Px on the left */
         ctx->bp_ps.regs_s = (STRING **)((char *)ctx_regs + size_nip);
+    }
+
+    VTABLE void * get_pointer() {
+        return PARROT_CONTEXT(SELF)->regs;
+    }
+
+    VTABLE void * get_pointer_keyed_int(INTVAL regtype) {
+        switch (regtype) {
+            case REGNO_INT:
+            case REGNO_NUM:
+                return PARROT_CONTEXT(SELF)->regs_ni;
+            case REGNO_PMC:
+            case REGNO_STR:
+                return PARROT_CONTEXT(SELF)->regs_ps;
+            default:
+                return NULL;
+        }
     }
 
     VTABLE void destroy() {
