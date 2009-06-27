@@ -688,10 +688,6 @@ EOC
 
             if (vt->ro_variant_vtable)
                 vt->ro_variant_vtable->mro = vt->mro;
-
-EOC
-
-    $cout .= <<"EOC";
         }
 
         /* set up MRO and _namespace */
@@ -702,22 +698,12 @@ EOC
     foreach my $method ( @{ $self->{methods} } ) {
         next unless $method->type eq Parrot::Pmc2c::Method::NON_VTABLE;
 
-        my $proto       = proto( $method->return_type, $method->parameters );
         my $method_name = $method->name;
-        my $symbol_name =
-            defined $method->symbol ? $method->symbol : $method->name;
+        my $symbol_name = $method->symbol;
 
-        if ( exists $method->{PCCMETHOD} ) {
-            $cout .= <<"EOC";
+        $cout .= <<"EOC";
         register_raw_nci_method_in_ns(interp, entry, F2DPTR(Parrot_${classname}_${method_name}), CONST_STRING_GEN(interp, "$symbol_name"));
 EOC
-        }
-        else {
-            $cout .= <<"EOC";
-        register_nci_method(interp, entry,
-                F2DPTR(Parrot_${classname}_${method_name}), "$symbol_name", "$proto");
-EOC
-        }
         if ( $method->{attrs}{write} ) {
             $cout .= <<"EOC";
         Parrot_mark_method_writes(interp, entry, "$symbol_name");
@@ -726,12 +712,14 @@ EOC
     }
 
     # include any class specific init code from the .pmc file
-    $cout .= <<"EOC" if $class_init_code;
+    if ($class_init_code) {
+        $cout .= <<"EOC";
         /* class_init */
         {
 $class_init_code
         }
 EOC
+    }
 
     $cout .= <<"EOC";
         {
@@ -830,7 +818,7 @@ sub get_mro_func {
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
     if ($classname ne 'default') {
-        for my $dp (@{ $self->direct_parents}) {
+        for my $dp (reverse @{ $self->direct_parents}) {
             $get_mro .= "    mro = Parrot_${dp}_get_mro(interp, mro);\n"
             unless $dp eq 'default';
         }
@@ -871,7 +859,7 @@ sub get_isa_func {
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
     if ($classname ne 'default') {
-        for my $dp (@{ $self->direct_parents}) {
+        for my $dp (reverse @{ $self->direct_parents}) {
             $get_isa .= "    isa = Parrot_${dp}_get_isa(interp, isa);\n"
             unless $dp eq 'default';
         }
@@ -907,16 +895,23 @@ sub get_vtable_func {
 
     my $cout      = "";
     my $classname = $self->name;
+    my @other_parents = reverse @{ $self->direct_parents };
+    my $first_parent = shift @other_parents;
 
     my $get_vtable = '';
-    foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
-        if ($parent_name eq 'default') {
-            $get_vtable .= "    vt = Parrot_default_get_vtable(interp);\n";
-        }
-        else {
-            $get_vtable .= "    Parrot_${parent_name}_update_vtable(vt);\n";
-        }
+
+    if ($first_parent eq 'default') {
+        $get_vtable .= "    vt = Parrot_default_get_vtable(interp);\n";
     }
+    else {
+        $get_vtable .= "    vt = Parrot_${first_parent}_get_vtable(interp);\n";
+    }
+
+    foreach my $parent_name ( @other_parents) {
+        $get_vtable .= "    Parrot_${parent_name}_update_vtable(vt);\n";
+    }
+
+    $get_vtable .= "    Parrot_${classname}_update_vtable(vt);\n";
 
     $cout .= <<"EOC";
 PARROT_EXPORT
@@ -931,14 +926,19 @@ $get_vtable
 EOC
 
     my $get_extra_vtable = '';
-    foreach my $parent_name ( reverse ($self->name, @{ $self->parents }) ) {
-        if ($parent_name eq 'default') {
-            $get_extra_vtable .= "    vt = Parrot_default_ro_get_vtable(interp);\n";
-        }
-        else {
-            $get_extra_vtable .= "    Parrot_${parent_name}_ro_update_vtable(vt);\n";
-        }
+
+    if ($first_parent eq 'default') {
+        $get_extra_vtable .= "    vt = Parrot_default_ro_get_vtable(interp);\n";
     }
+    else {
+        $get_extra_vtable .= "    vt = Parrot_${first_parent}_ro_get_vtable(interp);\n";
+    }
+
+    foreach my $parent_name ( @other_parents ) {
+        $get_extra_vtable .= "    Parrot_${parent_name}_ro_update_vtable(vt);\n";
+    }
+
+    $get_extra_vtable .= "    Parrot_${classname}_ro_update_vtable(vt);\n";
 
     $cout .= <<"EOC";
 PARROT_EXPORT
@@ -1020,7 +1020,7 @@ BODY
     1;
 }
 
-# Generate signle case for switch VTABLE
+# Generate single case for switch VTABLE
 sub generate_single_case {
     my ($self, $vt_method_name, $multi) = @_;
 
