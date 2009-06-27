@@ -442,7 +442,7 @@ Introspection interface. C<key> can be:
         STRING *s     = CONST_STRING(interp, "globals");
         int     level = 0;
 
-        Parrot_Context *ctx;
+        PMC *ctx;
 
         if (Parrot_str_equal(interp, item, s))
             return interp->root_namespace;
@@ -474,15 +474,15 @@ Introspection interface. C<key> can be:
 
         if (outer) {
             for (; level; --level) {
-                ctx = ctx->outer_ctx;
-                if (!ctx)
+                ctx = PARROT_CONTEXT(ctx)->outer_ctx;
+                if (PMC_IS_NULL(ctx))
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such outer depth");
             }
         }
         else {
             for (; level; --level) {
-                cont = ctx->current_cont;
+                cont = PARROT_CONTEXT(ctx)->current_cont;
 
                 if (PMC_IS_NULL(cont) || !PMC_cont(cont)->seg)
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -497,45 +497,44 @@ Introspection interface. C<key> can be:
         }
 
         if (item == outer)
-            return ctx->current_sub;
+            return PARROT_CONTEXT(ctx)->current_sub;
 
         s = CONST_STRING(interp, "sub");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->current_sub;
+            return PARROT_CONTEXT(ctx)->current_sub;
 
         s = CONST_STRING(interp, "lexpad");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->lex_pad;
+            return PARROT_CONTEXT(ctx)->lex_pad;
 
         s = CONST_STRING(interp, "namespace");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->current_namespace;
+            return PARROT_CONTEXT(ctx)->current_namespace;
 
         s = CONST_STRING(interp, "continuation");
 
         if (Parrot_str_equal(interp, item, s))
-            return VTABLE_clone(interp, ctx->current_cont);
+            return VTABLE_clone(interp, PARROT_CONTEXT(ctx)->current_cont);
 
         s = CONST_STRING(interp, "annotations");
 
         if (Parrot_str_equal(interp, item, s)) {
             Parrot_sub *sub;
-            PMC        *sub_pmc = ctx->current_sub;
+            PMC        *sub_pmc = PARROT_CONTEXT(ctx)->current_sub;
             PMC_get_sub(interp, sub_pmc, sub);
             if (ctx == CONTEXT(interp)) {
                 /* We can't know the current program counter for the currently
                  * executing sub, so can't return annotations for that. */
-                if (ctx == CONTEXT(interp))
-                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                            "Cannot get annotations at depth 0; use annotations op instead.");
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "Cannot get annotations at depth 0; use annotations op instead.");
             }
             if (!PMC_IS_NULL(sub_pmc) && sub_pmc->vtable->base_type == enum_class_Sub &&
                     sub->seg->annotations) {
                 PackFile_ByteCode *seg = sub->seg;
-                opcode_t *pc = ctx->current_pc;
+                opcode_t *pc = PARROT_CONTEXT(ctx)->current_pc;
                 return PackFile_Annotations_lookup(interp,  seg->annotations,
                         pc - seg->base.data, NULL);
             }

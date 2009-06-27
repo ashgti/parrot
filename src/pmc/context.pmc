@@ -18,46 +18,342 @@ Information about the parrot calling Context
 
 */
 
-pmclass Context {
+/*
+=head2 Context and register frame layout
 
-    ATTR PMC     caller_ctx   /* caller context */
-    ATTR Regs_ni bp;          /* pointers to FLOATVAL & INTVAL */
-    ATTR Regs_ps bp_ps;       /* pointers to PMC & STR */
+    +----------++----+------+------------+----+
+    | context  || N  |  I   |   P        |  S +
+    +----------++----+------+------------+----+
+    ^          ^     ^                   ^
+    |          |     ctx.bp              ctx.bp_ps
+    ctx.state  opt
+               padding
+
+Registers are addressed as usual via the register base pointer ctx.bp.
+
+The macro CONTEXT() hides these details
+
+=cut
+
+*/
+
+/*
+=head2 Context and register frame allocation
+
+There are two allocation strategies: chunked memory and malloced with a free
+list.
+
+ CHUNKED_CTX_MEM = 1
+
+C<ctx_mem.data> is a pointer to an allocated chunk of memory.  The pointer
+C<ctx_mem.free> holds the next usable location. With (full) continuations the
+C<ctx_mem.free> pointer can't be moved below the C<ctx_mem.threshold>, which is
+the highest context pointer of all active continuations.
+
+[the code for this is incomplete; it had suffered some bit-rot and was
+getting in the way of maintaining the other case.  -- rgr, 4-Feb-06.]
+
+RT #46177 GC has to lower this threshold when collecting continuations.
+
+ CHUNKED_CTX_MEM = 0
+
+Context/register memory is malloced. C<ctx_mem.free> is used as a free list of
+reusable items.
+
+=cut
+
+*/
+
+
+#include "parrot/parrot.h"
+#include "parrot/register.h"
+#include "pmc_sub.h"
+
+#define SLOT_CHUNK_SIZE 8
+
+#define ROUND_ALLOC_SIZE(size) ((((size) + SLOT_CHUNK_SIZE - 1) \
+        / SLOT_CHUNK_SIZE) * SLOT_CHUNK_SIZE)
+#define CALCULATE_SLOT_NUM(size) ((size) / SLOT_CHUNK_SIZE)
+
+#if CHUNKED_CTX_MEM
+ #  error "Non-working code removed."
+#endif
+
+#define CTX_ALLOC_SIZE 0x20000
+
+#define ALIGNED_CTX_SIZE (((sizeof (Parrot_Context) + NUMVAL_SIZE - 1) \
+        / NUMVAL_SIZE) * NUMVAL_SIZE)
+
+
+/*
+
+=item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
+
+Clears all registers in a context.  PMC and STRING registers contain PMCNULL
+and NULL, respectively.  Integer and float registers contain negative flag
+values, for debugging purposes.
+
+=cut
+
+*/
+
+static void
+clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+{
+    ASSERT_ARGS(clear_regs)
+    int i;
+
+    /* NULL out registers - P/S have to be NULL for GC
+     *
+     * if the architecture has 0x := NULL and 0.0 we could memset too
+     */
+
+    for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; i++) {
+        CTX_REG_PMC(ctx, i) = PMCNULL;
+    }
+
+    for (i = 0; i < ctx->n_regs_used[REGNO_STR]; i++) {
+        CTX_REG_STR(ctx, i) = NULL;
+    }
+
+    if (Interp_debug_TEST(interp, PARROT_REG_DEBUG_FLAG)) {
+        /* depending on -D40 we set int and num to be identifiable garbage values */
+        for (i = 0; i < ctx->n_regs_used[REGNO_INT]; i++) {
+            CTX_REG_INT(ctx, i) = -999;
+        }
+        for (i = 0; i < ctx->n_regs_used[REGNO_NUM]; i++) {
+            CTX_REG_NUM(ctx, i) = -99.9;
+        }
+    }
+}
+
+
+pmclass Context {
+    ATTR PMC      *caller_ctx   /* caller context */
+    ATTR Regs_ni   bp;          /* pointers to FLOATVAL & INTVAL */
+    ATTR Regs_ps   bp_ps;       /* pointers to PMC & STR */
+    ATTR void *    regs;        /* register storage */
 
     /* end common header */
-    ATTR INTVAL n_regs_used[4];   /* INSP in PBC points to Sub */
-    ATTR PMC    lex_pad;         /* LexPad PMC */
-    ATTR PMC    outer_ctx;       /* outer context, if a closure */
+    ATTR INTVAL    n_regs_used[4];   /* INSP in PBC points to Sub */
+    ATTR PMC      *lex_pad;         /* LexPad PMC */
+    ATTR PMC      *outer_ctx;       /* outer context, if a closure */
 
     /* new call scheme and introspective variables */
-    ATTR PMC      current_sub;           /* the Sub we are executing */
+    ATTR PMC      *current_sub;           /* the Sub we are executing */
 
     /* for now use a return continuation PMC */
-    ATTR PMC      handlers;              /* local handlers for the context */
-    ATTR PMC      current_cont;          /* the return continuation PMC */
-    ATTR PMC      current_object;        /* current object if a method call */
-    ATTR PMC      current_namespace;     /* The namespace we're currently in */
-    ATTR PMC      results_signature;     /* non-const results signature PMC */
+    ATTR PMC      *handlers;              /* local handlers for the context */
+    ATTR PMC      *current_cont;          /* the return continuation PMC */
+    ATTR PMC      *current_object;        /* current object if a method call */
+    ATTR PMC      *current_namespace;     /* The namespace we're currently in */
+    ATTR PMC      *results_signature;     /* non-const results signature PMC */
     ATTR opcode_t *current_pc;            /* program counter of Sub invocation */
     ATTR opcode_t *current_results;       /* ptr into code with get_results opcode */
 
     /* deref the constants - we need it all the time */
-    ATTR struct PackFile_Constant **constants;
+    ATTR struct    PackFile_Constant **constants;
 
-    ATTR INTVAL  current_HLL;     /* see also src/hll.c */
-    ATTR size_t  regs_mem_size;   /* memory occupied by registers */
-    ATTR int     ref_count;       /* how often refered to */
-    ATTR int     gc_mark;         /* marked in gc run */
+    ATTR INTVAL    current_HLL;     /* see also src/hll.c */
+    ATTR size_t    regs_mem_size;   /* memory occupied by registers */
+    ATTR int       ref_count;       /* how often refered to */
+    ATTR int       gc_mark;         /* marked in gc run */
 
-    ATTR UINTVAL warns;           /* Keeps track of what warnings
+    ATTR UINTVAL   warns;           /* Keeps track of what warnings
                                              * have been activated */
-    ATTR UINTVAL errors;          /* fatals that can be turned off */
-    ATTR UINTVAL trace_flags;
-    ATTR UINTVAL recursion_depth; /* Sub call recursion depth */
+    ATTR UINTVAL   errors;          /* fatals that can be turned off */
+    ATTR UINTVAL   trace_flags;
+    ATTR UINTVAL   recursion_depth; /* Sub call recursion depth */
 
     /* code->prederefed.code - code->base.data in opcodes
      * to simplify conversion between code ptrs in e.g. invoke */
-    ATTR size_t pred_offset;
+    ATTR size_t    pred_offset;
+
+    VTABLE void init() {
+        Parrot_Context_attributes * const ctx =
+            mem_alloc_typed(Parrot_Context_attributes);
+        ctx->current_results   = NULL;
+        ctx->results_signature = PMCNULL;
+        ctx->lex_pad           = PMCNULL;
+        ctx->outer_ctx         = PMCNULL;
+        ctx->current_cont      = PMCNULL;
+        ctx->current_object    = PMCNULL;
+        ctx->handlers          = PMCNULL;
+        ctx->caller_ctx        = PMCNULL;
+        ctx->current_pc        = PMCNULL;
+        PMC_data(SELF) = ctx;
+        PObj_active_destroy_SET(SELF);
+        PObj_custom_mark_SET(SELF);
+    }
+
+    VTABLE void init_pmc(PMC *old_ctx) {
+        Parrot_Context_attributes * const ctx =
+            mem_alloc_typed(Parrot_Context_attributes);
+        ctx->current_results   = NULL;
+        ctx->results_signature = PMCNULL;
+        ctx->lex_pad           = PMCNULL;
+        ctx->outer_ctx         = PMCNULL;
+        ctx->current_cont      = PMCNULL;
+        ctx->current_object    = PMCNULL;
+        ctx->handlers          = PMCNULL;
+        ctx->caller_ctx        = PMCNULL;
+        ctx->current_pc        = PMCNULL;
+        ctx->current_namespace = PMCNULL;
+        PMC_data(SELF) = ctx;
+        PObj_active_destroy_SET(SELF);
+        PObj_custom_mark_SET(SELF);
+
+        if (!PMC_IS_NULL(old_ctx)) {
+            Parrot_Context_attributes * const old = PARROT_CONTEXT(old_ctx);
+            /* some items should better be COW copied */
+            ctx->constants         = old->constants;
+            ctx->warns             = old->warns;
+            ctx->errors            = old->errors;
+            ctx->trace_flags       = old->trace_flags;
+            ctx->pred_offset       = old->pred_offset;
+            ctx->current_HLL       = old->current_HLL;
+            ctx->current_namespace = old->current_namespace;
+            /* end COW */
+            ctx->recursion_depth   = old->recursion_depth;
+        }
+        else {
+            ctx->constants         = NULL;
+            ctx->warns             = 0;
+            ctx->errors            = 0;
+            ctx->trace_flags       = 0;
+            ctx->pred_offset       = 0;
+            ctx->current_HLL       = 0;
+            ctx->recursion_depth   = 0;
+        }
+        clear_regs(interp, ctx);
+    }
+
+    VTABLE void mark() {
+        Parrot_Context_attributes * const data = PARROT_CONTEXT(SELF);
+        if (data) {
+            if (data->caller_ctx)
+                Parrot_gc_mark_PObj_alive(interp, data->caller_ctx);
+            if (data->lex_pad)
+                Parrot_gc_mark_PObj_alive(interp, data->lex_pad);
+            if (data->outer_ctx)
+                Parrot_gc_mark_PObj_alive(interp, data->outer_ctx);
+            if (data->handlers)
+                Parrot_gc_mark_PObj_alive(interp, data->handlers);
+            if (data->current_sub)
+                Parrot_gc_mark_PObj_alive(interp, data->current_sub);
+            if (data->current_cont)
+                Parrot_gc_mark_PObj_alive(interp, data->current_cont);
+            if (data->current_object)
+                Parrot_gc_mark_PObj_alive(interp, data->current_object);
+            if (data->current_namespace)
+                Parrot_gc_mark_PObj_alive(interp, data->current_namespace);
+            if (data->results_signature)
+                Parrot_gc_mark_PObj_alive(interp, data->results_signature);
+        }
+    }
+
+/*
+
+=item C<void push_pmc(PMC *new)>
+
+Pushes the new context, and sets it as the current context
+
+=cut
+
+*/
+
+    VTABLE void push_pmc(PMC * new) {
+        PMC * const old = CONTEXT(interp);
+
+        PARROT_CONTEXT(SELF)->caller_ctx  = old;
+
+        /* doesn't change */
+        PARROT_CONTEXT(SELF)->current_sub = PARROT_CONTEXT(old)->current_sub;
+    }
+
+/*
+
+=item C<PMC * pop_pmc()>
+
+Pops SELF off the context list, and sets it's immediate parent as the
+current context
+
+*/
+
+    VTABLE PMC * pop_pmc() {
+        PMC * const ctx = CONTEXT(interp);
+        PMC * const old = ctx->caller_ctx;
+
+        /* restore old, set cached interpreter base pointers */
+        CONTEXT(interp)      = old;
+        interp->ctx.bp       = old->bp;
+        interp->ctx.bp_ps    = old->bp_ps;
+    }
+
+    VTABLE void set_integer_native(INTVAL val) {
+        INTVAL i;
+        INTVAL num_ints = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_INT];
+        for (i = 0; i < num_ints; ++i)
+            VTABLE_set_integer_keyed_int(INTERP, SELF, i, val);
+    }
+
+    VTABLE void set_number_native(FLOATVAL val) {
+        INTVAL i;
+        INTVAL num_nums = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_NUM];
+        for (i = 0; i < num_nums; ++i)
+            VTABLE_set_number_keyed_int(INTERP, SELF, i, val);
+    }
+
+    VTABLE void set_pmc(PMC * val) {
+        INTVAL i;
+        INTVAL num_pmcs = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_PMC];
+        for (i = 0; i < num_nums; ++i)
+            VTABLE_set_pmc_keyed_int(INTERP, SELF, i, val);
+    }
+
+    VTABLE void set_string_native(STRING * val) {
+        INTVAL i;
+        INTVAL num_strs = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_STR];
+        for (i = 0; i < num_strs; ++i)
+            VTABLE_set_string_keyed_int(INTERP, SELF, i, val);
+    }
+
+
+
+    VTABLE void set_pointer(void *number_regs_used) {
+        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
+        const size_t size_i = sizeof (INTVAL)   * number_regs_used[REGNO_INT];
+        const size_t size_n = sizeof (FLOATVAL) * number_regs_used[REGNO_NUM];
+        const size_t size_s = sizeof (STRING *) * number_regs_used[REGNO_STR];
+        const size_t size_p = sizeof (PMC *)    * number_regs_used[REGNO_PMC];
+
+        const size_t size_nip      = size_n + size_i + size_p;
+        const size_t all_regs_size = size_n + size_i + size_p + size_s;
+        const size_t reg_alloc     = ROUND_ALLOC_SIZE(all_regs_size);
+        const int    slot          = CALCULATE_SLOT_NUM(reg_alloc);
+
+        ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
+        ctx->n_regs_used[REGNO_NUM] = number_regs_used[REGNO_NUM];
+        ctx->n_regs_used[REGNO_STR] = number_regs_used[REGNO_STR];
+        ctx->n_regs_used[REGNO_PMC] = number_regs_used[REGNO_PMC];
+
+        ctx->regs_mem_size = reg_alloc;
+        ctx->regs = (void *)mem_sys_allocate(reg_alloc);
+
+        /* ctx.bp points to I0, which has Nx on the left */
+        ctx->bp.regs_i = (INTVAL *)((char *)ctx->regs + size_n);
+        /* ctx.bp_ps points to S0, which has Px on the left */
+        ctx->bp_ps.regs_s = (STRING **)((char *)ctx_regs + size_nip);
+    }
+
+    VTABLE void destroy() {
+        Parrot_Context_attributes * const data = PARROT_CONTEXT(SELF);
+        if (data) {
+            if (data->regs)
+                mem_sys_free(data->regs);
+            mem_sys_free(data);
+        }
+    }
 }
 
 /*

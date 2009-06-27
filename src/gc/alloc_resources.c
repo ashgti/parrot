@@ -21,6 +21,7 @@ Functions to manage non-PObj memory, including strings and buffers.
 
 #include "parrot/parrot.h"
 #include "gc_private.h"
+#include "../pmc/pmc_context.h"
 
 
 #define RECLAMATION_FACTOR 0.20
@@ -262,7 +263,7 @@ buffer_location(PARROT_INTERP, ARGIN(const PObj *b))
     int i;
     static char reg[10];
 
-    Parrot_Context* const ctx = CONTEXT(interp);
+    Parrot_Context_attributes * const ctx = PARROT_CONTEXT(CONTEXT(interp));
 
     for (i = 0; i < ctx->n_regs_used[REGNO_STR]; ++i) {
         PObj * const obj = (PObj *) CTX_REG_STR(interp, ctx, i);

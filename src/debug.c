@@ -2176,7 +2176,7 @@ char
 PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 {
     ASSERT_ARGS(PDB_check_condition)
-    Parrot_Context *ctx = CONTEXT(interp);
+    PMC *ctx = CONTEXT(interp);
 
     TRACEDEB_MSG("PDB_check_condition");
 
@@ -3441,7 +3441,7 @@ PDB_backtrace(PARROT_INTERP)
 
     /* information about the current sub */
     PMC              *sub = interpinfo_p(interp, CURRENT_SUB);
-    Parrot_Context   *ctx = CONTEXT(interp);
+    PMC   *ctx = CONTEXT(interp);
 
     if (!PMC_IS_NULL(sub)) {
         str = Parrot_Context_infostr(interp, ctx);

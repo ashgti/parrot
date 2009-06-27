@@ -605,7 +605,7 @@ op get_results(inconst PMC) :flow {
 
 op get_params(inconst PMC) :flow {
     opcode_t * const _this = CUR_OPCODE;
-    Parrot_Context *caller_ctx, *ctx;
+    PMC * caller_ctx, *ctx;
     PMC * ccont;
     PMC * const signature = $1;
     INTVAL argc;
@@ -613,9 +613,9 @@ op get_params(inconst PMC) :flow {
 
     interp->current_params = _this;
     ctx = CONTEXT(interp);
-    ccont = ctx->current_cont;
+    ccont = PARROT_CONTEXT(ctx)->current_cont;
 
-    caller_ctx = ctx->caller_ctx;
+    caller_ctx = PARROT_CONTEXT(ctx)->caller_ctx;
 
     src_indexes = interp->current_args;
     dst_indexes = interp->current_params;
@@ -639,7 +639,7 @@ op get_params(inconst PMC) :flow {
 
 op set_returns(inconst PMC) :flow {
     opcode_t * const _this = CUR_OPCODE;
-    Parrot_Context *ctx;
+    PMC *ctx;
     PMC *ccont;
     PMC *signature = $1;
     INTVAL argc;
@@ -647,12 +647,12 @@ op set_returns(inconst PMC) :flow {
 
     interp->current_returns = _this;
     ctx = CONTEXT(interp);
-    ccont = ctx->current_cont;
+    ccont = PARROT_CONTEXT(ctx)->current_cont;
 
     if (PMC_cont(ccont)->address) {
         /* Call is from runops_fromc */
-        Parrot_Context * const caller_ctx = PMC_cont(ccont)->to_ctx;
-        if (! caller_ctx) {
+        PMC * const caller_ctx = PMC_cont(ccont)->to_ctx;
+        if (PMC_IS_NULL(caller_ctx)) {
             /* there is no point calling Parrot_ex_throw_..., because
                PDB_backtrace can't deal with a missing to_ctx either. */
             exit_fatal(1, "No caller_ctx for continuation %p.", ccont);
@@ -666,10 +666,10 @@ op set_returns(inconst PMC) :flow {
 
         parrot_pass_args(interp, ctx, caller_ctx, src_indexes, dest_indexes, PARROT_PASS_RESULTS);
     }
-    else if (ctx->caller_ctx->results_signature) {
-    /* We have a dynamic result signature, from pcc_invoke */
-        parrot_pass_args(interp, ctx, ctx->caller_ctx, interp->current_returns,
-                ctx->caller_ctx->current_results, PARROT_PASS_RESULTS);
+    else if (PARROT_CONTEXT(PARROT_CONTEXT(ctx)->caller_ctx)->results_signature) {
+        /* We have a dynamic result signature, from pcc_invoke */
+        parrot_pass_args(interp, ctx, PARROT_CONTEXT(ctx)->caller_ctx, interp->current_returns,
+                PARROT_CONTEXT(PARROT_CONTEXT(ctx)->caller_ctx)->current_results, PARROT_PASS_RESULTS);
     }
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);

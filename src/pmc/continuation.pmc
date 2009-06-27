@@ -23,6 +23,7 @@ more information.
 
 #include "parrot/oplib/ops.h"
 #include "pmc_sub.h"
+#include "pmc_context.h"
 
 /*
 
@@ -228,8 +229,8 @@ destination to continue execution.
 
     VTABLE opcode_t *invoke(void *next) {
         Parrot_cont      *cc           = PMC_cont(SELF);
-        Parrot_Context   *from_ctx     = CONTEXT(interp);
-        Parrot_Context   *to_ctx       = cc->to_ctx;
+        PMC   *from_ctx     = CONTEXT(interp);
+        PMC   *to_ctx       = cc->to_ctx;
         opcode_t         *pc           = cc->address;
         UNUSED(next)
 
@@ -249,7 +250,7 @@ destination to continue execution.
              * therefore we have to block GC
              */
             opcode_t *src_indexes  = interp->current_args;
-            opcode_t *dest_indexes = to_ctx->current_results;
+            opcode_t *dest_indexes = PARROT_CONTEXT(to_ctx)->current_results;
             interp->current_args   = NULL;
 
             Parrot_block_GC_mark(INTERP);
@@ -293,7 +294,7 @@ Experimental: return caller PMC or PMCNULL if none.
 
     METHOD caller() {
         Parrot_cont *cc     = PMC_cont(SELF);
-        PMC         *caller = cc->to_ctx->current_sub;
+        PMC         *caller = PARROT_CONTEXT(cc->to_ctx)->current_sub;
         Parrot_sub  *sub;
 
         PMC_get_sub(INTERP, caller, sub);
@@ -315,7 +316,7 @@ Experimental: return continuation PMC of this Continuation or PMCNULL if none.
 
     METHOD continuation() {
         Parrot_cont *cc   = PMC_cont(SELF);
-        PMC         *cont = cc->to_ctx->current_cont;
+        PMC         *cont = PARROT_CONTEXT(cc->to_ctx)->current_cont;
 
         if (cont)
             RETURN(PMC *cont);

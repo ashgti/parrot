@@ -394,16 +394,17 @@ sub rewrite_pccmethod {
     PMC      * const _param_sig   = pmc_new(interp, enum_class_FixedIntegerArray);
     PMC      *_return_sig         = PMCNULL;
 
-    Parrot_Context *_caller_ctx   = CONTEXT(interp);
+    PMC *_caller_ctx              = CONTEXT(interp);
     PMC * const _ret_cont         = new_ret_continuation_pmc(interp, NULL);
-    Parrot_Context *_ctx          = Parrot_push_context(interp, _n_regs_used);
+    PMC *_ctx                     = pmc_new_init(interp, enum_class_Context, CONTEXT(interp));
     PMC *_ccont                   = PMCNULL;
+    VTABLE_set_pointer(inter, _ctx, _n_regs_used);
 
 $set_params
     UNUSED(_return_indexes);
 
-    if (_caller_ctx) {
-        _ccont = _caller_ctx->current_cont;
+    if (!PMC_IS_NULL(_caller_ctx)) {
+        _ccont = PARROT_CONTEXT(_caller_ctx)->current_cont;
     }
     else {
         /* there is no point calling Parrot_ex_throw_from_c_args here, because
@@ -411,8 +412,8 @@ $set_params
         exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
     }
 
-    _ctx->current_cont            = _ret_cont;
-    PMC_cont(_ret_cont)->from_ctx = _ctx;
+    PARROT_CONTEXT(_ctx)->current_cont = _ret_cont;
+    PMC_cont(_ret_cont)->from_ctx      = _ctx;
 
     _current_args                 = interp->current_args;
     interp->current_args         = NULL;
@@ -429,9 +430,8 @@ END
 
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        --_ctx->recursion_depth;
-        _ctx->caller_ctx      = _caller_ctx->caller_ctx;
-        Parrot_free_context(interp, _caller_ctx, 1);
+        --PARROT_CONTEXT(_ctx)->recursion_depth;
+        PARROT_CONTEXT(_ctx)->caller_ctx = PARROT_CONTEXT(_caller_ctx)->caller_ctx;
         interp->current_args = NULL;
     }
     /* BEGIN PARMS SCOPE */
@@ -458,7 +458,7 @@ END
         $e_post->emit( <<"END", __FILE__, __LINE__ + 1 );
 $method_returns
 
-    if (! _caller_ctx) {
+    if (PMC_IS_NULL(_caller_ctx)) {
         /* there is no point calling Parrot_ex_throw_from_c_args here, because
            PDB_backtrace can't deal with a missing to_ctx either. */
         exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
@@ -466,7 +466,7 @@ $method_returns
 
     interp->returns_signature = _return_sig;
     parrot_pass_args(interp, _ctx, _caller_ctx, _return_indexes,
-        _caller_ctx->current_results, PARROT_PASS_RESULTS);
+        PARROT_CONTEXT(_caller_ctx)->current_results, PARROT_PASS_RESULTS);
 END
     }
     $e_post->emit( <<"END", __FILE__, __LINE__ + 1 );
@@ -476,7 +476,7 @@ END
     no_return:
     PObj_live_CLEAR(_param_sig);
     PObj_live_CLEAR(_return_sig);
-    Parrot_pop_context(interp);
+    VTABLE_pop_pmc(interp, CONTEXT(interp));
 END
     $self->return_type('void');
     $self->parameters('');

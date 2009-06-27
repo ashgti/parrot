@@ -742,7 +742,7 @@ PMC *
 Parrot_find_name_op(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
 {
     ASSERT_ARGS(Parrot_find_name_op)
-    Parrot_Context * const ctx = CONTEXT(interp);
+    PMC * const ctx = CONTEXT(interp);
     PMC * const lex_pad = Parrot_find_pad(interp, name, ctx);
     PMC *g;
 
