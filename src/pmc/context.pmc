@@ -168,6 +168,16 @@ pmclass Context {
      * to simplify conversion between code ptrs in e.g. invoke */
     ATTR size_t    pred_offset;
 
+/*
+
+=item C<void init()>
+
+Initializes a new top-level context without a parent
+
+=cut
+
+*/
+
     VTABLE void init() {
         Parrot_Context_attributes * const ctx =
             mem_alloc_typed(Parrot_Context_attributes);
@@ -184,6 +194,16 @@ pmclass Context {
         PObj_active_destroy_SET(SELF);
         PObj_custom_mark_SET(SELF);
     }
+
+/*
+
+=item C<void init_pmc()>
+
+Creates a new Context PMC with the given old_ctx as a parent context.
+
+=cut
+
+*/
 
     VTABLE void init_pmc(PMC *old_ctx) {
         Parrot_Context_attributes * const ctx =
@@ -227,9 +247,30 @@ pmclass Context {
         clear_regs(interp, ctx);
     }
 
+/*
+
+=item C<void mark()>
+
+Mark the context, it's data items, and all the associated registers.
+
+=cut
+
+*/
+
     VTABLE void mark() {
         Parrot_Context_attributes * const data = PARROT_CONTEXT(SELF);
         if (data) {
+            INTVAL i;
+            INTVAL num_pmcs = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_PMC];
+            INTVAL num_strs = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_STR];
+
+            /* Mark register values alive */
+            for (i = 0; i < num_pmcs; ++i)
+                Parrot_gc_mark_PObj_alive(interp, VTABLE_get_pmc_keyed_int(INTERP, SELF, i));
+            for (i = 0; i < num_strs; ++i)
+                Parrot_gc_mark_PObj_alive(INTERP, VTABLE_get_string_keyed_int(INTERP, SELF, i));
+
+            /* Mark other data items alive */
             if (data->caller_ctx)
                 Parrot_gc_mark_PObj_alive(interp, data->caller_ctx);
             if (data->lex_pad)
@@ -255,19 +296,18 @@ pmclass Context {
 
 =item C<void push_pmc(PMC *new)>
 
-Pushes the new context, and sets it as the current context
+Pushes the new context, sets SELF as the caller_ctx of the given context.
 
 =cut
 
 */
 
     VTABLE void push_pmc(PMC * new) {
-        PMC * const old = CONTEXT(interp);
-
-        PARROT_CONTEXT(SELF)->caller_ctx  = old;
+        PARROT_CONTEXT(SELF)->caller_ctx  = SELF;
 
         /* doesn't change */
-        PARROT_CONTEXT(SELF)->current_sub = PARROT_CONTEXT(old)->current_sub;
+        PARROT_CONTEXT(SELF)->current_sub = PARROT_CONTEXT(SELF)->current_sub;
+        CONTEXT(INTERP) = new;
     }
 
 /*
@@ -285,9 +325,23 @@ current context
 
         /* restore old, set cached interpreter base pointers */
         CONTEXT(interp)      = old;
-        interp->ctx.bp       = old->bp;
-        interp->ctx.bp_ps    = old->bp_ps;
     }
+
+/*
+
+=item C<void set_integer_native(INTVAL val)>
+
+=item C<void set_number_native(FLOATVAL val)>
+
+=item C<void set_pmc(PMC * val)>
+
+=item C<void set_string_native(STRING * val)>
+
+Sets all registers in SELF of the given type to the given value.
+
+=cut
+
+*/
 
     VTABLE void set_integer_native(INTVAL val) {
         INTVAL i;
@@ -306,7 +360,7 @@ current context
     VTABLE void set_pmc(PMC * val) {
         INTVAL i;
         INTVAL num_pmcs = PARROT_CONTEXT(SELF)->n_regs_used[REGNO_PMC];
-        for (i = 0; i < num_nums; ++i)
+        for (i = 0; i < num_pmcs; ++i)
             VTABLE_set_pmc_keyed_int(INTERP, SELF, i, val);
     }
 
@@ -316,6 +370,36 @@ current context
         for (i = 0; i < num_strs; ++i)
             VTABLE_set_string_keyed_int(INTERP, SELF, i, val);
     }
+
+/*
+
+=item C<INTVAL get_integer_keyed_int(INTVAL key)>
+
+=item C<void set_integer_keyed_int(INTVAL key, INTVAL val)>
+
+Get and set methods for I registers
+
+=item C<FLOATVAL get_number_keyed_int(FLOATVAL key)>
+
+=item C<void set_number_keyed_int(INTVAL key, FLOATVAL val)>
+
+Get and set methods for N registers
+
+=item C<STRING * get_string_keyed_int(INTVAL key)>
+
+=item C<void set_string_keyed_int(INTVAL key, STRING * val)>
+
+Get and set methods for S registers
+
+=item C<PMC * get_pmc_keyed_int(INTVAL key)>
+
+=item C<void set_pmc_keyed_int(INTVAL key, PMC * val)>
+
+Get and set methods for P registers
+
+=cut
+
+*/
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL x) {
         return PARROT_CONTEXT(SELF)->bp.regs_i[x];
@@ -349,6 +433,18 @@ current context
         PARROT_CONTEXT(SELF)->bp_ps.regs_s[x] = val;
     }
 
+/*
+
+=item C<void set_pointer(void * number_regs_used)>
+
+Set a pointer to a 4-element INTVAL array that specifies how many of each
+type of register are needed in the context. Takes the numbers, calculates
+the sizes, and allocates memory accordingly
+
+=cut
+
+*/
+
     VTABLE void set_pointer(void *number_regs_used) {
         Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
         const size_t size_i = sizeof (INTVAL)   * number_regs_used[REGNO_INT];
@@ -375,9 +471,30 @@ current context
         ctx->bp_ps.regs_s = (STRING **)((char *)ctx_regs + size_nip);
     }
 
+/*
+
+=item C<void * get_pointer()>
+
+Returns a pointer to the allocated memory for holding registers.
+
+=cut
+
+*/
+
     VTABLE void * get_pointer() {
         return PARROT_CONTEXT(SELF)->regs;
     }
+
+/*
+
+=item C<void * get_pointer_keyed_int(INTVAL regtype)>
+
+Gets a base pointer to the given register set. regtype can be one of
+REGNO_INT, REGNO_NUM, REGNO_STR, or REGNO_PMC
+
+=cut
+
+*/
 
     VTABLE void * get_pointer_keyed_int(INTVAL regtype) {
         switch (regtype) {
@@ -391,6 +508,16 @@ current context
                 return NULL;
         }
     }
+
+/*
+
+=item C<void destroy()>
+
+deallocates memory used by the context
+
+=cut
+
+*/
 
     VTABLE void destroy() {
         Parrot_Context_attributes * const data = PARROT_CONTEXT(SELF);
