@@ -33,10 +33,10 @@ Returns the C C<#define> macros required by the ops.
 sub defines {
     return <<END;
 #define REL_PC (cur_opcode - start_code)
-#define IREG(i) REG_INT(interp, i)
-#define NREG(i) REG_NUM(interp, i)
-#define PREG(i) REG_PMC(interp, i)
-#define SREG(i) REG_STR(interp, i)
+#define IREG(i) VTABLE_get_integer_keyed_int(interp, CONTEXT(interp), i)
+#define NREG(i) VTABLE_get_number_keyed_int(interp, CONTEXT(interp), i)
+#define PREG(i) VTABLE_get_pmc_keyed_int(interp, CONTEXT(interp), i)
+#define SREG(i) VTABLE_get_string_keyed_int(interp, CONTEXT(interp), i)
 #define CONST(i) interp->code->const_table->constants[i]
 END
 }
