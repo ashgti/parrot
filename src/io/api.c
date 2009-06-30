@@ -236,15 +236,18 @@ Parrot_io_open(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
 {
     ASSERT_ARGS(Parrot_io_open)
     PMC *new_filehandle, *filehandle;
-    INTVAL flags;
+    INTVAL flags = Parrot_io_parse_open_flags(interp, mode);
     if (PMC_IS_NULL(pmc)) {
-        new_filehandle = pmc_new(interp,
-            Parrot_get_ctx_HLL_type(interp, enum_class_FileHandle));
+        if (flags & PIO_F_PIPE)
+            new_filehandle = pmc_new(interp,
+                Parrot_get_ctx_HLL_type(interp, enum_class_PipeHandle));
+        else
+            new_filehandle = pmc_new(interp,
+                Parrot_get_ctx_HLL_type(interp, enum_class_FileHandle));
     }
     else
         new_filehandle = pmc;
 
-    flags = Parrot_io_parse_open_flags(interp, mode);
     if (new_filehandle->vtable->base_type == enum_class_FileHandle) {
         filehandle = PIO_OPEN(interp, new_filehandle, path, flags);
         if (PMC_IS_NULL(filehandle))
@@ -254,6 +257,12 @@ Parrot_io_open(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
         SETATTR_FileHandle_filename(interp, new_filehandle, path);
         SETATTR_FileHandle_mode(interp, new_filehandle, mode);
         Parrot_io_setbuf(interp, filehandle, PIO_UNBOUND);
+    }
+    else if (new_filehandle->vtable->base_type == enum_class_PipeHandle) {
+        filehandle = PIO_OPEN_PIPE(interp, new_filehandle, path, flags);
+        if (PMC_IS_NULL(filehandle))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
+                "Unable to open pipe to command '%S'", path);
     }
     else if (new_filehandle->vtable->base_type == enum_class_StringHandle) {
         SETATTR_StringHandle_flags(interp, pmc, flags);
