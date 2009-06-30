@@ -1040,7 +1040,6 @@ Parrot_io_make_offset_pmc(PARROT_INTERP, ARGMOD(PMC *pmc))
     return VTABLE_get_integer(interp, pmc);
 }
 
-
 /*
 
 =back

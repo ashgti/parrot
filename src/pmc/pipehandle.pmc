@@ -27,6 +27,7 @@ it is.
 pmclass PipeHandle extends Handle {
     ATTR INTVAL reader;
     ATTR INTVAL writer;
+    ATTR PIOHANDLE child;
 
 /*
 
@@ -45,6 +46,7 @@ Initializes a newly created Socket object.
         PMC_data(SELF) = attrs;
         attrs->reader  = 0;
         attrs->writer  = 0;
+        attrs->child     = PIO_INVALID_HANDLE;
         attrs->os_handle = PIO_INVALID_HANDLE;
 
         PObj_active_destroy_SET(SELF);
@@ -85,8 +87,10 @@ Free structures.
         if (PARROT_PIPEHANDLE(SELF)) {
             Parrot_PipeHandle_attributes *data_struct = PARROT_PIPEHANDLE(SELF);
 
-            if(data_struct->os_handle != PIO_INVALID_HANDLE)
+            if (data_struct->os_handle != PIO_INVALID_HANDLE)
                 Parrot_io_close_piohandle(interp, data_struct->os_handle);
+            if (data_struct->child != PIO_INVALID_HANDLE)
+                Parrot_io_close_piohandle(interp, data_struct->child);
             data_struct->os_handle = PIO_INVALID_HANDLE;
         }
     }
