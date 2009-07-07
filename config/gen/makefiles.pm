@@ -50,6 +50,8 @@ sub _init {
             { SOURCE => 'config/gen/makefiles/json.in' },
         'compilers/pirc/Makefile'    =>
             { SOURCE => 'config/gen/makefiles/pirc.in' },
+        'compilers/opsc/Makefile'    =>
+            { SOURCE => 'config/gen/makefiles/opsc.in' },
         'src/dynpmc/Makefile'        =>
             { SOURCE => 'config/gen/makefiles/dynpmc.in' },
         'src/dynoplibs/Makefile'     =>

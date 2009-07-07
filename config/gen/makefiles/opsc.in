@@ -22,10 +22,10 @@ SOURCES := \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
   runcore/gen_base.pir \
-#  runcore/gen_cswitch.pir \
-#  runcore/gen_cgoto.pir \
-#  runcore/gen_cgp.pir \
-#  runcore/gen_cprederef.pir 
+  runcore/gen_cswitch.pir \
+  runcore/gen_cgoto.pir \
+  runcore/gen_cgp.pir \
+  runcore/gen_cprederef.pir \
   runcore/gen_c.pir
 
 # the default target
@@ -47,6 +47,22 @@ op/gen_op.pir: $(NQP) $(PCT) op/op.pm
 runcore/gen_base.pir: $(NQP) $(PCT) runcore/base.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_base.pir \
 	    --target=pir runcore/base.pm
+
+runcore/gen_cswitch.pir: $(NQP) $(PCT) runcore/cswitch.pm runcore/gen_base.pir
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_cswitch.pir \
+	    --target=pir runcore/cswitch.pm
+
+runcore/gen_cgoto.pir: $(NQP) $(PCT) runcore/cgoto.pm runcore/gen_base.pir
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_cgoto.pir \
+	    --target=pir runcore/cgoto.pm
+
+runcore/gen_cgp.pir: $(NQP) $(PCT) runcore/cgp.pm runcore/gen_base.pir
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_cgp.pir \
+	    --target=pir runcore/cgp.pm
+
+runcore/gen_cprederef.pir: $(NQP) $(PCT) runcore/cprederef.pm runcore/gen_base.pir
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_cprederef.pir \
+	    --target=pir runcore/cprederef.pm
 
 runcore/gen_c.pir: $(NQP) $(PCT) runcore/c.pm runcore/gen_base.pir
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_c.pir \
