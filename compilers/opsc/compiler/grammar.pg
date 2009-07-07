@@ -16,7 +16,7 @@ rule ops {
 
 rule op {
     <op_type> 'op' <op_name=identifier> '(' <op_params>? ')' <op_flag>*
-    '{' ~ '}' <op_body>
+    <op_body>
 }
 
 token op_type {
@@ -43,35 +43,15 @@ rule op_flag {
     ':' <identifier>
 }
 
+# OpBody starts with '{' and ends with single '}' on line.
+# Parse as nested set of {} enclosed things
 rule op_body {
-    <op_body_guts> [ '{' ~ '}' <op_body>  <op_body_guts> ]?
-}
-
-regex op_body_guts {
-    <not_special> [ <special_thingy> <not_special> ]*
-}
-
-regex not_special {
-    <-[{}$]>*
-}
-
-rule special_thingy {
-    [ <param_placeholder> ]
-}
-
-rule param_placeholder {
-    '$' <placeholder_digit>
-}
-
-token placeholder_digit {
-    <.digit>
+    '{' ~ '}' <-[{}]>*
 }
 
 token identifier {
     <.ident>
 }
-
-
 
 
 
