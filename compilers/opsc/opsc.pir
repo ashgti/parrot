@@ -16,7 +16,7 @@
     $P0 = new [ 'Ops';'Compiler' ]
     $P0.'language'('Ops')
     $P0.'parsegrammar'('Ops::Grammar')
-    #$P0.'parseactions'('Ops::Grammar::Actions')
+    $P0.'parseactions'('Ops::Grammar::Actions')
 
     #these stages aren't currently used, although generate_files exits before
     #they can be called anyway
