@@ -7,11 +7,12 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(7)
+    plan(9)
 
     test_parse_basic_op()
     test_parse_many_ops()
     test_parse_header()
+    test_parse_params()
 .end
 
 .sub "test_parse_basic_op"
@@ -137,6 +138,31 @@ END
 
     $I0 = res['ops';'op']
     is($I0, 1, "...and we have our op")
+
+.end
+
+.sub "test_parse_params"
+    .local string buf
+    .local pmc res
+
+    buf = <<"END"
+inline op reserved(inconst INT) {
+    /* reserve 1 entries */
+}
+
+END
+    
+    "_parse_buffer"(buf)
+    ok(1, "Op with single param parsed")
+
+    buf = <<"END"
+inline op add(out INT, inconst INT, inconst INT) {
+}
+
+END
+    
+    "_parse_buffer"(buf)
+    ok(1, "Op with multiple param parsed")
 
 .end
 

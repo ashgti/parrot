@@ -21,7 +21,9 @@ rule ops {
 }
 
 rule op {
-    <op_type>? 'op' <op_name=identifier> '(' <op_params>? ')' <op_flag>* 
+    <op_type>? 'op' <op_name=identifier> :: '(' 
+        [ <op_params>? || <panic: "Fail to parse params"> ]
+    ')' <op_flag>* 
     ::
     [ <op_body> || <panic: "Fail to parse op body"> ]
     {*}
@@ -39,12 +41,28 @@ rule op_param {
     <op_param_direction> <op_param_type>
 }
 
-rule op_param_direction {
-    [ 'in' | 'out' | 'inout' | 'inconst' | 'invar' ]
+token op_param_direction {
+    # Order is crucial. PGE doesn't support LTM yet.
+    [ 
+    | 'inout'
+    | 'inconst'
+    | 'invar'
+    | 'in'
+    | 'out'
+    ]
 }
 
-rule op_param_type {
-    [ 'INT' | 'NUM' | 'STR' | 'PMC' | 'KEY' | 'INTKEY' | 'LABEL' ]
+token op_param_type {
+    # Order is crucial. PGE doesn't support LTM yet.
+    [
+    | 'INTKEY'
+    | 'INT'
+    | 'NUM'
+    | 'STR'
+    | 'PMC'
+    | 'KEY'
+    | 'LABEL'
+    ]
 }
 
 rule op_flag {
