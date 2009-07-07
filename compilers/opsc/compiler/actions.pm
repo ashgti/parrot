@@ -4,7 +4,24 @@
 class Ops::Grammar::Actions;
 
 method TOP($/) {
-    make $<ops>.ast;
+    my $past := PAST::Op.new(
+        :node($/)
+    );
+
+    $past<header> := $<header>.ast;
+    $past<ops>    := $<ops>.ast;
+    make $past;
+}
+
+method header($/) {
+    # Single big chunk
+    make PAST::Op.new(
+        :node($/),
+        :pasttype('inline'),
+        :inline(
+            substr($/.orig, 0, $/.from)
+        )
+    );
 }
 
 method ops($/) {

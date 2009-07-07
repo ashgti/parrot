@@ -20,6 +20,7 @@
     .local pmc res
 
     buf = <<"END"
+VERSION = PARROT_VERSION;
 inline op noop() {
 }
 END
@@ -28,6 +29,7 @@ END
     ok(1, "Simple noop parsed")
 
     buf = <<"END"
+VERSION = PARROT_VERSION;
 inline op noop() {
     foo
 }
@@ -37,6 +39,7 @@ END
     ok(1, "noop body parsed")
 
     buf = <<"END"
+VERSION = PARROT_VERSION;
 inline op noop() {
     foo {
         bar{};
@@ -55,6 +58,8 @@ END
     .local pmc res
 
     buf = <<"END"
+
+VERSION = PARROT_VERSION;
 
 =item noop
 
@@ -146,6 +151,8 @@ END
     .local pmc res
 
     buf = <<"END"
+VERSION = PARROT_VERSION;
+
 inline op reserved(inconst INT) {
     /* reserve 1 entries */
 }
@@ -156,6 +163,8 @@ END
     ok(1, "Op with single param parsed")
 
     buf = <<"END"
+VERSION = PARROT_VERSION;
+
 inline op add(out INT, inconst INT, inconst INT) {
 }
 

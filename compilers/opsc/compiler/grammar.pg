@@ -5,15 +5,20 @@
 grammar Ops::Grammar is PCT::Grammar;
 
 token TOP {
-    <header>?
+    <header>
     <ops>
     [ $ || <panic: 'Syntax error'> ]
     {*}
 }
 
-# Cheat slightly. All ops have "VERSION = PARROT_VERSION;"
+# Cheat slightly. All ops have "VERSION = PARROT_VERSION;".
+# So, capture everything before <version> as header.
 token header {
-    ^ .*? 'VERSION = PARROT_VERSION;'
+    <version> {*}
+}
+
+token version {
+    'VERSION = PARROT_VERSION;'
 }
 
 rule ops {
@@ -83,12 +88,13 @@ token identifier {
     <.ident>
 }
 
-# ws handles whitespace, pod and perl comments
+# ws handles whitespace, pod and perl and C comments
 token ws {
   [
   | \s+
   | '#' \N*
   | ^^ '=' .*? \n '=cut'
+  | '/*' .*? '*/'
   ]*
 }
 
