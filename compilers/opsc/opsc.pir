@@ -128,20 +128,19 @@
     .tailcall $P0.'command_line'(args, 'encoding'=>'utf8', 'transcode'=>'ascii')
 .end
 
-.include 'src/nodes.pir'
-.include 'src/gen_nodes.pir'
-.include '../vtdumper/src/function.pir'
-.include 'src/emitter/pmc.pir'
-.include 'src/emitter/c.pir'
 
-.include 'src/gen_emitter.pir'
-.include 'src/emitter/gen_pmc.pir'
-.include 'src/emitter/gen_c.pir'
-.include 'src/emitter/pmc/default.pir'
-.include 'src/emitter/pmc/gen_default.pir'
-.include 'src/parser/gen_grammar.pir'
-.include 'src/parser/gen_actions.pir'
-.include 'src/builtins.pir'
+.include 'builtins.pir'
+.include 'compiler/gen_grammar.pir'
+.include 'compiler/gen_actions.pir'
+.include 'op/gen_op.pir'
+.include 'op/op.pir'
+
+.include 'runcore/gen_base.pir'
+.include 'runcore/gen_c.pir'
+.include 'runcore/gen_cgoto.pir'
+.include 'runcore/gen_cprederef.pir'
+.include 'runcore/gen_cgp.pir'
+.include 'runcore/gen_cswitch.pir'
 
 # Local Variables:
 #   mode: pir
