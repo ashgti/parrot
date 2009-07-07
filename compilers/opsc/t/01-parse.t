@@ -27,7 +27,7 @@ inline op noop() {
 END
     
     "_parse_buffer"(buf)
-    ok(1, "Simple noop parsed")
+    is(1, 1, "Simple noop parsed")
 
     buf = <<"END"
 VERSION = PARROT_VERSION;
@@ -37,7 +37,7 @@ inline op noop() {
 END
     
     "_parse_buffer"(buf)
-    ok(1, "noop body parsed")
+    is(1, 1, "noop body parsed")
 
     buf = <<"END"
 VERSION = PARROT_VERSION;
@@ -49,7 +49,7 @@ inline op noop() {
 END
     
     "_parse_buffer"(buf)
-    ok(1, "noop nested body parsed")
+    is(1, 1, "noop nested body parsed")
 
 
 .end
@@ -93,7 +93,7 @@ inline op rule_the_world() {
 END
     
     res = "_parse_buffer"(buf)
-    ok(1, "Multiple ops parsed")
+    is(1, 1, "Multiple ops parsed")
 
     $I0 = res['ops';'op']
     is($I0, 3, "...and we have 3 ops")
@@ -140,7 +140,7 @@ inline op noop() {
 END
     
     res = "_parse_buffer"(buf)
-    ok(1, "Header parsed")
+    is(1, 1, "Header parsed")
 
     $I0 = res['ops';'op']
     is($I0, 1, "...and we have our op")
@@ -161,7 +161,7 @@ inline op reserved(inconst INT) {
 END
     
     "_parse_buffer"(buf)
-    ok(1, "Op with single param parsed")
+    is(1, 1, "Op with single param parsed")
 
     buf = <<"END"
 VERSION = PARROT_VERSION;
@@ -172,7 +172,7 @@ inline op add(out INT, inconst INT, inconst INT) {
 END
     
     "_parse_buffer"(buf)
-    ok(1, "Op with multiple param parsed")
+    is(1, 1, "Op with multiple param parsed")
 
 .end
 
@@ -189,7 +189,7 @@ inline op hcf() :flow :deprecated {
 END
     
     res = "_parse_buffer"(buf)
-    ok(1, "Op with flags parsed")
+    is(1, 1, "Op with flags parsed")
 
     .local pmc op
     op = res['ops';'op';0;'op_flag']

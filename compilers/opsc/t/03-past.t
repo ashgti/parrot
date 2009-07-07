@@ -25,7 +25,7 @@ END
 
     compiler = compreg 'Ops'
     past = compiler.'compile'(buf, 'target'=>'past')
-    ok(1, "PAST::Node created")
+    is(1, 1, "PAST::Node created")
 
     $P0 = past['header']
     $S0 = $P0.'inline'()
@@ -45,10 +45,10 @@ END
     # Check op flags
     $P1 = op['flags']
     $I0 = $P1['flow']
-    ok($I0, ':flow flag parsed')
+    is(1, $I0, ':flow flag parsed')
     
     $I0 = $P1['deprecated']
-    ok($I0, ':deprecated flag parsed')
+    is(1, $I0, ':deprecated flag parsed')
 
     $I0 = $P1
     is($I0, 2, "And there is only 2 flags")
