@@ -7,9 +7,10 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(3)
+    plan(5)
 
     test_parse_basic_op()
+    test_parse_many_ops()
 .end
 
 .sub "test_parse_basic_op"
@@ -46,6 +47,52 @@ END
 
 
 .end
+
+.sub "test_parse_many_ops"
+    .local string buf
+    .local pmc res
+
+    buf = <<"END"
+
+=item noop
+
+asdfs
+
+=cut
+
+inline op noop() {
+}
+
+=item halt
+
+asdsad
+
+=cut
+
+inline op halt() {
+}
+
+=head2 
+
+ads
+
+=cut
+
+inline op rule_the_world() {
+}
+
+
+END
+    
+    res = "_parse_buffer"(buf)
+    ok(1, "Multiple ops parsed")
+
+    $I0 = res['ops';'op']
+    is($I0, 3, "...and we have 3 ops")
+
+.end
+
+
 
 # Don't forget to update plan!
 

@@ -58,7 +58,14 @@ token identifier {
     <.ident>
 }
 
-
+# ws handles whitespace, pod and perl comments
+token ws {
+  [
+  | \s+
+  | '#' \N*
+  | ^^ '=' .*? \n '=cut'
+  ]*
+}
 
 
 
