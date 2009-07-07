@@ -5,9 +5,15 @@
 grammar Ops::Grammar is PCT::Grammar;
 
 token TOP {
+    <header>?
     <ops>
     [ $ || <panic: 'Syntax error'> ]
     {*}
+}
+
+# Cheat slightly. All ops have "VERSION = PARROT_VERSION;"
+token header {
+    ^ .*? 'VERSION = PARROT_VERSION;'
 }
 
 rule ops {
