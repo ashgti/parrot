@@ -1,0 +1,80 @@
+# Copyright (C) 2009, Parrot Foundation.
+# $Id$
+
+
+grammar Ops::Grammar is PCT::Grammar;
+
+token TOP {
+    <ops>
+    [ $ || <panic: 'Syntax error'> ]
+    {*}
+}
+
+rule ops {
+    <op>*
+}
+
+rule op {
+    <op_type> 'op' <op_name=identifier> '(' <op_params>? ')' <op_flag>* 
+    '{' ~ '}' <op_body>
+}
+
+token op_type {
+    [ 'inline' | 'function' ]
+}
+
+rule op_params {
+    <op_param> [ ',' <op_param> ]*
+}
+
+rule op_param {
+    <op_param_direction> <op_param_type> 
+}
+
+rule op_param_direction {
+    [ 'in' | 'out' | 'inout' | 'inconst' | 'invar' ]   
+}
+
+rule op_param_type {
+    [ 'INT' | 'NUM' | 'STR' | 'PMC' | 'KEY' | 'INTKEY' | 'LABEL' ]
+}
+
+rule op_flag {
+    ':' <identifier> 
+}
+
+rule op_body {
+    <op_body_guts> [ '{' ~ '}' <op_body>  <op_body_guts> ]?
+}
+
+regex op_body_guts {
+    <not_special> [ <special_thingy> <not_special> ]*
+}
+
+regex not_special {
+    <-[{}$]>*
+}
+
+rule special_thingy {
+    [ <param_placeholder> ]
+}
+
+rule param_placeholder {
+    '$' <placeholder_digit>
+}
+
+token placeholder_digit {
+    <.digit>
+}
+
+token identifier {
+    <.ident>
+}
+
+
+
+
+
+
+
+# vim: expandtab shiftwidth=4 ft=perl6:
