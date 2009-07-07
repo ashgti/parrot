@@ -7,10 +7,11 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(5)
+    plan(7)
 
     test_parse_basic_op()
     test_parse_many_ops()
+    test_parse_header()
 .end
 
 .sub "test_parse_basic_op"
@@ -92,7 +93,52 @@ END
 
 .end
 
+# test parsing ops file header.
+.sub "test_parse_header"
+    .local string buf
+    .local pmc res
 
+    buf = <<"END"
+/*
+ * $Id$
+** core.ops
+*/
+
+#include "parrot/dynext.h"
+#include "parrot/embed.h"
+#include "parrot/runcore_api.h"
+#include "../pmc/pmc_continuation.h"
+#include "../pmc/pmc_parrotlibrary.h"
+
+VERSION = PARROT_VERSION;
+
+=head1 NAME
+
+core.ops - Core Opcodes
+
+=cut
+
+=head1 DESCRIPTION
+
+Parrot's core library of ops.
+
+Core operations are primarily flow control and interpreter
+introspection.
+
+=cut
+
+inline op noop() {
+}
+
+END
+    
+    res = "_parse_buffer"(buf)
+    ok(1, "Header parsed")
+
+    $I0 = res['ops';'op']
+    is($I0, 1, "...and we have our op")
+
+.end
 
 # Don't forget to update plan!
 
