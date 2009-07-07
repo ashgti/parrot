@@ -10,6 +10,14 @@
     .tailcall compiler.'parse'(buffer, 'target'=>'parse')
 .end
 
+.sub '_parse_one_file'
+    .param string filename
+    .local string buf
+
+    buf = '_slurp'(filename)
+    .tailcall '_parse_buffer'(buf)
+.end
+
 
 .sub '_slurp'
     .param string file
