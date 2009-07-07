@@ -7,12 +7,13 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(9)
+    plan(12)
 
     test_parse_basic_op()
     test_parse_many_ops()
     test_parse_header()
     test_parse_params()
+    test_parse_flags()
 .end
 
 .sub "test_parse_basic_op"
@@ -173,6 +174,29 @@ END
     "_parse_buffer"(buf)
     ok(1, "Op with multiple param parsed")
 
+.end
+
+.sub "test_parse_flags"
+    .local string buf
+    .local pmc res
+
+    buf = <<"END"
+VERSION = PARROT_VERSION;
+
+inline op hcf() :flow :deprecated {
+}
+
+END
+    
+    res = "_parse_buffer"(buf)
+    ok(1, "Op with flags parsed")
+
+    .local pmc op
+    op = res['ops';'op';0;'op_flag']
+    $S0 = op[0]
+    is($S0, ":flow ", "First flag parsed")
+    $S0 = op[1]
+    is($S0, ":deprecated ", "Second flag parsed")
 .end
 
 # Don't forget to update plan!
