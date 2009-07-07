@@ -45,6 +45,12 @@ method op($/) {
         $<op_body>.ast
     );
 
+    # Handling flags.
+    for $<op_flag> {
+        $past<flags>{~$_<identifier>} := 1;
+    }
+
+    # Handling parameters.
     #$past<parameters> := $<op_params>.ast;
 
     make $past;

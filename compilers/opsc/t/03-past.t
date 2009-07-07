@@ -7,7 +7,7 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(4)
+    plan(7)
 
     .local pmc compiler, past
     .local string buf
@@ -41,6 +41,16 @@ END
     op = $P0[0]
     $S0 = op['name']
     is($S0, 'foo', "Name parsed")
+
+    $P1 = op['flags']
+    $I0 = $P1['flow']
+    ok($I0, ':flow flag parsed')
+    
+    $I0 = $P1['deprecated']
+    ok($I0, ':deprecated flag parsed')
+
+    $I0 = $P1
+    is($I0, 2, "And there is only 2 flags")
 
 .end
 
