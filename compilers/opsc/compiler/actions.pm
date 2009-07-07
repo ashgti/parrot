@@ -51,7 +51,34 @@ method op($/) {
     }
 
     # Handling parameters.
-    #$past<parameters> := $<op_params>.ast;
+    if $<op_params> {
+        $past<parameters> := $<op_params>[0].ast;
+    }
+
+    make $past;
+}
+
+method op_params($/) {
+    my $past := PAST::Stmts.new(
+        :node($/)
+    );
+
+    for $<op_param> {
+        $past.push($_.ast);
+    }
+
+    make $past;
+}
+
+method op_param($/) {
+    my $past := PAST::Var.new(
+        :node($/),
+        :isdecl(1)
+    );
+
+    # We have to store 2 "types". Just set 2 properties on Var for now
+    $past<direction> := ~$<op_param_direction>;
+    $past<type>      := ~$<op_param_type>;
 
     make $past;
 }

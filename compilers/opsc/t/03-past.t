@@ -7,7 +7,7 @@
     .include 'test_more.pir'
     load_bytecode 'opsc.pbc'
 
-    plan(7)
+    plan(14)
 
     .local pmc compiler, past
     .local string buf
@@ -42,6 +42,7 @@ END
     $S0 = op['name']
     is($S0, 'foo', "Name parsed")
 
+    # Check op flags
     $P1 = op['flags']
     $I0 = $P1['flow']
     ok($I0, ':flow flag parsed')
@@ -51,6 +52,31 @@ END
 
     $I0 = $P1
     is($I0, 2, "And there is only 2 flags")
+
+    # Check op params
+    $P1 = op['parameters']
+    $P1 = $P1.'list'()
+    $I0 = $P1
+    is($I0, 3, "Got 3 parameters")
+
+    $P2 = $P1[0]
+    $S0 = $P2['direction']
+    is($S0, 'out', 'First direction is correct')
+    $S0 = $P2['type']
+    is($S0, 'INT', 'First type is correct')
+
+    $P2 = $P1[1]
+    $S0 = $P2['direction']
+    is($S0, 'in', 'Second direction is correct')
+    $S0 = $P2['type']
+    is($S0, 'PMC', 'Second type is correct')
+
+    $P2 = $P1[2]
+    $S0 = $P2['direction']
+    is($S0, 'inconst', 'Third direction is correct')
+    $S0 = $P2['type']
+    is($S0, 'NUM', 'Third type is correct')
+
 
 .end
 

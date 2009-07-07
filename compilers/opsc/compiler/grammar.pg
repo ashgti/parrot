@@ -40,10 +40,12 @@ token op_type {
 
 rule op_params {
     <op_param> [ ',' <op_param> ]*
+    {*}
 }
 
 rule op_param {
     <op_param_direction> <op_param_type>
+    {*}
 }
 
 token op_param_direction {
