@@ -15,7 +15,7 @@ rule ops {
 }
 
 rule op {
-    <op_type> 'op' <op_name=identifier> '(' <op_params>? ')' <op_flag>* 
+    <op_type> 'op' <op_name=identifier> '(' <op_params>? ')' <op_flag>*
     '{' ~ '}' <op_body>
 }
 
@@ -28,11 +28,11 @@ rule op_params {
 }
 
 rule op_param {
-    <op_param_direction> <op_param_type> 
+    <op_param_direction> <op_param_type>
 }
 
 rule op_param_direction {
-    [ 'in' | 'out' | 'inout' | 'inconst' | 'invar' ]   
+    [ 'in' | 'out' | 'inout' | 'inconst' | 'invar' ]
 }
 
 rule op_param_type {
@@ -40,7 +40,7 @@ rule op_param_type {
 }
 
 rule op_flag {
-    ':' <identifier> 
+    ':' <identifier>
 }
 
 rule op_body {
