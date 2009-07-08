@@ -3,7 +3,7 @@
 
 .namespace [ 'Ops';'Compiler' ]
 
-.sub '__onload' :load :init
+.sub 'onload' :load :init
     load_bytecode 'PCT.pbc'
     load_bytecode 'compilers/nqp/nqp.pbc'
 

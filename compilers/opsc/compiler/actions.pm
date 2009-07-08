@@ -50,7 +50,7 @@ method op($/) {
 
     # Handling flags.
     for $<op_flag> {
-        $op.op_flags.push(~$_<identifier>);
+        $op<op_flags>{ ~$_<identifier> } := 1;
     }
 
     # Handling parameters.

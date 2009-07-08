@@ -41,8 +41,8 @@ PMC class by it self.
     res.'init'(children :flat, adverbs :flat :named)
 
     # Initialize various attributes
-    $P1 = new ['ResizableStringArray']
-    res.'attr'('op_flags', $P1, 1)
+    #$P1 = new ['Hash']
+    #res.'attr'('op_flags', $P1, 1)
 
     .return (res)
 .end
@@ -53,9 +53,9 @@ How does this PMC act?.
 
 =cut
 
-.sub 'op_flags' :method
-    .tailcall self.'attr'('op_flags',0,0)
-.end
+#.sub 'op_flags' :method
+#    .tailcall self.'attr'('op_flags',0,0)
+#.end
 
 
 =head1 COPYRIGHT

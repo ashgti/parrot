@@ -43,7 +43,7 @@ END
     is($S0, 'foo', "Name parsed")
 
     # Check op flags
-    $P1 = op['flags']
+    $P1 = op['op_flags']
     $I0 = $P1['flow']
     is(1, $I0, ':flow flag parsed')
     
@@ -51,7 +51,7 @@ END
     is(1, $I0, ':deprecated flag parsed')
 
     $I0 = $P1
-    is($I0, 2, "And there is only 2 flags")
+    is($I0, 2, "And there are only 2 flags")
 
     # Check op params
     $P1 = op['parameters']
