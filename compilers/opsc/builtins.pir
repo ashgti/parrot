@@ -43,6 +43,13 @@ Variour helper builtins.
     .return ($P0)
 .end
 
+.sub 'elements'
+    .param pmc p
+    $I0 = elements p
+    .return ($I0)
+.end
+
+
 .sub 'substr'
     .param string orig
     .param int    from
@@ -50,6 +57,43 @@ Variour helper builtins.
     $S0 = substr orig, from, len
     .return ($S0)
 .end
+
+.sub 'match'
+    .param string pattern
+    .param string subject
+
+    .local pmc recomp, resub, match, recache
+
+    load_bytecode 'PGE.pbc'
+    
+    #hash cache mapping patterns to subs, avoiding unneeded recompilation
+    recache = get_hll_global ['Ops';'Op'], '%recache'
+    $I0 = isnull recache
+    if $I0 goto no_cache
+    $I0 = exists recache[pattern]
+    if $I0 goto found_re
+    goto no_re
+
+  no_cache:
+    recache = new ['Hash']
+
+  no_re:
+    recomp = compreg 'PGE::Perl6Regex'
+    resub = recomp(pattern)
+    recache[pattern] = resub
+
+  found_re:
+    resub = recache[pattern]
+    set_hll_global ['Ops';'Op'], '%recache', recache
+
+    match = resub(subject)
+    if match goto found_match
+    .return (0)
+  found_match:
+    .return (1)
+.end
+
+
 
 # Local Variables:
 #   mode: pir

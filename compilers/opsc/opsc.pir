@@ -23,7 +23,15 @@
     $P0.'removestage'('post')
     $P0.'removestage'('pir')
     $P0.'removestage'('evalpmc')
+    $P0.'addstage'('die', 'after'=>'past')
 
+.end
+
+.sub 'die' :method
+    .param pmc past
+    .param pmc adverbs :slurpy :named
+
+    exit 0
 .end
 
 
@@ -37,8 +45,8 @@
 .include 'builtins.pir'
 .include 'compiler/gen_grammar.pir'
 .include 'compiler/gen_actions.pir'
-.include 'op/gen_op.pir'
 .include 'op/op.pir'
+.include 'op/gen_op.pir'
 
 .include 'runcore/gen_base.pir'
 .include 'runcore/gen_c.pir'

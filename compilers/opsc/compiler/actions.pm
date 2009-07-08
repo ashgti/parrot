@@ -45,17 +45,20 @@ method op($/) {
         $<op_body>.ast
     );
 
+    my $op := Ops::Op.new( :name(~$<op_name>) );
+    $op.set_body(~$<op_body>);
+
     # Handling flags.
     for $<op_flag> {
-        $past<flags>{~$_<identifier>} := 1;
+        $op.op_flags.push(~$_<identifier>);
     }
 
     # Handling parameters.
     if $<op_params> {
-        $past<parameters> := $<op_params>[0].ast;
+        $op<parameters> := $<op_params>[0].ast;
     }
 
-    make $past;
+    make $op;
 }
 
 method op_params($/) {
