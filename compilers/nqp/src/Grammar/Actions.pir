@@ -1060,7 +1060,7 @@
     if count == terms goto make
     $P0 = quote_term[count]
     $P0 = $P0.'ast'()
-    past = $P1.'new'(past, $P1, 'pasttype'=>'pirop', 'pirop'=>'concat')
+    past = $P1.'new'(past, $P0, 'pasttype'=>'pirop', 'pirop'=>'concat')
     
     inc count
     goto loop
@@ -1078,14 +1078,14 @@
 ##            );
 ##        }
 ##        elsif ($key eq 'variable') {
-##            $past := PAST::Op.new( $<variable>.ast, :name('prefix:~'), :pasttype('call') );
+##            $past := PAST::Op.new( $<variable>.ast, :pirop('set S*'), :pasttype('pirop') );
 ##        }
 ##        elsif ($key eq 'circumfix') {
 ##            $past := $<circumfix>.ast;
 ##            if $past.isa(PAST::Block) {
 ##                $past.blocktype('immediate');
 ##            }
-##            $past := PAST::Op.new( $past, :name('prefix:~'), :pasttype('call') );
+##            $past := PAST::Op.new( $past, :pirop('set S*'), :pasttype('pirop') );
 ##        }
 ##        make $past;
 ##    }
@@ -1103,7 +1103,10 @@
 
   not_literal:
     if key != 'variable' goto not_variable
-    match.'panic'('Not implemented yet')
+    $P1 = get_hll_global ['PAST'], 'Op'
+    $P0 = match['variable']
+    $P0 = $P0.'ast'()
+    past = $P1.'new'($P0, 'pasttype'=>'pirop', 'pirop'=>'set S*')
     goto make
 
   not_variable:
