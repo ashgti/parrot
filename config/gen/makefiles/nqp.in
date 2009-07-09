@@ -15,6 +15,7 @@ SOURCES := \
   nqp.pir \
   src/Grammar.pg \
   src/Grammar/Actions.pir \
+  src/quote_expression.pir \
   src/builtins.pir
 
 BOOTSRC := \

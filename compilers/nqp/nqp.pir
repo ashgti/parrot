@@ -26,6 +26,8 @@
 
 .include 'src/Grammar/Actions.pir'
 
+.include 'src/quote_expression.pir'
+
 .include 'src/builtins.pir'
 
 # Local Variables:
