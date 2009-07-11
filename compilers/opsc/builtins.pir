@@ -93,6 +93,12 @@ Variour helper builtins.
     .return (1)
 .end
 
+.sub 'die'
+    .param string why       :optional
+    .param int    has_why   :opt_flag
+
+    die why
+.end
 
 
 # Local Variables:

@@ -19,6 +19,8 @@ SOURCES := \
   builtins.pir \
   ops/op.pir \
   ops/gen_op.pir \
+  ops/oplib.pir \
+  ops/gen_oplib.pir \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
   runcore/gen_base.pir \
@@ -36,13 +38,17 @@ compiler/gen_grammar.pir: $(PGE_LIBRARY) compiler/grammar.pg
 	$(PARROT) $(PARROT_ARGS) $(PGE_LIBRARY)/Perl6Grammar.pir \
 	    --output=compiler/gen_grammar.pir compiler/grammar.pg
 
-compiler/gen_actions.pir: $(NQP) $(PCT) compiler/actions.pm op/gen_op.pir
+compiler/gen_actions.pir: $(NQP) $(PCT) compiler/actions.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=compiler/gen_actions.pir \
 	    --target=pir compiler/actions.pm
 
 ops/gen_op.pir: $(NQP) $(PCT) ops/op.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=ops/gen_op.pir \
 	    --target=pir ops/op.pm
+
+ops/gen_oplib.pir: $(NQP) $(PCT) ops/oplib.pm
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=ops/gen_oplib.pir \
+	    --target=pir ops/oplib.pm
 
 runcore/gen_base.pir: $(NQP) $(PCT) runcore/base.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_base.pir \
@@ -99,6 +105,7 @@ CLEANUPS := \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
   ops/gen_op.pir \
+  ops/gen_oplib.pir \
   runcore/gen_base.pir \
   runcore/gen_c.pir \
 

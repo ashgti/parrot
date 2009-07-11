@@ -47,6 +47,8 @@
 .include 'compiler/gen_actions.pir'
 .include 'ops/op.pir'
 .include 'ops/gen_op.pir'
+.include 'ops/oplib.pir'
+.include 'ops/gen_oplib.pir'
 
 .include 'runcore/gen_base.pir'
 .include 'runcore/gen_c.pir'
