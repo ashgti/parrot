@@ -23,11 +23,11 @@
     $P0.'removestage'('post')
     $P0.'removestage'('pir')
     $P0.'removestage'('evalpmc')
-    $P0.'addstage'('die', 'after'=>'past')
+    $P0.'addstage'('exit', 'after'=>'past')
 
 .end
 
-.sub 'die' :method
+.sub 'exit' :method
     .param pmc past
     .param pmc adverbs :slurpy :named
 
