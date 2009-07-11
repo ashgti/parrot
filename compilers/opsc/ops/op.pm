@@ -3,6 +3,18 @@
 
 class Ops::Op;
 
+=head1 NAME
+
+C<Ops::Op> - Parrot Operation
+
+=head1 DESCRIPTION
+
+Extends PAST::Block with various helper methods.
+
+=head2 Methods
+
+=over 4
+
 =item C<set_body>
 
 Set the body of this Op and do some processing on the body to determine which
@@ -64,3 +76,6 @@ method set_body($body) {
         self<jump_flags> := join('|', @jumps);
     }
 }
+
+
+

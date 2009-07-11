@@ -45,8 +45,8 @@
 .include 'builtins.pir'
 .include 'compiler/gen_grammar.pir'
 .include 'compiler/gen_actions.pir'
-.include 'op/op.pir'
-.include 'op/gen_op.pir'
+.include 'ops/op.pir'
+.include 'ops/gen_op.pir'
 
 .include 'runcore/gen_base.pir'
 .include 'runcore/gen_c.pir'

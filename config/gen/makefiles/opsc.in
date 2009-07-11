@@ -17,8 +17,8 @@ all: opsc.pbc
 SOURCES := \
   opsc.pir \
   builtins.pir \
-  op/op.pir \
-  op/gen_op.pir \
+  ops/op.pir \
+  ops/gen_op.pir \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
   runcore/gen_base.pir \
@@ -40,9 +40,9 @@ compiler/gen_actions.pir: $(NQP) $(PCT) compiler/actions.pm op/gen_op.pir
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=compiler/gen_actions.pir \
 	    --target=pir compiler/actions.pm
 
-op/gen_op.pir: $(NQP) $(PCT) op/op.pm
-	$(PARROT) $(PARROT_ARGS) $(NQP) --output=op/gen_op.pir \
-	    --target=pir op/op.pm
+ops/gen_op.pir: $(NQP) $(PCT) ops/op.pm
+	$(PARROT) $(PARROT_ARGS) $(NQP) --output=ops/gen_op.pir \
+	    --target=pir ops/op.pm
 
 runcore/gen_base.pir: $(NQP) $(PCT) runcore/base.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=runcore/gen_base.pir \
@@ -98,7 +98,7 @@ CLEANUPS := \
   opsc.pbc \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
-  op/gen_op.pir \
+  ops/gen_op.pir \
   runcore/gen_base.pir \
   runcore/gen_c.pir \
 
