@@ -1,0 +1,205 @@
+/*
+Copyright (C) 2001-2008, Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/packfilerawsegment.pmc - PackfileRawSegment PMC
+
+=head1 DESCRIPTION
+
+This class implements a PackfileRawSegment object, a low level view of a
+segment that just splits it into an array of integers.
+
+See packfile.pmc for the toplevel Packfile interface, see packfilesegment.pmc
+for the list of common methods every packfile segment pmc must implement; see
+PDD13 for the design spec.
+
+
+=head2 Methods
+
+=over 4
+
+=cut
+
+*/
+
+pmclass PackfileRawSegment extends PackfileSegment {
+    /* ResizableIntegerArray of opcodes */
+    ATTR PMC    *opcodes;
+
+/*
+
+=item C<init>
+
+Create empty PackfileRawSegment.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        Parrot_PackfileRawSegment_attributes * attrs =
+                mem_allocate_zeroed_typed(Parrot_PackfileRawSegment_attributes);
+
+        attrs->opcodes = pmc_new(interp, enum_class_ResizableIntegerArray);
+
+        PObj_custom_mark_destroy_SETALL(SELF);
+        PMC_data(SELF) = attrs;
+    }
+
+/*
+
+=item C<void mark()>
+
+Marks the object as live.
+
+=cut
+
+*/
+
+    VTABLE void mark() {
+        Parrot_PackfileRawSegment_attributes * attrs =
+                PARROT_PACKFILERAWSEGMENT(SELF);
+
+        if (attrs->opcodes)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)attrs->opcodes);
+
+        SUPER();
+    }
+
+/*
+
+=item C<void destroy()>
+
+Destroys the PMC and frees all allocated memory.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        Parrot_PackfileRawSegment_attributes * attrs =
+                PARROT_PACKFILERAWSEGMENT(SELF);
+
+        if (attrs) {
+            mem_sys_free(attrs);
+            PMC_data(SELF) = NULL;
+        }
+    }
+
+
+
+/*
+
+=item C<set_pointer>
+
+Initialize PackfileRawSegment from PackFile_Segment
+
+=cut
+
+*/
+
+    VTABLE void set_pointer(void * pointer) {
+        const PackFile_Segment * const pfseg =
+                (const PackFile_Segment *)pointer;
+        PMC * opcodes = PARROT_PACKFILERAWSEGMENT(SELF)->opcodes;
+        size_t i;
+
+        if (pfseg->size) {
+            /* copy data to own array */
+            VTABLE_set_integer_native(interp, opcodes, pfseg->size);
+            /* Not very efficient... */
+            for (i = 0; i < pfseg->size; ++i) {
+                VTABLE_set_integer_keyed_int(interp, opcodes, i, pfseg->data[i]);
+            }
+        }
+    }
+
+/*
+
+=item C<void *get_pointer()>
+
+=cut
+
+*/
+
+    VTABLE void *get_pointer() {
+        PackFile_Segment * pfseg =
+                (PackFile_Segment*)mem_allocate_zeroed_typed(PackFile_ByteCode);
+        Parrot_PackfileRawSegment_attributes * attrs =
+                PARROT_PACKFILERAWSEGMENT(SELF);
+        PMC * opcodes = attrs->opcodes;
+        size_t i;
+
+        pfseg->type     = PF_BYTEC_SEG;
+        pfseg->size     = VTABLE_get_integer(interp, opcodes);
+        pfseg->data     = mem_allocate_n_typed(pfseg->size, opcode_t);
+
+        /* Not very efficient... */
+        for (i = 0; i < pfseg->size; ++i) {
+            pfseg->data[i] = VTABLE_get_integer_keyed_int(interp, opcodes, i);
+        }
+
+        return pfseg;
+    }
+/*
+
+=item C<INTVAL elements()>
+
+Get the number of elements in the array.
+
+=cut
+
+*/
+    VTABLE INTVAL elements() {
+        return VTABLE_elements(interp,
+                PARROT_PACKFILERAWSEGMENT(SELF)->opcodes);
+    }
+
+
+/*
+
+=item C<INTVAL get_integer_keyed_int(INTVAL key)>
+
+Fetch an integer's worth of data from the segment.
+
+=cut
+
+*/
+    VTABLE INTVAL get_integer_keyed_int(INTVAL key)  {
+        return VTABLE_get_integer_keyed_int(interp,
+                PARROT_PACKFILERAWSEGMENT(SELF)->opcodes, key);
+    }
+
+
+/*
+
+=item C<void set_integer_keyed_int(INTVAL key, INTVAL value)>
+
+Set an integer's worth of data in the segment.
+
+=cut
+
+*/
+    VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value)  {
+        VTABLE_set_integer_keyed_int(interp,
+            PARROT_PACKFILERAWSEGMENT(SELF)->opcodes, key, value);
+    }
+
+
+}
+/*
+
+=back
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

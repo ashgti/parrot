@@ -1,0 +1,23 @@
+{
+    "release.version"  : "1.3.0",
+    "release.name"     : "Andean Swift",
+    "release.day"      : "Tuesday",
+    "release.date"     : "16 June 2009",
+    "release.nextdate" : "21 July 2009",
+
+    "web.root"         : "http://parrot.org/",
+    "web.source"       : "download",
+    "web.openpatches"  : "openpatches.html",
+    "web.repository"   : "https://svn.parrot.org/parrot/trunk/",
+
+    "bugday.day"       : "Saturday",
+    "bugday.date"      : "18 July 2009",
+
+    "wiki.root"        : "https://trac.parrot.org/parrot/wiki/",
+    "wiki.bugday"      : "bug_day_2009_07_18",
+
+    "cpan.search"      : "http://search.cpan.org/dist/parrot",
+    "ftp.path"         : "ftp://ftp.parrot.org/pub/parrot/releases/devel/1.3.0/",
+    "subversion.root"  : "http://subversion.tigris.org/",
+    "svk.root"         : "http://svk.bestpractical.com/"
+}

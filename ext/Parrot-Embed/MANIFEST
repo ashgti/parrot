@@ -1,0 +1,13 @@
+Build.PL
+Changes
+MANIFEST
+META.yml # Will be created by "make dist"
+README
+lib/Parrot/Embed.pm
+lib/Parrot/Embed.xs
+lib/Parrot/Interpreter.pm
+lib/Parrot/PMC.pm
+t/greet.pir
+t/interp.t
+TODO
+typemap

@@ -1,0 +1,405 @@
+# $Id$
+
+=head1 Purpose
+
+Provide a list of deprecated and experimental items in parrot.
+All items in this list should have a corresponding Trac ticket[1].
+
+=head1 Experimental Status
+
+These features are not considered stable, even though they may
+have shipped in a stable release of parrot[2]. Use them at your own
+risk, as they can be removed or changed in any release. These
+items are marked below with C<[experimental]>.
+
+=head1 Deprecated Status
+
+Please see F<docs/project/support_policy.pod> for the parrot
+project's policy regarding deprecated features.
+
+Each item shows the first release in which it is eligible for removal, e.g.
+C<[eligible in 1.5]>.  If the release listed is one that has already
+shipped, this feature may be removed in B<any> upcoming release, and
+you should no longer rely on it.
+
+Whenever deprecated items are removed, information
+regarding how to cope with the removal will be added to
+L<https://trac.parrot.org/parrot/wiki/Deprecation>.
+
+When running parrot, you can receive warnings about deprecated opcodes.
+Either run parrot with the C<-w> option to enable all warnings, or
+specifically by including this C<PIR> code:
+
+ .include 'warnings.pasm'
+ warningson .PARROT_WARNINGS_DEPRECATED_FLAG
+
+=head1 Configuration
+
+=over 4
+
+=item Alternate GC configurations [eligible in 1.5]
+
+C<malloc>, C<malloc-trace> and C<libc> will be removed as potential
+options for the C<--gc> config option.
+
+L<https://trac.parrot.org/parrot/ticket/490>
+
+=back
+
+=head1 PMCS
+
+=over 4
+
+=item pair (dynamic PMC) [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/187>
+
+=item random [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/189>
+
+=item moved to dynpmc [eligible in 1.1]
+
+AddrRegistry, CodeString, Env, Eval, File, OS, PCCMETHOD_Test, StringHandle,
+and Timer.
+
+L<https://trac.parrot.org/parrot/ticket/448>
+
+=item multiple dispatch within core PMCs [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/452>
+
+=item Hash changes to AssociativePMCArray [eligible in 1.5]
+
+Also OrderedHash to OrderedAssociativePMCArray.
+
+L<https://trac.parrot.org/parrot/ticket/679>
+
+=item Method stdhandle in ParrotInterpreter [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/264>
+
+=back
+
+=head1 Opcodes
+
+=over 4
+
+=item moved to dynop [eligible in 1.1]
+
+Parts or all of: bit.ops, debug.ops, io.ops, math.ops, set.ops
+(the obscure and rarely used parts), sys.ops.
+
+L<https://trac.parrot.org/parrot/ticket/449>
+
+=item experimental ops [eligible in 1.1]
+
+F<src/ops/experimental.ops> - only the C<trap> opcode remains
+
+=item get_addr and set_addr [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/218>
+
+These opcodes are being repurposed. They will always return a unique memory
+address of the PMC. Uses of get_addr and set_addr that would set label values
+for Sub, Exception, and related PMC types will instead be handled by
+get_label and set_label.
+
+=item C<bsr>, C<jsr>, and C<ret> [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/702>
+
+=item C<branch_cs> [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/470>
+
+=back
+
+=head1 Bytecode
+
+=over 4
+
+=item packfile structure [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/451>
+
+=item opcode numbering [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/451>
+
+=item PMC numbering [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/451>
+
+=back
+
+=head1 Class Features
+
+=over 4
+
+=back
+
+=head1 PIR syntax
+
+=over 4
+
+=item Assignment syntax with opcodes [eligible in 1.1]
+
+When the first argument of an opcode is C<OUT>, then
+the assignment syntax will be allowed, as it is today.
+
+In any other case (i.e. C<INOUT>, C<IN>), this will become
+a syntax error. For example:
+
+    $S0 = print
+    $P0 = substr 1, 2, "x"
+
+Will have to be:
+
+    print $S0
+    substr $P0, 1, 2, "x"
+
+L<http://rt.perl.org/rt3/Ticket/Display.html?id=36283>
+
+=item named class/pmc lookup in pir syntax such as new, isa, subclass, 
+    get_class, etc [eligible in 1.1]
+
+Class PMC name resolution will be the following.
+
+if the arg is a STRING
+  Relative to the current Namespace
+
+if the arg is a Array (of any sort) or Key
+  Relative to the current HLL Namespace
+
+if the arg is a Namespace or Class PMC
+  The passed in class or the class attatched to the passed in namespace.
+
+L<https://trac.parrot.org/parrot/ticket/159>
+
+=item load or include paths prefixed with 'library/' or 'include/'
+[eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/511>
+
+=back
+
+=head1 Functions
+
+=over 4
+
+=item mmd_cvt_to_types [eligible in 1.1]
+
+L<http://rt.perl.org/rt3/Ticket/Display.html?id=60626>
+
+=item src/pic.c and src/pic_jit.c [eligible in 1.1]
+
+These two files were a thin prototype implementation of Polymorphic Inline
+Caching that only ever applied to 4 opcodes, one of which has now been removed.
+The files (and all functions in them) are deprecated, and will be removed.
+
+L<http://rt.perl.org/rt3/Ticket/Display.html?id=60048>
+
+=item Subs marked with C<:vtable>/C<:method> aren't in namespace [eligible in 1.1]
+
+Subs marked with C<:vtable> or C<:method> flags are no longer given a
+namespace entry by default.  Use the C<:nsentry> flag to cause this
+to happen.
+
+L<http://rt.perl.org/rt3/Ticket/Display.html?id=53302>
+
+=item C API coding standards cleanup [eligible in 1.1]
+
+All C API functions that aren't currently named according to the
+'Parrot_<system>_*' scheme will be renamed. If you depend on these
+functions in an extending/embedding interface or C-level custom PMCs,
+check in 1.4 or 2.0 for the new names.
+
+L<https://trac.parrot.org/parrot/ticket/443>
+
+=item parrot_new_pmc_hash [eligible in 1.5]
+
+This function will be removed.  parrot_new_hash should be used in its place.
+
+L<https://trac.parrot.org/parrot/ticket/494>
+
+=item Parrot_get_namespace_autobase [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/155>
+
+=item Parrot_find_global_k [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/156>
+
+=item Parrot_MMD_method_name [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/625>
+
+=item pobject_lives [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/664>
+
+=item functions in src/stack.c [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/702>
+Here is a list of functions in this file which are currently being exported:
+
+  stack_system_init
+  cst_new_stack_chunk
+  new_stack
+  mark_stack
+  stack_height
+  stack_entry
+  stack_prepare_push
+  stack_push
+  stack_prepare_pop
+  stack_pop
+  pop_dest
+  stack_peep
+  Parrot_dump_dynamic_environment
+  Parrot_push_action*
+  Parrot_push_mark*
+  Parrot_pop_mark*
+
+* = item may be kept but reimplemented.
+
+=back
+
+=head1 Compiler tools
+
+=head2 Parrot Grammar Engine
+
+=over 4
+
+=item Deprecated rules and methods [eligible in 1.1]
+
+The following "built-in" PGE rules and methods are from previous 
+versions of Synopsis 5.
+
+Deprecated rules:
+    C<null>, C<fail>, C<sp>, C<lt>, C<gt>, C<dot>
+
+Deprecated methods:
+    C<.text>, C<.item>, C<.result_object>
+
+L<https://trac.parrot.org/parrot/ticket/460>
+
+=item Stringification, numification [eligible in 1.1]
+
+C< PGE::Match > objects will stringify or numify based on
+the text that is matched, not the result object.
+
+L<https://trac.parrot.org/parrot/ticket/461>
+
+=back
+
+=head2 Parrot Compiler Toolkit
+
+=over 4
+
+=item PCT::HLLCompiler stages [eligible in 1.1]
+
+The interface of various methods for adding, removing, and modifying 
+the list stages in a PCT::HLLCompiler object is subject to change.
+The existing actual stages will remain; only the mechanism for specifying
+the order of individual stages is likely to change.
+
+L<https://trac.parrot.org/parrot/ticket/462>
+
+=item PCT::HLLCompiler from Perl 5's Test::Harness [eligible in 1.1]
+
+In order to facilitate using PCT::HLLCompiler with test harnesses,
+the C<command_line> method of PCT::HLLCompiler object exits silently 
+if it detects that it is being run in a sample run from Perl's
+Test::Harness.  Currently this detection is done by checking the
+second command line argument for "@INC"; future releases may
+use a different detection mechanism or eliminate it altogether.
+
+L<https://trac.parrot.org/parrot/ticket/463>
+
+=back
+
+=head2 Not Quite Perl (NQP)
+
+=over 4
+
+=item C< $(...) > syntax  [eligible in 1.5]
+
+The C< $(...) > syntax for obtaining a result object from a Match
+object will no longer work.  The new syntax is to invoke the 
+C<.ast> method on the Match object.
+
+L<https://trac.parrot.org/parrot/ticket/459>
+
+=back
+
+=cut
+
+=head1 build tools
+
+=over 4
+
+=item tools/build/dynoplibs.pl and tools/build/dynpmc.pl [eligible in 1.1]
+
+Replaced with makefiles.
+
+L<https://trac.parrot.org/parrot/ticket/338>
+
+=back
+
+=head1 pmc2c syntax
+
+=over 4
+
+=item "pmclass" with name not matching file's basename [eligible in 1.5]
+
+When foo.pmc contains a the line "pmclass bar", pmc2c generates a pmc_foo.h
+but tries to include pmc_bar.h.  This is a bug, but it's possible someone out
+there is using it.  This usage will result in a warning for now; after
+the 1.4 release, this warning will be upgraded to an error.
+
+L<https://trac.parrot.org/parrot/ticket/665>
+
+=back
+
+=head1 Parrot library
+
+=over 4
+
+=item Data::Replace [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/108>
+
+=item JSON, JSON, and Config;JSON [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/508>
+
+=item NCI::call_toolkit_init [eligible in 1.5]
+
+L<https://trac.parrot.org/parrot/ticket/753>
+
+=item Cross-HLL library loading [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/754>
+
+=back
+
+=head1 Footnotes
+
+=over 4
+
+=item 1
+
+L<Trac|http://trac.parrot.org/> is parrot's primary issue tracking system.
+
+Older tickets may be listed at L<RT|https://rt.perl.org/rt3>.
+
+=item 2
+
+For an item to be considered experimental, it can B<never> have shipped in
+a stable release without the C<[experimental]> tag; otherwise, it must be
+deprecated normally before removal or incompatible change.
+
+=back
+
+=cut

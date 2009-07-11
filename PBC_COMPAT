@@ -1,0 +1,42 @@
+# This file shows the history of incompatible changes to
+# Parrot that invalidated existing PBC (Parrot Byte Code) files.
+#
+# The latest version number of the bytecode format in this file
+# is used by Parrot to version the bytecode files it writes and
+# is able to read. In the future, Parrot should be able to read
+# and/or write older bytecode versions too.
+#
+# Currently known actions that should be entered here
+#   (and invalidate PBC are):
+#
+# - deleting/changing/inserting existing ops in ops.num
+# - changing operands of existing ops
+# - adding/deleting/renaming a PMC to classes
+# - changes in the packfile format itself
+# - changes to any PMCs that are frozen into the .pbc like
+#   ParrotInterpreter (HLL_info), Subs and more
+# - other core changes that invalidate byte code :)
+#
+# After changing PBC_COMPAT either disable t/native_pbc tests or
+# better, if you have an i386 box at hand, regenerate the PBCs
+# with tools/dev/mk_native_pbc and commit the changes
+
+# TODO TT #361: all .pbc files should make-depend on PBC_COMPAT
+
+# Also, if you're removing an opcode, be sure to run "make opsrenumber"
+
+# please insert tab separated entries at the top of the list
+
+4.8	2009.05.30	Infinoid	Added Handle PMC
+4.7	2009.05.29	cotto	add cmp_pmc opcode (also, addition of setstdin and root_new in previous commits)
+4.6	2009.05.18	bacek	removed PackfileAnnotationKeys PMC
+4.5	2009.04.10	cotto	removed Ref and SharedRef PMCs
+4.4	2009.04.07	pmichaud	find_caller_lex added
+4.3	2009.03.25	jonathan	socket opcodes added
+4.2	2009.03.21	cotto	removed Bound_NCI PMC
+4.1	2009.03.17	cotto	removed Slice PMC
+4.0	2009.03.17	allison	released 1.0.0
+3.0	2007.07.23	jonathan	implementing new PBC header format
+2.0	2005.11.22	leo	changed PBC format (HLL_info)
+1.0	2005.10.15	jonathan	changed debug segment format
+0.1	2003.10.21	leo	start this file

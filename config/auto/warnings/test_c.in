@@ -1,0 +1,23 @@
+/*
+Copyright (C) 2007-2009, Parrot Foundation.
+$Id$
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "parrot/compiler.h"
+
+/* as long as the file compiles, everything is okay */
+int
+main()
+{
+    return EXIT_SUCCESS;
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

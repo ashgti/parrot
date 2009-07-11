@@ -1,0 +1,180 @@
+/*
+Copyright (C) 2001-2009, Parrot Foundation.
+$Id$
+
+=head1 DESCRIPTION
+
+src/pmc/managedstruct.pmc - Memory-managed C struct
+
+=head1 DESCRIPTION
+
+C<ManagedStruct> extends C<UnManagedStruct> to provide a class to hold C
+C<struct> values that Parrot is responsible for disposing of.
+
+=head2 Methods
+
+=over 4
+
+=cut
+
+*/
+
+typedef void (*custom_free_func_t)(PARROT_INTERP, void *ptr, void *priv);
+typedef PMC * (*custom_clone_func_t)(PARROT_INTERP, PMC *ptr, void *priv);
+
+pmclass ManagedStruct extends UnManagedStruct need_ext {
+    /* if custom_free_func and ptr (inherited from UnManagedStruct) are both set,
+     * custom_free_func is called before the normal destroy() function does any
+     * work.
+     */
+    ATTR void (*custom_free_func)(PARROT_INTERP, void *, void *);
+    ATTR void *custom_free_priv;
+    /* if custom_clone_func is set, it will be called *instead* of the normal
+     * clone() function logic.
+     */
+    ATTR PMC * (*custom_clone_func)(PARROT_INTERP, PMC *ptr, void *priv);
+    ATTR void *custom_clone_priv;
+
+/*
+
+=item C<void init()>
+
+Initializes an empty struct.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        Parrot_ManagedStruct_attributes *attrs =
+            mem_allocate_zeroed_typed(Parrot_ManagedStruct_attributes);
+        PObj_active_destroy_SET(SELF);
+        PMC_data(SELF) = attrs;
+
+    }
+
+/*
+
+=item C<void init_pmc(PMC *value)>
+
+Initializes the struct with C<*value>.
+
+=cut
+
+*/
+
+    VTABLE void init_pmc(PMC *value) {
+        SELF.init();
+        SELF.set_pmc(value);
+    }
+
+/*
+
+=item C<void destroy()>
+
+Destroys the struct, freeing the allocated memory.
+
+If the "custom_free_func" attribute is set, it is called to free the pointer.
+Otherwise, mem_sys_free() is used.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        void *ptr = PARROT_MANAGEDSTRUCT(SELF)->ptr;
+        if (ptr) {
+            custom_free_func_t free_func = PARROT_MANAGEDSTRUCT(SELF)->custom_free_func;
+            if (free_func) {
+                void *free_data = PARROT_MANAGEDSTRUCT(SELF)->custom_free_priv;
+                free_func(interp, ptr, free_data);
+            } else
+                mem_sys_free(ptr);
+        }
+        mem_sys_free(PMC_data(SELF));
+    }
+
+/*
+
+=item C<void set_integer_native(INTVAL value)>
+
+(Re)allocates C<value> bytes for the struct.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_native(INTVAL value) {
+        if (PARROT_MANAGEDSTRUCT(SELF)->ptr && !value) {
+            mem_sys_free(PARROT_MANAGEDSTRUCT(SELF)->ptr);
+            PARROT_MANAGEDSTRUCT(SELF)->ptr  = NULL;
+            PARROT_MANAGEDSTRUCT(SELF)->size = 0;
+        }
+        else if (value && !PARROT_MANAGEDSTRUCT(SELF)->ptr) {
+            PARROT_MANAGEDSTRUCT(SELF)->ptr  = mem_sys_allocate_zeroed((size_t)value);
+            PARROT_MANAGEDSTRUCT(SELF)->size = value;
+        }
+        else if (value && PARROT_MANAGEDSTRUCT(SELF)->ptr) {
+            if (PARROT_MANAGEDSTRUCT(SELF)->size != value) {
+                PARROT_MANAGEDSTRUCT(SELF)->ptr =
+                    mem_sys_realloc(PARROT_MANAGEDSTRUCT(SELF)->ptr, (size_t)value);
+                PARROT_MANAGEDSTRUCT(SELF)->size = value;
+            }
+        }
+
+        return;
+    }
+
+
+/*
+
+=item C<PMC * clone()>
+
+Creates a clone of this PMC; clones any unmanaged memory it holds too.
+
+If the "custom_clone_func" attribute is set, it is called to clone the PMC.
+Otherwise, a basic (shallow copy) clone is performed, as there's no general way
+of knowing how to make a deep copy of the pointer contents.
+
+=cut
+
+*/
+
+    VTABLE PMC *clone() {
+        custom_clone_func_t clone_func = PARROT_MANAGEDSTRUCT(SELF)->custom_clone_func;
+        PMC *dest;
+        if (clone_func) {
+            void *clone_data = PARROT_MANAGEDSTRUCT(SELF)->custom_clone_priv;
+            return clone_func(interp, SELF, clone_data);
+        }
+        dest = pmc_new_init(interp, SELF->vtable->base_type,
+            PARROT_MANAGEDSTRUCT(SELF)->init);
+
+        if (PARROT_MANAGEDSTRUCT(SELF)->ptr)
+            memmove(PARROT_MANAGEDSTRUCT(dest)->ptr,
+                    PARROT_MANAGEDSTRUCT(SELF)->ptr,
+                    PARROT_MANAGEDSTRUCT(SELF)->size);
+
+        return dest;
+    }
+
+}
+
+/*
+
+=back
+
+=head1 HISTORY
+
+Initial revision by sean 2002/08/04.
+
+=cut
+
+*/
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
