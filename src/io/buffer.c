@@ -236,15 +236,16 @@ Parrot_io_fill_readbuf(PARROT_INTERP, ARGMOD(PMC *filehandle))
     size_t   got;
     STRING   fake;
     STRING  *s    = &fake;
-    PIOOFF_T pos  = Parrot_io_get_file_position(interp, filehandle);
 
     fake.strstart = (char *)Parrot_io_get_buffer_start(interp, filehandle);
     fake.bufused  = Parrot_io_get_buffer_size(interp, filehandle);
 
     got           = PIO_READ(interp, filehandle, &s);
 
-    /* buffer-filling does not change fileposition */
-    Parrot_io_set_file_position(interp, filehandle, pos);
+    if (filehandle->vtable->base_type == enum_class_FileHandle)
+        /* buffer-filling does not change fileposition */
+        Parrot_io_set_file_position(interp, filehandle,
+                Parrot_io_get_file_position(interp, filehandle));
 
     /* nothing to get */
     if (got == 0)
@@ -319,8 +320,9 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
         memcpy(out_buf, buffer_next, current);
         buffer_next += current;
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
-        Parrot_io_set_file_position(interp, filehandle, (current +
-                Parrot_io_get_file_position(interp, filehandle)));
+        if (filehandle->vtable->base_type == enum_class_FileHandle)
+            Parrot_io_set_file_position(interp, filehandle, (current +
+                    Parrot_io_get_file_position(interp, filehandle)));
 
         /* buffer completed */
         if (current == avail) {
@@ -357,8 +359,9 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
             got           = PIO_READ(interp, filehandle, &sf);
             s->strlen     = s->bufused = current + got;
 
-            Parrot_io_set_file_position(interp, filehandle,
-                    (got + Parrot_io_get_file_position(interp, filehandle)));
+            if (filehandle->vtable->base_type == enum_class_FileHandle)
+                Parrot_io_set_file_position(interp, filehandle,
+                        (got + Parrot_io_get_file_position(interp, filehandle)));
             return current + got;
         }
 
@@ -378,8 +381,9 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
     buffer_next += len;
 
     Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
-    Parrot_io_set_file_position(interp, filehandle,
-            (len + Parrot_io_get_file_position(interp, filehandle)));
+    if (filehandle->vtable->base_type == enum_class_FileHandle)
+        Parrot_io_set_file_position(interp, filehandle,
+                (len + Parrot_io_get_file_position(interp, filehandle)));
 
     /* is the buffer is completely empty ? */
     if (buffer_next == buffer_end) {
@@ -627,8 +631,9 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
         wrote = PIO_WRITE(interp, filehandle, s);
 
         if (wrote == (long)len) {
-            Parrot_io_set_file_position(interp, filehandle, (wrote +
-                        Parrot_io_get_file_position(interp, filehandle)));
+            if (filehandle->vtable->base_type == enum_class_FileHandle)
+                Parrot_io_set_file_position(interp, filehandle, (wrote +
+                            Parrot_io_get_file_position(interp, filehandle)));
             return wrote;
         }
         /* Write error */
@@ -642,8 +647,9 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
         memmove(buffer_next, buffer, len);
         buffer_next += len;
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
-        Parrot_io_set_file_position(interp, filehandle, (len +
-                    Parrot_io_get_file_position(interp, filehandle)));
+        if (filehandle->vtable->base_type == enum_class_FileHandle)
+            Parrot_io_set_file_position(interp, filehandle, (len +
+                        Parrot_io_get_file_position(interp, filehandle)));
         return len;
     }
     else {
@@ -656,8 +662,9 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
         memmove(buffer_next, buffer, avail);
         buffer_next += avail;
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
-        Parrot_io_set_file_position(interp, filehandle, (avail +
-                    Parrot_io_get_file_position(interp, filehandle)));
+        if (filehandle->vtable->base_type == enum_class_FileHandle)
+            Parrot_io_set_file_position(interp, filehandle, (avail +
+                        Parrot_io_get_file_position(interp, filehandle)));
         Parrot_io_flush_buffer(interp, filehandle);
 
         buffer_flags |= PIO_BF_WRITEBUF;
@@ -668,8 +675,9 @@ Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
 
         buffer_next += diff;
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
-        Parrot_io_set_file_position(interp, filehandle, (diff +
-                    Parrot_io_get_file_position(interp, filehandle)));
+        if (filehandle->vtable->base_type == enum_class_FileHandle)
+            Parrot_io_set_file_position(interp, filehandle, (diff +
+                        Parrot_io_get_file_position(interp, filehandle)));
         return len;
     }
 }
@@ -692,10 +700,14 @@ Parrot_io_seek_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
 {
     ASSERT_ARGS(Parrot_io_seek_buffer)
     PIOOFF_T newpos;
-    PIOOFF_T file_pos = Parrot_io_get_file_position(interp, filehandle);
+    PIOOFF_T file_pos;
     unsigned char *buffer_start = Parrot_io_get_buffer_start(interp, filehandle);
     unsigned char *buffer_next  = Parrot_io_get_buffer_next(interp, filehandle);
     unsigned char *buffer_end   = Parrot_io_get_buffer_end(interp, filehandle);
+    if (filehandle->vtable->base_type != enum_class_FileHandle)
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
+                "Seek called on non-file handle");
+    file_pos = Parrot_io_get_file_position(interp, filehandle);
 
     switch (whence) {
     case SEEK_SET:

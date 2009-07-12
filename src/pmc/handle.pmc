@@ -29,18 +29,95 @@ pmclass Handle provides Handle {
     /* TODO: Consider encapsulating PIOHANDLE as a PMC type, for subclassing */
     ATTR PIOHANDLE os_handle;         /* Low level OS descriptor      */
     ATTR INTVAL flags;                /* flags                        */
+    ATTR size_t buffer_size;          /* Buffer size                  */
+    ATTR INTVAL buffer_flags;         /* Buffer flags                 */
+    ATTR unsigned char *buffer_start; /* Start of buffer              */
+    ATTR unsigned char *buffer_end;   /* End of buffer                */
+    ATTR unsigned char *buffer_next;  /* Current read/write pointer   */
     ATTR STRING *mode;                /* The mode string used in open */
     ATTR STRING *encoding;            /* The encoding for read/write  */
 
+
+/*
+
+=item C<void init()>
+
+Set up a new Handle.
+
+=cut
+
+*/
+
     VTABLE void init() {
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "Handle cannot be instantiated directly.");
+        Parrot_Handle_attributes *attr = PARROT_HANDLE(SELF);
+        if(!attr)
+            attr = mem_allocate_typed(Parrot_Handle_attributes);
+
+        attr->flags         = 0;
+        attr->mode          = NULL;
+        attr->encoding      = NULL;
+        attr->buffer_size   = 0;
+        attr->buffer_flags  = 0;
+        attr->buffer_start  = NULL;
+        attr->buffer_end    = NULL;
+        attr->buffer_next   = NULL;
+
+        /* Initialize the os_handle to the platform-specific value for closed. */
+        attr->os_handle     = (PIOHANDLE) PIO_INVALID_HANDLE;
+
+        PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
     }
 
-    VTABLE void init_pmc(PMC * init) {
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "Handle cannot be instantiated directly.");
+
+/*
+
+=item C<void destroy()>
+
+Destroy a Handle object.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        if (PARROT_HANDLE(SELF)) {
+            Parrot_Handle_attributes *attr = PARROT_HANDLE(SELF);
+
+            if (!PIO_IS_CLOSED(INTERP, SELF)) {
+                if (attr->flags & PIO_F_SHARED)
+                    Parrot_io_flush_filehandle(INTERP, SELF);
+                else
+                    Parrot_io_close_filehandle(INTERP, SELF);
+            }
+
+            if (attr->buffer_start)
+                mem_sys_free(attr->buffer_start);
+
+            mem_sys_free(attr);
+        }
     }
+
+
+/*
+
+=item C<void mark()>
+
+Mark active handle data as live.
+
+=cut
+
+*/
+
+    VTABLE void mark() {
+        Parrot_Handle_attributes * const attr = PARROT_HANDLE(SELF);
+        if (attr->mode)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)attr->mode);
+        if (attr->encoding)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)attr->encoding);
+    }
+
+
 }
 
 /*

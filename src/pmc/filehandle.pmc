@@ -35,11 +35,6 @@ pmclass FileHandle extends Handle {
     ATTR STRING *filename;            /* The opened path and filename */
     ATTR PIOOFF_T file_pos;           /* Current real file pointer    */
     ATTR PIOOFF_T last_pos;           /* Last file position           */
-    ATTR size_t buffer_size;          /* Buffer size                  */
-    ATTR INTVAL buffer_flags;         /* Buffer flags                 */
-    ATTR unsigned char *buffer_start; /* Start of buffer              */
-    ATTR unsigned char *buffer_end;   /* End of buffer                */
-    ATTR unsigned char *buffer_next;  /* Current read/write pointer   */
 
 /*
 
@@ -56,23 +51,10 @@ Initializes a newly created FileHandle object.
                 mem_allocate_typed(Parrot_FileHandle_attributes);
 
         PMC_data(SELF)             = data_struct;
-        data_struct->flags         = 0;
+        SUPER();
         data_struct->filename      = NULL;
-        data_struct->mode          = NULL;
-        data_struct->encoding      = NULL;
         data_struct->file_pos      = piooffsetzero;
         data_struct->last_pos      = piooffsetzero;
-        data_struct->buffer_size   = 0;
-        data_struct->buffer_flags  = 0;
-        data_struct->buffer_start  = NULL;
-        data_struct->buffer_end    = NULL;
-        data_struct->buffer_next   = NULL;
-
-        /* Initialize the os_handle to the platform-specific value for closed. */
-        data_struct->os_handle     = (PIOHANDLE) PIO_INVALID_HANDLE;
-
-        PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
     }
 
 /*
@@ -107,40 +89,9 @@ Mark active filehandle data as live.
 
     VTABLE void mark() {
         Parrot_FileHandle_attributes * const data_struct = PARROT_FILEHANDLE(SELF);
-        if (data_struct->mode)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->mode);
+        SUPER();
         if (data_struct->filename)
             Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->filename);
-        if (data_struct->encoding)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)data_struct->encoding);
-    }
-
-/*
-
-=item C<void destroy()>
-
-Free structures.
-
-=cut
-
-*/
-    VTABLE void destroy() {
-        if (PARROT_FILEHANDLE(SELF)) {
-            Parrot_FileHandle_attributes *data_struct = PARROT_FILEHANDLE(SELF);
-
-            if (!Parrot_io_is_closed_filehandle(INTERP, SELF)) {
-                if (data_struct->flags & PIO_F_SHARED)
-                    Parrot_io_flush_filehandle(INTERP, SELF);
-                else
-                    Parrot_io_close_filehandle(INTERP, SELF);
-            }
-
-            if (data_struct->buffer_start)
-                mem_sys_free(data_struct->buffer_start);
-
-            mem_sys_free(PARROT_FILEHANDLE(SELF));
-            PMC_data(SELF) = NULL;
-        }
     }
 
 /*
