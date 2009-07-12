@@ -157,7 +157,7 @@ Parrot_io_open_unix(PARROT_INTERP, ARGMOD_NULLOK(PMC *filehandle),
     char *spath;
 
     if (flags & PIO_F_PIPE)
-        return Parrot_io_open_pipe_unix(interp, filehandle, path, flags);
+        return Parrot_io_open_pipe_unix(interp, path, flags);
 
     if ((flags & (PIO_F_WRITE | PIO_F_READ)) == 0)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -378,6 +378,30 @@ Parrot_io_close_piohandle_unix(SHIM_INTERP, PIOHANDLE handle)
     ASSERT_ARGS(Parrot_io_close_piohandle_unix)
     return close(handle);
 }
+
+
+/*
+
+=item C<INTVAL Parrot_io_wait_child_unix(PARROT_INTERP, PIOHANDLE child)>
+
+Clean up the given child process.  Returns the child's return value on success,
+or -1 on failure.
+
+=cut
+
+*/
+
+INTVAL
+Parrot_io_wait_child_unix(SHIM_INTERP, PIOHANDLE child)
+{
+    ASSERT_ARGS(Parrot_io_wait_child_unix)
+    int status, rv;
+    rv = waitpid(child, &status, 0);
+    if (rv >= 0)
+        return WEXITSTATUS(status);
+    return -1;
+}
+
 
 /*
 

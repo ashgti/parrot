@@ -1110,7 +1110,8 @@ map_colors(ARGIN(const IMC_Unit* unit), int x, ARGIN(unsigned int *graph),
 
 /*
 
-=item C<static unsigned int first_avail(const IMC_Unit *unit, int reg_set, Set **avail)>
+=item C<static unsigned int first_avail(const IMC_Unit *unit, int reg_set, Set
+**avail)>
 
 find first available register of the given reg_set
 

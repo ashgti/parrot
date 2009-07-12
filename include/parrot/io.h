@@ -317,6 +317,10 @@ PIOOFF_T Parrot_io_tell(PARROT_INTERP, ARGMOD(PMC *pmc))
         FUNC_MODIFIES(*pmc);
 
 PARROT_EXPORT
+INTVAL Parrot_io_wait_child(PARROT_INTERP, PIOHANDLE child)
+        __attribute__nonnull__(1);
+
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL Parrot_io_write(PARROT_INTERP,
     ARGMOD(PMC *pmc),
@@ -415,6 +419,8 @@ PIOOFF_T Parrot_io_make_offset_pmc(PARROT_INTERP, ARGMOD(PMC *pmc))
 #define ASSERT_ARGS_Parrot_io_tell __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc)
+#define ASSERT_ARGS_Parrot_io_wait_child __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_io_write __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc) \

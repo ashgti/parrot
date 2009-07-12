@@ -9,7 +9,9 @@ src/pmc/pipehandle.pmc - PipeHandle PMC
 =head1 DESCRIPTION
 
 The PipeHandle PMC is an I/O handle used to access one endpoint of a Pipe pair.
-It is created by the Pipe PMC.
+It is created by the Pipe PMC.  It may also optionally babysit a process ID for
+the process on the other end of the pipe.  (Otherwise the "child" ATTR will be
+set to PIO_INVALID_HANDLE.)
 
 This object may be read-only or write-only, depending on which side of the Pipe
 it is.
@@ -25,6 +27,10 @@ it is.
 #include "../src/io/io_private.h"
 
 pmclass PipeHandle extends Handle {
+    /* "child" is a process ID, not an I/O handle.  But PIOHANDLE is an integer
+     * on unix and a pointer on win32, and that's what we need for process
+     * handles too, so it works out.
+     */
     ATTR PIOHANDLE child;
 
 /*
@@ -86,8 +92,9 @@ Free structures.
             if (data_struct->os_handle != PIO_INVALID_HANDLE)
                 Parrot_io_close_piohandle(interp, data_struct->os_handle);
             if (data_struct->child != PIO_INVALID_HANDLE)
-                Parrot_io_close_piohandle(interp, data_struct->child);
+                Parrot_io_wait_child(interp, data_struct->child);
             data_struct->os_handle = PIO_INVALID_HANDLE;
+            data_struct->child     = PIO_INVALID_HANDLE;
         }
     }
 

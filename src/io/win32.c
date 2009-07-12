@@ -315,6 +315,36 @@ Parrot_io_close_piohandle_win32(PARROT_INTERP, PIOHANDLE handle)
     return CloseHandle(handle) ? 0 : -1;
 }
 
+
+/*
+
+=item C<INTVAL Parrot_io_wait_child_win32(PARROT_INTERP, PIOHANDLE child)>
+
+Clean up the given child process.  Returns the child's return value on success,
+or -1 on failure.
+
+=cut
+
+*/
+
+INTVAL
+Parrot_io_wait_child_win32(SHIM_INTERP, PIOHANDLE child)
+{
+    ASSERT_ARGS(Parrot_io_wait_child_win32)
+    int rv;
+    DWORD status;
+
+    if (child == INVALID_HANDLE_VALUE)
+        return -1;
+
+    WaitForSingleObject(child, INFINITE);
+    rv = GetExitCodeProcess(child, &status);
+    if (!rv || status == STILL_ACTIVE)
+        return -1;
+    CloseHandle(child);
+    return status;
+}
+
 /*
 
 =item C<INTVAL Parrot_io_close_win32(PARROT_INTERP, PMC *filehandle)>

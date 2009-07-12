@@ -113,6 +113,7 @@ PIOOFF_T Parrot_io_tell_unix(PARROT_INTERP, ARGMOD(PMC *filehandle))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*filehandle);
 
+INTVAL Parrot_io_wait_child_unix(SHIM_INTERP, PIOHANDLE child);
 size_t Parrot_io_write_unix(PARROT_INTERP,
     ARGIN(PMC *filehandle),
     ARGMOD(STRING *s))
@@ -162,6 +163,7 @@ size_t Parrot_io_write_unix(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_io_tell_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(filehandle)
+#define ASSERT_ARGS_Parrot_io_wait_child_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
 #define ASSERT_ARGS_Parrot_io_write_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(filehandle) \
@@ -280,10 +282,11 @@ INTVAL Parrot_io_socket_unix(PARROT_INTERP,
     Parrot_io_open_unix((interp), (pmc), (file), (flags))
 #define PIO_FDOPEN(interp, pmc, handle, flags) \
     Parrot_io_fdopen_unix((interp), (pmc), (handle), (flags))
-#define PIO_OPEN_PIPE(interp, pmc, file, flags) \
-    Parrot_io_open_pipe_unix((interp), (pmc), (file), (flags))
+#define PIO_OPEN_PIPE(interp, file, flags) \
+    Parrot_io_open_pipe_unix((interp), (file), (flags))
 #define PIO_CLOSE(interp, pmc) Parrot_io_close_unix((interp), (pmc))
 #define PIO_CLOSE_PIOHANDLE(interp, handle) Parrot_io_close_piohandle_unix((interp), (handle))
+#define PIO_WAIT_CHILD(interp, handle) Parrot_io_wait_child_unix((interp), (handle))
 #define PIO_IS_CLOSED(interp, pmc) Parrot_io_is_closed_unix((interp), (pmc))
 #define PIO_READ(interp, pmc, buf) Parrot_io_read_unix((interp), (pmc), (buf))
 #define PIO_WRITE(interp, pmc, str) Parrot_io_write_unix((interp), (pmc), (str))

@@ -259,7 +259,7 @@ Parrot_io_open(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
         Parrot_io_setbuf(interp, filehandle, PIO_UNBOUND);
     }
     else if (new_filehandle->vtable->base_type == enum_class_PipeHandle) {
-        filehandle = PIO_OPEN_PIPE(interp, new_filehandle, path, flags);
+        filehandle = PIO_OPEN_PIPE(interp, path, flags);
         if (PMC_IS_NULL(filehandle))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
                 "Unable to open pipe to command '%S'", path);
@@ -376,6 +376,26 @@ Parrot_io_close_piohandle(PARROT_INTERP, PIOHANDLE handle)
 {
     ASSERT_ARGS(Parrot_io_close_piohandle)
     return PIO_CLOSE_PIOHANDLE(interp, handle);
+}
+
+
+/*
+
+=item C<INTVAL Parrot_io_wait_child(PARROT_INTERP, PIOHANDLE child)>
+
+Calls waitpid() on the given PIOHANDLE.  This is the low level OS-specific
+wait() function, intended to be called directly by PMC destroy() vtables.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+INTVAL
+Parrot_io_wait_child(PARROT_INTERP, PIOHANDLE child)
+{
+    ASSERT_ARGS(Parrot_io_wait_child)
+    return PIO_WAIT_CHILD(interp, child);
 }
 
 

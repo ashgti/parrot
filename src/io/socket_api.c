@@ -45,6 +45,7 @@ PARROT_EXPORT
 INTVAL
 Parrot_io_have_networking_support(SHIM_INTERP)
 {
+    ASSERT_ARGS(Parrot_io_have_networking_support)
     return PARROT_NETWORKING_SUPPORT == 0 ? 0 : 1;
 }
 
