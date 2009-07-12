@@ -35,7 +35,10 @@ APitUE - W. Richard Stevens, AT&T SFIO, Perl 5 (Nick Ing-Simmons)
 
 #  include <sys/types.h>
 #  include <sys/wait.h>
-#  include <unistd.h> /* for pipe() */
+#  include <unistd.h> /* for fork() */
+
+#  include "../pmc/pmc_pipe.h"
+#  include "../pmc/pmc_pipehandle.h"
 
 /* HEADERIZER HFILE: include/parrot/io_unix.h */
 
@@ -655,10 +658,8 @@ Parrot_io_tell_unix(PARROT_INTERP, ARGMOD(PMC *filehandle))
 
 /*
 
-=item C<PMC * Parrot_io_open_pipe_unix(PARROT_INTERP, PMC *filehandle, STRING
-*command, int flags)>
-
-Very limited C<exec> for now.
+=item C<PMC * Parrot_io_open_pipe_unix(PARROT_INTERP, STRING *command, int
+flags)>
 
 =cut
 
@@ -667,57 +668,43 @@ Very limited C<exec> for now.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
-Parrot_io_open_pipe_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
-        ARGIN(STRING *command), int flags)
+Parrot_io_open_pipe_unix(PARROT_INTERP, ARGIN(STRING *command), int flags)
 {
     ASSERT_ARGS(Parrot_io_open_pipe_unix)
-    /*
-     * pipe(), fork() should be defined, if this header is present
-     *        if that's not true, we need a test
-     */
 #  ifdef PARROT_HAS_HEADER_UNISTD
     int pid;
-    int fds[2];
+    PMC *pipec, *reader, *writer;
     const int f_read  = (flags & PIO_F_READ) != 0;
     const int f_write = (flags & PIO_F_WRITE) != 0;
     if (f_read == f_write)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
             "Invalid pipe mode: %X", flags);
 
-    if (pipe(fds) < 0)
+    pipec = pmc_new(interp, enum_class_Pipe);
+    if (!pipec)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
             "Error opening pipe: %s", strerror(errno));
+    GETATTR_Pipe_r(interp, pipec, reader);
+    GETATTR_Pipe_w(interp, pipec, writer);
 
     pid = fork();
     if (pid < 0) {
-        /* fork failed, cleaning up */
-        close(fds[0]);
-        close(fds[1]);
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
             "fork failed: %s", strerror(errno));
     }
     else if (pid > 0) {
         /* Parent - return IO stream */
-        PMC *io;
-        if (PMC_IS_NULL(filehandle))
-            io = Parrot_io_new_pmc(interp, flags & (PIO_F_READ|PIO_F_WRITE));
-        else
-            io = filehandle;
+        PMC *rv;
+
+        if (f_read)
+            rv = reader;
+        else  /* assume write only for now */
+            rv = writer;
 
         /* Save the pid of the child, we'll wait for it when closing */
-        VTABLE_set_integer_keyed_int(interp, io, 0, pid);
+        SETATTR_PipeHandle_child(interp, rv, pid);
 
-        if (f_read) {
-            /* close this writer's end of pipe */
-            close(fds[1]);
-            Parrot_io_set_os_handle(interp, io, fds[0]);
-        }
-        else {  /* assume write only for now */
-            /* close this reader's end */
-            close(fds[0]);
-            Parrot_io_set_os_handle(interp, io, fds[1]);
-        }
-        return io;
+        return rv;
     }
     else /* (pid == 0) */ {
         /* Child - exec process */
@@ -727,24 +714,27 @@ Parrot_io_open_pipe_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
          */
         static char auxarg0 [] = "/bin/sh";
         static char auxarg1 [] = "-c";
+        int readerfd, writerfd;
+        GETATTR_PipeHandle_os_handle(interp, reader, readerfd);
+        GETATTR_PipeHandle_os_handle(interp, writer, writerfd);
 
         if (f_write) {
             /* the other end is writing - we read from the pipe */
             close(STDIN_FILENO);
-            close(fds[1]);
+            VTABLE_destroy(interp, writer);
 
-            if (Parrot_dup(fds[0]) != STDIN_FILENO)
+            if (Parrot_dup(readerfd) != STDIN_FILENO)
                 exit(EXIT_FAILURE);
         }
         else {
-            /* XXX redirect stdout, stderr to pipe */
             close(STDOUT_FILENO);
-            close(STDERR_FILENO);
-            close(fds[0]);
+            VTABLE_destroy(interp, reader);
 
-            if (Parrot_dup(fds[1]) != STDOUT_FILENO)
-                exit(EXIT_FAILURE);
-            if (Parrot_dup(fds[1]) != STDERR_FILENO)
+            /* TODO: This will fail if stdin was closed (or never open to begin
+             * with).  Calling it a second time will handle that case, calling
+             * dup2() would be even cleaner if that's available on all unices.
+             */
+            if (Parrot_dup(writerfd) != STDOUT_FILENO)
                 exit(EXIT_FAILURE);
         }
 
