@@ -113,19 +113,16 @@ Parrot_io_init_unix(PARROT_INTERP)
         PMC *filehandle;
 
         filehandle = Parrot_io_fdopen_unix(interp, PMCNULL, STDIN_FILENO, PIO_F_READ);
-        if (PMC_IS_NULL(filehandle))
-            return -1;
-        _PIO_STDIN(interp) = filehandle;
+        if (!PMC_IS_NULL(filehandle))
+            _PIO_STDIN(interp) = filehandle;
 
         filehandle = Parrot_io_fdopen_unix(interp, PMCNULL, STDOUT_FILENO, PIO_F_WRITE);
-        if (PMC_IS_NULL(filehandle))
-            return -1;
-        _PIO_STDOUT(interp) = filehandle;
+        if (!PMC_IS_NULL(filehandle))
+            _PIO_STDOUT(interp) = filehandle;
 
         filehandle = Parrot_io_fdopen_unix(interp, PMCNULL, STDERR_FILENO, PIO_F_WRITE);
-        if (PMC_IS_NULL(filehandle))
-            return -1;
-        _PIO_STDERR(interp) = filehandle;
+        if (!PMC_IS_NULL(filehandle))
+            _PIO_STDERR(interp) = filehandle;
 
         return 0;
     }
