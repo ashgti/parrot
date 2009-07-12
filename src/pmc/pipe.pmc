@@ -58,6 +58,7 @@ Create a new pipe.
         PARROT_PIPEHANDLE(attrs->w)->writer = 1;
 
         PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
     }
 
 
@@ -104,6 +105,25 @@ Mark active filehandle data as live.
             if (attrs->w)
                 Parrot_gc_mark_PObj_alive(interp, (PObj *)attrs->w);
         }
+    }
+
+
+/*
+
+=item C<void destroy()>
+
+Destroy a Pipe object.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        if (PARROT_PIPE(SELF)) {
+            Parrot_Pipe_attributes *attr = PARROT_PIPE(SELF);
+            mem_sys_free(attr);
+        }
+        PMC_data(SELF) = NULL;
     }
 
 
