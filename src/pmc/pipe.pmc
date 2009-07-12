@@ -20,6 +20,7 @@ write-only.  Data written to the writer is readable from the reader.
 
 */
 
+#include "../src/io/io_private.h"
 #include "pmc_pipehandle.h"
 
 pmclass Pipe {
@@ -54,8 +55,8 @@ Create a new pipe.
         }
         PARROT_PIPEHANDLE(attrs->r)->os_handle = reader;
         PARROT_PIPEHANDLE(attrs->w)->os_handle = writer;
-        PARROT_PIPEHANDLE(attrs->r)->reader = 1;
-        PARROT_PIPEHANDLE(attrs->w)->writer = 1;
+        PARROT_PIPEHANDLE(attrs->r)->flags = PIO_F_READ;
+        PARROT_PIPEHANDLE(attrs->w)->flags = PIO_F_WRITE;
 
         PObj_custom_mark_SET(SELF);
         PObj_active_destroy_SET(SELF);
