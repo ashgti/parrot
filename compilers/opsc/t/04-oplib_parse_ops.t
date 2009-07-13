@@ -7,7 +7,7 @@ PIR q<
     load_bytecode "opsc_core.pbc"
 >;
 
-plan(4);
+plan(6);
 
 my @files := qw{
     ../../src/ops/core.ops
@@ -33,5 +33,8 @@ ok( $lib.max_op_num > 1200, "ops.num file parsed");
 # Check couple random ops.
 ok( $lib.optable<end> == 0, "'end' have code 0");
 ok( $lib.optable<set_args_pc> == 42, "'set_args_pc' have code 42");
+
+ok( $lib.skiptable<abs_i_ic>,       "'abs_i_ic' in skiptable");
+ok( $lib.skiptable<ne_nc_nc_ic>,    "'ne_nc_nc_ic' in skiptable");
 
 # vim: expandtab shiftwidth=4 ft=perl6:

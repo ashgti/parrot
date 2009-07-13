@@ -94,6 +94,8 @@ method BUILD(*%args) {
 
     my %optable;
     self<optable>    := %optable;
+    my %skiptable;
+    self<skiptable>  := %skiptable;
     self<ops>        := <>;
 
     self;
@@ -180,20 +182,20 @@ method _load_num_file() {
 method _load_skip_file() {
 ##    open $op, '<', $skip_file
 ##        or die "Can't open $skip_file: $!";
+    # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
+    my $buf     := slurp(self<skip_file>);
+    my @lines   := split("\n", $buf);
+
 ##    while (<$op>) {
-##        chomp;
-##        s/#.*$//;
-##        s/\s*$//;
-##        s/^\s*//;
-##        next unless $_;
-##        ($name) = split( /\s+/, $_ );
-##        if ( exists $self->{optable}{$name} ) {
-##            die "skipped opcode is also in $num_file:$.";
-##        }
-##        $self->{skiptable}{$name} = 1;
-##    }
-##    undef $op;
-##    return 1;
+    for @lines {
+        # XXX Bit ugly. But I don't know how to invoke ~~ in NQP...
+        if /^^ \S+ $$/($_) {
+            if ( exists( self<optable>, $_) ) {
+                die("skipped opcode '$_' is also in num_file");
+            }
+            self<skiptable>{$_} := 1;
+        }
+    }
 }
 
 
@@ -211,13 +213,18 @@ method files() {
     self<files>;
 }
 
+method max_op_num() {
+    self<max_op_num>;
+}
+
 method optable() {
     self<optable>;
 }
 
-method max_op_num() {
-    self<max_op_num>;
+method skiptable() {
+    self<skiptable>;
 }
+
 
 # Local Variables:
 #   mode: perl6
