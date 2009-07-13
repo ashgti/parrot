@@ -73,7 +73,7 @@ they are useless and/or silly."
 
 =over 4
 
-=item BUILD
+=item C<BUILD>
 
 Build OpLib.
 
@@ -81,21 +81,19 @@ Build OpLib.
 
 =cut
 
-method BUILD(*%args) {
-    my @files := %args<files>;
+method BUILD(:@files, :$num_file, :$skip_file) {
+    # Process arguments
     if +@files == 0 {
         die("We need some files!")
     }
-    self<files> := @files;
+    self<files>      := @files;
+    self<num_file>   := $num_file  || 'src/ops/ops.num';
+    self<skip_file>  := $skip_file || 'src/ops/ops.skip';
 
+    # Initialize self.
     self<max_op_num> := 0;
-    self<num_file>   := %args<num_file> || 'src/ops/ops.num';
-    self<skip_file>  := %args<skip_file> || 'src/ops/ops.skip';
-
-    my %optable;
-    self<optable>    := %optable;
-    my %skiptable;
-    self<skiptable>  := %skiptable;
+    self<optable>    := hash();
+    self<skiptable>  := hash();
     self<ops>        := <>;
 
     self;

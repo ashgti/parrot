@@ -181,6 +181,10 @@ Variour helper builtins.
     .return(retv)
 .end
 
+.sub 'hash'
+    $P0 = new ['Hash']
+    .return ($P0)
+.end
 
 
 # Local Variables:
