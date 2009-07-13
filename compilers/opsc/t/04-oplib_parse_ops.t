@@ -6,15 +6,16 @@ PIR q<
 
 
 my @files := qw{
-    src/ops/core.ops
-    src/ops/math.ops
+    ../../src/ops/core.ops
+    ../../src/ops/math.ops
 };
 
 my $lib := Ops::OpLib.new.BUILD(:files(@files));
 
 $lib.parse_ops();
 
-# Not a real number. But I'll adjust it soon.
-ok(+($lib.ops) == 42, "ops file parsed");
+# 86 core
+# 116 math
+ok(+($lib.ops) == 86 + 116, "ops file parsed");
 
 # vim: expandtab shiftwidth=4 ft=perl6:

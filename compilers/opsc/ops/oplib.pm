@@ -42,7 +42,7 @@ Build OpLib.
 
 method BUILD(*%args) {
     my @files := %args<files>;
-    if !+@files {
+    if +@files == 0 {
         die("We need some files!")
     }
     self<files> := @files;
@@ -60,12 +60,25 @@ Parse all ops files passed to BUILD method. Create self.ops list for parsed ops.
 
 method parse_ops() {
     for self.files() {
-        self<ops>.push(self.parse_ops_file($_));
+        for @(self.parse_ops_file($_)) {
+            self<ops>.push($_);
+        }
     }
 }
 
 method parse_ops_file($file) {
-    <>;
+    my $parser := self._get_compiler();
+    my $buffer := slurp($file);
+    my $past   := $parser.compile($buffer, :target('past'));
+    #_dumper($past);
+    #say($file ~ ' ' ~ +@($past<ops>));
+    $past<ops>;
+}
+
+method _get_compiler() {
+    PIR q< 
+        %r = compreg 'Ops'
+    >;
 }
 
 method ops() {
