@@ -36,24 +36,47 @@ Op files. Mandatory argument of C<BUILD> method.
 
 Build OpLib.
 
-(It's NQP. In Perl 6 it should be submethod invoked automatically)
+(It's NQP. In Perl 6 it should be submethod and invoked automatically)
 
 =cut
 
 method BUILD(*%args) {
-    my $self  := self; # NQP parser isn't full Perl6. So alias self to $self.
     my @files := %args<files>;
     if !+@files {
         die("We need some files!")
     }
-    $self<files> := @files;
+    self<files> := @files;
+
+    self<ops>   := <>;
+
+    self;
 }
 
+=item C<parse_ops>
+
+Parse all ops files passed to BUILD method. Create self.ops list for parsed ops.
+
+=cut
+
+method parse_ops() {
+    for self.files() {
+        self.parse_ops_file($_);
+        self<ops>.push(self.parse_ops_file($_));
+    }
+}
+
+method parse_ops_file($file) {
+    <>;
+}
+
+method ops() {
+    self<ops>;
+}
 
 method files() {
-    my $self := self;
-    $self<files>;
+    self<files>;
 }
+
 
 # Local Variables:
 #   mode: perl6
