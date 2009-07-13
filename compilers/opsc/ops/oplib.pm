@@ -22,11 +22,52 @@ Heavily inspired by Perl5 Parrot::Ops2pm.
 
 =over 4
 
-=item C<@.files>
+=item * C<@.files>
 
 Op files. Mandatory argument of C<BUILD> method.
 
-=cut
+=item * C<$.max_op_num>
+
+Scalar holding number of highest non-experimental op.  Example:
+
+    'max_op_num' => 1246,
+
+=item * C<%.optable>
+
+Hash holding mapping of opcode names ops to their numbers.
+Example:
+
+  'optable' => {
+    'pow_p_p_i' => 650,
+    'say_s' => 463,
+    'lsr_p_p_i' => 207,
+    'lt_s_sc_ic' => 289,
+    # ...
+    'debug_init' => 429,
+    'iseq_i_nc_n' => 397,
+    'eq_addr_sc_s_ic' => 254
+  },
+
+Per F<src/ops/ops.num>, this mapping exists so that we can nail down
+the op numbers for the core opcodes in a particular version of the
+bytecode and provide backward-compatibility for bytecode.
+
+=item * C<%.skiptable>
+
+Reference to a 'seen-hash' of skipped opcodes.
+
+  'skiptable' => {
+    'bor_i_ic_ic' => 1,
+    'xor_i_ic_ic' => 1,
+    'tanh_n_nc' => 1,
+    # ...
+  },
+
+As F<src/ops/ops.skip> states, these are "... opcodes that could be listed in
+F<[src/ops/]ops.num> but aren't ever to be generated or implemented because
+they are useless and/or silly."
+
+=back
 
 =head1 METHODS
 
@@ -47,7 +88,13 @@ method BUILD(*%args) {
     }
     self<files> := @files;
 
-    self<ops>   := <>;
+    self<max_op_num> := 0;
+    self<num_file>   := %args<num_file> || 'src/ops/ops.num';
+    self<skip_file>  := %args<skip_file> || 'src/ops/ops.skip';
+
+    my %optable;
+    self<optable>    := %optable;
+    self<ops>        := <>;
 
     self;
 }
@@ -66,6 +113,12 @@ method parse_ops() {
     }
 }
 
+=item C<parse_ops_file>
+
+Parse single ops file. Returns list of parsed ops.
+
+=cut
+
 method parse_ops_file($file) {
     my $parser := self._get_compiler();
     my $buffer := slurp($file);
@@ -74,6 +127,75 @@ method parse_ops_file($file) {
     #say($file ~ ' ' ~ +@($past<ops>));
     $past<ops>;
 }
+
+
+=item C<load_op_map_files>
+
+Load ops.num and ops.skip files.
+
+=cut
+
+method load_op_map_files() {
+    self._load_num_file();
+    self._load_skip_file();
+}
+
+method _load_num_file() {
+##    open $op, '<', $num_file
+##        or die "Can't open $num_file: $!";
+
+    # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
+    my $buf := slurp(self<num_file>);
+    my @ops := split("\n", $buf);
+
+    my $prev := -1;
+##    while (<$op>) {
+    for @ops {
+##        chomp;
+##        s/#.*$//;
+##        s/\s*$//;
+##        s/^\s*//;
+##        next unless $_;
+        my @parts   := split( /\s+/, $_ );
+        my $name    := @parts[0];
+        my $number  := @parts[1];
+        #say(@parts[0] ~ ' => ' ~@parts[1]);
+        if ((+$number) eq $number) {
+            if ($prev + 1 != $number) {
+                die("hole in ops.num before #$number");
+            }
+            if ( exists(self<optable>, $name) ) {
+                die("duplicate opcode $name and $number");
+            }
+
+            $prev := $number;
+            self<optable>{$name} := $number;
+            if ( $number > self<max_op_num> ) {
+                self<max_op_num> := $number;
+            }
+        }
+    }
+}
+
+method _load_skip_file() {
+##    open $op, '<', $skip_file
+##        or die "Can't open $skip_file: $!";
+##    while (<$op>) {
+##        chomp;
+##        s/#.*$//;
+##        s/\s*$//;
+##        s/^\s*//;
+##        next unless $_;
+##        ($name) = split( /\s+/, $_ );
+##        if ( exists $self->{optable}{$name} ) {
+##            die "skipped opcode is also in $num_file:$.";
+##        }
+##        $self->{skiptable}{$name} = 1;
+##    }
+##    undef $op;
+##    return 1;
+}
+
 
 method _get_compiler() {
     PIR q< 
@@ -89,6 +211,13 @@ method files() {
     self<files>;
 }
 
+method optable() {
+    self<optable>;
+}
+
+method max_op_num() {
+    self<max_op_num>;
+}
 
 # Local Variables:
 #   mode: perl6
