@@ -2,7 +2,7 @@
 
 # Iterpolation and quoting. Cherry-picked from Perl 6 spectest.
 
-plan(7);
+plan(9);
 
 # interpolating into double quotes results in a Str
 my $a := 1;
@@ -31,3 +31,8 @@ ok( +@list == 2, '<> produced 2 words');
 ok( @list[0] == 'foo', 'First is "foo"');
 ok( @list[1] == 'bar', 'Second is "bar"');
 
+my $str := 'foo';
+my $matched := / foo /($str);
+ok($matched, 'Can positive match regexp');
+$matched := / bar /($str);
+ok(!$matched, 'Can negative match regexp');
