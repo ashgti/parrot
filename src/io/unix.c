@@ -682,6 +682,8 @@ Parrot_io_tell_unix(PARROT_INTERP, ARGMOD(PMC *filehandle))
 =item C<PMC * Parrot_io_open_pipe_unix(PARROT_INTERP, STRING *command, int
 flags)>
 
+Open a pipe.
+
 =cut
 
 */
