@@ -16,7 +16,11 @@ Heavily inspired by Perl5 Parrot::Ops2pm.
 
 =head1 SYNOPSIS
 
-  my $oplib := Ops::OpLib.new.BUILD;
+    my $oplib := Ops::OpLib.new.BUILD(
+        :files(@files),
+        :num_file('../../src/ops/ops.num'),
+        :skip_file('../../src/ops/ops.skip'),
+    ));
 
 =head1 ATTRIBUTES
 
@@ -25,6 +29,12 @@ Heavily inspired by Perl5 Parrot::Ops2pm.
 =item * C<@.files>
 
 Op files. Mandatory argument of C<BUILD> method.
+
+=item * C<@.ops>
+
+List of parsed ops. Currently as C<PAST::Block>, but we probably will use
+more specific class inherited from C<PAST::Block> to provide some helper
+methods.
 
 =item * C<$.max_op_num>
 
@@ -189,6 +199,24 @@ method _get_compiler() {
         %r = compreg 'Ops'
     >;
 }
+
+=head2 ACCESSORS
+
+Various methods for accessing internals.
+
+=over 4
+
+=item * C<ops>
+
+=item * C<files>
+
+=item * C<max_op_num>
+
+=item * C<optable>
+
+=item * C<skiptable>
+
+=cut
 
 method ops() {
     self<ops>;
