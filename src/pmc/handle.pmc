@@ -16,8 +16,6 @@ This is the base-class for all IO-related PMCs.
 
 =item * [to come]
 
-=back
-
 =cut
 
 */
@@ -40,7 +38,7 @@ pmclass Handle provides Handle {
 
 /*
 
-=item C<void init()>
+=item * C<void init()>
 
 Set up a new Handle.
 
@@ -72,7 +70,7 @@ Set up a new Handle.
 
 /*
 
-=item C<void destroy()>
+=item * C<void destroy()>
 
 Destroy a Handle object.
 
@@ -101,7 +99,7 @@ Destroy a Handle object.
 
 /*
 
-=item C<void mark()>
+=item * C<void mark()>
 
 Mark active handle data as live.
 
@@ -119,6 +117,8 @@ Mark active handle data as live.
 
 
 }
+
+=back
 
 /*
  * Local variables:
