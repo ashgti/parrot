@@ -143,21 +143,12 @@ method load_op_map_files() {
 }
 
 method _load_num_file() {
-##    open $op, '<', $num_file
-##        or die "Can't open $num_file: $!";
-
     # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
     my $buf := slurp(self<num_file>);
     my @ops := split("\n", $buf);
 
     my $prev := -1;
-##    while (<$op>) {
     for @ops {
-##        chomp;
-##        s/#.*$//;
-##        s/\s*$//;
-##        s/^\s*//;
-##        next unless $_;
         my @parts   := split( /\s+/, $_ );
         my $name    := @parts[0];
         my $number  := @parts[1];
@@ -180,13 +171,9 @@ method _load_num_file() {
 }
 
 method _load_skip_file() {
-##    open $op, '<', $skip_file
-##        or die "Can't open $skip_file: $!";
-    # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
     my $buf     := slurp(self<skip_file>);
     my @lines   := split("\n", $buf);
 
-##    while (<$op>) {
     for @lines {
         # XXX Bit ugly. But I don't know how to invoke ~~ in NQP...
         if /^^ \S+ $$/($_) {
