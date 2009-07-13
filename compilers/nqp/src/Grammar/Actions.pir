@@ -1006,7 +1006,9 @@
 
   not_quote_concat:
     if key != 'quote_regex' goto not_quote_regex
-    match.'panic'('Not implemented yet')
+    $P0 = match['quote_regex']
+    $P1 = get_hll_global ['PAST'], 'Block'
+    past = $P1.'new'($P0, 'compiler'=>'PGE::Perl6Regex', 'blocktype'=>'declaration', 'node'=>match)
     goto make
 
   not_quote_regex:
