@@ -1,20 +1,33 @@
 #!./parrot nqp.pbc
 
-# Iterpolation. Cherry-picked from Perl 6 spectest.
+# Iterpolation and quoting. Cherry-picked from Perl 6 spectest.
 
-plan(4);
+plan(7);
 
 # interpolating into double quotes results in a Str
 my $a := 1;
-say("ok $a");
+ok("foo $a bar" == "foo 1 bar", "Scalar interpolated in double-quotes");
 
 $a++;
-say(qq<ok $a>);
+ok(q<ok $a> == "ok 2", "Scalar interpolated in q<>");
 
 # Multi-line
 $a++;
 my $b := $a++;
-say(qq<
-ok $b
-ok $a
->);
+ok(qq<
+foo $b
+bar $a
+> == '
+foo 3
+bar 4
+', 'Multi-line qq<> works');
+
+# Word quoting.
+my @list := qw{ foo bar baz };
+ok( +@list == 3, 'qw produced 3 words');
+
+@list := <foo bar>;
+ok( +@list == 2, '<> produced 2 words');
+ok( @list[0] == 'foo', 'First is "foo"');
+ok( @list[1] == 'bar', 'Second is "bar"');
+

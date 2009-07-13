@@ -992,7 +992,7 @@
   quote_concat_list:
 
     $P1 = get_hll_global ['PAST'], 'Op'
-    past = $P1.'new'('name'=>'list', 'pasttype'=>'call', 'node'=>match)
+    past = $P1.'new'('name'=>'infix:,', 'pasttype'=>'call', 'node'=>match)
     .local pmc it
     it = iter $P0
   iter_loop:
