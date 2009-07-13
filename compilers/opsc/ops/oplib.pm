@@ -60,7 +60,6 @@ Parse all ops files passed to BUILD method. Create self.ops list for parsed ops.
 
 method parse_ops() {
     for self.files() {
-        self.parse_ops_file($_);
         self<ops>.push(self.parse_ops_file($_));
     }
 }
