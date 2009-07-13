@@ -50,7 +50,7 @@ Set up a new Handle.
 
     VTABLE void init() {
         Parrot_Handle_attributes *attr = PARROT_HANDLE(SELF);
-        if(!attr)
+        if (!attr)
             attr = mem_allocate_typed(Parrot_Handle_attributes);
 
         attr->flags         = 0;
