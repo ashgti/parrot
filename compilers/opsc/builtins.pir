@@ -100,6 +100,15 @@ Variour helper builtins.
     die why
 .end
 
+.sub 'slurp'
+    .param string file
+    .local pmc pio
+    pio  = open file
+    $S0  = pio.'readall'()
+    close pio
+    .return ($S0)
+.end
+
 
 # Local Variables:
 #   mode: pir
