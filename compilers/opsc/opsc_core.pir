@@ -20,13 +20,30 @@
     $P0.'removestage'('post')
     $P0.'removestage'('pir')
     $P0.'removestage'('evalpmc')
-    $P0.'addstage'('exit', 'after'=>'past')
+    $P0.'addstage'('generate_runcores', 'after'=>'past')
 
 .end
 
-.sub 'exit' :method
+.sub 'generate_runcores' :method
     .param pmc past
     .param pmc adverbs :slurpy :named
+
+    .local pmc oplib, files
+
+    $P0 = find_caller_lex "$?FILES"
+    $S0 = $P0
+    files = split " ", $S0
+    #do oplib stuff
+    # - make an oplib
+    $P0 = get_hll_global ['Ops'], 'OpLib'
+    oplib = $P0.'new'()
+    #use default location for ops.num and ops.skip for now
+    oplib.'BUILD'(files :named("files"))
+    oplib.'set_ops_past'(past)
+
+    #for each runcore
+    # * make a clone of the op tree
+    # * call the runcore with it 
 
     exit 0
 .end

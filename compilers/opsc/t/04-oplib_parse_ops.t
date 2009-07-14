@@ -24,9 +24,8 @@ $lib.parse_ops();
 
 # 86 core
 # 116 math
-ok(+($lib.ops) == 86 + 116, "ops file parsed");
+ok(+($lib.ops_past) == 86 + 116, "ops file parsed");
 
-$lib.load_op_map_files();
 # It's 1258 currently. But testing for exact match isn't nessary.
 ok( $lib.max_op_num > 1200, "ops.num file parsed");
 
