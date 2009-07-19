@@ -40,6 +40,7 @@
     #use default location for ops.num and ops.skip for now
     oplib.'BUILD'(files :named("files"))
     oplib.'set_ops_past'(past)
+    oplib.'build_ops'()
 
     #for each runcore
     # * make a clone of the op tree

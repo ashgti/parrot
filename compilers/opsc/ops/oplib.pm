@@ -108,9 +108,6 @@ method BUILD(:@files, :$num_file, :$skip_file) {
 
     self.load_op_map_files();
 
-    #split ops_past into ops
-    self.build_ops();
-
     self;
 }
 
@@ -152,7 +149,7 @@ Assign an already-constructed past tree to self.
 =cut
 
 method set_ops_past($past) {
-    self<ops_past> := past;
+    self<ops_past> := $past;
 }
 
 =item C<load_op_map_files>
@@ -184,9 +181,10 @@ method build_ops() {
 
     my $op_num := 0;
 
-    for self<ops_past> {
+    for self<ops_past><ops>.iterator {
         my $cur_op := $_;
-        my $jump_flags := self.get_jump_flags($cur_op);
+        say("found an op: "~ ~$_<name>);
+        #my $jump_flags := self.get_jump_flags($cur_op);
         #figure out all the constant data: flags, name, etc
         #build an array of args
         #$args := [ [] ];
@@ -218,6 +216,69 @@ method build_ops() {
 
 
 }
+
+=item C<get_jump_flags>
+
+Process the body of this op to figure out which jump flags need to be set.
+
+=cut
+
+method get_jump_flags($op) {
+    my %jumps;
+    my @jumps;
+
+    #figure out which control flow flags need to be set for this op
+    if (match( " 'goto' \s+ 'ADDRESS' ", ~$op)) {
+        %jumps{'PARROT_JUMP_ADDRESS'} := 1;
+    }
+
+    if (match( " 'goto' \s+ 'OFFSET' ", ~$op) ||
+        $op.name eq 'runinterp' ) {
+        %jumps{'PARROT_JUMP_RELATIVE'} := 1;
+    }
+
+    if (match( " 'goto' \s+ 'POP' ", ~$op)) {
+        %jumps{'PARROT_JUMP_POP'} := 1;
+    }
+
+    if (match( " 'expr' \s+ 'NEXT' ", ~$op) ||
+        $op.name eq 'runinterp' ) {
+        %jumps{'PARROT_JUMP_ENEXT'} := 1;
+    }
+
+    if (match( " 'restart' \s+ 'OFFSET' ", ~$op)) {
+        %jumps{'PARROT_JUMP_RELATIVE'} := 1;
+        %jumps{'PARROT_JUMP_RESTART'}  := 1;
+    }
+    elsif (match( " 'restart' \s+ 'OFFSET' ", ~$op)) {
+        %jumps{'PARROT_JUMP_RESTART'} := 1;
+        %jumps{'PARROT_JUMP_ENEXT'}   := 1;
+    }
+    elsif ($op.name eq 'branch_cs' || $op.name eq 'returncc' ) {
+        %jumps{'PARROT_JUMP_RESTART'} := 1;
+    }
+    elsif (match( " 'restart' \s+ 'ADDRESS' ", ~~$op)) {
+        %jumps{'PARROT_JUMP_RESTART'} := 1;
+        %jumps{'PARROT_JUMP_ENEXT'}   := 0;
+    }
+
+    #XXX: need to handle PARROT_JUMP_GNEXT
+
+    for %jumps {
+        if %jumps{$_} {
+            @jumps.push($_);
+        }
+    }
+
+    if +@jumps == 0 {
+        $op<jump_flags> := '0';
+    }
+    else {
+        $op<jump_flags> := join('|', @jumps);
+    }
+    say(~$op<jump_flags>);
+}
+
 
 
 method _load_num_file() {
