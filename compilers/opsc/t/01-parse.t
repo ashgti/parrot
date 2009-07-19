@@ -21,7 +21,6 @@
     .local pmc res
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 inline op noop() {
 }
 END
@@ -30,7 +29,6 @@ END
     is(1, 1, "Simple noop parsed")
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 inline op noop() {
     foo
 }
@@ -40,7 +38,6 @@ END
     is(1, 1, "noop body parsed")
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 inline op noop() {
     foo {
         bar{};
@@ -60,7 +57,6 @@ END
 
     buf = <<"END"
 
-VERSION = PARROT_VERSION;
 
 =item noop
 
@@ -95,7 +91,7 @@ END
     res = "_parse_buffer"(buf)
     is(1, 1, "Multiple ops parsed")
 
-    $I0 = res['ops';'op']
+    $I0 = res['body';'op']
     is($I0, 3, "...and we have 3 ops")
 
 .end
@@ -111,13 +107,15 @@ END
 ** core.ops
 */
 
+BEGIN_OPS_PREAMBLE
+
 #include "parrot/dynext.h"
 #include "parrot/embed.h"
 #include "parrot/runcore_api.h"
 #include "../pmc/pmc_continuation.h"
 #include "../pmc/pmc_parrotlibrary.h"
 
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 =head1 NAME
 
@@ -142,7 +140,7 @@ END
     res = "_parse_buffer"(buf)
     is(1, 1, "Header parsed")
 
-    $I0 = res['ops';'op']
+    $I0 = res['body';'op']
     is($I0, 1, "...and we have our op")
 
 .end
@@ -152,7 +150,6 @@ END
     .local pmc res
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 
 inline op reserved(inconst INT) {
     /* reserve 1 entries */
@@ -164,7 +161,6 @@ END
     is(1, 1, "Op with single param parsed")
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 
 inline op add(out INT, inconst INT, inconst INT) {
 }
@@ -181,7 +177,6 @@ END
     .local pmc res
 
     buf = <<"END"
-VERSION = PARROT_VERSION;
 
 inline op hcf() :flow :deprecated {
 }
@@ -192,7 +187,7 @@ END
     is(1, 1, "Op with flags parsed")
 
     .local pmc op
-    op = res['ops';'op';0;'op_flag']
+    op = res['body';'op';0;'op_flag']
     $S0 = op[0]
     is($S0, ":flow ", "First flag parsed")
     $S0 = op[1]

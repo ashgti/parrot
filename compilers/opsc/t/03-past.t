@@ -12,11 +12,11 @@
     .local pmc compiler, past
     .local string buf
     buf = <<"END"
+BEGIN_OPS_PREAMBLE    
 /*
 THE HEADER
 */
-
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 inline op foo(out INT, in PMC, inconst NUM) :flow :deprecated {
     foo # We don't handle anything in C<body> during parse/past.
@@ -27,8 +27,9 @@ END
     past = compiler.'compile'(buf, 'target'=>'past')
     is(1, 1, "PAST::Node created")
 
-    $P0 = past['header']
-    $S0 = $P0.'inline'()
+    $P0 = past['preamble']
+    $P1 = $P0[0]
+    $S0 = $P1[0]
     like($S0, 'HEADER', 'Header parsed')
 
     $P0 = past['ops']

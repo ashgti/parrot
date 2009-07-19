@@ -4,37 +4,39 @@
 class Ops::Grammar::Actions;
 
 method TOP($/) {
-    my $past := PAST::Op.new(
-        :node($/)
-    );
-
-    $past<header> := $<header>.ast;
-    $past<ops>    := $<ops>.ast;
-    make $past;
+    make $<body>.ast;
 }
 
-method header($/) {
-    # Single big chunk
-    make PAST::Op.new(
-        :node($/),
-        :pasttype('inline'),
-        :inline(
-            substr($/.orig, 0, $/.from)
-        )
-    );
-}
+method body($/) {
 
-method ops($/) {
-    # Brr.. We need something more tasty here.
     my $past := PAST::Stmts.new(
         :node($/)
     );
+    
+    $past<preamble> := PAST::Stmts.new(
+        :node($/)
+    );
+    $past<ops> := PAST::Stmts.new(
+        :node($/)
+    );
+
+    for $<preamble> {
+        $past<preamble>.push($_.ast);
+    }
 
     for $<op> {
-        $past.push($_.ast);
+        $past<ops>.push($_.ast);
     }
 
     make $past;
+}
+
+method preamble($/) {
+    make PAST::Op.new(
+        :node($/),
+        :pasttype('preamble'),
+        ~$<preamble_guts>
+    );
 }
 
 method op($/) {

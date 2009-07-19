@@ -4,25 +4,32 @@
 
 grammar Ops::Grammar is PCT::Grammar;
 
-token TOP {
-    <header>
-    <ops>
+rule TOP {
+    <body> 
     [ $ || <panic: 'Syntax error'> ]
     {*}
 }
 
-# Cheat slightly. All ops have "VERSION = PARROT_VERSION;".
-# So, capture everything before <version> as header.
-token header {
-    <version> {*}
+rule body {
+    [  <preamble> |  <op> ]* {*}
 }
 
-token version {
-    'VERSION = PARROT_VERSION;'
+token preamble {
+    <begin_preamble>
+    <preamble_guts>
+    <end_preamble>  {*}
 }
 
-rule ops {
-    <op>* {*}
+regex preamble_guts {
+    .*? <?end_preamble>
+}
+
+token begin_preamble {
+    ^^'BEGIN_OPS_PREAMBLE'
+}
+
+token end_preamble {
+    ^^'END_OPS_PREAMBLE'
 }
 
 rule op {
