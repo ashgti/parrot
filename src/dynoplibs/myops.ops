@@ -3,10 +3,12 @@
   $Id$
 */
 
+BEGIN_OPS_PREAMBLE
+
 #include "parrot/dynext.h"
 #include <stdlib.h>
 
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 =head1 NAME
 
