@@ -8,28 +8,66 @@ src/pmc/orderedhash.pmc - Ordered Hash
 
 =head1 DESCRIPTION
 
-C<OrderedHash> extends C<Hash> to provide the interfaces of C<array> and
-C<hash>. To achieve ordering, hash there are a few restrictions:
-C<delete_keyed> never removes items; they are just nulled.
+C<OrderedHash> provide the interfaces of C<array> and
+C<hash>.
 
-Please note that if values are set via integer idx, these indices have to be in
-strict order. Using C<push_xx> simplifies this task.  This creates a key
-"\1idx" for C<idx> and is therefore not fully transparent.
-
-There are two iterator interfaces:
+Some limitations:
 
 =over 4
 
-=item * retrieve values (in creation order)
+=item *
 
-Please note that after a C<delete_keyed> operation, iterating over
-values doesn't work any more.  You'll get an error 'No such key'.
+Keys are always STRING*.
 
-=item * retrieve keys (in creation order)
+=item *
+
+Values are always PMC*.
 
 =back
 
-See F<t/pmc/orderedhash.t>.
+To archive ordering for each item we store:
+
+=over 4
+
+=item * C<key>
+
+Original key
+
+=item * C<value>
+
+Original value
+
+=item * C<next>
+
+Pointer to next C<item>
+
+=item * C<prev>
+
+Pointer to previous C<item>
+
+=back
+
+OrderedHash stores next things:
+
+=over 4
+
+=item * C<hash>
+
+Lookup hash for values.
+
+=item * C<first>
+
+Pointer to first inserted value.
+
+=item * C<last>
+
+Pointer to last inserter value.
+
+=back
+
+See F<t/pmc/orderedhash.t> for test cases.
+
+Overall design heavily inspired by C<Tie::StoredOrderHash>.
 
 =head2 Methods
 
@@ -39,7 +77,51 @@ See F<t/pmc/orderedhash.t>.
 
 */
 
-pmclass OrderedHash extends Hash need_ext provides array provides hash {
+/* To avoid creating OrderedHashItem PMC we reuse FixedPMCArray PMC */
+/* So, there is indexes to avoid using of "magick constants" */
+enum ORDERED_HASH_ITEM_PART {
+    ORDERED_HASH_ITEM_KEY   = 0,
+    ORDERED_HASH_ITEM_VALUE = 1,
+    ORDERED_HASH_ITEM_PREV  = 2,
+    ORDERED_HASH_ITEM_NEXT  = 3,
+    ORDERED_HASH_ITEM_MAX   = 4,
+};
+
+/* Create new stored item. FixedPMCArray of (key, value, prev, next). */
+static PMC*
+create_item(PARROT_INTERP, ARGIN(PMC *key), ARGIN(PMC *value)) {
+    PMC *ret = pmc_new(interp, enum_class_FixedPMCArray);
+    VTABLE_set_integer_native(interp, ret, ORDERED_HASH_ITEM_MAX);
+
+    VTABLE_set_pmc_keyed_int(interp, ret, ORDERED_HASH_ITEM_KEY, key);
+    VTABLE_set_pmc_keyed_int(interp, ret, ORDERED_HASH_ITEM_VALUE, value);
+    return ret;
+}
+
+pmclass OrderedHash need_ext provides array provides hash {
+    ATTR PMC*   hash;   /* key -> (value, prev, next) tuple */
+    ATTR PMC*   first;  /* Pointer to first inserted value  */
+    ATTR PMC*   last;   /* Pointer to last inserted value   */
+
+/*
+
+=item C<void init()>
+
+Create new instance of OrderedHash.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        Parrot_OrderedHash_attributes * const attrs =
+                mem_allocate_zeroed_typed(Parrot_OrderedHash_attributes);
+
+        PMC_data(SELF)  = attrs;
+        attrs->lookup   = pmc_new(INTERP, enum_class_Hash);
+
+        PObj_custom_mark_destroy_SETALL(SELF);
+    }
 
 /*
 
@@ -52,27 +134,18 @@ Marks the OrderedHash as live.
 */
 
     VTABLE void mark() {
-        Hash * const h = (Hash *)SELF.get_pointer();
-        INTVAL  i;
+        Parrot_OrderedHash_attributes * const attrs =
+                PARROT_ORDEREDHASH(SELF);
 
-        if (!h)
-            return;
+        if (attrs->lookup)
+            Parrot_gc_mark_PObj_alive(INTERP, attrs->lookup);
 
-        /* RT #53890 - keys can be NULL on purpose; move to src/hash.c ? */
-        for (i = h->mask; i >= 0; --i) {
-            HashBucket *b = h->bi[i];
+        /* Don't mark C<first> and C<last>. They are in lookup hash anyway */
+    }
 
-            while (b) {
 
-                if (b->key) {
-                    Parrot_gc_mark_PObj_alive(interp, (PObj *)b->key);
-                    if (b->value)
-                        Parrot_gc_mark_PObj_alive(interp, (PObj *)b->value);
-                }
-
-                b = b->next;
-            }
-        }
+    VTABLE void destroy() {
+        mem_sys_free(PMC_data(SELF));
     }
 
 /*
