@@ -88,6 +88,25 @@ create_item(PARROT_INTERP, ARGIN(PMC *key), ARGIN(PMC *value)) {
     return ret;
 };
 
+/* Find first/last in cloned/thawed OrderedHash */
+/* Parameter C<pmc_hash> is Hash, not OrderedHash */
+static void
+find_bounds(PARROT_INTERP, PMC *pmc_hash, PMC **first, PMC **last) {
+    PMC *iter = VTABLE_get_iter(interp, pmc_hash);
+    while (VTABLE_get_bool(interp, iter)) {
+        PMC *item  = VTABLE_shift_pmc(interp, iter);
+        PMC *entry = VTABLE_get_pmc_keyed(interp, pmc_hash, item);
+        /* First entry doesn't have prev */
+        PMC *tmp   = VTABLE_get_pmc_keyed_int(interp, entry, ORDERED_HASH_ITEM_PREV);
+        if (PMC_IS_NULL(tmp))
+            *first = entry;
+        /* Last entry doesn't have next */
+        tmp   = VTABLE_get_pmc_keyed_int(interp, entry, ORDERED_HASH_ITEM_NEXT);
+        if (PMC_IS_NULL(tmp))
+            *last = entry;
+    }
+}
+
 /* Helpers for boxing values */
 static PMC*
 box_string(PARROT_INTERP, STRING *str) {
@@ -139,10 +158,6 @@ Create new instance of OrderedHash.
         attrs->last     = PMCNULL;
 
         PObj_custom_mark_destroy_SETALL(SELF);
-    }
-
-    VTABLE void init_pmc() {
-        PARROT_ASSERT(!"Bah");
     }
 
 /*
@@ -597,6 +612,11 @@ the clone via integers has different indices, if items were deleted.
 
     VTABLE PMC *clone() {
         PMC  * const dest   = pmc_new(INTERP, SELF->vtable->base_type);
+        Parrot_OrderedHash_attributes *clone_attrs =
+                PARROT_ORDEREDHASH(dest);
+
+        clone_attrs->hash   = VTABLE_clone(INTERP, PARROT_ORDEREDHASH(SELF)->hash);
+        find_bounds(INTERP, clone_attrs->hash, &clone_attrs->first, &clone_attrs->last);
 
         return dest;
     }
@@ -614,9 +634,6 @@ Used to archive the hash.
 
 Used to unarchive the hash.
 
-Freeze/thaw are inherited from hash.  Only thaw.visit is special, as we have to
-preserve key/value order.
-
 =cut
 
 */
@@ -626,6 +643,13 @@ preserve key/value order.
         info->thaw_ptr = hash;
         (info->visit_pmc_now)(INTERP, *hash, info);
         SUPER(info);
+    }
+
+    VTABLE void thaw(visit_info *info) {
+        Parrot_OrderedHash_attributes *attrs;
+        SUPER(info);
+        attrs = PARROT_ORDEREDHASH(SELF);
+        find_bounds(INTERP, attrs->hash, &attrs->first, &attrs->last);
     }
 }
 
