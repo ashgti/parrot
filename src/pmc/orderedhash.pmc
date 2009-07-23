@@ -342,11 +342,14 @@ Sets the PMC value of the element at index C<key> to C<val>.
 
     VTABLE PMC *get_pmc_keyed_int(INTVAL idx) {
         Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(SELF);
+        INTVAL                         n = STATICSELF.elements();
         INTVAL                         pos;
         PMC                           *list_entry = attrs->first;
 
-        if (idx < 0 || idx >= STATICSELF.elements())
-            return PMCNULL;
+        if (idx < -n)
+            idx = -idx - n - 1;
+        else if (idx < 0)
+            idx += n;
 
         /* Iterate over linked list to get value */
         for (pos = 0; pos < idx; ++pos) {
@@ -467,7 +470,29 @@ The created key = "\1idx".
 */
 
     VTABLE void set_pmc_keyed_int(INTVAL idx, PMC *val) {
-        PARROT_ASSERT(!"Bah");
+        const INTVAL     n = STATICSELF.elements();
+        STRING * const fmt = CONST_STRING(INTERP, "\1%d");
+        PMC * list_entry;
+        INTVAL pos;
+
+        if (idx < -n)
+            idx = -idx - n - 1;
+        else if (idx < 0)
+            idx += n;
+
+        if (idx >= n) {
+            /* TODO warn or fill if there are holes */
+            STRING * const key = Parrot_sprintf_s(INTERP, fmt, idx);
+            SELF.set_pmc_keyed_str(key, val);
+        }
+        else {
+            /* Iterate over linked list to get value */
+            for (pos = 0; pos < idx; ++pos) {
+                list_entry = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_NEXT);
+            }
+            PARROT_ASSERT(!PMC_IS_NULL(list_entry));
+            VTABLE_set_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_VALUE, val);
+        }
     }
 
     VTABLE void set_integer_keyed_int(INTVAL idx, INTVAL value) {
