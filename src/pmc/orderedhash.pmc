@@ -77,16 +77,6 @@ Overall design heavily inspired by C<Tie::StoredOrderHash>.
 
 */
 
-/* To avoid creating OrderedHashItem PMC we reuse FixedPMCArray PMC */
-/* So, there is indexes to avoid using of "magick constants" */
-enum ORDERED_HASH_ITEM_PART {
-    ORDERED_HASH_ITEM_KEY   = 0,
-    ORDERED_HASH_ITEM_VALUE = 1,
-    ORDERED_HASH_ITEM_PREV  = 2,
-    ORDERED_HASH_ITEM_NEXT  = 3,
-    ORDERED_HASH_ITEM_MAX   = 4,
-};
-
 /* Create new stored item. FixedPMCArray of (key, value, prev, next). */
 static PMC*
 create_item(PARROT_INTERP, ARGIN(PMC *key), ARGIN(PMC *value)) {
@@ -97,6 +87,32 @@ create_item(PARROT_INTERP, ARGIN(PMC *key), ARGIN(PMC *value)) {
     VTABLE_set_pmc_keyed_int(interp, ret, ORDERED_HASH_ITEM_VALUE, value);
     return ret;
 };
+
+/* Helpers for boxing values */
+static PMC*
+box_string(PARROT_INTERP, STRING *str) {
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp,
+                enum_class_String));
+    VTABLE_set_string_native(interp, ret, str);
+    return ret;
+}
+
+static PMC*
+box_integer(PARROT_INTERP, INTVAL val) {
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp,
+                enum_class_Integer));
+    VTABLE_set_integer_native(interp, ret, val);
+    return ret;
+}
+
+static PMC*
+box_number(PARROT_INTERP, FLOATVAL val) {
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp,
+                enum_class_Float));
+    VTABLE_set_number_native(interp, ret, val);
+    return ret;
+}
+
 
 pmclass OrderedHash need_ext provides array {
     ATTR PMC    *hash;   /* key to item tuple */
@@ -194,12 +210,15 @@ Returns the size of the hash.
         return VTABLE_elements(INTERP, PARROT_ORDEREDHASH(SELF)->hash);
     }
 
-    VTABLE void set_pmc_keyed_str(STRING *key, PMC *value) {
-        PMC *pkey = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String));
-        VTABLE_set_string_native(INTERP, pkey, key);
-        VTABLE_set_pmc_keyed(INTERP, SELF, pkey, value);
-    }
+/*
 
+=item C<set_pmc_keyed(PMC *key, PMC *value)>
+
+Main set function.
+
+=cut
+
+*/
     VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
         Parrot_OrderedHash_attributes *attrs =
                 PARROT_ORDEREDHASH(SELF);
@@ -229,6 +248,71 @@ Returns the size of the hash.
         /* .. and store it */
         VTABLE_set_pmc_keyed(INTERP, attrs->hash, key, list_entry);
     }
+/*
+
+=item C<void set_integer_keyed(INTVAL key, INTVAL value)>
+
+=item C<void set_number_keyed(INTVAL key, FLOATVAL value)>
+
+=item C<void set_string_keyed(INTVAL key, STRING *value)>
+
+Sets the PMC value of the element at index C<key> to C<val>.
+
+=cut
+
+*/
+
+    VTABLE void set_integer_keyed(PMC *key, INTVAL value) {
+        PMC * const v = box_integer(INTERP, value);
+        SELF.set_pmc_keyed(key, v);
+    }
+
+    VTABLE void set_number_keyed(PMC *key, FLOATVAL value) {
+        PMC * const v = box_number(INTERP, value);
+        SELF.set_pmc_keyed(key, v);
+    }
+
+    VTABLE void set_string_keyed(PMC *key, STRING *value) {
+        PMC * const v = box_string(INTERP, value);
+        SELF.set_pmc_keyed(key, v);
+    }
+
+/*
+
+=item C<void set_pmc_keyed_str(STRING *key, PMC *val)>
+
+=item C<void set_integer_keyed_str(STRING *key, INTVAL value)>
+
+=item C<void set_number_keyed_str(STRING *key, FLOATVAL value)>
+
+=item C<void set_string_keyed_str(STRING *key, STRING *value)>
+
+Sets the PMC value of the element at index C<key> to C<val>.
+
+=cut
+
+*/
+
+    VTABLE void set_pmc_keyed_str(STRING *key, PMC *value) {
+        PMC *pkey = box_string(INTERP, key);
+        VTABLE_set_pmc_keyed(INTERP, SELF, pkey, value);
+    }
+
+    VTABLE void set_string_keyed_str(STRING *key, STRING *value) {
+        PMC * const v = box_string(INTERP, value);
+        STATICSELF.set_pmc_keyed_str(key, v);
+    }
+
+    VTABLE void set_integer_keyed_str(STRING *key, INTVAL value) {
+        PMC * const v = box_integer(INTERP, value);
+        STATICSELF.set_pmc_keyed_str(key, v);
+    }
+
+    VTABLE void set_number_keyed_str(STRING *key, FLOATVAL value) {
+        PMC * const v = box_number(INTERP, value);
+        STATICSELF.set_pmc_keyed_str(key, v);
+    }
+
 /*
 
 =item C<PMC *get_pmc_keyed(PMC *key)>
@@ -463,7 +547,11 @@ The created key = "\1idx".
 */
 
     VTABLE INTVAL defined_keyed(PMC *key) {
-        PARROT_ASSERT(!"Bah");
+        return VTABLE_defined_keyed(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
+    }
+
+    VTABLE INTVAL defined_keyed_str(STRING *key) {
+        return VTABLE_defined_keyed_str(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
     }
 
     VTABLE INTVAL defined_keyed_int(INTVAL idx) {
@@ -485,14 +573,14 @@ Deletes the key C<*key> from the hash.
 */
 
     VTABLE void delete_keyed(PMC *key) {
-        PARROT_ASSERT(!"Bah");
-    }
-
-    VTABLE void delete_keyed_int(INTVAL idx) {
-        PARROT_ASSERT(!"Bah");
+        return VTABLE_delete_keyed(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
     }
 
     VTABLE void delete_keyed_str(STRING *key) {
+        return VTABLE_delete_keyed_str(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
+    }
+
+    VTABLE void delete_keyed_int(INTVAL idx) {
         PARROT_ASSERT(!"Bah");
     }
 
