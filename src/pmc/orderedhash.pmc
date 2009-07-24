@@ -356,7 +356,9 @@ Sets the PMC value of the element at index C<key> to C<val>.
             list_entry = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_NEXT);
         }
 
-        PARROT_ASSERT(!PMC_IS_NULL(list_entry));
+        if (PMC_IS_NULL(list_entry))
+            return PMCNULL;
+
         return VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_VALUE);
     }
 
@@ -566,7 +568,17 @@ The created key = "\1idx".
     }
 
     VTABLE INTVAL exists_keyed(PMC *key) {
-        /* TODO Handle Key PMC */
+        if ((PObj_get_FLAGS(key) & KEY_type_FLAGS) == KEY_integer_FLAG) {
+            /* Don't fetch item prematurely. It's costy */
+            INTVAL    intval = VTABLE_get_integer(INTERP, key);
+            PMC * const next = VTABLE_shift_pmc(INTERP, key);
+
+            if (!next)
+                return STATICSELF.exists_keyed_int(intval);
+
+            return VTABLE_exists_keyed(INTERP, STATICSELF.get_pmc_keyed_int(intval), next);
+        }
+
         return VTABLE_exists_keyed_str(INTERP, SELF, VTABLE_get_string(INTERP, key));
     }
 
@@ -587,15 +599,43 @@ The created key = "\1idx".
 */
 
     VTABLE INTVAL defined_keyed(PMC *key) {
-        return VTABLE_defined_keyed(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
+        if ((PObj_get_FLAGS(key) & KEY_type_FLAGS) == KEY_integer_FLAG) {
+            /* Don't fetch item prematurely. It's costy */
+            INTVAL    intval = VTABLE_get_integer(INTERP, key);
+            PMC * const next = VTABLE_shift_pmc(INTERP, key);
+
+            if (!next)
+                return STATICSELF.defined_keyed_int(intval);
+
+            return VTABLE_defined_keyed(INTERP, STATICSELF.get_pmc_keyed_int(intval), next);
+        }
+
+        /* We store list_item (which is defined). So fetch original PMC and check it */
+        PMC * const item = STATICSELF.get_pmc_keyed(key);
+        if (PMC_IS_NULL(item))
+            return 0;
+        return VTABLE_defined(INTERP, item);
     }
 
     VTABLE INTVAL defined_keyed_str(STRING *key) {
-        return VTABLE_defined_keyed_str(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
+        PMC * const item = STATICSELF.get_pmc_keyed_str(key);
+        if (PMC_IS_NULL(item))
+            return 0;
+        return VTABLE_defined(INTERP, item);
     }
 
     VTABLE INTVAL defined_keyed_int(INTVAL idx) {
-        PARROT_ASSERT(!"Bah");
+        PMC * item;
+        /* If item doesn't exists it's undefined */
+        if (!STATICSELF.exists_keyed_int(idx))
+            return 0;
+
+        /* Null is undefined */
+        item = STATICSELF.get_pmc_keyed_int(idx);
+        if (PMC_IS_NULL(item))
+            return 0;
+
+        return VTABLE_defined(INTERP, item);
     }
 
 /*
