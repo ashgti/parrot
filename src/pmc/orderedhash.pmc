@@ -670,10 +670,9 @@ Used to unarchive the hash.
         SUPER(info);
     }
 
-    VTABLE void thaw(visit_info *info) {
-        Parrot_OrderedHash_attributes *attrs;
-        SUPER(info);
-        attrs = PARROT_ORDEREDHASH(SELF);
+    VTABLE void thawfinish(visit_info *info) {
+        Parrot_OrderedHash_attributes *attrs =
+                PARROT_ORDEREDHASH(SELF);
         find_bounds(INTERP, attrs->hash, &attrs->first, &attrs->last);
     }
 }
