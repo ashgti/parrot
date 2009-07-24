@@ -88,6 +88,26 @@ create_item(PARROT_INTERP, ARGIN(PMC *key), ARGIN(PMC *value)) {
     return ret;
 };
 
+/* Get list_item by index */
+static PMC*
+get_list_item(PARROT_INTERP, ARGIN(PMC *self), INTVAL idx) {
+    Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(self);
+    INTVAL                         n = VTABLE_elements(interp, attrs->hash);
+    INTVAL                         pos;
+    PMC                           *list_entry = attrs->first;
+
+    if (idx < -n)
+        idx = -idx - n - 1;
+    else if (idx < 0)
+        idx += n;
+
+    /* Iterate over linked list to get list_item */
+    for (pos = 0; pos < idx; ++pos) {
+        list_entry = VTABLE_get_pmc_keyed_int(interp, list_entry, ORDERED_HASH_ITEM_NEXT);
+    }
+    return list_entry;
+}
+
 /* Find first/last in cloned/thawed OrderedHash */
 /* Parameter C<pmc_hash> is Hash, not OrderedHash */
 static void
@@ -133,7 +153,7 @@ box_number(PARROT_INTERP, FLOATVAL val) {
 }
 
 
-pmclass OrderedHash need_ext provides array {
+pmclass OrderedHash need_ext provides array provides hash {
     ATTR PMC    *hash;   /* key to item tuple */
     ATTR PMC    *first;  /* Pointer to first inserted value  */
     ATTR PMC    *last;   /* Pointer to last inserted value   */
@@ -341,20 +361,7 @@ Sets the PMC value of the element at index C<key> to C<val>.
 */
 
     VTABLE PMC *get_pmc_keyed_int(INTVAL idx) {
-        Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(SELF);
-        INTVAL                         n = STATICSELF.elements();
-        INTVAL                         pos;
-        PMC                           *list_entry = attrs->first;
-
-        if (idx < -n)
-            idx = -idx - n - 1;
-        else if (idx < 0)
-            idx += n;
-
-        /* Iterate over linked list to get value */
-        for (pos = 0; pos < idx; ++pos) {
-            list_entry = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_NEXT);
-        }
+        PMC *list_entry = get_list_item(INTERP, SELF, idx);
 
         if (PMC_IS_NULL(list_entry))
             return PMCNULL;
@@ -488,10 +495,7 @@ The created key = "\1idx".
             SELF.set_pmc_keyed_str(key, val);
         }
         else {
-            /* Iterate over linked list to get value */
-            for (pos = 0; pos < idx; ++pos) {
-                list_entry = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_NEXT);
-            }
+            list_entry = get_list_item(INTERP, SELF, idx);
             PARROT_ASSERT(!PMC_IS_NULL(list_entry));
             VTABLE_set_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_VALUE, val);
         }
@@ -653,15 +657,54 @@ Deletes the key C<*key> from the hash.
 */
 
     VTABLE void delete_keyed(PMC *key) {
+        Parrot_OrderedHash_attributes *attrs =
+                PARROT_ORDEREDHASH(SELF);
+        PMC *list_entry, *prev, *next;
+        if ((PObj_get_FLAGS(key) & KEY_type_FLAGS) == KEY_integer_FLAG) {
+            INTVAL    intval = VTABLE_get_integer(INTERP, key);
+            PMC * const next = VTABLE_shift_pmc(INTERP, key);
+
+            if (!next)
+                return STATICSELF.delete_keyed_int(intval);
+
+            return VTABLE_delete_keyed(INTERP, STATICSELF.get_pmc_keyed_int(intval), next);
+        }
+
+        list_entry = VTABLE_get_pmc_keyed(INTERP, attrs->hash, key);
+        if (PMC_IS_NULL(list_entry))
+            return;
+
+        /* Unlink entry */
+        next = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_NEXT);
+        prev = VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_PREV);
+
+        if (attrs->first == list_entry)
+            attrs->first = next;
+
+        if (attrs->last == list_entry)
+            attrs->last = prev;
+
+        /* C<prev> and C<next> are list entries (FPA) */
+        if (!PMC_IS_NULL(prev))
+            VTABLE_set_pmc_keyed_int(INTERP, prev, ORDERED_HASH_ITEM_NEXT, next);
+        if (!PMC_IS_NULL(next))
+            VTABLE_set_pmc_keyed_int(INTERP, next, ORDERED_HASH_ITEM_PREV, prev);
+
+        /* And finally delete it */
         return VTABLE_delete_keyed(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
     }
 
     VTABLE void delete_keyed_str(STRING *key) {
-        return VTABLE_delete_keyed_str(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
+        return STATICSELF.delete_keyed(box_string(INTERP, key));
     }
 
     VTABLE void delete_keyed_int(INTVAL idx) {
-        PARROT_ASSERT(!"Bah");
+        PMC *list_entry;
+        if (!STATICSELF.exists_keyed_int(idx))
+            return;
+
+        list_entry = get_list_item(INTERP, SELF, idx);
+        STATICSELF.delete_keyed(VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_KEY));
     }
 
 /*
