@@ -889,6 +889,14 @@ mark_const_subs(PARROT_INTERP)
 pbc_action_enum_t action, PMC *eval_pmc)>
 
 C<action> is one of C<PBC_PBC>, C<PBC_LOADED>, C<PBC_INIT>, or C<PBC_MAIN>.
+These determine which subs get executed at this point. Some rules:
+
+ :immediate subs always execute immediately
+ :postcomp subs always execute immediately
+ :main subs execute when we have the PBC_MAIN or PBC_PBC actions
+ :init subs execute when :main does
+ :load subs execute on PBC_LOAD
+
 Also store the C<eval_pmc> in the sub structure, so that the eval PMC is kept
 alive by living subs.
 
@@ -2238,6 +2246,26 @@ sort_segs(ARGMOD(PackFile_Directory *dir))
             PackFile_Segment * const s2 = dir->segments[i];
             if (s2->type == PF_FIXUP_SEG) {
                 dir->segments[1] = s2;
+                dir->segments[i] = seg;
+                break;
+            }
+        }
+    }
+
+    /* XXX
+     * Temporary? hack to put ConstantTable in front of other segments.
+     * This is useful for Annotations because we ensure that constants used
+     * for keys already available during unpack.
+     */
+    seg = dir->segments[2];
+
+    if (seg->type != PF_CONST_SEG) {
+        size_t i;
+
+        for (i = 3; i < num_segs; i++) {
+            PackFile_Segment * const s2 = dir->segments[i];
+            if (s2->type == PF_CONST_SEG) {
+                dir->segments[2] = s2;
                 dir->segments[i] = seg;
                 break;
             }
@@ -4888,8 +4916,9 @@ Parrot_load_bytecode(PARROT_INTERP, ARGIN_NULLOK(STRING *file_str))
 =item C<void PackFile_fixup_subs(PARROT_INTERP, pbc_action_enum_t what, PMC
 *eval)>
 
-Runs C<:load> or C<:immediate> subroutines for the current code segment.  If
-C<eval> is given, set this as the owner of the subroutines.
+Calls C<:load>, C<:init>, C<:main>, C<:immediate> and/or C<:postcomp>
+subroutines in the current packfile, depending on the value of C<action>.
+See C<do_sub_pragmas> for more details.
 
 =cut
 

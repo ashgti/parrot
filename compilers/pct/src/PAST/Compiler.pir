@@ -664,7 +664,7 @@ Return the POST representation of a C<PAST::Control>.
     .local string rtype
     rtype = options['rtype']
 
-    .local pmc iter, node, ops, pops, tail, skip
+    .local pmc it, node, ops, pops, tail, skip
     $P0 = get_hll_global ['POST'], 'Ops'
     ops = $P0.'new'('node'=>node)
     $P0 = get_hll_global ['POST'], 'Ops'
@@ -675,10 +675,10 @@ Return the POST representation of a C<PAST::Control>.
     $S0 = self.'unique'('skip_handler_')
     skip = $P0.'new'('result'=>$S0)
 
-    iter = new 'Iterator', ehs
+    it = iter ehs
   handler_loop:
-    unless iter, handler_loop_done
-    node = shift iter
+    unless it, handler_loop_done
+    node = shift it
 
     .local pmc ehpir, types, label
     .local string ehreg, type
@@ -826,14 +826,14 @@ Return the POST representation of a C<PAST::Block>.
     ##  merge the Block's symtable with outersym
     symtable = clone symtable
   symtable_merge:
-    .local pmc iter
-    iter = new 'Iterator', outersym
+    .local pmc it
+    it = iter outersym
   symtable_merge_loop:
-    unless iter goto have_symtable
-    $S0 = shift iter
+    unless it goto have_symtable
+    $S0 = shift it
     $I0 = exists symtable[$S0]
     if $I0 goto symtable_merge_loop
-    $P0 = iter[$S0]
+    $P0 = it[$S0]
     symtable[$S0] = $P0
     goto symtable_merge_loop
   have_symtable:
@@ -1499,14 +1499,14 @@ to C<ResizablePMCArray> if not set.
     returns = box 'ResizablePMCArray'
   have_returns:
 
-    .local pmc listpost, iter
+    .local pmc listpost, it
     listpost = self.'as_vivipost'(returns, 'rtype'=>'P')
     ops.'result'(listpost)
     ops.'push'(listpost)
-    iter = new 'Iterator', posargs
+    it = iter posargs
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
+    unless it goto iter_end
+    $S0 = shift it
     ops.'push_pirop'('push', listpost, $S0)
     goto iter_loop
   iter_end:
@@ -2224,20 +2224,21 @@ attribute.
     .param pmc node
     .param pmc bindpost
 
-    .local string name
+    .local pmc ops
     $P0 = get_hll_global ['POST'], 'Ops'
+    ops = $P0.'new'('node'=>node)
+    .local string name
     name = node.'name'()
     name = self.'escape'(name)
 
-    .local pmc call_on, ops
+    .local pmc call_on
     call_on = node[0]
     if null call_on goto use_self
     call_on = self.'as_post'(call_on, 'rtype'=>'P')
-    ops = call_on
+    ops.'push'(call_on)
     goto invocant_done
   use_self:
     call_on = box 'self'
-    ops = $P0.'new'('node'=>node)
   invocant_done:
 
     if bindpost goto attribute_bind

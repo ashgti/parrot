@@ -18,8 +18,6 @@ SOURCES := \
   opsc.pir \
   opsc_core.pir \
   builtins.pir \
-  ops/op.pir \
-  ops/gen_op.pir \
   ops/oplib.pir \
   ops/gen_oplib.pir \
   compiler/gen_grammar.pir \
@@ -45,10 +43,6 @@ compiler/gen_grammar.pir: $(PGE_LIBRARY) compiler/grammar.pg
 compiler/gen_actions.pir: $(NQP) $(PCT) compiler/actions.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=compiler/gen_actions.pir \
 	    --target=pir compiler/actions.pm
-
-ops/gen_op.pir: $(NQP) $(PCT) ops/op.pm
-	$(PARROT) $(PARROT_ARGS) $(NQP) --output=ops/gen_op.pir \
-	    --target=pir ops/op.pm
 
 ops/gen_oplib.pir: $(NQP) $(PCT) ops/oplib.pm
 	$(PARROT) $(PARROT_ARGS) $(NQP) --output=ops/gen_oplib.pir \
@@ -108,7 +102,6 @@ CLEANUPS := \
   opsc.pbc \
   compiler/gen_grammar.pir \
   compiler/gen_actions.pir \
-  ops/gen_op.pir \
   ops/gen_oplib.pir \
   runcore/gen_base.pir \
   runcore/gen_c.pir \

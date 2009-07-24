@@ -276,6 +276,9 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 #if PARROT_GC_GMS
     Parrot_gc_gms_init(interp);
 #endif
+#if PARROT_GC_INF
+    Parrot_gc_inf_init(interp);
+#endif
 
     initialize_memory_pools(interp);
     initialize_header_pools(interp);
@@ -398,6 +401,7 @@ Parrot_gc_add_pmc_ext(PARROT_INTERP, ARGMOD(PMC *pmc))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: PMC_EXT allocation failed!\n");
     PObj_is_PMC_EXT_SET(pmc);
+    PObj_is_special_PMC_SET(pmc);
 
 #ifdef PARROT_GC_IMS
     /*

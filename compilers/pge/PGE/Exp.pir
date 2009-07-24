@@ -443,15 +443,15 @@ tree as a PIR code object that can be compiled.
     .param string label
     .param string next
 
-    .local pmc iter, exp
+    .local pmc it, exp
     code.'emit'('        %0: # concat', label)
     $P0 = self.'list'()
-    iter = new 'Iterator', $P0
-    exp = shift iter
+    it  = iter $P0
+    exp = shift it
     $S0 = code.'unique'('R')
   iter_loop:
-    unless iter goto iter_end
-    $P1 = shift iter
+    unless it goto iter_end
+    $P1 = shift it
     $S1 = code.'unique'('R')
     exp.'pir'(code, $S0, $S1)
     exp = $P1
@@ -862,7 +862,7 @@ tree as a PIR code object that can be compiled.
         %L_1:
           $P0 = find_name '%0'
           unless null $P0 goto %L_2
-          say "Unable to find regex '%0'"
+          die "Unable to find regex '%0'"
         %L_2:
         CODE
 
@@ -988,6 +988,7 @@ tree as a PIR code object that can be compiled.
     .local string token, test
     token = self.'ast'()
 
+    if token == '<?>' goto anchor_null
     if token == '^' goto anchor_bos
     if token == '$' goto anchor_eos
     if token == '^^' goto anchor_bol
@@ -1001,6 +1002,15 @@ tree as a PIR code object that can be compiled.
     test = '=='
     if token == '\B' goto anchor_word
 
+  anchor_fail:
+    code.'emit'("        %0: # anchor fail %1", label, token)
+    code.'emit'("          goto fail")
+    .return ()
+
+  anchor_null:
+    code.'emit'("        %0: # anchor null %1", label, token)
+    code.'emit'("          goto %0", next)
+    .return ()
 
   anchor_bos:
     code.'emit'("        %0: # anchor bos", label)

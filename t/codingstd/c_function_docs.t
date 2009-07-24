@@ -120,6 +120,7 @@ config/gen/platform/openbsd/memexec.c
 config/gen/platform/solaris/math.c
 config/gen/platform/solaris/time.c
 examples/c/nanoparrot.c
+examples/c/pbc_info.c
 examples/compilers/japhc.c
 examples/embed/lorito.c
 src/atomic/gcc_x86.c
@@ -134,7 +135,6 @@ src/jit/i386/exec_dep.c
 src/jit/ppc/exec_dep.c
 src/nci_test.c
 src/pbc_dump.c
-src/pbc_info.c
 src/pic.c
 src/pic_jit.c
 src/string/charset/ascii.c

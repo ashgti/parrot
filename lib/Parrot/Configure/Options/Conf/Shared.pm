@@ -18,6 +18,8 @@ our @shared_valid_options = qw{
     cgoto
     configure_trace
     cxx
+    darwin_no_fink
+    darwin_no_macports
     datadir
     debugging
     define
@@ -27,7 +29,6 @@ our @shared_valid_options = qw{
     fatal
     fatal-step
     floatval
-    gc
     help
     icu-config
     icuheaders
@@ -72,9 +73,10 @@ our @shared_valid_options = qw{
     without-gdbm
     without-gettext
     without-gmp
+    without-icu
     without-opengl
     without-pcre
-    without-icu
+    without-threads
     yacc
 };
 

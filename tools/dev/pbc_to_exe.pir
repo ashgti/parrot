@@ -507,16 +507,26 @@ END_OF_FUNCTION
 
     $P0 = '_config'()
     .local string cc, ccflags, cc_o_out, osname, build_dir, slash
+    .local string installed, includepath, versiondir
     cc        = $P0['cc']
     ccflags   = $P0['ccflags']
     cc_o_out  = $P0['cc_o_out']
     osname    = $P0['osname']
     build_dir = $P0['build_dir']
     slash     = $P0['slash']
+    installed = $P0['installed']
+    includepath = $P0['includedir']
+    versiondir = $P0['versiondir']
 
     .local string includedir, pathquote
+    if installed == '1' goto installed_includedir
     includedir = concat build_dir, slash
     includedir = concat includedir, 'include'
+    goto done_includedir
+  installed_includedir:
+    includedir = concat includepath, versiondir
+  done_includedir:
+
     pathquote  = ''
     unless osname == 'MSWin32' goto not_windows
     pathquote  = '"'
@@ -558,6 +568,7 @@ END_OF_FUNCTION
     $P0 = '_config'()
     .local string cc, link, link_dynamic, linkflags, ld_out, libparrot, libs, o
     .local string rpath, osname, build_dir, slash, icushared
+    .local string installed, libdir, versiondir
     cc           = $P0['cc']
     link         = $P0['link']
     link_dynamic = $P0['link_dynamic']
@@ -571,18 +582,29 @@ END_OF_FUNCTION
     build_dir    = $P0['build_dir']
     slash        = $P0['slash']
     icushared    = $P0['icu_shared']
+    installed    = $P0['installed']
+    libdir       = $P0['libdir']
+    versiondir   = $P0['versiondir']
 
     .local string config, pathquote, exeprefix
+    if installed == '1' goto config_installed
     exeprefix = substr exefile, 0, 12
     config     = concat build_dir, slash
     config    .= 'src'
     config    .= slash
-    if exeprefix == 'installable_' goto config_install
+    if exeprefix == 'installable_' goto config_to_install
     config    .= 'parrot_config'
     goto config_cont
- config_install:
+ config_to_install:
     config    .= 'install_config'
     rpath     = $P0['rpath_lib']
+    goto config_cont
+ config_installed:
+    rpath      = $P0['rpath_lib']
+    libparrot  = $P0['inst_libparrot_linkflags']
+    config     = concat libdir, versiondir
+    config    .= slash
+    config    .= 'parrot_config'
  config_cont:
     config    .= o
     pathquote  = ''

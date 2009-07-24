@@ -235,10 +235,6 @@ Returns the portion of the target string matched by this object.
     .return ('')
 .end
 
-.sub 'text' :method
-    .tailcall self.'Str'()
-.end
-
 
 =item C<orig()>
 
@@ -251,23 +247,6 @@ Return the original item being matched.
     .return ($P0)
 .end
 
-
-=item C<item()>
-
-Returns the scalar value of this match -- the "result object"
-if there is one, otherwise the substring matched by this match
-object.
-
-=cut
-
-.sub 'item' :method
-    .tailcall self.'ast'()
-.end
-
-.sub 'result_object' :method
-    .param pmc obj
-    .tailcall self.'!make'(obj)
-.end
 
 =item C<!make(pmc obj)>
 
@@ -320,9 +299,13 @@ then simply return the first key found.
     .return ($S0)
   first_key:
     $P0 = self.'hash'()
-    $P1 = new 'Iterator', $P0
+    $P1 = iter $P0
     unless $P1 goto not_found
+  next:
     $S0 = shift $P1
+    $P2 = $P0[$S0]
+    $I0 = isa $P2, 'Capture'
+    unless $I0 goto next
     .return ($S0)
   not_found:
     .return ('')

@@ -14,20 +14,6 @@
  * for a given compiler.  They are based on GCC's __attribute__ functionality.
  */
 
-/*
- * Microsoft provides two annotations mechanisms.  __declspec, which has been
- * around for a while, and Microsoft's standard source code annotation
- * language (SAL), introduced with Visual C++ 8.0.
- * See <http://msdn2.microsoft.com/en-us/library/ms235402(VS.80).aspx>,
- * <http://msdn2.microsoft.com/en-us/library/dabb5z75(VS.80).aspx>.
- */
-#if defined(_MSC_VER) && (_MSC_VER >= 1400)
-#  define PARROT_HAS_SAL 1
-#  include <sal.h>
-#else
-#  define PARROT_HAS_SAL 0
-#endif
-
 #ifdef HASATTRIBUTE_NEVER_WORKS
  #  error This attribute can never succeed.  Something has mis-sniffed your configuration.
 #endif
@@ -113,7 +99,19 @@
  */
 #define UNUSED(a) /*@-noeffect*/if (0) (void)(a)/*@=noeffect*/;
 
-#if PARROT_HAS_SAL
+/* 64-bit CL has some problems, so this section here is going to try to fix them */
+#ifdef PARROT_HAS_MSVC_SAL
+#  ifdef _WIN64
+    /* CL64 can't seem to find sal.h, so take that out of the equation */
+#    undef PARROT_HAS_MSVC_SAL
+    /* CL64 complains about not finding _iob, so this might fix it */
+
+
+#  endif
+#endif
+
+#ifdef PARROT_HAS_MSVC_SAL
+#  include <sal.h>
 #  define PARROT_CAN_RETURN_NULL      /*@null@*/ __maybenull
 #  define PARROT_CANNOT_RETURN_NULL   /*@notnull@*/ __notnull
 #else
@@ -144,7 +142,7 @@
 /* Function argument instrumentation */
 /* For explanations of the annotations, see http://www.splint.org/manual/manual.html */
 
-#if PARROT_HAS_SAL
+#ifdef PARROT_HAS_MSVC_SAL
 #  define NOTNULL(x)                  /*@notnull@*/ __notnull x
     /* The pointer passed may not be NULL */
 

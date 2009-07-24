@@ -1,5 +1,5 @@
 /* interpreter.h
- *  Copyright (C) 2001-2007, Parrot Foundation.
+ *  Copyright (C) 2001-2009, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -290,8 +290,10 @@ typedef struct _context_mem {
  * runloop ID, so it still needs to be a separate stack for a while longer. */
 
 typedef struct parrot_runloop_t {
-    Parrot_jump_buff resume;     /* jmp_buf */
-    struct parrot_runloop_t *prev; /* interpreter's runloop jump buffer stack */
+    Parrot_jump_buff         resume;        /* jmp_buf */
+    struct parrot_runloop_t *prev;          /* interpreter's runloop
+                                             * jump buffer stack */
+    opcode_t                *handler_start; /* Used in exception handling */
 } parrot_runloop_t;
 
 typedef parrot_runloop_t Parrot_runloop;
@@ -312,7 +314,6 @@ struct parrot_interp_t {
     int      n_vtable_max;                    /* highest used type */
     int      n_vtable_alloced;                /* alloced vtable space */
 
-    struct _ParrotIOLayer **piolayers;        /* IO registered layers */
     struct _ParrotIOData   *piodata;          /* interpreter's IO system */
 
     op_lib_t  *op_lib;                        /* Opcode library */
@@ -457,7 +458,12 @@ typedef enum {
 #define PNCONST   PF_NCONST(interp->code)
 
 /* TODO - Make this a config option */
-#define PARROT_CATCH_NULL 1
+/* Splint complains about PMCNULL's storage, so don't use it. */
+#ifdef S_SPLINT_S
+#  define PARROT_CATCH_NULL 0
+#else
+#  define PARROT_CATCH_NULL 1
+#endif
 
 #if PARROT_CATCH_NULL
 PARROT_DATA PMC * PMCNULL;   /* Holds single Null PMC */

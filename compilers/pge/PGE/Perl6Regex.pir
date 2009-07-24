@@ -324,6 +324,8 @@ needed for compiling regexes.
     optable.'newtok'('term:\B',  'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
     optable.'newtok'('term:<<',  'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
     optable.'newtok'('term:>>',  'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:<?>', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
+    optable.'newtok'('term:<!>', 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
     optable.'newtok'(unicode:"term:\xab", 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
     optable.'newtok'(unicode:"term:\xbb", 'equiv'=>'term:', 'nows'=>1, 'match'=>'PGE::Exp::Anchor')
 
@@ -1244,7 +1246,7 @@ Parse a goal.
     failsub = mob.'new'(mob, 'grammar'=>'PGE::Exp::Subrule')
     failsub.'to'(pos)
     failsub['subname'] = 'FAILGOAL'
-    $S0 = goal.'text'()
+    $S0 = goal.'Str'()
     failsub['arg'] = $S0
     alt = mob.'new'(mob, 'grammar'=>'PGE::Exp::Alt')
     alt.'to'(pos)
@@ -1665,14 +1667,14 @@ Parse a modifier.
     .tailcall exp1.'perl6exp'(pad)
   with_lhs:
 
-    .local pmc lexscope, savescope, iter
+    .local pmc lexscope, savescope, it
     lexscope = pad['lexscope']
     savescope = new 'Hash'
-    iter = new 'Iterator', lexscope
+    it = iter lexscope
   iter_loop:
-    unless iter goto iter_end
-    $P1 = shift iter
-    $P2 = iter[$P1]
+    unless it goto iter_end
+    $P1 = shift it
+    $P2 = it[$P1]
     savescope[$P1] = $P2
     goto iter_loop
   iter_end:

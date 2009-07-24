@@ -175,6 +175,22 @@ GEN_CONFIGS := \
 #IF(has_opengl):    config/gen/call_list/opengl.in \
 #IF(has_glut):    $(SRC_DIR)/glut_callbacks.c \
     $(SRC_DIR)/core_pmcs.c \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/md2.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/md4.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/md5.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/ripemd160.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/sha.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/sha1.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/sha256.pmc \
+#IF(has_crypto):    $(SRC_DIR)/dynpmc/sha512.pmc \
+#IF(has_crypto):    t/dynpmc/md2.t \
+#IF(has_crypto):    t/dynpmc/md4.t \
+#IF(has_crypto):    t/dynpmc/md5.t \
+#IF(has_crypto):    t/dynpmc/ripemd160.t \
+#IF(has_crypto):    t/dynpmc/sha.t \
+#IF(has_crypto):    t/dynpmc/sha1.t \
+#IF(has_crypto):    t/dynpmc/sha256.t \
+#IF(has_crypto):    t/dynpmc/sha512.t \
     CFLAGS \
     $(IMCC_DIR)/CFLAGS \
     config_lib.pasm \
@@ -302,7 +318,6 @@ GEN_LIBRARY := \
     $(LIBRARY_DIR)/YAML/Parser/Syck.pbc \
     $(LIBRARY_DIR)/STM.pbc \
     $(LIBRARY_DIR)/libpcre.pbc \
-    $(LIBRARY_DIR)/Data/Replace.pbc \
     $(LIBRARY_DIR)/postgres.pbc
 
 # the dependencies of $(SRC_DIR)/jit_emit.h are done explicitly
@@ -413,6 +428,7 @@ INTERP_O_FILES := \
     $(SRC_DIR)/gc/generational_ms$(O) \
     $(SRC_DIR)/gc/incremental_ms$(O) \
     $(SRC_DIR)/gc/gc_ms$(O) \
+    $(SRC_DIR)/gc/gc_inf$(O) \
     $(SRC_DIR)/gc/mark_sweep$(O) \
     $(SRC_DIR)/gc/system$(O) \
     $(SRC_DIR)/global$(O) \
@@ -485,7 +501,6 @@ PARROT              := $(CUR_DIR)/@test_prog@$(EXE)
 MINIPARROT          := $(CUR_DIR)/miniparrot$(EXE)
 DIS                 := $(CUR_DIR)/pbc_disassemble$(EXE)
 PDUMP               := $(CUR_DIR)/pbc_dump$(EXE)
-PINFO               := $(CUR_DIR)/pbc_info$(EXE)
 PBCMERGE            := $(CUR_DIR)/pbc_merge$(EXE)
 PDB                 := $(CUR_DIR)/parrot_debugger$(EXE)
 PBC_TO_EXE          := $(CUR_DIR)/pbc_to_exe$(EXE)
@@ -496,7 +511,6 @@ PIRC                := $(CUR_DIR)/pirc$(EXE)
 INSTALLABLEPARROT   := $(CUR_DIR)/installable_parrot$(EXE)
 INSTALLABLEDIS      := $(CUR_DIR)/installable_pbc_disassemble$(EXE)
 INSTALLABLEPDUMP    := $(CUR_DIR)/installable_pbc_dump$(EXE)
-INSTALLABLEPINFO    := $(CUR_DIR)/installable_pbc_info$(EXE)
 INSTALLABLEPBCMERGE := $(CUR_DIR)/installable_pbc_merge$(EXE)
 INSTALLABLEPBCTOEXE := $(CUR_DIR)/installable_pbc_to_exe$(EXE)
 INSTALLABLEPDB      := $(CUR_DIR)/installable_parrot_debugger$(EXE)
@@ -589,7 +603,6 @@ all : \
     $(PBCMERGE) \
     $(PDB) \
     $(PDUMP) \
-    $(PINFO) \
 
 $(GEN_LIBRARY) : $(PARROT)
 
@@ -660,13 +673,11 @@ help :
 	@echo "  world:             'all' and 'parrot_utils'."
 	@echo "  installable:       same as 'world', but targets for installation"
 	@echo ""
-	@echo "  parrot_utils:      $(PDUMP), $(DIS), $(PINFO), $(PDB), $(PBCMERGE) and $(PBC_TO_EXE) $(PARROT_CONFIG)"
+	@echo "  parrot_utils:      $(PDUMP), $(DIS), $(PDB), $(PBCMERGE) and $(PBC_TO_EXE) $(PARROT_CONFIG)"
 	@echo " $(PDUMP):"
 	@echo "                     Parrot Dumper"
 	@echo " $(DIS):"
 	@echo "                     Parrot Disassembler"
-	@echo " $(PINFO):"
-	@echo "                     Information about Parrot Byte Code"
 	@echo " $(PDB):"
 	@echo "                     Parrot Debugger"
 	@echo " $(PBCMERGE):"
@@ -764,9 +775,9 @@ help :
 
 world : all parrot_utils
 
-parrot_utils : $(PDUMP) $(DIS) $(PINFO) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
+parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
 
-installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPINFO) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG)
+installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG)
 
 
 flags_dummy :
@@ -963,20 +974,6 @@ $(INSTALLABLEPDUMP) : $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) $(LIBPARRO
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 
-# pbc_info
-$(PINFO) : $(SRC_DIR)/pbc_info$(O) $(LIBPARROT)
-	$(LINK) @ld_out@$@ \
-    $(SRC_DIR)/pbc_info$(O) \
-    @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
-#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
-
-$(SRC_DIR)/pbc_info$(O) : $(INC_DIR)/parrot.h $(GEN_HEADERS)
-
-$(INSTALLABLEPINFO) : $(SRC_DIR)/pbc_info$(O) $(LIBPARROT)
-	$(LINK) @ld_out@$@ \
-    $(SRC_DIR)/pbc_info$(O) \
-    @rpath_lib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
-#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 #
 # Parrot Bytecode File Merger
@@ -1094,6 +1091,8 @@ $(SRC_DIR)/key$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/key.str $(SRC_DIR)/pmc/pmc_ke
 $(SRC_DIR)/gc/mark_sweep$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_private.h
 
 $(SRC_DIR)/gc/gc_ms$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_ms.c
+
+$(SRC_DIR)/gc/gc_inf$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_inf.c
 
 $(SRC_DIR)/gc/api$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_private.h
 
@@ -1536,23 +1535,6 @@ fulltest :
 	examples_tests \
 	distro_tests
 
-fulltest_all :
-	-@make@ testb
-#IF(cg_flag):	-@make@ testC
-	-@make@ testf
-#IF(cg_flag):	-@make@ testg
-#IF(jitcapable):	-@make@ testj
-	-@make@ testr
-	-@make@ testS
-	-@make@ src_tests
-	-@make@ run_tests
-	-@make@ perl_tests
-	-@make@ codetest
-	-@make@ manifest_tests
-	-@make@ examples_tests
-	-@make@ distro_tests
-	-@make@ benchmark_tests
-
 # bounds checking, slow core
 testb : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) -b $(RUNCORE_TEST_FILES)
@@ -1675,7 +1657,6 @@ prog-clean :
     $(INSTALLABLEPARROT) \
     $(INSTALLABLEDIS) \
     $(INSTALLABLEPDUMP) \
-    $(INSTALLABLEPINFO) \
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPBCTOEXE) \
     $(INSTALLABLEPDB) \
@@ -1684,7 +1665,6 @@ prog-clean :
     parrot_config$(EXE) parrot_config.c parrot_config$(O) parrot_config.pbc \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
-    $(SRC_DIR)/pbc_info$(O) $(PINFO) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
     $(PBCMERGE) $(SRC_DIR)/pbc_merge$(O) \
     $(DIS) $(SRC_DIR)/pbc_disassemble$(O)
@@ -1715,13 +1695,11 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(INSTALLABLEPARROT) \
     $(INSTALLABLEDIS) \
     $(INSTALLABLEPDUMP) \
-    $(INSTALLABLEPINFO) \
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPDB) \
     $(INSTALLABLECONFIG) \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
-    $(PINFO) $(SRC_DIR)/pbc_info$(O) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
     $(PBCMERGE) $(SRC_DIR)/pbc_merge$(O) \
     $(DIS) $(SRC_DIR)/pbc_disassemble$(O) \
@@ -1796,15 +1774,6 @@ test-clean :
     "t/stress/*.pbc" \
     "t/tools/*.pbc"
 	$(RM_F) \
-	"t/dynpmc/md2.t" \
-	"t/dynpmc/md4.t" \
-	"t/dynpmc/md5.t" \
-	"t/dynpmc/ripemd160.t" \
-	"t/dynpmc/sha.t" \
-	"t/dynpmc/sha1.t" \
-	"t/dynpmc/sha256.t" \
-	"t/dynpmc/sha512.t"
-	$(RM_F) \
     "t/src/*.c" \
     "t/src/*.pdb" \
     "t/src/*.manifest"
@@ -1828,7 +1797,6 @@ imcc-clean:
 # a failing step of cleaning, usually doesn't concern the following steps
 realclean : clean
 	-$(MAKE) compilers/pirc  realclean
-	-$(MAKE) src/dynpmc      realclean
 	$(RM_RF) \
     $(CONFIGURE_GENERATED_FILES) \
     blib \

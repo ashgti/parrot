@@ -37,22 +37,11 @@ specifically by including this C<PIR> code:
 
 =over 4
 
-=item Alternate GC configurations [eligible in 1.5]
-
-C<malloc>, C<malloc-trace> and C<libc> will be removed as potential
-options for the C<--gc> config option.
-
-L<https://trac.parrot.org/parrot/ticket/490>
-
 =back
 
 =head1 PMCS
 
 =over 4
-
-=item pair (dynamic PMC) [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/187>
 
 =item random [eligible in 1.1]
 
@@ -79,6 +68,12 @@ L<https://trac.parrot.org/parrot/ticket/679>
 
 L<https://trac.parrot.org/parrot/ticket/264>
 
+=item VTABLE nomenclature. [eligible in 1.5]
+
+Current list of VTABLE functions will be reviewed and cleaned.
+
+L<https://trac.parrot.org/parrot/ticket/866>
+
 =back
 
 =head1 Opcodes
@@ -87,18 +82,10 @@ L<https://trac.parrot.org/parrot/ticket/264>
 
 =item moved to dynop [eligible in 1.1]
 
-Parts or all of: bit.ops, debug.ops, io.ops, math.ops, obscure.ops, set.ops
+Parts or all of: bit.ops, debug.ops, io.ops, math.ops, set.ops
 (the obscure and rarely used parts), sys.ops.
 
 L<https://trac.parrot.org/parrot/ticket/449>
-
-=item experimental ops [eligible in 1.1]
-
-F<src/ops/experimental.ops> - only the C<trap> opcode remains
-
-=item myops [eligible in 1.1]
-
-L<https://trac.parrot.org/parrot/ticket/450>
 
 =item get_addr and set_addr [eligible in 1.5]
 
@@ -139,9 +126,7 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 =head1 Class Features
 
-=over 4
-
-=back
+[Nothing at this time.]
 
 =head1 PIR syntax
 
@@ -221,28 +206,6 @@ check in 1.4 or 2.0 for the new names.
 
 L<https://trac.parrot.org/parrot/ticket/443>
 
-=item parrot_new_pmc_hash [eligible in 1.5]
-
-This function will be removed.  parrot_new_hash should be used in its place.
-
-L<https://trac.parrot.org/parrot/ticket/494>
-
-=item Parrot_get_namespace_autobase [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/155>
-
-=item Parrot_find_global_k [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/156>
-
-=item Parrot_MMD_method_name [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/625>
-
-=item pobject_lives [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/664>
-
 =item functions in src/stack.c [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/702>
@@ -271,29 +234,23 @@ Here is a list of functions in this file which are currently being exported:
 
 =head1 Compiler tools
 
-=head2 Parrot Grammar Engine
+=head2 Parrot Grammar Engine (PGE)
 
 =over 4
 
-=item Deprecated rules and methods [eligible in 1.1]
+=item Action methods in rules
 
-The following "built-in" PGE rules and methods are from previous 
-versions of Synopsis 5.
+Per Synopsis 5, all regexes will have an implied {*} token at the
+end which cause invocation of an action method if a C<:action>
+object is supplied.
 
-Deprecated rules:
-    C<null>, C<fail>, C<sp>, C<lt>, C<gt>, C<dot>
+L<https://trac.parrot.org/parrot/ticket/843>
 
-Deprecated methods:
-    C<.text>, C<.item>, C<.result_object>
+=item C<find_key> method on PGE::Match [eligible in 1.5]
 
-L<https://trac.parrot.org/parrot/ticket/460>
+The C<find_key> method on PGE::Match objects will be removed.
 
-=item Stringification, numification [eligible in 1.1]
-
-C< PGE::Match > objects will stringify or numify based on
-the text that is matched, not the result object.
-
-L<https://trac.parrot.org/parrot/ticket/461>
+L<https://trac.parrot.org/parrot/ticket/851>
 
 =back
 
@@ -321,6 +278,14 @@ use a different detection mechanism or eliminate it altogether.
 
 L<https://trac.parrot.org/parrot/ticket/463>
 
+=item PAST::Val node generation [eligible in 1.5]
+
+The PAST::Compiler may generate the code for PAST::Val nodes
+(i.e., constants) at the beginning of the block (Parrot sub) instead
+of the location where they occur in the PAST tree.
+
+L<https://trac.parrot.org/parrot/ticket/868>
+
 =back
 
 =head2 Not Quite Perl (NQP)
@@ -334,6 +299,26 @@ object will no longer work.  The new syntax is to invoke the
 C<.ast> method on the Match object.
 
 L<https://trac.parrot.org/parrot/ticket/459>
+
+=item Quoted items [eligible in 1.5]
+
+Double-quoted strings will interpret unescaped $-names
+as interpolated variables in the string.  Bare slashes 
+will introduce regular expressions.  The C<< <foo bar> >>
+syntax will produce an array of strings instead of a single
+string.
+
+L<https://trac.parrot.org/parrot/ticket/837>
+
+=item C<< PIR q:to:<xyz> >> inline PIR [eligible in 1.5]
+
+The C<< PIR q:to:<xyz> >> form of inline PIR in NQP scripts is
+deprecated.  Use C< Q:PIR { ... } >  or C< Q:PIR {{ ... }} >
+instead.
+
+L<https://trac.parrot.org/parrot/ticket/842>
+
+=cut
 
 =back
 
@@ -385,6 +370,10 @@ L<https://trac.parrot.org/parrot/ticket/753>
 =item Cross-HLL library loading [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/754>
+
+=item OpenGL bindings and libraries [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/852>
 
 =back
 

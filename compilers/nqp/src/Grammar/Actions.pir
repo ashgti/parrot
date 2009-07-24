@@ -103,11 +103,11 @@
     past = $P0.'new'('node'=>match)
     $P1 = match['statement']
     if null $P1 goto iter_end
-    .local pmc iter
-    iter = new 'Iterator', $P1
+    .local pmc it
+    it = iter $P1
   iter_loop:
-    unless iter goto iter_end
-    $P2 = shift iter
+    unless it goto iter_end
+    $P2 = shift it
     $P2 = $P2.'ast'()
     past.'push'($P2)
     goto iter_loop
@@ -345,7 +345,7 @@
   not_quote:
     if key != 'heredoc' goto not_heredoc
     $P0 = match['text']
-    inline = $P0.'text'()
+    inline = $P0.'Str'()
   not_heredoc:
   make:
     $P1 = get_hll_global ['PAST'], 'Op'
@@ -410,11 +410,11 @@
     $P0 = $P0[0]
     if null $P0 goto param_end
     unless $P0 goto param_end
-    .local pmc iter
-    iter = new 'Iterator', $P0
+    .local pmc it
+    it = iter $P0
   param_loop:
-    unless iter goto param_end
-    $P1 = shift iter
+    unless it goto param_end
+    $P1 = shift it
     .local pmc parameter
     $P2 = $P1['parameter']
     parameter = $P2.'ast'()
@@ -516,11 +516,11 @@
     past = $P0.'ast'()
     $P1 = match['postfix']
     if null $P1 goto end
-    .local pmc iter, term
-    iter = new 'Iterator', $P1
+    .local pmc it, term
+    it = iter $P1
   iter_loop:
-    unless iter goto end
-    $P2 = shift iter
+    unless it goto end
+    $P2 = shift it
     term = past
     past = $P2.'ast'()
     past.'unshift'(term)
@@ -1211,11 +1211,11 @@
     past = $P0.'new'('node'=>match, 'name'=>name, 'opattr'=>opattr)
     $P1 = match.'list'()
     if null $P1 goto iter_end
-    .local pmc iter
-    iter = new 'Iterator', $P1
+    .local pmc it
+    it = iter $P1
   iter_loop:
-    unless iter goto iter_end
-    $P2 = shift iter
+    unless it goto iter_end
+    $P2 = shift it
     $I0 = $P2.'from'()
     $I1 = $P2.'to'()
     if $I0 == $I1 goto iter_loop

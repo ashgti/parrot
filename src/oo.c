@@ -620,33 +620,6 @@ Parrot_get_vtable_name(SHIM_INTERP, INTVAL idx)
 
 /*
 
-=item C<const char* Parrot_MMD_method_name(PARROT_INTERP, INTVAL idx)>
-
-Return the method name for the given MMD enum.
-
-{{**DEPRECATE**}}
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_PURE_FUNCTION
-PARROT_CAN_RETURN_NULL
-const char*
-Parrot_MMD_method_name(SHIM_INTERP, INTVAL idx)
-{
-    ASSERT_ARGS(Parrot_MMD_method_name)
-    PARROT_ASSERT(idx >= 0);
-
-    if (idx >= MMD_USER_FIRST)
-        return NULL;
-
-    return Parrot_mmd_func_names[idx];
-}
-
-/*
-
 =item C<static INTVAL fail_if_type_exists(PARROT_INTERP, PMC *name)>
 
 This function throws an exception if a PMC or class with the same name *
@@ -1250,7 +1223,12 @@ C3_merge(PARROT_INTERP, ARGIN(PMC *merge_list))
 
 =item C<PMC* Parrot_ComputeMRO_C3(PARROT_INTERP, PMC *_class)>
 
-Computes the C3 linearization for the given class.
+Computes the C3 linearization for the given class. C3 is an algorithm to
+compute the method resolution order (MRO) of a class that is inheriting
+from multiple parent classes (multiple inheritance). C3 was first described
+by Barrett et al at:
+
+F<http://192.220.96.201/dylan/linearization-oopsla96.html>
 
 =cut
 

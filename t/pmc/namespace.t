@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 67;
+use Parrot::Test tests => 68;
 use Parrot::Config;
 
 =head1 NAME
@@ -1699,21 +1699,24 @@ pir_output_is( <<'CODE', <<OUT, "iterate through a NameSpace PMC, RT #39978" );
      $P1 = 0
      set_root_global [ "DUMMY"; "X"; "Y" ], "T0", $P0
 
-     .local pmc dummy_x_y_ns, iter
+     .local pmc dummy_x_y_ns, it, res
      dummy_x_y_ns = get_root_namespace [ "DUMMY"; "X"; "Y" ]
-     iter = new ['Iterator'], dummy_x_y_ns
+     it   = iter dummy_x_y_ns
+     res  = new ['ResizablePMCArray']
 loop:
-     unless iter goto loop_end
-     $S0 = shift iter
-     print $S0
-     print "\n"
+     unless it goto loop_end
+     $S0 = shift it
+     push res, $S0
      goto loop
 loop_end:
 
+     res.'sort'()
+     $S0 = join ' ', res
+     say $S0
+
 .end
 CODE
-Explosion
-T0
+Explosion T0
 OUT
 
 pir_error_output_like( <<'CODE', <<OUT, "NameSpace with no class, RT #55620" );
@@ -1730,17 +1733,24 @@ pir_output_is( <<'CODE', <<OUT, "iterate through a NameSpace PMC" );
 .namespace [ 'bar' ]
 
 .sub 'main' :main
+    .local pmc res
+    res = new ['ResizablePMCArray']
+
     $P0 = get_namespace
     say $P0
     $I0 = elements $P0
     say $I0
-    new $P1 , 'Iterator', $P0
+    $P1 = iter $P0
   L1:
     unless $P1 goto L2
     $P2 = shift $P1
-    say $P2
+    $S0 = $P2
+    push res, $S0
     goto L1
   L2:
+    res.'sort'()
+    $S0 = join "\n", res
+    say $S0
     say 'OK'
 .end
 
@@ -1750,8 +1760,8 @@ pir_output_is( <<'CODE', <<OUT, "iterate through a NameSpace PMC" );
 CODE
 bar
 2
-main
 foo
+main
 OK
 OUT
 
@@ -1796,6 +1806,35 @@ CODE
 /
 ok 1
 Could not find non-existent sub nok/
+OUT
+
+
+pir_output_is( <<'CODE', <<'OUT', 'HLL_map on namespace', todo => 'TT #867');
+.HLL 'tcl'
+
+.sub 'foo' :anon :init
+  $P1 = get_class 'NameSpace'
+  $P2 = subclass $P1, 'BSNS'
+  $P0 = getinterp
+  $P0.'hll_map'($P1, $P2)
+.end
+
+.namespace ['a';'b';'c']
+
+.sub 'hi'
+  noop
+.end
+
+.namespace []
+
+.sub 'blah' :main
+  $P1 = get_hll_namespace ['a';'b';'c']
+  $S0 = typeof $P1
+  print 'ok 1 - '
+  say $S0
+.end
+CODE
+ok 1 - BSNS
 OUT
 
 # Local Variables:

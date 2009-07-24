@@ -322,12 +322,11 @@ Returns a hashed value for an integer key (passed as a void pointer, sadly).
 PARROT_WARN_UNUSED_RESULT
 PARROT_PURE_FUNCTION
 size_t
-key_hash_int(SHIM_INTERP, ARGIN(const void *value), size_t seed)
+key_hash_int(SHIM_INTERP, ARGIN_NULLOK(const void *value), size_t seed)
 {
     ASSERT_ARGS(key_hash_int)
     return (size_t)value ^ seed;
 }
-
 
 /*
 
@@ -349,7 +348,6 @@ int_compare(SHIM_INTERP, ARGIN_NULLOK(const void *a), ARGIN_NULLOK(const void *b
     ASSERT_ARGS(int_compare)
     return a != b;
 }
-
 
 /*
 
@@ -717,13 +715,13 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
 {
     ASSERT_ARGS(expand_hash)
     HashBucket  **old_bi, **new_bi;
-    HashBucket   *bs, *b;
+    HashBucket   *bs, *b, *new_mem;
+    HashBucket   *old_offset = (HashBucket *)((char *)hash + sizeof (Hash));
 
-    void * const  old_mem  = hash->bs;
-    HashBucket *old_offset = (HashBucket*)((char*)hash + sizeof (Hash));
-    const UINTVAL old_size = hash->mask + 1;
-    const UINTVAL new_size = old_size << 1;
-    const UINTVAL old_nb   = N_BUCKETS(old_size);
+    void * const  old_mem    = hash->bs;
+    const UINTVAL old_size   = hash->mask + 1;
+    const UINTVAL new_size   = old_size << 1;
+    const UINTVAL old_nb     = N_BUCKETS(old_size);
     size_t        offset, i, new_loc;
 
     /*
@@ -738,7 +736,6 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
     */
 
     /* resize mem */
-    HashBucket *new_mem;
     if (old_offset != old_mem) {
         /* This buffer has been reallocated at least once before. */
         new_mem = (HashBucket *)mem_sys_realloc(old_mem, HASH_ALLOC_SIZE(new_size));
@@ -757,11 +754,11 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
          | new_mem                 | hash->bi
     */
     bs     = new_mem;
-    old_bi = (HashBucket**) (bs + old_nb);
-    new_bi = (HashBucket**) (bs + N_BUCKETS(new_size));
+    old_bi = (HashBucket **)(bs + old_nb);
+    new_bi = (HashBucket **)(bs + N_BUCKETS(new_size));
 
     /* things can have moved by this offset */
-    offset = (char*)new_mem - (char*)old_mem;
+    offset = (char *)new_mem - (char *)old_mem;
 
     /* relocate the bucket index */
     mem_sys_memmove(new_bi, old_bi, old_size * sizeof (HashBucket *));
@@ -772,7 +769,7 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
     hash->mask = new_size - 1;
 
     /* clear freshly allocated bucket index */
-    memset(new_bi + old_size, 0, sizeof (HashBucket *) * old_size);
+    memset(new_bi + old_size, 0, sizeof (HashBucket *) * (new_size - old_size));
 
     /*
      * reloc pointers - this part would be also needed, if we
@@ -812,12 +809,11 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
 
     /* add new buckets to free_list in reverse order
      * lowest bucket is top on free list and will be used first */
-    for (i = 0, b = (HashBucket*)new_bi - 1; i < old_nb; ++i, --b) {
+    for (i = 0, b = (HashBucket *)new_bi - 1; i < old_nb; ++i, --b) {
         b->next         = hash->free_list;
         b->key          = b->value         = NULL;
         hash->free_list = b;
     }
-
 }
 
 
@@ -825,7 +821,7 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
 
 =item C<Hash* parrot_new_hash(PARROT_INTERP)>
 
-Creates a new Parrot STRING hash in C<hptr>.
+Creates a new Parrot STRING hash.
 
 =cut
 
@@ -842,26 +838,6 @@ parrot_new_hash(PARROT_INTERP)
             Hash_key_type_STRING,
             STRING_compare,
             (hash_hash_key_fn)key_hash_STRING);
-}
-
-
-/*
-
-=item C<void parrot_new_pmc_hash(PARROT_INTERP, PMC *container)>
-
-Creates a new Parrot STRING hash in C<container>.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-parrot_new_pmc_hash(PARROT_INTERP, ARGOUT(PMC *container))
-{
-    ASSERT_ARGS(parrot_new_pmc_hash)
-    Hash * const hash = parrot_new_hash(interp);
-    VTABLE_set_pointer(interp, container, hash);
 }
 
 
@@ -984,7 +960,7 @@ parrot_create_hash(PARROT_INTERP, PARROT_DATA_TYPE val_type, Hash_key_type hkey_
      * - use the bucket store and bi inside this structure
      * - when reallocate copy this part
      */
-    bp = (HashBucket *)((char*)alloc + sizeof (Hash));
+    bp = (HashBucket *)((char *)alloc + sizeof (Hash));
     hash->free_list = NULL;
 
     /* fill free_list from hi addresses so that we can use
@@ -1200,7 +1176,7 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 HashBucket *
-parrot_hash_get_bucket(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(const void *key))
+parrot_hash_get_bucket(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(const void *key))
 {
     ASSERT_ARGS(parrot_hash_get_bucket)
 
@@ -1216,7 +1192,7 @@ parrot_hash_get_bucket(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(const void 
             HashBucket *bucket = hash->bs + i;
 
             /* the hash->compare cost is too high for this fast path */
-            if (bucket->key && bucket->key == key)
+            if (bucket->key == key)
                 return bucket;
         }
     }
@@ -1299,11 +1275,25 @@ PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
 HashBucket*
-parrot_hash_put(PARROT_INTERP, ARGMOD(Hash *hash), ARGIN(void *key), ARGIN_NULLOK(void *value))
+parrot_hash_put(PARROT_INTERP, ARGMOD(Hash *hash),
+        ARGIN_NULLOK(void *key), ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(parrot_hash_put)
     const UINTVAL hashval = (hash->hash_val)(interp, key, hash->seed);
     HashBucket   *bucket  = hash->bi[hashval & hash->mask];
+
+    /* Very complex assert that we'll not put non-constant stuff into constant hash */
+    PARROT_ASSERT(
+        PMC_IS_NULL(hash->container)
+        || !(PObj_constant_TEST(hash->container))
+        || (
+            (
+                !(hash->key_type == Hash_key_type_STRING)
+                || PObj_constant_TEST((PObj *)key))
+            && (
+                !((hash->entry_type == enum_type_PMC) || (hash->entry_type == enum_type_STRING))
+                || PObj_constant_TEST((PObj *)value)))
+        || !"Use non-constant key or value in constant hash");
 
     while (bucket) {
         /* store hash_val or not */

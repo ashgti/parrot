@@ -20,8 +20,6 @@ my @steps = qw(
     auto::gcc
     auto::glibc
     auto::backtrace
-    auto::fink
-    auto::macports
     auto::msvc
     auto::attributes
     auto::warnings
@@ -52,6 +50,7 @@ my @steps = qw(
     auto::socklen_t
     auto::neg_0
     auto::env
+    auto::thread
     auto::gmp
     auto::readline
     auto::gdbm

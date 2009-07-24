@@ -21,8 +21,9 @@ well.
 .sub main :main
     .include 'test_more.pir'
     .include 'except_types.pasm'
+    .include 'datatypes.pasm'
 
-    plan(146)
+    plan(161)
 
     initial_hash_tests()
     more_than_one_hash()
@@ -67,6 +68,9 @@ well.
     unicode_keys_register_rt_39249()
     unicode_keys_literal_rt_39249()
 
+    integer_keys()
+    value_types_convertion()
+    elements_in_hash()
 .end
 
 .sub initial_hash_tests
@@ -1200,44 +1204,53 @@ lp:
   thash["c"] = "d"
   thash["e"] = "f"
 
-  .local pmc iter
-  iter = new ['Iterator'], thash
-  iter = .ITERATE_FROM_START
+  .local pmc it
+  it = iter thash
+  it = .ITERATE_FROM_START
 
-  .local string key
+  .local pmc keys, key
+  keys = new ['ResizablePMCArray']
 
   # go through the hash, print out all the keys: should be a c and e
 preit_loop:
-  unless iter goto preit_end
+  unless it goto preit_end
 
-  key = shift iter
-  result .= key
+  key = shift it
+  $S0 = key
+  push keys, $S0
 
   branch preit_loop
 preit_end:
 
+  keys.'sort'()
+  result = join '', keys
   is( result, 'ace', 'iterated through keys successfully' )
 
   # get rid of the c element?
   delete thash["c"]
+  keys = new ['ResizablePMCArray']
 
   # what do we have after deletion?
   result = ""
 
-  iter = new ['Iterator'], thash
-  iter = .ITERATE_FROM_START
+  it = iter thash
+  it = .ITERATE_FROM_START
 
   # go through the hash, print out all the keys... I believe it should be a and e?
   # it actually outputs a, c and e.
 postit_loop:
-  unless iter goto postit_end
+  unless it goto postit_end
 
-  key = shift iter
-  result .= key
+  key = shift it
+  $S0 = key
+  push keys, $S0
+
 
   branch postit_loop
 postit_end:
 
+  keys.'sort'()
+  result = join '', keys
   is( result, 'ae', 'the c key was no longer iterated over' )
 .end
 
@@ -1260,6 +1273,100 @@ postit_end:
   $S2 = unicode:"\u7777"
   $S1 = $P1[$S2]
   is( $S1, 'ok', 'literal unicode key lookup via var' )
+.end
+
+# Switch to use integer keys instead of strings.
+.sub integer_keys
+    .include "hash_key_type.pasm"
+    .local pmc hash
+    hash = new ['Hash']
+    hash = .Hash_key_type_int
+
+    hash[0]   = 'foo'
+    hash[42]  = 'bar'
+    $S0       = 'foo'
+    hash[$S0] = 'BAZ'
+
+    $S0       = '42 parrots'
+    hash[$S0] = 'Wins!'
+
+    # 'foo' numifies to '0'. So check it
+    $S0 = hash[0]
+    is($S0, 'BAZ', 'Key was numified')
+
+    # '42 parrots' numifies to '42'. So check it
+    $S0 = hash[42]
+    is($S0, 'Wins!', 'Key was numified again')
+.end
+
+# Check that we can set various value types and they properly converted
+.sub value_types_convertion
+    .local pmc hash
+    hash = new ['Hash']
+
+    # PMC is first value type
+    hash.'set_value_type'(.DATATYPE_PMC)
+    $P0 = new 'Env' # arbitary choice. Just to prevent possible casting.
+    hash['env'] = $P0
+    hash['foo'] = 42
+    hash['bar'] = 21285.06
+    hash['baz'] = 'forty two'
+
+    # Check that original value preserved
+    $P1 = hash['env']
+    $I0 = isa $P1, 'Env'
+    ok($I0, 'Env PMC preserved')
+    $I0 = hash['foo']
+    is($I0, 42, 'Intval preserved')
+    $N0 = hash['bar']
+    is($N0, 21285.06, 'Number preserved')
+    $S0 = hash['baz']
+    is($S0, 'forty two', 'String preserved')
+
+    # Clear the Hash and set INTVAL as stored values.
+    hash.'set_value_type'(.DATATYPE_INTVAL)
+    hash['foo'] = 42            # Use as-is
+    hash['bar'] = 21285.06      # Truncate to int
+    hash['baz'] = 'forty two'   # Cast to int
+
+    $I0 = hash['foo']
+    is($I0, 42, 'Intval preserved with datatype int')
+    $I0 = hash['bar']
+    is($I0, 21285, 'Floatval trunkated to int')
+    $I0 = hash['baz']
+    is($I0, 0, 'String casted to int')
+
+    # TODO Add tests for String.
+.end
+
+# Check number of elements in Hash
+.sub 'elements_in_hash'
+    .local pmc hash
+    hash = new ['Hash']
+
+    $I0 = elements hash
+    is($I0, 0, "Empty hash has 0 items")
+
+    hash['foo'] = 'FOO'
+    $I0 = elements hash
+    is($I0, 1, "Hash has 1 item")
+
+    hash['foo'] = 'BAR'
+    $I0 = elements hash
+    is($I0, 1, "Hash still has 1 item after update")
+
+    hash['bar'] = 'BAR'
+    $I0 = elements hash
+    is($I0, 2, "Hash has 2 items")
+
+    delete hash['foo']
+    $I0 = elements hash
+    is($I0, 1, "Hash has 1 item after delete")
+
+    delete hash['bar']
+    $I0 = elements hash
+    is($I0, 0, "Hash has 0 items after delete")
+
 .end
 
 # Local Variables:

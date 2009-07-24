@@ -61,10 +61,6 @@ sub runstep {
         default         => defined $conf->data->get('glibc') ? '' : '-lintl',
     } );
 
-    # On OS X check the presence of the gettext header in the standard
-    # Fink location.
-    $self->_handle_darwin_for_fink($conf, $osname, 'libintl.h');
-
     $conf->cc_gen('config/auto/gettext/gettext_c.in');
     eval { $conf->cc_build( q{}, $extra_libs ); };
     my $has_gettext = 0;

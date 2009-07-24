@@ -173,7 +173,7 @@ sub start_new_file {
     my $filedir = File::Spec->catpath($volume, $dir);
     unless (-d $filedir) {
         print "creating $filedir\n";
-        mkpath($filedir);
+        mkpath( [ $filedir ], 0, 0777 );
     }
     print "creating $filepath\n";
     open $fh, '>', $filepath;
@@ -1228,8 +1228,11 @@ __src/ops/@lclang@.ops__
  * Copyright (C) 20xx, Parrot Foundation.
  */
 
+BEGIN_OPS_PREAMBLE
+
 #include "parrot/dynext.h"
-VERSION = PARROT_VERSION;
+
+END_OPS_PREAMBLE
 
 /* Op to get the address of a PMC. */
 inline op @lclang@_pmc_addr(out INT, invar PMC) :base_core {
@@ -1256,11 +1259,11 @@ say.pir -- simple implementation of a say function
 
 .sub 'say'
     .param pmc args            :slurpy
-    .local pmc iter
-    iter = new 'Iterator', args
+    .local pmc it
+    it = iter args
   iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
+    unless it goto iter_end
+    $P0 = shift it
     print $P0
     goto iter_loop
   iter_end:
