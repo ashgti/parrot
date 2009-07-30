@@ -21,10 +21,7 @@ here.
     .include 'test_more.pir'
 
     plan(1)
-    push_eh cant_instantiate
     $P0 = new 'Handle'
-    print "not "
-  cant_instantiate:
     say "ok 1"
 .end
 
