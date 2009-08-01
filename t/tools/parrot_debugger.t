@@ -192,8 +192,6 @@ pdb_output_like( <<PIR, "pir","t 2\np I", qr/I0 = 242\s*I1 = 1982/, 'print all i
 .end
 PIR
 
-TODO: {
-    local $TODO = 'TT#889 - deleting breakpoints does not currently work';
 pdb_output_like( <<PASM, "pasm", "b\n d 1", qr/Breakpoint 1 deleted/, 'Delete a breakpoint');
     set I0, 242
 PASM
@@ -203,8 +201,6 @@ pdb_output_like( <<PIR, "pir", "b\nd 1", qr/Breakpoint 1 deleted/, 'Delete a bre
     \$I0 = 242
 .end
 PIR
-
-}
 
 pdb_output_like( <<PIR, "pir", "l", qr/\.sub main :main/, 'list source');
 .sub main :main

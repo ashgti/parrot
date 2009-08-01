@@ -2056,6 +2056,7 @@ PDB_delete_breakpoint(PARROT_INTERP, ARGIN(const char *command))
     ASSERT_ARGS(PDB_delete_breakpoint)
     PDB_breakpoint_t * const breakpoint = PDB_find_breakpoint(interp, command);
     const PDB_line_t *line;
+    long bp_id;
 
     if (breakpoint) {
         if (!interp->pdb->file)
@@ -2086,9 +2087,11 @@ PDB_delete_breakpoint(PARROT_INTERP, ARGIN(const char *command))
         else {
             interp->pdb->breakpoint = NULL;
         }
-
+        bp_id = breakpoint->id;
         /* Kill the breakpoint */
         mem_sys_free(breakpoint);
+
+        Parrot_io_eprintf(interp->pdb->debugger, "Breakpoint %li deleted\n", bp_id);
     }
 }
 
