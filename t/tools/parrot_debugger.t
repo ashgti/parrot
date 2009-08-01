@@ -206,7 +206,21 @@ PIR
 
 }
 
-BEGIN { $tests += 31 }
+pdb_output_like( <<PIR, "pir", "l", qr/\.sub main :main/, 'list source');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
+pdb_output_like( <<PIR, "pir", "l 2", qr/N4 = 6.28/, 'list source with start line');
+.sub main :main
+    \$N3 = 3.14
+    \$N4 = 6.28
+    print "\\n"
+.end
+PIR
+
+BEGIN { $tests += 33 }
 
 BEGIN { plan tests => $tests; }
 
