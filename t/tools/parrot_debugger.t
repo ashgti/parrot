@@ -216,7 +216,13 @@ pdb_output_like( <<PIR, "pir", "l 2", qr/N4 = 6.28/, 'list source with start lin
 .end
 PIR
 
-BEGIN { $tests += 33 }
+pdb_output_like( <<PIR, "pir", "d 42", qr/No breakpoint number 42/, 'delete invalid breakpoint');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
+BEGIN { $tests += 34 }
 
 BEGIN { plan tests => $tests; }
 
