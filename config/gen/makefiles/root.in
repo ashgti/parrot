@@ -2281,6 +2281,12 @@ apilist: $(SRC_DIR)/core_pmcs.c
 malloclist: $(SRC_DIR)/core_pmcs.c
 	$(PERL) $(BUILD_TOOLS_DIR)/headerizer.pl --macro=PARROT_MALLOC $(HEADERIZER_O_FILES)
 
+DEPENDENCY_FILES := $(subst $(O),.c,$(HEADERIZER_O_FILES))
+
+# http://www.xfree86.org/current/makedepend.1.html
+depend:
+	makedepend -fconfig/gen/makefiles/depend.in -o'$$(O)' -- $(CFLAGS) -- $(DEPENDENCY_FILES)
+
 # Local variables:
 #   mode: makefile
 # End:
