@@ -28,6 +28,7 @@ sub _init {
     $data{result}      = q{};
     $data{makefiles}   = {
         'Makefile' => { SOURCE => 'config/gen/makefiles/root.in' },
+        'depend.mk' => { SOURCE => 'config/gen/makefiles/depend.in' },
         'ext/Makefile' => { SOURCE => 'config/gen/makefiles/ext.in', },
 
         'ext/Parrot-Embed/Makefile.PL' => {

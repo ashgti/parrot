@@ -2287,6 +2287,11 @@ DEPENDENCY_FILES := $(subst $(O),.c,$(HEADERIZER_O_FILES))
 depend:
 	makedepend -fconfig/gen/makefiles/depend.in -o'$$(O)' -- $(CFLAGS) -- $(DEPENDENCY_FILES)
 
+makedeps:
+	tools/dev/makedeps.pl $(HEADERIZER_O_FILES) > depend.mk
+
+include depend.mk
+
 # Local variables:
 #   mode: makefile
 # End:
