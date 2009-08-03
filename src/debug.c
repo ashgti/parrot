@@ -3242,9 +3242,16 @@ C<eval>s an instruction.
 void
 PDB_eval(PARROT_INTERP, ARGIN(const char *command))
 {
+    opcode_t *run;
     ASSERT_ARGS(PDB_eval)
+    TRACEDEB_MSG("PDB_eval");
     /* This code is almost certainly wrong. The Parrot debugger needs love. */
-    opcode_t *run = PDB_compile(interp, command);
+
+    if(!strlen(command)) {
+        fprintf(stderr, "Must give a command to eval\n");
+        return;
+    }
+    run = PDB_compile(interp, command);
 
     if (run)
         DO_OP(run, interp);
