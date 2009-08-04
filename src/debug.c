@@ -3251,7 +3251,9 @@ PDB_eval(PARROT_INTERP, ARGIN(const char *command))
         fprintf(stderr, "Must give a command to eval\n");
         return;
     }
+    TRACEDEB_MSG("PDB_eval  compiling code");
     run = PDB_compile(interp, command);
+    TRACEDEB_MSG("PDB_eval running compiled code");
 
     if (run)
         DO_OP(run, interp);
@@ -3284,13 +3286,16 @@ PDB_compile(PARROT_INTERP, ARGIN(const char *command))
             interp->iglobals, IGLOBALS_COMPREG_HASH);
     PMC        *compiler = VTABLE_get_pmc_keyed_str(interp, compreg_hash, key);
 
+    TRACEDEB_MSG("PDB_compile");
     if (!VTABLE_defined(interp, compiler)) {
         fprintf(stderr, "Couldn't find PASM compiler");
         return NULL;
     }
 
+    TRACEDEB_MSG("PDB_compile creating code string");
     buf = Parrot_sprintf_c(interp, "%s%s", command, end);
 
+    TRACEDEB_MSG("PDB_compile invoking code");
     return VTABLE_invoke(interp, compiler, buf);
 }
 
