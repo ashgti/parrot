@@ -20,7 +20,7 @@ which stores FLOATVALs. It uses Float PMCs to do all necessary conversions.
 
 */
 
-pmclass ResizableFloatArray extends FixedFloatArray need_ext provides array {
+pmclass ResizableFloatArray extends FixedFloatArray need_ext auto_attrs provides array {
     ATTR INTVAL resize_threshold; /* max size before array needs resizing */
 
 
@@ -35,9 +35,7 @@ Initializes this array.
 
 */
     VTABLE void init() {
-        Parrot_ResizableFloatArray_attributes* attrs =
-            mem_allocate_zeroed_typed(Parrot_ResizableFloatArray_attributes);
-        PMC_data(SELF) = attrs;
+        SUPER();
     }
 
 /*

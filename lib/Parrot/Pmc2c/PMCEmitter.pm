@@ -464,7 +464,8 @@ sub vtable_decl {
         NULL,       /* mro */
         NULL,       /* attribute_defs */
         NULL,       /* ro_variant_vtable */
-        $methlist
+        $methlist,
+	0           /* attr size */
     };
 ENDOFCODE
     return $cout;
@@ -601,6 +602,12 @@ EOC
 
 EOC
 
+    if ( @{$attributes} && $self->{flags}{auto_attrs} ) {
+    $cout .= <<"EOC";
+        vt->attr_size = sizeof(Parrot_${classname}_attributes);
+EOC
+    }
+
     # init vtable slot
     if ( $self->is_dynamic ) {
         $cout .= <<"EOC";
@@ -640,6 +647,14 @@ EOC
             vt_${k}                 = Parrot_${classname}_${k}_get_vtable(interp);
             vt_${k}->base_type      = $enum_name;
             vt_${k}->flags          = $k_flags;
+EOC
+        if ( @{$attributes}  && $self->{flags}{auto_attrs} ) {
+            $cout .= <<"EOC";
+            vt_${k}->attr_size = sizeof(Parrot_${classname}_attributes);
+EOC
+            }
+        $cout .= <<"EOC";
+
             vt_${k}->attribute_defs = attr_defs;
 
             vt_${k}->base_type           = entry;
