@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2002-2008, Parrot Foundation.
+ * Copyright (C) 2002-2009, Parrot Foundation.
  */
 
 /*
- * debug.h
+ * debugger.h
  *
  * SVN Info
  *    $Id$

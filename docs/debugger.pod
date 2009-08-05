@@ -395,7 +395,7 @@ C<PDB_run_command> function and go down from there for the real meat.
 
 C<Parrot_debug>, the function which launches the debugger, is implemented here.
 
-=item include/parrot/debug.h
+=item include/parrot/debugger.h
 
 This defines all the PDB structures, which hold data used by the debugger.
 
