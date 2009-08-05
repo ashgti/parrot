@@ -523,7 +523,7 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     char unknown_sub[]  = "(unknown sub)";
     char unknown_file[] = "(unknown file)";
     static INTVAL first_init = 1;
-    FILE *prof_fd = fopen("parrot.pprof", "a");
+    FILE *prof_fd;
 
     /* avoid clobbering the file from an inner runloop */
     if (first_init) {
