@@ -498,9 +498,6 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     return pc;
 }
 
-#undef code_start
-#undef code_end
-
 
 /*
 
@@ -519,37 +516,74 @@ opcode_t *
 runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profile_core)
-    RunProfile * const profile = interp->profile;
-    const opcode_t     old_op  = profile->cur_op;
 
-    /* if reentering the runloop, remember old op and calc time 'til now */
-    if (old_op)
-        profile->data[old_op].time +=
-            Parrot_floatval_time() - profile->starttime;
+    Parrot_Context_info info;
+    struct timespec preop, postop;
+    long long op_time;
+    char unknown_sub[]  = "(unknown sub)";
+    char unknown_file[] = "(unknown file)";
 
-    while (pc) {/* && pc >= code_start && pc < code_end) */
-        opcode_t cur_op;
+    FILE *prof_fd = fopen("parrot.pprof", "w");
 
-        CONTEXT(interp)->current_pc      = pc;
-        profile->cur_op                  = cur_op = *pc + PARROT_PROF_EXTRA;
-        profile->starttime               = Parrot_floatval_time();
-        profile->data[cur_op].numcalls++;
+    if (!prof_fd) {
+        fprintf(stderr, "unable to open parrot_prof.out for writing");
+        exit(1);
+    }
 
+    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+    fprintf(prof_fd, "F:%s\n", info.file->strstart);
+    fprintf(prof_fd, "S:%s\n", info.subname->strstart);
+
+    while (pc) {
+
+        char *file_preop, *file_postop;
+        char *sub_preop,  *sub_postop;
+
+        if (pc < code_start || pc >= code_end) {
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                    "attempt to access code outside of current code segment");
+        }
+
+        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+        file_preop = info.file->strstart;
+        sub_preop  = info.subname->strstart;
+
+        CONTEXT(interp)->current_pc = pc;
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &preop);
         DO_OP(pc, interp);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
 
-        /* profile->cur_op may be different, if exception was thrown */
-        profile->data[profile->cur_op].time +=
-            Parrot_floatval_time() - profile->starttime;
+        op_time = (postop.tv_sec * 1000000000 + postop.tv_nsec) -
+                  (preop.tv_sec  * 1000000000 + preop.tv_nsec);
+
+        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+        file_postop = info.file->strstart;
+        sub_postop  = info.subname->strstart;
+
+        if (!file_preop)  file_preop  = unknown_file;
+        if (!file_postop) file_postop = unknown_file;
+        if (!sub_preop)   file_preop  = unknown_sub;
+        if (!sub_preop)   file_postop = unknown_sub;
+
+        if (pc) {
+            if (strcmp(file_preop, file_postop))
+                fprintf(prof_fd, "F:%s\n", file_postop);
+            if (strcmp(sub_preop, sub_postop))
+                fprintf(prof_fd, "S:%s\n", sub_postop);
+            fprintf(prof_fd, "%d:%lli:%d:%s\n",
+                    info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
+                    (interp->op_info_table)[*pc].name);
+        }
     }
 
-    if (old_op) {
-        /* old opcode continues */
-        profile->starttime = Parrot_floatval_time();
-        profile->cur_op    = old_op;
-    }
-
+    fclose(prof_fd);
     return pc;
+
+
 }
+
+#undef code_start
+#undef code_end
 
 /*
 

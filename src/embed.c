@@ -30,9 +30,6 @@ This file implements the Parrot embedding interface.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static FLOATVAL calibrate(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 PARROT_CANNOT_RETURN_NULL
 PARROT_OBSERVER
 static const char * op_name(PARROT_INTERP, int k)
@@ -42,9 +39,6 @@ static void print_constant_table(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void print_debug(PARROT_INTERP, SHIM(int status), SHIM(void *p))
-        __attribute__nonnull__(1);
-
-static void print_profile(PARROT_INTERP, SHIM(int status), SHIM(void *p))
         __attribute__nonnull__(1);
 
 static int prof_sort_f(ARGIN(const void *a), ARGIN(const void *b))
@@ -60,15 +54,11 @@ static PMC* setup_argv(PARROT_INTERP, int argc, ARGIN(char **argv))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_calibrate __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_op_name __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_print_constant_table __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_print_debug __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_print_profile __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_prof_sort_f __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(a) \
@@ -723,122 +713,6 @@ op_name(PARROT_INTERP, int k)
 
 /*
 
-=item C<static FLOATVAL calibrate(PARROT_INTERP)>
-
-With this calibration, reported times of C<parrot -p> almost match those
-measured with time C<parrot -R bounds>.
-
-=cut
-
-*/
-
-static FLOATVAL
-calibrate(PARROT_INTERP)
-{
-    ASSERT_ARGS(calibrate)
-    opcode_t code[] = { 1 };      /* noop */
-    opcode_t *pc    = code;
-    const size_t   count  = 1000000;
-    size_t   n      = count;
-    const FLOATVAL start  = Parrot_floatval_time();
-    FLOATVAL now    = start;
-
-    /* op timing isn't free; it requires at least one time fetch per op */
-    for (; n; --n) {
-        pc = (interp->op_func_table[*code])(pc, interp);
-        now = Parrot_floatval_time();
-    }
-
-    return (now - start) / (FLOATVAL) count;
-}
-
-
-/*
-
-=item C<static void print_profile(PARROT_INTERP, int status, void *p)>
-
-Prints out a profile listing.
-
-=cut
-
-*/
-
-static void
-print_profile(PARROT_INTERP, SHIM(int status), SHIM(void *p))
-{
-    ASSERT_ARGS(print_profile)
-    RunProfile * const profile = interp->profile;
-
-    if (profile) {
-        UINTVAL        j;
-        int            k, jit;
-        UINTVAL        op_count   = 0;
-        UINTVAL        call_count = 0;
-        FLOATVAL       sum_time   = 0.0;
-        const FLOATVAL empty      = calibrate(interp);
-
-        Parrot_io_printf(interp,
-                   "Calibration: overhead = %.6f ms/op\n", 1000.0 * empty);
-
-        Parrot_io_printf(interp,
-                   " Code J Name                         "
-                   "Calls  Total/s       Avg/ms\n");
-
-        for (j = 0; j < interp->op_count + PARROT_PROF_EXTRA; j++) {
-            const UINTVAL n     = profile->data[j].numcalls;
-            profile->data[j].op = j;
-
-            if (j >= PARROT_PROF_EXTRA) {
-                profile->data[j].time -= empty * n;
-
-                /* faster than noop */
-                if (profile->data[j].time < 0.0)
-                    profile->data[j].time = 0.0;
-            }
-        }
-
-        qsort(profile->data, interp->op_count + PARROT_PROF_EXTRA,
-                sizeof (ProfData), prof_sort_f);
-
-        for (j = 0; j < interp->op_count + PARROT_PROF_EXTRA; j++) {
-            const UINTVAL n = profile->data[j].numcalls;
-
-            if (n > 0) {
-                const FLOATVAL t = profile->data[j].time;
-
-                op_count++;
-                call_count += n;
-                sum_time   += t;
-
-                k   = profile->data[j].op;
-                jit = '-';
-#if JIT_CAPABLE
-                if (k >= PARROT_PROF_EXTRA &&
-                    op_jit[k - PARROT_PROF_EXTRA].extcall != 1)
-                    jit = 'j';
-#endif
-                Parrot_io_printf(interp, " %4d %c %-25s %8vu  %10vf  %10.6vf\n",
-                        k - PARROT_PROF_EXTRA,
-                        jit,
-                        op_name(interp, k),
-                        n,
-                        t,
-                        (FLOATVAL)(t * 1000.0 / (FLOATVAL)n));
-            }
-        }
-
-        Parrot_io_printf(interp, " %4vu - %-25s %8vu  %10vf  %10.6vf\n",
-                op_count,
-                "-",
-                call_count,
-                sum_time,
-                (FLOATVAL)(sum_time * 1000.0 / (FLOATVAL)call_count));
-    }
-}
-
-
-/*
-
 =item C<static void print_debug(PARROT_INTERP, int status, void *p)>
 
 Prints GC info.
@@ -1005,7 +879,6 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
      * before exiting, then print debug infos if turned on.
      */
     Parrot_on_exit(interp, print_debug,   NULL);
-    Parrot_on_exit(interp, print_profile, NULL);
 
     /* Let's kick the tires and light the fires--call interpreter.c:runops. */
     main_sub = CONTEXT(interp)->current_sub;
