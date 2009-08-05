@@ -407,6 +407,7 @@ static const DebuggerCmd
         "assign to a register",
 "blah blah blah",
     },
+    cmd_break = {
         & dbg_break,
         "add a breakpoint",
 "Set a breakpoint at a given line number (which must be specified).\n\n\
@@ -3174,6 +3175,26 @@ PDB_hasinstruction(ARGIN(const char *c))
 
 /*
 
+=item C<void PDB_assign(PARROT_INTERP, const char *command)>
+
+Assign to registers.
+
+=cut
+
+*/
+
+void
+PDB_assign(PARROT_INTERP, ARGIN(const char *command))
+{
+    ASSERT_ARGS(PDB_assign)
+    fprintf(stderr,"woohoo\n");
+    REG_INT(interp,0) = 10;
+    REG_INT(interp,1) = 20;
+    REG_INT(interp,2) = 30;
+    dump_string(interp,command);
+}
+/*
+
 =item C<void PDB_list(PARROT_INTERP, const char *command)>
 
 Show lines from the source code file.
@@ -3338,24 +3359,6 @@ dump_string(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
     Parrot_io_eprintf(interp, "\tString  =\t%S\n", s);
 }
 
-/*
-
-=item C<void PDB_assign(PARROT_INTERP, const char *command)>
-
-Assign to registers.
-
-=cut
-
-*/
-
-void
-PDB_assign(PARROT_INTERP, ARGIN(const char *command))
-{
-    ASSERT_ARGS(PDB_assign)
-    //
-    const char * const s = GDB_P(interp->pdb->debugee, command);
-    Parrot_io_eprintf(interp, "%s\n", s);
-}
 /*
 
 =item C<void PDB_print(PARROT_INTERP, const char *command)>
