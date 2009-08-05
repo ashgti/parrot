@@ -207,6 +207,13 @@ static int nomoreargs(PDB_t * pdb, const char * cmd) /* HEADERIZER SKIP */
     }
 }
 
+static void dbg_assign(PDB_t * pdb, const char * cmd) /* HEADERIZER SKIP */
+{
+    TRACEDEB_MSG("dbg_assign");
+
+    PDB_assign(pdb->debugee, cmd);
+}
+
 static void dbg_break(PDB_t * pdb, const char * cmd) /* HEADERIZER SKIP */
 {
     TRACEDEB_MSG("dbg_break");
@@ -395,7 +402,11 @@ struct DebuggerCmd {
 };
 
 static const DebuggerCmd
-    cmd_break = {
+    cmd_assign = {
+        & dbg_assign,
+        "assign to a register",
+"blah blah blah",
+    },
         & dbg_break,
         "add a breakpoint",
 "Set a breakpoint at a given line number (which must be specified).\n\n\
@@ -549,6 +560,7 @@ struct DebuggerCmdList {
 };
 
 DebuggerCmdList DebCmdList [] = {
+    { "assign",      'a',  &cmd_assign },
     { "break",       '\0', &cmd_break },
     { "continue",    '\0', &cmd_continue },
     { "delete",      'd',  &cmd_delete },
@@ -3326,6 +3338,24 @@ dump_string(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
     Parrot_io_eprintf(interp, "\tString  =\t%S\n", s);
 }
 
+/*
+
+=item C<void PDB_assign(PARROT_INTERP, const char *command)>
+
+Assign to registers.
+
+=cut
+
+*/
+
+void
+PDB_assign(PARROT_INTERP, ARGIN(const char *command))
+{
+    ASSERT_ARGS(PDB_assign)
+    //
+    const char * const s = GDB_P(interp->pdb->debugee, command);
+    Parrot_io_eprintf(interp, "%s\n", s);
+}
 /*
 
 =item C<void PDB_print(PARROT_INTERP, const char *command)>

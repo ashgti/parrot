@@ -222,7 +222,13 @@ pdb_output_like( <<PIR, "pir", "d 42", qr/No breakpoint number 42/, 'delete inva
 .end
 PIR
 
-BEGIN { $tests += 34 }
+pdb_output_like( <<PIR, "pir", "a I0 17", qr/I0=17/, 'assign to an integer register');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
+BEGIN { $tests += 35 }
 
 BEGIN { plan tests => $tests; }
 
