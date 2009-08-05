@@ -519,11 +519,20 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
 
     Parrot_Context_info info;
     struct timespec preop, postop;
-    long long op_time;
+    HUGEINTVAL op_time;
     char unknown_sub[]  = "(unknown sub)";
     char unknown_file[] = "(unknown file)";
+    static INTVAL first_init = 1;
+    FILE *prof_fd = fopen("parrot.pprof", "a");
 
-    FILE *prof_fd = fopen("parrot.pprof", "w");
+    /* avoid clobbering the file from an inner runloop */
+    if (first_init) {
+        prof_fd = fopen("parrot.pprof", "w");
+        first_init = 0;
+    }
+    else {
+        prof_fd = fopen("parrot.pprof", "a");
+    }
 
     if (!prof_fd) {
         fprintf(stderr, "unable to open parrot_prof.out for writing");
@@ -553,8 +562,8 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         DO_OP(pc, interp);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
 
-        op_time = (postop.tv_sec * 1000000000 + postop.tv_nsec) -
-                  (preop.tv_sec  * 1000000000 + preop.tv_nsec);
+        op_time = (postop.tv_sec * 1000*1000*1000 + postop.tv_nsec) -
+                  (preop.tv_sec  * 1000*1000*1000 + preop.tv_nsec);
 
         Parrot_Context_get_info(interp, CONTEXT(interp), &info);
         file_postop = info.file->strstart;
