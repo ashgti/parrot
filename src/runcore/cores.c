@@ -563,7 +563,7 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         if (!file_preop)  file_preop  = unknown_file;
         if (!file_postop) file_postop = unknown_file;
         if (!sub_preop)   sub_preop   = unknown_sub;
-        if (!sub_preop)   sub_postop  = unknown_sub;
+        if (!sub_postop)  sub_postop  = unknown_sub;
 
         if (pc) {
             if (strcmp(file_preop, file_postop))
