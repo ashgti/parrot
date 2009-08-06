@@ -234,7 +234,13 @@ pdb_output_like( <<PIR, "pir", "a Z0 42", qr/Invalid register type Z/, 'assign t
 .end
 PIR
 
-BEGIN { $tests += 36 }
+pdb_output_like( <<PIR, "pir", "a foo", qr/Must give a register number and value to assign/, 'invalid assignment command');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
+BEGIN { $tests += 37 }
 
 BEGIN { plan tests => $tests; }
 

@@ -3193,7 +3193,8 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     char reg_type;
     int t;
 
-    if (!strlen(command)) {
+    // smallest valid commad length is 4, i.e. "I0 1"
+    if (strlen(command) < 4) {
         fprintf(stderr, "Must give a register number and value to assign\n");
         return;
     }
