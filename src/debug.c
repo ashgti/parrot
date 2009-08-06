@@ -3187,12 +3187,23 @@ void
 PDB_assign(PARROT_INTERP, ARGIN(const char *command))
 {
     ASSERT_ARGS(PDB_assign)
-    fprintf(stderr,"woohoo\n");
-    REG_INT(interp,0) = 10;
-    REG_INT(interp,1) = 20;
-    REG_INT(interp,2) = 30;
-    dump_string(interp,command);
+    unsigned long register_num;
+    unsigned long register_value;
+
+    if (!strlen(command)) {
+        fprintf(stderr, "Must give a register number and value to assign\n");
+        return;
+    }
+    // TODO check validity of these
+    register_num   = get_ulong(&command, 0);
+    register_value = get_ulong(&command, 0);
+
+    REG_INT(interp,register_num) =  register_value;
+
+    Parrot_io_eprintf(interp, "\n  I%d = ", register_num);
+    Parrot_io_eprintf(interp, "%s\n", GDB_print_reg(interp, REGNO_INT, register_num));
 }
+
 /*
 
 =item C<void PDB_list(PARROT_INTERP, const char *command)>
