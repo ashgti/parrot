@@ -602,12 +602,6 @@ EOC
 
 EOC
 
-    if ( @{$attributes} && $self->{flags}{auto_attrs} ) {
-    $cout .= <<"EOC";
-        vt->attr_size = sizeof(Parrot_${classname}_attributes);
-EOC
-    }
-
     # init vtable slot
     if ( $self->is_dynamic ) {
         $cout .= <<"EOC";
@@ -647,13 +641,6 @@ EOC
             vt_${k}                 = Parrot_${classname}_${k}_get_vtable(interp);
             vt_${k}->base_type      = $enum_name;
             vt_${k}->flags          = $k_flags;
-EOC
-        if ( @{$attributes}  && $self->{flags}{auto_attrs} ) {
-            $cout .= <<"EOC";
-            vt_${k}->attr_size = sizeof(Parrot_${classname}_attributes);
-EOC
-            }
-        $cout .= <<"EOC";
 
             vt_${k}->attribute_defs = attr_defs;
 
@@ -776,12 +763,22 @@ sub update_vtable_func {
     my $classname = $self->name;
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
+    my $set_attr_size = "    vt->attr_size = ";
+    if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
+        $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
+    } else {
+        $set_attr_size .= "0";
+    }
+    $set_attr_size .= ";\n";
+
     my $vtable_updates = '';
     for my $name ( @{ $self->vtable->names } ) {
         if (exists $self->{has_method}{$name}) {
             $vtable_updates .= "    vt->$name = Parrot_${classname}_${name};\n";
         }
     }
+
+    $vtable_updates .= $set_attr_size;
 
     $cout .= <<"EOC";
 
@@ -807,6 +804,8 @@ EOC
             $vtable_updates .= "    vt->$name = Parrot_${classname}_${name};\n";
         }
     }
+
+    $vtable_updates .= $set_attr_size;
 
     $cout .= <<"EOC";
 
