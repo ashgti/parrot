@@ -222,13 +222,19 @@ pdb_output_like( <<PIR, "pir", "d 42", qr/No breakpoint number 42/, 'delete inva
 .end
 PIR
 
-pdb_output_like( <<PIR, "pir", "t\na 0 17", qr/I0 = 17/, 'assign to an integer register');
+pdb_output_like( <<PIR, "pir", "t\na I0 17", qr/I0 = 17/, 'assign to an integer register');
 .sub main :main
     \$I0 = 242
 .end
 PIR
 
-BEGIN { $tests += 35 }
+pdb_output_like( <<PIR, "pir", "a Z0 42", qr/Invalid register type Z/, 'assign to an invalid register');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
+BEGIN { $tests += 36 }
 
 BEGIN { plan tests => $tests; }
 
