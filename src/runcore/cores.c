@@ -518,12 +518,13 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     ASSERT_ARGS(runops_profile_core)
 
     Parrot_Context_info info;
-    struct timespec preop, postop;
-    HUGEINTVAL op_time;
-    char unknown_sub[]  = "(unknown sub)";
-    char unknown_file[] = "(unknown file)";
-    static INTVAL first_init = 1;
-    FILE *prof_fd;
+    struct timespec     preop, postop;
+    opcode_t           *old_pc;
+    FILE               *prof_fd;
+    HUGEINTVAL          op_time;
+    char                unknown_sub[]  = "(unknown sub)";
+    char                unknown_file[] = "(unknown file)";
+    static INTVAL       first_init = 1;
 
     /* avoid clobbering the file from an inner runloop */
     if (first_init) {
@@ -558,6 +559,7 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         sub_preop  = info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
+        old_pc = pc;
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &preop);
         DO_OP(pc, interp);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
@@ -574,14 +576,14 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         if (!sub_preop)   sub_preop   = unknown_sub;
         if (!sub_postop)  sub_postop  = unknown_sub;
 
-        if (pc) {
+        if (old_pc) {
             if (strcmp(file_preop, file_postop))
                 fprintf(prof_fd, "F:%s\n", file_postop);
             if (strcmp(sub_preop, sub_postop))
                 fprintf(prof_fd, "S:%s\n", sub_postop);
             fprintf(prof_fd, "%d:%lli:%d:%s\n",
                     info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
-                    (interp->op_info_table)[*pc].name);
+                    (interp->op_info_table)[*old_pc].name);
         }
     }
 
