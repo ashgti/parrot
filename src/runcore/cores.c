@@ -518,17 +518,18 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     ASSERT_ARGS(runops_profile_core)
 
     Parrot_Context_info prev_info, curr_info;
+    Parrot_Context     *prev_ctx;
     struct timespec     preop, postop;
-    opcode_t           *old_pc;
+    opcode_t           *prev_pc;
     static FILE        *prof_fd;
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "(unknown sub)";
     char                unknown_file[] = "(unknown file)";
-    static INTVAL       interp_counter = 0;
+    static int          interp_counter = 0;
 
-    /* Hilarity ensues if inner runloops open and write to a separate FILE*, so
-     * use a simple static counter to ensure that the FILE* only gets opened
-     * and closed once. */
+    /* Hilarity ensues if an inner runloops opens and writes to a separate
+     * FILE*, so use a simple static counter to ensure that the FILE* only gets
+     * opened and closed once. */
     if (interp_counter == 0) {
         prof_fd = fopen("parrot.pprof", "w");
         if (!prof_fd) {
@@ -538,10 +539,14 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     }
     
     interp_counter++;
+    fprintf(prof_fd, "NEW RUNLOOP (%d)\n", interp_counter);
 
+    prev_ctx = CONTEXT(interp);
     Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
     fprintf(prof_fd, "F:%s\n", curr_info.file->strstart);
-    fprintf(prof_fd, "S:%s\n", curr_info.subname->strstart);
+    fprintf(prof_fd, "S:%s;%s\n", 
+            VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
+            curr_info.subname->strstart);
 
     while (pc) {
 
@@ -561,7 +566,8 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         sub_preop  = prev_info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
-        old_pc = pc;
+        prev_ctx = CONTEXT(interp);
+        prev_pc = pc;
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &preop);
         DO_OP(pc, interp);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
@@ -577,17 +583,20 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         if (!sub_preop)   sub_preop   = unknown_sub;
         if (!sub_postop)  sub_postop  = unknown_sub;
 
-        if (old_pc) {
+        if (prev_pc) {
             if (strcmp(file_preop, file_postop))
                 fprintf(prof_fd, "F:%s\n", file_postop);
             if (strcmp(sub_preop, sub_postop))
-                fprintf(prof_fd, "S:%s\n", sub_postop);
+                fprintf(prof_fd, "S:%s;%s\n", 
+                        VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
+                        sub_postop);
             fprintf(prof_fd, "%d:%lli:%d:%s\n",
                     curr_info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
-                    (interp->op_info_table)[*old_pc].name);
+                    (interp->op_info_table)[*prev_pc].name);
         }
     }
 
+    fprintf(prof_fd, "END OF RUNLOOP (%d)\n", interp_counter);
     interp_counter--;
 
     if (interp_counter == 0) 

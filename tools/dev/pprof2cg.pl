@@ -8,8 +8,8 @@ use strict;
 use Data::Dumper;
 
 #what about throw and rethrow?
-my @call_ops   = (qw{invoke invokecc});
-my @return_ops = (qw{yield returncc tailcall});
+my @call_ops   = (qw{invoke invokecc callmethod callmethodcc});
+my @return_ops = (qw{yield returncc tailcall tailcallmethod});
 my @prof_stack = ();
 my %stats;
 
@@ -17,30 +17,42 @@ my ($file, $func, $line, $op_seq, $op) = ('', '', 0, 0, 0);
 my ($call, $return) = (0,0);
 my $prev_func = '';
 my $total_time = 0;
+my $func_num = 0;
 my ($prev_line, $new_line, $op_num) = (0,0,0);
+
+sub maybe_say($@) {
+    #say $@;
+}
 
 while (<>) {
     if (/^F:(.*)$/) {
         $file = $1;
-        #say "found file $file";
+        maybe_say "found file $file";
         $stats{$file} = {} unless exists $stats{$file};
     }
     elsif (/S:(.*)$/) {
         $prev_func = $func;
         $func = $1;
-        #say "found func $func";
+        maybe_say "found func $func";
 
         $stats{$file}{$func} = {} unless exists $stats{$file}{$func};
 
         if ($return) {
             #pop the current func and op number off the stack
             #the func is there mainly for debugging
+            unless (@prof_stack) {
+                die "tried to pop off an empty stack when returning from $func";
+            }
+            for my $frame (@prof_stack) {
+                my ($file, $func, $line, $op_num) = @{$frame};
+                maybe_say "($file,$func,$line,$op_num)";
+            }
             ($file, $func, $line, $op_num) = @{pop @prof_stack};
-            #say "popped func $func, op $op_num off the stack";
+            maybe_say "popped func $func, op $op_num off the stack";
             $stats{$file}{$func}{$line}{$op_num}{func_name} = $prev_func;
         }
     }
-    elsif (/^(\d+):(\d+):(\d+):(\w+)$/) {
+    elsif (/^(\d+):(\d+):(\d+):(.*)$/) {
         my ($line, $op_time, $rec_depth, $op) = ($1, $2, $3, $4);
 
         $new_line = ($line != $prev_line);
@@ -56,7 +68,7 @@ while (<>) {
             $op_num++;
         }
 
-        #say "$func line #$line, op #$op_num is $op";
+        maybe_say "$func line #$line, op #$op_num is $op";
 
         if ($new_line) {
             $stats{$file}{$func}{$line} = {line_calls_func => 0}
@@ -75,8 +87,8 @@ while (<>) {
             $stats{$file}{$func}{$line}{$op_num}{hits}++;
         }
 
-        #say "calling a func" if $call;
-        #say "returning from a func" if $return;
+        maybe_say "calling a func" if $call;
+        maybe_say "returning from a func" if $return;
 
         if ($call) {
 
@@ -84,17 +96,23 @@ while (<>) {
             $op_num++;
             if (!exists $stats{$file}{$func}{$line}{$op_num}) {
                 $stats{$file}{$func}{$line}{$op_num} = {
-                    time => 0,
-                    hits => 1,
-                    op   => "FUNCTION_CALL",
+                    time      => 0,
+                    hits      => 1,
+                    op        => "FUNCTION_CALL",
+                    func_name => "unknown_function$func_num",
                 };
+                $func_num++;
             }
             else {
                 $stats{$file}{$func}{$line}{$op_num}{hits}++;
             }
 
-            #say "pushed func $func, op $op_num onto the stack";
+            maybe_say "pushed func $func, op $op_num onto the stack";
             push @prof_stack, [$file, $func, $line, $op_num];
+            for my $frame (@prof_stack) {
+                my ($file, $func, $line, $op_num) = @{$frame};
+                maybe_say "($file,$func,$line,$op_num)";
+            }
             $stats{$file}{$func}{$line}{line_calls_func} = 1;
         }
         else {
@@ -176,3 +194,5 @@ for $file (keys %stats) {
         }
     }
 }
+
+say OUT_FH "totals: $total_time";
