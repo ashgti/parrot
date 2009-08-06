@@ -3203,6 +3203,8 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     // TODO check validity of these
     register_num   = get_ulong(&command, 0);
 
+    // Currently we can only assign to registers that already have
+    // been brought into existence by the debuggee, why?
     switch (reg_type) {
         case 'I':
                 t         = REGNO_INT;
@@ -3212,6 +3214,7 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
                 break;
         case 'N':
                 t = REGNO_NUM;
+                value_float = atof(command);
                 REG_NUM(interp,register_num) =  value_float;
                 break;
         case 'S':

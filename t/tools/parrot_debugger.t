@@ -240,7 +240,13 @@ pdb_output_like( <<PIR, "pir", "a foo", qr/Must give a register number and value
 .end
 PIR
 
-BEGIN { $tests += 37 }
+pdb_output_like( <<PIR, "pir", "t\na N0 3.14", qr/N0 = 3.14/, 'assign to a numeric register');
+.sub main :main
+    \$N0 = 9.99
+.end
+PIR
+
+BEGIN { $tests += 38 }
 
 BEGIN { plan tests => $tests; }
 
