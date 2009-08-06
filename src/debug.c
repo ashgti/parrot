@@ -3188,7 +3188,8 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
 {
     ASSERT_ARGS(PDB_assign)
     unsigned long register_num;
-    unsigned long register_value;
+    unsigned long value_int;
+    float value_float;
     char reg_type;
     int t;
 
@@ -3200,21 +3201,28 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     command++;
     // TODO check validity of these
     register_num   = get_ulong(&command, 0);
-    register_value = get_ulong(&command, 0);
 
     switch (reg_type) {
-        case 'I': t = REGNO_INT; break;
-        case 'N': t = REGNO_NUM; break;
-        case 'S': t = REGNO_STR; break;
-        case 'P': t = REGNO_PMC; break;
+        case 'I':
+                t         = REGNO_INT;
+                value_int = get_ulong(&command, 0);
+
+                REG_INT(interp,register_num) =  value_int;
+                break;
+        case 'N':
+                t = REGNO_NUM;
+                REG_NUM(interp,register_num) =  value_float;
+                break;
+        case 'S':
+                t = REGNO_STR;
+                break;
+        case 'P':
+                t = REGNO_PMC;
+                break;
         default:
             fprintf(stderr, "Invalid register type %c\n",reg_type);
             return;
     }
-    fprintf(stderr, "regtype = %c\n",reg_type);
-    dump_string(interp,command);
-
-    REG_INT(interp,register_num) =  register_value;
 
     Parrot_io_eprintf(interp, "\n  %c%u = ", reg_type, register_num);
     Parrot_io_eprintf(interp, "%s\n", GDB_print_reg(interp, t , register_num));
