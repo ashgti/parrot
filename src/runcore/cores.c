@@ -517,32 +517,31 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profile_core)
 
-    Parrot_Context_info info;
+    Parrot_Context_info prev_info, curr_info;
     struct timespec     preop, postop;
     opcode_t           *old_pc;
-    FILE               *prof_fd;
+    static FILE        *prof_fd;
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "(unknown sub)";
     char                unknown_file[] = "(unknown file)";
-    static INTVAL       first_init = 1;
+    static INTVAL       interp_counter = 0;
 
-    /* avoid clobbering the file from an inner runloop */
-    if (first_init) {
+    /* Hilarity ensues if inner runloops open and write to a separate FILE*, so
+     * use a simple static counter to ensure that the FILE* only gets opened
+     * and closed once. */
+    if (interp_counter == 0) {
         prof_fd = fopen("parrot.pprof", "w");
-        first_init = 0;
+        if (!prof_fd) {
+            fprintf(stderr, "unable to open parrot_prof.out for writing");
+            exit(1);
+        }
     }
-    else {
-        prof_fd = fopen("parrot.pprof", "a");
-    }
+    
+    interp_counter++;
 
-    if (!prof_fd) {
-        fprintf(stderr, "unable to open parrot_prof.out for writing");
-        exit(1);
-    }
-
-    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-    fprintf(prof_fd, "F:%s\n", info.file->strstart);
-    fprintf(prof_fd, "S:%s\n", info.subname->strstart);
+    Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
+    fprintf(prof_fd, "F:%s\n", curr_info.file->strstart);
+    fprintf(prof_fd, "S:%s\n", curr_info.subname->strstart);
 
     while (pc) {
 
@@ -554,9 +553,12 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
                     "attempt to access code outside of current code segment");
         }
 
-        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-        file_preop = info.file->strstart;
-        sub_preop  = info.subname->strstart;
+        /* avoid an extra call to Parrot_Context_get_info */
+        mem_sys_memcopy(&prev_info, &curr_info, sizeof(Parrot_Context_info));
+
+        Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
+        file_preop = prev_info.file->strstart;
+        sub_preop  = prev_info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
         old_pc = pc;
@@ -567,9 +569,8 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
         op_time = (postop.tv_sec * 1000*1000*1000 + postop.tv_nsec) -
                   (preop.tv_sec  * 1000*1000*1000 + preop.tv_nsec);
 
-        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-        file_postop = info.file->strstart;
-        sub_postop  = info.subname->strstart;
+        file_postop = curr_info.file->strstart;
+        sub_postop  = curr_info.subname->strstart;
 
         if (!file_preop)  file_preop  = unknown_file;
         if (!file_postop) file_postop = unknown_file;
@@ -582,12 +583,15 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
             if (strcmp(sub_preop, sub_postop))
                 fprintf(prof_fd, "S:%s\n", sub_postop);
             fprintf(prof_fd, "%d:%lli:%d:%s\n",
-                    info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
+                    curr_info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
                     (interp->op_info_table)[*old_pc].name);
         }
     }
 
-    fclose(prof_fd);
+    interp_counter--;
+
+    if (interp_counter == 0) 
+        fclose(prof_fd);
     return pc;
 
 
