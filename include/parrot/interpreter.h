@@ -224,6 +224,8 @@ struct Parrot_Context {
     int                    ref_count;       /* how often refered to */
     int                    gc_mark;         /* marked in gc run */
 
+    PMC *caller_sig;            /* CallSignature PMC that invoked this context*/
+    PMC *current_sig;           /* temporary CallSignature PMC for active call */
     UINTVAL                warns;           /* Keeps track of what warnings
                                              * have been activated */
     UINTVAL                errors;          /* fatals that can be turned off */
