@@ -246,7 +246,21 @@ pdb_output_like( <<PIR, "pir", "t\na N0 3.14", qr/N0 = 3.14/, 'assign to a numer
 .end
 PIR
 
-BEGIN { $tests += 38 }
+pdb_output_like( <<PIR, "pir", "t\np S", qr/S0 = foobar/, 'print string registers');
+.sub main :main
+    \$S0 = "foobar"
+.end
+PIR
+
+pdb_output_like( <<PIR, "pir", "t\na S0 foobar", qr/S0 = foobar/, 'print string registers when none exist');
+.sub main :main
+    \$I0 = 10
+    \$I1 = 11
+    \$I2 = 12
+.end
+PIR
+
+BEGIN { $tests += 40 }
 
 BEGIN { plan tests => $tests; }
 

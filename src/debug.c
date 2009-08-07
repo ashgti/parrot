@@ -3192,6 +3192,7 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     float value_float;
     char reg_type;
     int t;
+    char *string;
 
     // smallest valid commad length is 4, i.e. "I0 1"
     if (strlen(command) < 4) {
@@ -3219,6 +3220,7 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
                 break;
         case 'S':
                 t = REGNO_STR;
+                REG_STR(interp,register_num) =  command;
                 break;
         case 'P':
                 t = REGNO_PMC;
@@ -3227,7 +3229,6 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
             fprintf(stderr, "Invalid register type %c\n",reg_type);
             return;
     }
-
     Parrot_io_eprintf(interp, "\n  %c%u = ", reg_type, register_num);
     Parrot_io_eprintf(interp, "%s\n", GDB_print_reg(interp, t , register_num));
 }
@@ -3412,7 +3413,10 @@ void
 PDB_print(PARROT_INTERP, ARGIN(const char *command))
 {
     ASSERT_ARGS(PDB_print)
+
     const char * const s = GDB_P(interp->pdb->debugee, command);
+
+    TRACEDEB_MSG("PDB_print print register");
     Parrot_io_eprintf(interp, "%s\n", s);
 }
 
@@ -3646,6 +3650,7 @@ static const char*
 GDB_print_reg(PARROT_INTERP, int t, int n)
 {
     ASSERT_ARGS(GDB_print_reg)
+    char * string;
 
     if (n >= 0 && n < CONTEXT(interp)->n_regs_used[t]) {
         switch (t) {
@@ -3654,7 +3659,7 @@ GDB_print_reg(PARROT_INTERP, int t, int n)
             case REGNO_NUM:
                 return Parrot_str_from_num(interp, REG_NUM(interp, n))->strstart;
             case REGNO_STR:
-                return REG_STR(interp, n)->strstart;
+                return REG_STR(interp, n);
             case REGNO_PMC:
                 /* prints directly */
                 trace_pmc_dump(interp, REG_PMC(interp, n));
@@ -3688,12 +3693,15 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
     ASSERT_ARGS(GDB_P)
     int t;
     char reg_type;
+    char *string;
 
+    TRACEDEB_MSG("GDB_P");
     /* Skip leading whitespace. */
     while (isspace((unsigned char)*s))
         s++;
 
     reg_type = (unsigned char) toupper((unsigned char)*s);
+
     switch (reg_type) {
         case 'I': t = REGNO_INT; break;
         case 'N': t = REGNO_NUM; break;
@@ -3708,8 +3716,11 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
 
         for (n = 0; n < max_reg; n++) {
             /* this must be done in two chunks because PMC's print directly. */
-            Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
-            Parrot_io_eprintf(interp, "%s", GDB_print_reg(interp, t, n));
+            string = GDB_print_reg(interp, t, n);
+            if (string) {
+                Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
+                Parrot_io_eprintf(interp, "%s", string );
+            }
         }
         return "";
     }
