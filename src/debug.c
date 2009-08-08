@@ -48,6 +48,11 @@ the Parrot debugger, and the C<debug> ops.
 /* Length of command line buffers */
 #define DEBUG_CMD_BUFFER_LENGTH 255
 
+/* Easier register access */
+#define IREG(i) REG_INT(interp,i)
+#define NREG(i) REG_NUM(interp,i)
+#define SREG(i) REG_STR(interp,i)
+#define PREG(i) REG_PMC(interp,i)
 
 typedef struct DebuggerCmd DebuggerCmd;
 typedef struct DebuggerCmdList DebuggerCmdList;
@@ -3651,24 +3656,32 @@ GDB_print_reg(PARROT_INTERP, int t, int n)
 {
     ASSERT_ARGS(GDB_print_reg)
     char * string;
+/*
+    Parrot_io_eprintf(interp, "STR=%d, t =%d\n", REGNO_STR, t );
+    Parrot_io_eprintf(interp, "n =%d\n", n );
+    Parrot_io_eprintf(interp, "num regs=%d\n", CONTEXT(interp)->n_regs_used[t]);
+    */
 
     if (n >= 0 && n < CONTEXT(interp)->n_regs_used[t]) {
         switch (t) {
             case REGNO_INT:
-                return Parrot_str_from_int(interp, REG_INT(interp, n))->strstart;
+                return Parrot_str_from_int(interp, IREG(n))->strstart;
             case REGNO_NUM:
-                return Parrot_str_from_num(interp, REG_NUM(interp, n))->strstart;
+                return Parrot_str_from_num(interp, NREG(n))->strstart;
             case REGNO_STR:
-                return REG_STR(interp, n);
+                string = SREG(n)->strstart;
+                Parrot_io_eprintf(interp, "string=%s \n", string);
+
+                return string; //Parrot_str_new(interp,)->strstart;
             case REGNO_PMC:
                 /* prints directly */
-                trace_pmc_dump(interp, REG_PMC(interp, n));
+                trace_pmc_dump(interp, PREG(n));
                 return "";
             default:
                 break;
         }
     }
-    return "no such reg";
+    return "no such register";
 }
 
 /*
@@ -3717,10 +3730,8 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
         for (n = 0; n < max_reg; n++) {
             /* this must be done in two chunks because PMC's print directly. */
             string = GDB_print_reg(interp, t, n);
-            if (string) {
-                Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
-                Parrot_io_eprintf(interp, "%s", string );
-            }
+            Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
+            Parrot_io_eprintf(interp, "%s", string );
         }
         return "";
     }
