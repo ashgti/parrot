@@ -33,12 +33,6 @@ specifically by including this C<PIR> code:
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
 
-=head1 Configuration
-
-=over 4
-
-=back
-
 =head1 PMCS
 
 =over 4
@@ -96,6 +90,8 @@ address of the PMC. Uses of get_addr and set_addr that would set label values
 for Sub, Exception, and related PMC types will instead be handled by
 get_label and set_label.
 
+=back
+
 =head1 Bytecode
 
 =over 4
@@ -118,27 +114,17 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 [Nothing at this time.]
 
+=head1 Debugger
+
+Assigning to registers [experimental]
+
 =head1 PIR syntax
 
 =over 4
 
 =item Assignment syntax with opcodes [eligible in 1.1]
 
-When the first argument of an opcode is C<OUT>, then
-the assignment syntax will be allowed, as it is today.
-
-In any other case (i.e. C<INOUT>, C<IN>), this will become
-a syntax error. For example:
-
-    $S0 = print
-    $P0 = substr 1, 2, "x"
-
-Will have to be:
-
-    print $S0
-    substr $P0, 1, 2, "x"
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=36283>
+L<https://trac.parrot.org/parrot/ticket/906>
 
 =item named class/pmc lookup in pir syntax such as new, isa, subclass, 
     get_class, etc [eligible in 1.1]
@@ -310,11 +296,7 @@ instead.
 
 L<https://trac.parrot.org/parrot/ticket/842>
 
-=cut
-
 =back
-
-=cut
 
 =head1 build tools
 
