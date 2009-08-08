@@ -252,7 +252,6 @@ pdb_output_like( <<PIR, "pir", "t\np S", qr/S0 = foobar/, 'print string register
 .end
 PIR
 
-# at least 3 integer registers are needed to trigger this
 pdb_output_like( <<PIR, "pir", "t\na S0 foobar", qr/S0 = no such register/, 'print string registers when none exist');
 .sub main :main
     new \$P0, 'ResizableIntegerArray'

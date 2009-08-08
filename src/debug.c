@@ -3196,8 +3196,8 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     unsigned long value_int;
     float value_float;
     char reg_type;
-    int t;
     char *string;
+    int t;
 
     // smallest valid commad length is 4, i.e. "I0 1"
     if (strlen(command) < 4) {
@@ -3213,29 +3213,29 @@ PDB_assign(PARROT_INTERP, ARGIN(const char *command))
     // been brought into existence by the debuggee, why?
     switch (reg_type) {
         case 'I':
-                t         = REGNO_INT;
-                value_int = get_ulong(&command, 0);
-
-                REG_INT(interp,register_num) =  value_int;
+                t                  = REGNO_INT;
+                value_int          = get_ulong(&command, 0);
+                IREG(register_num) = value_int;
                 break;
         case 'N':
-                t = REGNO_NUM;
-                value_float = atof(command);
-                REG_NUM(interp,register_num) =  value_float;
+                t                  = REGNO_NUM;
+                value_float        = atof(command);
+                NREG(register_num) = value_float;
                 break;
         case 'S':
-                t = REGNO_STR;
-                REG_STR(interp,register_num) =  command;
+                t                  = REGNO_STR;
+                SREG(register_num) = Parrot_str_new(interp,command,strlen(command));
                 break;
         case 'P':
                 t = REGNO_PMC;
-                break;
+                fprintf(stderr, "Assigning to PMCs is not currently supported\n");
+                return;
         default:
             fprintf(stderr, "Invalid register type %c\n",reg_type);
             return;
     }
     Parrot_io_eprintf(interp, "\n  %c%u = ", reg_type, register_num);
-    Parrot_io_eprintf(interp, "%s\n", GDB_print_reg(interp, t , register_num));
+    Parrot_io_eprintf(interp, "%s\n", GDB_print_reg(interp, t, register_num));
 }
 
 /*
@@ -3656,11 +3656,6 @@ GDB_print_reg(PARROT_INTERP, int t, int n)
 {
     ASSERT_ARGS(GDB_print_reg)
     char * string;
-/*
-    Parrot_io_eprintf(interp, "STR=%d, t =%d\n", REGNO_STR, t );
-    Parrot_io_eprintf(interp, "n =%d\n", n );
-    Parrot_io_eprintf(interp, "num regs=%d\n", CONTEXT(interp)->n_regs_used[t]);
-    */
 
     if (n >= 0 && n < CONTEXT(interp)->n_regs_used[t]) {
         switch (t) {
@@ -3669,10 +3664,14 @@ GDB_print_reg(PARROT_INTERP, int t, int n)
             case REGNO_NUM:
                 return Parrot_str_from_num(interp, NREG(n))->strstart;
             case REGNO_STR:
-                string = SREG(n)->strstart;
-                Parrot_io_eprintf(interp, "string=%s \n", string);
+                /* This hack is needed because we occasionally are told
+                that we have string registers when we actually don't */
+                string = (char *) SREG(n);
 
-                return string; //Parrot_str_new(interp,)->strstart;
+                if (string == '\0' )
+                    return "";
+                else
+                    return SREG(n)->strstart;
             case REGNO_PMC:
                 /* prints directly */
                 trace_pmc_dump(interp, PREG(n));
@@ -3704,9 +3703,8 @@ static const char*
 GDB_P(PARROT_INTERP, ARGIN(const char *s))
 {
     ASSERT_ARGS(GDB_P)
-    int t;
     char reg_type;
-    char *string;
+    int t;
 
     TRACEDEB_MSG("GDB_P");
     /* Skip leading whitespace. */
@@ -3729,9 +3727,8 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
 
         for (n = 0; n < max_reg; n++) {
             /* this must be done in two chunks because PMC's print directly. */
-            string = GDB_print_reg(interp, t, n);
             Parrot_io_eprintf(interp, "\n  %c%d = ", reg_type, n);
-            Parrot_io_eprintf(interp, "%s", string );
+            Parrot_io_eprintf(interp, "%s", GDB_print_reg(interp, t, n));
         }
         return "";
     }
@@ -3740,7 +3737,7 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
         return GDB_print_reg(interp, t, n);
     }
     else
-        return "no such reg";
+        return "no such register";
 
 }
 
