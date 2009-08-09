@@ -241,7 +241,6 @@ sub rewrite_RETURNs {
         if ($returns eq 'void') {
             $e->emit( <<"END", __FILE__, __LINE__ + 1 );
     /*BEGIN RETURN $returns */
-    Parrot_pop_context(interp);
     return;
     /*END RETURN $returns */
 END
@@ -260,7 +259,6 @@ END
         $e->emit( <<"END", __FILE__, __LINE__ + 1 );
     Parrot_pcc_fill_returns_from_c_args(interp, _call_object, "$returns_signature",
             $returns_varargs);
-    Parrot_pop_context(interp);
     return;
     /*END RETURN $returns */
     }
@@ -402,26 +400,14 @@ sub rewrite_pccmethod {
     rewrite_pccinvoke( $self, $pmc );
 
     $e->emit( <<"END", __FILE__, __LINE__ + 1 );
-    PMC *_call_object = CONTEXT(interp)->current_sig;
+    Parrot_Context *_caller_ctx, *_ctx;
+    PMC *_ccont, *_call_object;
 
-    const INTVAL _n_regs_used[]   = { 0, 0, 0, 0 };
+    _ctx = CONTEXT(interp);
+    _ccont = _ctx->current_cont;
 
-    Parrot_Context *_caller_ctx   = CONTEXT(interp);
-    PMC * const _ret_cont         = new_ret_continuation_pmc(interp, NULL);
-    Parrot_Context *_ctx          = Parrot_push_context(interp, _n_regs_used);
-    PMC *_ccont                   = PMCNULL;
-
-    if (_caller_ctx) {
-        _ccont = _caller_ctx->current_cont;
-    }
-    else {
-        /* there is no point calling Parrot_ex_throw_from_c_args here, because
-           PDB_backtrace can't deal with a missing to_ctx either. */
-        exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
-    }
-
-    _ctx->current_cont            = _ret_cont;
-    PMC_cont(_ret_cont)->from_ctx = _ctx;
+    _caller_ctx = _ctx->caller_ctx;
+    _call_object = _ctx->current_sig;
 
     { /* BEGIN PARMS SCOPE */
 END
@@ -435,13 +421,6 @@ END
 END
     }
     $e->emit( <<"END", __FILE__, __LINE__ + 1 );
-    if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
-        PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        --_ctx->recursion_depth;
-        _ctx->caller_ctx      = _caller_ctx->caller_ctx;
-        Parrot_free_context(interp, _caller_ctx, 1);
-    }
-
     { /* BEGIN PMETHOD BODY */
 END
 
@@ -450,7 +429,7 @@ END
     } /* END PMETHOD BODY */
     } /* END PARAMS SCOPE */
     no_return:
-    Parrot_pop_context(interp);
+    return;
 END
     $self->return_type('void');
     $self->parameters('');
