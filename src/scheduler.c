@@ -950,8 +950,8 @@ Parrot_cx_timer_invoke(PARROT_INTERP, ARGIN(PMC *timer))
                     Parrot_floatval_time());
 #endif
     if (!PMC_IS_NULL(timer_struct->codeblock)) {
-        Parrot_runops_fromc_args_event(interp,
-                timer_struct->codeblock, "v");
+        Parrot_pcc_invoke_sub_from_c_args(interp,
+                timer_struct->codeblock, "->");
     }
 }
 

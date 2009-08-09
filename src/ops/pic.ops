@@ -244,6 +244,10 @@ inline op pic_callr__(inconst PMC) :pic :flow {
     void **pred_pc;
     INTVAL i, n_args, *sig_bits;
     PMC *sig;
+    opcode_t *handler = Parrot_ex_throw_from_op_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "Impossible call, poking into low-level args");
+    goto ADDRESS(handler);
 
     ctx = CONTEXT(interp);
     mic = (Parrot_MIC *) cur_opcode[1];
