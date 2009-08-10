@@ -191,6 +191,8 @@ parrot_init_library_paths(PARROT_INTERP)
     VTABLE_set_pmc_keyed_int(interp, lib_paths,
             PARROT_LIB_PATH_INCLUDE, paths);
     if (!STRING_IS_NULL(builddir)) {
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/"), 0);
+        VTABLE_push_string(interp, paths, entry);
         entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/runtime/parrot/include/"), 0);
         VTABLE_push_string(interp, paths, entry);
     }
