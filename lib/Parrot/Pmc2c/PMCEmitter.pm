@@ -763,13 +763,16 @@ sub update_vtable_func {
     my $classname = $self->name;
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
-    my $set_attr_size = "    vt->attr_size = ";
+    my $set_attr_size = '';
+
     if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
         $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
     } else {
-        $set_attr_size .= "0";
+        $set_attr_size .= "0" if exists($self->{has_method}{init}) ||
+                                 exists($self->{has_method}{init_pmc});
     }
-    $set_attr_size .= ";\n";
+    $set_attr_size =     "    vt->attr_size = " . $set_attr_size . ";\n"
+        if $set_attr_size ne '';
 
     my $vtable_updates = '';
     for my $name ( @{ $self->vtable->names } ) {
