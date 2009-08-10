@@ -270,7 +270,32 @@ pdb_output_like( <<PIR, "pir", "t\na S0 foobar", qr/S0 = no such register/, 'pri
 .end
 PIR
 
-BEGIN { $tests += 41 }
+pdb_output_like( <<PIR, "pir", "r", qr/great job!/, 'run code');
+.sub main :main
+    print "great job!"
+.end
+PIR
+
+TODO: {
+
+local $TODO = 'arguments do not seem to populate $P0';
+pdb_output_like( <<PIR, "pir", "r gomer", qr/gomer/, 'run code with args');
+.sub main :main
+    print \$P0
+.end
+PIR
+
+}
+
+pdb_output_like( <<PIR, "pir", "t\nw I0 == 2\nt", qr/Adding watchpoint/, 'watchpoint');
+.sub main :main
+    \$I0 = 1
+    \$I0 = 2
+    \$I0 = 3
+.end
+PIR
+
+BEGIN { $tests += 44 }
 
 BEGIN { plan tests => $tests; }
 
