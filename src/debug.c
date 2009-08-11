@@ -3316,7 +3316,6 @@ C<eval>s an instruction.
 void
 PDB_eval(PARROT_INTERP, ARGIN(const char *command))
 {
-    opcode_t *run;
     ASSERT_ARGS(PDB_eval)
 
     PDB_t         *pdb = interp->pdb;
