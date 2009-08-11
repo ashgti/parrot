@@ -205,35 +205,6 @@ inline op branch(in LABEL) :base_loop :flow {
 }
 
 
-=item B<branch_cs>(in STR)
-
-Intersegment branch to location in fixup table named $1.
-
-=cut
-
-inline op branch_cs(in STR) :base_loop :check_event :flow {
-    PackFile_FixupEntry * fe;
-    {
-        char * const label = Parrot_str_to_cstring(interp, $1);
-        fe = PackFile_find_fixup_entry(interp, enum_fixup_label, label);
-        Parrot_str_free_cstring(label);
-    }
-
-    if (!fe) {
-        opcode_t * handler= Parrot_ex_throw_from_op_args(interp, NULL,
-            EXCEPTION_INVALID_OPERATION,
-            "branch_cs: fixup for '%Ss' not found", $1);
-        goto ADDRESS(handler);
-    }
-    else {
-        interp->resume_offset = fe->offset;
-        Parrot_switch_to_cs(interp, fe->seg, 1);
-        mem_sys_free(fe);
-    }
-    interp->resume_flag = 2;
-    goto ADDRESS(0);
-}
-
 ########################################
 
 =item B<local_branch>(invar PMC, in LABEL)
@@ -829,7 +800,9 @@ inline op throw(invar PMC) :flow {
     opcode_t *const ret    = expr NEXT();
     PMC            *resume = new_ret_continuation_pmc(interp, ret);
     if (PMC_IS_NULL(except) || except->vtable->base_type != enum_class_Exception)
-        except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
     /*
      * We might return here after handling the exception, so mark the
      * current context appropriately.
@@ -844,7 +817,9 @@ inline op throw(invar PMC, invar PMC) :flow {
     opcode_t * dest;
     PMC * except = $1;
     if (PMC_IS_NULL(except) || except->vtable->base_type != enum_class_Exception)
-        except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
     dest = Parrot_ex_throw_from_op(interp, $1,
                                 VTABLE_get_pointer(interp, $2));
     goto ADDRESS(dest);
@@ -854,7 +829,9 @@ inline op rethrow(invar PMC) :flow {
     opcode_t * dest;
     if (PMC_IS_NULL($1) || $1->vtable->base_type != enum_class_Exception) {
         opcode_t * const ret = expr NEXT();
-        PMC * except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        PMC * except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
         dest = Parrot_ex_throw_from_op(interp, except, ret);
         goto ADDRESS(dest);
     }

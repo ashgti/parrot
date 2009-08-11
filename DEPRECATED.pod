@@ -33,12 +33,6 @@ specifically by including this C<PIR> code:
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
 
-=head1 Configuration
-
-=over 4
-
-=back
-
 =head1 PMCS
 
 =over 4
@@ -96,10 +90,6 @@ address of the PMC. Uses of get_addr and set_addr that would set label values
 for Sub, Exception, and related PMC types will instead be handled by
 get_label and set_label.
 
-=item C<branch_cs> [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/470>
-
 =back
 
 =head1 Bytecode
@@ -124,27 +114,17 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 [Nothing at this time.]
 
+=head1 Debugger
+
+Assigning to registers [experimental]
+
 =head1 PIR syntax
 
 =over 4
 
 =item Assignment syntax with opcodes [eligible in 1.1]
 
-When the first argument of an opcode is C<OUT>, then
-the assignment syntax will be allowed, as it is today.
-
-In any other case (i.e. C<INOUT>, C<IN>), this will become
-a syntax error. For example:
-
-    $S0 = print
-    $P0 = substr 1, 2, "x"
-
-Will have to be:
-
-    print $S0
-    substr $P0, 1, 2, "x"
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=36283>
+L<https://trac.parrot.org/parrot/ticket/906>
 
 =item named class/pmc lookup in pir syntax such as new, isa, subclass, 
     get_class, etc [eligible in 1.1]
@@ -210,9 +190,33 @@ L<https://trac.parrot.org/parrot/ticket/443>
 These items and related helper functions are added as experimental support
 for TT #895
 
+=item PDB_compile and PDB_eval [eligible in 2.1]
+
+The function PDB_compile doesn't work since some time, and his implementation
+was a hack. His functionality may be reimplemented in another way. Until the
+end of deprecation cycle it just throws an excpetion.
+
+The PDB_eval function, that used in the debugger to support the eval
+command, was using PDB_compile. His functionality must be reimplemented
+in another way and with a name that follows current conventions, in the
+meantime and until the end of the deprecation cycle it just shows a
+diagnostic message.
+
+L<https://trac.parrot.org/parrot/ticket/872>
+
 =back
 
 =head1 Compiler tools
+
+=head2 PASM1 compiler
+
+=over 4
+
+=item C<PASM1 compiler> [eligible in 2.1]
+
+See PDB_compile.
+
+=back
 
 =head2 Parrot Grammar Engine (PGE)
 
@@ -225,12 +229,6 @@ end which cause invocation of an action method if a C<:action>
 object is supplied.
 
 L<https://trac.parrot.org/parrot/ticket/843>
-
-=item C<find_key> method on PGE::Match [eligible in 1.5]
-
-The C<find_key> method on PGE::Match objects will be removed.
-
-L<https://trac.parrot.org/parrot/ticket/851>
 
 =back
 
@@ -298,11 +296,7 @@ instead.
 
 L<https://trac.parrot.org/parrot/ticket/842>
 
-=cut
-
 =back
-
-=cut
 
 =head1 build tools
 
@@ -335,17 +329,9 @@ L<https://trac.parrot.org/parrot/ticket/665>
 
 =over 4
 
-=item Data::Replace [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/108>
-
 =item JSON, JSON, and Config;JSON [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/508>
-
-=item NCI::call_toolkit_init [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/753>
 
 =item Cross-HLL library loading [experimental]
 
