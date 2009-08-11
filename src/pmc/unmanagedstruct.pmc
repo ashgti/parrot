@@ -664,8 +664,6 @@ pmclass UnManagedStruct need_ext auto_attrs no_ro {
 
 =over 4
 
-/*
-
 =item C<void init_pmc(PMC *value)>
 
 Initialize the struct with some data.

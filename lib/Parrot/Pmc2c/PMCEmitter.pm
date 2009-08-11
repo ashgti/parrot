@@ -767,7 +767,8 @@ sub update_vtable_func {
 
     if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
         $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
-    } else {
+    }
+    else {
         $set_attr_size .= "0" if exists($self->{has_method}{init}) ||
                                  exists($self->{has_method}{init_pmc});
     }

@@ -39,7 +39,7 @@ Initialize StringIterator.
 
 */
     VTABLE void init_pmc(PMC *string) {
-	SET_ATTR_string(INTERP, SELF, string);
+        SET_ATTR_string(INTERP, SELF, string);
 
         /* by default, iterate from start */
         SELF.set_integer_native(ITERATE_FROM_START);

@@ -80,10 +80,10 @@ pointer.
 
     VTABLE void mark() {
         STRING *sig;
-	GET_ATTR_sig(INTERP, SELF, sig);
+        GET_ATTR_sig(INTERP, SELF, sig);
         if (sig) {
-	    void *pointer;
-	    GET_ATTR_pointer(INTERP, SELF, pointer);
+            void *pointer;
+            GET_ATTR_pointer(INTERP, SELF, pointer);
             Parrot_gc_mark_PObj_alive(interp, (PObj *)sig);
 
             if (pointer) {
