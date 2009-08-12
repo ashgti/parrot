@@ -24,16 +24,18 @@ The same macros are also provided for PASM.
 .endm
 
 .macro fp_eq_ok (  J, K, L )
-    set $N10, .J
-    set $N11, .K
-    sub $N12, $N11, $N10
-    abs $N12, $N12
+    macro_local num $J, $K, $L
+    macro_local int $i
+    set $J, .J
+    set $K, .K
+    sub $K, $K, $J
+    abs $K, $K
 
-    set $I0, 0
-    gt  $N12, 0.000001, .$FPEQNOK
-    set $I0, 1
+    set $I, 0
+    gt  $K, 0.000001, .$FPEQNOK
+    set $I, 1
 .label $FPEQNOK:
-    ok( $I0, .L )
+    ok( i, .$L )
 .endm
 
 .macro fp_ne ( J, K, L )
