@@ -763,8 +763,12 @@ sub update_vtable_func {
     my $classname = $self->name;
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
+    # Sets the attr_size field:
+    # If the auto_attrs flag is set, use the current data,
+    # else check if this PMC has init or init_pmc vtable functions,
+    # setting it to 0 in that case, and keeping the value from the
+    # parent otherwise.
     my $set_attr_size = '';
-
     if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
         $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
     }
