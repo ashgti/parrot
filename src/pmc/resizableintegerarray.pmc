@@ -25,19 +25,6 @@ pmclass ResizableIntegerArray extends FixedIntegerArray need_ext auto_attrs prov
 
 /*
 
-=item C<void init()>
-
-Initializes the array.
-
-=cut
-
-*/
-    VTABLE void init() {
-        SUPER();
-    }
-
-/*
-
 =item C<INTVAL get_integer_keyed_int(INTVAL key)>
 
 Returns the integer value of the element at index C<key>.
