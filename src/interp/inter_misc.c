@@ -281,8 +281,8 @@ interpinfo(PARROT_INTERP, INTVAL what)
                 ret = PARROT_GC_DEBUG_CORE;
             else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "debugger")))
                 ret = PARROT_DEBUGGER_CORE;
-            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "profile")))
-                ret = PARROT_PROFILE_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "profiling")))
+                ret = PARROT_PROFILING_CORE;
             break;
         }
         default:        /* or a warning only? */

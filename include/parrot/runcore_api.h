@@ -211,6 +211,9 @@ void Parrot_runcore_gc_debug_init(PARROT_INTERP)
 void Parrot_runcore_jit_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+void Parrot_runcore_profiling_init(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 void Parrot_runcore_slow_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -247,6 +250,8 @@ void Parrot_runcore_switch_jit_init(PARROT_INTERP)
 #define ASSERT_ARGS_Parrot_runcore_gc_debug_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_runcore_jit_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_runcore_profiling_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_runcore_slow_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)

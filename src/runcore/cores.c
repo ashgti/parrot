@@ -328,7 +328,7 @@ static opcode_t * runops_jit_core(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-static opcode_t * runops_profile_core(PARROT_INTERP,
+static opcode_t * runops_profiling_core(PARROT_INTERP,
     ARGIN(Parrot_runcore_t *runcore),
     ARGIN(opcode_t *pc))
         __attribute__nonnull__(1)
@@ -390,7 +390,7 @@ static opcode_t * runops_trace_core(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore) \
     || PARROT_ASSERT_ARG(pc)
-#define ASSERT_ARGS_runops_profile_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_runops_profiling_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore) \
     || PARROT_ASSERT_ARG(pc)
@@ -730,6 +730,34 @@ Parrot_runcore_cgp_jit_init(PARROT_INTERP)
 
 /*
 
+=item C<void Parrot_runcore_profiling_init(PARROT_INTERP)>
+
+Registers the profiling runcore with Parrot.
+
+=cut
+
+*/
+
+void
+Parrot_runcore_profiling_init(PARROT_INTERP)
+{
+    ASSERT_ARGS(Parrot_runcore_profiling_init)
+
+    Parrot_runcore_t *coredata = mem_allocate_typed(Parrot_runcore_t);
+    coredata->name             = CONST_STRING(interp, "profiling");
+    coredata->opinit           = PARROT_CORE_OPLIB_INIT;
+    coredata->runops           = runops_profiling_core;
+    coredata->prepare_run      = NULL;
+    coredata->destroy          = NULL;
+
+    PARROT_RUNCORE_FUNC_TABLE_SET(coredata);
+
+    Parrot_runcore_register(interp, coredata);
+}
+
+
+/*
+
 =item C<static opcode_t * runops_fast_core(PARROT_INTERP, Parrot_runcore_t
 *runcore, opcode_t *pc)>
 
@@ -971,7 +999,7 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opco
 
 /*
 
-=item C<static opcode_t * runops_profile_core(PARROT_INTERP, Parrot_runcore_t
+=item C<static opcode_t * runops_profiling_core(PARROT_INTERP, Parrot_runcore_t
 *runcore, opcode_t *pc)>
 
 Runs the Parrot operations starting at C<pc> until there are no more
@@ -984,11 +1012,10 @@ operations, with tracing, bounds checking, and profiling enabled.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static opcode_t *
-runops_profile_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcode_t *pc))
+runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcode_t *pc))
 {
-    ASSERT_ARGS(runops_profile_core)
-
-    Parrot_Context_info prev_info, curr_info;
+    ASSERT_ARGS(runops_profiling_core)
+            Parrot_Context_info prev_info, curr_info;
     Parrot_Context     *prev_ctx;
     struct timespec     preop, postop;
     opcode_t           *prev_pc;
@@ -1010,7 +1037,7 @@ runops_profile_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcod
     }
 
     interp_counter++;
-    fprintf(prof_fd, "NEW RUNLOOP (%d)\n", interp_counter);
+    fprintf(prof_fd, "#NEW RUNLOOP (%d)\n", interp_counter);
 
     prev_ctx = CONTEXT(interp);
     Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
@@ -1037,8 +1064,8 @@ runops_profile_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcod
         sub_preop  = prev_info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
-        prev_ctx                    = CONTEXT(interp);
-        prev_pc                     = pc;
+        prev_ctx = CONTEXT(interp);
+        prev_pc = pc;
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &preop);
         DO_OP(pc, interp);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
@@ -1055,25 +1082,74 @@ runops_profile_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcod
         if (!sub_postop)  sub_postop  = unknown_sub;
 
         if (prev_pc) {
+
+            PMC                 *invoked;
+            Parrot_Context_info  info;
+
             if (strcmp(file_preop, file_postop))
                 fprintf(prof_fd, "F:%s\n", file_postop);
             if (strcmp(sub_preop, sub_postop))
                 fprintf(prof_fd, "S:%s;%s\n",
                         VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
                         sub_postop);
-            fprintf(prof_fd, "%d:%lli:%d:%s\n",
-                    curr_info.line, op_time, (int)CONTEXT(interp)->recursion_depth,
-                    (interp->op_info_table)[*prev_pc].name);
+
+            /* if an invokable thing was invoked, note which namespace we're in now */
+            switch (*prev_pc) {
+                case PARROT_OP_invokecc_p:
+                case PARROT_OP_invoke_p_p:
+
+                case PARROT_OP_callmethod_p_s_p:
+                case PARROT_OP_callmethod_p_sc_p:
+                case PARROT_OP_callmethod_p_p_p:
+
+                case PARROT_OP_callmethodcc_p_s:
+                case PARROT_OP_callmethodcc_p_sc:
+                case PARROT_OP_callmethodcc_p_p:
+
+                    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+
+                    if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
+                        fprintf(prof_fd, "%d:%lli:%s calls to %s\n",
+                                curr_info.line, op_time,
+                                (interp->op_info_table)[*prev_pc].name,
+                                info.fullname->strstart);
+                        break;
+                    }
+                    /* intentional fallthrough if we're not in a new sub */
+
+                case PARROT_OP_returncc:
+                case PARROT_OP_yield:
+                case PARROT_OP_tailcall_p:
+                case PARROT_OP_tailcallmethod_p_s:
+                case PARROT_OP_tailcallmethod_p_sc:
+                case PARROT_OP_tailcallmethod_p_p:
+
+                    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+
+                    if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
+                        fprintf(prof_fd, "%d:%lli:%s returns to %s\n",
+                                curr_info.line, op_time,
+                                (interp->op_info_table)[*prev_pc].name,
+                                info.fullname->strstart);
+                        break;
+                    }
+                    /* intentional fallthrough if we're not in a new sub */
+
+                default:
+                    fprintf(prof_fd, "%d:%lli:%s\n",
+                            curr_info.line, op_time,
+                            (interp->op_info_table)[*prev_pc].name);
+            }
+
         }
     }
 
-    fprintf(prof_fd, "END OF RUNLOOP (%d)\n", interp_counter);
+    fprintf(prof_fd, "#END OF RUNLOOP (%d)\n", interp_counter);
     interp_counter--;
 
     if (interp_counter == 0)
         fclose(prof_fd);
     return pc;
-
 
 }
 

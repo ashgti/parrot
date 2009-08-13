@@ -389,9 +389,10 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
                     core |= PARROT_SWITCH_JIT_CORE;
                 else if (STREQ(opt.opt_arg, "exec"))
                     core |= PARROT_EXEC_CORE;
-                else if (STREQ(opt.opt_arg, "trace")) {
+                else if (STREQ(opt.opt_arg, "trace"))
                     core |= PARROT_SLOW_CORE;
-                }
+                else if (STREQ(opt.opt_arg, "profiling"))
+                    core |= PARROT_PROFILING_CORE;
                 else if (STREQ(opt.opt_arg, "gcdebug"))
                     core |= PARROT_GC_DEBUG_CORE;
                 else

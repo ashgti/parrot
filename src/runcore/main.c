@@ -139,6 +139,8 @@ Parrot_runcore_init(PARROT_INTERP)
     Parrot_runcore_gc_debug_init(interp);
     Parrot_runcore_debugger_init(interp);
 
+    Parrot_runcore_profiling_init(interp);
+
 #ifdef HAVE_COMPUTED_GOTO
     Parrot_runcore_cgp_init(interp);
     Parrot_runcore_cgoto_init(interp);

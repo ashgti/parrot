@@ -381,6 +381,9 @@ Parrot_set_run_core(PARROT_INTERP, Parrot_Run_core_t core)
         case PARROT_DEBUGGER_CORE:
             Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "debugger"));
             break;
+        case PARROT_PROFILING_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "profiling"));
+            break;
         default:
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "Invalid runcore requested\n");
