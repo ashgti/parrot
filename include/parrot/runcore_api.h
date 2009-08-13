@@ -165,6 +165,12 @@ void runops_int(PARROT_INTERP, size_t offset)
 /* HEADERIZER BEGIN: src/runcore/cores.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_CAN_RETURN_NULL
+void * destroy_profiling_core(PARROT_INTERP,
+    ARGIN(Parrot_runcore_t *runcore))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 oplib_init_f get_core_op_lib_init(PARROT_INTERP,
@@ -180,6 +186,11 @@ void * init_jit_run(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
 
 PARROT_CAN_RETURN_NULL
 void * init_prederef(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_CAN_RETURN_NULL
+void * init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -223,6 +234,9 @@ void Parrot_runcore_switch_init(PARROT_INTERP)
 void Parrot_runcore_switch_jit_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+#define ASSERT_ARGS_destroy_profiling_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(runcore)
 #define ASSERT_ARGS_get_core_op_lib_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore)
@@ -230,6 +244,9 @@ void Parrot_runcore_switch_jit_init(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore)
 #define ASSERT_ARGS_init_prederef __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(runcore)
+#define ASSERT_ARGS_init_profiling_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore)
 #define ASSERT_ARGS_load_prederef __attribute__unused__ int _ASSERT_ARGS_CHECK = \

@@ -756,8 +756,8 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
     coredata->name             = CONST_STRING(interp, "profiling");
     coredata->opinit           = PARROT_CORE_OPLIB_INIT;
     coredata->runops           = runops_profiling_core;
-    coredata->prepare_run      = NULL;
-    coredata->destroy          = NULL;
+    coredata->prepare_run      = init_profiling_core;
+    coredata->destroy          = destroy_profiling_core;
 
     PARROT_RUNCORE_FUNC_TABLE_SET(coredata);
 
@@ -1008,6 +1008,27 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opco
 
 /*
 
+=item C<void * init_profiling_core(PARROT_INTERP, Parrot_runcore_t *runcore)>
+
+Perform initialization for the profiling runcore.
+
+=cut
+
+*/
+
+PARROT_CAN_RETURN_NULL
+void *
+init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
+{
+    ASSERT_ARGS(init_profiling_core)
+
+    fprintf(stderr, "PROFILING INIT CALLED");
+
+    return NULL;
+}
+
+/*
+
 =item C<static opcode_t * runops_profiling_core(PARROT_INTERP, Parrot_runcore_t
 *runcore, opcode_t *pc)>
 
@@ -1160,6 +1181,28 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
         fclose(prof_fd);
     return pc;
 
+}
+
+
+/*
+
+=item C<void * destroy_profiling_core(PARROT_INTERP, Parrot_runcore_t *runcore)>
+
+Perform initialization for the profiling runcore.
+
+=cut
+
+*/
+
+PARROT_CAN_RETURN_NULL
+void *
+destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
+{
+    ASSERT_ARGS(destroy_profiling_core)
+
+    fprintf(stderr,"PROFILING DESTRUCTOR CALLED\n");
+
+    return NULL;
 }
 
 #undef code_start
