@@ -221,6 +221,9 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     CONTEXT(interp)->current_cont   = NULL;
     CONTEXT(interp)->current_object = NULL;
 
+    /* initialize built-in runcores */
+    Parrot_runcore_init(interp);
+
     /* Load the core op func and info tables */
     interp->op_lib          = PARROT_CORE_OPLIB_INIT(1);
     interp->op_count        = interp->op_lib->op_count;

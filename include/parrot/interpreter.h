@@ -72,7 +72,8 @@ typedef enum {
     PARROT_SWITCH_JIT_CORE  = 0x12,         /* J P                */
     PARROT_EXEC_CORE        = 0x20,         /* TODO Parrot_exec_run variants */
     PARROT_GC_DEBUG_CORE    = 0x40,         /* run GC before each op */
-    PARROT_DEBUGGER_CORE    = 0x80          /* used by parrot debugger */
+    PARROT_DEBUGGER_CORE    = 0x80,         /* used by parrot debugger */
+    PARROT_PROFILE_CORE     = 0x160         /* used by parrot debugger */
 } Parrot_Run_core_t;
 /* &end_gen */
 
@@ -339,7 +340,9 @@ struct parrot_interp_t {
 
     UINTVAL debug_flags;                      /* debug settings */
 
-    INTVAL run_core;                          /* type of core to run the ops */
+    struct runcore_t  *run_core;              /* type of core to run the ops */
+    struct runcore_t **cores;                 /* array of known runcores */
+    UINTVAL            num_cores;             /* number of known runcores */
 
     /* TODO profile per code segment or global */
     RunProfile *profile;                      /* profile counters */
@@ -696,8 +699,7 @@ void exec_init_prederef(PARROT_INTERP,
     void *prederef_arena);
 void prepare_for_run(PARROT_INTERP);
 void *init_jit(PARROT_INTERP, opcode_t *pc);
-PARROT_EXPORT void dynop_register(PARROT_INTERP, PMC* op_lib);
-void do_prederef(void **pc_prederef, PARROT_INTERP, int type);
+PARROT_EXPORT void dynop_register(PARROT_INTERP, PMC *op_lib);
 
 /* interpreter.pmc */
 void clone_interpreter(Parrot_Interp dest, Parrot_Interp self, INTVAL flags);

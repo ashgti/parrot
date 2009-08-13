@@ -22,6 +22,7 @@ This file implements the Parrot embedding interface.
 #include "parrot/embed.h"
 #include "parrot/oplib/ops.h"
 #include "pmc/pmc_sub.h"
+#include "parrot/runcore_api.h"
 
 #include "../compilers/imcc/imc.h"
 
@@ -157,7 +158,7 @@ Parrot_set_flag(PARROT_INTERP, INTVAL flag)
     switch (flag) {
         case PARROT_BOUNDS_FLAG:
         case PARROT_PROFILE_FLAG:
-            Interp_core_SET(interp, PARROT_SLOW_CORE);
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "slow"));
             break;
         default:
             break;
@@ -220,7 +221,7 @@ void
 Parrot_set_trace(PARROT_INTERP, UINTVAL flag)
 {
     CONTEXT(interp)->trace_flags |= flag;
-    Interp_core_SET(interp, PARROT_SLOW_CORE);
+    Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "slow"));
 }
 
 
@@ -346,7 +347,44 @@ PARROT_EXPORT
 void
 Parrot_set_run_core(PARROT_INTERP, Parrot_Run_core_t core)
 {
-    Interp_core_SET(interp, core);
+    switch (core) {
+        case PARROT_SLOW_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "slow"));
+            break;
+        case PARROT_FAST_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "fast"));
+            break;
+        case PARROT_SWITCH_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "switch"));
+            break;
+        case PARROT_CGP_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "cgp"));
+            break;
+        case PARROT_CGOTO_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "cgoto"));
+            break;
+        case PARROT_JIT_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "jit"));
+            break;
+        case PARROT_CGP_JIT_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "cgp_jit"));
+            break;
+        case PARROT_SWITCH_JIT_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "switch_jit"));
+            break;
+        case PARROT_EXEC_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "exec"));
+            break;
+        case PARROT_GC_DEBUG_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "gc_debug"));
+            break;
+        case PARROT_DEBUGGER_CORE:
+            Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "debugger"));
+            break;
+        default:
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
+                "Invalid runcore requested\n");
+    }
 }
 
 
@@ -829,38 +867,8 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
         if (Interp_trace_TEST(interp, PARROT_TRACE_OPS_FLAG))
             Parrot_io_eprintf(interp, "*** Parrot VM: Tracing enabled. ***\n");
 
-        Parrot_io_eprintf(interp, "*** Parrot VM: ");
-
-        switch (interp->run_core) {
-            case PARROT_SLOW_CORE:
-                Parrot_io_eprintf(interp, "Slow core");
-                break;
-            case PARROT_FAST_CORE:
-                Parrot_io_eprintf(interp, "Fast core");
-                break;
-            case PARROT_SWITCH_CORE:
-            case PARROT_SWITCH_JIT_CORE:
-                Parrot_io_eprintf(interp, "Switch core");
-                break;
-            case PARROT_CGP_CORE:
-            case PARROT_CGP_JIT_CORE:
-                Parrot_io_eprintf(interp, "CGP core");
-                break;
-            case PARROT_CGOTO_CORE:
-                Parrot_io_eprintf(interp, "CGoto core");
-                break;
-            case PARROT_JIT_CORE:
-                Parrot_io_eprintf(interp, "JIT core");
-                break;
-            case PARROT_EXEC_CORE:
-                Parrot_io_eprintf(interp, "EXEC core");
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                     "Unknown run core");
-        }
-
-        Parrot_io_eprintf(interp, " ***\n");
+        Parrot_io_eprintf(interp, "*** Parrot VM: %Ss core ***\n",
+                interp->run_core->name);
     }
 
     /* Set up @ARGS (or whatever this language calls it) in userargv. */
@@ -869,7 +877,8 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
 #if EXEC_CAPABLE
 
     /* s. runops_exec interpreter.c */
-    if (Interp_core_TEST(interp, PARROT_EXEC_CORE))
+    if (Parrot_str_equal(interp, interp->run_core->name,
+        Parrot_str_new_constant(interp, "exec")))
         Parrot_exec_run = 1;
 
 #endif
