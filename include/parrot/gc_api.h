@@ -239,7 +239,7 @@ void Parrot_gc_finalize(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 void Parrot_gc_free_bufferlike_header(PARROT_INTERP,
-    ARGMOD(PObj *obj),
+    ARGMOD(Buffer *obj),
     size_t size)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)

@@ -15,46 +15,19 @@
 
 #include "parrot/config.h"
 
-typedef union UnionVal {
-    struct _b {                                  /* One Buffer structure */
-        void *     _bufstart;
-        size_t     _buflen;
-    } _b;
-    struct _ptrs {                                  /* or two pointers, both are defines */
-        DPOINTER * _struct_val;
-        PMC *      _pmc_val;
-    } _ptrs;
-    struct _i {
-        INTVAL _int_val;                      /* or 2 intvals */
-        INTVAL _int_val2;
-    } _i;
-    FLOATVAL _num_val;                       /* or one float */
-    struct parrot_string_t * _string_val;    /* or a pointer to a string */
-} UnionVal;
-
-#define UVal_ptr(u)       (u)._ptrs._struct_val
-#define UVal_pmc(u)       (u)._ptrs._pmc_val
-#define UVal_int(u)       (u)._i._int_val
-#define UVal_int2(u)      (u)._i._int_val2
-#define UVal_num(u)       (u)._num_val
-#define UVal_str(u)       (u)._string_val
-
 /* Parrot Object - base class for all others */
 typedef struct pobj_t {
-    UnionVal u;
     Parrot_UInt flags;
-} pobj_t;
+} PObj;
 
-/* plain Buffer is the smallest Parrot Obj */
-typedef struct Buffer {
-    UnionVal    cache;
+typedef struct buffer_t {
     Parrot_UInt flags;
+    void *     _bufstart;
+    size_t     _buflen;    
 } Buffer;
 
-typedef Buffer PObj;
-
-#define PObj_bufstart(pmc)    (pmc)->cache._b._bufstart
-#define PObj_buflen(pmc)      (pmc)->cache._b._buflen
+#define Buffer_bufstart(buffer)    (buffer)->_bufstart
+#define Buffer_buflen(buffer)      (buffer)->_buflen
 
 /* See src/gc/alloc_resources.c. the basic idea is that buffer memory is
    set up as follows:
@@ -84,24 +57,20 @@ obj->bufstart   ->  +------------------+      +------------------+
                     v                  v      v                  v
 
 */
-typedef struct Buffer_alloc_unit {
-    INTVAL ref_count;
-    UnionVal buffer[1]; /* Guarantee it's suitably aligned */
-} Buffer_alloc_unit;
 
 /* Given a pointer to the buffer, find the ref_count and the actual start of
    the allocated space. Setting ref_count is clunky because we avoid lvalue
    casts. */
 #ifdef GC_IS_MALLOC       /* see src/gc/res_lea.c */
 #  define Buffer_alloc_offset    (offsetof(Buffer_alloc_unit, buffer))
-#  define PObj_bufallocstart(b)  ((char *)PObj_bufstart(b) - Buffer_alloc_offset)
-#  define PObj_bufrefcount(b)    (((Buffer_alloc_unit *)PObj_bufallocstart(b))->ref_count)
-#  define PObj_bufrefcountptr(b) (&PObj_bufrefcount(b))
+#  define Buffer_bufallocstart(b)  ((char *)Buffer_bufstart(b) - Buffer_alloc_offset)
+#  define Buffer_bufrefcount(b)    (((Buffer_alloc_unit *)Buffer_bufallocstart(b))->ref_count)
+#  define Buffer_bufrefcountptr(b) (&Buffer_bufrefcount(b))
 #else                     /* see src/gc/alloc_resources.c */
 #  define Buffer_alloc_offset sizeof (INTVAL)
-#  define PObj_bufallocstart(b)  ((char *)PObj_bufstart(b) - Buffer_alloc_offset)
-#  define PObj_bufrefcount(b)    (*(INTVAL *)PObj_bufallocstart(b))
-#  define PObj_bufrefcountptr(b) ((INTVAL *)PObj_bufallocstart(b))
+#  define Buffer_bufallocstart(b)  ((char *)Buffer_bufstart(b) - Buffer_alloc_offset)
+#  define Buffer_bufrefcount(b)    (*(INTVAL *)Buffer_bufallocstart(b))
+#  define Buffer_bufrefcountptr(b) ((INTVAL *)Buffer_bufallocstart(b))
 #endif
 
 typedef enum {
@@ -112,8 +81,10 @@ typedef enum {
 } parrot_string_representation_t;
 
 struct parrot_string_t {
-    UnionVal    cache;
     Parrot_UInt flags;
+    void *     _bufstart;
+    size_t     _buflen;
+      
     char       *strstart;
     UINTVAL     bufused;
     UINTVAL     strlen;
@@ -124,18 +95,14 @@ struct parrot_string_t {
     const struct _charset  *charset;
 };
 
+struct _Sync;   /* forward decl */
+
 /* note that cache and flags are isomorphic with Buffer and PObj */
 struct PMC {
-    UnionVal        cache;
     Parrot_UInt     flags;
     VTABLE         *vtable;
     DPOINTER       *data;
-    struct PMC_EXT *pmc_ext;
-};
 
-struct _Sync;   /* forward decl */
-
-typedef struct PMC_EXT {
     PMC *_metadata;      /* properties */
     /*
      * PMC access synchronization for shared PMCs
@@ -160,21 +127,16 @@ typedef struct PMC_EXT {
        stuff, which'd merit an extra dereference when setting, but let
        us memset the actual GC data in a big block
     */
-} PMC_EXT;
+};
 
-#ifdef NDEBUG
-#  define PMC_ext_checked(pmc)             (pmc)->pmc_ext
-#else
-#  define PMC_ext_checked(pmc)             (PARROT_ASSERT((pmc)->pmc_ext), (pmc)->pmc_ext)
-#endif /* NDEBUG */
 #define PMC_data(pmc)                   (pmc)->data
 #define PMC_data_typed(pmc, type) (type)(pmc)->data
 /* do not allow PMC_data2 as lvalue */
 #define PMC_data0(pmc)            (1 ? (pmc)->data : 0)
 #define PMC_data0_typed(pmc)      (type)(1 ? (pmc)->data : 0)
-#define PMC_metadata(pmc)     PMC_ext_checked(pmc)->_metadata
-#define PMC_next_for_GC(pmc)  PMC_ext_checked(pmc)->_next_for_GC
-#define PMC_sync(pmc)         PMC_ext_checked(pmc)->_synchronize
+#define PMC_metadata(pmc)     pmc->_metadata
+#define PMC_next_for_GC(pmc)  pmc->_next_for_GC
+#define PMC_sync(pmc)         pmc->_synchronize
 
 #define POBJ_FLAG(n) ((UINTVAL)1 << (n))
 /* PObj flags */

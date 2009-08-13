@@ -28,11 +28,12 @@ typedef enum {
 
 /*
  * hash_entry is currently unused in the hash structure
- */
+ 
 typedef struct _hash_entry {
     HashEntryType type;
     UnionVal val;
 } HashEntry;
+*/
 
 /* A BucketIndex is an index into the pool of available buckets. */
 typedef UINTVAL BucketIndex;

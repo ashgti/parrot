@@ -359,7 +359,7 @@ pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
 {
     ASSERT_ARGS(pmc_reuse_check_pmc_ext)
     /* Do we have an extension area? */
-    INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc) && pmc->pmc_ext);
+    INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc));
 
     /* Do we need one? */
     if (flags & VTABLE_PMC_NEEDS_EXT) {
@@ -373,7 +373,6 @@ pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
         PMC_data(pmc) = NULL;
         newflags &= ~PObj_is_PMC_EXT_FLAG;
         PARROT_ASSERT((newflags & PObj_is_PMC_EXT_FLAG) == 0);
-        PARROT_ASSERT(pmc->pmc_ext == NULL);
     }
     return newflags;
 }

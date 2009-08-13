@@ -463,17 +463,18 @@ static void
 str_append(PARROT_INTERP, ARGMOD(STRING *s), ARGIN(const void *b), size_t len)
 {
     ASSERT_ARGS(str_append)
+
     const size_t used = s->bufused;
-    const int need_free = (int)PObj_buflen(s) - used - len;
+    const int need_free = (int)Buffer_buflen(s) - used - len;
     /*
      * grow by factor 1.5 or such
      */
     if (need_free <= 16) {
-        size_t new_size = (size_t) (PObj_buflen(s) * 1.5);
-        if (new_size < PObj_buflen(s) - need_free + 512)
-            new_size = PObj_buflen(s) - need_free + 512;
+        size_t new_size = (size_t) (Buffer_buflen(s) * 1.5);
+        if (new_size < Buffer_buflen(s) - need_free + 512)
+            new_size = Buffer_buflen(s) - need_free + 512;
         Parrot_gc_reallocate_string_storage(interp, s, new_size);
-        PARROT_ASSERT(PObj_buflen(s) - used - len >= 15);
+        PARROT_ASSERT(Buffer_buflen(s) - used - len >= 15);
     }
     mem_sys_memcopy((void *)((ptrcast_t)s->strstart + used), b, len);
     s->bufused += len;
@@ -591,6 +592,7 @@ static INTVAL
 shift_ascii_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
 {
     ASSERT_ARGS(shift_ascii_integer)
+
     char * const start = (char*)io->image->strstart;
     char *p = start;
     const INTVAL i = strtoul(p, &p, 10);
@@ -599,7 +601,9 @@ shift_ascii_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
     PARROT_ASSERT(p <= start + io->image->bufused);
     io->image->strstart = p;
     io->image->bufused -= (p - start);
+    io->image->strlen -= (p - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
+
     return i;
 }
 
@@ -617,6 +621,7 @@ static FLOATVAL
 shift_ascii_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
 {
     ASSERT_ARGS(shift_ascii_number)
+
     char * const start = (char*)io->image->strstart;
     char *p = start;
     const FLOATVAL f = (FLOATVAL) strtod(p, &p);
@@ -625,7 +630,9 @@ shift_ascii_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
     PARROT_ASSERT(p <= start + io->image->bufused);
     io->image->strstart = p;
     io->image->bufused -= (p - start);
+    io->image->strlen -= (p - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
+
     return f;
 }
 
@@ -656,9 +663,11 @@ shift_ascii_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
     PARROT_ASSERT(p <= start + io->image->bufused);
     io->image->strstart = p;
     io->image->bufused -= (p - start);
+    io->image->strlen -= (p - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
     s = string_make(interp, start, p - start - 1, "iso-8859-1", 0);
 /*    s = string_make(interp, start, p - start - 1, "UTF-8", 0); */
+
     return s;
 }
 
@@ -678,6 +687,7 @@ static PMC*
 shift_ascii_pmc(SHIM_INTERP, ARGIN(IMAGE_IO *io))
 {
     ASSERT_ARGS(shift_ascii_pmc)
+
     char * const start = (char*)io->image->strstart;
     char *p = start;
     const unsigned long i = strtoul(p, &p, 16);
@@ -685,7 +695,9 @@ shift_ascii_pmc(SHIM_INTERP, ARGIN(IMAGE_IO *io))
     PARROT_ASSERT(p <= start + io->image->bufused);
     io->image->strstart = p;
     io->image->bufused -= (p - start);
+    io->image->strlen -= (p - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
+
     return (PMC*) i;
 }
 
@@ -712,16 +724,17 @@ op_check_size(PARROT_INTERP, ARGIN(STRING *s), size_t len)
 {
     ASSERT_ARGS(op_check_size)
     const size_t used = s->bufused;
-    const int need_free = (int)PObj_buflen(s) - used - len;
+    const int need_free = (int)Buffer_buflen(s) - used - len;
+
     /*
      * grow by factor 1.5 or such
      */
     if (need_free <= 16) {
-        size_t new_size = (size_t) (PObj_buflen(s) * 1.5);
-        if (new_size < PObj_buflen(s) - need_free + 512)
-            new_size = PObj_buflen(s) - need_free + 512;
+        size_t new_size = (size_t) (Buffer_buflen(s) * 1.5);
+        if (new_size < Buffer_buflen(s) - need_free + 512)
+            new_size = Buffer_buflen(s) - need_free + 512;
         Parrot_gc_reallocate_string_storage(interp, s, new_size);
-        PARROT_ASSERT(PObj_buflen(s) - used - len >= 15);
+        PARROT_ASSERT(Buffer_buflen(s) - used - len >= 15);
     }
 #ifndef DISABLE_GC_DEBUG
     Parrot_gc_compact_memory_pool(interp);
@@ -785,6 +798,7 @@ static void
 push_opcode_number(PARROT_INTERP, ARGIN(IMAGE_IO *io), FLOATVAL v)
 {
     ASSERT_ARGS(push_opcode_number)
+
     const size_t   len  = PF_size_number() * sizeof (opcode_t);
     STRING * const s    = io->image;
     const size_t   used = s->bufused;
@@ -812,6 +826,7 @@ static void
 push_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io), ARGIN(STRING *v))
 {
     ASSERT_ARGS(push_opcode_string)
+
     const size_t len = PF_size_string(v) * sizeof (opcode_t);
     STRING * const s = io->image;
     const size_t used = s->bufused;
@@ -862,6 +877,7 @@ shift_opcode_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
                                     (const opcode_t **)opcode);
 
     io->image->bufused -= ((char *)io->image->strstart - start);
+    io->image->strlen -= ((char *)io->image->strstart - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
 
     return i;
@@ -903,12 +919,14 @@ static FLOATVAL
 shift_opcode_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
 {
     ASSERT_ARGS(shift_opcode_number)
+
     const char * const   start  = (const char *)io->image->strstart;
     char               **opcode = &io->image->strstart;
     const FLOATVAL       f      = PF_fetch_number(io->pf,
                                     (const opcode_t **)opcode);
 
     io->image->bufused -= ((char *)io->image->strstart - start);
+    io->image->strlen -= ((char *)io->image->strstart - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
 
     return f;
@@ -930,12 +948,15 @@ static STRING*
 shift_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
 {
     ASSERT_ARGS(shift_opcode_string)
-    char * const   start  = (char*)io->image->strstart;
-    char         **opcode = &io->image->strstart;
-    STRING * const s      = PF_fetch_string(interp, io->pf,
-                                (const opcode_t **)opcode);
 
-    io->image->bufused -= ((char *)io->image->strstart - start);
+    char * const   start  = (char*)io->image->strstart;
+    char *         opcode = io->image->strstart;
+    STRING * const s      = PF_fetch_string(interp, io->pf,
+                                (const opcode_t **)&opcode);
+
+    io->image->strstart = opcode;
+    io->image->bufused -= (opcode - start);
+    io->image->strlen -= (opcode - start);
     PARROT_ASSERT((int)io->image->bufused >= 0);
 
     return s;
@@ -1019,6 +1040,7 @@ ft_init(PARROT_INTERP, ARGIN(visit_info *info))
          16 - PACKFILE_HEADER_BYTES % 16 : 0);
 
     info->image_io = mem_allocate_typed(IMAGE_IO);
+
     info->image_io->image = s = info->image;
 #if FREEZE_ASCII
     info->image_io->vtable = &ascii_funcs;
@@ -1026,6 +1048,7 @@ ft_init(PARROT_INTERP, ARGIN(visit_info *info))
     info->image_io->vtable = &opcode_funcs;
 #endif
     pf = info->image_io->pf = PackFile_new(interp, 0);
+
     if (info->what == VISIT_FREEZE_NORMAL ||
         info->what == VISIT_FREEZE_AT_DESTRUCT) {
 
@@ -1052,6 +1075,7 @@ ft_init(PARROT_INTERP, ARGIN(visit_info *info))
         mem_sys_memcopy(pf->header, s->strstart, PACKFILE_HEADER_BYTES);
         PackFile_assign_transforms(pf);
         s->bufused -= header_length;
+        s->strlen -= header_length;
         LVALUE_CAST(char *, s->strstart) += header_length;
     }
 
@@ -1171,6 +1195,7 @@ thaw_pmc(PARROT_INTERP, ARGMOD(visit_info *info),
 
     info->extra_flags = EXTRA_IS_NULL;
     n = VTABLE_shift_pmc(interp, io);
+
     if (((UINTVAL) n & 3) == 3) {
         /* pmc has extra data */
         info->extra_flags = VTABLE_shift_integer(interp, io);
@@ -1194,6 +1219,7 @@ thaw_pmc(PARROT_INTERP, ARGMOD(visit_info *info),
             *type = enum_class_Class;
         }
     }
+
     *id = (UINTVAL) n;
     return seen;
 }
@@ -1356,7 +1382,7 @@ do_thaw(PARROT_INTERP, ARGIN_NULLOK(PMC* pmc), ARGIN(visit_info *info))
     }
     list_assign(interp, (List *)PMC_data(info->id_list), id, pmc, enum_type_PMC);
     /* remember nested aggregates depth first */
-    if (pmc->pmc_ext)
+    if (PObj_is_PMC_EXT_TEST(pmc))
         list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
 }
 
@@ -1396,7 +1422,7 @@ static void
 add_pmc_next_for_GC(SHIM_INTERP, ARGIN(PMC *pmc), ARGOUT(visit_info *info))
 {
     ASSERT_ARGS(add_pmc_next_for_GC)
-    if (pmc->pmc_ext) {
+    if (PObj_is_PMC_EXT_TEST(pmc)) {
         PMC_next_for_GC(info->mark_ptr) = pmc;
         info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
     }
@@ -1433,7 +1459,7 @@ next_for_GC_seen(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
      * we can only remember PMCs with a next_for_GC pointer
      * which is located in pmc_ext
      */
-    if (pmc->pmc_ext) {
+    if (PObj_is_PMC_EXT_TEST(pmc)) {
         /* already seen? */
         if (!PMC_IS_NULL(PMC_next_for_GC(pmc))) {
             seen = 1;
@@ -1500,7 +1526,7 @@ todo_list_seen(PARROT_INTERP, ARGIN(PMC *pmc), ARGMOD(visit_info *info),
     parrot_hash_put(interp,
             (Hash *)VTABLE_get_pointer(interp, info->seen), pmc, (void*)*id);
     /* remember containers */
-    if (pmc->pmc_ext)
+    if (PObj_is_PMC_EXT_TEST(pmc))
         list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
     return 0;
 }
@@ -1607,7 +1633,7 @@ visit_loop_next_for_GC(PARROT_INTERP, ARGIN(PMC *current),
 {
     ASSERT_ARGS(visit_loop_next_for_GC)
     visit_next_for_GC(interp, current, info);
-    if (current->pmc_ext) {
+    if (PObj_is_PMC_EXT_TEST(current)) {
         PMC *prev = NULL;
 
         while (current != prev) {
@@ -1797,7 +1823,8 @@ run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
      */
     LVALUE_CAST(char *, image->strstart) -= bufused;
     image->bufused = bufused;
-    PARROT_ASSERT(image->strstart >= (char *)PObj_bufstart(image));
+    image->strlen += bufused;
+    PARROT_ASSERT(image->strstart >= (char *)Buffer_bufstart(image));
 
     if (gc_block) {
         Parrot_unblock_GC_mark(interp);
