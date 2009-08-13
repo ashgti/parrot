@@ -258,6 +258,15 @@ next opcode, or examine and manipulate data from the executing program.
 #  include "../jit.h"
 #endif
 
+#if defined(CLOCK_PROCESS_CPUTIME_ID)
+#  define CLOCK_BEST CLOCK_PROCESS_CPUTIME_ID
+#elif defined(CLOCK_PROF)
+#  define CLOCK_BEST CLOCK_PROF
+#else
+#  define CLOCK_BEST CLOCK_REALTIME
+#endif
+
+
 /* HEADERIZER HFILE: include/parrot/runcore_api.h */
 
 /* HEADERIZER BEGIN: static */
@@ -1066,9 +1075,9 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
         CONTEXT(interp)->current_pc = pc;
         prev_ctx = CONTEXT(interp);
         prev_pc = pc;
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &preop);
+        clock_gettime(CLOCK_BEST, &preop);
         DO_OP(pc, interp);
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &postop);
+        clock_gettime(CLOCK_BEST, &postop);
 
         op_time = (postop.tv_sec * 1000*1000*1000 + postop.tv_nsec) -
                   (preop.tv_sec  * 1000*1000*1000 + preop.tv_nsec);
