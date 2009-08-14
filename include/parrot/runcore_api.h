@@ -11,6 +11,8 @@
 
 struct runcore_t;
 typedef struct runcore_t Parrot_runcore_t;
+struct profiling_runcore_t;
+typedef struct profiling_runcore_t Parrot_profiling_runcore_t;
 
 #include "parrot/parrot.h"
 #include "parrot/op.h"
@@ -28,6 +30,19 @@ struct runcore_t {
     runcore_destroy_fn_type  destroy;
     runcore_prepare_fn_type  prepare_run;
     INTVAL                   flags;
+};
+
+struct profiling_runcore_t {
+    STRING                  *name;
+    oplib_init_f             opinit;
+    runcore_runops_fn_type   runops;
+    runcore_destroy_fn_type  destroy;
+    runcore_prepare_fn_type  prepare_run;
+    INTVAL                   flags;
+
+    /* end of common members */
+    FILE                    *prof_fd;
+    INTVAL                   nesting_counter;
 };
 
 typedef enum Parrot_runcore_flags {
@@ -167,7 +182,7 @@ void runops_int(PARROT_INTERP, size_t offset)
 
 PARROT_CAN_RETURN_NULL
 void * destroy_profiling_core(PARROT_INTERP,
-    ARGIN(Parrot_runcore_t *runcore))
+    ARGIN(Parrot_profiling_runcore_t *runcore))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

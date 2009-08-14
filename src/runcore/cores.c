@@ -274,7 +274,7 @@ next opcode, or examine and manipulate data from the executing program.
 
 PARROT_CAN_RETURN_NULL
 static void * init_profiling_core(PARROT_INTERP,
-    ARGIN(Parrot_runcore_t *runcore),
+    ARGIN(Parrot_profiling_runcore_t *runcore),
     ARGIN(opcode_t *pc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -346,7 +346,7 @@ static opcode_t * runops_jit_core(PARROT_INTERP,
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static opcode_t * runops_profiling_core(PARROT_INTERP,
-    ARGIN(Parrot_runcore_t *runcore),
+    ARGIN(Parrot_profiling_runcore_t *runcore),
     ARGIN(opcode_t *pc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -1020,8 +1020,8 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opco
 
 /*
 
-=item C<static void * init_profiling_core(PARROT_INTERP, Parrot_runcore_t
-*runcore, opcode_t *pc)>
+=item C<static void * init_profiling_core(PARROT_INTERP,
+Parrot_profiling_runcore_t *runcore, opcode_t *pc)>
 
 Perform initialization for the profiling runcore.
 
@@ -1031,22 +1031,27 @@ Perform initialization for the profiling runcore.
 
 PARROT_CAN_RETURN_NULL
 static void *
-init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcode_t *pc))
+init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(init_profiling_core)
 
     runcore->runops  = runops_profiling_core;
     runcore->destroy = destroy_profiling_core;
 
-    fprintf(stderr, "PROFILING INIT CALLED\n");
+    runcore->nesting_counter = 0;
+    runcore->prof_fd = fopen("parrot.pprof", "w");
+    if (!runcore->prof_fd) {
+        fprintf(stderr, "unable to open parrot_prof.out for writing");
+        exit(1);
+    }
 
     return runops_profiling_core(interp, runcore, pc);
 }
 
 /*
 
-=item C<static opcode_t * runops_profiling_core(PARROT_INTERP, Parrot_runcore_t
-*runcore, opcode_t *pc)>
+=item C<static opcode_t * runops_profiling_core(PARROT_INTERP,
+Parrot_profiling_runcore_t *runcore, opcode_t *pc)>
 
 Runs the Parrot operations starting at C<pc> until there are no more
 operations, with tracing, bounds checking, and profiling enabled.
@@ -1058,7 +1063,7 @@ operations, with tracing, bounds checking, and profiling enabled.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static opcode_t *
-runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcode_t *pc))
+runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profiling_core)
             Parrot_Context_info prev_info, curr_info;
@@ -1069,26 +1074,14 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "(unknown sub)";
     char                unknown_file[] = "(unknown file)";
-    static int          interp_counter = 0;
 
-    /* Hilarity ensues if an inner runloops opens and writes to a separate
-     * FILE*, so use a simple static counter to ensure that the FILE* only gets
-     * opened and closed once. */
-    if (interp_counter == 0) {
-        prof_fd = fopen("parrot.pprof", "w");
-        if (!prof_fd) {
-            fprintf(stderr, "unable to open parrot_prof.out for writing");
-            exit(1);
-        }
-    }
-
-    interp_counter++;
-    fprintf(prof_fd, "#NEW RUNLOOP (%d)\n", interp_counter);
+    runcore->nesting_counter++;
+    fprintf(runcore->prof_fd, "#NEW RUNLOOP (%d)\n", runcore->nesting_counter);
 
     prev_ctx = CONTEXT(interp);
     Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
-    fprintf(prof_fd, "F:%s\n", curr_info.file->strstart);
-    fprintf(prof_fd, "S:%s;%s\n",
+    fprintf(runcore->prof_fd, "F:%s\n", curr_info.file->strstart);
+    fprintf(runcore->prof_fd, "S:%s;%s\n",
             VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
             curr_info.subname->strstart);
 
@@ -1133,9 +1126,9 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
             Parrot_Context_info  info;
 
             if (strcmp(file_preop, file_postop))
-                fprintf(prof_fd, "F:%s\n", file_postop);
+                fprintf(runcore->prof_fd, "F:%s\n", file_postop);
             if (strcmp(sub_preop, sub_postop))
-                fprintf(prof_fd, "S:%s;%s\n",
+                fprintf(runcore->prof_fd, "S:%s;%s\n",
                         VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
                         sub_postop);
 
@@ -1155,7 +1148,7 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
                     Parrot_Context_get_info(interp, CONTEXT(interp), &info);
 
                     if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
-                        fprintf(prof_fd, "%d:%lli:%s calls to %s\n",
+                        fprintf(runcore->prof_fd, "%d:%lli:%s calls to %s\n",
                                 curr_info.line, op_time,
                                 (interp->op_info_table)[*prev_pc].name,
                                 info.fullname->strstart);
@@ -1173,7 +1166,7 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
                     Parrot_Context_get_info(interp, CONTEXT(interp), &info);
 
                     if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
-                        fprintf(prof_fd, "%d:%lli:%s returns to %s\n",
+                        fprintf(runcore->prof_fd, "%d:%lli:%s returns to %s\n",
                                 curr_info.line, op_time,
                                 (interp->op_info_table)[*prev_pc].name,
                                 info.fullname->strstart);
@@ -1182,7 +1175,7 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
                     /* intentional fallthrough if we're not in a new sub */
 
                 default:
-                    fprintf(prof_fd, "%d:%lli:%s\n",
+                    fprintf(runcore->prof_fd, "%d:%lli:%s\n",
                             curr_info.line, op_time,
                             (interp->op_info_table)[*prev_pc].name);
             }
@@ -1190,11 +1183,9 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
         }
     }
 
-    fprintf(prof_fd, "#END OF RUNLOOP (%d)\n", interp_counter);
-    interp_counter--;
+    fprintf(runcore->prof_fd, "#END OF RUNLOOP (%d)\n", runcore->nesting_counter);
+    runcore->nesting_counter--;
 
-    if (interp_counter == 0)
-        fclose(prof_fd);
     return pc;
 
 }
@@ -1202,7 +1193,8 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opc
 
 /*
 
-=item C<void * destroy_profiling_core(PARROT_INTERP, Parrot_runcore_t *runcore)>
+=item C<void * destroy_profiling_core(PARROT_INTERP, Parrot_profiling_runcore_t
+*runcore)>
 
 Perform initialization for the profiling runcore.
 
@@ -1212,11 +1204,11 @@ Perform initialization for the profiling runcore.
 
 PARROT_CAN_RETURN_NULL
 void *
-destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
+destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore))
 {
     ASSERT_ARGS(destroy_profiling_core)
 
-    fprintf(stderr, "PROFILING DESTRUCTOR CALLED\n");
+    fclose(runcore->prof_fd);
 
     return NULL;
 }
