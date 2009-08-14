@@ -20,14 +20,17 @@ my $total_time = 0;
 my $func_num = 0;
 my ($prev_line, $new_line, $op_num) = (0,0,0);
 
-sub maybe_say($@) {
-    #say $@;
+sub maybe_say(@) {
+    say @_;
 }
 
 while (<>) {
-    if (/^F:(.*)$/) {
+    if (/^#/) {
+        #comment: don't do anything
+    }
+    elsif (/^F:(.*)$/) {
         $file = $1;
-        maybe_say "found file $file";
+        #maybe_say "found file $file";
         $stats{$file} = {} unless exists $stats{$file};
     }
     elsif (/S:(.*)$/) {
@@ -45,18 +48,17 @@ while (<>) {
             }
             for my $frame (@prof_stack) {
                 my ($file, $func, $line, $op_num) = @{$frame};
-                maybe_say "($file,$func,$line,$op_num)";
+                #maybe_say "($file,$func,$line,$op_num)";
             }
             ($file, $func, $line, $op_num) = @{pop @prof_stack};
-            maybe_say "popped func $func, op $op_num off the stack";
-            $stats{$file}{$func}{$line}{$op_num}{func_name} = $prev_func;
+            #maybe_say "popped func $func, op $op_num off the stack";
         }
     }
-    elsif (/^(\d+):(\d+):(\d+):(.*)$/) {
-        my ($line, $op_time, $rec_depth, $op) = ($1, $2, $3, $4);
+    elsif (/^ (\d+) : (\d+) : ([^)]*) (?: \( ([^)]+) \) )? \n$/x) {
+        my ($line, $op_time, $op, $ns) = ($1, $2, $3, $4);
 
         $new_line = ($line != $prev_line);
-        $call     = ($op ~~ @call_ops);
+        $call     = defined $ns;
         $total_time += $op_time;
         
         $prev_line = $line;
@@ -68,7 +70,7 @@ while (<>) {
             $op_num++;
         }
 
-        maybe_say "$func line #$line, op #$op_num is $op";
+        #maybe_say "$func line #$line, op #$op_num is $op";
 
         if ($new_line) {
             $stats{$file}{$func}{$line} = {line_calls_func => 0}
@@ -99,7 +101,7 @@ while (<>) {
                     time      => 0,
                     hits      => 1,
                     op        => "FUNCTION_CALL",
-                    func_name => "unknown_function$func_num",
+                    func_name => $ns,
                 };
                 $func_num++;
             }
@@ -111,7 +113,7 @@ while (<>) {
             push @prof_stack, [$file, $func, $line, $op_num];
             for my $frame (@prof_stack) {
                 my ($file, $func, $line, $op_num) = @{$frame};
-                maybe_say "($file,$func,$line,$op_num)";
+                #maybe_say "($file,$func,$line,$op_num)";
             }
             $stats{$file}{$func}{$line}{line_calls_func} = 1;
         }
@@ -126,6 +128,11 @@ while (<>) {
 }
 
 #print Dumper(%stats);
+say "done processing: stack size is ".scalar(@prof_stack);
+for my $frame (@prof_stack) {
+    my ($file, $func, $line, $op_num) = @{$frame};
+    maybe_say "($file,$func,$line,$op_num)";
+}
 
 open(OUT_FH, ">parrot.out") or die "couldn't open parrot.out for writing";
 
