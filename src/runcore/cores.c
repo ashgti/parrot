@@ -1216,7 +1216,7 @@ destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
 {
     ASSERT_ARGS(destroy_profiling_core)
 
-    fprintf(stderr,"PROFILING DESTRUCTOR CALLED\n");
+    fprintf(stderr, "PROFILING DESTRUCTOR CALLED\n");
 
     return NULL;
 }
