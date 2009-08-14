@@ -48,7 +48,7 @@ caller(PARROT_INTERP, PMC *pmc /*NULLOK*/)
 /*
 
 =item C<static void cant_do_method(PARROT_INTERP, PMC *pmc,
-                                   const char *methname)>
+                                   int index)>
 
 Throws an exception "$methname() not implemented in class '$class'", used by
 all unimplemented messages.
@@ -59,10 +59,11 @@ all unimplemented messages.
 
 PARROT_DOES_NOT_RETURN
 static void
-cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
+cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, int index)
 {
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ILL_INHERIT,
-            "%s() not implemented in class '%Ss'", methname,
+            "%s() not implemented in class '%Ss'",
+            Parrot_get_vtable_name(interp, index),
             caller(interp, pmc));
 }
 
@@ -70,7 +71,7 @@ cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
 /*
 
 =item C<static void cant_do_write_method(PARROT_INTERP, PMC *pmc,
-                                   const char *methname)>
+                                   int index)>
 
 Throws an exception "$methname() on read-only instance of '$class'", used by
 all updating messages on read-only instances.
@@ -81,10 +82,11 @@ all updating messages on read-only instances.
 
 PARROT_DOES_NOT_RETURN
 static void
-cant_do_write_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
+cant_do_write_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, int index)
 {
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_WRITE_TO_CONSTCLASS,
-            "%s() in read-only instance of '%Ss'", methname,
+            "%s() in read-only instance of '%Ss'",
+            Parrot_get_vtable_name(interp, index),
             caller(interp, pmc));
 }
 
@@ -825,22 +827,6 @@ Converts C<key> to a PMC key and calls C<delete_keyed()> with it.
     VTABLE void delete_keyed_int(INTVAL key) {
         PMC *const r_key = INT2KEY(INTERP, key);
         SELF.delete_keyed(r_key);
-    }
-
-/*
-
-=item C<PMC *nextkey_keyed_int(INTVAL key, INTVAL w)>
-
-Converts C<key> to a PMC key and returns the result of calling
-C<nextkey_keyed()> with it.
-
-=cut
-
-*/
-
-    VTABLE PMC *nextkey_keyed_int(INTVAL key, INTVAL w) {
-        PMC *const r_key = INT2KEY(INTERP, key);
-        return SELF.nextkey_keyed(r_key, w);
     }
 
 /*

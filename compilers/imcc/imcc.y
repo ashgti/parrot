@@ -458,7 +458,7 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
             if (!ascii)
                 rhs->type |= VT_ENCODED;
 
-            rhs->usage    = U_FIXUP | U_SUBID_LOOKUP;;
+            rhs->usage    |= U_FIXUP | U_SUBID_LOOKUP;
             break;
         default:
             rhs = mk_const(interp, name, 'P');
@@ -524,7 +524,7 @@ mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
         if (!ascii)
             rhs->type |= VT_ENCODED;
 
-        rhs->usage    = U_FIXUP | U_SUBID_LOOKUP;
+        rhs->usage    |= U_FIXUP | U_SUBID_LOOKUP;
     }
     else {
         rhs = mk_const(interp, const_name, 'P');
@@ -880,8 +880,9 @@ set_lexical(PARROT_INTERP, ARGMOD(SymReg *r), ARGMOD(SymReg *name))
             "register %s already declared as lexical %s", r->name, name->name);
 
     /* chain all names in r->reg */
-    name->reg = r->reg;
-    r->reg = name;
+    name->reg    = r->reg;
+    r->reg       = name;
+    name->usage |= U_LEXICAL;
     r->use_count++;
 }
 
@@ -1219,28 +1220,28 @@ hll_def:
    ;
 
 constdef:
-     CONST { pesky_global__is_def = 1; } type IDENTIFIER '=' const
+     CONST { IMCC_INFO(interp)->is_def = 1; } type IDENTIFIER '=' const
          {
              mk_const_ident(interp, $4, $3, $6, 1);
              mem_sys_free($4);
-             pesky_global__is_def = 0;
+             IMCC_INFO(interp)->is_def = 0;
          }
    ;
 
 pmc_const:
-     CONST { pesky_global__is_def=1; } INTC var_or_i '=' any_string
+     CONST { IMCC_INFO(interp)->is_def = 1; } INTC var_or_i '=' any_string
          {
            $$ = mk_pmc_const(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
            mem_sys_free($6);
-           pesky_global__is_def = 0;
+           IMCC_INFO(interp)->is_def = 0;
          }
 
-     | CONST { pesky_global__is_def=1; } STRINGC var_or_i '=' any_string
+     | CONST { IMCC_INFO(interp)->is_def = 1; } STRINGC var_or_i '=' any_string
          {
            $$ = mk_pmc_const_named(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
            mem_sys_free($3);
            mem_sys_free($6);
-           pesky_global__is_def = 0;
+           IMCC_INFO(interp)->is_def = 0;
          }
    ;
 any_string:
@@ -1290,10 +1291,14 @@ pasm_inst:                     { clear_state(interp); }
          }
    | LEXICAL STRINGC COMMA REG
          {
-           SymReg *r = mk_pasm_reg(interp, $4);
-           SymReg *n = mk_const(interp, $2, 'S');
+           char   *name = mem_sys_strdup($2 + 1);
+           SymReg *r    = mk_pasm_reg(interp, $4);
+           SymReg *n;
+           name[strlen(name) - 1] = 0;
+           n = mk_const(interp, name, 'S');
            set_lexical(interp, r, n);
            $$ = 0;
+           mem_sys_free(name);
            mem_sys_free($2);
            mem_sys_free($4);
          }
@@ -1340,10 +1345,6 @@ class_namespace:
 maybe_ns:
      '[' keylist ']'
         {
-            if (IMCC_INFO(interp)->in_slice)
-                IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
-                    "Slice not allowed in namespace.");
-
             $$ = $2;
         }
    | '[' ']'                   { $$ = NULL; }
@@ -1386,7 +1387,7 @@ sub_params:
    ;
 
 sub_param:
-   PARAM { pesky_global__is_def=1; } sub_param_type_def { $$ = $3; pesky_global__is_def=0; }
+   PARAM { IMCC_INFO(interp)->is_def = 1; } sub_param_type_def { $$ = $3; IMCC_INFO(interp)->is_def = 0; }
    ;
 
 sub_param_type_def:
@@ -1669,7 +1670,7 @@ pcc_results:
 
 pcc_result:
      RESULT target paramtype_list { $$ = $2; $$->type |= $3; }
-   | LOCAL { pesky_global__is_def=1; } type id_list_id
+   | LOCAL { IMCC_INFO(interp)->is_def = 1; } type id_list_id
          {
            IdList * const l = $4;
            SymReg *ignored;
@@ -1678,8 +1679,8 @@ pcc_result:
            else
                ignored = mk_ident(interp, l->id, $3);
            UNUSED(ignored);
-           pesky_global__is_def=0;
-           $$=0;
+           IMCC_INFO(interp)->is_def = 0;
+           $$ = 0;
          }
    ;
 
@@ -1900,7 +1901,7 @@ opt_unique_reg:
 labeled_inst:
      assignment
    | conditional_statement
-   | LOCAL { pesky_global__is_def=1; } type id_list
+   | LOCAL { IMCC_INFO(interp)->is_def = 1; } type id_list
          {
            IdList *l = $4;
            while (l) {
@@ -1914,32 +1915,36 @@ labeled_inst:
                mem_sys_free(l1->id);
                mem_sys_free(l1);
            }
-           pesky_global__is_def=0; $$=0;
+           IMCC_INFO(interp)->is_def = 0; $$ = 0;
          }
    | LEXICAL STRINGC COMMA target
          {
-           SymReg * const n = mk_const(interp, $2, 'S');
+           SymReg *n;
+           char   *name = mem_sys_strdup($2 + 1);
+           name[strlen(name) - 1] = 0;
+           n = mk_const(interp, name, 'S');
            set_lexical(interp, $4, n); $$ = 0;
            mem_sys_free($2);
+           mem_sys_free(name);
          }
    | LEXICAL USTRINGC COMMA target
          {
-           SymReg * const n = mk_const(interp, $2, 'U');
+           SymReg *n = mk_const(interp, $2, 'U');
            set_lexical(interp, $4, n); $$ = 0;
            mem_sys_free($2);
          }
-   | CONST { pesky_global__is_def=1; } type IDENTIFIER '=' const
+   | CONST { IMCC_INFO(interp)->is_def = 1; } type IDENTIFIER '=' const
          {
            mk_const_ident(interp, $4, $3, $6, 0);
-           pesky_global__is_def=0;
+           IMCC_INFO(interp)->is_def = 0;
            mem_sys_free($4);
          }
 
    | pmc_const
-   | GLOBAL_CONST { pesky_global__is_def=1; } type IDENTIFIER '=' const
+   | GLOBAL_CONST { IMCC_INFO(interp)->is_def = 1; } type IDENTIFIER '=' const
          {
            mk_const_ident(interp, $4, $3, $6, 1);
-           pesky_global__is_def=0;
+           IMCC_INFO(interp)->is_def = 0;
            mem_sys_free($4);
          }
    | TAILCALL sub_call
@@ -2371,7 +2376,6 @@ var:
 keylist:
          {
            IMCC_INFO(interp)->nkeys    = 0;
-           IMCC_INFO(interp)->in_slice = 0;
          }
      _keylist
          {
@@ -2384,7 +2388,6 @@ keylist:
 keylist_force:
          {
            IMCC_INFO(interp)->nkeys = 0;
-           IMCC_INFO(interp)->in_slice = 0;
          }
      _keylist
          {
@@ -2406,8 +2409,6 @@ _keylist:
 key:
      var
          {
-           if (IMCC_INFO(interp)->in_slice)
-               $1->type |= VT_START_SLICE | VT_END_SLICE;
            $$ = $1;
          }
    ;

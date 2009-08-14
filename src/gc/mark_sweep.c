@@ -79,6 +79,17 @@ PARROT_CANNOT_RETURN_NULL
 static Small_Object_Pool * new_string_pool(PARROT_INTERP, INTVAL constant)
         __attribute__nonnull__(1);
 
+static void Parrot_gc_allocate_new_attributes_arena(PARROT_INTERP,
+    ARGMOD(PMC_Attribute_Pool *pool))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pool);
+
+PARROT_CANNOT_RETURN_NULL
+static PMC_Attribute_Pool * Parrot_gc_create_attrib_pool(PARROT_INTERP,
+    size_t attrib_size)
+        __attribute__nonnull__(1);
+
 #define ASSERT_ARGS_free_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(pool) \
     || PARROT_ASSERT_ARG(b)
@@ -95,6 +106,12 @@ static Small_Object_Pool * new_string_pool(PARROT_INTERP, INTVAL constant)
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_new_small_object_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
 #define ASSERT_ARGS_new_string_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_gc_allocate_new_attributes_arena \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(pool)
+#define ASSERT_ARGS_Parrot_gc_create_attrib_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -195,7 +212,7 @@ Parrot_gc_trace_root(PARROT_INTERP, Parrot_gc_trace_type trace)
     mark_context(interp, ctx);
 
     /* mark the dynamic environment. */
-    mark_stack(interp, interp->dynamic_env);
+    Parrot_gc_mark_PObj_alive(interp, (PObj*)interp->dynamic_env);
 
     /* mark the vtables: the data, Class PMCs, etc. */
     mark_vtables(interp);
@@ -1182,6 +1199,174 @@ header_pools_iterate_callback(PARROT_INTERP, int flag, ARGIN_NULLOK(void *arg),
     }
 
     return 0;
+}
+
+/*
+
+=over 4
+
+=item C<void * Parrot_gc_get_attributes_from_pool(PARROT_INTERP,
+PMC_Attribute_Pool * pool)>
+
+Get a new fixed-size storage space from the given pool. The pool contains
+information on the size of the item to allocate already.
+
+=item C<static void Parrot_gc_allocate_new_attributes_arena(PARROT_INTERP,
+PMC_Attribute_Pool *pool)>
+
+Allocate a new arena of fixed-sized data structures for the given pool.
+
+=item C<void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+PMC_Attribute_Pool * pool, void *data)>
+
+Frees a fixed-size data item back to the pool for later reallocation
+
+=item C<PMC_Attribute_Pool * Parrot_gc_get_attribute_pool(PARROT_INTERP, size_t
+attrib_size)>
+
+Find a fixed-sized data structure pool given the size of the object to
+allocate. If the pool does not exist, create it.
+
+=item C<static PMC_Attribute_Pool * Parrot_gc_create_attrib_pool(PARROT_INTERP,
+size_t attrib_size)>
+
+Create a new pool for fixed-sized data items with the given C<attrib_size>.
+
+=back
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_get_attributes_from_pool(PARROT_INTERP, ARGMOD(PMC_Attribute_Pool * pool))
+{
+    ASSERT_ARGS(Parrot_gc_get_attributes_from_pool)
+    PMC_Attribute_Free_List *item;
+
+    if (pool->top_arena == NULL
+#if GC_USE_LAZY_ALLOCATOR
+     || (pool->newfree == NULL && pool->free_list == NULL))
+#else
+     || pool->free_list == NULL)
+#endif
+        Parrot_gc_allocate_new_attributes_arena(interp, pool);
+
+#if GC_USE_LAZY_ALLOCATOR
+    if (pool->newfree) {
+        item          = pool->newfree;
+        pool->newfree = (PMC_Attribute_Free_List *)
+                            ((char *)(pool->newfree) + pool->attr_size);
+        if (pool->newfree >= pool->newlast)
+            pool->newfree = NULL;
+    }
+    else {
+        item            = pool->free_list;
+        pool->free_list = item->next;
+    }
+#else
+    item            = pool->free_list;
+    pool->free_list = item->next;
+#endif
+
+    pool->num_free_objects--;
+    return (void *)item;
+}
+
+void
+Parrot_gc_free_attributes_from_pool(PARROT_INTERP, ARGMOD(PMC_Attribute_Pool * pool),
+    ARGMOD(void *data))
+{
+    ASSERT_ARGS(Parrot_gc_free_attributes_from_pool)
+    PMC_Attribute_Free_List * const item = (PMC_Attribute_Free_List *)data;
+    item->next = pool->free_list;
+    pool->free_list = item;
+    pool->num_free_objects++;
+}
+
+static void
+Parrot_gc_allocate_new_attributes_arena(PARROT_INTERP, ARGMOD(PMC_Attribute_Pool *pool))
+{
+    ASSERT_ARGS(Parrot_gc_allocate_new_attributes_arena)
+    const size_t num_items = pool->objects_per_alloc;
+    const size_t item_size = pool->attr_size;
+    const size_t total_size = sizeof (PMC_Attribute_Arena) + (pool->attr_size * num_items);
+    size_t i;
+    PMC_Attribute_Free_List *list, *next, *first;
+    PMC_Attribute_Arena * const new_arena = (PMC_Attribute_Arena *)mem_internal_allocate(
+        total_size);
+    new_arena->prev = NULL;
+    new_arena->next = pool->top_arena;
+    pool->top_arena = new_arena;
+    first = next = (PMC_Attribute_Free_List *)(new_arena + 1);
+#if GC_USE_LAZY_ALLOCATOR
+    pool->newfree = first;
+    pool->newlast = (PMC_Attribute_Free_List*)((char*)first + (item_size * num_items));
+#else
+    for (i = 0; i < num_items; i++) {
+        list = next;
+        list->next = (PMC_Attribute_Free_List *)((char *)list + item_size);
+        next = list->next;
+    }
+    list->next = pool->free_list;
+    pool->free_list = first;
+#endif
+    pool->total_objects += num_items;
+}
+
+PARROT_CANNOT_RETURN_NULL
+PMC_Attribute_Pool *
+Parrot_gc_get_attribute_pool(PARROT_INTERP, size_t attrib_size)
+{
+    ASSERT_ARGS(Parrot_gc_get_attribute_pool)
+    Arenas * const arenas = interp->arena_base;
+    PMC_Attribute_Pool ** pools = arenas->attrib_pools;
+    const size_t size = (attrib_size < sizeof (void *))?(sizeof (void *)):(attrib_size);
+    const size_t idx  = size - sizeof (void *);
+
+    if (pools == NULL) {
+        const size_t total_size = idx + GC_ATTRIB_POOLS_HEADROOM;
+        /* Allocate more then we strictly need, hoping that we can reduce the
+           number of resizes. 8 is just an arbitrary number */
+        pools = (PMC_Attribute_Pool **)mem_internal_allocate(total_size
+                                                             * sizeof (PMC_Attribute_Pool *));
+        memset(pools, 0, total_size * sizeof (void*));
+        arenas->attrib_pools = pools;
+        arenas->num_attribs = total_size;
+    }
+    if (arenas->num_attribs < idx) {
+        const size_t total_size   = idx + GC_ATTRIB_POOLS_HEADROOM;
+        const size_t current_size = arenas->num_attribs;
+        const size_t diff         = total_size - current_size;
+
+        pools = (PMC_Attribute_Pool **)mem_internal_realloc(pools, total_size
+                                                            * sizeof (PMC_Attribute_Pool *));
+        memset(pools + current_size, 0, diff * sizeof (void *));
+        arenas->attrib_pools = pools;
+        arenas->num_attribs = total_size;
+    }
+    if (pools[idx] == NULL)
+        pools[idx] = Parrot_gc_create_attrib_pool(interp, attrib_size);
+    return pools[idx];
+}
+
+PARROT_CANNOT_RETURN_NULL
+static PMC_Attribute_Pool *
+Parrot_gc_create_attrib_pool(PARROT_INTERP, size_t attrib_size)
+{
+    ASSERT_ARGS(Parrot_gc_create_attrib_pool)
+    const size_t num_objs_raw =
+        (GC_FIXED_SIZE_POOL_SIZE - sizeof (PMC_Attribute_Arena)) / attrib_size;
+    const size_t num_objs = (num_objs_raw == 0)?(1):(num_objs_raw);
+    PMC_Attribute_Pool * const newpool = mem_internal_allocate_typed(PMC_Attribute_Pool);
+    newpool->attr_size = attrib_size;
+    newpool->total_objects = 0;
+    newpool->objects_per_alloc = num_objs;
+    newpool->num_free_objects = 0;
+    newpool->free_list = NULL;
+    newpool->top_arena = NULL;
+    return newpool;
 }
 
 

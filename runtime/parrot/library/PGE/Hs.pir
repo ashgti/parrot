@@ -164,7 +164,9 @@ END:
     .local int ari, arc
     .local int tmpi, cond
     .local string tmps, key
-    .local pmc capt, iter, subelm, elm
+    .local pmc capt, it, subelm, elm
+    .local pmc jmpstack
+    jmpstack = new 'ResizableIntegerArray'
 
     out = ""
 
@@ -192,7 +194,7 @@ END:
     cond = defined capt[spi]
     unless cond goto subpats_fail
     elm = capt[spi]
-    bsr dumper
+    local_branch jmpstack, dumper
     inc spi
     goto subpats_loop
   subpats_fail:
@@ -204,11 +206,10 @@ END:
     out .= "] ["
     capt = self.'hash'()
     if_null capt, end
-    iter = new 'Iterator', capt
-    iter = 0
-    unless iter goto end
+    it = iter capt
+    unless it goto end
   subrules_body:
-    key = shift iter
+    key = shift it
     cond = defined capt[key]
     unless cond goto subrules_fail
     elm = capt[key]
@@ -216,15 +217,15 @@ END:
     tmps = escape key
     out .= tmps
     out .= '", '
-    bsr dumper
+    local_branch jmpstack, dumper
     out .= ")"
-    unless iter goto end
+    unless it goto end
     out .= ", "
     goto subrules_body
   subrules_fail:
     out .= PGE_FAIL
-    key = shift iter
-    unless iter goto end
+    key = shift it
+    unless it goto end
     goto subrules_body
 
   dumper:
@@ -234,20 +235,20 @@ END:
     unless $I0 goto dumper_string
     tmps = elm."dump_hs"()
     out .= tmps
-    ret
+    local_return jmpstack
   dumper_string:
     $S0 = elm
     tmps = escape $S0
     out .= 'PGE_String "'
     out .= tmps
     out .= '"'
-    ret
+    local_return jmpstack
   dumper_fail:
     out .= PGE_FAIL
-    ret
+    local_return jmpstack
   dumper_done:
     out .= "]"
-    ret
+    local_return jmpstack
   dumper_array:
     ari = 0
     arc = elements elm

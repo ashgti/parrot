@@ -214,7 +214,6 @@ typedef struct Parrot_coro {
 
     PackFile_ByteCode *caller_seg;  /* bytecode segment */
     opcode_t *address;           /* next address to run - toggled each time */
-    struct Stack_Chunk *dynamic_state; /* next dynamic state */
 } Parrot_coro;
 
 typedef struct Parrot_cont {
@@ -222,7 +221,6 @@ typedef struct Parrot_cont {
     PackFile_ByteCode *seg;          /* bytecode segment */
     opcode_t *address;               /* start of bytecode, addr to continue */
     struct Parrot_Context *to_ctx;   /* pointer to dest context */
-    struct Stack_Chunk *dynamic_state; /* dest dynamic state */
     /* a Continuation keeps the from_ctx alive */
     struct Parrot_Context *from_ctx; /* sub, this cont is returning from */
     opcode_t *current_results;       /* ptr into code with get_results opcode
@@ -303,11 +301,6 @@ void mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
 void mark_context_start(void);
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Parrot_sub * new_closure(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
 Parrot_cont * new_continuation(PARROT_INTERP,
     ARGIN_NULLOK(const Parrot_cont *to))
         __attribute__nonnull__(1);
@@ -379,8 +372,6 @@ PMC* Parrot_find_pad(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_mark_context_start __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_new_closure __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_new_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_new_coroutine __attribute__unused__ int _ASSERT_ARGS_CHECK = \

@@ -21,11 +21,6 @@ enum VARTYPE {              /* variable type can be */
     VT_FLAT         = VARTYPE_BIT(8),   /* var :flat */
     VT_OPTIONAL     = VARTYPE_BIT(9),   /* var :optional */
     /* include/parrot/packfile.h */
-    VT_START_SLICE  = PF_VT_START_SLICE, /* x .. y slice range */
-    VT_END_SLICE    = PF_VT_END_SLICE,
-    VT_START_ZERO   = PF_VT_START_ZERO, /* .. y 0..start */
-    VT_END_INF      = PF_VT_END_INF,    /* x..  start..inf */
-    VT_SLICE_BITS   = PF_VT_SLICE_BITS,
     VT_ENCODED      = VARTYPE_BIT(16),  /* unicode string constant */
     VT_OPT_FLAG     = VARTYPE_BIT(17),  /* var :opt_flag */
     VT_NAMED        = VARTYPE_BIT(18),  /* var :named(name) */
@@ -107,8 +102,6 @@ struct namespace_t {
     char       *name;
     Identifier *idents;
 };
-
-struct _IMC_Unit;
 
 /* functions */
 
@@ -317,7 +310,8 @@ void pop_namespace(PARROT_INTERP, ARGIN(const char *name))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-void push_namespace(SHIM_INTERP, ARGIN(const char *name))
+void push_namespace(PARROT_INTERP, ARGIN(const char *name))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 void store_symreg(PARROT_INTERP, ARGMOD(SymReg *r))
@@ -429,7 +423,8 @@ char * symreg_to_str(ARGIN(const SymReg *s))
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(name)
 #define ASSERT_ARGS_push_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(name)
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(name)
 #define ASSERT_ARGS_store_symreg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(r)

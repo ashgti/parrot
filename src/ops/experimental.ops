@@ -3,8 +3,6 @@
 ** experimental.ops
 */
 
-VERSION = PARROT_VERSION;
-
 =head1 NAME
 
 experimental.ops - Experimental Opcodes
@@ -51,6 +49,31 @@ op trap() :deprecated {
 #if defined(__GNUC__) && defined(PPC)
     __asm__("trap");       /* opcode tr 31, 0, 0 */
 #endif
+}
+
+=over 4
+
+=item B<set_label>(invar PMC, inconst LABEL)
+
+Sets the opcode_t* label value for the given PMC. This is basically only
+useful for PMCs such as Sub, Continuation, ExceptionHandler and derivatives
+
+=item B<get_label>(out INT, invar PMC)
+
+Gets the opcode_t* label value from the given PMC. This is basically only
+useful for PMCs such as Sub, Continuation, ExceptionHandler and derivatives
+
+=back
+
+=cut
+
+inline op set_label(invar PMC, inconst LABEL) {
+    VTABLE_set_pointer(interp, $1, (CUR_OPCODE + $2));
+}
+
+inline op get_label(out INT, invar PMC) {
+    void * const ptr = VTABLE_get_pointer(interp, $2);
+    $1 =  PTR2INTVAL(ptr);
 }
 
 =head1 COPYRIGHT

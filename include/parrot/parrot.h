@@ -1,5 +1,5 @@
 /* parrot.h
- *  Copyright (C) 2001-2008, Parrot Foundation.
+ *  Copyright (C) 2001-2009, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -136,8 +136,8 @@ typedef struct parrot_interp_t Interp;
     A. D. Aug. 6, 2002.
 */
 #if PTR_SIZE == INTVAL_SIZE
-#  define INTVAL2PTR(any, d)    (any)(d)
-#  define UINTVAL2PTR(any, d)    (any)(d)
+#  define INTVAL2PTR(any, d)    ((any)(d))
+#  define UINTVAL2PTR(any, d)    ((any)(d))
 #else
 #  if PTR_SIZE == LONG_SIZE
 #    define INTVAL2PTR(any, d)    ((any)(unsigned long)(d))
@@ -267,7 +267,6 @@ typedef struct PackFile_ByteCode PackFile_ByteCode;
 #include "parrot/list.h"
 #include "parrot/pmc_freeze.h"
 #include "parrot/vtable.h"
-#include "parrot/stacks.h"
 #include "parrot/register.h"
 #include "parrot/exceptions.h"
 #include "parrot/warnings.h"

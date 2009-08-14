@@ -114,10 +114,6 @@ Transforms to C<PC' = PC + S>, where C<S> is the size of an op.
 
 Transforms to C<PC' = X>. This is used for absolute jumps.
 
-=item C<goto POP()>
-
-Transforms to C<< PC' = <pop> >>. Pops the address off control stack.
-
 =item C<expr OFFSET(X)>
 
 Transforms to C<PC + X>. This is used to give a relative address.
@@ -239,6 +235,8 @@ sub read_ops {
 
     open my $OPS, '<', $file or die "Can't open $file, $!/$^E";
 
+    $self->version( $PConfig{VERSION} );
+
     if ( !( $file =~ s/\.ops$/.c/ ) ) {
         $file .= ".c";
     }
@@ -257,36 +255,24 @@ sub read_ops {
     my @argdirs;
     my $seen_pod;
     my $seen_op;
+    my $in_preamble;
     my $line;
     my $flags;
     my @labels;
 
     while (<$OPS>) {
-        $seen_pod = 1 if m|^=|;
+        $seen_pod    = 1 if m|^=|;
+        $in_preamble = 1 if s|^BEGIN_OPS_PREAMBLE||;
 
         unless ( $seen_op or m|^(inline\s+)?op\s+| ) {
-            if (m/^\s*VERSION\s*=\s*"(\d+\.\d+\.\d+)"\s*;\s*$/)
-            {
-                if ( exists $self->{VERSION} ) {
 
-                    #die "VERSION MULTIPLY DEFINED!";
-                }
-
-                $self->version($1);
+            if (m|^END_OPS_PREAMBLE|) {
                 $_ = '';
+                $in_preamble = 0;
             }
-            elsif (m/^\s*VERSION\s*=\s*PARROT_VERSION\s*;\s*$/) {
-                if ( exists $self->{VERSION} ) {
-
-                    #die "VERSION MULTIPLY DEFINED!";
-                }
-
-                $self->version( $PConfig{VERSION} );
-                $_ = '';
+            elsif ($in_preamble) {
+                $self->{PREAMBLE} .= $_;
             }
-
-            $self->{PREAMBLE} .= $_
-                unless $seen_pod or $count;    # Lines up to first op def.
 
             next;
         }
@@ -510,7 +496,6 @@ END_CODE
         #   goto OFFSET(X)     {{+=X}}  PC' = PC + X  Used for branches
         #   goto NEXT()        {{+=S}}  PC' = PC + S  Where S is op size
         #   goto ADDRESS(X)    {{=X}}   PC' = X       Used for absolute jumps
-        #   goto POP()         {{=*}}   PC' = <pop>   Pop address off control stack
         #   expr OFFSET(X)     {{^+X}}  PC + X        Relative address
         #   expr NEXT()        {{^+S}}  PC + S        Where S is op size
         #   expr ADDRESS(X)    {{^X}}   X             Absolute address
@@ -546,9 +531,6 @@ END_CODE
         $branch   ||= $body =~ s/\bgoto\s+OFFSET\((.*?)\)/{{+=$1}}/mg;
                       $body =~ s/\bexpr\s+OFFSET\((.*?)\)/{{^+$1}}/mg;
 
-        $pop      ||= $body =~ s/\bgoto\s+POP\(\)/{{=*}}/mg;
-                      $body =~ s/\bexpr\s+POP\(\)/{{^*}}/mg;
-
         $next     ||= $short_name =~ /runinterp/;
         $next     ||= $body =~ s/\bexpr\s+NEXT\(\)/{{^+$op_size}}/mg;
                       $body =~ s/\bgoto\s+NEXT\(\)/{{+=$op_size}}/mg;
@@ -563,9 +545,6 @@ END_CODE
         elsif ( $body =~ s/\brestart\s+NEXT\(\)/{{=0,+=$op_size}}/mg ) {
             $restart = 1;
             $next    = 1;
-        }
-        elsif ( $short_name eq 'branch_cs' || $short_name eq 'returncc' ) {
-            $restart = 1;    # dest may be NULL to leave run-loop
         }
         elsif ( $body =~ s/\brestart\s+ADDRESS\((.*?)\)/{{=$1}}/mg ) {
             $next    = 0;
@@ -589,7 +568,6 @@ END_CODE
         # Constants here are defined in include/parrot/op.h
         or_flag( \$jumps, "PARROT_JUMP_ADDRESS"  ) if $absolute;
         or_flag( \$jumps, "PARROT_JUMP_RELATIVE" ) if $branch;
-        or_flag( \$jumps, "PARROT_JUMP_POP"      ) if $pop;
         or_flag( \$jumps, "PARROT_JUMP_ENEXT"    ) if $next;
         or_flag( \$jumps, "PARROT_JUMP_RESTART"  ) if $restart;
 
@@ -685,7 +663,6 @@ sub preamble {
 
         #s/goto\s+NEXT\(\)/{{+=$op_size}}/mg;   #not supported--dependent on op size
         s/goto\s+ADDRESS\((.*)\)/{{=$1}}/mg;
-        s/goto\s+POP\(\)/{{=*}}/mg;
         s/HALT\(\)/{{=0}}/mg;
 
         # RT#43721: This ought to throw errors when attempting to rewrite $n

@@ -41,7 +41,7 @@
  * that won't collide with high level compiler generated names.  */
 #define IMCC_INTERNAL_CHAR '@'
 
-typedef struct _IMC_Unit IMC_Unit;
+typedef struct IMC_Unit IMC_Unit;
 
 #include "symreg.h"
 #include "instructions.h"
@@ -595,6 +595,7 @@ typedef struct _imc_info_t {
     STRING                *error_message;   /* The Error message */
 
     /* some values that were global... */
+    Namespace            *namespace_stack;
     SymReg               *cur_call;
     SymReg               *cur_obj;
     SymReg               *adv_named_id;
@@ -603,6 +604,7 @@ typedef struct _imc_info_t {
     char                 *heredoc_end;
     char                 *heredoc_content;
     char                 *cur_macro_name;
+    int                  is_def;
 
     struct macro_frame_t *frames;
     imcc_globals         *globals;
@@ -633,7 +635,6 @@ typedef struct _imc_info_t {
     int                   has_compile;
     int                   imcc_warn;
     int                   in_pod;
-    int                   in_slice;
     int                   ins_line;
     int                   keyvec;
     int                   line;                   /* current line number */

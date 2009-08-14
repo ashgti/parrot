@@ -196,6 +196,25 @@ run the tests described in C<--test=build>.
 
 =back
 
+=item C<--configure_trace>
+
+Store the results of each configuration step in a Storable F<.sto> file on
+disk, for later analysis by F<Parrot::Configure::Trace> methods.
+
+=item Operating system-specific configuration options
+
+=over 4
+
+=item C<--darwin_no_fink>
+
+On Darwin, do not probe for Fink libraries.
+
+=item C<--darwin_no_macports>
+
+On Darwin, do not probe for Macports libraries.
+
+=back
+
 =back
 
 =head2 Compile Options
@@ -335,11 +354,6 @@ Use JIT system.
 =item C<--execcapable>
 
 Use JIT to emit a native executable.
-
-=item C<--gc=(type)>
-
-Determine the type of garbage collection. The value for C<type> should be one
-of: C<gc>, C<libc>, C<malloc> or C<malloc-trace>. The default is C<gc>.
 
 =back
 
@@ -638,11 +652,11 @@ configuration file.
 
 You may see how this works in practice by calling:
 
-    perl Configure.pl --file=xconf/samples/yourfoobar
+    perl Configure.pl --file=examples/config/file/configcompiler
 
 or
 
-    perl Configure.pl --file=xconf/samples/testfoobar
+    perl Configure.pl --file=examples/config/file/configwithfatalstep
 
 =head1 SEE ALSO
 

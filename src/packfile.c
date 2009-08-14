@@ -2251,6 +2251,26 @@ sort_segs(ARGMOD(PackFile_Directory *dir))
             }
         }
     }
+
+    /* XXX
+     * Temporary? hack to put ConstantTable in front of other segments.
+     * This is useful for Annotations because we ensure that constants used
+     * for keys already available during unpack.
+     */
+    seg = dir->segments[2];
+
+    if (seg->type != PF_CONST_SEG) {
+        size_t i;
+
+        for (i = 3; i < num_segs; i++) {
+            PackFile_Segment * const s2 = dir->segments[i];
+            if (s2->type == PF_CONST_SEG) {
+                dir->segments[2] = s2;
+                dir->segments[i] = seg;
+                break;
+            }
+        }
+    }
 }
 
 
@@ -4085,15 +4105,6 @@ PackFile_Constant_unpack_key(PARROT_INTERP, ARGIN(PackFile_ConstTable *constt),
                 break;
             default:
                 return NULL;
-        }
-
-        if (slice_bits) {
-            if (slice_bits & PF_VT_START_SLICE)
-                PObj_get_FLAGS(tail) |= KEY_start_slice_FLAG;
-            if (slice_bits & PF_VT_END_SLICE)
-                PObj_get_FLAGS(tail) |= KEY_end_slice_FLAG;
-            if (slice_bits & (PF_VT_START_ZERO | PF_VT_END_INF))
-                PObj_get_FLAGS(tail) |= KEY_inf_slice_FLAG;
         }
     }
 

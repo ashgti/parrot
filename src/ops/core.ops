@@ -3,13 +3,15 @@
 ** core.ops
 */
 
+BEGIN_OPS_PREAMBLE
+
 #include "parrot/dynext.h"
 #include "parrot/embed.h"
 #include "parrot/runcore_api.h"
 #include "../pmc/pmc_continuation.h"
 #include "../pmc/pmc_parrotlibrary.h"
 
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 =head1 NAME
 
@@ -203,60 +205,6 @@ inline op branch(in LABEL) :base_loop :flow {
 }
 
 
-=item B<branch_cs>(in STR)
-
-Intersegment branch to location in fixup table named $1.
-
-=cut
-
-inline op branch_cs(in STR) :base_loop :check_event :flow {
-    PackFile_FixupEntry * fe;
-    {
-        char * const label = Parrot_str_to_cstring(interp, $1);
-        fe = PackFile_find_fixup_entry(interp, enum_fixup_label, label);
-        Parrot_str_free_cstring(label);
-    }
-
-    if (!fe) {
-        opcode_t * handler= Parrot_ex_throw_from_op_args(interp, NULL,
-            EXCEPTION_INVALID_OPERATION,
-            "branch_cs: fixup for '%Ss' not found", $1);
-        goto ADDRESS(handler);
-    }
-    else {
-        interp->resume_offset = fe->offset;
-        Parrot_switch_to_cs(interp, fe->seg, 1);
-        mem_sys_free(fe);
-    }
-    interp->resume_flag = 2;
-    goto ADDRESS(0);
-}
-
-########################################
-
-=item B<bsr>(in LABEL)
-
-Branch to the location specified by $1. Push the current location onto the call
-stack for later returning.
-
-=cut
-
-inline op bsr(in LABEL) :base_core :check_event :flow {
-    stack_push(interp, &interp->dynamic_env,
-             expr NEXT(),  STACK_ENTRY_DESTINATION, STACK_CLEANUP_NULL);
-    goto OFFSET($1);
-}
-
-=item B<ret>()
-
-Pop the location off the top of the call stack and go there.
-
-=cut
-
-inline op ret() :flow {
-    goto POP();
-}
-
 ########################################
 
 =item B<local_branch>(invar PMC, in LABEL)
@@ -314,25 +262,6 @@ inline op local_return(invar PMC) :flow {
     }
 
     goto ADDRESS(next);
-}
-
-
-
-########################################
-
-=item B<jsr>(in LABEL)
-
-Jump to the location specified by register $1. Push the current
-location onto the call stack for later returning.
-
-=cut
-
-inline op jsr(in LABEL) :base_core :check_event :flow {
-    opcode_t * loc;
-    stack_push(interp, &interp->dynamic_env,
-             expr NEXT(),  STACK_ENTRY_DESTINATION, STACK_CLEANUP_NULL);
-    loc = INTVAL2PTR(opcode_t *, $1);
-    goto ADDRESS(loc);
 }
 
 ########################################
@@ -871,7 +800,9 @@ inline op throw(invar PMC) :flow {
     opcode_t *const ret    = expr NEXT();
     PMC            *resume = new_ret_continuation_pmc(interp, ret);
     if (PMC_IS_NULL(except) || except->vtable->base_type != enum_class_Exception)
-        except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
     /*
      * We might return here after handling the exception, so mark the
      * current context appropriately.
@@ -886,7 +817,9 @@ inline op throw(invar PMC, invar PMC) :flow {
     opcode_t * dest;
     PMC * except = $1;
     if (PMC_IS_NULL(except) || except->vtable->base_type != enum_class_Exception)
-        except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
     dest = Parrot_ex_throw_from_op(interp, $1,
                                 VTABLE_get_pointer(interp, $2));
     goto ADDRESS(dest);
@@ -896,7 +829,9 @@ inline op rethrow(invar PMC) :flow {
     opcode_t * dest;
     if (PMC_IS_NULL($1) || $1->vtable->base_type != enum_class_Exception) {
         opcode_t * const ret = expr NEXT();
-        PMC * except = Parrot_ex_build_exception(interp, EXCEPT_fatal, 1, NULL);
+        PMC * except = Parrot_ex_build_exception(interp, EXCEPT_fatal,
+                EXCEPTION_UNIMPLEMENTED,
+                Parrot_str_new_constant(interp, "Not a throwable object"));
         dest = Parrot_ex_throw_from_op(interp, except, ret);
         goto ADDRESS(dest);
     }
@@ -958,20 +893,40 @@ inline op exit(in INT) :flow {
                                                       $1, NULL);
     VTABLE_set_attr_str(interp, exception,
                         Parrot_str_new_constant(interp, "resume"), resume);
+    VTABLE_set_integer_keyed_str(interp, exception,
+        Parrot_str_new_constant(interp, "exit_code"), $1);
     dest = Parrot_ex_throw_from_op(interp, exception, ret);
     goto ADDRESS(dest);
 }
 
 inline op pushmark(in INT) {
-    Parrot_push_mark(interp, $1);
+    PMC * const newint = pmc_new(interp, enum_class_Integer);
+    VTABLE_set_integer_native(interp, newint, $1);
+    VTABLE_push_pmc(interp, interp->dynamic_env, newint);
 }
 
 inline op popmark(in INT) {
-    Parrot_pop_mark(interp, $1);
+    opcode_t * dest;
+    opcode_t * const ret = expr NEXT();
+    int found = 0;
+    while (VTABLE_elements(interp, interp->dynamic_env)) {
+        PMC * const item = VTABLE_pop_pmc(interp, interp->dynamic_env);
+        if (item->vtable->base_type == enum_class_Integer
+           && VTABLE_get_integer(interp, item) == $1) {
+           found = 1;
+           break;
+        }
+
+        else if (item->vtable->base_type == enum_class_Sub
+                 || item->vtable->base_type == enum_class_NCI)
+            Parrot_pcc_invoke_sub_from_c_args(interp, item, "I->", 0);
+    }
+    if (!found)
+        dest = Parrot_ex_throw_from_op_args(interp, ret, 1, "Mark %d not found", $1);
 }
 
 inline op pushaction(invar PMC) {
-    Parrot_push_action(interp, $1);
+    VTABLE_push_pmc(interp, interp->dynamic_env, $1);
 }
 
 =back

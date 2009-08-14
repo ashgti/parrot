@@ -12,6 +12,7 @@ parrot_debugger - The Parrot debugger
 =head1 SYNOPSIS
 
  parrot_debugger programfile
+ parrot_debugger --script scriptfile programfile
 
 =head1 DESCRIPTION
 
@@ -39,7 +40,13 @@ Run the program.
 
 =item C<break> or C<b>
 
-Add a breakpoint.
+Add a breakpoint at the line number given or the current line if none is given.
+
+    (pdb) b
+    Breakpoint 1 at pos 0
+
+    (pdb) b 10
+    Breakpoint 1 at pos 10
 
 =item C<watch> or C<w>
 
@@ -47,7 +54,10 @@ Add a watchpoint.
 
 =item C<delete> or C<d>
 
-Delete a breakpoint.
+Given a number n, deletes the n-th breakpoint. To delete the first breakpoint:
+
+    (pdb) d 1
+    Breakpoint 1 deleted
 
 =item C<disable>
 
@@ -71,11 +81,26 @@ Run an instruction.
 
 =item C<trace> or C<t>
 
-Trace the next instruction.
+Trace the next instruction. This is equivalent to printing the source of the
+next instruction and then executing it.
 
 =item C<print> or C<p>
 
-Print the interpreter registers.
+Print an interpreter register. If a register I0 has been used, this
+would look like:
+
+    (pdb) p I0
+    2
+
+If no register number is given then all registers of that type will be printed.
+If the two registers I0 and I1 have been used, then this would look like:
+
+    (pdb) p I
+    I0 = 2
+    I1 = 5
+
+It would be nice if "p" with no arguments printed all registers, but this is
+currently not the case.
 
 =item C<stack> or C<s>
 
@@ -83,7 +108,13 @@ Examine the stack.
 
 =item C<info>
 
-Print interpreter information.
+Print interpreter information relating to memory allocation and garbage
+collection.
+
+=item C<gcdebug>
+
+Toggle garbage collection debugging mode.  In gcdebug mode a garbage collection
+cycle is run before each opcocde, which is the same as using the gcdebug core.
 
 =item C<quit> or C<q>
 
@@ -122,7 +153,7 @@ static void PDB_run_code(PARROT_INTERP, int argc, char *argv[]);
 
 =item C<int main(int argc, char *argv[])>
 
-Reads the PASM or PBC file from argv[1], loads it, and then calls
+Reads the PIR, PASM or PBC file from argv[1], loads it, and then calls
 Parrot_debug().
 
 =cut

@@ -237,6 +237,7 @@ U: cotto
 D: Patch for key flags in pdd08
 D: Range check in Env PMC
 A: christoph_googleacct@mksig.org
+A: christop...@mksig.org
 D: Pipp
 E: christoph@mksig.org
 
@@ -496,6 +497,12 @@ D: coding standard tests
 N: John Paul Wallington
 D: pir-mode.el: fix for xemacs plus bugfixes and cleanups
 
+N: Jonathan Leto
+E: jonathan@leto.net
+W: http://leto.net
+U: dukeleto
+S: Portland, OR
+
 N: Jonathan Scott Duff
 U: duff
 E: duff@pobox.com
@@ -667,6 +674,11 @@ N: Michael Cartmell
 E: Michael.Cartmell@thomson.com
 D: README.win32 spelling patch
 
+N: Michael H. Hind
+U: mikehh
+D: codingstd patches
+E: mike.hind@gmail.com
+
 N: Michael G. Schwern
 
 N: Michael Scott
@@ -676,9 +688,6 @@ D: HTML documentation for Parrot
 E: michael_scott@mac.com
 U: mikescott
 W: http://xrl.us/sml
-
-U: mikehh
-D: codingstd patches
 
 N: Michael Stevens
 D: Remove an unused variable in C-land
@@ -788,6 +797,11 @@ U: rurban
 E: rurban@cpan.org
 D: cygwin, 64-bit pbc compat, float converters, bignum.pmc
 
+N: Richard Hainsworth
+U: finanalyst
+E: richard@rusrating.ru
+D: bugfix SDL Font
+
 N: Richard Tibbetts
 D: Divide by zero exceptions in some PMCs
 
@@ -839,6 +853,11 @@ D: Pythonic and OO patches
 
 N: Sam Vilain
 D: Prototype object model and tests
+
+N: Samuel Harrington
+E: samuel.harrington@mines.sdsmt.edu
+U: samlh
+D: css patch
 
 N: Sean O'Rourke
 E: educated_foo@yahoo.com
@@ -916,6 +935,11 @@ D: lolcode patches
 N: Tanton Gibbs
 U: thgibbs
 E: thgibbs@deltafarms.com
+
+N: Ted Reed
+U: treed
+E: ted.reed@gmail.com
+D: cardinal
 
 N: Thilo Planz
 D: partcl tests and inspiration

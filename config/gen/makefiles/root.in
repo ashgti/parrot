@@ -112,6 +112,7 @@ LDFLAGS          := @ldflags@ @ld_debug@
 RECONFIGURE      := $(PERL) tools/dev/reconfigure.pl
 INNO_SETUP       := iscc
 JIT_BUILD_TOOL   := $(BUILD_TOOLS_DIR)/jit2c.pl
+TEMPDIR          := @tempdir@
 #IF(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
 
 ###############################################################################
@@ -318,7 +319,6 @@ GEN_LIBRARY := \
     $(LIBRARY_DIR)/YAML/Parser/Syck.pbc \
     $(LIBRARY_DIR)/STM.pbc \
     $(LIBRARY_DIR)/libpcre.pbc \
-    $(LIBRARY_DIR)/Data/Replace.pbc \
     $(LIBRARY_DIR)/postgres.pbc
 
 # the dependencies of $(SRC_DIR)/jit_emit.h are done explicitly
@@ -461,7 +461,6 @@ INTERP_O_FILES := \
     $(SRC_DIR)/scheduler$(O) \
     $(SRC_DIR)/spf_render$(O) \
     $(SRC_DIR)/spf_vtable$(O) \
-    $(SRC_DIR)/stacks$(O) \
     $(SRC_DIR)/string/primitives$(O) \
     $(SRC_DIR)/sub$(O) \
     $(SRC_DIR)/thread$(O) \
@@ -502,7 +501,6 @@ PARROT              := $(CUR_DIR)/@test_prog@$(EXE)
 MINIPARROT          := $(CUR_DIR)/miniparrot$(EXE)
 DIS                 := $(CUR_DIR)/pbc_disassemble$(EXE)
 PDUMP               := $(CUR_DIR)/pbc_dump$(EXE)
-PINFO               := $(CUR_DIR)/pbc_info$(EXE)
 PBCMERGE            := $(CUR_DIR)/pbc_merge$(EXE)
 PDB                 := $(CUR_DIR)/parrot_debugger$(EXE)
 PBC_TO_EXE          := $(CUR_DIR)/pbc_to_exe$(EXE)
@@ -513,7 +511,6 @@ PIRC                := $(CUR_DIR)/pirc$(EXE)
 INSTALLABLEPARROT   := $(CUR_DIR)/installable_parrot$(EXE)
 INSTALLABLEDIS      := $(CUR_DIR)/installable_pbc_disassemble$(EXE)
 INSTALLABLEPDUMP    := $(CUR_DIR)/installable_pbc_dump$(EXE)
-INSTALLABLEPINFO    := $(CUR_DIR)/installable_pbc_info$(EXE)
 INSTALLABLEPBCMERGE := $(CUR_DIR)/installable_pbc_merge$(EXE)
 INSTALLABLEPBCTOEXE := $(CUR_DIR)/installable_pbc_to_exe$(EXE)
 INSTALLABLEPDB      := $(CUR_DIR)/installable_parrot_debugger$(EXE)
@@ -588,17 +585,9 @@ MAKE := @make_c@
 ###############################################################################
 
 all : \
-    flags_dummy \
-    PARROT_LIBS \
-    $(PARROT) \
-    runtime/parrot/include/parrotlib.pbc \
-    runtime/parrot/include/config.fpmc \
+    corevm \
     docs \
-    $(LIBNCI_TEST_SO) \
 #IF(has_glut):    $(LIBGLUTCB_SO) \
-    $(GEN_LIBRARY) \
-    dynpmc \
-    dynoplibs \
     compilers \
     $(DIS) \
     $(PARROT_CONFIG) \
@@ -606,7 +595,17 @@ all : \
     $(PBCMERGE) \
     $(PDB) \
     $(PDUMP) \
-    $(PINFO) \
+
+corevm : \
+    flags_dummy \
+    PARROT_LIBS \
+    $(PARROT) \
+    runtime/parrot/include/parrotlib.pbc \
+    runtime/parrot/include/config.fpmc \
+    $(LIBNCI_TEST_SO) \
+    $(GEN_LIBRARY) \
+    dynpmc \
+    dynoplibs \
 
 $(GEN_LIBRARY) : $(PARROT)
 
@@ -641,7 +640,6 @@ STR_FILES := \
     $(SRC_DIR)/spf_vtable.str \
     $(SRC_DIR)/string/api.str \
     $(SRC_DIR)/sub.str \
-    $(SRC_DIR)/stacks.str \
     \
     $(CLASS_STR_FILES)
 
@@ -678,13 +676,11 @@ help :
 	@echo "  world:             'all' and 'parrot_utils'."
 	@echo "  installable:       same as 'world', but targets for installation"
 	@echo ""
-	@echo "  parrot_utils:      $(PDUMP), $(DIS), $(PINFO), $(PDB), $(PBCMERGE) and $(PBC_TO_EXE) $(PARROT_CONFIG)"
+	@echo "  parrot_utils:      $(PDUMP), $(DIS), $(PDB), $(PBCMERGE) and $(PBC_TO_EXE) $(PARROT_CONFIG)"
 	@echo " $(PDUMP):"
 	@echo "                     Parrot Dumper"
 	@echo " $(DIS):"
 	@echo "                     Parrot Disassembler"
-	@echo " $(PINFO):"
-	@echo "                     Information about Parrot Byte Code"
 	@echo " $(PDB):"
 	@echo "                     Parrot Debugger"
 	@echo " $(PBCMERGE):"
@@ -782,9 +778,9 @@ help :
 
 world : all parrot_utils
 
-parrot_utils : $(PDUMP) $(DIS) $(PINFO) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
+parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
 
-installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPINFO) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG)
+installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG)
 
 
 flags_dummy :
@@ -981,20 +977,6 @@ $(INSTALLABLEPDUMP) : $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) $(LIBPARRO
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 
-# pbc_info
-$(PINFO) : $(SRC_DIR)/pbc_info$(O) $(LIBPARROT)
-	$(LINK) @ld_out@$@ \
-    $(SRC_DIR)/pbc_info$(O) \
-    @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
-#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
-
-$(SRC_DIR)/pbc_info$(O) : $(INC_DIR)/parrot.h $(GEN_HEADERS)
-
-$(INSTALLABLEPINFO) : $(SRC_DIR)/pbc_info$(O) $(LIBPARROT)
-	$(LINK) @ld_out@$@ \
-    $(SRC_DIR)/pbc_info$(O) \
-    @rpath_lib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
-#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 #
 # Parrot Bytecode File Merger
@@ -1073,7 +1055,7 @@ $(SRC_DIR)/global_setup$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/global_setup.str
 $(SRC_DIR)/global$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/global.str \
 	$(SRC_DIR)/pmc/pmc_sub.h
 
-$(SRC_DIR)/pmc$(O) : $(GENERAL_H_FILES)
+$(SRC_DIR)/pmc$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_class.h
 
 $(SRC_DIR)/pmc_freeze$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc_freeze.str
 
@@ -1180,7 +1162,7 @@ $(SRC_DIR)/interp/inter_create$(O) : $(SRC_DIR)/interp/inter_create.c \
 $(SRC_DIR)/call/ops$(O) : $(SRC_DIR)/call/ops.c $(GENERAL_H_FILES) \
 	$(SRC_DIR)/pmc/pmc_continuation.h
 
-$(IO_DIR)/api$(O) : $(GENERAL_H_FILES) $(IO_DIR)/io_private.h $(IO_DIR)/api.str
+$(IO_DIR)/api$(O) : $(GENERAL_H_FILES) $(IO_DIR)/io_private.h $(IO_DIR)/api.str $(SRC_DIR)/pmc/pmc_filehandle.h
 
 $(IO_DIR)/buffer$(O) : $(GENERAL_H_FILES) $(IO_DIR)/io_private.h
 
@@ -1216,8 +1198,6 @@ $(SRC_DIR)/parrot$(O) : $(GENERAL_H_FILES)
 $(SRC_DIR)/gc/alloc_register$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_sub.h
 
 $(SRC_DIR)/runcore/cores$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/runcore/cores.str
-
-$(SRC_DIR)/stacks$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/tsq$(O) : $(GENERAL_H_FILES)
 
@@ -1530,7 +1510,7 @@ smolder_coretest : test_prep
 smoke : smolder_test
 
 # "core tests" -- test basic functionality but not ancillaries
-coretest : test_prep
+coretest : corevm
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) --core-tests
 
 # automake compatibility
@@ -1555,23 +1535,6 @@ fulltest :
 	manifest_tests \
 	examples_tests \
 	distro_tests
-
-fulltest_all :
-	-@make@ testb
-#IF(cg_flag):	-@make@ testC
-	-@make@ testf
-#IF(cg_flag):	-@make@ testg
-#IF(jitcapable):	-@make@ testj
-	-@make@ testr
-	-@make@ testS
-	-@make@ src_tests
-	-@make@ run_tests
-	-@make@ perl_tests
-	-@make@ codetest
-	-@make@ manifest_tests
-	-@make@ examples_tests
-	-@make@ distro_tests
-	-@make@ benchmark_tests
 
 # bounds checking, slow core
 testb : test_prep
@@ -1695,7 +1658,6 @@ prog-clean :
     $(INSTALLABLEPARROT) \
     $(INSTALLABLEDIS) \
     $(INSTALLABLEPDUMP) \
-    $(INSTALLABLEPINFO) \
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPBCTOEXE) \
     $(INSTALLABLEPDB) \
@@ -1704,7 +1666,6 @@ prog-clean :
     parrot_config$(EXE) parrot_config.c parrot_config$(O) parrot_config.pbc \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
-    $(SRC_DIR)/pbc_info$(O) $(PINFO) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
     $(PBCMERGE) $(SRC_DIR)/pbc_merge$(O) \
     $(DIS) $(SRC_DIR)/pbc_disassemble$(O)
@@ -1735,13 +1696,11 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(INSTALLABLEPARROT) \
     $(INSTALLABLEDIS) \
     $(INSTALLABLEPDUMP) \
-    $(INSTALLABLEPINFO) \
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPDB) \
     $(INSTALLABLECONFIG) \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
-    $(PINFO) $(SRC_DIR)/pbc_info$(O) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
     $(PBCMERGE) $(SRC_DIR)/pbc_merge$(O) \
     $(DIS) $(SRC_DIR)/pbc_disassemble$(O) \
@@ -1953,7 +1912,7 @@ SPLINT := splint
 
 # Temp directory for splint.  Add +keep to splintflags if you want work files
 # kept in there after completion.
-SPLINT_TMP := $(TMP)/splint
+SPLINT_TMP := $(TEMPDIR)/splint
 
 # Splint flags: http://splint.org/manual/html/appB.html
 # The dashes in the names don't make any difference to Splint, but I've

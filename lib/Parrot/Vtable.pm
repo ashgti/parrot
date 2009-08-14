@@ -238,6 +238,16 @@ EOM
 
 EOM
 
+    # Slot numbers
+    my $vtable_slot_num = 9;
+    for my $entry ( @{$vtable} ) {
+        my $uc_meth = uc $entry->[1];
+        $macros .= <<"EOM";
+#define PARROT_VTABLE_SLOT_${uc_meth} ${vtable_slot_num}
+EOM
+        ++$vtable_slot_num;
+    }
+
     # finally the name mapping
     $macros .= <<'EOM';
 /*
@@ -273,48 +283,6 @@ EOM
 };
 
 #define NUM_VTABLE_FUNCTIONS $num_vtable_funcs
-
-#endif /* PARROT_IN_OBJECTS_C */
-
-/* Need this for add, subtract, multiply, divide, mod, cmod, bitwise
-   (and, or, xor, lshift, rshift), concat, logical (and, or, xor),
-   repeat, eq, cmp */
-
-/* &gen_from_enum(mmd.pasm) */
-
-typedef enum {
-EOM
-    for my $entry ( @{$vtable} ) {
-        next unless ( $entry->[4] =~ /MMD_/ );
-        next if ( $entry->[4] =~ /_INT$/ );
-        next if ( $entry->[4] =~ /_STR$/ );
-        next if ( $entry->[4] =~ /_FLOAT$/ );
-        $macros .= <<"EOM";
-        $entry->[4],
-EOM
-    }
-    $macros .= <<'EOM';
-        MMD_USER_FIRST
-} parrot_mmd_func_enum;
-
-/* &end_gen */
-
-#ifdef PARROT_IN_OBJECTS_C
-static PARROT_OBSERVER const char * const Parrot_mmd_func_names[] = {
-EOM
-
-    for my $entry ( @{$vtable} ) {
-        next unless ( $entry->[4] =~ /MMD_/ );
-        next if ( $entry->[4] =~ /_INT$/ );
-        next if ( $entry->[4] =~ /_STR$/ );
-        next if ( $entry->[4] =~ /_FLOAT$/ );
-        $macros .= <<"EOM";
-        \"$entry->[1]\",
-EOM
-    }
-    $macros .= <<"EOM";
-    NULL
-};
 
 #endif /* PARROT_IN_OBJECTS_C */
 EOM

@@ -107,9 +107,16 @@ die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
     INTVAL         exit_status = 1;
     const INTVAL   severity    = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "severity"));
 
+    /* In some cases we have a fatal exception before the IO system
+     * is completely initialized. Do some attempt to output the
+     * message to stderr, to help diagnosing. */
+    int use_perr = !PMC_IS_NULL(Parrot_io_STDERR(interp));
+
     /* flush interpreter output to get things printed in order */
-    Parrot_io_flush(interp, Parrot_io_STDOUT(interp));
-    Parrot_io_flush(interp, Parrot_io_STDERR(interp));
+    if (!PMC_IS_NULL(Parrot_io_STDOUT(interp)))
+        Parrot_io_flush(interp, Parrot_io_STDOUT(interp));
+    if (use_perr)
+        Parrot_io_flush(interp, Parrot_io_STDERR(interp));
 
     if (interp->pdb) {
         Interp * interpdeb = interp->pdb->debugger;
@@ -120,7 +127,14 @@ die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
     }
 
     if (Parrot_str_not_equal(interp, message, CONST_STRING(interp, ""))) {
-        Parrot_io_eprintf(interp, "%S\n", message);
+        if (use_perr)
+            Parrot_io_eprintf(interp, "%S\n", message);
+        else {
+            char * const msg = Parrot_str_to_cstring(interp, message);
+            fflush(stderr);
+            fprintf(stderr, "\n%s\n", msg);
+            Parrot_str_free_cstring(msg);
+        }
 
         /* caution against output swap (with PDB_backtrace) */
         fflush(stderr);

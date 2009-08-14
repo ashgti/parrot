@@ -300,9 +300,10 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
     PObj_is_object_SET(cloned);
 
     /* Now create the underlying structure, and clone attributes list.class. */
-    cloned_guts               = mem_allocate_zeroed_typed(Parrot_Object_attributes);
+    cloned_guts               = mem_allocate_typed(Parrot_Object_attributes);
     PMC_data(cloned)          = cloned_guts;
     cloned_guts->_class       = obj->_class;
+    cloned_guts->attrib_store = NULL;
     cloned_guts->attrib_store = VTABLE_clone(interp, obj->attrib_store);
     num_attrs                 = VTABLE_elements(interp, cloned_guts->attrib_store);
     for (i = 0; i < num_attrs; i++) {
@@ -329,6 +330,10 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
         }
     }
 
+    /* free object attributes if created directly */
+    if (!PMC_IS_NULL(dest))
+        mem_sys_free(obj);
+
     /* And we have ourselves a clone. */
     return cloned;
 }
@@ -337,10 +342,9 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
 
 =item C<void * Parrot_oo_new_object_attrs(PARROT_INTERP, PMC * class_)>
 
-Create a new C<Parrot_Object_attributes> structure, which is the thing that
-holds data for an Object PMC. We need this for places where a new Object
-is being created without being instantiated by it's associated class, such
-as in C<Parrot_oo_clone_object>.
+Create a new C<Parrot_Object_attributes> structure to hold data for an Object
+PMC. We need this for places which create a new Object without instantiating it
+through its associated class, such as in C<Parrot_oo_clone_object>.
 
 =cut
 
@@ -477,6 +481,7 @@ Lookup a vtable override in a specific class object.
 
 */
 
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -504,6 +509,7 @@ from parents.
 
 */
 
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
@@ -515,8 +521,9 @@ Parrot_oo_find_vtable_override(PARROT_INTERP,
     PMC                            *result =
         VTABLE_get_pmc_keyed_str(interp, _class->parent_overrides, name);
 
-    if (!PMC_IS_NULL(result))
+    if (!PMC_IS_NULL(result)) {
         return result;
+    }
     else if (VTABLE_exists_keyed_str(interp, _class->parent_overrides, name))
         return PMCNULL;
     else {
@@ -617,33 +624,6 @@ Parrot_get_vtable_name(SHIM_INTERP, INTVAL idx)
     return Parrot_vtable_slot_names[idx];
 }
 
-
-/*
-
-=item C<const char* Parrot_MMD_method_name(PARROT_INTERP, INTVAL idx)>
-
-Return the method name for the given MMD enum.
-
-{{**DEPRECATE**}}
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_PURE_FUNCTION
-PARROT_CAN_RETURN_NULL
-const char*
-Parrot_MMD_method_name(SHIM_INTERP, INTVAL idx)
-{
-    ASSERT_ARGS(Parrot_MMD_method_name)
-    PARROT_ASSERT(idx >= 0);
-
-    if (idx >= MMD_USER_FIRST)
-        return NULL;
-
-    return Parrot_mmd_func_names[idx];
-}
 
 /*
 
@@ -1250,7 +1230,12 @@ C3_merge(PARROT_INTERP, ARGIN(PMC *merge_list))
 
 =item C<PMC* Parrot_ComputeMRO_C3(PARROT_INTERP, PMC *_class)>
 
-Computes the C3 linearization for the given class.
+Computes the C3 linearization for the given class. C3 is an algorithm to
+compute the method resolution order (MRO) of a class that is inheriting
+from multiple parent classes (multiple inheritance). C3 was first described
+by Barrett et al at:
+
+F<http://192.220.96.201/dylan/linearization-oopsla96.html>
 
 =cut
 

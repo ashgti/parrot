@@ -513,6 +513,7 @@ again:
             Parrot_io_eprintf(interp,
              "Parrot VM: Problem reading packfile from PIO:  code %d.\n",
                         ferror(io));
+            fclose(io);
             mem_sys_free(program_code);
             return NULL;
         }
@@ -855,10 +856,6 @@ void
 Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
 {
     PMC *userargv, *main_sub;
-
-    if (Interp_debug_TEST(interp, PARROT_START_DEBUG_FLAG))
-        Parrot_io_eprintf(interp,
-                "*** Parrot VM: Setting stack top. ***\n");
 
     /* Debugging mode nonsense. */
     if (Interp_debug_TEST(interp, PARROT_START_DEBUG_FLAG)) {

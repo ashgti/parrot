@@ -103,11 +103,11 @@
     past = $P0.'new'('node'=>match)
     $P1 = match['statement']
     if null $P1 goto iter_end
-    .local pmc iter
-    iter = new 'Iterator', $P1
+    .local pmc it
+    it = iter $P1
   iter_loop:
-    unless iter goto iter_end
-    $P2 = shift iter
+    unless it goto iter_end
+    $P2 = shift it
     $P2 = $P2.'ast'()
     past.'push'($P2)
     goto iter_loop
@@ -152,10 +152,12 @@
     .param pmc match
     .local pmc expr, block, past
     .local int cond
+    .local pmc jmpstack
+    jmpstack = new 'ResizableIntegerArray'
     cond = match['EXPR']
     cond -= 1
-    bsr get_expr
-    bsr get_block
+    local_branch jmpstack, get_expr
+    local_branch jmpstack, get_block
     $P2 = get_hll_global ['PAST'], 'Op'
     past = $P2.'new'(expr, block, 'pasttype'=>'if', 'node'=>match)
 
@@ -169,8 +171,8 @@
   while:
     unless cond != 0 goto end_while
     cond -= 1
-    bsr get_expr
-    bsr get_block
+    local_branch jmpstack, get_expr
+    local_branch jmpstack, get_block
     past = $P2.'new'(expr, block, past, 'pasttype'=>'if', 'node'=>match)
     goto while
 
@@ -181,12 +183,12 @@
     expr = match['EXPR']
     expr = expr[cond]
     expr = expr.'ast'()
-    ret
+    local_return jmpstack
   get_block:
     block = match['block']
     block = block[cond]
     block = block.'ast'()
-    ret
+    local_return jmpstack
   end:
     match.'!make'(past)
 .end
@@ -411,11 +413,11 @@
     $P0 = $P0[0]
     if null $P0 goto param_end
     unless $P0 goto param_end
-    .local pmc iter
-    iter = new 'Iterator', $P0
+    .local pmc it
+    it = iter $P0
   param_loop:
-    unless iter goto param_end
-    $P1 = shift iter
+    unless it goto param_end
+    $P1 = shift it
     .local pmc parameter
     $P2 = $P1['parameter']
     parameter = $P2.'ast'()
@@ -517,11 +519,11 @@
     past = $P0.'ast'()
     $P1 = match['postfix']
     if null $P1 goto end
-    .local pmc iter, term
-    iter = new 'Iterator', $P1
+    .local pmc it, term
+    it = iter $P1
   iter_loop:
-    unless iter goto end
-    $P2 = shift iter
+    unless it goto end
+    $P2 = shift it
     term = past
     past = $P2.'ast'()
     past.'unshift'(term)
@@ -1038,11 +1040,11 @@
     past = $P0.'new'('node'=>match, 'name'=>name, 'opattr'=>opattr)
     $P1 = match.'list'()
     if null $P1 goto iter_end
-    .local pmc iter
-    iter = new 'Iterator', $P1
+    .local pmc it
+    it = iter $P1
   iter_loop:
-    unless iter goto iter_end
-    $P2 = shift iter
+    unless it goto iter_end
+    $P2 = shift it
     $I0 = $P2.'from'()
     $I1 = $P2.'to'()
     if $I0 == $I1 goto iter_loop

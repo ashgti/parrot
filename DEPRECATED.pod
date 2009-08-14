@@ -33,26 +33,9 @@ specifically by including this C<PIR> code:
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
 
-=head1 Configuration
-
-=over 4
-
-=item Alternate GC configurations [eligible in 1.5]
-
-C<malloc>, C<malloc-trace> and C<libc> will be removed as potential
-options for the C<--gc> config option.
-
-L<https://trac.parrot.org/parrot/ticket/490>
-
-=back
-
 =head1 PMCS
 
 =over 4
-
-=item pair (dynamic PMC) [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/187>
 
 =item random [eligible in 1.1]
 
@@ -79,6 +62,12 @@ L<https://trac.parrot.org/parrot/ticket/679>
 
 L<https://trac.parrot.org/parrot/ticket/264>
 
+=item VTABLE nomenclature. [eligible in 1.5]
+
+Current list of VTABLE functions will be reviewed and cleaned.
+
+L<https://trac.parrot.org/parrot/ticket/866>
+
 =back
 
 =head1 Opcodes
@@ -92,10 +81,6 @@ Parts or all of: bit.ops, debug.ops, io.ops, math.ops, set.ops
 
 L<https://trac.parrot.org/parrot/ticket/449>
 
-=item experimental ops [eligible in 1.1]
-
-F<src/ops/experimental.ops> - only the C<trap> opcode remains
-
 =item get_addr and set_addr [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/218>
@@ -104,14 +89,6 @@ These opcodes are being repurposed. They will always return a unique memory
 address of the PMC. Uses of get_addr and set_addr that would set label values
 for Sub, Exception, and related PMC types will instead be handled by
 get_label and set_label.
-
-=item C<bsr>, C<jsr>, and C<ret> [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/702>
-
-=item C<branch_cs> [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/470>
 
 =back
 
@@ -135,9 +112,11 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 =head1 Class Features
 
-=over 4
+[Nothing at this time.]
 
-=back
+=head1 Debugger
+
+Assigning to registers [experimental]
 
 =head1 PIR syntax
 
@@ -145,21 +124,7 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 =item Assignment syntax with opcodes [eligible in 1.1]
 
-When the first argument of an opcode is C<OUT>, then
-the assignment syntax will be allowed, as it is today.
-
-In any other case (i.e. C<INOUT>, C<IN>), this will become
-a syntax error. For example:
-
-    $S0 = print
-    $P0 = substr 1, 2, "x"
-
-Will have to be:
-
-    print $S0
-    substr $P0, 1, 2, "x"
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=36283>
+L<https://trac.parrot.org/parrot/ticket/906>
 
 =item named class/pmc lookup in pir syntax such as new, isa, subclass, 
     get_class, etc [eligible in 1.1]
@@ -217,55 +182,55 @@ check in 1.4 or 2.0 for the new names.
 
 L<https://trac.parrot.org/parrot/ticket/443>
 
-=item parrot_new_pmc_hash [eligible in 1.5]
+=item PMC Attributes Allocation Functions [experimental]
 
-This function will be removed.  parrot_new_hash should be used in its place.
+ Parrot_gc_allocate_pmc_attributes
+ Parrot_gc_free_pmc_attributes
 
-L<https://trac.parrot.org/parrot/ticket/494>
+These items and related helper functions are added as experimental support
+for TT #895
 
-=item Parrot_get_namespace_autobase [eligible in 1.5]
+=item PDB_compile and PDB_eval [eligible in 2.1]
 
-L<https://trac.parrot.org/parrot/ticket/155>
+The function PDB_compile doesn't work since some time, and his implementation
+was a hack. His functionality may be reimplemented in another way. Until the
+end of deprecation cycle it just throws an excpetion.
 
-=item Parrot_find_global_k [eligible in 1.5]
+The PDB_eval function, that used in the debugger to support the eval
+command, was using PDB_compile. His functionality must be reimplemented
+in another way and with a name that follows current conventions, in the
+meantime and until the end of the deprecation cycle it just shows a
+diagnostic message.
 
-L<https://trac.parrot.org/parrot/ticket/156>
-
-=item Parrot_MMD_method_name [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/625>
-
-=item pobject_lives [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/664>
-
-=item functions in src/stack.c [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/702>
-Here is a list of functions in this file which are currently being exported:
-
-  stack_system_init
-  cst_new_stack_chunk
-  new_stack
-  mark_stack
-  stack_height
-  stack_entry
-  stack_prepare_push
-  stack_push
-  stack_prepare_pop
-  stack_pop
-  pop_dest
-  stack_peep
-  Parrot_dump_dynamic_environment
-  Parrot_push_action*
-  Parrot_push_mark*
-  Parrot_pop_mark*
-
-* = item may be kept but reimplemented.
+L<https://trac.parrot.org/parrot/ticket/872>
 
 =back
 
 =head1 Compiler tools
+
+=head2 PASM1 compiler
+
+=over 4
+
+=item C<PASM1 compiler> [eligible in 2.1]
+
+See PDB_compile.
+
+=back
+
+=head2 Parrot Grammar Engine (PGE)
+
+=over 4
+
+=item Action methods in rules
+
+Per Synopsis 5, all regexes will have an implied {*} token at the
+end which cause invocation of an action method if a C<:action>
+object is supplied.
+
+L<https://trac.parrot.org/parrot/ticket/843>
+
+=back
 
 =head2 Parrot Compiler Toolkit
 
@@ -291,6 +256,14 @@ use a different detection mechanism or eliminate it altogether.
 
 L<https://trac.parrot.org/parrot/ticket/463>
 
+=item PAST::Val node generation [eligible in 1.5]
+
+The PAST::Compiler may generate the code for PAST::Val nodes
+(i.e., constants) at the beginning of the block (Parrot sub) instead
+of the location where they occur in the PAST tree.
+
+L<https://trac.parrot.org/parrot/ticket/868>
+
 =back
 
 =head2 Not Quite Perl (NQP)
@@ -305,9 +278,25 @@ C<.ast> method on the Match object.
 
 L<https://trac.parrot.org/parrot/ticket/459>
 
-=back
+=item Quoted items [eligible in 1.5]
 
-=cut
+Double-quoted strings will interpret unescaped $-names
+as interpolated variables in the string.  Bare slashes 
+will introduce regular expressions.  The C<< <foo bar> >>
+syntax will produce an array of strings instead of a single
+string.
+
+L<https://trac.parrot.org/parrot/ticket/837>
+
+=item C<< PIR q:to:<xyz> >> inline PIR [eligible in 1.5]
+
+The C<< PIR q:to:<xyz> >> form of inline PIR in NQP scripts is
+deprecated.  Use C< Q:PIR { ... } >  or C< Q:PIR {{ ... }} >
+instead.
+
+L<https://trac.parrot.org/parrot/ticket/842>
+
+=back
 
 =head1 build tools
 
@@ -340,21 +329,17 @@ L<https://trac.parrot.org/parrot/ticket/665>
 
 =over 4
 
-=item Data::Replace [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/108>
-
 =item JSON, JSON, and Config;JSON [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/508>
 
-=item NCI::call_toolkit_init [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/753>
-
 =item Cross-HLL library loading [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/754>
+
+=item OpenGL bindings and libraries [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/852>
 
 =back
 

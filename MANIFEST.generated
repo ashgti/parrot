@@ -2,10 +2,10 @@
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
 # Please re-sort this file after *EVERY* modification
-blib/lib/libparrot.1.3.0.dylib                    [main]lib
+blib/lib/libparrot.1.4.0.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
-blib/lib/libparrot.so.1.3.0                       [main]lib
+blib/lib/libparrot.so.1.4.0                       [main]lib
 blib/lib/libparrot.so                             [main]lib
 compilers/json/JSON/grammar.pbc                   [json]
 compilers/json/JSON.pbc                           [json]
@@ -48,6 +48,7 @@ include/parrot/platform_limits.h                  [devel]include
 include/parrot/vtable.h                           [main]include
 install_config.fpmc                               [main]lib
 src/install_config.o                              [main]lib
+src/install_config.obj                            [main]lib
 installable_parrot_config.exe                     [main]bin
 installable_parrot_config                         [main]bin
 installable_parrot_debugger.exe                   [main]bin
@@ -58,14 +59,13 @@ installable_pbc_disassemble.exe                   [main]bin
 installable_pbc_disassemble                       [main]bin
 installable_pbc_dump.exe                          [main]bin
 installable_pbc_dump                              [main]bin
-installable_pbc_info.exe                          [main]bin
-installable_pbc_info                              [main]bin
 installable_pbc_merge.exe                         [main]bin
 installable_pbc_merge                             [main]bin
 installable_pbc_to_exe.exe                        [main]bin
 installable_pbc_to_exe                            [main]bin
 lib/Parrot/Config/Generated.pm                    [devel]lib
 libparrot.dll                                     [main]bin
+libparrot.lib                                     [main]bin
 lib/Parrot/OpLib/core.pm                          [devel]lib
 lib/Parrot/Pmc2c/PCCMETHOD_BITS.pm                [devel]lib
 lib/Parrot/PMC.pm                                 [devel]lib
@@ -118,7 +118,6 @@ runtime/parrot/include/interptrace.pasm           [main]
 runtime/parrot/include/iotypes.pasm               [main]
 runtime/parrot/include/iterator.pasm              [main]
 runtime/parrot/include/longopt.pasm               [main]
-runtime/parrot/include/mmd.pasm                   [main]
 runtime/parrot/include/opengl_defines.pasm        [main]
 runtime/parrot/include/parrotlib.pbc              [main]
 runtime/parrot/include/pmctypes.pasm              [main]

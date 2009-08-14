@@ -149,28 +149,6 @@ new_sub(PARROT_INTERP)
 
 /*
 
-=item C<Parrot_sub * new_closure(PARROT_INTERP)>
-
-Returns a new C<Parrot_sub> with its own scratchpad.
-
-XXX: Need to document semantics in detail.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-Parrot_sub *
-new_closure(PARROT_INTERP)
-{
-    ASSERT_ARGS(new_closure)
-    Parrot_sub * const newsub = new_sub(interp);
-    return newsub;
-}
-
-/*
-
 =item C<Parrot_cont * new_continuation(PARROT_INTERP, const Parrot_cont *to)>
 
 Returns a new C<Parrot_cont> to the context of C<to> with its own copy of the
@@ -192,7 +170,6 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
 
     cc->to_ctx        = to_ctx;
     cc->from_ctx      = Parrot_context_ref(interp, CONTEXT(interp));
-    cc->dynamic_state = NULL;
     cc->runloop_id    = 0;
     if (to) {
         cc->seg       = to->seg;
@@ -227,7 +204,6 @@ new_ret_continuation(PARROT_INTERP)
 
     cc->to_ctx          = CONTEXT(interp);
     cc->from_ctx        = CONTEXT(interp);    /* filled in during a call */
-    cc->dynamic_state   = NULL;
     cc->runloop_id      = 0;
     cc->seg             = interp->code;
     cc->current_results = NULL;
@@ -257,7 +233,6 @@ new_coroutine(PARROT_INTERP)
 
     co->seg                = interp->code;
     co->ctx                = NULL;
-    co->dynamic_state      = NULL;
 
     return co;
 }
@@ -575,7 +550,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_capture_lex)
     Parrot_Context * const ctx          = CONTEXT(interp);
-    Parrot_sub            *current_sub, *outer_sub;
+    Parrot_sub            *current_sub;
     Parrot_sub            *sub;
     Parrot_Context        *old;
 

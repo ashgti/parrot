@@ -264,6 +264,9 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     ASSERT_ARGS(Parrot_gc_initialize)
     interp->arena_base = mem_allocate_zeroed_typed(Arenas);
     interp->arena_base->sized_header_pools = NULL;
+    interp->arena_base->num_sized = 0;
+    interp->arena_base->attrib_pools = NULL;
+    interp->arena_base->num_attribs = 0;
 
     interp->lo_var_ptr = stacktop;
 
@@ -538,8 +541,7 @@ Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
 Returns a new buffer-like header from the appropriate sized pool.
 A "bufferlike object" is an object that is considered to be isomorphic to the
 PObj, so it will participate in normal GC. At the moment these are only used
-to create ListChunk objects in src/list.c and Stack_Chunk objects in
-src/stacks.c.
+to create ListChunk objects in src/list.c.
 
 =cut
 
@@ -1072,6 +1074,9 @@ Parrot_gc_destroy_header_pools(PARROT_INTERP)
     interp->arena_base->pmc_ext_pool = NULL;
 
     mem_internal_free(interp->arena_base->sized_header_pools);
+    if (interp->arena_base->attrib_pools)
+        mem_internal_free(interp->arena_base->attrib_pools);
+    interp->arena_base->attrib_pools = NULL;
     interp->arena_base->sized_header_pools = NULL;
 }
 
@@ -1652,6 +1657,97 @@ Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
     ASSERT_ARGS(Parrot_gc_pmc_needs_early_collection)
     PObj_needs_early_gc_SET(pmc);
     ++interp->arena_base->num_early_gc_PMCs;
+}
+
+/*
+
+=item C<void * Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc, size_t
+size)>
+
+EXPERIMENTAL!!!
+
+Allocation and deallocation function for PMC Attribute structures.
+
+These functions are not currently used. They are waiting for changes to
+the PMC allocation/deallocation mechanisms. See TT #895 for details.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc), size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_pmc_attributes)
+    /* const size_t attr_size = pmc->vtable->attr_size; */
+    const size_t attr_size = size;
+    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
+        attr_size);
+    void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
+    memset(attrs, 0, size);
+    PMC_data(pmc) = attrs;
+    return attrs;
+}
+
+/*
+
+=item C<void Parrot_gc_free_pmc_attributes(PARROT_INTERP, PMC *pmc, size_t
+item_size)>
+
+EXPERIMENTAL!!!  See above.
+
+*/
+
+void
+Parrot_gc_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc), size_t item_size)
+{
+    ASSERT_ARGS(Parrot_gc_free_pmc_attributes)
+    void * const data = PMC_data(pmc);
+    /* const size_t size = pmc->vtable->attr_size; */
+    const size_t size = item_size;
+    if (data != NULL) {
+        PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp, size);
+        Parrot_gc_free_attributes_from_pool(interp, pool, data);
+        PMC_data(pmc) = NULL;
+    }
+}
+
+/*
+
+=item C<void * Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t
+size)>
+
+EXPERIMENTAL!!!  See above.
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_fixed_size_storage)
+    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
+        size);
+    return Parrot_gc_get_attributes_from_pool(interp, pool);
+}
+
+/*
+
+=item C<void Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, void
+* data)>
+
+EXPERIMENTAL!!!  See above.
+
+*/
+
+void
+Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void * data))
+{
+    ASSERT_ARGS(Parrot_gc_free_fixed_size_storage)
+    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
+        size);
+    Parrot_gc_free_attributes_from_pool(interp, pool, data);
 }
 
 /*
