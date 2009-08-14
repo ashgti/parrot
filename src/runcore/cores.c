@@ -768,7 +768,7 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
     coredata->name             = CONST_STRING(interp, "profiling");
     coredata->opinit           = PARROT_CORE_OPLIB_INIT;
     coredata->runops           = init_profiling_core;
-    coredata->destroy          = destroy_profiling_core;
+    coredata->destroy          = NULL;
     coredata->prepare_run      = NULL;
 
     PARROT_RUNCORE_FUNC_TABLE_SET(coredata);
@@ -1035,7 +1035,10 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcod
 {
     ASSERT_ARGS(init_profiling_core)
 
-    runcore->runops           = runops_profiling_core;
+    runcore->runops  = runops_profiling_core;
+    runcore->destroy = destroy_profiling_core;
+
+    fprintf(stderr, "PROFILING INIT CALLED\n");
 
     return runops_profiling_core(interp, runcore, pc);
 }
