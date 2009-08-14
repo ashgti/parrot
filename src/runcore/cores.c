@@ -266,6 +266,8 @@ next opcode, or examine and manipulate data from the executing program.
 #  define CLOCK_BEST CLOCK_REALTIME
 #endif
 
+#define TIME_IN_NS(n) ((n).tv_sec * 1000*1000*1000 + (n).tv_nsec)
+
 
 /* HEADERIZER HFILE: include/parrot/runcore_api.h */
 
@@ -764,7 +766,8 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_runcore_profiling_init)
 
-    Parrot_runcore_t *coredata = mem_allocate_typed(Parrot_runcore_t);
+    Parrot_profiling_runcore_t *coredata =
+                                 mem_allocate_typed(Parrot_profiling_runcore_t);
     coredata->name             = CONST_STRING(interp, "profiling");
     coredata->opinit           = PARROT_CORE_OPLIB_INIT;
     coredata->runops           = init_profiling_core;
@@ -1038,7 +1041,10 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
     runcore->runops  = runops_profiling_core;
     runcore->destroy = destroy_profiling_core;
 
-    runcore->nesting_counter = 0;
+    runcore->level = 0;
+    runcore->time_size = 32;
+    runcore->time = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL*);
+
     runcore->prof_fd = fopen("parrot.pprof", "w");
     if (!runcore->prof_fd) {
         fprintf(stderr, "unable to open parrot_prof.out for writing");
@@ -1063,20 +1069,35 @@ operations, with tracing, bounds checking, and profiling enabled.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static opcode_t *
-runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), ARGIN(opcode_t *pc))
+runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
+ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profiling_core)
             Parrot_Context_info prev_info, curr_info;
     Parrot_Context     *prev_ctx;
-    struct timespec     preop, postop;
     opcode_t           *prev_pc;
     static FILE        *prof_fd;
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "(unknown sub)";
     char                unknown_file[] = "(unknown file)";
 
-    runcore->nesting_counter++;
-    fprintf(runcore->prof_fd, "#NEW RUNLOOP (%d)\n", runcore->nesting_counter);
+    clock_gettime(CLOCK_BEST, &runcore->runcore_start);
+    runcore->exit_check = 0;
+
+    /* if we're in a nested runloop, */
+    if (runcore->level != 0) {
+
+        if (runcore->level > runcore->time_size) {
+            runcore->time_size *= 2;
+            runcore->time = 
+                mem_realloc_n_typed(runcore->time, runcore->time_size, UHUGEINGVAL*);
+        }
+
+        /* store the time between DO_OP and the start of this runcore in this
+         * op's running total */
+        runcore->time[runcore->level] =
+            TIME_IN_NS(runcore->runcore_start) - TIME_IN_NS(runcore->op_start);
+    }
 
     prev_ctx = CONTEXT(interp);
     Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
@@ -1089,6 +1110,7 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
 
         char *file_preop, *file_postop;
         char *sub_preop,  *sub_postop;
+        INTVAL get_new_info = 1;
 
         if (pc < code_start || pc >= code_end) {
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -1105,12 +1127,22 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
         CONTEXT(interp)->current_pc = pc;
         prev_ctx = CONTEXT(interp);
         prev_pc = pc;
-        clock_gettime(CLOCK_BEST, &preop);
-        DO_OP(pc, interp);
-        clock_gettime(CLOCK_BEST, &postop);
 
-        op_time = (postop.tv_sec * 1000*1000*1000 + postop.tv_nsec) -
-                  (preop.tv_sec  * 1000*1000*1000 + preop.tv_nsec);
+        runcore->level++;
+        clock_gettime(CLOCK_BEST, &runcore->op_start);
+        DO_OP(pc, interp);
+        clock_gettime(CLOCK_BEST, &runcore->op_finish);
+
+        if (runcore->exit_check) {
+            runcore->exit_check = 0;
+            op_time = TIME_IN_NS(runcore->op_finish) - TIME_IN_NS(runcore->runcore_finish);
+            op_time += runcore->time[runcore->level];
+            runcore->time[runcore->level] = 0;
+        }
+        else {
+            op_time = TIME_IN_NS(runcore->op_finish) - TIME_IN_NS(runcore->op_start);
+        }
+        runcore->level--;
 
         file_postop = curr_info.file->strstart;
         sub_postop  = curr_info.subname->strstart;
@@ -1146,6 +1178,7 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
                 case PARROT_OP_callmethodcc_p_p:
 
                     Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+                    get_new_info = 0;
 
                     if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
                         fprintf(runcore->prof_fd, "%d:%lli:%s calls to %s\n",
@@ -1163,7 +1196,8 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
                 case PARROT_OP_tailcallmethod_p_sc:
                 case PARROT_OP_tailcallmethod_p_p:
 
-                    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+                    if (get_new_info)
+                        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
 
                     if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
                         fprintf(runcore->prof_fd, "%d:%lli:%s returns to %s\n",
@@ -1178,14 +1212,11 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
                     fprintf(runcore->prof_fd, "%d:%lli:%s\n",
                             curr_info.line, op_time,
                             (interp->op_info_table)[*prev_pc].name);
-            }
+            } /* switch (*prev_pc) */
+        } /* if (prev_pc) */
+    } /* while (pc) */
 
-        }
-    }
-
-    fprintf(runcore->prof_fd, "#END OF RUNLOOP (%d)\n", runcore->nesting_counter);
-    runcore->nesting_counter--;
-
+    clock_gettime(CLOCK_BEST, &runcore->runcore_finish);
     return pc;
 
 }
@@ -1209,6 +1240,7 @@ destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore)
     ASSERT_ARGS(destroy_profiling_core)
 
     fclose(runcore->prof_fd);
+    mem_sys_free(runcore->time);
 
     return NULL;
 }

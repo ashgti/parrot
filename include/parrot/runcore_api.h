@@ -42,7 +42,15 @@ struct profiling_runcore_t {
 
     /* end of common members */
     FILE                    *prof_fd;
-    INTVAL                   nesting_counter;
+    UINTVAL                  level;      /* how many nested runloops */
+    UINTVAL                  exit_check; /* did we just exit a runcore */
+    UINTVAL                  time_size;  /* how big is the following array */
+    UHUGEINTVAL             *time;       /* time spent between DO_OP and start/end of a runcore */
+    /* XXX: this will need to be made cross-platform */
+    struct timespec          runcore_start;
+    struct timespec          op_start;
+    struct timespec          op_finish;
+    struct timespec          runcore_finish;
 };
 
 typedef enum Parrot_runcore_flags {
