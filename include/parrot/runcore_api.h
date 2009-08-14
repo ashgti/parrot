@@ -189,11 +189,6 @@ void * init_prederef(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_CAN_RETURN_NULL
-void * init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 void load_prederef(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -244,9 +239,6 @@ void Parrot_runcore_switch_jit_init(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore)
 #define ASSERT_ARGS_init_prederef __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(runcore)
-#define ASSERT_ARGS_init_profiling_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore)
 #define ASSERT_ARGS_load_prederef __attribute__unused__ int _ASSERT_ARGS_CHECK = \

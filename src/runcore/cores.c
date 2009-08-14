@@ -272,6 +272,14 @@ next opcode, or examine and manipulate data from the executing program.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_CAN_RETURN_NULL
+static void * init_profiling_core(PARROT_INTERP,
+    ARGIN(Parrot_runcore_t *runcore),
+    ARGIN(opcode_t *pc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static opcode_t * runops_cgoto_core(PARROT_INTERP,
@@ -371,6 +379,10 @@ static opcode_t * runops_trace_core(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
+#define ASSERT_ARGS_init_profiling_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(runcore) \
+    || PARROT_ASSERT_ARG(pc)
 #define ASSERT_ARGS_runops_cgoto_core __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(runcore) \
@@ -1008,7 +1020,8 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opco
 
 /*
 
-=item C<void * init_profiling_core(PARROT_INTERP, Parrot_runcore_t *runcore)>
+=item C<static void * init_profiling_core(PARROT_INTERP, Parrot_runcore_t
+*runcore, opcode_t *pc)>
 
 Perform initialization for the profiling runcore.
 
@@ -1017,14 +1030,14 @@ Perform initialization for the profiling runcore.
 */
 
 PARROT_CAN_RETURN_NULL
-void *
-init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
+static void *
+init_profiling_core(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore), ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(init_profiling_core)
 
     runcore->runops           = runops_profiling_core;
 
-    return NULL;
+    return runops_profiling_core(interp, runcore, pc);
 }
 
 /*
