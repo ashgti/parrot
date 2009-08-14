@@ -701,22 +701,8 @@ Parrot_runcore_destroy(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_runcore_destroy)
     op_lib_t         *cg_lib;
-    size_t            num_cores = interp->cores ?
-                      sizeof (interp->cores) / sizeof (Parrot_runcore_t *) : 1;
+    size_t            num_cores = interp->num_cores;
     size_t            i;
-
-#ifdef HAVE_COMPUTED_GOTO
-    cg_lib = PARROT_CORE_CGP_OPLIB_INIT(1);
-
-    if (cg_lib->op_func_table)
-        mem_sys_free(cg_lib->op_func_table);
-    cg_lib->op_func_table = NULL;
-
-    cg_lib = PARROT_CORE_CG_OPLIB_INIT(1);
-    if (cg_lib->op_func_table)
-        mem_sys_free(cg_lib->op_func_table);
-    cg_lib->op_func_table = NULL;
-#endif
 
     for (i = 0; i < num_cores; ++i) {
         Parrot_runcore_t        *core    = interp->cores[i];
@@ -733,6 +719,28 @@ Parrot_runcore_destroy(PARROT_INTERP)
 
     interp->cores    = NULL;
     interp->run_core = NULL;
+
+    /* dynop libs */
+    if (interp->n_libs <= 0)
+        return;
+
+#ifdef HAVE_COMPUTED_GOTO
+    cg_lib = PARROT_CORE_CGP_OPLIB_INIT(1);
+
+    if (cg_lib->op_func_table)
+        mem_sys_free(cg_lib->op_func_table);
+    cg_lib->op_func_table = NULL;
+
+    cg_lib = PARROT_CORE_CG_OPLIB_INIT(1);
+    if (cg_lib->op_func_table)
+        mem_sys_free(cg_lib->op_func_table);
+    cg_lib->op_func_table = NULL;
+#endif
+
+    mem_sys_free(interp->op_info_table);
+    mem_sys_free(interp->op_func_table);
+    interp->op_info_table = NULL;
+    interp->op_func_table = NULL;
 }
 
 

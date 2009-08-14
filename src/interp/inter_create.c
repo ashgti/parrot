@@ -367,6 +367,10 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     /* Now the PIOData gets also cleared */
     Parrot_io_finish(interp);
 
+    /* deinit runcores and dynamic op_libs */
+    if (!interp->parent_interpreter)
+        Parrot_runcore_destroy(interp);
+
     /*
      * now all objects that need timely destruction should be finalized
      * so terminate the event loop
@@ -441,15 +445,6 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
 
         /* free vtables */
         parrot_free_vtables(interp);
-
-        /* dynop libs */
-        if (interp->n_libs > 0) {
-            mem_sys_free(interp->op_info_table);
-            mem_sys_free(interp->op_func_table);
-
-            /* deinit op_lib */
-            Parrot_runcore_destroy(interp);
-        }
 
         MUTEX_DESTROY(interpreter_array_mutex);
         mem_sys_free(interp);
