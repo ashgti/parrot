@@ -54,6 +54,17 @@ static const char* buffer_location(PARROT_INTERP, ARGIN(const PObj *b))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static void check_memory_pool(ARGMOD(Memory_Pool *pool))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*pool);
+
+static void check_memory_system(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static void check_small_object_pool(ARGMOD(Small_Object_Pool * pool))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(* pool);
+
 static void debug_print_buf(PARROT_INTERP, ARGIN(const Buffer *b))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -71,6 +82,12 @@ static Memory_Pool * new_memory_pool(
 #define ASSERT_ARGS_buffer_location __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(b)
+#define ASSERT_ARGS_check_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(pool)
+#define ASSERT_ARGS_check_memory_system __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_check_small_object_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(pool)
 #define ASSERT_ARGS_debug_print_buf __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(b)
@@ -727,7 +744,7 @@ merge_pools(ARGMOD(Memory_Pool *dest), ARGMOD(Memory_Pool *source))
 
 /*
 
-=item C<void check_memory_system(PARROT_INTERP)>
+=item C<static void check_memory_system(PARROT_INTERP)>
 
 Checks the memory system of parrot on any corruptions, including
 the string system.
@@ -759,7 +776,7 @@ check_memory_system(PARROT_INTERP)
 
 /*
 
-=item C<void check_small_object_pool(Small_Object_Pool * pool)>
+=item C<static void check_small_object_pool(Small_Object_Pool * pool)>
 
 Checks a small object pool, if it contains buffer it checks the buffers also.
 
@@ -838,7 +855,7 @@ check_small_object_pool(ARGMOD(Small_Object_Pool * pool))
 
 /*
 
-=item C<void check_memory_pool(Memory_Pool *pool)>
+=item C<static void check_memory_pool(Memory_Pool *pool)>
 
 Checks a memory pool, containing buffer data
 
@@ -871,7 +888,7 @@ check_memory_pool(ARGMOD(Memory_Pool *pool))
 
 /*
 
-=item C<void check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)>
+=item C<void check_buffer_ptr(Buffer * pobj, Memory_Pool * pool)>
 
 Checks wether the buffer is within the bounds of the memory pool
 
