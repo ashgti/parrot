@@ -11,6 +11,7 @@
 
 struct runcore_t;
 typedef struct runcore_t Parrot_runcore_t;
+
 struct profiling_runcore_t;
 typedef struct profiling_runcore_t Parrot_profiling_runcore_t;
 

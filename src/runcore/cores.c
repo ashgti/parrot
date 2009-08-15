@@ -776,7 +776,7 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
 
     PARROT_RUNCORE_FUNC_TABLE_SET(coredata);
 
-    Parrot_runcore_register(interp, coredata);
+    Parrot_runcore_register(interp, (Parrot_runcore_t *) coredata);
 }
 
 
@@ -1043,7 +1043,7 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
 
     runcore->level = 0;
     runcore->time_size = 32;
-    runcore->time = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL*);
+    runcore->time = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
 
     runcore->prof_fd = fopen("parrot.pprof", "w");
     if (!runcore->prof_fd) {
@@ -1089,8 +1089,8 @@ ARGIN(opcode_t *pc))
 
         if (runcore->level > runcore->time_size) {
             runcore->time_size *= 2;
-            runcore->time = 
-                mem_realloc_n_typed(runcore->time, runcore->time_size, UHUGEINGVAL*);
+            runcore->time =
+                mem_realloc_n_typed(runcore->time, runcore->time_size, UHUGEINTVAL);
         }
 
         /* store the time between DO_OP and the start of this runcore in this
