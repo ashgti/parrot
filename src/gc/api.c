@@ -945,12 +945,9 @@ Parrot_gc_merge_buffer_pools(PARROT_INTERP,
     /* XXX this won't work with, e.g., gc_gms */
     free_list_end = dest->free_list;
 
-    if(free_list_end == NULL)
-    {
+    if (free_list_end == NULL)
         dest->free_list = source->free_list;
-    }
-    else
-    {
+    else {
         while (free_list_end->next_ptr)
             free_list_end = free_list_end->next_ptr;
 
