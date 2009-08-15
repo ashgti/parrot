@@ -23,7 +23,7 @@ typedef struct pobj_t {
 typedef struct buffer_t {
     Parrot_UInt flags;
     void *     _bufstart;
-    size_t     _buflen;    
+    size_t     _buflen;
 } Buffer;
 
 #define Buffer_bufstart(buffer)    (buffer)->_bufstart
@@ -84,7 +84,6 @@ struct parrot_string_t {
     Parrot_UInt flags;
     void *     _bufstart;
     size_t     _buflen;
-      
     char       *strstart;
     UINTVAL     bufused;
     UINTVAL     strlen;
