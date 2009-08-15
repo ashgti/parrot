@@ -528,6 +528,12 @@ PARROT_CONST_FUNCTION
 PARROT_WARN_UNUSED_RESULT
 size_t aligned_string_size(size_t len);
 
+void check_buffer_ptr(Buffer * pobj, Memory_Pool * pool);
+void check_memory_pool(Memory_Pool *pool);
+void check_memory_system(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+void check_small_object_pool(Small_Object_Pool * pool);
 void compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -548,31 +554,18 @@ void merge_pools(ARGMOD(Memory_Pool *dest), ARGMOD(Memory_Pool *source))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*dest)
         FUNC_MODIFIES(*source);
-        
-void check_memory_system(PARROT_INTERP)
-        __attribute__nonnull__(1);    
-      
-void check_memory_system(PARROT_INTERP)
-        __attribute__nonnull__(1);  
-        
-void check_small_object_pool(Small_Object_Pool * pool)                    
-        __attribute__nonnull__(1);
 
-void
-check_memory_pool(Memory_Pool *pool)
-        __attribute__nonnull__(1);
-        
-void
-check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-         
 #define ASSERT_ARGS_aligned_mem __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(buffer) \
     || PARROT_ASSERT_ARG(mem)
 #define ASSERT_ARGS_aligned_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(buffer)
 #define ASSERT_ARGS_aligned_string_size __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_check_buffer_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_check_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_check_memory_system __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_check_small_object_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
 #define ASSERT_ARGS_compact_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pool)

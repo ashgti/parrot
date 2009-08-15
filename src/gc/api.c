@@ -579,7 +579,7 @@ get_free_buffer(PARROT_INTERP, ARGIN(Small_Object_Pool *pool))
 
 /*
 
-=item C<void Parrot_gc_free_bufferlike_header(PARROT_INTERP, PObj *obj, size_t
+=item C<void Parrot_gc_free_bufferlike_header(PARROT_INTERP, Buffer *obj, size_t
 size)>
 
 Free a bufferlike header that is not being used, so that Parrot can recycle

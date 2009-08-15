@@ -232,9 +232,6 @@ void Parrot_gc_destroy_header_pools(PARROT_INTERP)
 void Parrot_gc_destroy_memory_pools(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-UINTVAL Parrot_gc_extended_pmcs(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 void Parrot_gc_finalize(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -415,8 +412,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_gc_destroy_memory_pools \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_extended_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_gc_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)

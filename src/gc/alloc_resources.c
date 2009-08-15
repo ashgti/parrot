@@ -277,7 +277,7 @@ buffer_location(PARROT_INTERP, ARGIN(const PObj *b))
 
 /*
 
-=item C<static void debug_print_buf(PARROT_INTERP, const PObj *b)>
+=item C<static void debug_print_buf(PARROT_INTERP, const Buffer *b)>
 
 Prints a debug statement with information about the given PObj C<b>.
 =cut
@@ -704,9 +704,8 @@ merge_pools(ARGMOD(Memory_Pool *dest), ARGMOD(Memory_Pool *source))
     while (cur_block) {
         Memory_Block * const next_block = cur_block->prev;
 
-        if (cur_block->free == cur_block->size) {
+        if (cur_block->free == cur_block->size)
             mem_internal_free(cur_block);
-        }
         else {
             cur_block->next        = NULL;
             cur_block->prev        = dest->top_block;
@@ -728,22 +727,6 @@ merge_pools(ARGMOD(Memory_Pool *dest), ARGMOD(Memory_Pool *source))
 
 /*
 
-=back
-
-=head1 SEE ALSO
-
-F<src/gc/memory.c>.
-
-=head1 HISTORY
-
-Initial version by Dan on 2001.10.2.
-
-=cut
-
-*/
-
-/*
-
 =item C<void check_memory_system(PARROT_INTERP)>
 
 Checks the memory system of parrot on any corruptions, including
@@ -753,25 +736,25 @@ the string system.
 
 */
 
-void
+static void
 check_memory_system(PARROT_INTERP)
 {
-  size_t i;
-  Arenas * const arena_base = interp->arena_base;
+    ASSERT_ARGS(check_memory_system
+    size_t i;
+    Arenas * const arena_base = interp->arena_base;
 
-  check_memory_pool(arena_base->memory_pool);
-  check_memory_pool(arena_base->constant_string_pool);
-  check_small_object_pool(arena_base->pmc_pool);
-  check_small_object_pool(arena_base->constant_pmc_pool);
-  check_small_object_pool(arena_base->string_header_pool);
-  check_small_object_pool(arena_base->constant_string_header_pool);
+    check_memory_pool(arena_base->memory_pool);
+    check_memory_pool(arena_base->constant_string_pool);
+    check_small_object_pool(arena_base->pmc_pool);
+    check_small_object_pool(arena_base->constant_pmc_pool);
+    check_small_object_pool(arena_base->string_header_pool);
+    check_small_object_pool(arena_base->constant_string_header_pool);
 
-  for(i = 0;i < arena_base->num_sized;i++)
-  {
-      Small_Object_Pool * pool = arena_base->sized_header_pools[i];
-      if(pool != NULL && pool != arena_base->string_header_pool)
-        check_small_object_pool(pool);
-  }
+    for (i = 0;i < arena_base->num_sized;i++) {
+        Small_Object_Pool * pool = arena_base->sized_header_pools[i];
+        if (pool != NULL && pool != arena_base->string_header_pool)
+            check_small_object_pool(pool);
+    }
 }
 
 /*
@@ -784,9 +767,10 @@ Checks a small object pool, if it contains buffer it checks the buffers also.
 
 */
 
-void
-check_small_object_pool(Small_Object_Pool * pool)
+static void
+check_small_object_pool(ARGMOD(Small_Object_Pool * pool))
 {
+    ASSERT_ARGS(check_small_object_pool)
     size_t total_objects;
     size_t last_free_list_count;
     Small_Object_Arena * arena_walker;
@@ -803,38 +787,31 @@ check_small_object_pool(Small_Object_Pool * pool)
     free_objects = 0;
 
     arena_walker = pool->last_Arena;
-    while(arena_walker != NULL)
-    {
-  	    total_objects -= arena_walker->total_objects;
-	    object = (PObj*)arena_walker->start_objects;
-	    for(i = 0;i < arena_walker->total_objects;++i)
-	    {
-	    	if(PObj_on_free_list_TEST(object))
-	    	{
-	          ++free_objects;
-	          pobj_walker = (GC_MS_PObj_Wrapper*)object;
-	          if(pobj_walker->next_ptr == NULL)
-	          {
-	        	  --last_free_list_count; //should happen only ones at the end
-	          }
-	          else
-	          {   /*next item on free list should also be flaged as free item*/
-	        	  pobj_walker = (GC_MS_PObj_Wrapper*)pobj_walker->next_ptr;
-	        	  PARROT_ASSERT(PObj_on_free_list_TEST((PObj*)pobj_walker));
-	          }
-	    	}
-	    	else if(pool->mem_pool != NULL) /*then it means we are a buffer*/
-	    	{
-	    	  check_buffer_ptr((Buffer*)object,pool->mem_pool);
-	    	}
-	    	object = (PObj*)((char *)object + pool->object_size);
-	    	PARROT_ASSERT(--count);
-	    }
-	    /*check the list*/
-	    if(arena_walker->prev != NULL)
-	    {
-	        PARROT_ASSERT(arena_walker->prev->next == arena_walker);
-	    }
+    while (arena_walker != NULL) {
+        total_objects -= arena_walker->total_objects;
+        object = (PObj*)arena_walker->start_objects;
+        for (i = 0;i < arena_walker->total_objects;++i) {
+            if (PObj_on_free_list_TEST(object)) {
+                ++free_objects;
+                pobj_walker = (GC_MS_PObj_Wrapper*)object;
+                if (pobj_walker->next_ptr == NULL)
+                    --last_free_list_count; //should happen only ones at the end
+                else {
+                    /*next item on free list should also be flaged as free item*/
+                    pobj_walker = (GC_MS_PObj_Wrapper*)pobj_walker->next_ptr;
+                    PARROT_ASSERT(PObj_on_free_list_TEST((PObj*)pobj_walker));
+                }
+            }
+            else if (pool->mem_pool != NULL) {
+                /*then it means we are a buffer*/
+                check_buffer_ptr((Buffer*)object,pool->mem_pool);
+            }
+            object = (PObj*)((char *)object + pool->object_size);
+            PARROT_ASSERT(--count);
+        }
+        /*check the list*/
+        if (arena_walker->prev != NULL)
+            PARROT_ASSERT(arena_walker->prev->next == arena_walker);
         arena_walker = arena_walker->prev;
         PARROT_ASSERT(--count);
     }
@@ -844,14 +821,13 @@ check_small_object_pool(Small_Object_Pool * pool)
     PARROT_ASSERT(free_objects == pool->num_free_objects);
 
     pobj_walker = (GC_MS_PObj_Wrapper*)pool->free_list;
-    while(pobj_walker != NULL)
-    {
-    	PARROT_ASSERT(pool->start_arena_memory <= (size_t)pobj_walker);
-    	PARROT_ASSERT(pool->end_arena_memory > (size_t)pobj_walker);
-    	PARROT_ASSERT(PObj_on_free_list_TEST((PObj*)pobj_walker));
-    	--free_objects;
-	    pobj_walker = (GC_MS_PObj_Wrapper*)pobj_walker->next_ptr;
-	    PARROT_ASSERT(--count);
+    while (pobj_walker != NULL) {
+        PARROT_ASSERT(pool->start_arena_memory <= (size_t)pobj_walker);
+        PARROT_ASSERT(pool->end_arena_memory > (size_t)pobj_walker);
+        PARROT_ASSERT(PObj_on_free_list_TEST((PObj*)pobj_walker));
+        --free_objects;
+        pobj_walker = (GC_MS_PObj_Wrapper*)pobj_walker->next_ptr;
+        PARROT_ASSERT(--count);
     }
 
     PARROT_ASSERT(total_objects == 0);
@@ -869,27 +845,27 @@ Checks a memory pool, containing buffer data
 
 */
 
-void
-check_memory_pool(Memory_Pool *pool)
+static void
+check_memory_pool(ARGMOD(Memory_Pool *pool))
 {
+    ASSERT_ARGS(check_memory_pool)
     size_t count;
     Memory_Block * block_walker;
     count = 10000000; /*detect unendless loop just use big enough number*/
 
-	block_walker = (Memory_Block *)pool->top_block;
-	while(block_walker != NULL)
-	{
-		PARROT_ASSERT(block_walker->start == (char *)block_walker + sizeof (Memory_Block));
-	    PARROT_ASSERT((size_t)(block_walker->top - block_walker->start) == block_walker->size - block_walker->free);
+    block_walker = (Memory_Block *)pool->top_block;
+    while (block_walker != NULL) {
+        PARROT_ASSERT(block_walker->start == (char *)block_walker +
+            sizeof (Memory_Block));
+        PARROT_ASSERT((size_t)(block_walker->top -
+            block_walker->start) == block_walker->size - block_walker->free);
 
         /*check the list*/
-	    if(block_walker->prev != NULL)
-	    {
-	        PARROT_ASSERT(block_walker->prev->next == block_walker);
-	    }
+        if (block_walker->prev != NULL)
+            PARROT_ASSERT(block_walker->prev->next == block_walker);
         block_walker = block_walker->prev;
         PARROT_ASSERT(--count);
-	}
+    }
 }
 
 /*
@@ -910,31 +886,34 @@ check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)
 
     bufstart = (char*)Buffer_bufstart(pobj);
 
-    if(bufstart == NULL && Buffer_buflen(pobj) == 0)
+    if (bufstart == NULL && Buffer_buflen(pobj) == 0)
         return;
 
-    if(PObj_external_TEST(pobj) || PObj_sysmem_TEST(pobj)) /*buffer does not come from the memory pool*/
-    {
-        if (PObj_is_string_TEST(pobj))
-        {
-            PARROT_ASSERT(((STRING *) pobj)->strstart >= (char *) Buffer_bufstart(pobj));
-            PARROT_ASSERT(((STRING *) pobj)->strstart + ((STRING *) pobj)->strlen <= (char *) Buffer_bufstart(pobj) + Buffer_buflen(pobj));
+    if (PObj_external_TEST(pobj) || PObj_sysmem_TEST(pobj)) {
+        /*buffer does not come from the memory pool*/
+        if (PObj_is_string_TEST(pobj)) {
+            PARROT_ASSERT(((STRING *) pobj)->strstart >=
+                (char *) Buffer_bufstart(pobj));
+            PARROT_ASSERT(((STRING *) pobj)->strstart +
+                ((STRING *) pobj)->strlen <=
+                (char *) Buffer_bufstart(pobj) + Buffer_buflen(pobj));
         }
         return;
     }
 
-    if(PObj_is_COWable_TEST(pobj))
+    if (PObj_is_COWable_TEST(pobj))
         bufstart -= sizeof (void*);
 
-    while (cur_block)
-    {
+    while (cur_block) {
         if ((char *)bufstart >= cur_block->start &&
-            (char *)Buffer_bufstart(pobj) + Buffer_buflen(pobj) < cur_block->start + cur_block->size)
-        {
-            if (PObj_is_string_TEST(pobj))
-            {
-                PARROT_ASSERT(((STRING *)pobj)->strstart >= (char *)Buffer_bufstart(pobj));
-                PARROT_ASSERT(((STRING *)pobj)->strstart + ((STRING *)pobj)->strlen <= (char *)Buffer_bufstart(pobj) + Buffer_buflen(pobj));
+            (char *)Buffer_bufstart(pobj) +
+            Buffer_buflen(pobj) < cur_block->start + cur_block->size) {
+            if (PObj_is_string_TEST(pobj)) {
+                PARROT_ASSERT(((STRING *)pobj)->strstart >=
+                    (char *)Buffer_bufstart(pobj));
+                PARROT_ASSERT(((STRING *)pobj)->strstart +
+                    ((STRING *)pobj)->strlen <= (char *)Buffer_bufstart(pobj) +
+                    Buffer_buflen(pobj));
             }
             return;
         }
@@ -942,6 +921,22 @@ check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)
     }
     PARROT_ASSERT(0);
 }
+
+/*
+
+=back
+
+=head1 SEE ALSO
+
+F<src/gc/memory.c>.
+
+=head1 HISTORY
+
+Initial version by Dan on 2001.10.2.
+
+=cut
+
+*/
 
 /*
  * Local variables:

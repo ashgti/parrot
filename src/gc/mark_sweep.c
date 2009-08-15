@@ -902,7 +902,7 @@ new_string_pool(PARROT_INTERP, INTVAL constant)
 /*
 
 =item C<static void free_buffer_malloc(PARROT_INTERP, Small_Object_Pool *pool,
-PObj *b)>
+Buffer *b)>
 
 Frees the given buffer, returning the storage space to the operating system
 and removing it from Parrot's memory management system. If the buffer is COW,
@@ -937,7 +937,7 @@ free_buffer_malloc(SHIM_INTERP, SHIM(Small_Object_Pool *pool),
 
 /*
 
-=item C<static void free_buffer(PARROT_INTERP, Small_Object_Pool *pool, PObj
+=item C<static void free_buffer(PARROT_INTERP, Small_Object_Pool *pool, Buffer
 *b)>
 
 Frees a buffer, returning it to the memory pool for Parrot to possibly
