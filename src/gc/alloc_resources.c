@@ -739,7 +739,7 @@ the string system.
 static void
 check_memory_system(PARROT_INTERP)
 {
-    ASSERT_ARGS(check_memory_system
+    ASSERT_ARGS(check_memory_system)
     size_t i;
     Arenas * const arena_base = interp->arena_base;
 
@@ -880,8 +880,9 @@ Checks wether the buffer is within the bounds of the memory pool
 */
 
 void
-check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)
+check_buffer_ptr(ARGMOD(Buffer * pobj), ARGMOD(Memory_Pool * pool))
 {
+    ASSERT_ARGS(check_buffer_ptr)
     Memory_Block * cur_block = pool->top_block;
     char * bufstart;
 
