@@ -767,7 +767,7 @@ check_memory_system(PARROT_INTERP)
     check_small_object_pool(arena_base->string_header_pool);
     check_small_object_pool(arena_base->constant_string_header_pool);
 
-    for (i = 0;i < arena_base->num_sized;i++) {
+    for (i = 0; i < arena_base->num_sized; i++) {
         Small_Object_Pool * pool = arena_base->sized_header_pools[i];
         if (pool != NULL && pool != arena_base->string_header_pool)
             check_small_object_pool(pool);
@@ -807,7 +807,7 @@ check_small_object_pool(ARGMOD(Small_Object_Pool * pool))
     while (arena_walker != NULL) {
         total_objects -= arena_walker->total_objects;
         object = (PObj*)arena_walker->start_objects;
-        for (i = 0;i < arena_walker->total_objects;++i) {
+        for (i = 0; i < arena_walker->total_objects; ++i) {
             if (PObj_on_free_list_TEST(object)) {
                 ++free_objects;
                 pobj_walker = (GC_MS_PObj_Wrapper*)object;
@@ -822,7 +822,7 @@ check_small_object_pool(ARGMOD(Small_Object_Pool * pool))
             }
             else if (pool->mem_pool != NULL) {
                 /*then it means we are a buffer*/
-                check_buffer_ptr((Buffer*)object,pool->mem_pool);
+                check_buffer_ptr((Buffer*)object, pool->mem_pool);
             }
             object = (PObj*)((char *)object + pool->object_size);
             PARROT_ASSERT(--count);
