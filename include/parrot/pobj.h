@@ -134,9 +134,9 @@ struct PMC {
 /* do not allow PMC_data2 as lvalue */
 #define PMC_data0(pmc)            (1 ? (pmc)->data : 0)
 #define PMC_data0_typed(pmc)      (type)(1 ? (pmc)->data : 0)
-#define PMC_metadata(pmc)     pmc->_metadata
-#define PMC_next_for_GC(pmc)  pmc->_next_for_GC
-#define PMC_sync(pmc)         pmc->_synchronize
+#define PMC_metadata(pmc)         ((pmc)->_metadata)
+#define PMC_next_for_GC(pmc)      ((pmc)->_next_for_GC)
+#define PMC_sync(pmc)             ((pmc)->_synchronize)
 
 #define POBJ_FLAG(n) ((UINTVAL)1 << (n))
 /* PObj flags */
