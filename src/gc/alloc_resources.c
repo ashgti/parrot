@@ -873,9 +873,10 @@ void
 check_memory_pool(Memory_Pool *pool)
 {
     size_t count;
+    Memory_Block * block_walker;
     count = 10000000; /*detect unendless loop just use big enough number*/
 
-	Memory_Block * block_walker = (Memory_Block *)pool->top_block;
+	block_walker = (Memory_Block *)pool->top_block;
 	while(block_walker != NULL)
 	{
 		PARROT_ASSERT(block_walker->start == (char *)block_walker + sizeof (Memory_Block));
@@ -912,7 +913,7 @@ check_buffer_ptr(Buffer * pobj,Memory_Pool * pool)
     if(bufstart == NULL && Buffer_buflen(pobj) == 0)
         return;
 
-    if(PObj_external_TEST(pobj)) /*buffer does not come from the memory pool*/
+    if(PObj_external_TEST(pobj) || PObj_sysmem_TEST(pobj)) /*buffer does not come from the memory pool*/
     {
         if (PObj_is_string_TEST(pobj))
         {
