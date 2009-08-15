@@ -71,16 +71,16 @@ typedef struct call_state_item {
 } call_state_item;
 
 typedef union UnionCallStateVal {
-    struct _ptrs {                                  //or two pointers, both are defines 
+    struct _ptrs {               /* or two pointers, both are defines */
         DPOINTER * _struct_val;
         PMC *      _pmc_val;
     } _ptrs;
     struct _i {
-        INTVAL _int_val;                      // or 2 intvals 
+        INTVAL _int_val;         /* or 2 intvals */
         INTVAL _int_val2;
     } _i;
-    FLOATVAL _num_val;                       // or one float 
-    struct parrot_string_t * _string_val;    // or a pointer to a string 
+    FLOATVAL _num_val;                       /* or one float */
+    struct parrot_string_t * _string_val;    /* or a pointer to a string */
 } UnionCallStateVal;
 
 #define UVal_ptr(u)       (u)._ptrs._struct_val

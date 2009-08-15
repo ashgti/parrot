@@ -106,7 +106,7 @@ Writes the types to C<stabs>.
 static void
 write_types(FILE *stabs, PARROT_INTERP)
 {
-	//It would be create if this function would be auto generated :)
+    /* It would be create if this function would be auto generated */
     int i, j;
     /* borrowed from mono */
     static BaseTypes base_types[] = {
@@ -180,7 +180,7 @@ write_types(FILE *stabs, PARROT_INTERP)
 
     fprintf(stabs, ".stabs \"PMC:T(0,%d)=s%d"
                 "flags:(0,12),%d,%d;"
-    		    "vtable:*(0,%d),%d,%d;"
+                "vtable:*(0,%d),%d,%d;"
                 "data:(0,14),%d,%d;"
                 "_metadata:*(0,%d),%d,%d;"
                 "_next_for_GC:*(0,%d),%d,%d;"
@@ -194,7 +194,7 @@ write_types(FILE *stabs, PARROT_INTERP)
 
     i++;
 
-    //some one can add some field to this one
+    /* someone can add some field to this one */
     fprintf(stabs, ".stabs \"VTABLE:T(0,%d)=s%d"
                 "base_type:(0,12),%d,%d;"
                 ";\""

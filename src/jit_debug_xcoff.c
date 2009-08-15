@@ -161,7 +161,7 @@ write_types(FILE *stabs, PARROT_INTERP)
 
     i++;
 
-    //some one can add some field to this one
+    /* some one can add some field to this one */
     fprintf(stabs, ".stabs \"VTABLE:T(0,%d)=s%d"
                 "base_type:(0,12),%d,%d;"
                 ";\""

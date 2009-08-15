@@ -185,7 +185,7 @@ typedef struct Arenas {
     struct Small_Object_Pool *string_header_pool;
     struct Small_Object_Pool *pmc_pool;
     struct Small_Object_Pool *constant_pmc_pool;
- //   struct Small_Object_Pool *buffer_header_pool;
+/*   struct Small_Object_Pool *buffer_header_pool; */
     struct Small_Object_Pool *constant_string_header_pool;
     struct Small_Object_Pool **sized_header_pools;
     size_t num_sized;

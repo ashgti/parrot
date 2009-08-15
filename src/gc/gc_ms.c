@@ -418,7 +418,7 @@ gc_ms_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     ptr             = free_list;
     pool->free_list = ((GC_MS_PObj_Wrapper*)ptr)->next_ptr;
 
-//    PObj_flags_SETTO(ptr, 0);
+    /* PObj_flags_SETTO(ptr, 0); */
     memset(ptr, 0, pool->object_size);
 
     --pool->num_free_objects;

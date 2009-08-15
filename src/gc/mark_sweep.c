@@ -1040,8 +1040,8 @@ initialize_header_pools(PARROT_INTERP)
      * The buffer_header_pool and the string_header_pool actually live in the
      * sized_header_pools. These pool pointers only provide faster access in
      * new_*_header */
-   // arena_base->buffer_header_pool       = new_buffer_pool(interp);
-   // arena_base->buffer_header_pool->name = "buffer_header";
+    /* arena_base->buffer_header_pool       = new_buffer_pool(interp);
+       arena_base->buffer_header_pool->name = "buffer_header"; */
 
     /* Init the string header pool */
     arena_base->string_header_pool       = new_string_pool(interp, 0);
