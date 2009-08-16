@@ -146,33 +146,6 @@ typedef struct warnings_t {
     Warnings_classes classes;
 } *Warnings;
 
-/* ProfData have these extra items in front followed by
- * one entry per op at (op + extra) */
-
-typedef enum {
-     PARROT_PROF_GC_p1,        /* pass 1 mark root set */
-     PARROT_PROF_GC_p2,        /* pass 2 mark next_for_GC */
-     PARROT_PROF_GC_cp,        /* collect PMCs */
-     PARROT_PROF_GC_cb,        /* collect buffers */
-     PARROT_PROF_GC,
-     PARROT_PROF_EXCEPTION,
-     PARROT_PROF_EXTRA
-} profile_extra_enum;
-
-/* data[op_count] is time spent for exception handling */
-typedef struct ProfData {
-    int op;
-    UINTVAL numcalls;
-    FLOATVAL time;
-} ProfData;
-
-typedef struct _RunProfile {
-    FLOATVAL starttime;
-    FLOATVAL gc_time;
-    opcode_t cur_op;
-    ProfData *data;
-} RunProfile;
-
 /* Forward declaration for imc_info_t -- the actual struct is
  * defined in imcc/imc.h */
 struct _imc_info_t;
@@ -343,9 +316,6 @@ struct parrot_interp_t {
     struct runcore_t  *run_core;              /* type of core to run the ops */
     struct runcore_t **cores;                 /* array of known runcores */
     UINTVAL            num_cores;             /* number of known runcores */
-
-    /* TODO profile per code segment or global */
-    RunProfile *profile;                      /* profile counters */
 
     INTVAL resume_flag;
     size_t resume_offset;

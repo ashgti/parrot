@@ -226,7 +226,6 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     interp->evc_func_table  = NULL;
     interp->save_func_table = NULL;
     interp->code            = NULL;
-    interp->profile         = NULL;
 
     /* create the root set registry */
     interp->gc_registry     = pmc_new(interp, enum_class_AddrRegistry);
@@ -415,13 +414,6 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     /* packfile */
     if (interp->initial_pf)
         PackFile_destroy(interp, interp->initial_pf);
-
-    if (interp->profile) {
-        mem_sys_free(interp->profile->data);
-        interp->profile->data = NULL;
-        mem_sys_free(interp->profile);
-        interp->profile = NULL;
-    }
 
     destroy_context(interp);
     destroy_runloop_jump_points(interp);

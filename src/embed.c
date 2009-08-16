@@ -42,10 +42,6 @@ static void print_constant_table(PARROT_INTERP)
 static void print_debug(PARROT_INTERP, SHIM(int status), SHIM(void *p))
         __attribute__nonnull__(1);
 
-static int prof_sort_f(ARGIN(const void *a), ARGIN(const void *b))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_CANNOT_RETURN_NULL
 static PMC* set_current_sub(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -61,9 +57,6 @@ static PMC* setup_argv(PARROT_INTERP, int argc, ARGIN(char **argv))
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_print_debug __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_prof_sort_f __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(a) \
-    || PARROT_ASSERT_ARG(b)
 #define ASSERT_ARGS_set_current_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_setup_argv __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -691,33 +684,6 @@ setup_argv(PARROT_INTERP, int argc, ARGIN(char **argv))
 
 /*
 
-=item C<static int prof_sort_f(const void *a, const void *b)>
-
-Sort function for profile data, by time.
-
-=cut
-
-*/
-
-static int
-prof_sort_f(ARGIN(const void *a), ARGIN(const void *b))
-{
-    ASSERT_ARGS(prof_sort_f)
-    const FLOATVAL timea = ((const ProfData *)a)->time;
-    const FLOATVAL timeb = ((const ProfData *)b)->time;
-
-    if (timea < timeb)
-        return 1;
-
-    if (timea > timeb)
-        return -1;
-
-    return 0;
-}
-
-
-/*
-
 =item C<static const char * op_name(PARROT_INTERP, int k)>
 
 Returns the name of the opcode.
@@ -732,24 +698,7 @@ static const char *
 op_name(PARROT_INTERP, int k)
 {
     ASSERT_ARGS(op_name)
-    switch (k) {
-        case PARROT_PROF_GC_p1:
-            return "GC_mark_root";
-        case PARROT_PROF_GC_p2:
-            return "GC_mark_next";
-        case PARROT_PROF_GC_cp:
-            return "GC_collect_PMC";
-        case PARROT_PROF_GC_cb:
-            return "GC_collect_buffers";
-        case PARROT_PROF_GC:
-            return "GC";
-        case PARROT_PROF_EXCEPTION:
-            return "EXCEPTION";
-        default:
-            break;
-    }
-
-    return interp->op_info_table[k - PARROT_PROF_EXTRA].full_name;
+    return interp->op_info_table[k].full_name;
 }
 
 
