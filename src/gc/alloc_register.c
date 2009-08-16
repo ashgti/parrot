@@ -167,10 +167,10 @@ Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
     PMC * const old = interp->ctx;
     PMC * const ctx = Parrot_set_new_context(interp, n_regs_used);
 
-    ctx->caller_ctx  = old;
+    PARROT_CONTEXT(ctx)->caller_ctx  = old;
 
     /* doesn't change */
-    ctx->current_sub = old->current_sub;
+    PARROT_CONTEXT(ctx)->current_sub = PARROT_CONTEXT(old)->current_sub;
 
     return ctx;
 }
@@ -193,7 +193,7 @@ Parrot_pop_context(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_pop_context)
     PMC * const ctx = interp->ctx;
-    PMC * const old = ctx->caller_ctx;
+    PMC * const old = PARROT_CONTEXT(ctx)->caller_ctx;
 
     /* restore old, set cached interpreter base pointers */
     interp->ctx       = old;
@@ -218,7 +218,7 @@ Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 {
     ASSERT_ARGS(Parrot_set_new_context)
     PMC * const old = interp->ctx;
-    PMC * const ctx = Parrot_alloc_context(interp, number_regs_used, old);
+    PMC * const ctx = Parrot_alloc_context(interp, number_regs_used, PARROT_CONTEXT(old));
 
     interp->ctx = ctx;
 
@@ -261,9 +261,6 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     pmcctx = pmc_new(interp, enum_class_Context);
     ctx = mem_sys_allocate_typed(Parrot_Context);
 
-        const size_t to_alloc = reg_alloc + ALIGNED_CTX_SIZE;
-        ctx                   = (Parrot_Context *)mem_sys_allocate(to_alloc);
-    }
 
     ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
     ctx->n_regs_used[REGNO_NUM] = number_regs_used[REGNO_NUM];
