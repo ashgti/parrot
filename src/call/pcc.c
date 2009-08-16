@@ -3754,6 +3754,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         interp->run_core = old_core;
     }
+    Parrot_pop_context(interp);
 
 }
 
