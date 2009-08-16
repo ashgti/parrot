@@ -254,19 +254,6 @@ typedef struct _Prederef {
                                      * some day; see src/register.c for details.
                                     */
 
-typedef struct _context_mem {
-#if CHUNKED_CTX_MEM
-    char *data;                     /* ctx + register store */
-    char *free;                     /* free to allocate */
-    char *threshold;                /* continuation threshold */
-    struct _context_mem *prev;      /* previous allocated area */
-#else
-    void **free_list;               /* array of free-lists, per size free slots */
-    int n_free_slots;               /* amount of allocated */
-#endif
-
-} context_mem;
-
 /* Wrap the jump buffer in a struct, to make it a linked list. Jump buffers are
  * used to resume execution at a point in the runloop where an exception
  * handler can be run. Ultimately this information should be part of
@@ -282,13 +269,11 @@ typedef struct parrot_runloop_t {
 
 typedef parrot_runloop_t Parrot_runloop;
 
-
 struct _handler_node_t; /* forward def - exit.h */
 
 /* The actual interpreter structure */
 struct parrot_interp_t {
     PMC                  *ctx;
-    context_mem           ctx_mem;            /* ctx memory managment */
 
     struct Arenas *arena_base;                /* Pointer to this interpreter's
                                                * arena */
