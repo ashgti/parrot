@@ -40,7 +40,7 @@ The C code is at:
 #   slight optimization here -- nothing a decent C compiler wouldn't already do :)
     limit = limit * limit
     argc = argv
-    w = 500
+    w = 200
     if argc <= 1 goto noarg
 #   w = atoi(argv[1]);
     $S0 = argv[1]
