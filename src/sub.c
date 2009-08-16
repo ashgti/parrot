@@ -676,7 +676,6 @@ Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, ARGIN(PMC *subclass)) {
         /* If it's actually a PMC still, probably does the same structure
          * underneath. */
         if (!PObj_is_object_TEST(subclass)) {
-            //GETATTR_Sub_sub(interp, subclass, sub);
             return PARROT_SUB(subclass);
         }
 
@@ -685,7 +684,6 @@ Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, ARGIN(PMC *subclass)) {
         VTABLE_set_string_native(interp, key, CONST_STRING(interp, "Sub"));
         sub_pmc = VTABLE_get_attr_keyed(interp, subclass, key, CONST_STRING(interp, "proxy"));
         if (sub_pmc->vtable->base_type == enum_class_Sub) {
-            //GETATTR_Sub_sub(interp, sub_pmc, sub);
             return PARROT_SUB(sub_pmc);
         }
     }
