@@ -1,0 +1,331 @@
+/*
+
+=item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
+
+Clears all registers in a context.  PMC and STRING registers contain PMCNULL
+and NULL, respectively.  Integer and float registers contain negative flag
+values, for debugging purposes.
+
+=cut
+
+*/
+
+static void
+clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+{
+    ASSERT_ARGS(clear_regs)
+    int i;
+
+    /* NULL out registers - P/S have to be NULL for GC
+     *
+     * if the architecture has 0x := NULL and 0.0 we could memset too
+     */
+
+    for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; i++) {
+        CTX_REG_PMC(ctx, i) = PMCNULL;
+    }
+
+    for (i = 0; i < ctx->n_regs_used[REGNO_STR]; i++) {
+        CTX_REG_STR(ctx, i) = NULL;
+    }
+
+    if (Interp_debug_TEST(interp, PARROT_REG_DEBUG_FLAG)) {
+        /* depending on -D40 we set int and num to be identifiable garbage values */
+        for (i = 0; i < ctx->n_regs_used[REGNO_INT]; i++) {
+            CTX_REG_INT(ctx, i) = -999;
+        }
+        for (i = 0; i < ctx->n_regs_used[REGNO_NUM]; i++) {
+            CTX_REG_NUM(ctx, i) = -99.9;
+        }
+    }
+}
+
+/*
+
+=item C<static void init_context(PARROT_INTERP, Parrot_Context *ctx, const
+Parrot_Context *old)>
+
+Initializes a freshly allocated or recycled context.
+
+=cut
+
+*/
+
+static void
+init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+{
+    ASSERT_ARGS(init_context)
+    ctx->current_results   = NULL;
+    ctx->results_signature = NULL;
+    ctx->lex_pad           = PMCNULL;
+    ctx->outer_ctx         = NULL;
+    ctx->current_cont      = NULL;
+    ctx->current_object    = NULL;
+    ctx->handlers          = PMCNULL;
+    ctx->caller_ctx        = NULL;
+    ctx->constants         = NULL;
+    ctx->warns             = 0;
+    ctx->errors            = 0;
+    ctx->trace_flags       = 0;
+    ctx->pred_offset       = 0;
+    ctx->current_HLL       = 0;
+    ctx->current_namespace = PMCNULL;
+    ctx->recursion_depth   = 0;
+
+    /* other stuff is set inside Sub.invoke */
+    clear_regs(interp, ctx);
+}
+
+/*
+
+=item C<Parrot_Context * Parrot_alloc_context(PARROT_INTERP, const INTVAL
+*number_regs_used, Parrot_Context *old)>
+
+Allocates and returns a new context.  Does not set this new context as the
+current context. Note that the register usage C<n_regs_used> is copied.  Use
+the init flag to indicate whether you want to initialize the new context
+(setting its default values and clearing its registers).
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+Parrot_Context *
+Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
+    ARGIN_NULLOK(Parrot_Context *old))
+{
+    ASSERT_ARGS(Parrot_alloc_context)
+    Parrot_Context *ctx;
+    void *p;
+
+    const size_t size_i = sizeof (INTVAL)   * number_regs_used[REGNO_INT];
+    const size_t size_n = sizeof (FLOATVAL) * number_regs_used[REGNO_NUM];
+    const size_t size_s = sizeof (STRING *) * number_regs_used[REGNO_STR];
+    const size_t size_p = sizeof (PMC *)    * number_regs_used[REGNO_PMC];
+
+    const size_t size_nip      = size_n + size_i + size_p;
+    const size_t all_regs_size = size_n + size_i + size_p + size_s;
+    const size_t reg_alloc     = ROUND_ALLOC_SIZE(all_regs_size);
+    const int    slot          = CALCULATE_SLOT_NUM(reg_alloc);
+
+    /*
+     * If slot is beyond the end of the allocated list, extend the list to
+     * allocate more slots.
+     */
+    if (slot >= interp->ctx_mem.n_free_slots) {
+        const int extend_size = slot + 1;
+        int i;
+
+        mem_realloc_n_typed(interp->ctx_mem.free_list, extend_size, void *);
+        for (i = interp->ctx_mem.n_free_slots; i < extend_size; ++i)
+            interp->ctx_mem.free_list[i] = NULL;
+        interp->ctx_mem.n_free_slots = extend_size;
+    }
+
+    /*
+     * The free_list contains a linked list of pointers for each size (slot
+     * index). Pop off an available context of the desired size from free_list.
+     * If no contexts of the desired size are available, allocate a new one.
+     */
+    ctx = (Parrot_Context *)interp->ctx_mem.free_list[slot];
+
+    if (ctx) {
+        /*
+         * Store the next pointer from the linked list for this size (slot
+         * index) in free_list. On "*(void **) ctx", C won't dereference a void
+         * * pointer (untyped), so type cast ctx to void ** (a dereference-able
+         * type) then dereference it to get a void *. Store the dereferenced
+         * value (the next pointer in the linked list) in free_list.
+         */
+        interp->ctx_mem.free_list[slot] = *(void **)ctx;
+    }
+    else {
+        const size_t to_alloc = reg_alloc + ALIGNED_CTX_SIZE;
+        ctx                   = (Parrot_Context *)mem_sys_allocate(to_alloc);
+    }
+
+    ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
+    ctx->n_regs_used[REGNO_NUM] = number_regs_used[REGNO_NUM];
+    ctx->n_regs_used[REGNO_STR] = number_regs_used[REGNO_STR];
+    ctx->n_regs_used[REGNO_PMC] = number_regs_used[REGNO_PMC];
+
+#if CTX_LEAK_DEBUG
+    if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)) {
+        fprintf(stderr, "[alloc ctx %p]\n", ctx);
+    }
+#endif
+
+    ctx->regs_mem_size = reg_alloc;
+
+    /* regs start past the context */
+    p   = (void *) ((char *)ctx + ALIGNED_CTX_SIZE);
+
+    /* ctx.bp points to I0, which has Nx on the left */
+    ctx->bp.regs_i = (INTVAL *)((char *)p + size_n);
+
+    /* ctx.bp_ps points to S0, which has Px on the left */
+    ctx->bp_ps.regs_s = (STRING **)((char *)p + size_nip);
+
+    init_context(interp, ctx, old);
+
+    return ctx;
+}
+
+/*
+
+=item C<void Parrot_free_context(PARROT_INTERP, Parrot_Context *ctx, int deref)>
+
+Frees the context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_free_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+{
+    ASSERT_ARGS(Parrot_free_context)
+
+    void *ptr;
+    int slot;
+
+#ifndef NDEBUG
+    if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG)
+        && ctx->current_sub) {
+        /* can't probably Parrot_io_eprintf here */
+        Parrot_sub *doomed;
+        PMC_get_sub(interp, ctx->current_sub, doomed);
+
+        if (doomed) {
+            fprintf(stderr, "[free  ctx %p of sub '%s']\n",
+                    (void *)ctx,
+                    (doomed->name == (void*)0xdeadbeef
+                    ? "???"
+                    : (char*)doomed->name->strstart));
+        }
+        else {
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                    "NULL doomed sub detected in Parrot_free_context");
+        }
+    }
+#endif
+
+    ctx->n_regs_used[REGNO_INT] = 0;
+    ctx->n_regs_used[REGNO_NUM] = 0;
+    ctx->n_regs_used[REGNO_STR] = 0;
+    ctx->n_regs_used[REGNO_PMC] = 0;
+
+#if CTX_LEAK_DEBUG_FULL
+    /* for debugging, poison the freed context in case anything
+     * tries to use it later. */
+    ctx->current_results   = (opcode_t *)0xbeefcafe;
+    ctx->results_signature = (PMC *)0xbeefcafe;
+    ctx->lex_pad           = (PMC *)0xbeefcafe;
+    ctx->outer_ctx         = (Parrot_Context *)0xbeefcafe;
+    ctx->current_cont      = (PMC *)0xbeefcafe;
+    ctx->current_object    = (PMC *)0xbeefcafe;
+    ctx->current_HLL       = -1;
+    ctx->handlers          = (PMC *)0xbeefcafe;
+    ctx->constants         = (struct PackFile_Constant **)0xbeefcafe;
+    ctx->current_namespace = (PMC *)0xbeefcafe;
+#endif
+
+    /* don't put the same context on the free list multiple times; we don't
+     * have the re-use versus multiple ref count semantics right yet */
+    if (ctx->ref_count < 0)
+        return;
+
+    /* force the reference count negative to indicate a dead context
+     * so mark_context (src/sub.c) can report it */
+    ctx->ref_count--;
+
+    ptr             = ctx;
+    slot            = CALCULATE_SLOT_NUM(ctx->regs_mem_size);
+
+#if CTX_LEAK_DEBUG_FULL
+    slot = 0;
+#endif
+
+    PARROT_ASSERT(slot < interp->ctx_mem.n_free_slots);
+    *(void **)ptr                   = interp->ctx_mem.free_list[slot];
+    interp->ctx_mem.free_list[slot] = ptr;
+}
+
+pmclass Context {
+    ATTR Parrot_Context * ctx;
+
+    VTABLE void init()
+    {
+        Parrot_Context_attributes * const attrs = mem_sys_allocate_typed(Parrot_Context_attributes);
+        Parrot_Context * const ctx = mem_sys_allocate_typed(Parrot_Context);
+        init_context(INTERP, ctx);
+        attrs->ctx = ctx;
+        PMC_DATA(SELF) = attrs;
+    }
+
+    VTABLE void mark()
+    {
+        Parrot_Context * const ctx = PARROT_CONTEXT(SELF)->ctx;
+        PObj *obj;
+        int   i;
+
+        obj = (PObj *)ctx->current_sub;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_object;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_cont;
+        if (obj && !PObj_live_TEST(obj))
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->caller_ctx;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->outer_ctx;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_namespace;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->lex_pad;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->handlers;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        if (!ctx->n_regs_used)
+            return;
+
+        for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; ++i) {
+            obj = (PObj *)CTX_REG_PMC(ctx, i);
+            if (obj)
+                Parrot_gc_mark_PObj_alive(interp, obj);
+        }
+
+        for (i = 0; i < ctx->n_regs_used[REGNO_STR]; ++i) {
+            obj = (PObj *)CTX_REG_STR(ctx, i);
+            if (obj)
+                Parrot_gc_mark_PObj_alive(interp, obj);
+        }
+    }
+
+    VTABLE void destroy()
+    {
+        Parrot_Context_attributes * const attrs = PARROT_CONTEXT(SELF);
+        Parrot_Context * const ctx = attrs->ctx;
+        Parrot_free_context(INTERP, ctx);
+        mem_sys_free(ctx);
+        mem_sys_free(attrs);
+    }
+}

@@ -195,14 +195,14 @@ typedef union {
 
 struct Parrot_Context {
     /* common header with Interp_Context */
-    struct Parrot_Context *caller_ctx;      /* caller context */
+    PMC                   *caller_ctx;      /* caller context */
     Regs_ni                bp;              /* pointers to FLOATVAL & INTVAL */
     Regs_ps                bp_ps;           /* pointers to PMC & STR */
 
     /* end common header */
     INTVAL                n_regs_used[4];   /* INSP in PBC points to Sub */
-    PMC                   *lex_pad;         /* LexPad PMC */
-    struct Parrot_Context *outer_ctx;       /* outer context, if a closure */
+    PMC                  *lex_pad;          /* LexPad PMC */
+    PMC                  *outer_ctx;        /* outer context, if a closure */
 
     /* new call scheme and introspective variables */
     PMC      *current_sub;           /* the Sub we are executing */
@@ -221,8 +221,6 @@ struct Parrot_Context {
 
     INTVAL                 current_HLL;     /* see also src/hll.c */
     size_t                 regs_mem_size;   /* memory occupied by registers */
-    int                    ref_count;       /* how often refered to */
-    int                    gc_mark;         /* marked in gc run */
 
     UINTVAL                warns;           /* Keeps track of what warnings
                                              * have been activated */
@@ -250,21 +248,7 @@ typedef struct _Prederef {
     size_t n_allocated;                 /* allocated size of it */
 } Prederef;
 
-
-/*
- * This is an 'inlined' copy of the first 3 Context items for
- * faster access of registers mainly
- * During a context switch a 3 pointers are set
- */
-typedef struct Interp_Context {
-    /* common header */
-    struct Parrot_Context *state;       /* context  */
-    Regs_ni                bp;          /* pointers to FLOATVAL & INTVAL */
-    Regs_ps                bp_ps;       /* pointers to PMC & STR */
-    /* end common header */
-} Interp_Context;
-
-#define CONTEXT(interp) ((interp)->ctx.state)
+#define CONTEXT(interp) (Parrot_ctx_get_context_struct((interp)->ctx))
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated
                                      * some day; see src/register.c for details.
@@ -303,7 +287,7 @@ struct _handler_node_t; /* forward def - exit.h */
 
 /* The actual interpreter structure */
 struct parrot_interp_t {
-    struct Interp_Context ctx;
+    PMC                  *ctx;
     context_mem           ctx_mem;            /* ctx memory managment */
 
     struct Arenas *arena_base;                /* Pointer to this interpreter's

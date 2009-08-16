@@ -89,9 +89,9 @@ Marks the continuation as live.
         Parrot_cont *cc = PMC_cont(SELF);
 
         if (cc->to_ctx)
-            mark_context(INTERP, cc->to_ctx);
+            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) cc->to_ctx);
         if (cc->from_ctx)
-            mark_context(INTERP, cc->from_ctx);
+            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) cc->from_ctx);
     }
 
 /*
