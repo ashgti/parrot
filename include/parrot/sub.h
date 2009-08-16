@@ -293,12 +293,6 @@ void invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*cont);
 
-void mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(* ctx);
-
-void mark_context_start(void);
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 Parrot_cont * new_continuation(PARROT_INTERP,
@@ -368,10 +362,6 @@ PMC* Parrot_find_pad(PARROT_INTERP,
 #define ASSERT_ARGS_invalidate_retc_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(cont)
-#define ASSERT_ARGS_mark_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx)
-#define ASSERT_ARGS_mark_context_start __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
 #define ASSERT_ARGS_new_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_new_coroutine __attribute__unused__ int _ASSERT_ARGS_CHECK = \

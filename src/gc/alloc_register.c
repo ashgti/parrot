@@ -28,11 +28,6 @@ is determined by the PASM/PIR compiler in the register allocation pass
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*ctx);
-
 static void init_context(PARROT_INTERP,
     ARGMOD(Parrot_Context *ctx),
     ARGIN_NULLOK(const Parrot_Context *old))
@@ -40,9 +35,6 @@ static void init_context(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*ctx);
 
-#define ASSERT_ARGS_clear_regs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_init_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
@@ -108,7 +100,8 @@ reusable items.
 
 /*
 
-=item C<Parrot_Context * Parrot_ctx_get_context_struct(PARROT_INTERP, PMC * context)>
+=item C<Parrot_Context * Parrot_ctx_get_context_struct(PARROT_INTERP, PMC *
+context)>
 
 =cut
 
@@ -147,8 +140,7 @@ create_initial_context(PARROT_INTERP)
 
 /*
 
-=item C<Parrot_Context * Parrot_push_context(PARROT_INTERP, const INTVAL
-*n_regs_used)>
+=item C<PMC * Parrot_push_context(PARROT_INTERP, const INTVAL *n_regs_used)>
 
 Creates and sets the current context to a new context, remembering the old
 context in C<caller_ctx>.  Suitable to use with C<Parrot_pop_context>.
@@ -201,7 +193,7 @@ Parrot_pop_context(PARROT_INTERP)
 
 /*
 
-=item C<Parrot_Context * Parrot_set_new_context(PARROT_INTERP, const INTVAL
+=item C<PMC * Parrot_set_new_context(PARROT_INTERP, const INTVAL
 *number_regs_used)>
 
 Allocates and returns a new context as the current context.  Note that the
@@ -227,7 +219,7 @@ Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 
 /*
 
-=item C<Parrot_Context * Parrot_alloc_context(PARROT_INTERP, const INTVAL
+=item C<PMC * Parrot_alloc_context(PARROT_INTERP, const INTVAL
 *number_regs_used, Parrot_Context *old)>
 
 Allocates and returns a new context.  Does not set this new context as the
@@ -438,6 +430,47 @@ Parrot_clear_n(PARROT_INTERP)
     for (i = 0; i < nregs_used; ++i)
         REG_NUM(interp, i) = 0.0;
 }
+
+PARROT_CANNOT_RETURN_NULL
+INTVAL *
+Parrot_ctx_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_ctx_get_INTVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp.regs_i[idx]);
+}
+
+PARROT_CANNOT_RETURN_NULL
+FLOATVAL *
+Parrot_ctx_FLOATVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp.regs_n[-1L - idx]);
+}
+
+PARROT_CANNOT_RETURN_NULL
+STRING **
+Parrot_ctx_STRING_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp.regs_s[idx]);
+}
+
+PARROT_CANNOT_RETURN_NULL
+PMC **
+Parrot_ctx_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp.regs_p[-1L - idx]);
+}
+
+PARROT_CANNOT_RETURN_NULL
+PMC *
+Parrot_ctx_get_caller(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_ctx_get_caller)
+    return PARROT_CONTEXT(ctx)->caller_ctx;
+}
+
 
 
 /*

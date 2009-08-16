@@ -248,7 +248,7 @@ typedef struct _Prederef {
     size_t n_allocated;                 /* allocated size of it */
 } Prederef;
 
-#define CONTEXT(interp) (Parrot_ctx_get_context_struct((interp)->ctx))
+#define CONTEXT(interp) (Parrot_ctx_get_context_struct((interp), (interp)->ctx))
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated
                                      * some day; see src/register.c for details.
