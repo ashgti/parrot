@@ -36,12 +36,10 @@ static void
 print_sub_name(PARROT_INTERP, PMC *sub_pmc)
 {
     /* It's actually a Parrot_coro, but this avoids casting warnings. */
-    Parrot_sub          *co;
+    Parrot_Sub_attributes *co = PARROT_SUB(sub_pmc);
     Interp      * const tracer = (interp->pdb && interp->pdb->debugger) ?
         interp->pdb->debugger :
         interp;
-
-    GETATTR_Coroutine_sub(interp, sub_pmc, co);
 
     Parrot_io_eprintf(tracer, "# %s coro '%Ss'",
         !(PObj_get_FLAGS(sub_pmc) & SUB_FLAG_CORO_FF) ?
@@ -59,6 +57,8 @@ print_sub_name(PARROT_INTERP, PMC *sub_pmc)
 }
 
 pmclass Coroutine extends Sub need_ext {
+    PackFile_ByteCode *caller_seg;  /* bytecode segment */
+    opcode_t *address;           /* next address to run - toggled each time */
 
 /*
 
