@@ -485,14 +485,6 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
 
     }
 
-    /* Check if we have an invocant, and add it to the front of the arguments */
-/*    if (!PMC_IS_NULL(interp->current_object)) {
-        string_sig = Parrot_str_concat(interp, CONST_STRING(interp, "Pi"), string_sig, 0);
-        VTABLE_set_string_native(interp, call_object, string_sig);
-        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
-    }
-*/
-
     return call_object;
 }
 
@@ -760,7 +752,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         EXCEPTION_INVALID_OPERATION,
-                        "Multiple Dispatch: invalid argument type %c!", type);
+                        "Dispatch: invalid argument type %c!", type);
              }
         }
         else {
@@ -777,8 +769,16 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                     break;
                 case 'P':
                 {
+                    INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
                     PMC * const pmc_arg = va_arg(args, PMC *);
                     VTABLE_push_pmc(interp, call_object, pmc_arg);
+                    if (type_lookahead == 'i') {
+                        if (i != 0)
+                            Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION,
+                                "Dispatch: only the first argument can be an invocant");
+                        i++; /* skip 'i' */
+                    }
                     break;
                 }
                 case '-':
@@ -788,7 +788,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         EXCEPTION_INVALID_OPERATION,
-                        "Multiple Dispatch: invalid argument type %c!", type);
+                        "Dispatch: invalid argument type %c!", type);
             }
         }
     }
