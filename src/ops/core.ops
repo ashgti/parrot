@@ -579,6 +579,9 @@ op set_returns(inconst PMC) :flow {
 
     Parrot_pcc_fill_returns_from_op(interp, call_object, signature, raw_returns);
 
+    gc_unregister_pmc(interp, call_object);
+    CONTEXT(interp)->current_sig = NULL;
+
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }

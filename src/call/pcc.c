@@ -418,8 +418,10 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     INTVAL          arg_count = VTABLE_elements(interp, raw_sig);
     Parrot_Context *ctx       = CONTEXT(interp);
 
-    if (PMC_IS_NULL(signature))
+    if (PMC_IS_NULL(signature)) {
         call_object = pmc_new(interp, enum_class_CallSignature);
+        gc_register_pmc(interp, call_object);
+    }
     else
         call_object = signature;
 
@@ -631,8 +633,10 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     Parrot_Context *ctx       = CONTEXT(interp);
     PMC            *returns   = pmc_new(interp, enum_class_ResizablePMCArray);
 
-    if (PMC_IS_NULL(signature))
+    if (PMC_IS_NULL(signature)) {
         call_object = pmc_new(interp, enum_class_CallSignature);
+        gc_register_pmc(interp, call_object);
+    }
     else
         call_object = signature;
 
@@ -3754,8 +3758,9 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         interp->run_core = old_core;
     }
+    gc_unregister_pmc(interp, call_object);
+    ctx->current_sig = NULL;
     Parrot_pop_context(interp);
-
 }
 
 
