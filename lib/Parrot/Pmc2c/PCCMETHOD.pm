@@ -408,6 +408,7 @@ sub rewrite_pccmethod {
 
     _caller_ctx = _ctx->caller_ctx;
     _call_object = _ctx->current_sig;
+    _ctx->current_sig = NULL;
 
     { /* BEGIN PARMS SCOPE */
 END
