@@ -13,6 +13,7 @@
 #ifndef PARROT_REGISTER_H_GUARD
 #define PARROT_REGISTER_H_GUARD
 
+#include "parrot/core_types.h"
 #include "parrot/string.h"
 #include "parrot/compiler.h"
 
@@ -27,10 +28,10 @@
 #define CTX_REG_STR(ctx, x) (ctx)->bp_ps.regs_s[x]
 
 /* Macros for interfacing with the Context PMC */
-#define REG_NUM(interp, x) *(Parrot_ctx_FLOATVAL_reg((interp), (interp)->ctx, (x)))
-#define REG_INT(interp, x) *(Parrot_ctx_INTVA_reg((interp), (interp)->ctx, (x)))
-#define REG_PMC(interp, x) *(Parrot_ctx_PMC_reg((interp), (interp)->ctx, (x)))
-#define REG_STR(interp, x) *(Parrot_ctx_STRING_reg((interp), (interp)->ctx, (x)))
+#define REG_NUM(interp, x) (*(Parrot_ctx_FLOATVAL_reg((interp), (interp)->ctx, (x))))
+#define REG_INT(interp, x) (*(Parrot_ctx_INTVAL_reg((interp), (interp)->ctx, (x))))
+#define REG_PMC(interp, x) (*(Parrot_ctx_PMC_reg((interp), (interp)->ctx, (x))))
+#define REG_STR(interp, x) (*(Parrot_ctx_STRING_reg((interp), (interp)->ctx, (x))))
 
 /*
  * and a set of macros to access a register by offset, used
