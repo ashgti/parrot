@@ -770,7 +770,7 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
                                  mem_allocate_typed(Parrot_profiling_runcore_t);
     coredata->name             = CONST_STRING(interp, "profiling");
     coredata->opinit           = PARROT_CORE_OPLIB_INIT;
-    coredata->runops           = init_profiling_core;
+    coredata->runops           = (Parrot_runcore_runops_fn_t) init_profiling_core;
     coredata->destroy          = NULL;
     coredata->prepare_run      = NULL;
 
@@ -1038,8 +1038,8 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
 {
     ASSERT_ARGS(init_profiling_core)
 
-    runcore->runops  = runops_profiling_core;
-    runcore->destroy = destroy_profiling_core;
+    runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
+    runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
 
     runcore->level = 0;
     runcore->time_size = 32;

@@ -20,9 +20,13 @@ typedef struct profiling_runcore_t Parrot_profiling_runcore_t;
 
 #  define DO_OP(PC, INTERP) ((PC) = (((INTERP)->op_func_table)[*(PC)])((PC), (INTERP)))
 
-typedef opcode_t * (*runcore_runops_fn_type)(PARROT_INTERP, ARGIN(Parrot_runcore_t *), ARGIN(opcode_t *pc));
+typedef opcode_t * (*runcore_runops_fn_type) (PARROT_INTERP, ARGIN(Parrot_runcore_t *), ARGIN(opcode_t *pc));
 typedef       void (*runcore_destroy_fn_type)(PARROT_INTERP, ARGIN(Parrot_runcore_t *));
 typedef     void * (*runcore_prepare_fn_type)(PARROT_INTERP, ARGIN(Parrot_runcore_t *));
+
+typedef runcore_runops_fn_type  Parrot_runcore_runops_fn_t;
+typedef runcore_destroy_fn_type Parrot_runcore_destroy_fn_t;
+typedef runcore_prepare_fn_type Parrot_runcore_prepare_fn_t;
 
 struct runcore_t {
     STRING                  *name;
@@ -34,12 +38,12 @@ struct runcore_t {
 };
 
 struct profiling_runcore_t {
-    STRING                  *name;
-    oplib_init_f             opinit;
-    runcore_runops_fn_type   runops;
-    runcore_destroy_fn_type  destroy;
-    runcore_prepare_fn_type  prepare_run;
-    INTVAL                   flags;
+    STRING                      *name;
+    oplib_init_f                 opinit;
+    Parrot_runcore_runops_fn_t   runops;
+    Parrot_runcore_destroy_fn_t  destroy;
+    Parrot_runcore_prepare_fn_t  prepare_run;
+    INTVAL                       flags;
 
     /* end of common members */
     FILE                    *prof_fd;
