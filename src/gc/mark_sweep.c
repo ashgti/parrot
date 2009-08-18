@@ -1018,7 +1018,7 @@ The initialization routine for the interpreter's header pools. Initializes
 pools for string headers, constant string headers, buffers, PMCs, PMC_EXTs, and
 constant PMCs.
 
-The C<string_header_pool> and C<buffer_header_pool> are actually both in the
+The C<string_header_pool> actually lives in the
 sized pools, although no other sized pools are created here.
 
 =cut
@@ -1037,11 +1037,9 @@ initialize_header_pools(PARROT_INTERP)
 
     /* Init the buffer header pool
      *
-     * The buffer_header_pool and the string_header_pool actually live in the
+     * The string_header_pool actually lives in the
      * sized_header_pools. These pool pointers only provide faster access in
      * new_*_header */
-    /* arena_base->buffer_header_pool       = new_buffer_pool(interp);
-       arena_base->buffer_header_pool->name = "buffer_header"; */
 
     /* Init the string header pool */
     arena_base->string_header_pool       = new_string_pool(interp, 0);
