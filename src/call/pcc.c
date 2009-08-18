@@ -3386,6 +3386,7 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
     PMC *current_array;
     const char *x;
     INTVAL flags = 0;
+    INTVAL set = 0;
 
     if (PMC_IS_NULL(*arg_flags))
         *arg_flags = pmc_new(interp, enum_class_ResizableIntegerArray);
@@ -3406,14 +3407,16 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
         else if (isupper((unsigned char)*x)) {
             /* Starting a new argument, so store the previous argument,
              * if there was one. */
-            if (flags)
+            if (set) {
                 VTABLE_push_integer(interp, current_array, flags);
+                set = 0;
+            }
 
             switch (*x) {
-                case 'I': flags = PARROT_ARG_INTVAL;   break;
-                case 'N': flags = PARROT_ARG_FLOATVAL; break;
-                case 'S': flags = PARROT_ARG_STRING;   break;
-                case 'P': flags = PARROT_ARG_PMC;      break;
+                case 'I': flags = PARROT_ARG_INTVAL;   set++; break;
+                case 'N': flags = PARROT_ARG_FLOATVAL; set++; break;
+                case 'S': flags = PARROT_ARG_STRING;   set++; break;
+                case 'P': flags = PARROT_ARG_PMC;      set++; break;
                 default:
                   Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_INVALID_OPERATION,
@@ -3440,8 +3443,8 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
         }
     }
 
-    /* Store the final argument, * if there was one. */
-    if (flags)
+    /* Store the final argument, if there was one. */
+    if (set)
         VTABLE_push_integer(interp, current_array, flags);
 }
 
