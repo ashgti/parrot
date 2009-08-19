@@ -791,11 +791,10 @@ create_class_pmc(PARROT_INTERP, INTVAL type)
      * original because we have a singleton. Just set the singleton to
      * be our class object, but don't mess with its vtable.  */
     if ((interp->vtables[type]->flags & VTABLE_PMC_IS_SINGLETON)
-    &&  (_class == _class->vtable->pmc_class)) {
+    &&  (_class == _class->vtable->pmc_class))
         interp->vtables[type]->pmc_class = _class;
-    }
     else {
-        Parrot_gc_free_pmc_ext(interp, _class);
+        Parrot_gc_free_pmc_sync(interp, _class);
         gc_flag_CLEAR(is_special_PMC, _class);
         PObj_is_PMC_shared_CLEAR(_class);
         interp->vtables[type]->pmc_class = _class;

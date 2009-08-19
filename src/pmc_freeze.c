@@ -113,10 +113,6 @@ static void op_check_size(PARROT_INTERP, ARGIN(STRING *s), size_t len)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void pmc_add_ext(PARROT_INTERP, ARGIN(PMC *pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 static void push_ascii_integer(PARROT_INTERP, ARGIN(IMAGE_IO *io), INTVAL v)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -323,9 +319,6 @@ static void visit_todo_list_thaw(PARROT_INTERP,
 #define ASSERT_ARGS_op_check_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_pmc_add_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_push_ascii_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(io)

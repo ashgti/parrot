@@ -366,7 +366,7 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    Parrot_gc_free_pmc_ext(interp, pmc);
+    Parrot_gc_free_pmc_sync(interp, pmc);
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
     pool->add_free_object(interp, pool, (PObj *)pmc);
@@ -375,7 +375,7 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
 
 /*
 
-=item C<void Parrot_gc_free_pmc_ext(PARROT_INTERP, PMC *p)>
+=item C<void Parrot_gc_free_pmc_sync(PARROT_INTERP, PMC *p)>
 
 Frees the C<PMC_EXT> structure attached to a PMC, if it exists.
 
@@ -384,9 +384,9 @@ Frees the C<PMC_EXT> structure attached to a PMC, if it exists.
 */
 
 void
-Parrot_gc_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
+Parrot_gc_free_pmc_sync(PARROT_INTERP, ARGMOD(PMC *p))
 {
-    ASSERT_ARGS(Parrot_gc_free_pmc_ext)
+    ASSERT_ARGS(Parrot_gc_free_pmc_sync)
 
     if (PObj_is_PMC_shared_TEST(p) && PMC_sync(p)) {
         MUTEX_DESTROY(PMC_sync(p)->pmc_lock);
