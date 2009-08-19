@@ -641,12 +641,13 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
         call_object = signature;
 
     /* A hack to support 'get_results' as the way of fetching the
-     * exception object inside an exception handler. */
+     * exception object inside an exception handler. The first argument
+     * in the call object is the exception, stick it directly into the
+     * destination register. */
     if (CALLSIGNATURE_is_exception_TEST(call_object)) {
         const INTVAL raw_index = raw_args[2];
-        PMC *exception_object = 
+        CTX_REG_PMC(ctx, raw_index) = 
                 VTABLE_get_pmc_keyed_int(interp, call_object, 0);
-        CTX_REG_PMC(ctx, raw_index) = exception_object;
         return NULL;
     }
 
