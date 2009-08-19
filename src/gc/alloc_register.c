@@ -100,15 +100,15 @@ reusable items.
 
 /*
 
-=item C<Parrot_Context * Parrot_ctx_get_context_struct(PARROT_INTERP, PMC *
-context)>
+=item C<Parrot_Context_attributes * Parrot_ctx_get_context_struct(PARROT_INTERP,
+PMC * context)>
 
 =cut
 
 */
 
 PARROT_CAN_RETURN_NULL
-Parrot_Context *
+Parrot_Context_attributes *
 Parrot_ctx_get_context_struct(PARROT_INTERP, ARGIN(PMC * context))
 {
     ASSERT_ARGS(Parrot_ctx_get_context_struct)
@@ -220,7 +220,7 @@ Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 /*
 
 =item C<PMC * Parrot_alloc_context(PARROT_INTERP, const INTVAL
-*number_regs_used, Parrot_Context *old)>
+*number_regs_used, PMC *old)>
 
 Allocates and returns a new context.  Does not set this new context as the
 current context. Note that the register usage C<n_regs_used> is copied.  Use
@@ -235,11 +235,11 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC *
 Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
-    ARGIN_NULLOK(Parrot_Context *old))
+    ARGIN_NULLOK(PMC *old))
 {
     ASSERT_ARGS(Parrot_alloc_context)
     PMC * pmcctx;
-    Parrot_Context *ctx;
+    Parrot_Context_attributes *ctx;
     void *p;
 
     const size_t size_i = sizeof (INTVAL)   * number_regs_used[REGNO_INT];
@@ -251,7 +251,7 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     const size_t all_regs_size = size_n + size_i + size_p + size_s;
 
     pmcctx = pmc_new(interp, enum_class_Context);
-    ctx = mem_sys_allocate_typed(Parrot_Context);
+    ctx = PARROT_CONTEXT(pmcctx);
 
 
     ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
@@ -277,7 +277,6 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     ctx->bp_ps.regs_s = (STRING **)((char *)p + size_nip);
 
     init_context(interp, ctx, old);
-    PARROT_CONTEXT(pmcctx)->ctx = ctx;
 
     return pmcctx;
 }

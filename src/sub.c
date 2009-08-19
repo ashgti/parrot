@@ -265,7 +265,7 @@ Parrot_full_sub_name(PARROT_INTERP, ARGIN_NULLOK(PMC* sub_pmc))
 
 /*
 
-=item C<int Parrot_Context_get_info(PARROT_INTERP, const Parrot_Context *ctx,
+=item C<int Parrot_Context_get_info(PARROT_INTERP, const PMC *pmcctx,
 Parrot_Context_info *info)>
 
 Takes pointers to a context and its information table.
@@ -278,11 +278,12 @@ Used by Parrot_Context_infostr.
 
 PARROT_EXPORT
 int
-Parrot_Context_get_info(PARROT_INTERP, ARGIN(const Parrot_Context *ctx),
+Parrot_Context_get_info(PARROT_INTERP, ARGIN(const PMC *pmcctx),
                     ARGOUT(Parrot_Context_info *info))
 {
     ASSERT_ARGS(Parrot_Context_get_info)
     Parrot_sub *sub;
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
 
     /* set file/line/pc defaults */
     info->file     = CONST_STRING(interp, "(unknown file)");
@@ -357,8 +358,7 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(const Parrot_Context *ctx),
 
 /*
 
-=item C<STRING* Parrot_Context_infostr(PARROT_INTERP, const Parrot_Context
-*ctx)>
+=item C<STRING* Parrot_Context_infostr(PARROT_INTERP, const PMC *pmcctx)>
 
 Formats context information for display.  Takes a context pointer and
 returns a pointer to the text.  Used in debug.c and warnings.c
@@ -371,15 +371,17 @@ PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 STRING*
-Parrot_Context_infostr(PARROT_INTERP, ARGIN(const Parrot_Context *ctx))
+Parrot_Context_infostr(PARROT_INTERP, ARGIN(const PMC *pmcctx))
 {
     ASSERT_ARGS(Parrot_Context_infostr)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     Parrot_Context_info info;
     STRING             *res = NULL;
     const char * const  msg = (CONTEXT(interp) == ctx)
         ? "current instr.:"
         : "called from Sub";
 
+    /* XXX Why block GC here? */
     Parrot_block_GC_mark(interp);
     if (Parrot_Context_get_info(interp, ctx, &info)) {
 
@@ -394,8 +396,8 @@ Parrot_Context_infostr(PARROT_INTERP, ARGIN(const Parrot_Context *ctx))
 
 /*
 
-=item C<PMC* Parrot_find_pad(PARROT_INTERP, STRING *lex_name, const
-Parrot_Context *ctx)>
+=item C<PMC* Parrot_find_pad(PARROT_INTERP, STRING *lex_name, const PMC
+*pmcctx)>
 
 Locate the LexPad containing the given name. Return NULL on failure.
 
@@ -406,12 +408,13 @@ Locate the LexPad containing the given name. Return NULL on failure.
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC*
-Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const Parrot_Context *ctx))
+Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const PMC *pmcctx))
 {
     ASSERT_ARGS(Parrot_find_pad)
     while (1) {
-        PMC                    * const lex_pad = ctx->lex_pad;
-        const Parrot_Context   * const outer   = ctx->outer_ctx;
+        Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+        PMC * const lex_pad = ctx->lex_pad;
+        PMC * const outer   = ctx->outer_ctx;
 
         if (!outer)
             return lex_pad;
@@ -431,7 +434,7 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const Parrot_Conte
                 "Bug:  Context %p :outer points back to itself.", ctx);
         }
 #endif
-        ctx = outer;
+        pmcctx = outer;
     }
 }
 

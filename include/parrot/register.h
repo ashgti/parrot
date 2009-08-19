@@ -58,8 +58,8 @@
         (__CTX->n_regs_used[REGNO_PMC] - 1L - (x)))
 #define REG_OFFS_STR(x) (sizeof (STRING*) * (x) + _SIZEOF_INTS + _SIZEOF_PMCS)
 
-
-typedef struct Parrot_Context Parrot_Context; /* parrot/interpreter.h */
+/* Forward declaration of Context PMC attributes */
+typedef struct Parrot_Context_attributes Parrot_Context_attributes;
 
 /* HEADERIZER BEGIN: src/gc/alloc_register.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -98,7 +98,7 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_alloc_context(PARROT_INTERP,
     ARGIN(const INTVAL *number_regs_used),
-    ARGIN_NULLOK(Parrot_Context *old))
+    ARGIN_NULLOK(PMC *old))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -109,8 +109,13 @@ FLOATVAL * Parrot_ctx_FLOATVAL_reg(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
+PMC * Parrot_ctx_get_caller(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CAN_RETURN_NULL
-Parrot_Context * Parrot_ctx_get_context_struct(PARROT_INTERP,
+Parrot_Context_attributes * Parrot_ctx_get_context_struct(PARROT_INTERP,
     ARGIN(PMC * context))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -156,6 +161,9 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(number_regs_used)
 #define ASSERT_ARGS_Parrot_ctx_FLOATVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_ctx_get_caller __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_ctx_get_context_struct __attribute__unused__ int _ASSERT_ARGS_CHECK = \

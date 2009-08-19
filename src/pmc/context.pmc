@@ -1,3 +1,6 @@
+
+#include "parrot/packfile.h"
+
 /*
 
 =item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
@@ -41,7 +44,30 @@ clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
 }
 
 pmclass Context {
-    ATTR Parrot_Context * ctx;
+    ATTR PMC        *caller_ctx;      /* caller context */
+    ATTR Regs_ni    bp;              /* pointers to FLOATVAL & INTVAL */
+    ATTR Regs_ps    bp_ps;           /* pointers to PMC & STR */
+    ATTR INTVAL     n_regs_used[4];   /* INSP in PBC points to Sub */
+    ATTR PMC        *lex_pad;          /* LexPad PMC */
+    ATTR PMC        *outer_ctx;        /* outer context, if a closure */
+    ATTR PMC        *current_sub;           /* the Sub we are executing */
+    ATTR PMC      *handlers;              /* local handlers for the context */
+    ATTR PMC      *current_cont;          /* the return continuation PMC */
+    ATTR PMC      *current_object;        /* current object if a method call */
+    ATTR PMC      *current_namespace;     /* The namespace we're currently in */
+    ATTR PMC      *results_signature;     /* non-const results signature PMC */
+    ATTR opcode_t *current_pc;            /* program counter of Sub invocation */
+    ATTR opcode_t *current_results;       /* ptr into code with get_results opcode */
+    ATTR struct PackFile_Constant **constants;
+    ATTR INTVAL                 current_HLL;     /* see also src/hll.c */
+    ATTR UINTVAL                regs_mem_size;   /* memory occupied by registers */
+    ATTR UINTVAL                warns;           /* Keeps track of what warnings
+                                             * have been activated */
+    ATTR UINTVAL                errors;          /* fatals that can be turned off */
+    ATTR UINTVAL                trace_flags;
+    ATTR UINTVAL                recursion_depth; /* Sub call recursion depth */
+    ATTR UINTVAL  pred_offset; /* code->prederefed.code - code->base.data in opcodes
+     * to simplify conversion between code ptrs in e.g. invoke */
 
     VTABLE void init()
     {

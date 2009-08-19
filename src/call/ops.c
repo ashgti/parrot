@@ -134,7 +134,7 @@ runops(PARROT_INTERP, size_t offs)
 
 /*
 
-=item C<Parrot_Context * Parrot_runops_fromc(PARROT_INTERP, PMC *sub)>
+=item C<PMC * Parrot_runops_fromc(PARROT_INTERP, PMC *sub)>
 
 Runs the Parrot ops, called from C code. The function arguments are
 already setup according to Parrot calling conventions, the C<sub> argument
@@ -147,7 +147,7 @@ is an invocable C<Sub> PMC.
 PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
-Parrot_Context *
+PMC *
 Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
 {
     ASSERT_ARGS(Parrot_runops_fromc)
@@ -169,7 +169,7 @@ Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
             "Subroutine returned a NULL address");
 
-    ctx    = CONTEXT(interp);
+    ctx    = interp->ctx;
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return ctx;

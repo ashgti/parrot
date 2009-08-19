@@ -52,7 +52,7 @@ static void commit_last_arg(PARROT_INTERP,
     int seen_arrow,
     ARGIN(PMC * const *sigs),
     ARGMOD(opcode_t **indexes),
-    ARGMOD(Parrot_Context *ctx),
+    ARGMOD(PMC *pmcctx),
     ARGIN_NULLOK(PMC *pmc),
     ARGIN(va_list *list))
         __attribute__nonnull__(1)
@@ -63,7 +63,7 @@ static void commit_last_arg(PARROT_INTERP,
         __attribute__nonnull__(10)
         FUNC_MODIFIES(*n_regs_used)
         FUNC_MODIFIES(*indexes)
-        FUNC_MODIFIES(*ctx);
+        FUNC_MODIFIES(*pmcctx);
 
 static void commit_last_arg_sig_object(PARROT_INTERP,
     int index,
@@ -245,7 +245,7 @@ static void too_many(PARROT_INTERP,
     || PARROT_ASSERT_ARG(n_regs_used) \
     || PARROT_ASSERT_ARG(sigs) \
     || PARROT_ASSERT_ARG(indexes) \
-    || PARROT_ASSERT_ARG(ctx) \
+    || PARROT_ASSERT_ARG(pmcctx) \
     || PARROT_ASSERT_ARG(list)
 #define ASSERT_ARGS_commit_last_arg_sig_object __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
@@ -535,8 +535,8 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
 
 /*
 
-=item C<int Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, Parrot_Context
-*ctx, opcode_t *indexes, PMC *sig_pmc, call_state_item *sti)>
+=item C<int Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, PMC *pmcctx,
+opcode_t *indexes, PMC *sig_pmc, call_state_item *sti)>
 
 Initializes argument transfer with given context registers, register indexes,
 and a signature PMC.
@@ -552,11 +552,12 @@ These functions return 0 if no arguments are present, or 1 on success.
 
 PARROT_EXPORT
 int
-Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
+Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(PMC *pmcctx),
         ARGIN_NULLOK(opcode_t *indexes), ARGIN_NULLOK(PMC *sig_pmc),
         ARGMOD(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_indexes_and_sig_pmc)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     if (!sig_pmc && indexes) {
         ++indexes;
         sig_pmc = ctx->constants[*indexes]->u.key;
@@ -589,7 +590,7 @@ Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
 
 /*
 
-=item C<int Parrot_init_arg_op(PARROT_INTERP, Parrot_Context *ctx, opcode_t *pc,
+=item C<int Parrot_init_arg_op(PARROT_INTERP, PMC *pmcctx, opcode_t *pc,
 call_state_item *sti)>
 
 Initializes argument transfer with given context registers and opcode location
@@ -601,10 +602,11 @@ of a C<get_*> or C<set_*> argument opcode.
 
 PARROT_EXPORT
 int
-Parrot_init_arg_op(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
+Parrot_init_arg_op(PARROT_INTERP, ARGIN(PMC *pmcctx),
     ARGIN_NULLOK(opcode_t *pc), ARGIN(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_op)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     PMC *sig_pmc = PMCNULL;
 
     if (pc) {
@@ -614,14 +616,14 @@ Parrot_init_arg_op(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
         ++pc;
     }
 
-    return Parrot_init_arg_indexes_and_sig_pmc(interp, ctx, pc, sig_pmc, sti);
+    return Parrot_init_arg_indexes_and_sig_pmc(interp, pmcctx, pc, sig_pmc, sti);
 }
 
 
 /*
 
-=item C<int Parrot_init_arg_sig(PARROT_INTERP, Parrot_Context *ctx, const char
-*sig, void *ap, call_state_item *sti)>
+=item C<int Parrot_init_arg_sig(PARROT_INTERP, PMC *pmcctx, const char *sig,
+void *ap, call_state_item *sti)>
 
 Initializes argument transfer with given code segment (holding the
 const_table), registers, function signature, and arguments.
@@ -632,11 +634,12 @@ const_table), registers, function signature, and arguments.
 
 PARROT_EXPORT
 int
-Parrot_init_arg_sig(PARROT_INTERP, ARGIN(Parrot_Context *ctx),
+Parrot_init_arg_sig(PARROT_INTERP, ARGIN(PMC *pmcctx),
     ARGIN(const char *sig), ARGIN_NULLOK(void *ap),
     ARGMOD(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_sig)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     sti->used = 1;
     sti->i    = 0;
     sti->n    = 0;
@@ -1199,10 +1202,10 @@ clone_key_arg(PARROT_INTERP, ARGMOD(call_state *st))
     for (; key; key = VTABLE_shift_pmc(interp, key)) {
         /* register keys have to be cloned */
         if (PObj_get_FLAGS(key) & KEY_register_FLAG) {
-            Parrot_Context temp_ctx;
+            Parrot_Context_attributes temp_ctx;
 
             /* clone sets key values according to refered register items */
-            SAVE_OFF_REGS(interp->ctx, (*(st->src.ctx)), temp_ctx)
+            SAVE_OFF_REGS(CONTEXT(interp), PARROT_CONTEXT(*(st->src.ctx)), temp_ctx)
             UVal_pmc(st->val) = VTABLE_clone(interp, key);
             RESTORE_REGS(interp->ctx, temp_ctx)
             return;
@@ -1843,9 +1846,8 @@ Parrot_convert_arg(PARROT_INTERP, ARGMOD(call_state *st))
 
 /*
 
-=item C<void parrot_pass_args(PARROT_INTERP, Parrot_Context *src_ctx,
-Parrot_Context *dest_ctx, opcode_t *src_indexes, opcode_t *dest_indexes,
-arg_pass_t param_or_result)>
+=item C<void parrot_pass_args(PARROT_INTERP, PMC *src_pmcctx, PMC *dest_pmcctx,
+opcode_t *src_indexes, opcode_t *dest_indexes, arg_pass_t param_or_result)>
 
 Main argument passing routine.
 
@@ -1865,7 +1867,7 @@ latter handles return values and yields.
 PARROT_EXPORT
 void
 parrot_pass_args(PARROT_INTERP,
-        ARGMOD(Parrot_Context *src_ctx), ARGMOD(Parrot_Context *dest_ctx),
+        ARGMOD(PMC *src_pmcctx), ARGMOD(PMC *dest_pmcctx),
         ARGMOD_NULLOK(opcode_t *src_indexes), ARGMOD_NULLOK(opcode_t *dest_indexes),
         arg_pass_t param_or_result)
 {
@@ -1902,7 +1904,7 @@ parrot_pass_args(PARROT_INTERP,
 /*
 
 =item C<opcode_t * parrot_pass_args_fromc(PARROT_INTERP, const char *sig,
-opcode_t *dest, Parrot_Context *old_ctxp, va_list ap)>
+opcode_t *dest, PMC *old_ctxp, va_list ap)>
 
 Passes arguments from C code with given signature to a Parrot Sub.
 Prerequisites are like above.
@@ -1915,12 +1917,12 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 opcode_t *
 parrot_pass_args_fromc(PARROT_INTERP, ARGIN(const char *sig),
-        ARGMOD(opcode_t *dest), ARGIN(Parrot_Context *old_ctxp), va_list ap)
+        ARGMOD(opcode_t *dest), ARGIN(PMC *old_ctxp), va_list ap)
 {
     ASSERT_ARGS(parrot_pass_args_fromc)
     call_state st;
 
-    Parrot_init_arg_op(interp, CONTEXT(interp), dest, &st.dest);
+    Parrot_init_arg_op(interp, interp->ctx, dest, &st.dest);
     Parrot_init_arg_sig(interp, old_ctxp, sig, PARROT_VA_TO_VAPTR(ap), &st.src);
     Parrot_process_args(interp, &st, PARROT_PASS_PARAMS);
     return dest + st.dest.n + 2;
@@ -1966,7 +1968,7 @@ set_retval_util(PARROT_INTERP, ARGIN(const char *sig),
 
 /*
 
-=item C<void * set_retval(PARROT_INTERP, int sig_ret, Parrot_Context *ctx)>
+=item C<void * set_retval(PARROT_INTERP, int sig_ret, PMC *pmcctx)>
 
 Handles void and pointer (PMC *, STRING *) return values.  Returns a PMC,
 STRING, or NULL pointer as appropriate.
@@ -1978,9 +1980,10 @@ STRING, or NULL pointer as appropriate.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 void *
-set_retval(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+set_retval(PARROT_INTERP, int sig_ret, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(set_retval)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     call_state st;
 
     if (!sig_ret || sig_ret == 'v')
@@ -2003,7 +2006,7 @@ set_retval(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
 
 /*
 
-=item C<INTVAL set_retval_i(PARROT_INTERP, int sig_ret, Parrot_Context *ctx)>
+=item C<INTVAL set_retval_i(PARROT_INTERP, int sig_ret, PMC *pmcctx)>
 
 Handles an INTVAL return value, returning its value if present and 0 otherwise.
 
@@ -2012,9 +2015,10 @@ Handles an INTVAL return value, returning its value if present and 0 otherwise.
 */
 
 INTVAL
-set_retval_i(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+set_retval_i(PARROT_INTERP, int sig_ret, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(set_retval_i)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     call_state st;
 
     if (sig_ret != 'I')
@@ -2030,7 +2034,7 @@ set_retval_i(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
 
 /*
 
-=item C<FLOATVAL set_retval_f(PARROT_INTERP, int sig_ret, Parrot_Context *ctx)>
+=item C<FLOATVAL set_retval_f(PARROT_INTERP, int sig_ret, PMC *pmcctx)>
 
 Handles a FLOATVAL return value, returning its value if present and 0.0
 otherwise.
@@ -2040,9 +2044,10 @@ otherwise.
 */
 
 FLOATVAL
-set_retval_f(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+set_retval_f(PARROT_INTERP, int sig_ret, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(set_retval_f)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     call_state st;
 
     if (sig_ret != 'N')
@@ -2058,7 +2063,7 @@ set_retval_f(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
 
 /*
 
-=item C<STRING* set_retval_s(PARROT_INTERP, int sig_ret, Parrot_Context *ctx)>
+=item C<STRING* set_retval_s(PARROT_INTERP, int sig_ret, PMC *pmcctx)>
 
 Handles a STRING return value, returning its pointer if present and NULL
 otherwise.
@@ -2070,7 +2075,7 @@ otherwise.
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 STRING*
-set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(set_retval_s)
     call_state st;
@@ -2088,7 +2093,7 @@ set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
 
 /*
 
-=item C<PMC* set_retval_p(PARROT_INTERP, int sig_ret, Parrot_Context *ctx)>
+=item C<PMC* set_retval_p(PARROT_INTERP, int sig_ret, PMC *pmcctx)>
 
 Handles a PMC return value, returning the PMC pointer if present and NULL
 otherwise.
@@ -2100,9 +2105,10 @@ otherwise.
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC*
-set_retval_p(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+set_retval_p(PARROT_INTERP, int sig_ret, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(set_retval_p)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     call_state st;
 
     if (sig_ret != 'P')
@@ -2119,8 +2125,8 @@ set_retval_p(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
 /*
 
 =item C<static void commit_last_arg(PARROT_INTERP, int index, int cur, opcode_t
-*n_regs_used, int seen_arrow, PMC * const *sigs, opcode_t **indexes,
-Parrot_Context *ctx, PMC *pmc, va_list *list)>
+*n_regs_used, int seen_arrow, PMC * const *sigs, opcode_t **indexes, PMC
+*pmcctx, PMC *pmc, va_list *list)>
 
 Called by C<Parrot_PCCINVOKE> when it reaches the end of each arg in the arg
 signature.  See C<Parrot_PCCINVOKE> for signature syntax.
@@ -2132,10 +2138,11 @@ signature.  See C<Parrot_PCCINVOKE> for signature syntax.
 static void
 commit_last_arg(PARROT_INTERP, int index, int cur,
     ARGMOD(opcode_t *n_regs_used), int seen_arrow, ARGIN(PMC * const *sigs),
-    ARGMOD(opcode_t **indexes), ARGMOD(Parrot_Context *ctx),
+    ARGMOD(opcode_t **indexes), ARGMOD(PMC *pmcctx),
     ARGIN_NULLOK(PMC *pmc), ARGIN(va_list *list))
 {
     ASSERT_ARGS(commit_last_arg)
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
     int reg_offset = 0;
 
     /* invocant already commited, just return */
