@@ -534,17 +534,17 @@ op get_results(inconst PMC) :flow {
 
 op get_params(inconst PMC) :flow {
     opcode_t * const _this = CUR_OPCODE;
-    Parrot_Context *caller_ctx, *ctx;
+    PMC *caller_ctx, *ctx;
     PMC * ccont;
     PMC * const signature = $1;
     INTVAL argc;
     opcode_t *src_indexes, *dst_indexes;
 
     interp->current_params = _this;
-    ctx = CONTEXT(interp);
-    ccont = ctx->current_cont;
+    ctx =   interp->ctx;
+    ccont = PARROT_CONTEXT(ctx)->current_cont;
 
-    caller_ctx = ctx->caller_ctx;
+    caller_ctx = PARROT_CONTEXT(ctx)->caller_ctx;
 
     src_indexes = interp->current_args;
     dst_indexes = interp->current_params;
