@@ -18,7 +18,6 @@ board.pir - a tetris board class.
 =cut
 
 .namespace ["Tetris::Board"]
-.loadlib 'math_ops'
 
 .sub __onload :load
     $P0 = get_class "Tetris::Board"
@@ -886,7 +885,8 @@ TDB
     $I0 = blocks
 
     # get a random block id
-    rand $N0
+    $P0 = new 'Random'
+    $N0 = $P0
     $N0 = $N0 * $I0
     id = $N0
 

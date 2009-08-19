@@ -46,7 +46,7 @@ These are the vtable functions for the CPointer class.
 
 */
 
-pmclass CPointer need_ext auto_attrs {
+pmclass CPointer need_ext {
     ATTR void   *pointer; /* The stored pointer. */
     ATTR STRING *sig;     /* A string signature for the pointer. */
 
@@ -61,8 +61,12 @@ Initializes the pointer object.
 */
 
     VTABLE void init() {
-        SET_ATTR_pointer(INTERP, SELF, NULL);
-        SET_ATTR_sig(INTERP, SELF, NULL);
+        Parrot_CPointer_attributes * const pdata_struct =
+            mem_allocate_typed(Parrot_CPointer_attributes);
+
+        PMC_data(SELF)        = pdata_struct;
+        pdata_struct->pointer = NULL;
+        pdata_struct->sig     = NULL;
 
         PObj_custom_mark_destroy_SETALL(SELF);
     }
@@ -79,21 +83,19 @@ pointer.
 */
 
     VTABLE void mark() {
-        STRING *sig;
-        GET_ATTR_sig(INTERP, SELF, sig);
-        if (sig) {
-            void *pointer;
-            GET_ATTR_pointer(INTERP, SELF, pointer);
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)sig);
+        Parrot_CPointer_attributes * const data = PARROT_CPOINTER(SELF);
 
-            if (pointer) {
-                if (Parrot_str_equal(interp, sig, CONST_STRING(interp, "P"))) {
-                    PMC ** const pmc_pointer = (PMC **) pointer;
+        if (data->sig) {
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)data->sig);
+
+            if (data->pointer) {
+                if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "P"))) {
+                    PMC ** const pmc_pointer = (PMC **) data->pointer;
                     PARROT_ASSERT(*pmc_pointer);
                     Parrot_gc_mark_PObj_alive(interp, (PObj *) *pmc_pointer);
                 }
-                else if (Parrot_str_equal(interp, sig, CONST_STRING(interp, "S"))) {
-                    STRING ** const str_pointer = (STRING **) pointer;
+                else if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "S"))) {
+                    STRING ** const str_pointer = (STRING **) data->pointer;
                     PARROT_ASSERT(*str_pointer);
                     Parrot_gc_mark_PObj_alive(interp, (PObj *) *str_pointer);
                 }
@@ -112,6 +114,12 @@ Destroys the PMC and frees all allocated memory.
 */
 
     VTABLE void destroy() {
+        Parrot_CPointer_attributes * const data = PARROT_CPOINTER(SELF);
+
+        if (data) {
+            mem_sys_free(data);
+            PMC_data(SELF) = NULL;
+        }
     }
 
 /*

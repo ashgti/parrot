@@ -19,7 +19,7 @@ lexicals at runtime.
 
 */
 
-pmclass DynLexPad dynpmc provides lexpad need_ext auto_attrs {
+pmclass DynLexPad dynpmc provides lexpad need_ext {
     ATTR Hash *hash;
     ATTR PMC  *init; /* the PMC used to initialize this DynLexPad */
 
@@ -42,7 +42,8 @@ lexinfo.
         Hash *hash;
 
         Parrot_DynLexPad_attributes *attrs =
-            (Parrot_DynLexPad_attributes *) PMC_data(SELF);
+            mem_allocate_zeroed_typed(Parrot_DynLexPad_attributes);
+        PMC_data(SELF) = attrs;
 
         if (VTABLE_elements(interp, lexinfo)) {
             attrs->init = pmc_new_init(interp, enum_class_LexPad, lexinfo);
@@ -187,6 +188,8 @@ Return the LexInfo PMC, if any or a Null PMC.
             parrot_hash_destroy(interp, PARROT_DYNLEXPAD(SELF)->hash);
             PARROT_DYNLEXPAD(SELF)->hash = NULL;
         }
+        mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
     }
 /*
 

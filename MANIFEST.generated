@@ -2,10 +2,10 @@
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
 # Please re-sort this file after *EVERY* modification
-blib/lib/libparrot.1.5.0.dylib                    [main]lib
+blib/lib/libparrot.1.4.0.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
-blib/lib/libparrot.so.1.5.0                       [main]lib
+blib/lib/libparrot.so.1.4.0                       [main]lib
 blib/lib/libparrot.so                             [main]lib
 compilers/json/JSON/grammar.pbc                   [json]
 compilers/json/JSON.pbc                           [json]
@@ -94,14 +94,6 @@ runtime/parrot/dynext/match_group.bundle          [library]
 runtime/parrot/dynext/match_group.dll             [library]
 runtime/parrot/dynext/match_group.dylib           [library]
 runtime/parrot/dynext/match_group.so              [library]
-runtime/parrot/dynext/math_ops.so                 [library]
-runtime/parrot/dynext/math_ops.bundle             [library]
-runtime/parrot/dynext/math_ops.dll                [library]
-runtime/parrot/dynext/math_ops.dylib              [library]
-runtime/parrot/dynext/obscure_ops.bundle          [library]
-runtime/parrot/dynext/obscure_ops.dll             [library]
-runtime/parrot/dynext/obscure_ops.dylib           [library]
-runtime/parrot/dynext/obscure_ops.so              [library]
 runtime/parrot/dynext/rational.bundle             [library]
 runtime/parrot/dynext/rational.dll                [library]
 runtime/parrot/dynext/rational.dylib              [library]

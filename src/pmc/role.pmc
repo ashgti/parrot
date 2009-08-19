@@ -198,7 +198,7 @@ static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
 
 */
 
-pmclass Role need_ext auto_attrs {
+pmclass Role need_ext {
     ATTR STRING *name;            /* The name of the role. */
     ATTR PMC    *_namespace;      /* The namespace it's linked to, if any. */
     ATTR PMC    *roles;           /* Roles from which this role is composed. */
@@ -221,11 +221,12 @@ C<init_data>.
 */
 
     VTABLE void init() {
-        Parrot_Role_attributes * const role =
-                (Parrot_Role_attributes *) PMC_data(SELF);
+        Parrot_Role_attributes * const role = mem_allocate_zeroed_typed(Parrot_Role_attributes);
+        PMC_data(SELF)        = role;
 
-        /* Set flags for custom GC mark. */
+        /* Set flags for custom GC mark and destroy. */
         PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
 
         /* Set up the object. */
         role->name            = CONST_STRING(interp, "");
@@ -241,6 +242,21 @@ C<init_data>.
 
         /* Initialize the role with the supplied data. */
         init_role_from_hash(interp, SELF, init_data);
+    }
+
+/*
+
+=item C<void destroy()>
+
+Free the memory associated with the object's underlying struct.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
     }
 
 /*

@@ -43,7 +43,7 @@ upgrade_self_to_bignum(PARROT_INTERP, PMC *self)
     return self;
 }
 
-pmclass Integer extends scalar provides integer provides scalar auto_attrs {
+pmclass Integer extends scalar provides integer provides scalar {
     ATTR INTVAL iv; /* the value of this Integer */
 
 /*
@@ -91,13 +91,16 @@ Destroys this PMC.
 
     VTABLE void init() {
         Parrot_Integer_attributes * const attrs =
-            (Parrot_Integer_attributes *)PMC_data(SELF);
+            mem_allocate_typed(Parrot_Integer_attributes);
 
         attrs->iv      = 0;
+        PMC_data(SELF) = attrs;
         PObj_active_destroy_SET(SELF);
     }
 
     VTABLE void destroy() {
+        mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
     }
 
 /*

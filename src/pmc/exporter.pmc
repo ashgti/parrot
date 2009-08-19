@@ -90,7 +90,7 @@ A Null PMC is allocated during initialization.
 
 */
 
-pmclass Exporter need_ext auto_attrs {
+pmclass Exporter need_ext {
 
     ATTR PMC *ns_src;
     ATTR PMC *ns_dest;
@@ -107,6 +107,10 @@ Initializes an Exporter PMC.
 */
 
     VTABLE void init() {
+        Parrot_Exporter_attributes * const exp =
+            mem_allocate_zeroed_typed(Parrot_Exporter_attributes);
+        PMC_data(SELF)       = exp;
+
         /* Set up the object. */
         SET_ATTR_ns_src(INTERP, SELF, PMCNULL);
         SET_ATTR_ns_dest(INTERP, SELF, CONTEXT(interp)->current_namespace);
@@ -114,7 +118,25 @@ Initializes an Exporter PMC.
 
         /* Set flags for custom GC mark and destroy. */
         PObj_custom_mark_SET(SELF);
+        PObj_active_destroy_SET(SELF);
     }
+
+
+/*
+
+=item C<void destroy()>
+
+Free the memory associated with the object's underlying struct.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
+    }
+
 
 /*
 

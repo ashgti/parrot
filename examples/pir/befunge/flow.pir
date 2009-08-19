@@ -3,8 +3,6 @@
 
 # ** direction changing
 
-.loadlib 'math_ops'
-
 #
 # flow__go_east()
 #
@@ -71,7 +69,10 @@
 # no return value
 #
 .sub "flow__go_away"
-    rand $I0, 0, 4
+    $P0 = new 'Random'
+    $N0 = $P0
+    $N0 = $N0 * 4
+    $I0 = $N0
     $P0 = get_global "status"
     $P0["dir"] = $I0
     set_global "status", $P0

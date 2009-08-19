@@ -37,6 +37,10 @@ specifically by including this C<PIR> code:
 
 =over 4
 
+=item random [eligible in 1.1]
+
+L<https://trac.parrot.org/parrot/ticket/189>
+
 =item moved to dynpmc [eligible in 1.1]
 
 AddrRegistry, CodeString, Env, Eval, File, OS, PCCMETHOD_Test, StringHandle,
@@ -210,8 +214,7 @@ L<https://trac.parrot.org/parrot/ticket/872>
 
 =item C<PASM1 compiler> [eligible in 2.1]
 
-See PDB_compile. Note that the current version of the C<PASM1> compiler
-issues a warning and is not functional. (However, it used to segfault.)
+See PDB_compile.
 
 =back
 

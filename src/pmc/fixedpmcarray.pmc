@@ -27,7 +27,7 @@ never be set for user arrays.
 #define PMC_size(x)  ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->size
 #define PMC_array(x) ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->pmc_array
 
-pmclass FixedPMCArray need_ext auto_attrs provides array {
+pmclass FixedPMCArray need_ext provides array {
     ATTR INTVAL   size;      /* number of elements in the array */
     ATTR PMC    **pmc_array; /* pointer to PMC array */
 
@@ -66,7 +66,9 @@ Initializes the array.
 
     VTABLE void init() {
         Parrot_FixedPMCArray_attributes *attrs =
-            (Parrot_FixedPMCArray_attributes *) PMC_data(SELF);
+            mem_allocate_zeroed_typed(Parrot_FixedPMCArray_attributes);
+
+        PMC_data(SELF) = attrs;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -84,6 +86,8 @@ Destroys the array.
         if (PMC_array(SELF)) {
             mem_sys_free(PMC_array(SELF));
         }
+        mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
     }
 
 /*

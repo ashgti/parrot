@@ -10,10 +10,9 @@ sub new {
     my ( $class, $self_hash ) = @_;
     my $self = {
         (
-            name       => "",
-            type       => "",
-            array_size => "",
-            modifiers  => [],
+            name      => "",
+            type      => "",
+            modifiers => [],
             %{ $self_hash || {} }
         )
     };
@@ -37,7 +36,7 @@ Generate and emit the C code for an attribute declaration.
 sub generate_declaration {
     my ( $self, $pmc ) = @_;
     my $h              = $pmc->{emitter};
-    my $decl           = '    ' . $self->{type} . ' ' . $self->{name} . $self->{array_size} . ";\n";
+    my $decl           = '    ' . $self->{type} . ' ' . $self->{name} . ";\n";
 
     $h->emit($decl);
 

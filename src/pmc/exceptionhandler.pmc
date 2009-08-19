@@ -22,7 +22,7 @@ exception object's C<_P5> attribute.
 
 #include "parrot/oplib/ops.h"
 
-pmclass ExceptionHandler extends Continuation need_ext auto_attrs {
+pmclass ExceptionHandler extends Continuation need_ext {
 
     ATTR PMC    *handled_types;
     ATTR PMC    *handled_types_except;
@@ -41,10 +41,11 @@ Initializes the exception handler.
 
     VTABLE void init() {
         Parrot_ExceptionHandler_attributes * const core_struct =
-            (Parrot_ExceptionHandler_attributes *)PMC_data(SELF);
+            mem_allocate_zeroed_typed(Parrot_ExceptionHandler_attributes);
         Parrot_cont * const cc     = new_continuation(INTERP, NULL);
 
         cc->invoked                = 0;
+        PMC_data(SELF)             = core_struct;
         PMC_cont(SELF)             = cc;
         core_struct->min_severity  = 0;
         core_struct->max_severity  = 0;

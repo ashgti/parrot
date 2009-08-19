@@ -146,9 +146,6 @@ sub find_attrs {
           | \(\*\w*\)\(.*?\)
         )
 
-        # Array size
-        (\[\d+\])?
-
         # modifiers
         \s*
         ((?::\w+\s*)*)
@@ -162,21 +159,19 @@ sub find_attrs {
     }sx;
 
     while ($pmcbody =~ s/($attr_re)//o) {
-        my ($type, $name, $array_size, @modifiers, $comment);
+        my ($type, $name, @modifiers, $comment);
         $type = $2;
         $name = $3;
-        $array_size = $4 || '';
-        @modifiers = split /\s/, $5;
-        $comment = $6;
+        @modifiers = split /\s/, $4;
+        $comment = $5;
 
         $lineno += count_newlines($1);
 
         $pmc->add_attribute(Parrot::Pmc2c::Attribute->new(
             {
-                name       => $name,
-                type       => $type,
-                array_size => $array_size,
-                modifiers  => \@modifiers,
+                name      => $name,
+                type      => $type,
+                modifiers => \@modifiers,
             }
         ));
     }

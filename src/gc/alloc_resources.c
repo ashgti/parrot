@@ -419,9 +419,8 @@ compact_pool(PARROT_INTERP, ARGMOD(Memory_Pool *pool))
                 cur_buffer_arena = cur_buffer_arena->prev) {
             Buffer *b = (Buffer *)ARENA_to_PObj(cur_buffer_arena->start_objects);
             UINTVAL i;
-            const size_t objects_end = cur_buffer_arena->used;
 
-            for (i = objects_end; i; --i) {
+            for (i = cur_buffer_arena->used; i; --i) {
                 INTVAL *ref_count = NULL;
 
                 /* ! (on_free_list | constant | external | sysmem) */
