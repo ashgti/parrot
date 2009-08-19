@@ -228,6 +228,24 @@ pmc_reuse_no_init(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
     /* Set the right vtable */
     pmc->vtable = new_vtable;
 
+    if (PMC_data(pmc) && pmc->vtable->attr_size) {
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_free_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#else
+        mem_sys_free(PMC_data(pmc));
+#endif
+    }
+
+    if (new_vtable->attr_size) {
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_allocate_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#else
+        PMC_data(pmc) = mem_sys_allocate_zeroed(new_vtable->attr_size);
+#endif
+    }
+    else
+        PMC_data(pmc) = NULL;
+
     return pmc;
 }
 
@@ -267,8 +285,20 @@ pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC *pmc), ARGIN(PMC *class_),
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    /* we are a PMC + maybe is_PMC_EXT */
+    /* we are a PMC */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
+
+/*
+    if (new_vtable->attr_size) {
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_allocate_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#else
+        PMC_data(pmc) = mem_sys_allocate_zeroed(new_vtable->attr_size);
+#endif
+    }
+    else
+        PMC_data(pmc) = NULL;
+*/
 
     /* Set the right vtable */
     pmc->vtable = new_vtable;
@@ -406,6 +436,14 @@ get_new_pmc_header(PARROT_INTERP, INTVAL base_type, UINTVAL flags)
 
     pmc            = Parrot_gc_new_pmc_header(interp, flags);
     pmc->vtable    = vtable;
+
+    if (vtable->attr_size) {
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_allocate_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#else
+        PMC_data(pmc) = mem_sys_allocate_zeroed(vtable->attr_size);
+#endif
+    }
 
 #if GC_VERBOSE
     if (Interp_flags_TEST(interp, PARROT_TRACE_FLAG)) {

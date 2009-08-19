@@ -48,16 +48,17 @@ This file implements handling logic for strings and arbitrary-sized memory
 buffers. String storage is managed by special Memory_Pool structures, and use
 a separate compacting garbage collector to keep track of them.
 
-=item F<src/gc/gc_ims.c>
+=item F<src/gc/incremental_ms.c>
 
-=item F<src/gc/gc_gms.c>
+=item F<src/gc/generational_ms.c>
 
 =item F<src/gc/gc_ms.c>
 
 These files are the individual GC cores which implement the primary tracing
-and sweeping logic. gc_ms.c is the mark&sweep collector core which is used in
-Parrot by default. gc_gms.c is an experimental and incomplete generational core.
-gc_ims.c is an experimental and incomplete incremental collector core.
+and sweeping logic. gc_ms.c is the mark & sweep collector core which is used in
+Parrot by default. generational_ms.c is an experimental and incomplete
+generational core.  incremental_ms.c is an experimental and incomplete
+incremental collector core.
 
 =item F<src/gc/mark_sweep.c>
 
@@ -367,6 +368,16 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
         VTABLE_destroy(interp, pmc);
 
     Parrot_gc_free_pmc_sync(interp, pmc);
+
+    if (PMC_data(pmc) && pmc->vtable->attr_size) {
+#if 0
+        mem_sys_free(PMC_data(pmc));
+        PMC_data(pmc) = NULL;
+#else
+        Parrot_gc_free_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#endif
+    }
+    PARROT_ASSERT(NULL == PMC_data(pmc));
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
     pool->add_free_object(interp, pool, (PObj *)pmc);

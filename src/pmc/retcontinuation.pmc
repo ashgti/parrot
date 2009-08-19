@@ -23,7 +23,7 @@ after invocation.
 
 #include "parrot/oplib/ops.h"
 
-pmclass RetContinuation extends Continuation need_ext {
+pmclass RetContinuation extends Continuation need_ext auto_attrs {
 
 /*
 
@@ -37,27 +37,17 @@ Initializes the continuation.
 
     VTABLE void init() {
         Parrot_RetContinuation_attributes * const attrs =
-            mem_allocate_typed(Parrot_RetContinuation_attributes);
-
-        PMC_data(SELF) = attrs;
+            (Parrot_RetContinuation_attributes *) PMC_data(SELF);
         PMC_cont(SELF) = new_ret_continuation(INTERP);
 
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
-    /*
-     * XXX when reusing SUPER.destroy() RetContinuations
-     *     have to set ref_count initially to 1
-     */
-
     VTABLE void destroy() {
         Parrot_cont * const cc = PMC_cont(SELF);
 
-        if (cc)
+         if (cc)
             mem_sys_free(cc);
-
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
     }
 /*
 

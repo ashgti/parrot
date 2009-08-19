@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2005, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -123,9 +123,11 @@ CODE
 1
 OUTPUT
 
-pasm_output_is( <<'CODE', <<OUTPUT, "vanishing slingleton PMC" );
+pasm_output_is( <<'CODE', <<OUTPUT, "vanishing singleton PMC" );
 _main:
     .const 'Sub' P0 = "_rand"
+    new P16, 'Env'
+    set P16['Foo'], 'bar'
     set I16, 100
     set I17, 0
 loop:
@@ -137,14 +139,13 @@ loop:
     end
 
 .pcc_sub _rand:
-    new P16, 'Random'
-    set I5, P16[10]
-    gt I5, 10, err
-    lt I5, 0, err
+    new P16, 'Env'
+    set P5, P16['Foo']
+    ne P5, 'bar', err
     returncc
 err:
-    print "singleton destroyed .Random = ."
-    new P16, 'Random'
+    print "singleton destroyed .Env = ."
+    new P16, 'Env'
     typeof S16, P16
     print S16
     print "\n"
