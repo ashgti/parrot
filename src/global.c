@@ -19,6 +19,7 @@ src/global.c - Access to global PMCs
 #include "parrot/parrot.h"
 #include "global.str"
 #include "pmc/pmc_sub.h"
+#include "pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: include/parrot/global.h */
 /* HEADERIZER BEGIN: static */
@@ -678,8 +679,7 @@ PMC *
 Parrot_find_name_op(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
 {
     ASSERT_ARGS(Parrot_find_name_op)
-    Parrot_Context * const ctx = CONTEXT(interp);
-    PMC * const lex_pad = Parrot_find_pad(interp, name, ctx);
+    PMC * const lex_pad = Parrot_find_pad(interp, name, interp->ctx);
     PMC *g;
 
     if (PMC_IS_NULL(lex_pad))

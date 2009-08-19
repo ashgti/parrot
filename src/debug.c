@@ -32,6 +32,7 @@ the Parrot debugger, and the C<debug> ops.
 #include "parrot/runcore_trace.h"
 #include "debug.str"
 #include "pmc/pmc_continuation.h"
+#include "pmc/pmc_context.h"
 
 /* Hand switched debugger tracing
  * Set to 1 to enable tracing to stderr
@@ -2211,7 +2212,7 @@ char
 PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 {
     ASSERT_ARGS(PDB_check_condition)
-    Parrot_Context *ctx = CONTEXT(interp);
+    Parrot_Context_attributes *ctx = CONTEXT(interp);
 
     TRACEDEB_MSG("PDB_check_condition");
 
@@ -3511,11 +3512,11 @@ PDB_backtrace(PARROT_INTERP)
     int               rec_level = 0;
 
     /* information about the current sub */
-    PMC              *sub = interpinfo_p(interp, CURRENT_SUB);
-    Parrot_Context   *ctx = CONTEXT(interp);
+    PMC                         *sub = interpinfo_p(interp, CURRENT_SUB);
+    Parrot_Context_attributes   *ctx = CONTEXT(interp);
 
     if (!PMC_IS_NULL(sub)) {
-        str = Parrot_Context_infostr(interp, ctx);
+        str = Parrot_Context_infostr(interp, interp->ctx);
         if (str) {
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
@@ -3557,10 +3558,10 @@ PDB_backtrace(PARROT_INTERP)
 
         /* recursion detection */
         if (!PMC_IS_NULL(old) && PMC_cont(old) &&
-            PMC_cont(old)->to_ctx->current_pc ==
-            PMC_cont(sub)->to_ctx->current_pc &&
-            PMC_cont(old)->to_ctx->current_sub ==
-            PMC_cont(sub)->to_ctx->current_sub) {
+            PARROT_CONTEXT(PMC_cont(old)->to_ctx)->current_pc ==
+            PARROT_CONTEXT(PMC_cont(sub)->to_ctx)->current_pc &&
+            PARROT_CONTEXT(PMC_cont(old)->to_ctx)->current_sub ==
+            PARROT_CONTEXT(PMC_cont(sub)->to_ctx)->current_sub) {
                 ++rec_level;
         }
         else if (rec_level != 0) {
@@ -3573,7 +3574,7 @@ PDB_backtrace(PARROT_INTERP)
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
                 PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        sub_cont->to_ctx->current_pc - interp->code->base.data + 1, NULL);
+                        PARROT_CONTEXT(sub_cont->to_ctx)->current_pc - interp->code->base.data + 1, NULL);
                 if (!PMC_IS_NULL(annot)) {
                     PMC *pfile = VTABLE_get_pmc_keyed_str(interp, annot,
                             Parrot_str_new_constant(interp, "file"));
@@ -3590,7 +3591,7 @@ PDB_backtrace(PARROT_INTERP)
         }
 
         /* get the next Continuation */
-        ctx = PMC_cont(sub)->to_ctx;
+        ctx = PARROT_CONTEXT(PMC_cont(sub)->to_ctx);
         old = sub;
 
         if (!ctx)

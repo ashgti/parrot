@@ -33,6 +33,11 @@
 #define REG_PMC(interp, x) (*(Parrot_ctx_PMC_reg((interp), (interp)->ctx, (x))))
 #define REG_STR(interp, x) (*(Parrot_ctx_STRING_reg((interp), (interp)->ctx, (x))))
 
+#define PMCCTX_REG_NUM(ctx, x) PARROT_CONTEXT(ctx)->bp.regs_n[-1L-(x)]
+#define PMCCTX_REG_INT(ctx, x) PARROT_CONTEXT(ctx)->bp.regs_i[x]
+#define PMCCTX_REG_PMC(ctx, x) PARROT_CONTEXT(ctx)->bp_ps.regs_p[-1L-(x)]
+#define PMCCTX_REG_STR(ctx, x) PARROT_CONTEXT(ctx)->bp_ps.regs_s[x]
+
 /*
  * and a set of macros to access a register by offset, used
  * in JIT emit prederef code
@@ -59,7 +64,8 @@
 #define REG_OFFS_STR(x) (sizeof (STRING*) * (x) + _SIZEOF_INTS + _SIZEOF_PMCS)
 
 /* Forward declaration of Context PMC attributes */
-typedef struct Parrot_Context_attributes Parrot_Context_attributes;
+struct Parrot_Context_attributes;
+//typedef struct Parrot_Context_attributes Parrot_Context_attributes;
 
 /* HEADERIZER BEGIN: src/gc/alloc_register.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -114,12 +120,6 @@ PMC * Parrot_ctx_get_caller(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_CAN_RETURN_NULL
-Parrot_Context_attributes * Parrot_ctx_get_context_struct(PARROT_INTERP,
-    ARGIN(PMC * context))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_CANNOT_RETURN_NULL
 INTVAL * Parrot_ctx_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
         __attribute__nonnull__(1)
@@ -166,9 +166,6 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_ctx_get_caller __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
-#define ASSERT_ARGS_Parrot_ctx_get_context_struct __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(context)
 #define ASSERT_ARGS_Parrot_ctx_INTVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)

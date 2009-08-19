@@ -23,6 +23,7 @@ Define the the core subsystem for exceptions.
 #include "parrot/exceptions.h"
 #include "exceptions.str"
 #include "pmc/pmc_continuation.h"
+#include "pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: include/parrot/exceptions.h */
 
@@ -41,7 +42,7 @@ PARROT_CAN_RETURN_NULL
 static opcode_t * pass_exception_args(PARROT_INTERP,
     ARGIN(const char *sig),
     ARGIN(opcode_t *dest),
-    ARGIN(Parrot_Context * old_ctx),
+    ARGIN(PMC * old_ctx),
     ...)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -253,7 +254,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
     /* Set up the continuation context of the handler in the interpreter. */
     else if (PMC_cont(handler)->current_results)
         address = pass_exception_args(interp, "P", address,
-                CONTEXT(interp), exception);
+                interp->ctx, exception);
 
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {
         /* it's a C exception handler */
@@ -268,7 +269,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
 /*
 
 =item C<static opcode_t * pass_exception_args(PARROT_INTERP, const char *sig,
-opcode_t *dest, Parrot_Context * old_ctx, ...)>
+opcode_t *dest, PMC * old_ctx, ...)>
 
 Passes arguments to the exception handler routine. These are retrieved with
 the .get_results() directive in PIR code.
@@ -280,7 +281,7 @@ the .get_results() directive in PIR code.
 PARROT_CAN_RETURN_NULL
 static opcode_t *
 pass_exception_args(PARROT_INTERP, ARGIN(const char *sig),
-        ARGIN(opcode_t *dest), ARGIN(Parrot_Context * old_ctx), ...)
+        ARGIN(opcode_t *dest), ARGIN(PMC * old_ctx), ...)
 {
     ASSERT_ARGS(pass_exception_args)
     va_list   ap;
@@ -401,8 +402,7 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     /* Run the handler. */
     address = VTABLE_invoke(interp, handler, NULL);
     if (PMC_cont(handler)->current_results)
-        address = pass_exception_args(interp, "P", address,
-                CONTEXT(interp), exception);
+        address = pass_exception_args(interp, "P", address, interp->ctx, exception);
     PARROT_ASSERT(return_point->handler_start == NULL);
     return_point->handler_start = address;
     longjmp(return_point->resume, 2);

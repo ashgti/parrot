@@ -29,15 +29,15 @@ is determined by the PASM/PIR compiler in the register allocation pass
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 static void init_context(PARROT_INTERP,
-    ARGMOD(Parrot_Context *ctx),
-    ARGIN_NULLOK(const Parrot_Context *old))
+    ARGMOD(PMC *pmcctx),
+    ARGIN_NULLOK(const PMC *pmcold))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        FUNC_MODIFIES(*ctx);
+        FUNC_MODIFIES(*pmcctx);
 
 #define ASSERT_ARGS_init_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx)
+    || PARROT_ASSERT_ARG(pmcctx)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -100,23 +100,6 @@ reusable items.
 
 /*
 
-=item C<Parrot_Context_attributes * Parrot_ctx_get_context_struct(PARROT_INTERP,
-PMC * context)>
-
-=cut
-
-*/
-
-PARROT_CAN_RETURN_NULL
-Parrot_Context_attributes *
-Parrot_ctx_get_context_struct(PARROT_INTERP, ARGIN(PMC * context))
-{
-    ASSERT_ARGS(Parrot_ctx_get_context_struct)
-    return PARROT_CONTEXT(context);
-}
-
-/*
-
 =item C<void create_initial_context(PARROT_INTERP)>
 
 Creates the interpreter's initial context.
@@ -130,7 +113,7 @@ create_initial_context(PARROT_INTERP)
 {
     ASSERT_ARGS(create_initial_context)
     static INTVAL   num_regs[] = {32, 32, 32, 32};
-    Parrot_Context *ignored;
+    PMC *ignored;
 
     /* For now create context with 32 regs each. Some src tests (and maybe
      * other extenders) assume the presence of these registers */
@@ -210,7 +193,7 @@ Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 {
     ASSERT_ARGS(Parrot_set_new_context)
     PMC * const old = interp->ctx;
-    PMC * const ctx = Parrot_alloc_context(interp, number_regs_used, PARROT_CONTEXT(old));
+    PMC * const ctx = Parrot_alloc_context(interp, number_regs_used, old);
 
     interp->ctx = ctx;
 
@@ -276,15 +259,14 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     /* ctx.bp_ps points to S0, which has Px on the left */
     ctx->bp_ps.regs_s = (STRING **)((char *)p + size_nip);
 
-    init_context(interp, ctx, old);
+    init_context(interp, pmcctx, old);
 
     return pmcctx;
 }
 
 /*
 
-=item C<static void init_context(PARROT_INTERP, Parrot_Context *ctx, const
-Parrot_Context *old)>
+=item C<static void init_context(PARROT_INTERP, PMC *pmcctx, const PMC *pmcold)>
 
 Initializes a freshly allocated or recycled context.
 
@@ -293,12 +275,13 @@ Initializes a freshly allocated or recycled context.
 */
 
 static void
-init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
-        ARGIN_NULLOK(const Parrot_Context *old))
+init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
+        ARGIN_NULLOK(const PMC *pmcold))
 {
     ASSERT_ARGS(init_context)
-    ctx->ref_count         = 0;
-    ctx->gc_mark           = 0;
+    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *old = PARROT_CONTEXT(pmcold);
+
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
     ctx->lex_pad           = PMCNULL;
@@ -332,7 +315,9 @@ init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
     }
 
     /* other stuff is set inside Sub.invoke */
-    clear_regs(interp, ctx);
+    // XXX clear_regs is in Context PMC. Do we really need it?
+    //clear_regs(interp, ctx);
+    // (c++ style comment to bring attention)
 }
 
 /*
@@ -426,7 +411,7 @@ Parrot_clear_n(PARROT_INTERP)
     ASSERT_ARGS(Parrot_clear_n)
     int i;
     const int n_regs_used = CONTEXT(interp)->n_regs_used[REGNO_NUM];
-    for (i = 0; i < nregs_used; ++i)
+    for (i = 0; i < n_regs_used; ++i)
         REG_NUM(interp, i) = 0.0;
 }
 
@@ -434,7 +419,7 @@ PARROT_CANNOT_RETURN_NULL
 INTVAL *
 Parrot_ctx_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
-    ASSERT_ARGS(Parrot_ctx_get_INTVAL_reg)
+    ASSERT_ARGS(Parrot_ctx_INTVAL_reg)
     return &(PARROT_CONTEXT(ctx)->bp.regs_i[idx]);
 }
 
@@ -442,7 +427,7 @@ PARROT_CANNOT_RETURN_NULL
 FLOATVAL *
 Parrot_ctx_FLOATVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
-    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
+    ASSERT_ARGS(Parrot_ctx_FLOATVAL_reg)
     return &(PARROT_CONTEXT(ctx)->bp.regs_n[-1L - idx]);
 }
 
@@ -450,16 +435,16 @@ PARROT_CANNOT_RETURN_NULL
 STRING **
 Parrot_ctx_STRING_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
-    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
-    return &(PARROT_CONTEXT(ctx)->bp.regs_s[idx]);
+    ASSERT_ARGS(Parrot_ctx_FLOATVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp_ps.regs_s[idx]);
 }
 
 PARROT_CANNOT_RETURN_NULL
 PMC **
 Parrot_ctx_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
-    ASSERT_ARGS(Parrot_ctx_get_FLOATVAL_reg)
-    return &(PARROT_CONTEXT(ctx)->bp.regs_p[-1L - idx]);
+    ASSERT_ARGS(Parrot_ctx_FLOATVAL_reg)
+    return &(PARROT_CONTEXT(ctx)->bp_ps.regs_p[-1L - idx]);
 }
 
 PARROT_CANNOT_RETURN_NULL

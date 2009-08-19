@@ -23,6 +23,7 @@ Create or destroy a Parrot interpreter
 #include "parrot/runcore_api.h"
 #include "parrot/oplib/core_ops.h"
 #include "../compilers/imcc/imc.h"
+#include "../pmc/pmc_context.h"
 #include "inter_create.str"
 
 /* HEADERIZER HFILE: include/parrot/interpreter.h */
@@ -416,7 +417,6 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         interp->profile = NULL;
     }
 
-    destroy_context(interp);
     destroy_runloop_jump_points(interp);
 
     if (interp->evc_func_table) {
