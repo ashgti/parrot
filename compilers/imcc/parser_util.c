@@ -22,6 +22,7 @@
 #include "parrot/dynext.h"
 #include "parrot/embed.h"
 #include "../../src/pmc/pmc_sub.h"
+#include "../../src/pmc/pmc_context.h"
 #include "pbc.h"
 #include "parser.h"
 #include "optimizer.h"
@@ -626,7 +627,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     struct _imc_info_t    *imc_info = NULL;
     struct parser_state_t *next;
     void                  *yyscanner;
-    Parrot_Context        *ignored;
+    PMC                   *ignored;
     INTVAL regs_used[4] = {3, 3, 3, 3};
     INTVAL eval_number;
 
@@ -693,7 +694,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     IMCC_pop_parser_state(interp, yyscanner);
 
     if (!IMCC_INFO(interp)->error_code) {
-        Parrot_sub *sub_data;
+        Parrot_Sub_attributes *sub_data;
 
         /*
          * create sub PMC
@@ -904,7 +905,7 @@ imcc_compile_file(PARROT_INTERP, ARGIN(const char *fullname),
     const char                *ext;
     FILE                      *fp;
     STRING                    *fs;
-    Parrot_Context            *ignored;
+    PMC                       *ignored;
 
     /* need at least 3 regs for compilation of constant math e.g.
      * add_i_ic_ic - see also IMCC_subst_constants() */

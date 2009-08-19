@@ -35,6 +35,7 @@ IMCC helpers.
 #include "parrot/imcc.h"
 #include "pbc.h"
 #include "parser.h"
+#include "../../src/pmc/pmc_context.h"
 
 extern int yydebug;
 

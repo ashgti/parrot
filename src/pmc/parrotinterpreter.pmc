@@ -450,7 +450,7 @@ Introspection interface. C<key> can be:
         STRING *s     = CONST_STRING(interp, "globals");
         int     level = 0;
 
-        Parrot_Context *ctx;
+        Parrot_Context_attributes *ctx;
 
         if (Parrot_str_equal(interp, item, s))
             return interp->root_namespace;
@@ -482,7 +482,7 @@ Introspection interface. C<key> can be:
 
         if (outer) {
             for (; level; --level) {
-                ctx = ctx->outer_ctx;
+                ctx = PARROT_CONTEXT(ctx->outer_ctx);
                 if (!ctx)
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such outer depth");
@@ -496,7 +496,7 @@ Introspection interface. C<key> can be:
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such caller depth");
 
-                ctx = PMC_cont(cont)->to_ctx;
+                ctx = PARROT_CONTEXT(PMC_cont(cont)->to_ctx);
 
                 if (!ctx->current_sub)
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -540,9 +540,9 @@ Introspection interface. C<key> can be:
             }
             if (!PMC_IS_NULL(sub_pmc)
             &&   sub_pmc->vtable->base_type == enum_class_Sub) {
-                Parrot_sub        *sub;
-                PackFile_ByteCode *seg;
-                opcode_t          *pc  = ctx->current_pc;
+                Parrot_Sub_attributes *sub;
+                PackFile_ByteCode     *seg;
+                opcode_t              *pc  = ctx->current_pc;
 
                 PMC_get_sub(interp, sub_pmc, sub);
                 seg = sub->seg;

@@ -23,30 +23,9 @@ Subroutines, continuations, co-routines and other fun stuff...
 #include "sub.str"
 #include "pmc/pmc_sub.h"
 #include "pmc/pmc_continuation.h"
+#include "pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: include/parrot/sub.h */
-
-/*
-
-=item C<Parrot_sub * new_sub(PARROT_INTERP)>
-
-Returns a new C<Parrot_sub>.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-Parrot_sub *
-new_sub(PARROT_INTERP)
-{
-    ASSERT_ARGS(new_sub)
-    /* Using system memory until I figure out GC issues */
-    Parrot_sub * const newsub = mem_allocate_zeroed_typed(Parrot_sub);
-    newsub->seg               = interp->code;
-    return newsub;
-}
 
 /*
 
@@ -67,10 +46,9 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
 {
     ASSERT_ARGS(new_continuation)
     Parrot_cont    * const cc     = mem_allocate_typed(Parrot_cont);
-    Parrot_Context * const to_ctx = to ? to->to_ctx : CONTEXT(interp);
+    PMC            * const to_ctx = to ? to->to_ctx : interp->ctx;
 
     cc->to_ctx        = to_ctx;
-    cc->from_ctx      = Parrot_context_ref(interp, CONTEXT(interp));
     cc->runloop_id    = 0;
     if (to) {
         cc->seg       = to->seg;
@@ -81,7 +59,7 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
         cc->address   = NULL;
     }
 
-    cc->current_results = to_ctx->current_results;
+    cc->current_results = PARROT_CONTEXT(to_ctx)->current_results;
     return cc;
 }
 
@@ -103,39 +81,13 @@ new_ret_continuation(PARROT_INTERP)
     ASSERT_ARGS(new_ret_continuation)
     Parrot_cont * const cc = mem_allocate_typed(Parrot_cont);
 
-    cc->to_ctx          = CONTEXT(interp);
-    cc->from_ctx        = CONTEXT(interp);    /* filled in during a call */
+    cc->to_ctx          = interp->ctx;
+    cc->from_ctx        = interp->ctx;    /* filled in during a call */
     cc->runloop_id      = 0;
     cc->seg             = interp->code;
     cc->current_results = NULL;
     cc->address         = NULL;
     return cc;
-}
-
-/*
-
-=item C<Parrot_coro * new_coroutine(PARROT_INTERP)>
-
-Returns a new C<Parrot_coro>.
-
-XXX: Need to document semantics in detail.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-Parrot_coro *
-new_coroutine(PARROT_INTERP)
-{
-    ASSERT_ARGS(new_coroutine)
-    Parrot_coro * const co = mem_allocate_zeroed_typed(Parrot_coro);
-
-    co->seg                = interp->code;
-    co->ctx                = NULL;
-
-    return co;
 }
 
 /*
@@ -175,10 +127,9 @@ void
 invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
-    Parrot_Context *ctx = PMC_cont(cont)->from_ctx;
-    cont = ctx->current_cont;
+    PMC *ctx = PMC_cont(cont)->from_ctx;
+    cont = PARROT_CONTEXT(ctx)->current_cont;
 
-    Parrot_set_context_threshold(interp, ctx);
     while (1) {
         /*
          * We  stop if we encounter a true continuation, because
@@ -188,9 +139,8 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         if (!cont || cont->vtable != interp->vtables[enum_class_RetContinuation])
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
-        Parrot_context_ref(interp, ctx);
-        ctx  = ctx->caller_ctx;
-        cont = ctx->current_cont;
+        ctx  = PARROT_CONTEXT(ctx)->caller_ctx;
+        cont = PARROT_CONTEXT(ctx)->current_cont;
     }
 
 }
@@ -213,7 +163,7 @@ Parrot_full_sub_name(PARROT_INTERP, ARGIN_NULLOK(PMC* sub_pmc))
 {
     ASSERT_ARGS(Parrot_full_sub_name)
     if (sub_pmc && VTABLE_defined(interp, sub_pmc)) {
-        Parrot_sub *sub;
+        Parrot_Sub_attributes *sub;
 
         PMC_get_sub(interp, sub_pmc, sub);
 
@@ -282,8 +232,8 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(const PMC *pmcctx),
                     ARGOUT(Parrot_Context_info *info))
 {
     ASSERT_ARGS(Parrot_Context_get_info)
-    Parrot_sub *sub;
     Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Sub_attributes     *sub;
 
     /* set file/line/pc defaults */
     info->file     = CONST_STRING(interp, "(unknown file)");
@@ -383,7 +333,7 @@ Parrot_Context_infostr(PARROT_INTERP, ARGIN(const PMC *pmcctx))
 
     /* XXX Why block GC here? */
     Parrot_block_GC_mark(interp);
-    if (Parrot_Context_get_info(interp, ctx, &info)) {
+    if (Parrot_Context_get_info(interp, pmcctx, &info)) {
 
         res = Parrot_sprintf_c(interp,
             "%s '%Ss' pc %d (%Ss:%d)", msg,
@@ -424,7 +374,7 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const PMC *pmcctx)
                 return lex_pad;
 
 #if CTX_LEAK_DEBUG
-        if (outer == ctx) {
+        if (outer == pmcctx) {
             /* This is a bug; a context can never be its own :outer context.
              * Detecting it avoids an unbounded loop, which is difficult to
              * debug, though we'd rather not pay the cost of detection in a
@@ -453,12 +403,11 @@ void
 Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_capture_lex)
-    Parrot_Context * const ctx          = CONTEXT(interp);
-    Parrot_sub            *current_sub;
-    Parrot_sub            *sub;
-    Parrot_Context        *old;
+    PMC            * const ctx          = interp->ctx;
+    Parrot_Sub_attributes *current_sub;
+    Parrot_Sub_attributes *sub;
 
-    PMC_get_sub(interp, ctx->current_sub, current_sub);
+    PMC_get_sub(interp, PARROT_CONTEXT(ctx)->current_sub, current_sub);
 
     /* MultiSub gets special treatment */
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "MultiSub"))) {
@@ -468,7 +417,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
         while (VTABLE_get_bool(interp, iter)) {
 
             PMC        * const child_pmc = VTABLE_shift_pmc(interp, iter);
-            Parrot_sub        *child_sub, *child_outer_sub;
+            Parrot_Sub_attributes *child_sub, *child_outer_sub;
 
             PMC_get_sub(interp, child_pmc, child_sub);
 
@@ -476,10 +425,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
                 PMC_get_sub(interp, child_sub->outer_sub, child_outer_sub);
                 if (Parrot_str_equal(interp, current_sub->subid,
                                       child_outer_sub->subid)) {
-                    old = child_sub->outer_ctx;
-                    child_sub->outer_ctx = Parrot_context_ref(interp, ctx);
-                    if (old)
-                        Parrot_free_context(interp, old, 1);
+                    child_sub->outer_ctx = ctx;
                 }
             }
         }
@@ -504,10 +450,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 #endif
 
     /* set the sub's outer context to the current context */
-    old = sub->outer_ctx;
-    sub->outer_ctx = Parrot_context_ref(interp, ctx);
-    if (old)
-        Parrot_free_context(interp, old, 1);
+    sub->outer_ctx = ctx;
 }
 
 
@@ -555,16 +498,16 @@ Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
     ARGIN(const Parrot_cont *cc))
 {
     ASSERT_ARGS(Parrot_continuation_check)
-    Parrot_Context *to_ctx       = cc->to_ctx;
-    Parrot_Context *from_ctx     = CONTEXT(interp);
+    PMC *to_ctx       = cc->to_ctx;
+    PMC *from_ctx     = interp->ctx;
 
 #if CTX_LEAK_DEBUG
     if (Interp_debug_TEST(interp, PARROT_CTX_DESTROY_DEBUG_FLAG))
         fprintf(stderr,
-                "[invoke cont    %p, to_ctx %p, from_ctx %p (refs %d)]\n",
-                (const void *)pmc, (void *)to_ctx, (void *)from_ctx, (int)from_ctx->ref_count);
+                "[invoke cont    %p, to_ctx %p, from_ctx %p]\n",
+                (const void *)pmc, (void *)to_ctx, (void *)from_ctx);
 #endif
-    if (!to_ctx)
+    if (PMC_IS_NULL(to_ctx))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                        "Continuation invoked after deactivation.");
 }
@@ -586,11 +529,11 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
         ARGIN(Parrot_cont *cc))
 {
     ASSERT_ARGS(Parrot_continuation_rewind_environment)
-    Parrot_Context * const to_ctx = cc->to_ctx;
+    PMC * const to_ctx = cc->to_ctx;
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
-        PMC * const sub = to_ctx->current_sub;
+        PMC * const sub = PARROT_CONTEXT(to_ctx)->current_sub;
 
         Parrot_io_eprintf(interp, "# Back in sub '%Ss', env %p\n",
                     Parrot_full_sub_name(interp, sub),
@@ -598,16 +541,13 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
     }
 
     /* set context */
-    CONTEXT(interp)      = to_ctx;
-    interp->ctx.bp       = to_ctx->bp;
-    interp->ctx.bp_ps    = to_ctx->bp_ps;
+    interp->ctx          = to_ctx;
 }
 
 
 /*
 
-=item C<Parrot_sub * Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, PMC
-*subclass)>
+=item C<void * Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, PMC *subclass)>
 
 Gets a Parrot_sub structure from something that isn't a Sub PMC, but rather a
 subclass.
@@ -618,19 +558,18 @@ subclass.
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
-Parrot_sub *
+void *
 Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, ARGIN(PMC *subclass)) {
     ASSERT_ARGS(Parrot_get_sub_pmc_from_subclass)
     PMC        *key, *sub_pmc;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
 
     /* Ensure we really do have a subclass of sub. */
     if (VTABLE_isa(interp, subclass, CONST_STRING(interp, "Sub"))) {
         /* If it's actually a PMC still, probably does the same structure
          * underneath. */
         if (!PObj_is_object_TEST(subclass)) {
-            GETATTR_Sub_sub(interp, subclass, sub);
-            return sub;
+            return PARROT_SUB(subclass);
         }
 
         /* Get the Sub PMC itself. */
@@ -638,8 +577,7 @@ Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, ARGIN(PMC *subclass)) {
         VTABLE_set_string_native(interp, key, CONST_STRING(interp, "Sub"));
         sub_pmc = VTABLE_get_attr_keyed(interp, subclass, key, CONST_STRING(interp, "proxy"));
         if (sub_pmc->vtable->base_type == enum_class_Sub) {
-            GETATTR_Sub_sub(interp, sub_pmc, sub);
-            return sub;
+            return PARROT_SUB(sub_pmc);
         }
     }
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,

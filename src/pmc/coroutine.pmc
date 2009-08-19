@@ -36,12 +36,10 @@ static void
 print_sub_name(PARROT_INTERP, PMC *sub_pmc)
 {
     /* It's actually a Parrot_coro, but this avoids casting warnings. */
-    Parrot_sub          *co;
+    Parrot_Sub_attributes *co = PARROT_SUB(sub_pmc);
     Interp      * const tracer = (interp->pdb && interp->pdb->debugger) ?
         interp->pdb->debugger :
         interp;
-
-    GETATTR_Coroutine_sub(interp, sub_pmc, co);
 
     Parrot_io_eprintf(tracer, "# %s coro '%Ss'",
         !(PObj_get_FLAGS(sub_pmc) & SUB_FLAG_CORO_FF) ?
@@ -51,7 +49,7 @@ print_sub_name(PARROT_INTERP, PMC *sub_pmc)
     if (co->ctx && (PObj_get_FLAGS(sub_pmc) & SUB_FLAG_CORO_FF)) {
         Parrot_io_eprintf(tracer, " to '%Ss'",
                 Parrot_full_sub_name(interp,
-                    co->ctx->caller_ctx->current_sub));
+                    PARROT_CONTEXT(PARROT_CONTEXT(co->ctx)->caller_ctx)->current_sub));
     }
 
     Parrot_io_eprintf(tracer, "\n# ");
@@ -59,6 +57,8 @@ print_sub_name(PARROT_INTERP, PMC *sub_pmc)
 }
 
 pmclass Coroutine extends Sub need_ext {
+    ATTR PackFile_ByteCode *caller_seg;  /* bytecode segment */
+    ATTR opcode_t *address;           /* next address to run - toggled each time */
 
 /*
 
@@ -76,9 +76,10 @@ Clone the coroutine.
 
     VTABLE void init() {
         Parrot_Coroutine_attributes *attrs =
-            mem_allocate_typed(Parrot_Coroutine_attributes);
+            mem_allocate_zeroed_typed(Parrot_Coroutine_attributes);
 
-        attrs->sub     = (Parrot_sub *)new_coroutine(INTERP);
+        attrs->seg = INTERP->code;
+        attrs->ctx = NULL;
         PMC_data(SELF) = attrs;
 
         PObj_custom_mark_destroy_SETALL(SELF);
@@ -97,14 +98,12 @@ Clones the coroutine.
 
     VTABLE PMC *clone() {
         PMC         * const ret      = pmc_new(INTERP, SELF->vtable->base_type);
-        Parrot_sub         *sub;
-        Parrot_sub         *coro_sub;
+        Parrot_Coroutine_attributes *sub = PARROT_COROUTINE(SELF);
+        Parrot_Coroutine_attributes *coro_sub = PARROT_COROUTINE(ret);
 
         PObj_custom_mark_destroy_SETALL(ret);
 
-        PMC_get_sub(INTERP, ret,  coro_sub);
-        PMC_get_sub(INTERP, SELF, sub);
-        memcpy(coro_sub, sub, sizeof (Parrot_coro));
+        memcpy(coro_sub, sub, sizeof (Parrot_Coroutine_attributes));
 
         coro_sub->name      = Parrot_str_copy(INTERP, coro_sub->name);
 
@@ -123,16 +122,16 @@ Swaps the "context".
 
     VTABLE opcode_t *invoke(void *next) {
         PackFile_ByteCode  *wanted_seg;
-        Parrot_Coroutine_attributes *attrs = PARROT_COROUTINE(SELF);
-        Parrot_coro * const co = (Parrot_coro *)attrs->sub;
+        Parrot_Coroutine_attributes *co = PARROT_COROUTINE(SELF);
         opcode_t    * dest     = co->address;
 
         if (Interp_trace_TEST(INTERP, PARROT_TRACE_SUB_CALL_FLAG))
             print_sub_name(INTERP, SELF);
 
         if (!co->ctx) {
-            Parrot_Context *caller_ctx;
-            Parrot_Context *ctx;
+            PMC *caller_ctx;
+            PMC *pmcctx;
+            Parrot_Context_attributes *ctx;
             PMC *ccont;
 
             ccont = INTERP->current_cont;
@@ -146,13 +145,12 @@ Swaps the "context".
                         "tail call to coro not allowed");
 
             /* first time set current sub, cont, object */
-            caller_ctx = CONTEXT(interp);
-            ctx        = Parrot_set_new_context(INTERP, co->n_regs_used);
-
-            co->ctx                   = Parrot_context_ref(interp, ctx);
+            caller_ctx = interp->ctx;
+            pmcctx     = Parrot_set_new_context(INTERP, co->n_regs_used);
+            ctx        = PARROT_CONTEXT(pmcctx);
 
             ctx->caller_ctx           = caller_ctx;
-            PMC_cont(ccont)->from_ctx = ctx;
+            PMC_cont(ccont)->from_ctx = pmcctx;
             ctx->current_sub          = SELF;
             ctx->current_HLL          = co->HLL_id;
             ctx->current_namespace    = co->namespace_stash;
@@ -178,37 +176,37 @@ Swaps the "context".
         /* if calling the Coro we need the segment of the Coro */
         else if (!(PObj_get_FLAGS(SELF) & SUB_FLAG_CORO_FF)) {
             PMC *ccont;
-            Parrot_Context   *ctx;
+            PMC *pmcctx;
+            Parrot_Context_attributes *ctx;
 
             PObj_get_FLAGS(SELF) |= SUB_FLAG_CORO_FF;
             wanted_seg            = co->seg;
 
             /* remember segment of caller */
             co->caller_seg        = INTERP->code;
-            ctx                   = co->ctx;
+            pmcctx                = co->ctx;
+            ctx                   = PARROT_CONTEXT(pmcctx);
 
             /* and the recent call context */
             ccont                 = ctx->current_cont;
             ctx->caller_ctx       = PMC_cont(ccont)->to_ctx
-                                  = CONTEXT(interp);
+                                  = interp->ctx;
 
             /* set context to coro context */
-            CONTEXT(interp)       = ctx;
-            INTERP->ctx.bp        = ctx->bp;
-            INTERP->ctx.bp_ps     = ctx->bp_ps;
+            interp->ctx           = pmcctx;
         }
         else {
             PMC *ccont;
-            Parrot_Context   *ctx;
+            PMC *ctx;
 
             PObj_get_FLAGS(SELF) &= ~SUB_FLAG_CORO_FF;
             /* switch back to last remembered code seg and context */
 
             wanted_seg            = co->caller_seg;
-            ccont                 = co->ctx->current_cont;
+            ccont                 = PARROT_CONTEXT(co->ctx)->current_cont;
             ctx                   = PMC_cont(ccont)->to_ctx;
 
-            if (! ctx) {
+            if (PMC_IS_NULL(ctx)) {
                 /* This still isn't quite right, but it beats segfaulting.  See
                    the "Call an exited coroutine" case in t/pmc/coroutine.t; the
                    problem is that the defunct coroutine yields up one more
@@ -218,9 +216,7 @@ Swaps the "context".
                                "Cannot resume dead coroutine.");
             }
 
-            CONTEXT(interp)      = ctx;
-            INTERP->ctx.bp       = ctx->bp;
-            INTERP->ctx.bp_ps    = ctx->bp_ps;
+            interp->ctx = ctx;
         }
 
         /* toggle address */
@@ -244,8 +240,7 @@ Marks the coroutine as live.
 */
 
     VTABLE void mark() {
-        Parrot_Coroutine_attributes *attrs = PARROT_COROUTINE(SELF);
-        Parrot_coro * const          co    = (Parrot_coro *)attrs->sub;
+        Parrot_Coroutine_attributes *co = PARROT_COROUTINE(SELF);
 
         /* co->ctx marked in SUPER(), so do not mark here */
         if (co) {

@@ -241,6 +241,7 @@ next opcode, or examine and manipulate data from the executing program.
 #include "parrot/runcore_api.h"
 #include "parrot/embed.h"
 #include "parrot/runcore_trace.h"
+#include "../pmc/pmc_context.h"
 
 #ifdef HAVE_COMPUTED_GOTO
 #  include "parrot/oplib/core_ops_cg.h"

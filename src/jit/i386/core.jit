@@ -4,6 +4,7 @@
 ; $Id$
 ;
 
+#include "pmc/pmc_context.h"
 # TODO complete this
 #define P_ARITH ((PREV_OP == dec_i) || (PREV_OP == inc_i) || (PREV_OP == sub_i_i_i) || (PREV_OP == sub_i_i))
 
@@ -1491,10 +1492,10 @@ extern Parrot_get_params_pc {
 Parrot_get_results_pc {
     if (jit_info->code_type == JIT_CODE_FILE) {
         Parrot_jit_emit_get_INTERP(interp, jit_info->native_ptr, emit_EAX);
-        emitm_movl_m_r(interp, NATIVECODE, emit_EAX, emit_EAX, emit_None, 1,
-                offsetof(Interp, ctx.state));
-        emitm_movl_i_m(NATIVECODE, jit_info->cur_op, emit_EAX, emit_None, 1,
-                offsetof(Parrot_Context, current_results));
+        //emitm_movl_m_r(interp, NATIVECODE, emit_EAX, emit_EAX, emit_None, 1,
+        //        offsetof(Interp, ctx.state));
+        //emitm_movl_i_m(NATIVECODE, jit_info->cur_op, emit_EAX, emit_None, 1,
+        //        offsetof(Parrot_Context, current_results));
     }
     else {
         PackFile_Constant ** constants;

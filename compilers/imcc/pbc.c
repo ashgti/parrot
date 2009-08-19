@@ -7,6 +7,7 @@
 #include "pbc.h"
 #include "parrot/packfile.h"
 #include "../src/pmc/pmc_sub.h"
+#include "../../src/pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: compilers/imcc/pbc.h */
 
@@ -1205,7 +1206,7 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
                 while (n) {
                     STRING     *lex_name;
                     const int   k = n->color;
-                    Parrot_sub *sub;
+                    Parrot_Sub_attributes *sub;
                     PARROT_ASSERT(k >= 0);
 
                     lex_name = constants[k]->u.string;
@@ -1255,7 +1256,7 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
     subs_t      *s;
     PMC         *current;
     STRING      *cur_name;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     size_t      len;
 
     if (!unit->outer)
@@ -1320,9 +1321,9 @@ static int
 add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
 {
     ASSERT_ARGS(add_const_pmc_sub)
-    PMC                 *ns_pmc;
-    PMC                 *sub_pmc;
-    Parrot_sub          *sub, *outer_sub;
+    PMC                   *ns_pmc;
+    PMC                   *sub_pmc;
+    Parrot_Sub_attributes *sub, *outer_sub;
 
     const int            k            = add_const_table(interp);
     PackFile_ConstTable * const ct    = interp->code->const_table;

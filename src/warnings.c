@@ -18,6 +18,7 @@ messages.
 */
 
 #include "parrot/parrot.h"
+#include "pmc/pmc_context.h"
 
 #include <stdarg.h>
 
@@ -52,9 +53,7 @@ print_pbc_location(PARROT_INTERP)
     Interp * const tracer = (interp->pdb && interp->pdb->debugger) ?
         interp->pdb->debugger :
         interp;
-    Parrot_io_eprintf(tracer, "%Ss\n",
-            Parrot_Context_infostr(interp,
-                CONTEXT(interp)));
+    Parrot_io_eprintf(tracer, "%Ss\n", Parrot_Context_infostr(interp, interp->ctx));
 }
 
 /*

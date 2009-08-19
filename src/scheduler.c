@@ -22,6 +22,7 @@ exceptions, async I/O, and concurrent tasks (threads).
 #include "pmc/pmc_scheduler.h"
 #include "pmc/pmc_task.h"
 #include "pmc/pmc_timer.h"
+#include "pmc/pmc_context.h"
 
 #include "scheduler.str"
 
@@ -849,9 +850,9 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
      * for a handler
      */
     static int already_doing = 0;
-    static Parrot_Context * keep_context = NULL;
+    static Parrot_Context_attributes *keep_context = NULL;
+    Parrot_Context_attributes        *context;
 
-    Parrot_Context *context;
     PMC            *iter        = PMCNULL;
     STRING * const  handled_str = CONST_STRING(interp, "handled");
     STRING * const  iter_str    = CONST_STRING(interp, "handler_iter");
@@ -865,7 +866,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
          * Note that we are now trying to handle the new exception,
          * not the initial task argument (exception or whatever).
          */
-        context = keep_context->caller_ctx;
+        context = PARROT_CONTEXT(keep_context->caller_ctx);
         keep_context = NULL;
         if (context && !PMC_IS_NULL(context->handlers))
             iter = VTABLE_get_iter(interp, context->handlers);
@@ -881,7 +882,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
     if (task->vtable->base_type == enum_class_Exception
     && VTABLE_get_integer_keyed_str(interp, task, handled_str) == -1) {
         iter    = VTABLE_get_attr_str(interp, task, iter_str);
-        context = (Parrot_Context *)VTABLE_get_pointer(interp, task);
+        context = PARROT_CONTEXT((PMC*)VTABLE_get_pointer(interp, task));
     }
     else {
         context = CONTEXT(interp);
@@ -916,7 +917,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
         }
 
         /* Continue the search in the next context up the chain. */
-        context = context->caller_ctx;
+        context = PARROT_CONTEXT(context->caller_ctx);
         if (context && !PMC_IS_NULL(context->handlers))
             iter = VTABLE_get_iter(interp, context->handlers);
         else

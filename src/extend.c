@@ -1041,7 +1041,7 @@ Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub)
     va_list     ap;
     void       *result;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
 
     PARROT_CALLIN_START(interp);
 
@@ -1074,7 +1074,7 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub_ret_int)
     va_list     ap;
     Parrot_Int  result;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
 
     PARROT_CALLIN_START(interp);
 
@@ -1107,7 +1107,7 @@ Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub_ret_float)
     va_list       ap;
     Parrot_Float  result;
-    Parrot_sub   *sub;
+    Parrot_Sub_attributes   *sub;
 
     PARROT_CALLIN_START(interp);
 

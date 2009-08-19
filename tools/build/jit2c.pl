@@ -285,6 +285,9 @@ print $JITCPU <<"END_C";
 # define MAP(i) jit_info->optimizer->map_branch[jit_info->op_i + (i)]
 #endif
 
+/* Access to Context PMC attributes */
+#include "pmc/pmc_context.h"
+
 #define ROFFS_INT(x) REG_OFFS_INT(jit_info->cur_op[x])
 #define ROFFS_NUM(x) REG_OFFS_NUM(jit_info->cur_op[x])
 #define ROFFS_STR(x) REG_OFFS_STR(jit_info->cur_op[x])

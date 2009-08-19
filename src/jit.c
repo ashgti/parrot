@@ -36,6 +36,7 @@ used and not per subroutine or even opcode, it works per bytecode segment.
 #include "parrot/oplib/ops.h"
 #include "pmc/pmc_sub.h"
 #include "pmc/pmc_managedstruct.h"
+#include "pmc/pmc_context.h"
 
 #define JIT_SEGS 0
 
@@ -1294,10 +1295,10 @@ set_reg_usage(PARROT_INTERP, const opcode_t *pc)
     for (i = 0; i < ft->fixup_count; i++) {
         if (ft->fixups[i]->type == enum_fixup_sub) {
             const int ci               = ft->fixups[i]->offset;
-            PMC        * const sub_pmc = ct->constants[ci]->u.key;
-            Parrot_sub        *sub;
-            size_t             offs;
-            int                i;
+            PMC           * const sub_pmc = ct->constants[ci]->u.key;
+            Parrot_Sub_attributes *sub;
+            size_t                 offs;
+            int                    i;
 
             PMC_get_sub(interp, sub_pmc, sub);
             offs = pc - sub->seg->base.data;

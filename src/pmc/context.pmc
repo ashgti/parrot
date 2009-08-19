@@ -1,6 +1,7 @@
 
 #include "parrot/packfile.h"
 
+#if 0
 /*
 
 =item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
@@ -42,6 +43,7 @@ clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
         }
     }
 }
+#endif
 
 pmclass Context {
     ATTR PMC        *caller_ctx;      /* caller context */
@@ -71,13 +73,15 @@ pmclass Context {
 
     VTABLE void init()
     {
-        Parrot_Context_attributes * const attrs = mem_sys_allocate_typed(Parrot_Context_attributes);
-        PMC_DATA(SELF) = attrs;
+        Parrot_Context_attributes * const attrs =
+                mem_allocate_zeroed_typed(Parrot_Context_attributes);
+        PMC_data(SELF) = attrs;
     }
 
+    // XXX Probably I missed some fields.
     VTABLE void mark()
     {
-        Parrot_Context * const ctx = PARROT_CONTEXT(SELF)->ctx;
+        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF)->ctx;
         PObj *obj;
         int   i;
 
@@ -132,9 +136,6 @@ pmclass Context {
     VTABLE void destroy()
     {
         Parrot_Context_attributes * const attrs = PARROT_CONTEXT(SELF);
-        Parrot_Context * const ctx = attrs->ctx;
-        Parrot_free_context(INTERP, ctx);
-        mem_sys_free(ctx);
         mem_sys_free(attrs);
     }
 }

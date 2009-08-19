@@ -51,7 +51,7 @@
 #define REGNO_STR 2
 #define REGNO_PMC 3
 
-#define __CTX interp->ctx.state
+#define __CTX PARROT_CONTEXT(interp->ctx)
 #define _SIZEOF_INTS    (sizeof (INTVAL) * __CTX->n_regs_used[REGNO_INT])
 #define _SIZEOF_NUMS    (sizeof (FLOATVAL) * __CTX->n_regs_used[REGNO_NUM])
 #define _SIZEOF_PMCS    (sizeof (PMC*) * __CTX->n_regs_used[REGNO_PMC])
