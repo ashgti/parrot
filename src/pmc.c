@@ -42,14 +42,6 @@ static PMC * get_new_pmc_header(PARROT_INTERP,
     UINTVAL flags)
         __attribute__nonnull__(1);
 
-static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP,
-    ARGMOD(PMC * pmc),
-    INTVAL newflags,
-    INTVAL flags)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(* pmc);
-
 PARROT_CANNOT_RETURN_NULL
 static PMC* pmc_reuse_no_init(PARROT_INTERP,
     ARGIN(PMC *pmc),
@@ -64,9 +56,6 @@ static PMC* pmc_reuse_no_init(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_get_new_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pmc_reuse_check_pmc_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_pmc_reuse_no_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(pmc)
@@ -233,8 +222,6 @@ pmc_reuse_no_init(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    new_flags = pmc_reuse_check_pmc_ext(interp, pmc, new_flags, new_vtable->flags);
-
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
 
@@ -279,9 +266,6 @@ pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC *pmc), ARGIN(PMC *class_),
     /* Does the old PMC need any resources freed? */
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
-
-    new_flags = pmc_reuse_check_pmc_ext(interp, pmc,
-        new_flags, new_vtable->flags);
 
     /* we are a PMC + maybe is_PMC_EXT */
     PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
@@ -337,29 +321,6 @@ check_pmc_reuse_flags(PARROT_INTERP, UINTVAL srcflags, UINTVAL destflags)
                 EXCEPTION_ALLOCATION_ERROR,
                 "Parrot VM: Can't modify a constant\n");
     }
-}
-
-/*
-
-=item C<static INTVAL pmc_reuse_check_pmc_ext(PARROT_INTERP, PMC * pmc, INTVAL
-newflags, INTVAL flags)>
-
-We are converting one PMC type into another, such as in C<pmc_reuse> or
-C<pmc_reuse_by_class>. Check to make sure that we have a pmc_ext if we need
-one, and that we don't have it if we don't need it.
-
-=cut
-
-*/
-
-static INTVAL
-pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
-    INTVAL newflags, INTVAL flags)
-{
-    ASSERT_ARGS(pmc_reuse_check_pmc_ext)
-    /* Do we have an extension area? */
-
-    return newflags;
 }
 
 /*
