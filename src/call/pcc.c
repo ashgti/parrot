@@ -621,7 +621,7 @@ one was already created for set_args. Otherwise, creates a new one.
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_args))
@@ -639,6 +639,16 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     }
     else
         call_object = signature;
+
+    /* A hack to support 'get_results' as the way of fetching the
+     * exception object inside an exception handler. */
+    if (CALLSIGNATURE_is_exception_TEST(call_object)) {
+        const INTVAL raw_index = raw_args[2];
+        PMC *exception_object = 
+                VTABLE_get_pmc_keyed_int(interp, call_object, 0);
+        CTX_REG_PMC(ctx, raw_index) = exception_object;
+        return NULL;
+    }
 
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"), raw_sig);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "returns"), returns);

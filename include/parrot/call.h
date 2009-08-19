@@ -16,6 +16,20 @@
 #ifndef PARROT_INTER_CALL_H_GUARD
 #define PARROT_INTER_CALL_H_GUARD
 
+typedef enum {
+    CALLSIGNATURE_is_exception_FLAG      = PObj_private0_FLAG,
+} callsignature_flags_enum;
+
+#define CALLSIGNATURE_get_FLAGS(o) (PObj_get_FLAGS(o))
+#define CALLSIGNATURE_flag_TEST(flag, o) (CALLSIGNATURE_get_FLAGS(o) & CALLSIGNATURE_ ## flag ## _FLAG)
+#define CALLSIGNATURE_flag_SET(flag, o) (CALLSIGNATURE_get_FLAGS(o) |= CALLSIGNATURE_ ## flag ## _FLAG)
+#define CALLSIGNATURE_flag_CLEAR(flag, o) (CALLSIGNATURE_get_FLAGS(o) &= ~(UINTVAL)(CALLSIGNATURE_ ## flag ## _FLAG))
+
+/* Mark if the CallSignature is for an exception handler */
+#define CALLSIGNATURE_is_exception_TEST(o)  CALLSIGNATURE_flag_TEST(is_exception, (o))
+#define CALLSIGNATURE_is_exception_SET(o)   CALLSIGNATURE_flag_SET(is_exception, (o))
+#define CALLSIGNATURE_is_exception_CLEAR(o) CALLSIGNATURE_flag_CLEAR(is_exception, (o))
+
 typedef enum call_state_mode {
     /* argument fetching/putting modes */
     CALL_STATE_SIG     = 0x100, /* runops, nci. In case we're interfacing with
