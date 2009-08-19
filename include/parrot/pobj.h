@@ -160,8 +160,6 @@ typedef enum PObj_enum {
     PObj_is_string_FLAG         = POBJ_FLAG(8),
     /* PObj is a PMC */
     PObj_is_PMC_FLAG            = POBJ_FLAG(9),
-    /* the PMC has a PMC_EXT structure appended */
-    PObj_is_PMC_EXT_FLAG        = POBJ_FLAG(10),
     /* the PMC is a shared PMC */
     PObj_is_PMC_shared_FLAG     = POBJ_FLAG(11), /* Same as PObj_is_shared_FLAG */
     /* PObj is otherwise shared */
@@ -294,7 +292,6 @@ typedef enum PObj_enum {
     if ((PObj_get_FLAGS(o) & \
                 (PObj_active_destroy_FLAG | \
                  PObj_custom_mark_FLAG | \
-                 PObj_is_PMC_EXT_FLAG | \
                  PObj_needs_early_gc_FLAG))) \
         gc_flag_SET(is_special_PMC, o); \
     else \
@@ -329,9 +326,6 @@ typedef enum PObj_enum {
 #define PObj_is_object_CLEAR(o) PObj_flag_CLEAR(is_object, o)
 
 #define PObj_is_PMC_TEST(o) PObj_flag_TEST(is_PMC, o)
-
-#define PObj_is_PMC_EXT_TEST(o) PObj_flag_TEST(is_PMC_EXT, o)
-#define PObj_is_PMC_EXT_SET(o) PObj_special_SET(is_PMC_EXT, o)
 
 #define PObj_is_PMC_shared_TEST(o) PObj_flag_TEST(is_PMC_shared, o)
 #define PObj_is_PMC_shared_SET(o)  PObj_flag_SET(is_PMC_shared, o)

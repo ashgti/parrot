@@ -436,7 +436,7 @@ mark_special(PARROT_INTERP, ARGIN(PMC *obj))
     else
         hi_prio = 0;
 
-    if (PObj_is_PMC_EXT_TEST(obj)) {
+    {
         PMC * const tptr = arena_base->gc_trace_ptr;
         /*
          * XXX this basically invalidates the high-priority marking
@@ -788,9 +788,6 @@ free_pmc_in_pool(PARROT_INTERP, SHIM(Small_Object_Pool *pool),
 
     if (PObj_active_destroy_TEST(p))
         VTABLE_destroy(interp, pmc);
-
-    if (PObj_is_PMC_EXT_TEST(p))
-         Parrot_gc_free_pmc_ext(interp, pmc);
 
 #ifndef NDEBUG
 

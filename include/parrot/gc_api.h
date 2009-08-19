@@ -172,11 +172,6 @@ int Parrot_gc_active_pmcs(PARROT_INTERP)
 int Parrot_gc_active_sized_buffers(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void Parrot_gc_add_pmc_ext(PARROT_INTERP, ARGMOD(PMC *pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*pmc);
-
 void Parrot_gc_add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)

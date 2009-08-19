@@ -1693,14 +1693,6 @@ sweep_cb_pmc(PARROT_INTERP, ARGIN(Small_Object_Pool *pool), int flag, SHIM(void 
             --arena_base->num_early_gc_PMCs;
         if (PObj_active_destroy_TEST(obj))
             VTABLE_destroy(interp, (PMC *)obj);
-        if (PObj_is_PMC_EXT_TEST(obj) && obj->pmc_ext) {
-            /* if the PMC has a PMC_EXT structure,
-             * return it to the pool
-             */
-            Small_Object_Pool * const ext_pool = arena_base->pmc_ext_pool;
-            ext_pool->add_free_object(interp, ext_pool, obj->pmc_ext);
-        }
-
     }
     pool->free_list = pool->white;
     return 0;

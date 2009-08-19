@@ -230,9 +230,6 @@ static PMC*
 make_prop_hash(PARROT_INTERP, PMC *self) {
     PMC *prop;
 
-    if (!PObj_is_PMC_EXT_TEST(self))
-        Parrot_gc_add_pmc_ext(interp, self);
-
     PMC_metadata(self) = prop = pmc_new(interp, enum_class_Hash);
     GC_WRITE_BARRIER(interp, self, NULL, prop);
     propagate_std_props(interp, self, prop);
@@ -377,7 +374,7 @@ NULL PMC is returned.
 */
 
     VTABLE PMC *getprop(STRING *key) {
-        if (PObj_is_PMC_EXT_TEST(SELF) && PMC_metadata(SELF))
+        if (PMC_metadata(SELF))
             return VTABLE_get_pmc_keyed_str(INTERP, PMC_metadata(SELF), key);
         else
             return check_get_std_props(interp, SELF, key);
@@ -397,10 +394,8 @@ Sets the property for C<*key> to C<*value>.
         if (check_set_std_props(INTERP, SELF, key, value))
             return;
 
-        if (PObj_is_PMC_EXT_TEST(SELF) && PMC_metadata(SELF)) {
-            VTABLE_set_pmc_keyed_str(INTERP,
-                PMC_metadata(SELF), key, value);
-        }
+        if (PMC_metadata(SELF))
+            VTABLE_set_pmc_keyed_str(INTERP, PMC_metadata(SELF), key, value);
         else {
             PMC * const prop = make_prop_hash(INTERP, SELF);
 
@@ -419,7 +414,7 @@ Deletes the property for C<*key>.
 */
 
     VTABLE void delprop(STRING *key) {
-        if (PObj_is_PMC_EXT_TEST(SELF) && PMC_metadata(SELF))
+        if (PMC_metadata(SELF))
             VTABLE_delete_keyed_str(INTERP, PMC_metadata(SELF), key);
     }
 
@@ -434,9 +429,6 @@ Returns the PMC's properties or the NULL PMC if no properties exist.
 */
 
     VTABLE PMC *getprops() {
-        if (!PObj_is_PMC_EXT_TEST(SELF))
-            Parrot_gc_add_pmc_ext(INTERP, SELF);
-
         if (!PMC_metadata(SELF)) {
             if (has_pending_std_props(SELF))
                 return make_prop_hash(INTERP, SELF);
@@ -1055,7 +1047,7 @@ Used by GC to mark the PMC.
 
     VTABLE void visit(visit_info *info) {
         /* default - mark prop hash */
-        if (PObj_is_PMC_EXT_TEST(SELF) && PMC_metadata(SELF) &&
+        if (PMC_metadata(SELF) &&
             info->extra_flags != EXTRA_IS_PROP_HASH) {
             info->extra_flags = EXTRA_IS_PROP_HASH;
             info->extra       = PMC_metadata(SELF);
@@ -1110,9 +1102,6 @@ Initializes the PMC during unarchiving.
     VTABLE void thaw(visit_info *info) {
         /* default - initialize the PMC */
         if (info->extra_flags == EXTRA_IS_PROP_HASH) {
-            if (!PObj_is_PMC_EXT_TEST(SELF))
-                Parrot_gc_add_pmc_ext(INTERP, SELF);
-
             info->thaw_ptr  = &PMC_metadata(SELF);
             info->container = SELF;
 

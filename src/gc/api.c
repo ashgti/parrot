@@ -334,13 +334,10 @@ Parrot_gc_new_pmc_header(PARROT_INTERP, UINTVAL flags)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");
 
-    /* clear flags, set is_PMC_FLAG */
-    if (flags & PObj_is_PMC_EXT_FLAG) {
-        flags |= PObj_is_special_PMC_FLAG;
+    flags |= PObj_is_special_PMC_FLAG;
 
-        if (flags & PObj_is_PMC_shared_FLAG)
-            Parrot_gc_add_pmc_sync(interp, pmc);
-    }
+    if (flags & PObj_is_PMC_shared_FLAG)
+        Parrot_gc_add_pmc_sync(interp, pmc);
 
     PObj_get_FLAGS(pmc) = PObj_is_PMC_FLAG|flags;
     pmc->vtable         = NULL;
@@ -369,45 +366,11 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
     if (PObj_active_destroy_TEST(pmc))
         VTABLE_destroy(interp, pmc);
 
-    if (PObj_is_PMC_EXT_TEST(pmc))
-        Parrot_gc_free_pmc_ext(interp, pmc);
+    Parrot_gc_free_pmc_ext(interp, pmc);
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
     pool->add_free_object(interp, pool, (PObj *)pmc);
     pool->num_free_objects++;
-}
-
-/*
-
-=item C<void Parrot_gc_add_pmc_ext(PARROT_INTERP, PMC *pmc)>
-
-Obtains a new C<PMC_EXT> structure, and attaches it to the given C<PMC>.
-Sets the necessary flags associated with the PMC_EXT structure. Ensures
-that the PMC_EXT structure is marked as "alive" by the GC.
-
-=cut
-
-*/
-
-void
-Parrot_gc_add_pmc_ext(PARROT_INTERP, ARGMOD(PMC *pmc))
-{
-    ASSERT_ARGS(Parrot_gc_add_pmc_ext)
-
-    PObj_is_PMC_EXT_SET(pmc);
-    PObj_is_special_PMC_SET(pmc);
-
-#ifdef PARROT_GC_IMS
-    /*
-     * preserve DDD color: a simple PMC  live = black
-     *                     an aggregate  live = grey
-     * set'em black
-     */
-    if (PObj_live_TEST(pmc))
-        PObj_get_FLAGS(pmc) |= PObj_custom_GC_FLAG;
-#endif
-
-    PMC_next_for_GC(pmc) = PMCNULL;
 }
 
 /*
@@ -424,10 +387,6 @@ void
 Parrot_gc_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
 {
     ASSERT_ARGS(Parrot_gc_free_pmc_ext)
-    /* if the PMC has a PMC_EXT structure, return it to the pool/arena */
-
-    if (!PObj_is_PMC_EXT_TEST(p))
-        return;
 
     if (PObj_is_PMC_shared_TEST(p) && PMC_sync(p)) {
         MUTEX_DESTROY(PMC_sync(p)->pmc_lock);
@@ -452,8 +411,6 @@ void
 Parrot_gc_add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_add_pmc_sync)
-    if (!PObj_is_PMC_EXT_TEST(pmc))
-        Parrot_gc_add_pmc_ext(interp, pmc);
     if (PMC_sync(pmc))
         /* This mutex already exists, leave it alone. */
         return;

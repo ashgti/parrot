@@ -346,8 +346,7 @@ newflags, INTVAL flags)>
 
 We are converting one PMC type into another, such as in C<pmc_reuse> or
 C<pmc_reuse_by_class>. Check to make sure that we have a pmc_ext if we need
-one, and that we don't have it if we don't need it. Returns the updated
-flags field with the C<PObj_is_PMC_EXT> flag set if necessary.
+one, and that we don't have it if we don't need it.
 
 =cut
 
@@ -359,21 +358,7 @@ pmc_reuse_check_pmc_ext(PARROT_INTERP, ARGMOD(PMC * pmc),
 {
     ASSERT_ARGS(pmc_reuse_check_pmc_ext)
     /* Do we have an extension area? */
-    INTVAL const has_ext = (PObj_is_PMC_EXT_TEST(pmc));
 
-    /* Do we need one? */
-    if (flags & VTABLE_PMC_NEEDS_EXT) {
-        /* If we need an ext area, go allocate one */
-        Parrot_gc_add_pmc_ext(interp, pmc);
-        newflags |= PObj_is_PMC_EXT_FLAG;
-        PARROT_ASSERT((newflags & PObj_is_PMC_EXT_FLAG) != 0);
-    }
-    else {
-        Parrot_gc_free_pmc_ext(interp, pmc);
-        PMC_data(pmc) = NULL;
-        newflags &= ~PObj_is_PMC_EXT_FLAG;
-        PARROT_ASSERT((newflags & PObj_is_PMC_EXT_FLAG) == 0);
-    }
     return newflags;
 }
 
@@ -455,11 +440,8 @@ get_new_pmc_header(PARROT_INTERP, INTVAL base_type, UINTVAL flags)
         vtable = interp->vtables[base_type];
     }
 
-    if (vtable_flags & VTABLE_PMC_NEEDS_EXT) {
-        flags |= PObj_is_PMC_EXT_FLAG;
-        if (vtable_flags & VTABLE_IS_SHARED_FLAG)
-            flags |= PObj_is_PMC_shared_FLAG;
-    }
+    if (vtable_flags & VTABLE_IS_SHARED_FLAG)
+        flags |= PObj_is_PMC_shared_FLAG;
 
     pmc            = Parrot_gc_new_pmc_header(interp, flags);
     pmc->vtable    = vtable;

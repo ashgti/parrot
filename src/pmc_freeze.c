@@ -970,21 +970,9 @@ shift_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
 
 =over 4
 
-=item C<static void pmc_add_ext(PARROT_INTERP, PMC *pmc)>
-
-Adds a C<PMC_EXT> to C<*pmc>.
-
 =cut
 
 */
-
-static void
-pmc_add_ext(PARROT_INTERP, ARGIN(PMC *pmc))
-{
-    ASSERT_ARGS(pmc_add_ext)
-    if (pmc->vtable->flags & VTABLE_PMC_NEEDS_EXT)
-        Parrot_gc_add_pmc_ext(interp, pmc);
-}
 
 /*
  * this function setup stuff may be replaced by a real PMC
@@ -1382,8 +1370,7 @@ do_thaw(PARROT_INTERP, ARGIN_NULLOK(PMC* pmc), ARGIN(visit_info *info))
     }
     list_assign(interp, (List *)PMC_data(info->id_list), id, pmc, enum_type_PMC);
     /* remember nested aggregates depth first */
-    if (PObj_is_PMC_EXT_TEST(pmc))
-        list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
+    list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
 }
 
 
@@ -1422,10 +1409,9 @@ static void
 add_pmc_next_for_GC(SHIM_INTERP, ARGIN(PMC *pmc), ARGOUT(visit_info *info))
 {
     ASSERT_ARGS(add_pmc_next_for_GC)
-    if (PObj_is_PMC_EXT_TEST(pmc)) {
-        PMC_next_for_GC(info->mark_ptr) = pmc;
-        info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
-    }
+    PMC_next_for_GC(info->mark_ptr) = pmc;
+    info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
+
 }
 
 /*
@@ -1455,21 +1441,15 @@ next_for_GC_seen(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
         return 1;
     }
 
-    /*
-     * we can only remember PMCs with a next_for_GC pointer
-     * which is located in pmc_ext
-     */
-    if (PObj_is_PMC_EXT_TEST(pmc)) {
-        /* already seen? */
-        if (!PMC_IS_NULL(PMC_next_for_GC(pmc))) {
-            seen = 1;
-            goto skip;
-        }
-        /* put pmc at the end of the list */
-        PMC_next_for_GC(info->mark_ptr) = pmc;
-        /* make end self-referential */
-        info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
+    /* already seen? */
+    if (!PMC_IS_NULL(PMC_next_for_GC(pmc))) {
+        seen = 1;
+        goto skip;
     }
+    /* put pmc at the end of the list */
+    PMC_next_for_GC(info->mark_ptr) = pmc;
+    /* make end self-referential */
+    info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
 skip:
     *id = id_from_pmc(interp, pmc);
     return seen;
@@ -1526,8 +1506,7 @@ todo_list_seen(PARROT_INTERP, ARGIN(PMC *pmc), ARGMOD(visit_info *info),
     parrot_hash_put(interp,
             (Hash *)VTABLE_get_pointer(interp, info->seen), pmc, (void*)*id);
     /* remember containers */
-    if (PObj_is_PMC_EXT_TEST(pmc))
-        list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
+    list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
     return 0;
 }
 
@@ -1632,15 +1611,13 @@ visit_loop_next_for_GC(PARROT_INTERP, ARGIN(PMC *current),
         ARGIN(visit_info *info))
 {
     ASSERT_ARGS(visit_loop_next_for_GC)
+    PMC *prev = NULL;
     visit_next_for_GC(interp, current, info);
-    if (PObj_is_PMC_EXT_TEST(current)) {
-        PMC *prev = NULL;
 
-        while (current != prev) {
-            VTABLE_visit(interp, current, info);
-            prev = current;
-            current = PMC_next_for_GC(current);
-        }
+    while (current != prev) {
+        VTABLE_visit(interp, current, info);
+        prev = current;
+        current = PMC_next_for_GC(current);
     }
 }
 
@@ -1711,11 +1688,8 @@ again:
         }
 
         /* on thawing call thawfinish for each processed PMC */
-        if (!finished_first) {
-            /* the first create PMC might not be in the list,
-             * if it has no pmc_ext */
+        if (!finished_first)
             list_unshift(interp, finish_list, info->thaw_result, enum_type_PMC);
-        }
 
         n = list_length(interp, finish_list);
 
