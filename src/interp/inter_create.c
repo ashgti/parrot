@@ -180,6 +180,8 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
      */
     Parrot_str_init(interp);
 
+    Parrot_initialize_core_vtables(interp);
+
     /* Set up the MMD struct */
     interp->binop_mmd_funcs = NULL;
 
