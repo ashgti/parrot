@@ -85,27 +85,7 @@ pmclass Context {
         PObj *obj;
         int   i;
 
-        obj = (PObj *)ctx->current_sub;
-        if (obj)
-            Parrot_gc_mark_PObj_alive(interp, obj);
-
-        obj = (PObj *)ctx->current_object;
-        if (obj)
-            Parrot_gc_mark_PObj_alive(interp, obj);
-
-        obj = (PObj *)ctx->current_cont;
-        if (obj && !PObj_live_TEST(obj))
-            Parrot_gc_mark_PObj_alive(interp, obj);
-
         obj = (PObj *)ctx->caller_ctx;
-        if (obj)
-            Parrot_gc_mark_PObj_alive(interp, obj);
-
-        obj = (PObj *)ctx->outer_ctx;
-        if (obj)
-            Parrot_gc_mark_PObj_alive(interp, obj);
-
-        obj = (PObj *)ctx->current_namespace;
         if (obj)
             Parrot_gc_mark_PObj_alive(interp, obj);
 
@@ -113,7 +93,31 @@ pmclass Context {
         if (obj)
             Parrot_gc_mark_PObj_alive(interp, obj);
 
+        obj = (PObj *)ctx->outer_ctx;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_sub;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
         obj = (PObj *)ctx->handlers;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_cont;
+        if (obj && !PObj_live_TEST(obj))
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_object;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->current_namespace;
+        if (obj)
+            Parrot_gc_mark_PObj_alive(interp, obj);
+
+        obj = (PObj *)ctx->results_signature;
         if (obj)
             Parrot_gc_mark_PObj_alive(interp, obj);
 
