@@ -280,7 +280,6 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
 {
     ASSERT_ARGS(init_context)
     Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
-    Parrot_Context_attributes *old = PARROT_CONTEXT(pmcold);
 
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
@@ -291,17 +290,20 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
     ctx->handlers          = PMCNULL;
     ctx->caller_ctx        = NULL;
 
-    if (old) {
-        /* some items should better be COW copied */
-        ctx->constants         = old->constants;
-        ctx->warns             = old->warns;
-        ctx->errors            = old->errors;
-        ctx->trace_flags       = old->trace_flags;
-        ctx->pred_offset       = old->pred_offset;
-        ctx->current_HLL       = old->current_HLL;
-        ctx->current_namespace = old->current_namespace;
-        /* end COW */
-        ctx->recursion_depth   = old->recursion_depth;
+    if (pmcold) {
+        Parrot_Context_attributes *old = PARROT_CONTEXT(pmcold);
+        if(old) {
+            /* some items should better be COW copied */
+            ctx->constants         = old->constants;
+            ctx->warns             = old->warns;
+            ctx->errors            = old->errors;
+            ctx->trace_flags       = old->trace_flags;
+            ctx->pred_offset       = old->pred_offset;
+            ctx->current_HLL       = old->current_HLL;
+            ctx->current_namespace = old->current_namespace;
+            /* end COW */
+            ctx->recursion_depth   = old->recursion_depth;
+        }
     }
     else {
         ctx->constants         = NULL;
