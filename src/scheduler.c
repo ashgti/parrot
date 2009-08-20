@@ -917,7 +917,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
         }
 
         /* Continue the search in the next context up the chain. */
-        context = PARROT_CONTEXT(context->caller_ctx);
+        context = context->caller_ctx ? PARROT_CONTEXT(context->caller_ctx) : NULL;
         if (context && !PMC_IS_NULL(context->handlers))
             iter = VTABLE_get_iter(interp, context->handlers);
         else
