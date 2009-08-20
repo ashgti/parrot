@@ -78,10 +78,10 @@ pmclass Context {
         PMC_data(SELF) = attrs;
     }
 
-    // XXX Probably I missed some fields.
     VTABLE void mark()
     {
-        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF)->ctx;
+        // XXX Probably I missed some fields.
+        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
         PObj *obj;
         int   i;
 
