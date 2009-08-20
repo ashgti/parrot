@@ -36,9 +36,39 @@ extern void *flush_reg_store(void);
 
 #endif /* __ia64__ */
 
+/* the percent of used Arena items at which to trace next time through */
+#define GC_DEBUG_REPLENISH_LEVEL_FACTOR        0.0
+#define GC_DEBUG_UNITS_PER_ALLOC_GROWTH_FACTOR 1
+#define REPLENISH_LEVEL_FACTOR                 0.3
+
+/* this factor is totally arbitrary, but gives good timings for stress.pasm */
+#define UNITS_PER_ALLOC_GROWTH_FACTOR          1.75
+
+#define POOL_MAX_BYTES                         65536 * 128
+
+#ifndef GC_IS_MALLOC
+#  define PMC_HEADERS_PER_ALLOC    10240 / sizeof (PMC)
+#  define BUFFER_HEADERS_PER_ALLOC  5120 / sizeof (Buffer)
+#  define STRING_HEADERS_PER_ALLOC  5120 / sizeof (STRING)
+#else /* GC_IS_MALLOC */
+#  define PMC_HEADERS_PER_ALLOC    10240 / sizeof (PMC)
+#  define BUFFER_HEADERS_PER_ALLOC 10240 / sizeof (Buffer)
+#  define STRING_HEADERS_PER_ALLOC 10240 / sizeof (STRING)
+#endif /* GC_IS_MALLOC */
+
+#define CONSTANT_PMC_HEADERS_PER_ALLOC 64
+#define GET_SIZED_POOL_IDX(x) ((x) / sizeof (void *))
+
+
 /* these values are used for the attribute allocator */
 #define GC_ATTRIB_POOLS_HEADROOM 8
 #define GC_FIXED_SIZE_POOL_SIZE 4096
+
+/* Use the lazy allocator. Since it amortizes arena allocation costs, turn
+   this on at the same time that you increase the size of allocated arenas.
+   increase *_HEADERS_PER_ALLOC and GC_FIXED_SIZE_POOL_SIZE to be large
+   enough to satisfy most startup costs. */
+#define GC_USE_LAZY_ALLOCATOR 0
 
 /* We're using this here to add an additional pointer to a PObj without
    having to actually add an entire pointer to every PObj-alike structure
@@ -124,8 +154,6 @@ typedef struct _gc_gms_gen {
 
 #endif /* PARROT_GC_GMS */
 
-#define GC_USE_LAZY_ALLOCATOR 1
-
 typedef struct PMC_Attribute_Pool {
     size_t attr_size;
     size_t total_objects;
@@ -165,6 +193,10 @@ typedef struct Small_Object_Pool {
     size_t start_arena_memory;
     size_t end_arena_memory;
     PARROT_OBSERVER const char *name;
+#if GC_USE_LAZY_ALLOCATOR
+    void *newfree;
+    void *newlast;
+#endif
 #if PARROT_GC_GMS
     struct _gc_gms_hdr marker;          /* limit of list */
     struct _gc_gms_hdr *black;          /* alive */

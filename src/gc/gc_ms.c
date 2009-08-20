@@ -123,16 +123,6 @@ static int gc_ms_trace_active_PMCs(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
-/* the percent of used Arena items at which to trace next time through */
-#define GC_DEBUG_REPLENISH_LEVEL_FACTOR        0.0
-#define GC_DEBUG_UNITS_PER_ALLOC_GROWTH_FACTOR 1
-#define REPLENISH_LEVEL_FACTOR                 0.3
-
-/* this factor is totally arbitrary, but gives good timings for stress.pasm */
-#define UNITS_PER_ALLOC_GROWTH_FACTOR          1.75
-
-#define POOL_MAX_BYTES                         65536 * 128
-
 /*
 
 =head2 Primary MS Functions
@@ -422,6 +412,28 @@ gc_ms_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     PObj *ptr;
     PObj *free_list = (PObj *)pool->free_list;
 
+#if GC_USE_LAZY_ALLOCATOR
+    if (!free_list && !pool->newfree) {
+        (*pool->more_objects)(interp, pool);
+        free_list = (PObj *)pool->free_list;
+    }
+
+    if (!free_list) {
+        Small_Object_Arena * const arena = pool->last_Arena;
+        ptr           = (PObj *)pool->newfree;
+        pool->newfree = (void *)((char *)pool->newfree + pool->object_size);
+        arena->used++;
+
+        if (pool->newfree >= pool->newlast)
+            pool->newfree = NULL;
+
+        PARROT_ASSERT(ptr < (PObj *)pool->newlast);
+    }
+    else {
+        ptr             = free_list;
+        pool->free_list = ((GC_MS_PObj_Wrapper *)ptr)->next_ptr;
+    }
+#else
     /* if we don't have any objects */
     if (!free_list) {
         (*pool->more_objects)(interp, pool);
@@ -430,6 +442,7 @@ gc_ms_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
     ptr             = free_list;
     pool->free_list = ((GC_MS_PObj_Wrapper*)ptr)->next_ptr;
+#endif
 
     PObj_flags_SETTO(ptr, 0);
 
@@ -437,6 +450,7 @@ gc_ms_get_free_object(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
 
     return ptr;
 }
+
 
 /*
 
@@ -561,6 +575,29 @@ gc_ms_get_free_pmc_ext(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     PMC_EXT *ptr;
     PMC_EXT *free_list = (PMC_EXT *)pool->free_list;
 
+#if GC_USE_LAZY_ALLOCATOR
+    if (!free_list && !pool->newfree) {
+        (*pool->more_objects)(interp, pool);
+        free_list = (PMC_EXT *)pool->free_list;
+    }
+
+    if (!free_list) {
+        Small_Object_Arena * const arena = pool->last_Arena;
+
+        ptr           = (PMC_EXT *)pool->newfree;
+        pool->newfree = (void *)((char *)pool->newfree + pool->object_size);
+
+        if (pool->newfree >= pool->newlast)
+            pool->newfree = NULL;
+        arena->used++;
+        PARROT_ASSERT(ptr < (PMC_EXT *)pool->newlast);
+    }
+    else {
+        ptr               = free_list;
+        pool->free_list   = ptr->_next_for_GC;
+        ptr->_next_for_GC = NULL;
+    }
+#else
     /* if we don't have any objects */
     if (!free_list) {
         (*pool->more_objects)(interp, pool);
@@ -570,11 +607,13 @@ gc_ms_get_free_pmc_ext(PARROT_INTERP, ARGMOD(Small_Object_Pool *pool))
     ptr               = free_list;
     pool->free_list   = ptr->_next_for_GC;
     ptr->_next_for_GC = NULL;
+#endif
 
     --pool->num_free_objects;
 
     return ptr;
 }
+
 
 /*
 
