@@ -37,6 +37,12 @@ struct runcore_t {
     INTVAL                   flags;
 };
 
+
+typedef enum Parrot_profiling_flags {
+    PROFILING_EXIT_CHECK_FLAG = 1 << 0,
+    PROFILING_FIRST_OP_FLAG   = 1 << 1
+} Parrot_profiling_flags;
+
 struct profiling_runcore_t {
     STRING                      *name;
     oplib_init_f                 opinit;
@@ -46,9 +52,9 @@ struct profiling_runcore_t {
     INTVAL                       flags;
 
     /* end of common members */
+    Parrot_profiling_flags   profiling_flags;
     FILE                    *prof_fd;
     UINTVAL                  level;      /* how many nested runloops */
-    UINTVAL                  exit_check; /* did we just exit a runcore */
     UINTVAL                  time_size;  /* how big is the following array */
     UHUGEINTVAL             *time;       /* time spent between DO_OP and start/end of a runcore */
     /* XXX: this will need to be made cross-platform */
@@ -58,6 +64,7 @@ struct profiling_runcore_t {
     struct timespec          runcore_finish;
 };
 
+
 typedef enum Parrot_runcore_flags {
     RUNCORE_REENTRANT_FLAG    = 1 << 0,
     RUNCORE_FUNC_TABLE_FLAG   = 1 << 1,
@@ -66,6 +73,23 @@ typedef enum Parrot_runcore_flags {
     RUNCORE_CGOTO_OPS_FLAG    = 1 << 4,
     RUNCORE_JIT_OPS_FLAG      = 1 << 5
 } Parrot_runcore_flags;
+
+
+#define Profiling_get_FLAGS(o) ((o)->profiling_flags)
+
+#define Profiling_flag_TEST(flag, o) (Profiling_get_FLAGS(o) & PROFILING_ ## flag ## _FLAG)
+#define Profiling_flag_SET(flag, o) (Profiling_get_FLAGS(o) |= PROFILING_ ## flag ## _FLAG)
+#define Profiling_flag_CLEAR(flag, o) \
+            (Profiling_get_FLAGS(o) &= ~(UINTVAL)(PROFILING_ ## flag ## _FLAG))
+
+#define Profiling_exit_check_TEST(o)  Profiling_flag_TEST(EXIT_CHECK, o)
+#define Profiling_exit_check_SET(o)   Profiling_flag_SET(EXIT_CHECK, o)
+#define Profiling_exit_check_CLEAR(o) Profiling_flag_CLEAR(EXIT_CHECK, o)
+
+#define Profiling_first_op_TEST(o)  Profiling_flag_TEST(FIRST_OP, o)
+#define Profiling_first_op_SET(o)   Profiling_flag_SET(FIRST_OP, o)
+#define Profiling_first_op_CLEAR(o) Profiling_flag_CLEAR(FIRST_OP, o)
+
 
 #define Runcore_flag_SET(runcore, flag) \
     ((runcore)->flags |= flag)

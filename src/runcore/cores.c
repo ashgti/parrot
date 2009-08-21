@@ -1041,15 +1041,18 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
     runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
     runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
 
-    runcore->level = 0;
-    runcore->time_size = 32;
-    runcore->time = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
+    runcore->profiling_flags = 0;
+    runcore->level           = 0;
+    runcore->time_size       = 32;
+    runcore->time            = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
+    runcore->prof_fd         = fopen("parrot.pprof", "w");
 
-    runcore->prof_fd = fopen("parrot.pprof", "w");
     if (!runcore->prof_fd) {
         fprintf(stderr, "unable to open parrot_prof.out for writing");
         exit(1);
     }
+
+    Profiling_first_op_SET(runcore);
 
     return runops_profiling_core(interp, runcore, pc);
 }
@@ -1078,11 +1081,10 @@ ARGIN(opcode_t *pc))
     opcode_t           *prev_pc;
     static FILE        *prof_fd;
     HUGEINTVAL          op_time;
-    char                unknown_sub[]  = "(unknown sub)";
-    char                unknown_file[] = "(unknown file)";
+    char                unknown_sub[]  = "<unknown sub>";
+    char                unknown_file[] = "<unknown file>";
 
     clock_gettime(CLOCK_BEST, &runcore->runcore_start);
-    runcore->exit_check = 0;
 
     /* if we're in a nested runloop, */
     if (runcore->level != 0) {
@@ -1129,12 +1131,12 @@ ARGIN(opcode_t *pc))
         prev_pc = pc;
 
         runcore->level++;
+        Profiling_exit_check_CLEAR(runcore);
         clock_gettime(CLOCK_BEST, &runcore->op_start);
         DO_OP(pc, interp);
         clock_gettime(CLOCK_BEST, &runcore->op_finish);
 
-        if (runcore->exit_check) {
-            runcore->exit_check = 0;
+        if (Profiling_exit_check_TEST(runcore)) {
             op_time = TIME_IN_NS(runcore->op_finish) - TIME_IN_NS(runcore->runcore_finish);
             op_time += runcore->time[runcore->level];
             runcore->time[runcore->level] = 0;
@@ -1157,65 +1159,38 @@ ARGIN(opcode_t *pc))
             PMC                 *invoked;
             Parrot_Context_info  info;
 
+            Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+
             if (strcmp(file_preop, file_postop))
                 fprintf(runcore->prof_fd, "F:%s\n", file_postop);
+
             if (strcmp(sub_preop, sub_postop))
                 fprintf(runcore->prof_fd, "S:%s;%s\n",
                         VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
                         sub_postop);
 
-            /* if an invokable thing was invoked, note which namespace we're in now */
-            switch (*prev_pc) {
-                case PARROT_OP_invokecc_p:
-                case PARROT_OP_invoke_p_p:
+            /* a change in context implies some sort of change in control flow */
+            if (prev_ctx != CONTEXT(interp) || Profiling_first_op_TEST(runcore)) {
+                Profiling_first_op_CLEAR(runcore);
+                if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
+                    fprintf(runcore->prof_fd, "CS:%s@0x%x\n",
+                            info.fullname->strstart, (unsigned int) CONTEXT(interp));
+                }
+                else {
+                    fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%x\n",
+                            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
+                            (unsigned int) CONTEXT(interp));
+                }
+            }
 
-                case PARROT_OP_callmethod_p_s_p:
-                case PARROT_OP_callmethod_p_sc_p:
-                case PARROT_OP_callmethod_p_p_p:
-
-                case PARROT_OP_callmethodcc_p_s:
-                case PARROT_OP_callmethodcc_p_sc:
-                case PARROT_OP_callmethodcc_p_p:
-
-                    Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-                    get_new_info = 0;
-
-                    if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
-                        fprintf(runcore->prof_fd, "%d:%lli:%s calls to %s\n",
-                                curr_info.line, op_time,
-                                (interp->op_info_table)[*prev_pc].name,
-                                info.fullname->strstart);
-                        break;
-                    }
-                    /* intentional fallthrough if we're not in a new sub */
-
-                case PARROT_OP_returncc:
-                case PARROT_OP_yield:
-                case PARROT_OP_tailcall_p:
-                case PARROT_OP_tailcallmethod_p_s:
-                case PARROT_OP_tailcallmethod_p_sc:
-                case PARROT_OP_tailcallmethod_p_p:
-
-                    if (get_new_info)
-                        Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-
-                    if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
-                        fprintf(runcore->prof_fd, "%d:%lli:%s returns to %s\n",
-                                curr_info.line, op_time,
-                                (interp->op_info_table)[*prev_pc].name,
-                                info.fullname->strstart);
-                        break;
-                    }
-                    /* intentional fallthrough if we're not in a new sub */
-
-                default:
-                    fprintf(runcore->prof_fd, "%d:%lli:%s\n",
-                            curr_info.line, op_time,
-                            (interp->op_info_table)[*prev_pc].name);
-            } /* switch (*prev_pc) */
+            fprintf(runcore->prof_fd, "%d:%lli:%s:0x%x\n",
+                    curr_info.line, op_time,
+                    (interp->op_info_table)[*prev_pc].name,
+                    (unsigned int) CONTEXT(interp));
         } /* if (prev_pc) */
     } /* while (pc) */
 
+    Profiling_exit_check_SET(runcore);
     clock_gettime(CLOCK_BEST, &runcore->runcore_finish);
     return pc;
 
