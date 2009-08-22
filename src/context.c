@@ -93,6 +93,9 @@ Fetch Parrot_Context from Context PMC.
 PARROT_CAN_RETURN_NULL
 Parrot_Context*
 Parrot_ctx_get_context(PARROT_INTERP, ARGIN(PMC *ctx)) {
+    if (PMC_IS_NULL(ctx))
+        return NULL;
+
     return (Parrot_Context*)(VTABLE_get_pointer(interp, ctx));
 }
 

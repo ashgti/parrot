@@ -153,7 +153,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     Parrot_block_GC_sweep(interp);
 
     //create_initial_context(interp);
-    interp->ctx = PMCNULL;
+    interp->ctx.state   = PMCNULL;
     interp->resume_flag = RESUME_INITIAL;
 
     /* main is called as a Sub too - this will get depth 0 then */
