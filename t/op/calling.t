@@ -447,7 +447,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too few" );
     print $P0
 .end
 CODE
-/too few arguments passed/
+/too few positional arguments/
 OUTPUT
 
 pir_output_like(
@@ -1242,7 +1242,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "too few args via :flat" );
     $P35 = _fn1(1, $P34 :flat)
 .end
 CODE
-/too few arguments passed \(3\) - 4 params expected/
+/too few positional arguments: 3 passed, 4 \(or more\) expected/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "tailcall to NCI" );

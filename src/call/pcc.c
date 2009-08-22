@@ -966,7 +966,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
 
         /* No more positional arguments available to assign */
         if (positional_index >= positional_elements) {
-            if (!param_flags & PARROT_ARG_OPTIONAL)
+            if (!(param_flags & PARROT_ARG_OPTIONAL))
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few positional arguments: %d passed, %d (or more) expected",
                         positional_elements, param_index + 1);
