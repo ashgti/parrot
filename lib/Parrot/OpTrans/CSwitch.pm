@@ -154,7 +154,7 @@ sub run_core_func_start {
 #endif
 
 SWITCH_RELOAD:
-    _reg_base = (char*)interp->ctx.bp.regs_i;
+    _reg_base = (char*)CURRENT_CONTEXT_FIELD(bp.regs_i);
     do {
 SWITCH_AGAIN:
     Parrot_cx_handle_tasks(interp, interp->scheduler);

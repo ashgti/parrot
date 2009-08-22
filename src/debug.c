@@ -2221,7 +2221,7 @@ PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
         INTVAL   i,  j;
         if (condition->reg >= CONTEXT_FIELD(ctx, n_regs_used[REGNO_INT]))
             return 0;
-        i = PMCCTX_REG_INT(ctx, condition->reg);
+        i = CTX_REG_INT(ctx, condition->reg);
 
         if (condition->type & PDB_cond_const)
             j = *(INTVAL *)condition->value;
@@ -2243,7 +2243,7 @@ PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 
         if (condition->reg >= CONTEXT_FIELD(ctx, n_regs_used[REGNO_NUM]))
             return 0;
-        k = PMCCTX_REG_NUM(ctx, condition->reg);
+        k = CTX_REG_NUM(ctx, condition->reg);
 
         if (condition->type & PDB_cond_const)
             l = *(FLOATVAL *)condition->value;
@@ -2265,7 +2265,7 @@ PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 
         if (condition->reg >= CONTEXT_FIELD(ctx, n_regs_used[REGNO_STR]))
             return 0;
-        m = PMCCTX_REG_STR(ctx, condition->reg);
+        m = CTX_REG_STR(ctx, condition->reg);
 
         if (condition->type & PDB_cond_notnull)
             return ! STRING_IS_NULL(m);
@@ -2296,7 +2296,7 @@ PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 
         if (condition->reg >= CONTEXT_FIELD(ctx, n_regs_used[REGNO_PMC]))
             return 0;
-        m = PMCCTX_REG_PMC(ctx, condition->reg);
+        m = CTX_REG_PMC(ctx, condition->reg);
 
         if (condition->type & PDB_cond_notnull)
             return ! PMC_IS_NULL(m);

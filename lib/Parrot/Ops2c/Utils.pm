@@ -685,7 +685,7 @@ sub _print_goto_opcode {
     __asm__ ("jmp *4(%ebp)");  /* jump to ret addr, used by JIT */
 # endif
 #endif
-    _reg_base = (char*)interp->ctx.bp.regs_i;
+    _reg_base = (char*)CURRENT_CONTEXT_FIELD(bp.regs_i);
     goto **(void **)cur_opcode;
 
 END_C

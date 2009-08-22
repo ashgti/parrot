@@ -192,8 +192,6 @@ Swaps the "context".
 
             /* set context to coro context */
             CONTEXT(interp)       = ctx;
-            INTERP->ctx.bp        = CONTEXT_FIELD(ctx, bp);
-            INTERP->ctx.bp_ps     = CONTEXT_FIELD(ctx, bp_ps);
         }
         else {
             PMC *ccont;
@@ -217,8 +215,6 @@ Swaps the "context".
             }
 
             CONTEXT(interp)      = ctx;
-            INTERP->ctx.bp       = CONTEXT_FIELD(ctx, bp);
-            INTERP->ctx.bp_ps    = CONTEXT_FIELD(ctx, bp_ps);
         }
 
         /* toggle address */

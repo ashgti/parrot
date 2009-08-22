@@ -20,20 +20,15 @@
  * Macros to make accessing registers more convenient/readable.
  */
 
-#define CTX_REG_NUM(ctx, x) (ctx)->bp.regs_n[-1L-(x)]
-#define CTX_REG_INT(ctx, x) (ctx)->bp.regs_i[x]
-#define CTX_REG_PMC(ctx, x) (ctx)->bp_ps.regs_p[-1L-(x)]
-#define CTX_REG_STR(ctx, x) (ctx)->bp_ps.regs_s[x]
+#define CTX_REG_NUM(p, x) CONTEXT_FIELD(p, bp.regs_n[-1L-(x)])
+#define CTX_REG_INT(p, x) CONTEXT_FIELD(p, bp.regs_i[x])
+#define CTX_REG_PMC(p, x) CONTEXT_FIELD(p, bp_ps.regs_p[-1L-(x)])
+#define CTX_REG_STR(p, x) CONTEXT_FIELD(p, bp_ps.regs_s[x])
 
-#define PMCCTX_REG_NUM(p, x) CONTEXT_FIELD(p, bp.regs_n[-1L-(x)])
-#define PMCCTX_REG_INT(p, x) CONTEXT_FIELD(p, bp.regs_i[x])
-#define PMCCTX_REG_PMC(p, x) CONTEXT_FIELD(p, bp_ps.regs_p[-1L-(x)])
-#define PMCCTX_REG_STR(p, x) CONTEXT_FIELD(p, bp_ps.regs_s[x])
-
-#define REG_NUM(interp, x) CTX_REG_NUM(&(interp)->ctx, (x))
-#define REG_INT(interp, x) CTX_REG_INT(&(interp)->ctx, (x))
-#define REG_PMC(interp, x) CTX_REG_PMC(&(interp)->ctx, (x))
-#define REG_STR(interp, x) CTX_REG_STR(&(interp)->ctx, (x))
+#define REG_NUM(interp, x) CTX_REG_NUM((interp)->ctx, (x))
+#define REG_INT(interp, x) CTX_REG_INT((interp)->ctx, (x))
+#define REG_PMC(interp, x) CTX_REG_PMC((interp)->ctx, (x))
+#define REG_STR(interp, x) CTX_REG_STR((interp)->ctx, (x))
 
 /*
  * and a set of macros to access a register by offset, used
@@ -48,7 +43,7 @@
 #define REGNO_STR 2
 #define REGNO_PMC 3
 
-#define __CTX Parrot_ctx_get_context(interp, interp->ctx.state)
+#define __CTX Parrot_ctx_get_context(interp, interp->ctx)
 #define _SIZEOF_INTS    (sizeof (INTVAL) * __CTX->n_regs_used[REGNO_INT])
 #define _SIZEOF_NUMS    (sizeof (FLOATVAL) * __CTX->n_regs_used[REGNO_NUM])
 #define _SIZEOF_PMCS    (sizeof (PMC*) * __CTX->n_regs_used[REGNO_PMC])
@@ -100,9 +95,6 @@ PMC * Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
 void create_initial_context(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void destroy_context(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_alloc_context(PARROT_INTERP,
@@ -134,8 +126,6 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(n_regs_used)
 #define ASSERT_ARGS_create_initial_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_destroy_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_alloc_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \

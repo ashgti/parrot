@@ -54,16 +54,23 @@ pmclass Context {
             return;
 
         for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; ++i) {
-            obj = (PObj *)CTX_REG_PMC(ctx, i);
+            /* Original code from CTX_REG_PMC */
+            obj = (PObj *)ctx->bp_ps.regs_p[-1L-(i)];
             if (obj)
                 Parrot_gc_mark_PObj_alive(interp, obj);
         }
 
         for (i = 0; i < ctx->n_regs_used[REGNO_STR]; ++i) {
-            obj = (PObj *)CTX_REG_STR(ctx, i);
+            obj = (PObj *) ctx->bp_ps.regs_s[i];
             if (obj)
                 Parrot_gc_mark_PObj_alive(interp, obj);
         }
+    }
+
+    VTABLE void destroy() {
+        /* We own this pointer */
+        Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
+        mem_sys_free(ctx);
     }
 
     VTABLE void *get_pointer() {

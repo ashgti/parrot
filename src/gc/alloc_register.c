@@ -37,24 +37,24 @@ is determined by the PASM/PIR compiler in the register allocation pass
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+static void clear_regs(PARROT_INTERP, ARGMOD(PMC *pmcctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        FUNC_MODIFIES(*ctx);
+        FUNC_MODIFIES(*pmcctx);
 
 static void init_context(PARROT_INTERP,
-    ARGMOD(Parrot_Context *ctx),
-    ARGIN_NULLOK(const Parrot_Context *old))
+    ARGMOD(PMC *pmcctx),
+    ARGIN_NULLOK(PMC *pmcold))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        FUNC_MODIFIES(*ctx);
+        FUNC_MODIFIES(*pmcctx);
 
 #define ASSERT_ARGS_clear_regs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx)
+    || PARROT_ASSERT_ARG(pmcctx)
 #define ASSERT_ARGS_init_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx)
+    || PARROT_ASSERT_ARG(pmcctx)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -144,36 +144,6 @@ an available context is stored corresponds to the size of the context.
 
 */
 
-/*
-
-=item C<void destroy_context(PARROT_INTERP)>
-
-Frees allocated context memory.
-
-=cut
-
-*/
-
-void
-destroy_context(PARROT_INTERP)
-{
-    ASSERT_ARGS(destroy_context)
-    PMC *context = CONTEXT(interp);
-    int slot;
-
-    /* clear freed contexts */
-    for (slot = 0; slot < interp->ctx_mem.n_free_slots; ++slot) {
-        void *ptr = interp->ctx_mem.free_list[slot];
-        while (ptr) {
-            void * const next = *(void **) ptr;
-            mem_sys_free(ptr);
-            ptr = next;
-        }
-        interp->ctx_mem.free_list[slot] = NULL;
-    }
-    mem_sys_free(interp->ctx_mem.free_list);
-}
-
 
 /*
 
@@ -195,9 +165,6 @@ create_initial_context(PARROT_INTERP)
     /* Create some initial free_list slots. */
 
 #define INITIAL_FREE_SLOTS 8
-    interp->ctx_mem.n_free_slots = INITIAL_FREE_SLOTS;
-    interp->ctx_mem.free_list    = mem_allocate_n_zeroed_typed(INITIAL_FREE_SLOTS, void *);
-
     /* For now create context with 32 regs each. Some src tests (and maybe
      * other extenders) assume the presence of these registers */
     ignored = Parrot_set_new_context(interp, num_regs);
@@ -237,7 +204,7 @@ parrot_gc_context(PARROT_INTERP)
 
 /*
 
-=item C<static void clear_regs(PARROT_INTERP, Parrot_Context *ctx)>
+=item C<static void clear_regs(PARROT_INTERP, PMC *pmcctx)>
 
 Clears all registers in a context.  PMC and STRING registers contain PMCNULL
 and NULL, respectively.  Integer and float registers contain negative flag
@@ -248,10 +215,11 @@ values, for debugging purposes.
 */
 
 static void
-clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
+clear_regs(PARROT_INTERP, ARGMOD(PMC *pmcctx))
 {
     ASSERT_ARGS(clear_regs)
     int i;
+    Parrot_Context *ctx = Parrot_ctx_get_context(interp, pmcctx);
 
     /* NULL out registers - P/S have to be NULL for GC
      *
@@ -259,20 +227,20 @@ clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
      */
 
     for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; i++) {
-        CTX_REG_PMC(ctx, i) = PMCNULL;
+        CTX_REG_PMC(pmcctx, i) = PMCNULL;
     }
 
     for (i = 0; i < ctx->n_regs_used[REGNO_STR]; i++) {
-        CTX_REG_STR(ctx, i) = NULL;
+        CTX_REG_STR(pmcctx, i) = NULL;
     }
 
     if (Interp_debug_TEST(interp, PARROT_REG_DEBUG_FLAG)) {
         /* depending on -D40 we set int and num to be identifiable garbage values */
         for (i = 0; i < ctx->n_regs_used[REGNO_INT]; i++) {
-            CTX_REG_INT(ctx, i) = -999;
+            CTX_REG_INT(pmcctx, i) = -999;
         }
         for (i = 0; i < ctx->n_regs_used[REGNO_NUM]; i++) {
-            CTX_REG_NUM(ctx, i) = -99.9;
+            CTX_REG_NUM(pmcctx, i) = -99.9;
         }
     }
 }
@@ -280,8 +248,7 @@ clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
 
 /*
 
-=item C<static void init_context(PARROT_INTERP, Parrot_Context *ctx, const
-Parrot_Context *old)>
+=item C<static void init_context(PARROT_INTERP, PMC *pmcctx, PMC *pmcold)>
 
 Initializes a freshly allocated or recycled context.
 
@@ -290,10 +257,13 @@ Initializes a freshly allocated or recycled context.
 */
 
 static void
-init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
-        ARGIN_NULLOK(const Parrot_Context *old))
+init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
+        ARGIN_NULLOK(PMC *pmcold))
 {
     ASSERT_ARGS(init_context)
+    Parrot_Context *ctx = Parrot_ctx_get_context(interp, pmcctx);
+    Parrot_Context *old = Parrot_ctx_get_context(interp, pmcold);
+
     ctx->gc_mark           = 0;
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
@@ -328,7 +298,7 @@ init_context(PARROT_INTERP, ARGMOD(Parrot_Context *ctx),
     }
 
     /* other stuff is set inside Sub.invoke */
-    clear_regs(interp, ctx);
+    clear_regs(interp, pmcctx);
 }
 
 
@@ -384,8 +354,6 @@ Parrot_pop_context(PARROT_INTERP)
 
     /* restore old, set cached interpreter base pointers */
     CONTEXT(interp)      = old;
-    interp->ctx.bp       = CONTEXT_FIELD(old, bp);
-    interp->ctx.bp_ps    = CONTEXT_FIELD(old, bp_ps);
 }
 
 
@@ -422,43 +390,9 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     const size_t size_nip      = size_n + size_i + size_p;
     const size_t all_regs_size = size_n + size_i + size_p + size_s;
     const size_t reg_alloc     = ROUND_ALLOC_SIZE(all_regs_size);
-    const int    slot          = CALCULATE_SLOT_NUM(reg_alloc);
 
-    /*
-     * If slot is beyond the end of the allocated list, extend the list to
-     * allocate more slots.
-     */
-    if (slot >= interp->ctx_mem.n_free_slots) {
-        const int extend_size = slot + 1;
-        int i;
-
-        mem_realloc_n_typed(interp->ctx_mem.free_list, extend_size, void *);
-        for (i = interp->ctx_mem.n_free_slots; i < extend_size; ++i)
-            interp->ctx_mem.free_list[i] = NULL;
-        interp->ctx_mem.n_free_slots = extend_size;
-    }
-
-    /*
-     * The free_list contains a linked list of pointers for each size (slot
-     * index). Pop off an available context of the desired size from free_list.
-     * If no contexts of the desired size are available, allocate a new one.
-     */
-    ctx = (Parrot_Context *)interp->ctx_mem.free_list[slot];
-
-    if (ctx) {
-        /*
-         * Store the next pointer from the linked list for this size (slot
-         * index) in free_list. On "*(void **) ctx", C won't dereference a void
-         * * pointer (untyped), so type cast ctx to void ** (a dereference-able
-         * type) then dereference it to get a void *. Store the dereferenced
-         * value (the next pointer in the linked list) in free_list.
-         */
-        interp->ctx_mem.free_list[slot] = *(void **)ctx;
-    }
-    else {
-        const size_t to_alloc = reg_alloc + ALIGNED_CTX_SIZE;
-        ctx                   = (Parrot_Context *)mem_sys_allocate(to_alloc);
-    }
+    const size_t to_alloc = reg_alloc + ALIGNED_CTX_SIZE;
+    ctx                   = (Parrot_Context *)mem_sys_allocate(to_alloc);
 
     ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
     ctx->n_regs_used[REGNO_NUM] = number_regs_used[REGNO_NUM];
@@ -476,10 +410,10 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     /* ctx.bp_ps points to S0, which has Px on the left */
     ctx->bp_ps.regs_s = (STRING **)((char *)p + size_nip);
 
-    init_context(interp, ctx, Parrot_ctx_get_context(interp, old));
-
     pmcctx = pmc_new(interp, enum_class_Context);
     VTABLE_set_pointer(interp, pmcctx, ctx);
+
+    init_context(interp, pmcctx, old);
 
     return pmcctx;
 }
@@ -507,8 +441,6 @@ Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
     PMC *ctx = Parrot_alloc_context(interp, number_regs_used, old);
 
     CONTEXT(interp)          = ctx;
-    interp->ctx.bp.regs_i    = CONTEXT_FIELD(ctx, bp.regs_i);
-    interp->ctx.bp_ps.regs_s = CONTEXT_FIELD(ctx, bp_ps.regs_s);
 
     return ctx;
 }

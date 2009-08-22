@@ -830,26 +830,26 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
 
     switch (PARROT_ARG_TYPE_MASK_MASK(st->src.sig)) {
         case PARROT_ARG_INTVAL:
-            UVal_int(st->val) = constant ? idx : PMCCTX_REG_INT(st->src.ctx, idx);
+            UVal_int(st->val) = constant ? idx : CTX_REG_INT(st->src.ctx, idx);
             break;
         case PARROT_ARG_STRING:
         {
             /* ensure that callees don't modify constant caller strings */
             if (constant)
                 UVal_str(st->val) = Parrot_str_new_COW(interp,
-                                        CONTEXT_FIELD(st->src.ctx, constants[idx])->u.string);
+                                        Parrot_ctx_get_string_constant(interp, st->src.ctx, idx));
             else
-                UVal_str(st->val) = PMCCTX_REG_STR(st->src.ctx, idx);
+                UVal_str(st->val) = CTX_REG_STR(st->src.ctx, idx);
 
             break;
         }
         case PARROT_ARG_FLOATVAL:
             UVal_num(st->val) = constant ? CONTEXT_FIELD(st->src.ctx, constants[idx])->u.number
-                                         : PMCCTX_REG_NUM(st->src.ctx, idx);
+                                         : CTX_REG_NUM(st->src.ctx, idx);
             break;
         case PARROT_ARG_PMC:
-            UVal_pmc(st->val) = constant ? CONTEXT_FIELD(st->src.ctx, constants[idx])->u.key
-                                         : PMCCTX_REG_PMC(st->src.ctx, idx);
+            UVal_pmc(st->val) = constant ? Parrot_ctx_get_pmc_constant(interp, st->src.ctx, idx)
+                                         : CTX_REG_PMC(st->src.ctx, idx);
 
             if (st->src.sig & PARROT_ARG_FLATTEN) {
                 int retval;
@@ -1174,7 +1174,7 @@ check_for_opt_flag(PARROT_INTERP, ARGMOD(call_state *st), int has_arg)
 
     --st->params;
     PARROT_ASSERT(idx >= 0);
-    PMCCTX_REG_INT(st->dest.ctx, idx) = has_arg;
+    CTX_REG_INT(st->dest.ctx, idx) = has_arg;
 }
 
 
@@ -1209,15 +1209,15 @@ clone_key_arg(PARROT_INTERP, ARGMOD(call_state *st))
             Regs_ps bp_ps;
 
             /* clone sets key values according to refered register items */
-            bp    = interp->ctx.bp;
-            bp_ps = interp->ctx.bp_ps;
-            interp->ctx.bp    = CONTEXT_FIELD(st->src.ctx, bp);
-            interp->ctx.bp_ps = CONTEXT_FIELD(st->src.ctx, bp_ps);
+            bp    = CURRENT_CONTEXT_FIELD(bp);
+            bp_ps = CURRENT_CONTEXT_FIELD(bp_ps);
+            CURRENT_CONTEXT_FIELD(bp)    = CONTEXT_FIELD(st->src.ctx, bp);
+            CURRENT_CONTEXT_FIELD(bp_ps) = CONTEXT_FIELD(st->src.ctx, bp_ps);
 
             UVal_pmc(st->val) = VTABLE_clone(interp, key);
 
-            interp->ctx.bp    = bp;
-            interp->ctx.bp_ps = bp_ps;
+            CURRENT_CONTEXT_FIELD(bp)    = bp;
+            CURRENT_CONTEXT_FIELD(bp_ps) = bp_ps;
 
             return;
         }
@@ -1273,7 +1273,7 @@ init_first_dest_named(PARROT_INTERP, ARGMOD(call_state *st))
 
             /* pass the slurpy hash */
             idx = st->dest.u.op.pc[i];
-            PMCCTX_REG_PMC(st->dest.ctx, idx) = st->dest.slurp;
+            CTX_REG_PMC(st->dest.ctx, idx) = st->dest.slurp;
         }
         /* must be the actual arg of a named arg, count it */
         else
@@ -1323,7 +1323,7 @@ locate_named_named(PARROT_INTERP, ARGMOD(call_state *st))
         idx   = st->dest.u.op.pc[i];
         param = PARROT_ARG_CONSTANT_ISSET(st->dest.sig)
                 ? Parrot_ctx_get_string_constant(interp, st->dest.ctx, idx)
-                : PMCCTX_REG_STR(st->dest.ctx, idx);
+                : CTX_REG_STR(st->dest.ctx, idx);
 
         if (st->name == param || Parrot_str_equal(interp, st->name, param)) {
             ++i;
@@ -1362,16 +1362,16 @@ store_arg(PARROT_INTERP, ARGIN(const call_state *st), INTVAL idx)
     ASSERT_ARGS(store_arg)
     switch (st->dest.sig & PARROT_ARG_TYPE_MASK) {
         case PARROT_ARG_INTVAL:
-            PMCCTX_REG_INT(st->dest.ctx, idx) = UVal_int(st->val);
+            CTX_REG_INT(st->dest.ctx, idx) = UVal_int(st->val);
             break;
         case PARROT_ARG_FLOATVAL:
-            PMCCTX_REG_NUM(st->dest.ctx, idx) = UVal_num(st->val);
+            CTX_REG_NUM(st->dest.ctx, idx) = UVal_num(st->val);
             break;
         case PARROT_ARG_STRING:
-            PMCCTX_REG_STR(st->dest.ctx, idx) = UVal_str(st->val);
+            CTX_REG_STR(st->dest.ctx, idx) = UVal_str(st->val);
             break;
         case PARROT_ARG_PMC:
-            PMCCTX_REG_PMC(st->dest.ctx, idx) = UVal_pmc(st->val);
+            CTX_REG_PMC(st->dest.ctx, idx) = UVal_pmc(st->val);
             break;
         default:
             break;
@@ -1568,7 +1568,7 @@ check_named(PARROT_INTERP, ARGMOD(call_state *st))
                 if (arg_sig & PARROT_ARG_OPT_FLAG) {
                     i++;
                     idx = st->dest.u.op.pc[i];
-                    PMCCTX_REG_INT(st->dest.ctx, idx) = 0;
+                    CTX_REG_INT(st->dest.ctx, idx) = 0;
                 }
                 continue;
             }
@@ -1576,7 +1576,7 @@ check_named(PARROT_INTERP, ARGMOD(call_state *st))
                 const   INTVAL idx   = st->dest.u.op.pc[last_name_pos];
                 STRING * const param = PARROT_ARG_CONSTANT_ISSET(sig)
                     ? Parrot_ctx_get_string_constant(interp, st->dest.ctx, idx)
-                    : PMCCTX_REG_STR(st->dest.ctx, idx);
+                    : CTX_REG_STR(st->dest.ctx, idx);
 
                 Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_INVALID_OPERATION,
@@ -1749,7 +1749,7 @@ Parrot_process_args(PARROT_INTERP, ARGMOD(call_state *st), arg_pass_t param_or_r
 
         /* Must register this PMC or it may get collected when only the struct
          * references it. */
-        PMCCTX_REG_PMC(st->dest.ctx, idx) = array;
+        CTX_REG_PMC(st->dest.ctx, idx) = array;
 
         while (Parrot_fetch_arg(interp, st)) {
             /* if the src arg is named, we're done here */
@@ -2181,13 +2181,13 @@ commit_last_arg(PARROT_INTERP, int index, int cur,
     if (!seen_arrow) {
         switch (cur & PARROT_ARG_TYPE_MASK) {
             case PARROT_ARG_INTVAL:
-                PMCCTX_REG_INT(ctx, reg_offset) = va_arg(*list, INTVAL);   break;
+                CTX_REG_INT(ctx, reg_offset) = va_arg(*list, INTVAL);   break;
             case PARROT_ARG_FLOATVAL:
-                PMCCTX_REG_NUM(ctx, reg_offset) = va_arg(*list, FLOATVAL); break;
+                CTX_REG_NUM(ctx, reg_offset) = va_arg(*list, FLOATVAL); break;
             case PARROT_ARG_STRING:
-                PMCCTX_REG_STR(ctx, reg_offset) = va_arg(*list, STRING *); break;
+                CTX_REG_STR(ctx, reg_offset) = va_arg(*list, STRING *); break;
             case PARROT_ARG_PMC:
-                PMCCTX_REG_PMC(ctx, reg_offset) = va_arg(*list, PMC *);    break;
+                CTX_REG_PMC(ctx, reg_offset) = va_arg(*list, PMC *);    break;
             default:
                 Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_INVALID_OPERATION,
@@ -2371,18 +2371,18 @@ commit_last_arg_sig_object(PARROT_INTERP, int index, int cur,
     if (!seen_arrow) {
         switch (cur & PARROT_ARG_TYPE_MASK) {
             case PARROT_ARG_INTVAL:
-                PMCCTX_REG_INT(ctx, reg_offset) = VTABLE_get_integer_keyed_int(interp, sig_obj, index);
+                CTX_REG_INT(ctx, reg_offset) = VTABLE_get_integer_keyed_int(interp, sig_obj, index);
                 break;
             case PARROT_ARG_FLOATVAL:
-                PMCCTX_REG_NUM(ctx, reg_offset) = VTABLE_get_number_keyed_int(interp, sig_obj, index);
+                CTX_REG_NUM(ctx, reg_offset) = VTABLE_get_number_keyed_int(interp, sig_obj, index);
                 break;
             case PARROT_ARG_STRING:
-                PMCCTX_REG_STR(ctx, reg_offset) = VTABLE_get_string_keyed_int(interp, sig_obj, index);
+                CTX_REG_STR(ctx, reg_offset) = VTABLE_get_string_keyed_int(interp, sig_obj, index);
                 break;
             case PARROT_ARG_PMC:
-                PMCCTX_REG_PMC(ctx, reg_offset) = VTABLE_get_pmc_keyed_int(interp, sig_obj, index);
+                CTX_REG_PMC(ctx, reg_offset) = VTABLE_get_pmc_keyed_int(interp, sig_obj, index);
                 if (cur & PARROT_ARG_INVOCANT) {
-                    interp->current_object = PMCCTX_REG_PMC(ctx, reg_offset);
+                    interp->current_object = CTX_REG_PMC(ctx, reg_offset);
                 }
                 break;
             default:
@@ -2425,25 +2425,25 @@ set_context_sig_returns(PARROT_INTERP,
                 case 'I':
                     {
                     VTABLE_set_integer_native(interp, result_item,
-                            PMCCTX_REG_INT(ctx, indexes[seen_arrow][index]));
+                            CTX_REG_INT(ctx, indexes[seen_arrow][index]));
                     }
                     break;
                 case 'N':
                     {
                     VTABLE_set_number_native(interp, result_item,
-                            PMCCTX_REG_NUM(ctx, indexes[seen_arrow][index]));
+                            CTX_REG_NUM(ctx, indexes[seen_arrow][index]));
                     }
                     break;
                 case 'S':
                     {
                     VTABLE_set_string_native(interp, result_item,
-                            PMCCTX_REG_STR(ctx, indexes[seen_arrow][index]));
+                            CTX_REG_STR(ctx, indexes[seen_arrow][index]));
                     }
                     break;
                 case 'P':
                     {
                     VTABLE_set_pmc(interp, result_item,
-                            PMCCTX_REG_PMC(ctx, indexes[seen_arrow][index]));
+                            CTX_REG_PMC(ctx, indexes[seen_arrow][index]));
                     }
                     break;
                 default:
@@ -2496,25 +2496,25 @@ set_context_sig_returns_varargs(PARROT_INTERP, ARGMOD(PMC *ctx),
                 case 'I':
                     {
                     INTVAL * const tmpINTVAL = va_arg(returns, INTVAL*);
-                    *tmpINTVAL = PMCCTX_REG_INT(ctx, indexes[seen_arrow][index]);
+                    *tmpINTVAL = CTX_REG_INT(ctx, indexes[seen_arrow][index]);
                     }
                     break;
                 case 'N':
                     {
                     FLOATVAL * const tmpFLOATVAL = va_arg(returns, FLOATVAL*);
-                    *tmpFLOATVAL = PMCCTX_REG_NUM(ctx, indexes[seen_arrow][index]);
+                    *tmpFLOATVAL = CTX_REG_NUM(ctx, indexes[seen_arrow][index]);
                     }
                     break;
                 case 'S':
                     {
                     STRING ** const tmpSTRING = va_arg(returns, STRING**);
-                    *tmpSTRING = PMCCTX_REG_STR(ctx, indexes[seen_arrow][index]);
+                    *tmpSTRING = CTX_REG_STR(ctx, indexes[seen_arrow][index]);
                     }
                     break;
                 case 'P':
                     {
                     PMC ** const tmpPMC = va_arg(returns, PMC**);
-                    *tmpPMC = PMCCTX_REG_PMC(ctx, indexes[seen_arrow][index]);
+                    *tmpPMC = CTX_REG_PMC(ctx, indexes[seen_arrow][index]);
                     }
                     break;
                 default:
@@ -2786,7 +2786,7 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
     indexes[0][0] = 0;
 
     VTABLE_set_integer_keyed_int(interp, sigs[0], 0, PARROT_ARG_PMC);
-    PMCCTX_REG_PMC(ctx, 0) = pmc;
+    CTX_REG_PMC(ctx, 0) = pmc;
 
     n_regs_used[REGNO_PMC]++;
     index = 0;

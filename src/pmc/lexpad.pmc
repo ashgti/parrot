@@ -121,7 +121,7 @@ Return the LexInfo PMC, if any or a Null PMC.
 
         regno = (INTVAL) b->value;
 
-        return PMCCTX_REG_PMC(ctx, regno);
+        return CTX_REG_PMC(ctx, regno);
     }
 
     VTABLE PMC *get_pmc_keyed(PMC *name) {
@@ -146,7 +146,7 @@ Return the LexInfo PMC, if any or a Null PMC.
                 "Lexical '%Ss' not found", name);
 
         regno                   = (INTVAL) b->value;
-        PMCCTX_REG_PMC(ctx, regno) = value;
+        CTX_REG_PMC(ctx, regno) = value;
     }
 
     VTABLE void set_pmc_keyed(PMC *name, PMC *value) {

@@ -541,8 +541,6 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
 
     /* set context */
     CONTEXT(interp)      = to_ctx;
-    interp->ctx.bp       = CONTEXT_FIELD(to_ctx, bp);
-    interp->ctx.bp_ps    = CONTEXT_FIELD(to_ctx, bp_ps);
 }
 
 

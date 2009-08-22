@@ -153,7 +153,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     Parrot_block_GC_sweep(interp);
 
     //create_initial_context(interp);
-    interp->ctx.state   = PMCNULL;
+    interp->ctx         = PMCNULL;
     interp->resume_flag = RESUME_INITIAL;
 
     /* main is called as a Sub too - this will get depth 0 then */
@@ -419,7 +419,6 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         interp->profile = NULL;
     }
 
-    destroy_context(interp);
     destroy_runloop_jump_points(interp);
 
     if (interp->evc_func_table) {

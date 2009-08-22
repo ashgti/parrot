@@ -194,20 +194,7 @@ typedef struct _Prederef {
 } Prederef;
 
 
-/*
- * This is an 'inlined' copy of the first 3 Context items for
- * faster access of registers mainly
- * During a context switch a 3 pointers are set
- */
-typedef struct Interp_Context {
-    /* common header */
-    PMC                   *state;       /* context  */
-    Regs_ni                bp;          /* pointers to FLOATVAL & INTVAL */
-    Regs_ps                bp_ps;       /* pointers to PMC & STR */
-    /* end common header */
-} Interp_Context;
-
-#define CONTEXT(interp) ((interp)->ctx.state)
+#define CONTEXT(interp) ((interp)->ctx)
 
 /*
  * Helper macros to fetch fields from context.
@@ -253,8 +240,7 @@ struct _handler_node_t; /* forward def - exit.h */
 
 /* The actual interpreter structure */
 struct parrot_interp_t {
-    struct Interp_Context ctx;
-    context_mem           ctx_mem;            /* ctx memory managment */
+    struct PMC           *ctx;                /* current Context */
 
     struct Arenas *arena_base;                /* Pointer to this interpreter's
                                                * arena */

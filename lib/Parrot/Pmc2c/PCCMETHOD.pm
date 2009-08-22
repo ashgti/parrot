@@ -162,16 +162,16 @@ sub gen_arg_accessor {
     my $tiss = $reg_type_info->{$reg_type}{ss};    #reg_type_info short string
 
     if ( 'arg' eq $arg_type ) {
-        return "    $tis $name = PMCCTX_REG_$tiss(_ctx, $index);\n";
+        return "    $tis $name = CTX_REG_$tiss(_ctx, $index);\n";
     }
     elsif ( 'result' eq $arg_type ) {
-        return "    $name = PMCCTX_REG_$tiss(_ctx, $index);\n";
+        return "    $name = CTX_REG_$tiss(_ctx, $index);\n";
     }
     elsif ( 'name' eq $arg_type ) {
-        return "    PMCCTX_REG_$tiss(_ctx, $index) = CONST_STRING_GEN(interp, $name);\n";
+        return "    CTX_REG_$tiss(_ctx, $index) = CONST_STRING_GEN(interp, $name);\n";
     }
     else {  #$arg_type eq 'param' or $arg_type eq 'return'
-        return "    PMCCTX_REG_$tiss(_ctx, $index) = $name;\n";
+        return "    CTX_REG_$tiss(_ctx, $index) = $name;\n";
     }
 }
 
