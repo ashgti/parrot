@@ -33,6 +33,7 @@ http://sources.redhat.com/gdb/current/onlinedocs/stabs_toc.html.
 
 #include <parrot/parrot.h>
 #include "parrot/exec.h"
+#include "pmc/pmc_context.h"
 #include "jit.h"
 
 #define N_GSYM "32"     /* global variable */

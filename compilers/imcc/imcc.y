@@ -25,8 +25,6 @@
 #include "parser.h"
 #include "optimizer.h"
 
-// XXX We need Parrot_Context_attributes
-// Remove this comment if this include is ok.
 #include "../../src/pmc/pmc_context.h"
 
 /* prevent declarations of malloc() and free() in the generated parser. */

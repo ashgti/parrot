@@ -705,14 +705,14 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
     /* check params */
 
     if (op == PARROT_OP_set_returns_pc) {
-        PMC * const ccont = PARROT_CONTEXT(ctx)->current_cont;
+        PMC * const ccont = PMC_get_context(ctx)->current_cont;
         if (!PMC_cont(ccont)->address)
             return 0;
         caller_ctx = PMC_cont(ccont)->to_ctx;
-        args       = PARROT_CONTEXT(caller_ctx)->current_results;
+        args       = PMC_get_context(caller_ctx)->current_results;
     }
     else {
-        caller_ctx = PARROT_CONTEXT(ctx)->caller_ctx;
+        caller_ctx = PMC_get_context(ctx)->caller_ctx;
         args       = interp->current_args;
     }
 
@@ -721,7 +721,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
         int          n;
 
         /* check current_args signature */
-        sig2 = PARROT_CONTEXT(caller_ctx)->constants[const_nr]->u.key;
+        sig2 = PMC_get_context(caller_ctx)->constants[const_nr]->u.key;
         n    = parrot_pic_check_sig(interp, sig1, sig2, &type);
 
         if (n == -1)

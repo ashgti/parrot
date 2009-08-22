@@ -59,7 +59,7 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
         cc->address   = NULL;
     }
 
-    cc->current_results = PARROT_CONTEXT(to_ctx)->current_results;
+    cc->current_results = PMC_get_context(to_ctx)->current_results;
     return cc;
 }
 
@@ -127,10 +127,11 @@ void
 invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
-    PMC *ctx = PMC_cont(cont)->from_ctx;
-    cont = PARROT_CONTEXT(ctx)->current_cont;
+    PMC *pmcctx = PMC_cont(cont)->from_ctx;
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
 
     while (1) {
+        cont = ctx ? ctx->current_cont : NULL;
         /*
          * We  stop if we encounter a true continuation, because
          * if one were created, everything up the chain would have been
@@ -139,8 +140,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         if (!cont || cont->vtable != interp->vtables[enum_class_RetContinuation])
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
-        ctx  = PARROT_CONTEXT(ctx)->caller_ctx;
-        cont = PARROT_CONTEXT(ctx)->current_cont;
+        pmcctx       = ctx->caller_ctx;
     }
 
 }
@@ -232,7 +232,7 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(const PMC *pmcctx),
                     ARGOUT(Parrot_Context_info *info))
 {
     ASSERT_ARGS(Parrot_Context_get_info)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     Parrot_Sub_attributes     *sub;
 
     /* set file/line/pc defaults */
@@ -324,7 +324,7 @@ STRING*
 Parrot_Context_infostr(PARROT_INTERP, ARGIN(const PMC *pmcctx))
 {
     ASSERT_ARGS(Parrot_Context_infostr)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     Parrot_Context_info info;
     STRING             *res = NULL;
     const char * const  msg = (CONTEXT(interp) == ctx)
@@ -362,7 +362,7 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(const PMC *pmcctx)
 {
     ASSERT_ARGS(Parrot_find_pad)
     while (1) {
-        Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+        Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
         PMC * const lex_pad = ctx->lex_pad;
         PMC * const outer   = ctx->outer_ctx;
 
@@ -407,7 +407,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
     Parrot_Sub_attributes *current_sub;
     Parrot_Sub_attributes *sub;
 
-    PMC_get_sub(interp, PARROT_CONTEXT(ctx)->current_sub, current_sub);
+    PMC_get_sub(interp, PMC_get_context(ctx)->current_sub, current_sub);
 
     /* MultiSub gets special treatment */
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "MultiSub"))) {
@@ -533,7 +533,7 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
-        PMC * const sub = PARROT_CONTEXT(to_ctx)->current_sub;
+        PMC * const sub = PMC_get_context(to_ctx)->current_sub;
 
         Parrot_io_eprintf(interp, "# Back in sub '%Ss', env %p\n",
                     Parrot_full_sub_name(interp, sub),

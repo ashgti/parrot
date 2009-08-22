@@ -514,7 +514,7 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
 {
     ASSERT_ARGS(Parrot_init_ret_nci)
     PMC       *ctx          = interp->ctx;
-    PMC* const current_cont = PARROT_CONTEXT(ctx)->current_cont;
+    PMC* const current_cont = PMC_get_context(ctx)->current_cont;
 
     /* if this NCI call was a taicall, return results to caller's get_results
      * this also means that we pass the caller's register base pointer */
@@ -526,12 +526,12 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
 
     /* Non-constant signatures are stored in ctx->results_signature instead of
      * in the constants table. */
-    if (PARROT_CONTEXT(ctx)->results_signature)
+    if (PMC_get_context(ctx)->results_signature)
         Parrot_init_arg_indexes_and_sig_pmc(interp, ctx,
-                PARROT_CONTEXT(ctx)->current_results,
-                PARROT_CONTEXT(ctx)->results_signature, &st->dest);
+                PMC_get_context(ctx)->current_results,
+                PMC_get_context(ctx)->results_signature, &st->dest);
     else
-        Parrot_init_arg_op(interp, ctx, PARROT_CONTEXT(ctx)->current_results, &st->dest);
+        Parrot_init_arg_op(interp, ctx, PMC_get_context(ctx)->current_results, &st->dest);
 
 }
 
@@ -560,7 +560,7 @@ Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(PMC *pmcctx),
         ARGMOD(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_indexes_and_sig_pmc)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     if (!sig_pmc && indexes) {
         ++indexes;
         sig_pmc = ctx->constants[*indexes]->u.key;
@@ -609,7 +609,7 @@ Parrot_init_arg_op(PARROT_INTERP, ARGIN(PMC *pmcctx),
     ARGIN_NULLOK(opcode_t *pc), ARGIN(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_op)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     PMC *sig_pmc = PMCNULL;
 
     if (pc) {
@@ -642,7 +642,7 @@ Parrot_init_arg_sig(PARROT_INTERP, ARGIN(PMC *pmcctx),
     ARGMOD(call_state_item *sti))
 {
     ASSERT_ARGS(Parrot_init_arg_sig)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     sti->used = 1;
     sti->i    = 0;
     sti->n    = 0;
@@ -827,11 +827,11 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
     ASSERT_ARGS(fetch_arg_op)
     const int    constant = PARROT_ARG_CONSTANT_ISSET(st->src.sig);
     const INTVAL idx      = st->src.u.op.pc[st->src.i];
-    const Parrot_Context_attributes *srcctx = PARROT_CONTEXT(st->src.ctx);
+    const Parrot_Context_attributes *srcctx = PMC_get_context(st->src.ctx);
 
     switch (PARROT_ARG_TYPE_MASK_MASK(st->src.sig)) {
         case PARROT_ARG_INTVAL:
-            UVal_int(st->val) = constant ? idx : CTX_REG_NUM(srcctx, idx);
+            UVal_int(st->val) = constant ? idx : CTX_REG_INT(srcctx, idx);
             break;
         case PARROT_ARG_STRING:
         {
@@ -1175,7 +1175,7 @@ check_for_opt_flag(PARROT_INTERP, ARGMOD(call_state *st), int has_arg)
 
     --st->params;
     PARROT_ASSERT(idx >= 0);
-    CTX_REG_INT(PARROT_CONTEXT(st->dest.ctx), idx) = has_arg;
+    CTX_REG_INT(PMC_get_context(st->dest.ctx), idx) = has_arg;
 }
 
 
@@ -1209,7 +1209,7 @@ clone_key_arg(PARROT_INTERP, ARGMOD(call_state *st))
             Parrot_Context_attributes temp_ctx;
 
             /* clone sets key values according to refered register items */
-            SAVE_OFF_REGS(CONTEXT(interp), PARROT_CONTEXT(st->src.ctx), &temp_ctx)
+            SAVE_OFF_REGS(CONTEXT(interp), PMC_get_context(st->src.ctx), &temp_ctx)
             UVal_pmc(st->val) = VTABLE_clone(interp, key);
             RESTORE_REGS(CONTEXT(interp), &temp_ctx)
             return;
@@ -1266,7 +1266,7 @@ init_first_dest_named(PARROT_INTERP, ARGMOD(call_state *st))
 
             /* pass the slurpy hash */
             idx = st->dest.u.op.pc[i];
-            CTX_REG_PMC(PARROT_CONTEXT(st->dest.ctx), idx) = st->dest.slurp;
+            CTX_REG_PMC(PMC_get_context(st->dest.ctx), idx) = st->dest.slurp;
         }
         /* must be the actual arg of a named arg, count it */
         else
@@ -1315,7 +1315,7 @@ locate_named_named(PARROT_INTERP, ARGMOD(call_state *st))
         n_named++;
         idx   = st->dest.u.op.pc[i];
         param = PARROT_ARG_CONSTANT_ISSET(st->dest.sig)
-                ? PARROT_CONTEXT(st->dest.ctx)->constants[idx]->u.string
+                ? PMC_get_context(st->dest.ctx)->constants[idx]->u.string
                 : PMCCTX_REG_STR(st->dest.ctx, idx);
 
         if (st->name == param || Parrot_str_equal(interp, st->name, param)) {
@@ -1568,7 +1568,7 @@ check_named(PARROT_INTERP, ARGMOD(call_state *st))
             else {
                 const   INTVAL idx   = st->dest.u.op.pc[last_name_pos];
                 STRING * const param = PARROT_ARG_CONSTANT_ISSET(sig)
-                    ? PARROT_CONTEXT(st->dest.ctx)->constants[idx]->u.string
+                    ? PMC_get_context(st->dest.ctx)->constants[idx]->u.string
                     : PMCCTX_REG_STR(st->dest.ctx, idx);
 
                 Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1887,9 +1887,9 @@ parrot_pass_args(PARROT_INTERP,
     }
     else /* (param_or_result == PARROT_PASS_RESULTS) */ {
         src_signature               = interp->returns_signature;
-        dest_signature              = PARROT_CONTEXT(dest_pmcctx)->results_signature;
+        dest_signature              = PMC_get_context(dest_pmcctx)->results_signature;
         interp->returns_signature   = NULL;
-        PARROT_CONTEXT(dest_pmcctx)->results_signature = NULL;
+        PMC_get_context(dest_pmcctx)->results_signature = NULL;
     }
 
     Parrot_init_arg_indexes_and_sig_pmc(interp, src_pmcctx, src_indexes,
@@ -2141,7 +2141,7 @@ commit_last_arg(PARROT_INTERP, int index, int cur,
     ARGIN_NULLOK(PMC *pmc), ARGIN(va_list *list))
 {
     ASSERT_ARGS(commit_last_arg)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_Context_attributes *ctx = PMC_get_context(pmcctx);
     int reg_offset = 0;
 
     /* invocant already commited, just return */
@@ -2623,10 +2623,10 @@ set_context_sig_params(PARROT_INTERP, ARGIN(const char *signature),
         commit_last_arg_sig_object(interp, index, cur, n_regs_used, seen_arrow, sigs,
             indexes, ctx, sig_obj);
 
-    interp->current_args                   = indexes[0];
-    interp->args_signature                 = sigs[0];
-    PARROT_CONTEXT(ctx)->current_results   = indexes[1];
-    PARROT_CONTEXT(ctx)->results_signature = sigs[1];
+    interp->current_args                    = indexes[0];
+    interp->args_signature                  = sigs[0];
+    PMC_get_context(ctx)->current_results   = indexes[1];
+    PMC_get_context(ctx)->results_signature = sigs[1];
     return ret_x;
 }
 
@@ -2860,14 +2860,14 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
 
     interp->current_args                    = arg_indexes;
     interp->args_signature                  = args_sig;
-    PARROT_CONTEXT(ctx)->current_results    = result_indexes;
-    PARROT_CONTEXT(ctx)->results_signature  = results_sig;
+    PMC_get_context(ctx)->current_results   = result_indexes;
+    PMC_get_context(ctx)->results_signature = results_sig;
 
     /* arg_accessors assigned in loop above */
 
     interp->current_object              = pmc;
     interp->current_cont                = NEED_CONTINUATION;
-    PARROT_CONTEXT(ctx)->current_cont   = ret_cont;
+    PMC_get_context(ctx)->current_cont  = ret_cont;
     PMC_cont(ret_cont)->from_ctx        = ctx;
     pccinvoke_meth                      = VTABLE_find_method(interp, pmc, method_name);
 
@@ -3011,7 +3011,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     }
 
     interp->current_cont                = NEED_CONTINUATION;
-    PARROT_CONTEXT(ctx)->current_cont   = ret_cont;
+    PMC_get_context(ctx)->current_cont  = ret_cont;
     PMC_cont(ret_cont)->from_ctx        = ctx;
 
     /* Invoke the function */

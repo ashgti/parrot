@@ -866,7 +866,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
          * Note that we are now trying to handle the new exception,
          * not the initial task argument (exception or whatever).
          */
-        context = PARROT_CONTEXT(keep_context->caller_ctx);
+        context = PMC_get_context(keep_context->caller_ctx);
         keep_context = NULL;
         if (context && !PMC_IS_NULL(context->handlers))
             iter = VTABLE_get_iter(interp, context->handlers);
@@ -882,7 +882,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
     if (task->vtable->base_type == enum_class_Exception
     && VTABLE_get_integer_keyed_str(interp, task, handled_str) == -1) {
         iter    = VTABLE_get_attr_str(interp, task, iter_str);
-        context = PARROT_CONTEXT((PMC*)VTABLE_get_pointer(interp, task));
+        context = PMC_get_context((PMC*)VTABLE_get_pointer(interp, task));
     }
     else {
         context = CONTEXT(interp);
@@ -917,7 +917,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
         }
 
         /* Continue the search in the next context up the chain. */
-        context = context->caller_ctx ? PARROT_CONTEXT(context->caller_ctx) : NULL;
+        context = PMC_get_context(context->caller_ctx);
         if (context && !PMC_IS_NULL(context->handlers))
             iter = VTABLE_get_iter(interp, context->handlers);
         else

@@ -264,6 +264,7 @@ runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
             "no get_params in sub");
      */
 
+    ctx = interp->ctx;
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return ctx;
