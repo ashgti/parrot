@@ -188,10 +188,10 @@ prederef_args(ARGMOD(void **pc_prederef), PARROT_INTERP,
     ASSERT_ARGS(prederef_args)
     const PackFile_ConstTable * const const_table = interp->code->const_table;
 
-    const int regs_n = CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_NUM]);
-    const int regs_i = CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_INT]);
-    const int regs_p = CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_PMC]);
-    const int regs_s = CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_STR]);
+    const int regs_n = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_NUM]);
+    const int regs_i = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_INT]);
+    const int regs_p = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_PMC]);
+    const int regs_s = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_STR]);
 
     /* prederef var part too */
     const int m = opinfo->op_count;
@@ -315,7 +315,7 @@ do_prederef(ARGIN(void **pc_prederef), PARROT_INTERP, int type)
     /* first arguments - PIC needs it */
 
     /* check for RT#58044 */
-    PARROT_ASSERT(CURRENT_CONTEXT_FIELD(n_regs_used));
+    PARROT_ASSERT(CURRENT_CONTEXT_FIELD(interp, n_regs_used));
 
     prederef_args(pc_prederef, interp, pc, opinfo);
 
@@ -541,7 +541,7 @@ init_prederef(PARROT_INTERP, int which)
                 N * sizeof (void *));
 #endif
         /* calc and remember pred_offset */
-        CURRENT_CONTEXT_FIELD(pred_offset) = pc - (opcode_t *)temp;
+        CURRENT_CONTEXT_FIELD(interp, pred_offset) = pc - (opcode_t *)temp;
 
         /* fill with the prederef__ opcode function */
         if (which == PARROT_SWITCH_CORE || which == PARROT_SWITCH_JIT_CORE)

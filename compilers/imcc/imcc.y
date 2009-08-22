@@ -1210,7 +1210,7 @@ hll_def:
      HLL STRINGC
          {
             STRING * const hll_name = Parrot_str_unescape(interp, $2 + 1, '"', NULL);
-            CURRENT_CONTEXT_FIELD(current_HLL) =
+            CURRENT_CONTEXT_FIELD(interp, current_HLL) =
                 Parrot_register_HLL(interp, hll_name);
 
             IMCC_INFO(interp)->cur_namespace = NULL;

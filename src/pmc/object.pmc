@@ -27,11 +27,11 @@ static INTVAL
 get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
 {
     Parrot_Class_attributes * const _class  = PARROT_CLASS(self);
-    const INTVAL                    cur_hll = CURRENT_CONTEXT_FIELD(current_HLL);
+    const INTVAL                    cur_hll = CURRENT_CONTEXT_FIELD(interp, current_HLL);
     int                             num_classes, i;
     INTVAL                          retval;
 
-    CURRENT_CONTEXT_FIELD(current_HLL) = 0;
+    CURRENT_CONTEXT_FIELD(interp, current_HLL) = 0;
 
     /* First see if we can find it in the cache. */
     retval                       = VTABLE_get_integer_keyed_str(interp,
@@ -40,7 +40,7 @@ get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
     /* there's a semi-predicate problem with a retval of 0 */
     if (retval
     || VTABLE_exists_keyed_str(interp, _class->attrib_cache, name)) {
-        CURRENT_CONTEXT_FIELD(current_HLL) = cur_hll;
+        CURRENT_CONTEXT_FIELD(interp, current_HLL) = cur_hll;
         return retval;
     }
 
@@ -65,12 +65,12 @@ get_attrib_index(PARROT_INTERP, PMC *self, STRING *name)
             VTABLE_set_integer_keyed_str(interp, _class->attrib_cache, name,
                 index);
 
-            CURRENT_CONTEXT_FIELD(current_HLL) = cur_hll;
+            CURRENT_CONTEXT_FIELD(interp, current_HLL) = cur_hll;
             return index;
         }
     }
 
-    CURRENT_CONTEXT_FIELD(current_HLL) = cur_hll;
+    CURRENT_CONTEXT_FIELD(interp, current_HLL) = cur_hll;
     return -1;
 }
 

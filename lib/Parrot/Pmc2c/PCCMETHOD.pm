@@ -403,7 +403,7 @@ $set_params
     UNUSED(_return_indexes);
 
     if (_caller_ctx) {
-        _ccont = CONTEXT_FIELD(_caller_ctx, current_cont);
+        _ccont = CONTEXT_FIELD(interp, _caller_ctx, current_cont);
     }
     else {
         /* there is no point calling Parrot_ex_throw_from_c_args here, because
@@ -411,7 +411,7 @@ $set_params
         exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
     }
 
-    CONTEXT_FIELD(_ctx, current_cont)   = _ret_cont;
+    CONTEXT_FIELD(interp, _ctx, current_cont)   = _ret_cont;
     PMC_cont(_ret_cont)->from_ctx       = _ctx;
 
     _current_args                       = interp->current_args;
@@ -429,8 +429,8 @@ END
 
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        --CONTEXT_FIELD(_ctx, recursion_depth);
-        CONTEXT_FIELD(_ctx, caller_ctx) = CONTEXT_FIELD(_caller_ctx, caller_ctx);
+        --CONTEXT_FIELD(interp, _ctx, recursion_depth);
+        CONTEXT_FIELD(interp, _ctx, caller_ctx) = CONTEXT_FIELD(interp, _caller_ctx, caller_ctx);
         interp->current_args = NULL;
     }
     /* BEGIN PARMS SCOPE */
@@ -465,7 +465,7 @@ $method_returns
 
     interp->returns_signature = _return_sig;
     parrot_pass_args(interp, _ctx, _caller_ctx, _return_indexes,
-        CONTEXT_FIELD(_caller_ctx, current_results), PARROT_PASS_RESULTS);
+        CONTEXT_FIELD(interp, _caller_ctx, current_results), PARROT_PASS_RESULTS);
 END
     }
     $e_post->emit( <<"END", __FILE__, __LINE__ + 1 );

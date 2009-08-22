@@ -189,7 +189,7 @@ init_class_from_hash(PARROT_INTERP, PMC *self, PMC *info)
         }
         else {
             PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp,
-                    interp->HLL_namespace, CURRENT_CONTEXT_FIELD(current_HLL));
+                    interp->HLL_namespace, CURRENT_CONTEXT_FIELD(interp, current_HLL));
             new_namespace = Parrot_make_namespace_keyed(interp, hll_ns, name_arg);
         }
 
@@ -1161,13 +1161,13 @@ Creates a new PMC object of the type of the class and calls init().
             /* Check that we have all methods listed in resolve list. */
             const int resolve_count  = VTABLE_elements(interp,
                                                        _class->resolve_method);
-            const INTVAL cur_hll     = CURRENT_CONTEXT_FIELD(current_HLL);
+            const INTVAL cur_hll     = CURRENT_CONTEXT_FIELD(INTERP, current_HLL);
             const INTVAL num_parents = VTABLE_elements(interp, _class->parents);
             INTVAL       mro_length;
             int          i;
 
             /* don't use HLL mappings for internal-only data */
-            CURRENT_CONTEXT_FIELD(current_HLL) = 0;
+            CURRENT_CONTEXT_FIELD(INTERP, current_HLL) = 0;
 
             for (i = 0; i < resolve_count; i++) {
                 STRING * const check_meth =
@@ -1204,7 +1204,7 @@ Creates a new PMC object of the type of the class and calls init().
                 }
             }
 
-            CURRENT_CONTEXT_FIELD(current_HLL) = cur_hll;
+            CURRENT_CONTEXT_FIELD(INTERP, current_HLL) = cur_hll;
         }
 
         /* Set instantiated flag. */

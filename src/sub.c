@@ -66,10 +66,10 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
 {
     ASSERT_ARGS(new_continuation)
     Parrot_cont    * const cc     = mem_allocate_typed(Parrot_cont);
-    PMC            * const to_ctx = to ? to->to_ctx : CURRENT_CONTEXT;
+    PMC            * const to_ctx = to ? to->to_ctx : CURRENT_CONTEXT(interp);
 
     cc->to_ctx        = to_ctx;
-    cc->from_ctx      = CURRENT_CONTEXT;
+    cc->from_ctx      = CURRENT_CONTEXT(interp);
     cc->runloop_id    = 0;
     if (to) {
         cc->seg       = to->seg;
@@ -80,7 +80,7 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
         cc->address   = NULL;
     }
 
-    cc->current_results = CONTEXT_FIELD(to_ctx, current_results);
+    cc->current_results = CONTEXT_FIELD(interp, to_ctx, current_results);
     return cc;
 }
 
@@ -102,8 +102,8 @@ new_ret_continuation(PARROT_INTERP)
     ASSERT_ARGS(new_ret_continuation)
     Parrot_cont * const cc = mem_allocate_typed(Parrot_cont);
 
-    cc->to_ctx          = CURRENT_CONTEXT;
-    cc->from_ctx        = CURRENT_CONTEXT;    /* filled in during a call */
+    cc->to_ctx          = CURRENT_CONTEXT(interp);
+    cc->from_ctx        = CURRENT_CONTEXT(interp);    /* filled in during a call */
     cc->runloop_id      = 0;
     cc->seg             = interp->code;
     cc->current_results = NULL;
@@ -149,7 +149,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
     PMC *ctx = PMC_cont(cont)->from_ctx;
-    cont = CONTEXT_FIELD(ctx, current_cont);
+    cont = CONTEXT_FIELD(interp, ctx, current_cont);
 
     while (1) {
         /*
@@ -160,8 +160,8 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         if (!cont || cont->vtable != interp->vtables[enum_class_RetContinuation])
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
-        ctx  = CONTEXT_FIELD(ctx, caller_ctx);
-        cont = CONTEXT_FIELD(ctx, current_cont);
+        ctx  = CONTEXT_FIELD(interp, ctx, caller_ctx);
+        cont = CONTEXT_FIELD(interp, ctx, current_cont);
     }
 
 }
@@ -264,7 +264,7 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     info->fullname = NULL;
 
     /* is the current sub of the specified context valid? */
-    if (PMC_IS_NULL(CONTEXT_FIELD(ctx, current_sub))) {
+    if (PMC_IS_NULL(CONTEXT_FIELD(interp, ctx, current_sub))) {
         info->subname  = Parrot_str_new(interp, "???", 3);
         info->nsname   = info->subname;
         info->fullname = Parrot_str_new(interp, "??? :: ???", 10);
@@ -273,10 +273,10 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     }
 
     /* fetch Parrot_sub of the current sub in the given context */
-    if (!VTABLE_isa(interp, CONTEXT_FIELD(ctx, current_sub), CONST_STRING(interp, "Sub")))
+    if (!VTABLE_isa(interp, CONTEXT_FIELD(interp, ctx, current_sub), CONST_STRING(interp, "Sub")))
         return 1;
 
-    PMC_get_sub(interp, CONTEXT_FIELD(ctx, current_sub), sub);
+    PMC_get_sub(interp, CONTEXT_FIELD(interp, ctx, current_sub), sub);
     /* set the sub name */
     info->subname = sub->name;
 
@@ -287,18 +287,18 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     }
     else {
         info->nsname   = VTABLE_get_string(interp, sub->namespace_name);
-        info->fullname = Parrot_full_sub_name(interp, CONTEXT_FIELD(ctx, current_sub));
+        info->fullname = Parrot_full_sub_name(interp, CONTEXT_FIELD(interp, ctx, current_sub));
     }
 
     /* return here if there is no current pc */
-    if (CONTEXT_FIELD(ctx, current_pc) == NULL)
+    if (CONTEXT_FIELD(interp, ctx, current_pc) == NULL)
         return 1;
 
     /* calculate the current pc */
-    info->pc = CONTEXT_FIELD(ctx, current_pc) - sub->seg->base.data;
+    info->pc = CONTEXT_FIELD(interp, ctx, current_pc) - sub->seg->base.data;
 
     /* determine the current source file/line */
-    if (CONTEXT_FIELD(ctx, current_pc)) {
+    if (CONTEXT_FIELD(interp, ctx, current_pc)) {
         const size_t offs = info->pc;
         size_t i, n;
         opcode_t *pc = sub->seg->base.data;
@@ -346,7 +346,7 @@ Parrot_Context_infostr(PARROT_INTERP, ARGIN(PMC *ctx))
     ASSERT_ARGS(Parrot_Context_infostr)
     Parrot_Context_info info;
     STRING             *res = NULL;
-    const char * const  msg = (CURRENT_CONTEXT == ctx)
+    const char * const  msg = (CURRENT_CONTEXT(interp) == ctx)
         ? "current instr.:"
         : "called from Sub";
 
@@ -379,8 +379,8 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_find_pad)
     while (1) {
-        PMC * const lex_pad = CONTEXT_FIELD(ctx, lex_pad);
-        PMC        *outer   = CONTEXT_FIELD(ctx, outer_ctx);
+        PMC * const lex_pad = CONTEXT_FIELD(interp, ctx, lex_pad);
+        PMC        *outer   = CONTEXT_FIELD(interp, ctx, outer_ctx);
 
         if (!outer)
             return lex_pad;
@@ -408,11 +408,11 @@ void
 Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_capture_lex)
-    PMC            * const ctx          = CURRENT_CONTEXT;
+    PMC            * const ctx          = CURRENT_CONTEXT(interp);
     Parrot_Sub_attributes *current_sub;
     Parrot_Sub_attributes *sub;
 
-    PMC_get_sub(interp, CONTEXT_FIELD(ctx, current_sub), current_sub);
+    PMC_get_sub(interp, CONTEXT_FIELD(interp, ctx, current_sub), current_sub);
 
     /* MultiSub gets special treatment */
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "MultiSub"))) {
@@ -504,7 +504,7 @@ Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
 {
     ASSERT_ARGS(Parrot_continuation_check)
     PMC *to_ctx       = cc->to_ctx;
-    PMC *from_ctx     = CURRENT_CONTEXT;
+    PMC *from_ctx     = CURRENT_CONTEXT(interp);
 
     if (PMC_IS_NULL(to_ctx))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -532,7 +532,7 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
-        PMC * const sub = CONTEXT_FIELD(to_ctx, current_sub);
+        PMC * const sub = CONTEXT_FIELD(interp, to_ctx, current_sub);
 
         Parrot_io_eprintf(interp, "# Back in sub '%Ss', env %p\n",
                     Parrot_full_sub_name(interp, sub),
@@ -540,7 +540,7 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
     }
 
     /* set context */
-    CURRENT_CONTEXT      = to_ctx;
+    CURRENT_CONTEXT(interp) = to_ctx;
 }
 
 

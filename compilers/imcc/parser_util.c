@@ -869,10 +869,10 @@ imcc_compile_pir_ex(PARROT_INTERP, ARGIN(const char *s))
      * Continuations (this happens when something is the target of a :outer)
      * trying to return values using them when invoked. (See TT#500 for the
      * report of the bug this fixes). */
-    opcode_t *save_results = CURRENT_CONTEXT_FIELD(current_results);
-    CURRENT_CONTEXT_FIELD(current_results) = NULL;
+    opcode_t *save_results = CURRENT_CONTEXT_FIELD(interp, current_results);
+    CURRENT_CONTEXT_FIELD(interp, current_results) = NULL;
     sub = imcc_compile(interp, s, 0, &error_message);
-    CURRENT_CONTEXT_FIELD(current_results) = save_results;
+    CURRENT_CONTEXT_FIELD(interp, current_results) = save_results;
 
     if (sub)
         return sub;

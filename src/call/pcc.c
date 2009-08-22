@@ -341,14 +341,14 @@ static void too_many(PARROT_INTERP,
 #define PARROT_MAX(a, b) (((a)) > (b) ? (a) : (b))
 
 #define SAVE_OFF_REGS(orig, next, save) \
-        CONTEXT_FIELD((save), bp)    = CONTEXT_FIELD((orig), bp);\
-        CONTEXT_FIELD((save), bp_ps) = CONTEXT_FIELD((orig), bp_ps);\
-        CONTEXT_FIELD((orig), bp)    = CONTEXT_FIELD((next), bp);\
-        CONTEXT_FIELD((orig), bp_ps) = CONTEXT_FIELD((next), bp_ps);
+        CONTEXT_FIELD(interp, (save), bp)    = CONTEXT_FIELD(interp, (orig), bp);\
+        CONTEXT_FIELD(interp, (save), bp_ps) = CONTEXT_FIELD(interp, (orig), bp_ps);\
+        CONTEXT_FIELD(interp, (orig), bp)    = CONTEXT_FIELD(interp, (next), bp);\
+        CONTEXT_FIELD(interp, (orig), bp_ps) = CONTEXT_FIELD(interp, (next), bp_ps);
 
 #define RESTORE_REGS(orig, save) \
-        CONTEXT_FIELD((orig), bp)    = CONTEXT_FIELD((save), bp);\
-        CONTEXT_FIELD((orig), bp_ps) = CONTEXT_FIELD((save), bp_ps);
+        CONTEXT_FIELD(interp, (orig), bp)    = CONTEXT_FIELD(interp, (save), bp);\
+        CONTEXT_FIELD(interp, (orig), bp_ps) = CONTEXT_FIELD(interp, (save), bp_ps);
 
 /*
 
@@ -489,13 +489,13 @@ Parrot_init_arg_nci(PARROT_INTERP, ARGOUT(call_state *st),
     init_call_stats(st);
 
     if (PMC_IS_NULL(interp->args_signature))
-        Parrot_init_arg_op(interp, CURRENT_CONTEXT, interp->current_args,
+        Parrot_init_arg_op(interp, CURRENT_CONTEXT(interp), interp->current_args,
                            &st->src);
     else
-        Parrot_init_arg_indexes_and_sig_pmc(interp, CURRENT_CONTEXT,
+        Parrot_init_arg_indexes_and_sig_pmc(interp, CURRENT_CONTEXT(interp),
             interp->current_args, interp->args_signature, &st->src);
 
-    Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL, &st->dest);
+    Parrot_init_arg_sig(interp, CURRENT_CONTEXT(interp), sig, NULL, &st->dest);
 }
 
 
@@ -516,8 +516,8 @@ void
 Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig))
 {
     ASSERT_ARGS(Parrot_init_ret_nci)
-    PMC *ctx                 = CURRENT_CONTEXT;
-    PMC * const current_cont = CONTEXT_FIELD(ctx, current_cont);
+    PMC *ctx                 = CURRENT_CONTEXT(interp);
+    PMC * const current_cont = CONTEXT_FIELD(interp, ctx, current_cont);
 
     /* if this NCI call was a taicall, return results to caller's get_results
      * this also means that we pass the caller's register base pointer */
@@ -525,16 +525,16 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
         ctx = PMC_cont(current_cont)->to_ctx;
 
     /* TODO simplify all */
-    Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL, &st->src);
+    Parrot_init_arg_sig(interp, CURRENT_CONTEXT(interp), sig, NULL, &st->src);
 
     /* Non-constant signatures are stored in ctx->results_signature instead of
      * in the constants table. */
-    if (CONTEXT_FIELD(ctx, results_signature))
+    if (CONTEXT_FIELD(interp, ctx, results_signature))
         Parrot_init_arg_indexes_and_sig_pmc(interp, ctx,
-                CONTEXT_FIELD(ctx, current_results),
-                CONTEXT_FIELD(ctx, results_signature), &st->dest);
+                CONTEXT_FIELD(interp, ctx, current_results),
+                CONTEXT_FIELD(interp, ctx, results_signature), &st->dest);
     else
-        Parrot_init_arg_op(interp, ctx, CONTEXT_FIELD(ctx, current_results), &st->dest);
+        Parrot_init_arg_op(interp, ctx, CONTEXT_FIELD(interp, ctx, current_results), &st->dest);
 
 }
 
@@ -565,7 +565,7 @@ Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(PMC *ctx),
     ASSERT_ARGS(Parrot_init_arg_indexes_and_sig_pmc)
     if (!sig_pmc && indexes) {
         ++indexes;
-        sig_pmc = CONTEXT_FIELD(ctx, constants[*indexes])->u.key;
+        sig_pmc = CONTEXT_FIELD(interp, ctx, constants[*indexes])->u.key;
         ASSERT_SIG_PMC(sig_pmc);
         ++indexes;
     }
@@ -615,7 +615,7 @@ Parrot_init_arg_op(PARROT_INTERP, ARGIN(PMC *ctx),
 
     if (pc) {
         ++pc;
-        sig_pmc = CONTEXT_FIELD(ctx, constants[*pc])->u.key;
+        sig_pmc = CONTEXT_FIELD(interp, ctx, constants[*pc])->u.key;
         ASSERT_SIG_PMC(sig_pmc);
         ++pc;
     }
@@ -781,7 +781,7 @@ fetch_arg_sig(PARROT_INTERP, ARGMOD(call_state *st))
             break;
         case PARROT_ARG_PMC:
             if (st->src.u.sig.sig[st->src.i] == 'O')
-                UVal_pmc(st->val) = CURRENT_CONTEXT_FIELD(current_object);
+                UVal_pmc(st->val) = CURRENT_CONTEXT_FIELD(interp, current_object);
             else {
                 UVal_pmc(st->val) = va_arg(*ap, PMC *);
             }
@@ -844,7 +844,7 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
             break;
         }
         case PARROT_ARG_FLOATVAL:
-            UVal_num(st->val) = constant ? CONTEXT_FIELD(st->src.ctx, constants[idx])->u.number
+            UVal_num(st->val) = constant ? CONTEXT_FIELD(interp, st->src.ctx, constants[idx])->u.number
                                          : CTX_REG_NUM(st->src.ctx, idx);
             break;
         case PARROT_ARG_PMC:
@@ -1209,15 +1209,15 @@ clone_key_arg(PARROT_INTERP, ARGMOD(call_state *st))
             Regs_ps bp_ps;
 
             /* clone sets key values according to refered register items */
-            bp    = CURRENT_CONTEXT_FIELD(bp);
-            bp_ps = CURRENT_CONTEXT_FIELD(bp_ps);
-            CURRENT_CONTEXT_FIELD(bp)    = CONTEXT_FIELD(st->src.ctx, bp);
-            CURRENT_CONTEXT_FIELD(bp_ps) = CONTEXT_FIELD(st->src.ctx, bp_ps);
+            bp    = CURRENT_CONTEXT_FIELD(interp, bp);
+            bp_ps = CURRENT_CONTEXT_FIELD(interp, bp_ps);
+            CURRENT_CONTEXT_FIELD(interp, bp)    = CONTEXT_FIELD(interp, st->src.ctx, bp);
+            CURRENT_CONTEXT_FIELD(interp, bp_ps) = CONTEXT_FIELD(interp, st->src.ctx, bp_ps);
 
             UVal_pmc(st->val) = VTABLE_clone(interp, key);
 
-            CURRENT_CONTEXT_FIELD(bp)    = bp;
-            CURRENT_CONTEXT_FIELD(bp_ps) = bp_ps;
+            CURRENT_CONTEXT_FIELD(interp, bp)    = bp;
+            CURRENT_CONTEXT_FIELD(interp, bp_ps) = bp_ps;
 
             return;
         }
@@ -1894,9 +1894,9 @@ parrot_pass_args(PARROT_INTERP,
     }
     else /* (param_or_result == PARROT_PASS_RESULTS) */ {
         src_signature               = interp->returns_signature;
-        dest_signature              = CONTEXT_FIELD(dest_ctx, results_signature);
+        dest_signature              = CONTEXT_FIELD(interp, dest_ctx, results_signature);
         interp->returns_signature   = NULL;
-        CONTEXT_FIELD(dest_ctx, results_signature) = NULL;
+        CONTEXT_FIELD(interp, dest_ctx, results_signature) = NULL;
     }
 
     Parrot_init_arg_indexes_and_sig_pmc(interp, src_ctx, src_indexes,
@@ -1933,7 +1933,7 @@ parrot_pass_args_fromc(PARROT_INTERP, ARGIN(const char *sig),
     ASSERT_ARGS(parrot_pass_args_fromc)
     call_state st;
 
-    Parrot_init_arg_op(interp, CURRENT_CONTEXT, dest, &st.dest);
+    Parrot_init_arg_op(interp, CURRENT_CONTEXT(interp), dest, &st.dest);
     Parrot_init_arg_sig(interp, old_ctxp, sig, PARROT_VA_TO_VAPTR(ap), &st.src);
     Parrot_process_args(interp, &st, PARROT_PASS_PARAMS);
     return dest + st.dest.n + 2;
@@ -1963,7 +1963,7 @@ set_retval_util(PARROT_INTERP, ARGIN(const char *sig),
     interp->current_returns = NULL;
 
     if (todo) {
-        todo = Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL,
+        todo = Parrot_init_arg_sig(interp, CURRENT_CONTEXT(interp), sig, NULL,
             &st->dest);
 
         if (todo) {
@@ -2632,8 +2632,8 @@ set_context_sig_params(PARROT_INTERP, ARGIN(const char *signature),
 
     interp->current_args   = indexes[0];
     interp->args_signature = sigs[0];
-    CONTEXT_FIELD(ctx, current_results)   = indexes[1];
-    CONTEXT_FIELD(ctx, results_signature) = sigs[1];
+    CONTEXT_FIELD(interp, ctx, current_results)   = indexes[1];
+    CONTEXT_FIELD(interp, ctx, results_signature) = sigs[1];
     return ret_x;
 }
 
@@ -2867,14 +2867,14 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
 
     interp->current_args   = arg_indexes;
     interp->args_signature = args_sig;
-    CONTEXT_FIELD(ctx, current_results)   = result_indexes;
-    CONTEXT_FIELD(ctx, results_signature) = results_sig;
+    CONTEXT_FIELD(interp, ctx, current_results)   = result_indexes;
+    CONTEXT_FIELD(interp, ctx, results_signature) = results_sig;
 
     /* arg_accessors assigned in loop above */
 
     interp->current_object       = pmc;
     interp->current_cont         = NEED_CONTINUATION;
-    CONTEXT_FIELD(ctx, current_cont) = ret_cont;
+    CONTEXT_FIELD(interp, ctx, current_cont) = ret_cont;
     PMC_cont(ret_cont)->from_ctx = ctx;
     pccinvoke_meth               = VTABLE_find_method(interp, pmc, method_name);
 
@@ -3017,7 +3017,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         interp->current_object       = PMCNULL;
     }
     interp->current_cont             = NEED_CONTINUATION;
-    CONTEXT_FIELD(ctx, current_cont) = ret_cont;
+    CONTEXT_FIELD(interp, ctx, current_cont) = ret_cont;
     PMC_cont(ret_cont)->from_ctx     = ctx;
 
     /* Invoke the function */

@@ -320,13 +320,13 @@ PMC *
 Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
 {
     ASSERT_ARGS(Parrot_push_context)
-    PMC * const old = CURRENT_CONTEXT;
+    PMC * const old = CURRENT_CONTEXT(interp);
     PMC * const ctx = Parrot_set_new_context(interp, n_regs_used);
 
-    CONTEXT_FIELD(ctx, caller_ctx)  = old;
+    CONTEXT_FIELD(interp, ctx, caller_ctx)  = old;
 
     /* doesn't change */
-    CONTEXT_FIELD(ctx, current_sub) = CONTEXT_FIELD(old, current_sub);
+    CONTEXT_FIELD(interp, ctx, current_sub) = CONTEXT_FIELD(interp, old, current_sub);
 
     /* copy more ? */
     return ctx;
@@ -349,11 +349,11 @@ void
 Parrot_pop_context(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_pop_context)
-    PMC * const ctx = CURRENT_CONTEXT;
-    PMC * const old = CONTEXT_FIELD(ctx, caller_ctx);
+    PMC * const ctx = CURRENT_CONTEXT(interp);
+    PMC * const old = CONTEXT_FIELD(interp, ctx, caller_ctx);
 
     /* restore old, set cached interpreter base pointers */
-    CURRENT_CONTEXT      = old;
+    CURRENT_CONTEXT(interp) = old;
 }
 
 
@@ -437,10 +437,10 @@ PMC *
 Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 {
     ASSERT_ARGS(Parrot_set_new_context)
-    PMC *old = CURRENT_CONTEXT;
+    PMC *old = CURRENT_CONTEXT(interp);
     PMC *ctx = Parrot_alloc_context(interp, number_regs_used, old);
 
-    CURRENT_CONTEXT          = ctx;
+    CURRENT_CONTEXT(interp) = ctx;
 
     return ctx;
 }
@@ -470,7 +470,7 @@ Parrot_clear_i(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_i)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_INT]); ++i)
+    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_INT]); ++i)
         REG_INT(interp, i) = 0;
 }
 
@@ -491,7 +491,7 @@ Parrot_clear_s(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_s)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_STR]); ++i)
+    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_STR]); ++i)
         REG_STR(interp, i) = NULL;
 }
 
@@ -512,7 +512,7 @@ Parrot_clear_p(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_p)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_PMC]); ++i)
+    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_PMC]); ++i)
         REG_PMC(interp, i) = PMCNULL;
 }
 
@@ -533,7 +533,7 @@ Parrot_clear_n(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_n)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(n_regs_used[REGNO_NUM]); ++i)
+    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_NUM]); ++i)
         REG_NUM(interp, i) = 0.0;
 }
 

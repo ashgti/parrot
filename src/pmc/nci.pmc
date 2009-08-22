@@ -331,7 +331,7 @@ shifted down.
          */
         if (cont && cont != NEED_CONTINUATION &&
                 (PObj_get_FLAGS(cont) & SUB_FLAG_TAILCALL)) {
-            cont = CURRENT_CONTEXT_FIELD(current_cont);
+            cont = CURRENT_CONTEXT_FIELD(INTERP, current_cont);
             next = VTABLE_invoke(INTERP, cont, next);
         }
 

@@ -124,9 +124,9 @@ typedef Parrot_Run_core_t Run_Cores;
 #define Interp_debug_CLEAR(interp, flag) ((interp)->debug_flags &= ~(flag))
 #define Interp_debug_TEST(interp, flag)  ((interp)->debug_flags & (flag))
 
-#define Interp_trace_SET(interp, flag)   (CURRENT_CONTEXT_FIELD(trace_flags) |= (flag))
-#define Interp_trace_CLEAR(interp, flag) (CURRENT_CONTEXT_FIELD(trace_flags) &= ~(flag))
-#define Interp_trace_TEST(interp, flag)  (CURRENT_CONTEXT_FIELD(trace_flags) & (flag))
+#define Interp_trace_SET(interp, flag)   (CURRENT_CONTEXT_FIELD(interp, trace_flags) |= (flag))
+#define Interp_trace_CLEAR(interp, flag) (CURRENT_CONTEXT_FIELD(interp, trace_flags) &= ~(flag))
+#define Interp_trace_TEST(interp, flag)  (CURRENT_CONTEXT_FIELD(interp, trace_flags) & (flag))
 
 #define Interp_core_SET(interp, core)   ((interp)->run_core = (core))
 #define Interp_core_TEST(interp, core)  ((interp)->run_core == (core))
@@ -200,9 +200,9 @@ typedef struct _Prederef {
 /*
  * Helper macros to fetch fields from context.
  */
-#define CURRENT_CONTEXT             (interp->ctx)
-#define CONTEXT_FIELD(ctx, name)    ((Parrot_ctx_get_context(interp, ctx))->name)
-#define CURRENT_CONTEXT_FIELD(name) CONTEXT_FIELD(interp->ctx, name)
+#define CURRENT_CONTEXT(interp)             (interp->ctx)
+#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_ctx_get_context(interp, ctx))->name)
+#define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD(interp, interp->ctx, name)
 
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated

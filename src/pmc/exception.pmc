@@ -763,7 +763,7 @@ sub, or for the point of the call a level deeper for the rest.
                 Parrot_Sub_attributes *sub;
 
                 /* Get sub and put it in the hash. */
-                PMC *sub_pmc = CONTEXT_FIELD(cur_ctx, current_sub);
+                PMC *sub_pmc = CONTEXT_FIELD(interp, cur_ctx, current_sub);
 
                 if (!sub_pmc)
                     sub_pmc = PMCNULL;
@@ -778,7 +778,7 @@ sub, or for the point of the call a level deeper for the rest.
                         PackFile_ByteCode *seg = sub->seg;
                         opcode_t          *pc  = cont && cur_ctx == cont->to_ctx
                                                ? cont->address
-                                               : CONTEXT_FIELD(cur_ctx, current_pc);
+                                               : CONTEXT_FIELD(interp, cur_ctx, current_pc);
 
                         annotations = PackFile_Annotations_lookup(interp,
                                         seg->annotations, pc - seg->base.data,
@@ -793,7 +793,7 @@ sub, or for the point of the call a level deeper for the rest.
 
                 /* Push frame and go to next caller. */
                 VTABLE_push_pmc(interp, result, frame);
-                cur_ctx = CONTEXT_FIELD(cur_ctx, caller_ctx);
+                cur_ctx = CONTEXT_FIELD(interp, cur_ctx, caller_ctx);
             }
         }
 

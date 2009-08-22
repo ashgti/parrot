@@ -20,10 +20,10 @@
  * Macros to make accessing registers more convenient/readable.
  */
 
-#define CTX_REG_NUM(p, x) CONTEXT_FIELD(p, bp.regs_n[-1L-(x)])
-#define CTX_REG_INT(p, x) CONTEXT_FIELD(p, bp.regs_i[x])
-#define CTX_REG_PMC(p, x) CONTEXT_FIELD(p, bp_ps.regs_p[-1L-(x)])
-#define CTX_REG_STR(p, x) CONTEXT_FIELD(p, bp_ps.regs_s[x])
+#define CTX_REG_NUM(p, x) CONTEXT_FIELD(interp, p, bp.regs_n[-1L-(x)])
+#define CTX_REG_INT(p, x) CONTEXT_FIELD(interp, p, bp.regs_i[x])
+#define CTX_REG_PMC(p, x) CONTEXT_FIELD(interp, p, bp_ps.regs_p[-1L-(x)])
+#define CTX_REG_STR(p, x) CONTEXT_FIELD(interp, p, bp_ps.regs_s[x])
 
 #define REG_NUM(interp, x) CTX_REG_NUM((interp)->ctx, (x))
 #define REG_INT(interp, x) CTX_REG_INT((interp)->ctx, (x))

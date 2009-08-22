@@ -216,7 +216,7 @@ Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
                 {
                 PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp,
                                         interp->HLL_namespace,
-                                        CURRENT_CONTEXT_FIELD(current_HLL));
+                                        CURRENT_CONTEXT_FIELD(interp, current_HLL));
                 PMC * const ns     = Parrot_get_namespace_keyed(interp,
                                         hll_ns, key);
 
@@ -427,7 +427,7 @@ Parrot_oo_get_class_str(PARROT_INTERP, ARGIN(STRING *name))
 
     /* First check in current HLL namespace */
     PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp, interp->HLL_namespace,
-                           CURRENT_CONTEXT_FIELD(current_HLL));
+                           CURRENT_CONTEXT_FIELD(interp, current_HLL));
     PMC * const ns     = Parrot_get_namespace_keyed_str(interp, hll_ns, name);
     PMC * const _class = PMC_IS_NULL(ns)
                        ? PMCNULL : VTABLE_get_class(interp, ns);

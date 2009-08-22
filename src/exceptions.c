@@ -253,7 +253,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
     /* Set up the continuation context of the handler in the interpreter. */
     else if (PMC_cont(handler)->current_results)
         address = pass_exception_args(interp, "P", address,
-                CURRENT_CONTEXT, exception);
+                CURRENT_CONTEXT(interp), exception);
 
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {
         /* it's a C exception handler */
@@ -389,7 +389,8 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
 
     /* Note the thrower.
      * XXX TT#596 - pass in current context instead when we have context PMCs. */
-    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), CURRENT_CONTEXT_FIELD(current_cont));
+    /* Don't split line. It will break CONST_STRING handling */
+    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), CURRENT_CONTEXT_FIELD(interp, current_cont));
 
     /* it's a C exception handler */
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {
@@ -402,7 +403,7 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     address = VTABLE_invoke(interp, handler, NULL);
     if (PMC_cont(handler)->current_results)
         address = pass_exception_args(interp, "P", address,
-                CURRENT_CONTEXT, exception);
+                CURRENT_CONTEXT(interp), exception);
     PARROT_ASSERT(return_point->handler_start == NULL);
     return_point->handler_start = address;
     longjmp(return_point->resume, 2);

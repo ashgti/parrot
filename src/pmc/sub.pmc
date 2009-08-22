@@ -274,7 +274,7 @@ Invokes the subroutine.
          *
          */
         pc                   = sub->seg->base.data + sub->start_offs;
-        caller_ctx           = CURRENT_CONTEXT;
+        caller_ctx           = CURRENT_CONTEXT(interp);
         ccont                = INTERP->current_cont;
         INTERP->current_cont = NULL;
 
@@ -286,13 +286,13 @@ Invokes the subroutine.
         /* plain subroutine call
          * create new context, place it in interpreter */
         context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
-        CONTEXT_FIELD(context, current_sub)  = SELF;
-        CONTEXT_FIELD(context, caller_ctx)   = caller_ctx;
-        CONTEXT_FIELD(context, current_pc)   = pc;
-        CONTEXT_FIELD(context, current_cont) = ccont;
+        CONTEXT_FIELD(interp, context, current_sub)  = SELF;
+        CONTEXT_FIELD(interp, context, caller_ctx)   = caller_ctx;
+        CONTEXT_FIELD(interp, context, current_pc)   = pc;
+        CONTEXT_FIELD(interp, context, current_cont) = ccont;
 
         /* check recursion/call depth */
-        if (++CONTEXT_FIELD(context, recursion_depth) > INTERP->recursion_limit)
+        if (++CONTEXT_FIELD(interp, context, recursion_depth) > INTERP->recursion_limit)
             Parrot_ex_throw_from_c_args(INTERP, next, CONTROL_ERROR,
                     "maximum recursion depth exceeded");
 
@@ -309,37 +309,37 @@ Invokes the subroutine.
         }
 
         if (!PMC_IS_NULL(INTERP->current_object)) {
-            CONTEXT_FIELD(context, current_object) = INTERP->current_object;
+            CONTEXT_FIELD(interp, context, current_object) = INTERP->current_object;
             INTERP->current_object  = NULL;
         }
 
-        CONTEXT_FIELD(context, current_HLL)       = sub->HLL_id;
-        CONTEXT_FIELD(context, current_namespace) = sub->namespace_stash;
+        CONTEXT_FIELD(interp, context, current_HLL)       = sub->HLL_id;
+        CONTEXT_FIELD(interp, context, current_namespace) = sub->namespace_stash;
 
         /* create pad if needed
          * TODO move this up in front of argument passing
          *      and factor out common code with coroutine pmc
          */
         if (!PMC_IS_NULL(sub->lex_info)) {
-            CONTEXT_FIELD(context, lex_pad) = pmc_new_init(INTERP,
+            CONTEXT_FIELD(interp, context, lex_pad) = pmc_new_init(INTERP,
                     Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
                     sub->lex_info);
-            VTABLE_set_pointer(INTERP, CONTEXT_FIELD(context, lex_pad), context);
+            VTABLE_set_pointer(INTERP, CONTEXT_FIELD(interp, context, lex_pad), context);
         }
 
         if (sub->outer_ctx) {
             /* set outer context */
-            CONTEXT_FIELD(context, outer_ctx) = sub->outer_ctx;
+            CONTEXT_FIELD(interp, context, outer_ctx) = sub->outer_ctx;
         }
         else {
             /* autoclose */
             PMC *c;
-            for (c = context; !CONTEXT_FIELD(c, outer_ctx); c = CONTEXT_FIELD(c, outer_ctx)) {
+            for (c = context; !CONTEXT_FIELD(interp, c, outer_ctx); c = CONTEXT_FIELD(interp, c, outer_ctx)) {
 
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
 
-                PMC_get_sub(INTERP, CONTEXT_FIELD(c, current_sub), current_sub);
+                PMC_get_sub(INTERP, CONTEXT_FIELD(interp, c, current_sub), current_sub);
                 outer_pmc   = current_sub->outer_sub;
 
                 if (PMC_IS_NULL(outer_pmc))
@@ -350,20 +350,20 @@ Invokes the subroutine.
                 if (!outer_sub->ctx) {
                     PMC * const dummy = Parrot_alloc_context(INTERP,
                                                 outer_sub->n_regs_used, NULL);
-                    CONTEXT_FIELD(dummy, current_sub)    = outer_pmc;
+                    CONTEXT_FIELD(interp, dummy, current_sub)    = outer_pmc;
 
                     if (!PMC_IS_NULL(outer_sub->lex_info)) {
-                        CONTEXT_FIELD(dummy, lex_pad )= pmc_new_init(INTERP,
+                        CONTEXT_FIELD(interp, dummy, lex_pad )= pmc_new_init(INTERP,
                                Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
                                outer_sub->lex_info);
-                        VTABLE_set_pointer(INTERP, CONTEXT_FIELD(dummy, lex_pad), dummy);
+                        VTABLE_set_pointer(INTERP, CONTEXT_FIELD(interp, dummy, lex_pad), dummy);
                     }
 
-                    CONTEXT_FIELD(dummy, outer_ctx) = outer_sub->outer_ctx;
+                    CONTEXT_FIELD(interp, dummy, outer_ctx) = outer_sub->outer_ctx;
                     outer_sub->ctx = dummy;
                 }
 
-                CONTEXT_FIELD(c, outer_ctx) = outer_sub->ctx;
+                CONTEXT_FIELD(interp, c, outer_ctx) = outer_sub->ctx;
             }
         }
 
@@ -377,10 +377,10 @@ Invokes the subroutine.
             &&     pc[2] == PARROT_OP_get_params_pc))) {
 
                 /* TODO keep it or resize it */
-                --CONTEXT_FIELD(context, recursion_depth);
+                --CONTEXT_FIELD(interp, context, recursion_depth);
 
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-                CONTEXT_FIELD(context, caller_ctx) = CONTEXT_FIELD(caller_ctx, caller_ctx);
+                CONTEXT_FIELD(interp, context, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
 
                 //Parrot_free_context(INTERP, caller_ctx, 1);
             }
@@ -968,12 +968,12 @@ slurpy arguments).
          * outer context. */
 
         /* (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub */
-        tmp = CONTEXT_FIELD(CURRENT_CONTEXT_FIELD(caller_ctx), caller_ctx);
-        if (CONTEXT_FIELD(tmp, current_sub) == outer)
+        tmp = CONTEXT_FIELD(interp, CURRENT_CONTEXT_FIELD(interp, caller_ctx), caller_ctx);
+        if (CONTEXT_FIELD(interp, tmp, current_sub) == outer)
             sub->outer_ctx = tmp;
         /* else if (CONTEXT(interp)->caller_ctx->current_sub == outer) */
-        else if (CONTEXT_FIELD(CURRENT_CONTEXT_FIELD(caller_ctx), current_sub) == outer)
-            sub->outer_ctx = CURRENT_CONTEXT_FIELD(caller_ctx);
+        else if (CONTEXT_FIELD(interp, CURRENT_CONTEXT_FIELD(interp, caller_ctx), current_sub) == outer)
+            sub->outer_ctx = CURRENT_CONTEXT_FIELD(interp, caller_ctx);
     }
 
     METHOD get_multisig() {

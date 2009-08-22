@@ -482,10 +482,10 @@ void
 Parrot_cx_add_handler_local(PARROT_INTERP, ARGIN(PMC *handler))
 {
     ASSERT_ARGS(Parrot_cx_add_handler_local)
-    if (PMC_IS_NULL(CURRENT_CONTEXT_FIELD(handlers)))
-        CURRENT_CONTEXT_FIELD(handlers) = pmc_new(interp, enum_class_ResizablePMCArray);
+    if (PMC_IS_NULL(CURRENT_CONTEXT_FIELD(interp, handlers)))
+        CURRENT_CONTEXT_FIELD(interp, handlers) = pmc_new(interp, enum_class_ResizablePMCArray);
 
-    VTABLE_unshift_pmc(interp, CURRENT_CONTEXT_FIELD(handlers), handler);
+    VTABLE_unshift_pmc(interp, CURRENT_CONTEXT_FIELD(interp, handlers), handler);
 
 }
 
@@ -506,7 +506,7 @@ void
 Parrot_cx_delete_handler_local(PARROT_INTERP, ARGIN(STRING *handler_type))
 {
     ASSERT_ARGS(Parrot_cx_delete_handler_local)
-    PMC *handlers  = CURRENT_CONTEXT_FIELD(handlers);
+    PMC *handlers  = CURRENT_CONTEXT_FIELD(interp, handlers);
 
     if (PMC_IS_NULL(handlers))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -577,7 +577,7 @@ INTVAL
 Parrot_cx_count_handlers_local(PARROT_INTERP, ARGIN(STRING *handler_type))
 {
     ASSERT_ARGS(Parrot_cx_count_handlers_local)
-    PMC *handlers = CURRENT_CONTEXT_FIELD(handlers);
+    PMC *handlers = CURRENT_CONTEXT_FIELD(interp, handlers);
     INTVAL elements;
 
     if (PMC_IS_NULL(handlers))
@@ -865,10 +865,10 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
          * Note that we are now trying to handle the new exception,
          * not the initial task argument (exception or whatever).
          */
-        context = CONTEXT_FIELD(keep_context, caller_ctx);
+        context = CONTEXT_FIELD(interp, keep_context, caller_ctx);
         keep_context = NULL;
-        if (context && !PMC_IS_NULL(CONTEXT_FIELD(context, handlers)))
-            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(context, handlers));
+        if (context && !PMC_IS_NULL(CONTEXT_FIELD(interp, context, handlers)))
+            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(interp, context, handlers));
         else
             iter = PMCNULL;
     }
@@ -884,9 +884,9 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
         context = (PMC *)VTABLE_get_pointer(interp, task);
     }
     else {
-        context = CURRENT_CONTEXT;
-        if (!PMC_IS_NULL(CONTEXT_FIELD(context, handlers)))
-            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(context, handlers));
+        context = CURRENT_CONTEXT(interp);
+        if (!PMC_IS_NULL(CONTEXT_FIELD(interp, context, handlers)))
+            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(interp, context, handlers));
     }
 
     }
@@ -916,9 +916,9 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
         }
 
         /* Continue the search in the next context up the chain. */
-        context = CONTEXT_FIELD(context, caller_ctx);
-        if (context && !PMC_IS_NULL(CONTEXT_FIELD(context, handlers)))
-            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(context, handlers));
+        context = CONTEXT_FIELD(interp, context, caller_ctx);
+        if (context && !PMC_IS_NULL(CONTEXT_FIELD(interp, context, handlers)))
+            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(interp, context, handlers));
         else
             iter = PMCNULL;
     }

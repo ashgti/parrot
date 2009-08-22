@@ -221,7 +221,7 @@ destination to continue execution.
 
     VTABLE opcode_t *invoke(void *next) {
         Parrot_cont *cc           = PMC_cont(SELF);
-        PMC         *from_ctx     = CURRENT_CONTEXT;
+        PMC         *from_ctx     = CURRENT_CONTEXT(interp);
         PMC         *to_ctx       = cc->to_ctx;
         opcode_t    *pc           = cc->address;
         UNUSED(next)
@@ -231,9 +231,9 @@ destination to continue execution.
 
         /* pass args to where caller wants result */
         if (cc->current_results)
-            CONTEXT_FIELD(to_ctx, current_results) = cc->current_results;
+            CONTEXT_FIELD(interp, to_ctx, current_results) = cc->current_results;
 
-        if (CONTEXT_FIELD(to_ctx, current_results) && INTERP->current_args) {
+        if (CONTEXT_FIELD(interp, to_ctx, current_results) && INTERP->current_args) {
             /*
              * the register pointer is already switched back
              * to the caller, therefore the registers of the
@@ -242,7 +242,7 @@ destination to continue execution.
              * therefore we have to block GC
              */
             opcode_t *src_indexes  = interp->current_args;
-            opcode_t *dest_indexes = CONTEXT_FIELD(to_ctx, current_results);
+            opcode_t *dest_indexes = CONTEXT_FIELD(interp, to_ctx, current_results);
             interp->current_args   = NULL;
 
             Parrot_block_GC_mark(INTERP);
@@ -286,7 +286,7 @@ Experimental: return caller PMC or PMCNULL if none.
 
     METHOD caller() {
         Parrot_cont *cc     = PMC_cont(SELF);
-        PMC         *caller = CONTEXT_FIELD(cc->to_ctx, current_sub);
+        PMC         *caller = CONTEXT_FIELD(interp, cc->to_ctx, current_sub);
         Parrot_Sub_attributes  *sub;
 
         if (!caller)
@@ -312,7 +312,7 @@ Experimental: return continuation PMC of this Continuation or PMCNULL if none.
 
     METHOD continuation() {
         Parrot_cont *cc   = PMC_cont(SELF);
-        PMC         *cont = CONTEXT_FIELD(cc->to_ctx, current_cont);
+        PMC         *cont = CONTEXT_FIELD(interp, cc->to_ctx, current_cont);
 
         if (cont)
             RETURN(PMC *cont);
