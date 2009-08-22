@@ -1351,16 +1351,19 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
     for (return_index = 0; return_index < raw_return_count; return_index++) {
         INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, return_index);
-        INTVAL result_flags = VTABLE_get_pmc_keyed_int(interp, caller_return_flags, return_list_index);
+        INTVAL result_flags;
 
         const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(return_flags);
         const INTVAL raw_index = raw_returns[return_index + 2];
         PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
-        STRING *item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
+        STRING *item_sig;
 
         /* Gracefully ignore extra returns when error checking is off. */
         if (PMC_IS_NULL(result_item))
             break; /* Go on to next return arg. */
+
+        result_flags = VTABLE_get_pmc_keyed_int(interp, caller_return_flags, return_list_index);
+        item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
 
         /* If we're returning into a slurpy, set up a collection to hold the returns */
         if (result_flags & PARROT_ARG_SLURPY_ARRAY && filling_slurpy == 0) {
