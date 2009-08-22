@@ -17,11 +17,20 @@
 #include "parrot/string.h"
 #include "parrot/compiler.h"
 
+/* Forward declaration of Context PMC attributes */
+struct Parrot_Context_attributes;
+
+/*
+Parrot_ctx_get_attributes has internal assert. Which is quite useful during development.
+#define PMC_get_context(pmc) \
+    (PMC_IS_NULL(pmc) ? NULL : PARROT_CONTEXT(pmc))
+*/
+#define PMC_get_context(pmc) Parrot_ctx_get_attributes(pmc)
+
 /*
  * Macros to make accessing registers more convenient/readable.
  */
 
-/* Macros for interfacing with the Parrot_Context structure */
 #define CTX_REG_NUM(ctx, x) (ctx)->bp.regs_n[-1L-(x)]
 #define CTX_REG_INT(ctx, x) (ctx)->bp.regs_i[x]
 #define CTX_REG_PMC(ctx, x) (ctx)->bp_ps.regs_p[-1L-(x)]
@@ -33,10 +42,10 @@
 #define REG_PMC(interp, x) (*(Parrot_ctx_PMC_reg((interp), (interp)->ctx, (x))))
 #define REG_STR(interp, x) (*(Parrot_ctx_STRING_reg((interp), (interp)->ctx, (x))))
 
-#define PMCCTX_REG_NUM(ctx, x) PARROT_CONTEXT(ctx)->bp.regs_n[-1L-(x)]
-#define PMCCTX_REG_INT(ctx, x) PARROT_CONTEXT(ctx)->bp.regs_i[x]
-#define PMCCTX_REG_PMC(ctx, x) PARROT_CONTEXT(ctx)->bp_ps.regs_p[-1L-(x)]
-#define PMCCTX_REG_STR(ctx, x) PARROT_CONTEXT(ctx)->bp_ps.regs_s[x]
+#define PMCCTX_REG_NUM(ctx, x) PMC_get_context(ctx)->bp.regs_n[-1L-(x)]
+#define PMCCTX_REG_INT(ctx, x) PMC_get_context(ctx)->bp.regs_i[x]
+#define PMCCTX_REG_PMC(ctx, x) PMC_get_context(ctx)->bp_ps.regs_p[-1L-(x)]
+#define PMCCTX_REG_STR(ctx, x) PMC_get_context(ctx)->bp_ps.regs_s[x]
 
 /*
  * and a set of macros to access a register by offset, used
@@ -51,7 +60,7 @@
 #define REGNO_STR 2
 #define REGNO_PMC 3
 
-#define __CTX PARROT_CONTEXT(interp->ctx)
+#define __CTX PMC_get_context(interp->ctx)
 #define _SIZEOF_INTS    (sizeof (INTVAL) * __CTX->n_regs_used[REGNO_INT])
 #define _SIZEOF_NUMS    (sizeof (FLOATVAL) * __CTX->n_regs_used[REGNO_NUM])
 #define _SIZEOF_PMCS    (sizeof (PMC*) * __CTX->n_regs_used[REGNO_PMC])
@@ -62,10 +71,6 @@
 #define REG_OFFS_PMC(x) (_SIZEOF_INTS + sizeof (PMC*) * \
         (__CTX->n_regs_used[REGNO_PMC] - 1L - (x)))
 #define REG_OFFS_STR(x) (sizeof (STRING*) * (x) + _SIZEOF_INTS + _SIZEOF_PMCS)
-
-/* Forward declaration of Context PMC attributes */
-struct Parrot_Context_attributes;
-//typedef struct Parrot_Context_attributes Parrot_Context_attributes;
 
 /* HEADERIZER BEGIN: src/gc/alloc_register.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -115,6 +120,10 @@ FLOATVAL * Parrot_ctx_FLOATVAL_reg(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_CAN_RETURN_NULL
+struct Parrot_Context_attributes* Parrot_ctx_get_attributes(ARGIN(PMC *ctx))
+        __attribute__nonnull__(1);
+
 PARROT_CANNOT_RETURN_NULL
 PMC * Parrot_ctx_get_caller(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
@@ -163,6 +172,8 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_ctx_FLOATVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_ctx_get_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_ctx_get_caller __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)

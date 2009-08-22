@@ -457,7 +457,15 @@ Parrot_ctx_get_caller(PARROT_INTERP, ARGIN(PMC *ctx))
     return PARROT_CONTEXT(ctx)->caller_ctx;
 }
 
-
+PARROT_CAN_RETURN_NULL
+struct Parrot_Context_attributes*
+Parrot_ctx_get_attributes(ARGIN(PMC *ctx))
+{
+    if (PMC_IS_NULL(ctx))
+        return NULL;
+    PARROT_ASSERT(ctx->vtable->base_type == enum_class_Context);
+    return PARROT_CONTEXT(ctx);
+}
 
 /*
 
