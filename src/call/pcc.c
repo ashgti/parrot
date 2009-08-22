@@ -948,7 +948,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                         break;
                 }
                 param_name = NULL;
-                break; /* on to next parameter */
+                continue; /* on to next parameter */
             }
 
             /* If the named parameter doesn't have a corresponding named
@@ -992,7 +992,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                     break;
             }
 
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
 
         /* Otherwise, we have a positional argument to assign to the
@@ -1103,7 +1103,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                 *int_pointer = got_optional;
             }
             got_optional = -1;
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
         /* Collected ("slurpy") parameter */
         else if (param_flags & PARROT_ARG_SLURPY_ARRAY) {
@@ -1137,7 +1137,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                 }
             }
 
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
         /* Named non-collected */
         else if (param_flags & PARROT_ARG_NAME) {
@@ -1146,7 +1146,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
             STRING ** const string_pointer = va_arg(args, STRING**);
             param_name = *string_pointer;
 
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
         else if (!STRING_IS_NULL(param_name)) {
             /* The previous parameter was a parameter name. Now set the
@@ -1189,7 +1189,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                         break;
                 }
                 param_name = NULL;
-                break; /* on to next parameter */
+                continue; /* on to next parameter */
             }
 
             /* If the named parameter doesn't have a corresponding named
@@ -1245,7 +1245,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                     break;
             }
 
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
 
         /* Otherwise, we have a positional argument to assign to the
@@ -1361,7 +1361,7 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
 
         /* Gracefully ignore extra returns when error checking is off. */
         if (PMC_IS_NULL(result_item))
-            break; /* Go on to next return arg. */
+            continue; /* Go on to next return arg. */
 
         result_flags = VTABLE_get_pmc_keyed_int(interp, caller_return_flags, return_list_index);
         item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
@@ -1508,7 +1508,7 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 
         /* Gracefully ignore extra returns when error checking is off. */
         if (PMC_IS_NULL(result_item))
-            break; /* Go on to next return arg. */
+            continue; /* Go on to next return arg. */
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
