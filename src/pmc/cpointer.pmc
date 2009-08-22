@@ -344,7 +344,11 @@ to a string or PMC).
             *str_pointer = value;
         }
         else if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "P"))) {
-            PMC ** const pmc_pointer = (PMC **) data->pointer;
+            PMC ** pmc_pointer = (PMC **) data->pointer;
+            if (*pmc_pointer == PMCNULL) {
+                PMC * const new_str = pmc_new(interp, enum_class_String);
+                *pmc_pointer = (PMC *) new_str;
+            }
             VTABLE_set_string_native(interp, *pmc_pointer, value);
         }
         else {
