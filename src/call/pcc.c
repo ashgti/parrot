@@ -458,11 +458,12 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 else
                     string_value = CTX_REG_STR(ctx, raw_index);
 
-                if (arg_flags & PARROT_ARG_NAME)
+                if (arg_flags & PARROT_ARG_NAME) {
                     extract_named_arg_from_op(interp, call_object, string_value,
-                            raw_sig, raw_args, raw_index);
-                else
-                    VTABLE_push_string(interp, call_object, string_value);
+                            raw_sig, raw_args, ++arg_index);
+                }
+
+                VTABLE_push_string(interp, call_object, string_value);
 
                 break;
             }
@@ -878,7 +879,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
 
             CTX_REG_INT(ctx, raw_index) = got_optional;
             got_optional = -1;
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
         /* Collected ("slurpy") parameter */
         else if (param_flags & PARROT_ARG_SLURPY_ARRAY) {
@@ -906,7 +907,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 CTX_REG_PMC(ctx, raw_index) = collect_positional;
             }
 
-            break; /* on to next parameter */
+            continue; /* on to next parameter */
         }
         /* Named non-collected */
         else if (param_flags & PARROT_ARG_NAME) {
@@ -916,7 +917,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                                ? ctx->constants[raw_index]->u.string
                                : CTX_REG_STR(ctx, raw_index);
 
-            break; /* on to next parameter */
+            continue;
         }
         else if (!STRING_IS_NULL(param_name)) {
             /* The previous parameter was a parameter name. Now set the
