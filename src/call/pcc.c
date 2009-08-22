@@ -1360,13 +1360,14 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         if (PMC_IS_NULL(result_item))
             continue; /* Go on to next return arg. */
 
-        result_flags = VTABLE_get_pmc_keyed_int(interp, caller_return_flags, return_list_index);
+        result_flags = VTABLE_get_integer_keyed_int(interp, caller_return_flags, return_list_index);
         item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer)));
+                    VTABLE_set_pmc(interp, result_item,
+                            pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer)));
                 }
                 if (constant)
                     VTABLE_set_integer_native(interp, result_item, raw_index);
@@ -1376,7 +1377,8 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 break;
             case PARROT_ARG_FLOATVAL:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float)));
+                    VTABLE_set_pmc(interp, result_item,
+                        pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float)));
                 }
                 if (constant)
                     VTABLE_set_number_native(interp, result_item,
@@ -1387,7 +1389,8 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 break;
             case PARROT_ARG_STRING:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String)));
+                    VTABLE_set_pmc(interp, result_item,
+                            pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String)));
                 }
                 if (constant)
                     VTABLE_set_string_native(interp, result_item, Parrot_str_new_COW(interp,
