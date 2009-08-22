@@ -152,11 +152,12 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     Parrot_block_GC_mark(interp);
     Parrot_block_GC_sweep(interp);
 
-    create_initial_context(interp);
+    //create_initial_context(interp);
+    interp->ctx = PMCNULL;
     interp->resume_flag = RESUME_INITIAL;
 
     /* main is called as a Sub too - this will get depth 0 then */
-    CURRENT_CONTEXT_FIELD(recursion_depth) = (UINTVAL)-1;
+    //CURRENT_CONTEXT_FIELD(recursion_depth) = (UINTVAL)-1;
     interp->recursion_limit = RECURSION_LIMIT;
 
     /* PANIC will fail until this is done */

@@ -209,6 +209,8 @@ parrot_global_setup_2(PARROT_INTERP)
     PMC *classname_hash, *iglobals;
     int  i;
 
+    create_initial_context(interp);
+
     /* create the namespace root stash */
     interp->root_namespace = pmc_new(interp, enum_class_NameSpace);
     Parrot_init_HLL(interp);
