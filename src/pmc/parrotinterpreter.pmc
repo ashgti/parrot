@@ -209,15 +209,13 @@ Class initialization.
     void class_init() {
         const int typ = enum_class_ParrotInterpreter;
 
-        if (pass) {
-            /* TODO unify and fix signatures */
-            register_nci_method(INTERP, typ,
-                    F2DPTR(pt_thread_yield), "yield", "v");
+        /* TODO unify and fix signatures */
+        register_nci_method(INTERP, typ,
+                F2DPTR(pt_thread_yield), "yield", "v");
 
-            /* misc functions */
-            register_nci_method(INTERP, typ,
-                    F2DPTR(recursion_limit), "recursion_limit", "iJOi");
-        }
+        /* misc functions */
+        register_nci_method(INTERP, typ,
+                F2DPTR(recursion_limit), "recursion_limit", "iJOi");
     }
 
 /*
@@ -240,8 +238,9 @@ Initializes the interpreter.
             Parrot_ParrotInterpreter_attributes *attrs =
                 mem_allocate_zeroed_typed(Parrot_ParrotInterpreter_attributes);
             PMC_data(SELF) = attrs;
+        }
+        if (!PMC_interp(SELF)) {
             create_interp(SELF, INTERP);
-            PARROT_ASSERT(attrs->interp);
         }
         PObj_active_destroy_SET(SELF);
     }
@@ -261,8 +260,15 @@ C<parent> and uses that thread.
     VTABLE void init_pmc(PMC *parent) {
         Parrot_Interp p = PMC_interp(parent);
 
-        if (!PMC_interp(SELF))
+        if (!PMC_data(SELF)) {
+            Parrot_ParrotInterpreter_attributes *attrs =
+                mem_allocate_zeroed_typed(Parrot_ParrotInterpreter_attributes);
+            PMC_data(SELF) = attrs;
+        }
+        if (!PMC_interp(SELF)) {
             create_interp(SELF, p);
+        }
+        PObj_active_destroy_SET(SELF);
     }
 
 
@@ -534,9 +540,9 @@ Introspection interface. C<key> can be:
             }
             if (!PMC_IS_NULL(sub_pmc)
             &&   sub_pmc->vtable->base_type == enum_class_Sub) {
-                Parrot_sub        *sub;
-                PackFile_ByteCode *seg;
-                opcode_t          *pc  = ctx->current_pc;
+                Parrot_Sub_attributes *sub;
+                PackFile_ByteCode     *seg;
+                opcode_t              *pc  = ctx->current_pc;
 
                 PMC_get_sub(interp, sub_pmc, sub);
                 seg = sub->seg;
