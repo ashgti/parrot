@@ -66,10 +66,10 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
 {
     ASSERT_ARGS(new_continuation)
     Parrot_cont    * const cc     = mem_allocate_typed(Parrot_cont);
-    PMC            * const to_ctx = to ? to->to_ctx : CONTEXT(interp);
+    PMC            * const to_ctx = to ? to->to_ctx : CURRENT_CONTEXT;
 
     cc->to_ctx        = to_ctx;
-    cc->from_ctx      = CONTEXT(interp);
+    cc->from_ctx      = CURRENT_CONTEXT;
     cc->runloop_id    = 0;
     if (to) {
         cc->seg       = to->seg;
@@ -102,8 +102,8 @@ new_ret_continuation(PARROT_INTERP)
     ASSERT_ARGS(new_ret_continuation)
     Parrot_cont * const cc = mem_allocate_typed(Parrot_cont);
 
-    cc->to_ctx          = CONTEXT(interp);
-    cc->from_ctx        = CONTEXT(interp);    /* filled in during a call */
+    cc->to_ctx          = CURRENT_CONTEXT;
+    cc->from_ctx        = CURRENT_CONTEXT;    /* filled in during a call */
     cc->runloop_id      = 0;
     cc->seg             = interp->code;
     cc->current_results = NULL;
@@ -346,7 +346,7 @@ Parrot_Context_infostr(PARROT_INTERP, ARGIN(PMC *ctx))
     ASSERT_ARGS(Parrot_Context_infostr)
     Parrot_Context_info info;
     STRING             *res = NULL;
-    const char * const  msg = (CONTEXT(interp) == ctx)
+    const char * const  msg = (CURRENT_CONTEXT == ctx)
         ? "current instr.:"
         : "called from Sub";
 
@@ -408,7 +408,7 @@ void
 Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_capture_lex)
-    PMC            * const ctx          = CONTEXT(interp);
+    PMC            * const ctx          = CURRENT_CONTEXT;
     Parrot_Sub_attributes *current_sub;
     Parrot_Sub_attributes *sub;
 
@@ -504,7 +504,7 @@ Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
 {
     ASSERT_ARGS(Parrot_continuation_check)
     PMC *to_ctx       = cc->to_ctx;
-    PMC *from_ctx     = CONTEXT(interp);
+    PMC *from_ctx     = CURRENT_CONTEXT;
 
     if (PMC_IS_NULL(to_ctx))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -540,7 +540,7 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
     }
 
     /* set context */
-    CONTEXT(interp)      = to_ctx;
+    CURRENT_CONTEXT      = to_ctx;
 }
 
 

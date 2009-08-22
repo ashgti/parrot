@@ -207,7 +207,7 @@ Parrot_gc_trace_root(PARROT_INTERP, Parrot_gc_trace_type trace)
         Parrot_gc_mark_PObj_alive(interp, obj);
 
     /* mark the current context. */
-    Parrot_gc_mark_PObj_alive(interp, (PObj*)CONTEXT(interp));
+    Parrot_gc_mark_PObj_alive(interp, (PObj*)CURRENT_CONTEXT);
 
     /* mark the dynamic environment. */
     Parrot_gc_mark_PObj_alive(interp, (PObj*)interp->dynamic_env);

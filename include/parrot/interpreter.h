@@ -194,13 +194,15 @@ typedef struct _Prederef {
 } Prederef;
 
 
-#define CONTEXT(interp) ((interp)->ctx)
+#define CONTEXT(interp) Parrot_ctx_get_context(interp, interp->ctx)
+
 
 /*
  * Helper macros to fetch fields from context.
  */
-#define CONTEXT_FIELD(ctx, name) ((Parrot_ctx_get_context(interp, ctx))->name)
-#define CURRENT_CONTEXT_FIELD(name) CONTEXT_FIELD(CONTEXT(interp), name)
+#define CURRENT_CONTEXT             (interp->ctx)
+#define CONTEXT_FIELD(ctx, name)    ((Parrot_ctx_get_context(interp, ctx))->name)
+#define CURRENT_CONTEXT_FIELD(name) CONTEXT_FIELD(interp->ctx, name)
 
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated

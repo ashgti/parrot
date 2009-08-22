@@ -394,7 +394,7 @@ sub rewrite_pccmethod {
     PMC      * const _param_sig   = pmc_new(interp, enum_class_FixedIntegerArray);
     PMC      *_return_sig         = PMCNULL;
 
-    PMC        *_caller_ctx = CONTEXT(interp);
+    PMC        *_caller_ctx = interp->ctx;
     PMC * const _ret_cont   = new_ret_continuation_pmc(interp, NULL);
     PMC        *_ctx        = Parrot_push_context(interp, _n_regs_used);
     PMC        *_ccont      = PMCNULL;

@@ -478,7 +478,7 @@ Introspection interface. C<key> can be:
             Parrot_ex_throw_from_c_args(interp, NULL, CONTROL_ERROR,
                 "No such caller depth");
 
-        ctx = CONTEXT(interp);
+        ctx = CURRENT_CONTEXT;
 
         if (outer) {
             for (; level; --level) {
@@ -531,7 +531,7 @@ Introspection interface. C<key> can be:
 
         if (Parrot_str_equal(interp, item, s)) {
             PMC        *sub_pmc = CONTEXT_FIELD(ctx, current_sub);
-            if (ctx == CONTEXT(interp)) {
+            if (ctx == CURRENT_CONTEXT) {
                 /* We can't know the current program counter for the currently
                  * executing sub, so can't return annotations for that. */
                 if (ctx == CONTEXT(interp))

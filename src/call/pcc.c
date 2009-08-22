@@ -489,13 +489,13 @@ Parrot_init_arg_nci(PARROT_INTERP, ARGOUT(call_state *st),
     init_call_stats(st);
 
     if (PMC_IS_NULL(interp->args_signature))
-        Parrot_init_arg_op(interp, CONTEXT(interp), interp->current_args,
+        Parrot_init_arg_op(interp, CURRENT_CONTEXT, interp->current_args,
                            &st->src);
     else
-        Parrot_init_arg_indexes_and_sig_pmc(interp, CONTEXT(interp),
+        Parrot_init_arg_indexes_and_sig_pmc(interp, CURRENT_CONTEXT,
             interp->current_args, interp->args_signature, &st->src);
 
-    Parrot_init_arg_sig(interp, CONTEXT(interp), sig, NULL, &st->dest);
+    Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL, &st->dest);
 }
 
 
@@ -516,7 +516,7 @@ void
 Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig))
 {
     ASSERT_ARGS(Parrot_init_ret_nci)
-    PMC *ctx                 = CONTEXT(interp);
+    PMC *ctx                 = CURRENT_CONTEXT;
     PMC * const current_cont = CONTEXT_FIELD(ctx, current_cont);
 
     /* if this NCI call was a taicall, return results to caller's get_results
@@ -525,7 +525,7 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
         ctx = PMC_cont(current_cont)->to_ctx;
 
     /* TODO simplify all */
-    Parrot_init_arg_sig(interp, CONTEXT(interp), sig, NULL, &st->src);
+    Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL, &st->src);
 
     /* Non-constant signatures are stored in ctx->results_signature instead of
      * in the constants table. */
@@ -1933,7 +1933,7 @@ parrot_pass_args_fromc(PARROT_INTERP, ARGIN(const char *sig),
     ASSERT_ARGS(parrot_pass_args_fromc)
     call_state st;
 
-    Parrot_init_arg_op(interp, CONTEXT(interp), dest, &st.dest);
+    Parrot_init_arg_op(interp, CURRENT_CONTEXT, dest, &st.dest);
     Parrot_init_arg_sig(interp, old_ctxp, sig, PARROT_VA_TO_VAPTR(ap), &st.src);
     Parrot_process_args(interp, &st, PARROT_PASS_PARAMS);
     return dest + st.dest.n + 2;
@@ -1963,7 +1963,7 @@ set_retval_util(PARROT_INTERP, ARGIN(const char *sig),
     interp->current_returns = NULL;
 
     if (todo) {
-        todo = Parrot_init_arg_sig(interp, CONTEXT(interp), sig, NULL,
+        todo = Parrot_init_arg_sig(interp, CURRENT_CONTEXT, sig, NULL,
             &st->dest);
 
         if (todo) {

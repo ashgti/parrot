@@ -76,7 +76,7 @@ sub defines {
     return $pred_def . <<END;
 /* defines - $0 -> $type */
 #  define opcode_to_prederef(i, op)   (op ? \\
-     (opcode_t*) (op   - CONTEXT_FIELD(CONTEXT(i), pred_offset)) : (opcode_t*)NULL)
+     (opcode_t*) (op   - CONTEXT_FIELD(i->ctx, pred_offset)) : (opcode_t*)NULL)
 END
 }
 

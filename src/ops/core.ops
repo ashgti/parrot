@@ -541,7 +541,7 @@ op get_params(inconst PMC) :flow {
     opcode_t *src_indexes, *dst_indexes;
 
     interp->current_params = _this;
-    ctx = CONTEXT(interp);
+    ctx = CURRENT_CONTEXT;
     ccont = CONTEXT_FIELD(ctx, current_cont);
 
     caller_ctx = CONTEXT_FIELD(ctx, caller_ctx);
@@ -572,7 +572,7 @@ op set_returns(inconst PMC) :flow {
     opcode_t *src_indexes, *dest_indexes;
 
     interp->current_returns = _this;
-    ctx                     = CONTEXT(interp);
+    ctx                     = CURRENT_CONTEXT;
     caller_ctx              = CONTEXT_FIELD(ctx, caller_ctx);
     ccont                   = CONTEXT_FIELD(ctx, current_cont);
 

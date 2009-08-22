@@ -54,7 +54,7 @@ print_pbc_location(PARROT_INTERP)
         interp;
     Parrot_io_eprintf(tracer, "%Ss\n",
             Parrot_Context_infostr(interp,
-                CONTEXT(interp)));
+                CURRENT_CONTEXT));
 }
 
 /*
