@@ -3,6 +3,11 @@
 
 pmclass Context {
 
+    VTABLE void init() {
+        PMC_data(SELF) = NULL;
+        PObj_custom_mark_destroy_SETALL(SELF);
+    }
+
     VTABLE void mark()
     {
         Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
