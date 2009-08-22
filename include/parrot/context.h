@@ -73,12 +73,14 @@ Parrot_ctx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx);
 /* HEADERIZER BEGIN: src/context.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 struct PackFile_Constant ** Parrot_ctx_constants(PARROT_INTERP,
     ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 Parrot_Context* Parrot_ctx_get_context(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)

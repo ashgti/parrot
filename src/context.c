@@ -38,6 +38,7 @@ Get string constant from context.
 
 */
 
+PARROT_EXPORT
 STRING*
 Parrot_ctx_get_string_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
     Parrot_Context const * c = Parrot_ctx_get_context(interp, ctx);
@@ -54,6 +55,7 @@ Get PMC constant from context.
 
 */
 
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_ctx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
@@ -70,7 +72,7 @@ Parrot_ctx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
 =cut
 
 */
-
+PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 struct PackFile_Constant **
 Parrot_ctx_constants(PARROT_INTERP, ARGIN(PMC *ctx)) {
@@ -89,7 +91,7 @@ Fetch Parrot_Context from Context PMC.
 =cut
 
 */
-
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 Parrot_Context*
 Parrot_ctx_get_context(PARROT_INTERP, ARGIN(PMC *ctx)) {
