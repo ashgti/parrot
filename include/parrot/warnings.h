@@ -36,18 +36,18 @@ typedef enum {
 /* &end_gen */
 
 #define PARROT_WARNINGS_on(interp, flag) do { \
-    CONTEXT((interp))->warns |= (flag); } while (0)
+    CURRENT_CONTEXT_FIELD(warns) |= (flag); } while (0)
 #define PARROT_WARNINGS_off(interp, flag) do { \
-    CONTEXT((interp))->warns &= ~(flag); } while (0)
+    CURRENT_CONTEXT_FIELD(warns) &= ~(flag); } while (0)
 #define PARROT_WARNINGS_test(interp, flag)  \
-    (CONTEXT((interp))->warns & (flag))
+    (CURRENT_CONTEXT_FIELD(warns) & (flag))
 
 #define PARROT_ERRORS_on(interp, flag) do { \
-    CONTEXT((interp))->errors |= (flag); } while (0)
+    CURRENT_CONTEXT_FIELD(errors) |= (flag); } while (0)
 #define PARROT_ERRORS_off(interp, flag) do { \
-    CONTEXT((interp))->errors &= ~(flag); } while (0)
+    CURRENT_CONTEXT_FIELD(errors) &= ~(flag); } while (0)
 #define PARROT_ERRORS_test(interp, flag)  \
-    (CONTEXT((interp))->errors & (flag))
+    (CURRENT_CONTEXT_FIELD(errors) & (flag))
 
 #if defined(PARROT_IN_CORE)
 

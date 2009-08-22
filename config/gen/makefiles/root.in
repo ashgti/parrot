@@ -412,6 +412,7 @@ INTERP_O_FILES := \
 #IF(i386_has_gcc_cmpxchg):    $(SRC_DIR)/atomic/gcc_x86$(O) \
     $(SRC_DIR)/byteorder$(O) \
     $(SRC_DIR)/string/charset$(O) \
+    $(SRC_DIR)/context$(O) \
     $(SRC_DIR)/core_pmcs$(O) \
     $(SRC_DIR)/datatypes$(O) \
     $(SRC_DIR)/debug$(O) \

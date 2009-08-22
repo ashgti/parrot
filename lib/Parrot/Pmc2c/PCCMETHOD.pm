@@ -162,16 +162,16 @@ sub gen_arg_accessor {
     my $tiss = $reg_type_info->{$reg_type}{ss};    #reg_type_info short string
 
     if ( 'arg' eq $arg_type ) {
-        return "    $tis $name = CTX_REG_$tiss(_ctx, $index);\n";
+        return "    $tis $name = PMCCTX_REG_$tiss(_ctx, $index);\n";
     }
     elsif ( 'result' eq $arg_type ) {
-        return "    $name = CTX_REG_$tiss(_ctx, $index);\n";
+        return "    $name = PMCCTX_REG_$tiss(_ctx, $index);\n";
     }
     elsif ( 'name' eq $arg_type ) {
-        return "    CTX_REG_$tiss(_ctx, $index) = CONST_STRING_GEN(interp, $name);\n";
+        return "    PMCCTX_REG_$tiss(_ctx, $index) = CONST_STRING_GEN(interp, $name);\n";
     }
     else {  #$arg_type eq 'param' or $arg_type eq 'return'
-        return "    CTX_REG_$tiss(_ctx, $index) = $name;\n";
+        return "    PMCCTX_REG_$tiss(_ctx, $index) = $name;\n";
     }
 }
 
@@ -394,16 +394,16 @@ sub rewrite_pccmethod {
     PMC      * const _param_sig   = pmc_new(interp, enum_class_FixedIntegerArray);
     PMC      *_return_sig         = PMCNULL;
 
-    Parrot_Context *_caller_ctx   = CONTEXT(interp);
-    PMC * const _ret_cont         = new_ret_continuation_pmc(interp, NULL);
-    Parrot_Context *_ctx          = Parrot_push_context(interp, _n_regs_used);
-    PMC *_ccont                   = PMCNULL;
+    PMC        *_caller_ctx = CONTEXT(interp);
+    PMC * const _ret_cont   = new_ret_continuation_pmc(interp, NULL);
+    PMC        *_ctx        = Parrot_push_context(interp, _n_regs_used);
+    PMC        *_ccont      = PMCNULL;
 
 $set_params
     UNUSED(_return_indexes);
 
     if (_caller_ctx) {
-        _ccont = _caller_ctx->current_cont;
+        _ccont = CONTEXT_FIELD(_caller_ctx, current_cont);
     }
     else {
         /* there is no point calling Parrot_ex_throw_from_c_args here, because
@@ -411,11 +411,11 @@ $set_params
         exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
     }
 
-    _ctx->current_cont            = _ret_cont;
-    PMC_cont(_ret_cont)->from_ctx = _ctx;
+    CONTEXT_FIELD(_ctx, current_cont)   = _ret_cont;
+    PMC_cont(_ret_cont)->from_ctx       = _ctx;
 
-    _current_args                 = interp->current_args;
-    interp->current_args         = NULL;
+    _current_args                       = interp->current_args;
+    interp->current_args                = NULL;
 
 END
     $e->emit(<<"END");
@@ -429,9 +429,8 @@ END
 
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        --_ctx->recursion_depth;
-        _ctx->caller_ctx      = _caller_ctx->caller_ctx;
-        Parrot_free_context(interp, _caller_ctx, 1);
+        --CONTEXT_FIELD(_ctx, recursion_depth);
+        CONTEXT_FIELD(_ctx, caller_ctx) = CONTEXT_FIELD(_caller_ctx, caller_ctx);
         interp->current_args = NULL;
     }
     /* BEGIN PARMS SCOPE */
@@ -466,7 +465,7 @@ $method_returns
 
     interp->returns_signature = _return_sig;
     parrot_pass_args(interp, _ctx, _caller_ctx, _return_indexes,
-        _caller_ctx->current_results, PARROT_PASS_RESULTS);
+        CONTEXT_FIELD(_caller_ctx, current_results), PARROT_PASS_RESULTS);
 END
     }
     $e_post->emit( <<"END", __FILE__, __LINE__ + 1 );

@@ -65,6 +65,7 @@ sub defines {
     my $type = __PACKAGE__;
     return <<END;
 /* defines - $0 -> $type */
+#include "parrot/interpreter.h"
 #undef CONST
 #define REL_PC     ((size_t)(cur_opcode - (opcode_t*)interp->code->base.data))
 #define CUR_OPCODE cur_opcode
@@ -72,7 +73,7 @@ sub defines {
 #define NREG(i) REG_NUM(interp, cur_opcode[i])
 #define PREG(i) REG_PMC(interp, cur_opcode[i])
 #define SREG(i) REG_STR(interp, cur_opcode[i])
-#define CONST(i) CONTEXT(interp)->constants[cur_opcode[i]]
+#define CONST(i) Parrot_ctx_constants(interp, CONTEXT(interp))[i]
 END
 }
 

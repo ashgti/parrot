@@ -156,7 +156,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     interp->resume_flag = RESUME_INITIAL;
 
     /* main is called as a Sub too - this will get depth 0 then */
-    CONTEXT(interp)->recursion_depth = (UINTVAL)-1;
+    CURRENT_CONTEXT_FIELD(recursion_depth) = (UINTVAL)-1;
     interp->recursion_limit = RECURSION_LIMIT;
 
     /* PANIC will fail until this is done */
@@ -212,9 +212,9 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
 #endif
 
     /* clear context introspection vars */
-    CONTEXT(interp)->current_sub    = NULL;
-    CONTEXT(interp)->current_cont   = NULL;
-    CONTEXT(interp)->current_object = NULL;
+    CURRENT_CONTEXT_FIELD(current_sub)    = NULL;
+    CURRENT_CONTEXT_FIELD(current_cont)   = NULL;
+    CURRENT_CONTEXT_FIELD(current_object) = NULL;
 
     /* Load the core op func and info tables */
     interp->op_lib          = PARROT_CORE_OPLIB_INIT(1);

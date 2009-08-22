@@ -41,7 +41,7 @@ PARROT_CAN_RETURN_NULL
 static opcode_t * pass_exception_args(PARROT_INTERP,
     ARGIN(const char *sig),
     ARGIN(opcode_t *dest),
-    ARGIN(Parrot_Context * old_ctx),
+    ARGIN(PMC * old_ctx),
     ...)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -268,7 +268,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
 /*
 
 =item C<static opcode_t * pass_exception_args(PARROT_INTERP, const char *sig,
-opcode_t *dest, Parrot_Context * old_ctx, ...)>
+opcode_t *dest, PMC * old_ctx, ...)>
 
 Passes arguments to the exception handler routine. These are retrieved with
 the .get_results() directive in PIR code.
@@ -280,7 +280,7 @@ the .get_results() directive in PIR code.
 PARROT_CAN_RETURN_NULL
 static opcode_t *
 pass_exception_args(PARROT_INTERP, ARGIN(const char *sig),
-        ARGIN(opcode_t *dest), ARGIN(Parrot_Context * old_ctx), ...)
+        ARGIN(opcode_t *dest), ARGIN(PMC * old_ctx), ...)
 {
     ASSERT_ARGS(pass_exception_args)
     va_list   ap;
@@ -389,7 +389,7 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
 
     /* Note the thrower.
      * XXX TT#596 - pass in current context instead when we have context PMCs. */
-    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), CONTEXT(interp)->current_cont);
+    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), CURRENT_CONTEXT_FIELD(current_cont));
 
     /* it's a C exception handler */
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {

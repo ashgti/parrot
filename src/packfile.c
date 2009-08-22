@@ -681,7 +681,7 @@ run_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
     &&  interp->run_core != PARROT_FAST_CORE)
             interp->run_core = PARROT_FAST_CORE;
 
-    CONTEXT(interp)->constants = interp->code->const_table->constants;
+    CURRENT_CONTEXT_FIELD(constants) = interp->code->const_table->constants;
 
     retval           = (PMC *)Parrot_runops_fromc_args(interp, sub_pmc, "P");
     interp->run_core = old;
@@ -759,7 +759,7 @@ do_1_sub_pragma(PARROT_INTERP, ARGMOD(PMC *sub_pmc), pbc_action_enum_t action)
                                           / sizeof (opcode_t *);
 
                     PObj_get_FLAGS(sub_pmc)      &= ~SUB_FLAG_PF_MAIN;
-                    CONTEXT(interp)->current_sub  = sub_pmc;
+                    CURRENT_CONTEXT_FIELD(current_sub)  = sub_pmc;
                 }
                 else {
                     Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
@@ -3083,12 +3083,12 @@ Parrot_switch_to_cs(PARROT_INTERP, ARGIN(PackFile_ByteCode *new_cs), int really)
     }
 
     interp->code               = new_cs;
-    CONTEXT(interp)->constants = really
+    CURRENT_CONTEXT_FIELD(constants) = really
                                ? find_constants(interp, new_cs->const_table)
                                : new_cs->const_table->constants;
 
     /* new_cs->const_table->constants; */
-    CONTEXT(interp)->pred_offset =
+    CURRENT_CONTEXT_FIELD(pred_offset) =
         new_cs->base.data - (opcode_t*) new_cs->prederef.code;
 
     if (really)

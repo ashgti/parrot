@@ -450,7 +450,7 @@ Introspection interface. C<key> can be:
         STRING *s     = CONST_STRING(interp, "globals");
         int     level = 0;
 
-        Parrot_Context *ctx;
+        PMC *ctx;
 
         if (Parrot_str_equal(interp, item, s))
             return interp->root_namespace;
@@ -482,15 +482,15 @@ Introspection interface. C<key> can be:
 
         if (outer) {
             for (; level; --level) {
-                ctx = ctx->outer_ctx;
-                if (!ctx)
+                ctx = CONTEXT_FIELD(ctx, outer_ctx);
+                if (PMC_IS_NULL(ctx))
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such outer depth");
             }
         }
         else {
             for (; level; --level) {
-                cont = ctx->current_cont;
+                cont = CONTEXT_FIELD(ctx, current_cont);
 
                 if (PMC_IS_NULL(cont) || !PMC_cont(cont)->seg)
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -498,39 +498,39 @@ Introspection interface. C<key> can be:
 
                 ctx = PMC_cont(cont)->to_ctx;
 
-                if (!ctx->current_sub)
+                if (PMC_IS_NULL(CONTEXT_FIELD(ctx, current_sub)))
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such caller depth");
             }
         }
 
         if (item == outer)
-            return ctx->current_sub;
+            return CONTEXT_FIELD(ctx, current_sub);
 
         s = CONST_STRING(interp, "sub");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->current_sub;
+            return CONTEXT_FIELD(ctx, current_sub);
 
         s = CONST_STRING(interp, "lexpad");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->lex_pad;
+            return CONTEXT_FIELD(ctx, lex_pad);
 
         s = CONST_STRING(interp, "namespace");
 
         if (Parrot_str_equal(interp, item, s))
-            return ctx->current_namespace;
+            return CONTEXT_FIELD(ctx, current_namespace);
 
         s = CONST_STRING(interp, "continuation");
 
         if (Parrot_str_equal(interp, item, s))
-            return VTABLE_clone(interp, ctx->current_cont);
+            return VTABLE_clone(interp, CONTEXT_FIELD(ctx, current_cont));
 
         s = CONST_STRING(interp, "annotations");
 
         if (Parrot_str_equal(interp, item, s)) {
-            PMC        *sub_pmc = ctx->current_sub;
+            PMC        *sub_pmc = CONTEXT_FIELD(ctx, current_sub);
             if (ctx == CONTEXT(interp)) {
                 /* We can't know the current program counter for the currently
                  * executing sub, so can't return annotations for that. */
@@ -542,7 +542,7 @@ Introspection interface. C<key> can be:
             &&   sub_pmc->vtable->base_type == enum_class_Sub) {
                 Parrot_Sub_attributes *sub;
                 PackFile_ByteCode     *seg;
-                opcode_t              *pc  = ctx->current_pc;
+                opcode_t              *pc  = CONTEXT_FIELD(ctx, current_pc);
 
                 PMC_get_sub(interp, sub_pmc, sub);
                 seg = sub->seg;
@@ -803,7 +803,7 @@ Map core_type to hll_type.
     METHOD hll_map(PMC *core_type, PMC *hll_type) {
         INTVAL core_type_id = VTABLE_type(INTERP, core_type);
         INTVAL hll_type_id  = VTABLE_type(INTERP, hll_type);
-        INTVAL hll_id       = CONTEXT(interp)->current_HLL;
+        INTVAL hll_id       = CURRENT_CONTEXT_FIELD(current_HLL);
         Parrot_register_HLL_type(INTERP, hll_id, core_type_id, hll_type_id);
     }
 

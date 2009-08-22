@@ -51,7 +51,7 @@ typedef struct call_state_item {
         } op;
     } u;
 
-    Parrot_Context *ctx;     /* the source or destination context */
+    PMC   *ctx;              /* the source or destination context */
     INTVAL used;             /* src: whether this argument has been consumed
                               * (or: whether the previous arg has?) */
     INTVAL i;                /* number of args/params already processed */
@@ -111,7 +111,7 @@ int Parrot_fetch_arg_nci(PARROT_INTERP, ARGMOD(call_state *st))
 
 PARROT_EXPORT
 int Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP,
-    ARGIN(Parrot_Context *ctx),
+    ARGIN(PMC *ctx),
     ARGIN_NULLOK(opcode_t *indexes),
     ARGIN_NULLOK(PMC *sig_pmc),
     ARGMOD(call_state_item *sti))
@@ -131,7 +131,7 @@ void Parrot_init_arg_nci(PARROT_INTERP,
 
 PARROT_EXPORT
 int Parrot_init_arg_op(PARROT_INTERP,
-    ARGIN(Parrot_Context *ctx),
+    ARGIN(PMC *ctx),
     ARGIN_NULLOK(opcode_t *pc),
     ARGIN(call_state_item *sti))
         __attribute__nonnull__(1)
@@ -140,7 +140,7 @@ int Parrot_init_arg_op(PARROT_INTERP,
 
 PARROT_EXPORT
 int Parrot_init_arg_sig(PARROT_INTERP,
-    ARGIN(Parrot_Context *ctx),
+    ARGIN(PMC *ctx),
     ARGIN(const char *sig),
     ARGIN_NULLOK(void *ap),
     ARGMOD(call_state_item *sti))
@@ -161,8 +161,8 @@ void Parrot_init_ret_nci(PARROT_INTERP,
 
 PARROT_EXPORT
 void parrot_pass_args(PARROT_INTERP,
-    ARGMOD(Parrot_Context *src_ctx),
-    ARGMOD(Parrot_Context *dest_ctx),
+    ARGMOD(PMC *src_ctx),
+    ARGMOD(PMC *dest_ctx),
     ARGMOD_NULLOK(opcode_t *src_indexes),
     ARGMOD_NULLOK(opcode_t *dest_indexes),
     arg_pass_t param_or_result)
@@ -234,7 +234,8 @@ void Parrot_process_args(PARROT_INTERP,
         FUNC_MODIFIES(*st);
 
 PARROT_EXPORT
-int Parrot_store_arg(SHIM_INTERP, ARGIN(const call_state *st))
+int Parrot_store_arg(PARROT_INTERP, ARGIN(const call_state *st))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
@@ -242,7 +243,7 @@ PARROT_WARN_UNUSED_RESULT
 opcode_t * parrot_pass_args_fromc(PARROT_INTERP,
     ARGIN(const char *sig),
     ARGMOD(opcode_t *dest),
-    ARGIN(Parrot_Context *old_ctxp),
+    ARGIN(PMC *old_ctxp),
     va_list ap)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -252,29 +253,27 @@ opcode_t * parrot_pass_args_fromc(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-void * set_retval(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+void * set_retval(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-FLOATVAL set_retval_f(PARROT_INTERP,
-    int sig_ret,
-    ARGIN(Parrot_Context *ctx))
+FLOATVAL set_retval_f(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-INTVAL set_retval_i(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
-
-PARROT_CAN_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
-PMC* set_retval_p(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+INTVAL set_retval_i(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
+PMC* set_retval_p(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3);
+
+PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
@@ -342,7 +341,8 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(Parrot_Context *ctx))
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(st)
 #define ASSERT_ARGS_Parrot_store_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(st)
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(st)
 #define ASSERT_ARGS_parrot_pass_args_fromc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(sig) \
@@ -475,7 +475,7 @@ Parrot_run_meth_fromc_args_reti(PARROT_INTERP,
 PARROT_EXPORT
 PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
-Parrot_Context * Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
+PMC * Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

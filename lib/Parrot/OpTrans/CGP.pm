@@ -68,7 +68,7 @@ sub defines {
     return $pred_def . <<END;
 /* defines - $0 -> $type */
 #  define opcode_to_prederef(i, op)   \\
-     (opcode_t *) (op   - CONTEXT(i)->pred_offset)
+     (opcode_t *) (op   - CONTEXT_FIELD(CONTEXT(i), pred_offset))
 END
 }
 
@@ -107,7 +107,7 @@ sub goto_offset {
     my ( $self, $offset ) = @_;
 
     # this must be a single expression, in case it's in a single-statement if
-    return "do {\nCONTEXT(interp)->current_pc = CUR_OPCODE + $offset;\n"
+    return "do {\nCURRENT_CONTEXT_FIELD(current_pc) = CUR_OPCODE + $offset;\n"
     .      "goto **(void **)(cur_opcode += $offset);\n} while (1)";
 }
 
