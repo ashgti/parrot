@@ -1317,10 +1317,13 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
     INTVAL return_list_elements;
     Parrot_Context *ctx = CONTEXT(interp);
     PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    PMC * const caller_return_flags = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
     INTVAL raw_return_count     = VTABLE_elements(interp, raw_sig);
     INTVAL return_index = 0;
-    INTVAL return_list_index = 0;
+    INTVAL return_list_index = 0; /* index into the results... can be different in the presence of slurpies and friends */
     INTVAL err_check      = 0;
+    INTVAL filling_slurpy = 0;
+    PMC *slurpy_collection = PMCNULL;
 
     /* Check if we should be throwing errors. This is configured separately
      * for parameters and return values. */
@@ -1348,6 +1351,7 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
     for (return_index = 0; return_index < raw_return_count; return_index++) {
         INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, return_index);
+        INTVAL result_flags = VTABLE_get_pmc_keyed_int(interp, caller_return_flags, return_list_index);
 
         const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(return_flags);
         const INTVAL raw_index = raw_returns[return_index + 2];
@@ -1358,6 +1362,13 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         if (PMC_IS_NULL(result_item))
             break; /* Go on to next return arg. */
 
+        /* If we're returning into a slurpy, set up a collection to hold the returns */
+        if (result_flags & PARROT_ARG_SLURPY_ARRAY && filling_slurpy == 0) {
+            filling_slurpy = 1;
+            slurpy_collection = pmc_new(interp,
+                    Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
+        }
+
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
@@ -1367,7 +1378,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                     VTABLE_set_integer_native(interp, result_item, raw_index);
                 else
                     VTABLE_set_integer_native(interp, result_item, CTX_REG_INT(ctx, raw_index));
-                return_list_index++;
                 break;
             case PARROT_ARG_FLOATVAL:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
@@ -1378,7 +1388,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                             ctx->constants[raw_index]->u.number);
                 else
                     VTABLE_set_number_native(interp, result_item, CTX_REG_NUM(ctx, raw_index));
-                return_list_index++;
                 break;
             case PARROT_ARG_STRING:
                 if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
@@ -1389,20 +1398,34 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                                         ctx->constants[raw_index]->u.string));
                 else
                     VTABLE_set_string_native(interp, result_item, CTX_REG_STR(ctx, raw_index));
-                return_list_index++;
                 break;
             case PARROT_ARG_PMC:
                 if (constant)
                     VTABLE_set_pmc(interp, result_item, ctx->constants[raw_index]->u.key);
                 else
                     VTABLE_set_pmc(interp, result_item, CTX_REG_PMC(ctx, raw_index));
-                return_list_index++;
                 break;
             default:
                 Parrot_ex_throw_from_c_args(interp, NULL,
                         EXCEPTION_INVALID_OPERATION, "invalid parameter type");
                 break;
         }
+
+        /* If we're filling a slurpy, pull out the saved item and insert it into the collection */
+        if (filling_slurpy > 0) {
+            PMC *item = VTABLE_get_pmc(interp, result_item);
+            VTABLE_push_pmc(interp, slurpy_collection, item);
+            /* this check is WRONG... but close enough for now */
+            if (return_index + 1 == raw_return_count) {
+                VTABLE_set_pmc(interp, result_item, slurpy_collection);
+                filling_slurpy = 0;
+                return_list_index++;
+            }
+        }
+        else {
+            return_list_index++;
+        }
+
     }
 }
 
