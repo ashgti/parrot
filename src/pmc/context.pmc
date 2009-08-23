@@ -1,12 +1,54 @@
+/*
+Copyright (C) 2001-2009, Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/context.pmc - Interpreter Context.
+
+=head1 DESCRIPTION
+
+Stores context of execution. Currently we store pointer to Parrot_Context
+structure in PMC_data.
+
+=head2 Vtable Functions
+
+=over 4
+
+=cut
+
+*/
+
 
 #include "parrot/packfile.h"
 
 pmclass Context {
 
+/*
+
+=item C<void init()>
+
+Initialize new Context. See C<Parrot_alloc_context>.
+
+=cut
+
+*/
+
     VTABLE void init() {
         PMC_data(SELF) = NULL;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
+
+
+/*
+
+=item C<void mark()>
+
+Mark Context as alive.
+
+=cut
+
+*/
 
     VTABLE void mark()
     {
@@ -67,17 +109,53 @@ pmclass Context {
         }
     }
 
+/*
+
+=item C<void destroy()>
+
+Destroy Context and memory allocated by C<Parrot_alloc_context>.
+
+=cut
+
+*/
+
     VTABLE void destroy() {
         /* We own this pointer */
         Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
         mem_sys_free(ctx);
     }
 
+/*
+
+=item C<void *get_pointer()>
+
+Return pointer to underlying Parrot_Context structure.
+
+=cut
+
+*/
+
     VTABLE void *get_pointer() {
         return PMC_data(SELF);
     }
 
+/*
+
+=item C<void set_pointer(void *)>
+
+Set new Parrot_Context structure.
+
+=cut
+
+*/
     VTABLE void set_pointer(void *context) {
         PMC_data(SELF) = context;
     }
 }
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
