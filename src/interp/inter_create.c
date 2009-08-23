@@ -156,8 +156,6 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     interp->ctx         = PMCNULL;
     interp->resume_flag = RESUME_INITIAL;
 
-    /* main is called as a Sub too - this will get depth 0 then */
-    //CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;
     interp->recursion_limit = RECURSION_LIMIT;
 
     /* PANIC will fail until this is done */
@@ -211,6 +209,9 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     /* TODO not yet - too many test failures */
     PARROT_ERRORS_on(interp, PARROT_ERRORS_RESULT_COUNT_FLAG);
 #endif
+
+    /* main is called as a Sub too - this will get depth 0 then */
+    CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;
 
     /* clear context introspection vars */
     CURRENT_CONTEXT_FIELD(interp, current_sub)    = NULL;
