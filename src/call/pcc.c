@@ -1487,15 +1487,17 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 
     va_start(args, signature);
     for (return_index = 0; return_index < raw_return_count; return_index++) {
+        STRING *item_sig;
         INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, return_index);
 
         PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
-        STRING *item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
 
         /* Gracefully ignore extra returns when error checking is off. */
         if (PMC_IS_NULL(result_item))
             continue; /* Go on to next return arg. */
+
+        item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
