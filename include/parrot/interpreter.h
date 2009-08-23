@@ -199,6 +199,9 @@ typedef struct _Prederef {
 
 /*
  * Helper macros to fetch fields from context.
+ *
+ * Not considered as part of public API. Should be replaced with proper accessor
+ * functions to manipulate Context.
  */
 #define CURRENT_CONTEXT(interp)             (interp->ctx)
 #define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_ctx_get_context(interp, ctx))->name)
