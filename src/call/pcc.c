@@ -1028,6 +1028,12 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 break;
         }
     }
+
+    if (err_check && (positional_elements > positional_index))
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "too many positional arguments: %d passed, %d expected",
+                positional_elements, param_count);
+
 }
 
 /*
