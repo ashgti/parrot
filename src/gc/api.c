@@ -369,11 +369,11 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
 
     Parrot_gc_free_pmc_sync(interp, pmc);
     if (PMC_data(pmc) && pmc->vtable->attr_size) {
-#if 0
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_free_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
+#else
         mem_sys_free(PMC_data(pmc));
         PMC_data(pmc) = NULL;
-#else
-        Parrot_gc_free_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
 #endif
     }
     PARROT_ASSERT(NULL == PMC_data(pmc));

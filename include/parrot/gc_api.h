@@ -23,7 +23,7 @@
 #if defined(_WIN32) || defined(_WIN64)
 #  define GC_USE_FIXED_SIZE_ALLOCATOR 0
 #else
-#  define GC_USE_FIXED_SIZE_ALLOCATOR 1
+#  define GC_USE_FIXED_SIZE_ALLOCATOR 0
 #endif
 
 /*
