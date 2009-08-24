@@ -161,6 +161,10 @@ Mark any active exception data as live.
             Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->backtrace);
         if (core_struct->handler_iter)
             Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->handler_iter);
+        if (core_struct->handler_ctx)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->handler_ctx);
+        if (core_struct->thrower)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->thrower);
     }
 
 /*
