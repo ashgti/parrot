@@ -263,6 +263,16 @@ static opcode_t * runops_trace_core(PARROT_INTERP, ARGIN(opcode_t *pc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
+#ifdef code_start
+#  undef code_start
+#endif
+#ifdef code_end
+#  undef code_end
+#endif
+
+#define  code_start interp->code->base.data
+#define  code_end (interp->code->base.data + interp->code->base.size)
+
 /*
 
 =item C<opcode_t * runops_fast_core(PARROT_INTERP, opcode_t *pc)>
@@ -285,6 +295,10 @@ runops_fast_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     CURRENT_CONTEXT_FIELD(interp, current_pc) = NULL;
 
     while (pc) {
+        if (pc < code_start || pc >= code_end)
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                "attempt to access code outside of current code segment");
+
         DO_OP(pc, interp);
     }
 
@@ -326,16 +340,6 @@ runops_cgoto_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     Parrot_exit(interp, 1);
 #endif
 }
-
-#ifdef code_start
-#  undef code_start
-#endif
-#ifdef code_end
-#  undef code_end
-#endif
-
-#define  code_start interp->code->base.data
-#define  code_end (interp->code->base.data + interp->code->base.size)
 
 
 /*

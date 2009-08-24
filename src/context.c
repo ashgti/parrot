@@ -30,7 +30,7 @@ src/context.c - Parrot_Context functions.
 
 
 /*
- 
+
 =item C<STRING* Parrot_cx_get_string_constant(PARROT_INTERP, PMC *ctx, INTVAL
 idx)>
 
@@ -52,7 +52,7 @@ Parrot_cx_get_string_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 
 
 /*
- 
+
 =item C<PMC* Parrot_cx_get_pmc_constant(PARROT_INTERP, PMC *ctx, INTVAL idx)>
 
 Get PMC constant from context.
@@ -116,7 +116,7 @@ Parrot_cx_get_context(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
 
 /*
 
-=item C<UINTVAL Parrot_cx_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
+=item C<UINTVAL Parrot_cx_get_recursion_depth(PARROT_INTERP, PMC *ctx)>
 
 Get recursion depth from context.
 
@@ -128,7 +128,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_cx_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
-    ASSERT_ARGS(Parrot_cx_inc_recursion_depth)
+    ASSERT_ARGS(Parrot_cx_get_recursion_depth)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
     return c->recursion_depth;
 }
@@ -185,7 +185,7 @@ PARROT_EXPORT
 PMC*
 Parrot_cx_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 {
-    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    ASSERT_ARGS(Parrot_cx_get_caller_ctx)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
     return c->caller_ctx;
 }
@@ -205,7 +205,7 @@ PARROT_EXPORT
 void
 Parrot_cx_set_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *caller_ctx))
 {
-    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    ASSERT_ARGS(Parrot_cx_set_caller_ctx)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
     c->caller_ctx = caller_ctx;
 }
@@ -224,7 +224,7 @@ PARROT_EXPORT
 PMC*
 Parrot_cx_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
 {
-    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    ASSERT_ARGS(Parrot_cx_get_namespace)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
     return c->current_namespace;
 }
@@ -244,7 +244,7 @@ PARROT_EXPORT
 void
 Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *_namespace))
 {
-    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    ASSERT_ARGS(Parrot_cx_set_namespace)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
     c->current_namespace = _namespace;
 }

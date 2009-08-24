@@ -152,7 +152,6 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     Parrot_block_GC_mark(interp);
     Parrot_block_GC_sweep(interp);
 
-    //create_initial_context(interp);
     interp->ctx         = PMCNULL;
     interp->resume_flag = RESUME_INITIAL;
 
@@ -209,6 +208,8 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     /* TODO not yet - too many test failures */
     PARROT_ERRORS_on(interp, PARROT_ERRORS_RESULT_COUNT_FLAG);
 #endif
+
+    create_initial_context(interp);
 
     /* main is called as a Sub too - this will get depth 0 then */
     CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;

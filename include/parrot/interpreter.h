@@ -196,7 +196,7 @@ typedef struct _Prederef {
 /*
  * Get Context from interpeter.
  */
-#define CONTEXT(interp) (interp->ctx)
+#define CONTEXT(interp) ((interp)->ctx)
 
 
 /*
@@ -205,8 +205,8 @@ typedef struct _Prederef {
  * Not considered as part of public API. Should be replaced with proper accessor
  * functions to manipulate Context.
  */
-#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_cx_get_context(interp, ctx))->name)
-#define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD(interp, interp->ctx, name)
+#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_cx_get_context((interp), (ctx)))->name)
+#define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD((interp), (interp)->ctx, name)
 
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated

@@ -171,4 +171,11 @@ void Parrot_cx_set_namespace(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/context.c */
 
-#endif
+#endif /* PARROT_CONTEXT_H_GUARD */
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
