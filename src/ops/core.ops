@@ -544,7 +544,7 @@ op get_params(inconst PMC) :flow {
     ctx     = CONTEXT(interp);
     ccont   = CONTEXT_FIELD(interp, ctx, current_cont);
 
-    caller_ctx  = CONTEXT_FIELD(interp, ctx, caller_ctx);
+    caller_ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
 
     src_indexes = interp->current_args;
     dst_indexes = interp->current_params;
@@ -553,10 +553,11 @@ op get_params(inconst PMC) :flow {
     interp->current_params = NULL;
 
     parrot_pass_args(interp, caller_ctx, ctx, src_indexes, dst_indexes, PARROT_PASS_PARAMS);
+    /* TODO Factor out with Sub.invoke */
     if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
         Parrot_cx_dec_recursion_depth(interp, ctx);
-        CONTEXT_FIELD(interp, ctx, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
+        Parrot_cx_set_caller_ctx(interp, ctx, Parrot_cx_get_caller_ctx(interp, caller_ctx));
         interp->current_args = NULL;
     }
     argc = VTABLE_elements(interp, signature);
@@ -573,7 +574,7 @@ op set_returns(inconst PMC) :flow {
 
     interp->current_returns = _this;
     ctx                     = CONTEXT(interp);
-    caller_ctx              = CONTEXT_FIELD(interp, ctx, caller_ctx);
+    caller_ctx              = Parrot_cx_get_caller_ctx(interp, ctx);
     ccont                   = CONTEXT_FIELD(interp, ctx, current_cont);
 
     if (PMC_cont(ccont)->address) {

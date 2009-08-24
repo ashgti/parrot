@@ -77,6 +77,7 @@ lookup of the cache has to be done in the opcode itself.
 */
 
 #include "parrot/parrot.h"
+#include "parrot/context.h"
 #include "parrot/oplib/ops.h"
 #include "pmc/pmc_fixedintegerarray.h"
 #include "pmc/pmc_continuation.h"
@@ -711,7 +712,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
         args       = CONTEXT_FIELD(interp, caller_ctx, current_results);
     }
     else {
-        caller_ctx = CONTEXT_FIELD(interp, ctx, caller_ctx);
+        caller_ctx = Parrot_cx_get_caller_ctx(interp, ctx);
         args       = interp->current_args;
     }
 
@@ -720,7 +721,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
         int          n;
 
         /* check current_args signature */
-        sig2 = CONTEXT_FIELD(interp, caller_ctx, constants[const_nr])->u.key;
+        sig2 = Parrot_cx_get_pmc_constant(interp, caller_ctx, const_nr);
         n    = parrot_pic_check_sig(interp, sig1, sig2, &type);
 
         if (n == -1)

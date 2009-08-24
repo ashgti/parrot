@@ -376,7 +376,8 @@ Invokes the subroutine.
                 Parrot_cx_dec_recursion_depth(INTERP, context);
 
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-                CONTEXT_FIELD(interp, context, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
+                Parrot_cx_set_caller_ctx(interp, context,
+                        Parrot_cx_get_caller_ctx(interp, caller_ctx));
 
                 //Parrot_free_context(INTERP, caller_ctx, 1);
             }

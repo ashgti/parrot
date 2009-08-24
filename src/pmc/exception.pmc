@@ -793,7 +793,7 @@ sub, or for the point of the call a level deeper for the rest.
 
                 /* Push frame and go to next caller. */
                 VTABLE_push_pmc(interp, result, frame);
-                cur_ctx = CONTEXT_FIELD(interp, cur_ctx, caller_ctx);
+                cur_ctx = Parrot_cx_get_caller_ctx(interp, cur_ctx);
             }
         }
 

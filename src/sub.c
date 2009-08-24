@@ -160,7 +160,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         if (!cont || cont->vtable != interp->vtables[enum_class_RetContinuation])
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
-        ctx  = CONTEXT_FIELD(interp, ctx, caller_ctx);
+        ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
         cont = CONTEXT_FIELD(interp, ctx, current_cont);
     }
 

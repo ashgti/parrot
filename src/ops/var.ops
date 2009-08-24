@@ -95,9 +95,9 @@ op find_caller_lex(out PMC, in STR) {
     PMC     * ctx            = CONTEXT(interp);
     PMC     * result         = PMCNULL;
 
-    for (ctx = CONTEXT_FIELD(interp, ctx, caller_ctx);
+    for (ctx = Parrot_cx_get_caller_ctx(interp, ctx);
             !PMC_IS_NULL(ctx) && PMC_IS_NULL(result);
-            ctx = CONTEXT_FIELD(interp, ctx, caller_ctx))
+            ctx = Parrot_cx_get_caller_ctx(interp, ctx))
     {
         PMC * const lex_pad = Parrot_find_pad(interp, lex_name, ctx);
         if (!PMC_IS_NULL(lex_pad)) {

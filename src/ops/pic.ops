@@ -141,7 +141,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     ctx         = CONTEXT(interp);
     src_pc      = interp->current_args;
     mic         = (Parrot_MIC *) cur_opcode[1];
-    caller_ctx  = CONTEXT_FIELD(interp, ctx, caller_ctx);
+    caller_ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
     if (src_pc) {
         src_pred = (void**) src_pc - CONTEXT_FIELD(interp, caller_ctx, pred_offset);
         sig = (PMC*)(src_pred[1]);
@@ -163,7 +163,8 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
         if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
             PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
             Parrot_cx_dec_recursion_depth(interp, ctx);
-            CONTEXT_FIELD(interp, ctx, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
+            Parrot_cx_set_caller_ctx(interp, ctx,
+                    Parrot_cx_get_caller_ctx(interp, caller_ctx));
             interp->current_args = NULL;
         }
 
