@@ -168,7 +168,7 @@ Parrot_cx_dec_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
-    --c->recursion_depth;
+    return --c->recursion_depth;
 }
 
 /*
