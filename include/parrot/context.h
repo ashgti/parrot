@@ -64,12 +64,6 @@ struct Parrot_Context {
 
 #define PMC_context(pmc) Parrot_cx_get_context(interp, (pmc))
 
-STRING*
-Parrot_cx_get_string_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx);
-
-PMC*
-Parrot_cx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx);
-
 /* HEADERIZER BEGIN: src/context.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
@@ -82,7 +76,20 @@ struct PackFile_Constant ** Parrot_cx_constants(PARROT_INTERP,
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
-Parrot_Context* Parrot_cx_get_context(PARROT_INTERP, ARGIN(PMC *ctx))
+Parrot_Context* Parrot_cx_get_context(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
+        __attribute__nonnull__(1);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC* Parrot_cx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+STRING* Parrot_cx_get_string_constant(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    INTVAL idx)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -90,6 +97,11 @@ Parrot_Context* Parrot_cx_get_context(PARROT_INTERP, ARGIN(PMC *ctx))
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_cx_get_pmc_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_cx_get_string_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
