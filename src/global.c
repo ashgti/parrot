@@ -375,7 +375,7 @@ Parrot_make_namespace_autobase(PARROT_INTERP, ARGIN_NULLOK(PMC *key))
     ASSERT_ARGS(Parrot_make_namespace_autobase)
     PMC *base_ns;
     if (VTABLE_isa(interp, key, CONST_STRING(interp, "String")))
-        base_ns = CURRENT_CONTEXT_FIELD(interp, current_namespace);
+        base_ns = Parrot_cx_get_namespace(interp, CONTEXT(interp));
     else
         base_ns = VTABLE_get_pmc_keyed_int(interp, interp->HLL_namespace,
             CURRENT_CONTEXT_FIELD(interp, current_HLL));
@@ -531,7 +531,7 @@ PMC *
 Parrot_find_global_cur(PARROT_INTERP, ARGIN_NULLOK(STRING *globalname))
 {
     ASSERT_ARGS(Parrot_find_global_cur)
-    PMC * const ns = CURRENT_CONTEXT_FIELD(interp, current_namespace);
+    PMC * const ns = Parrot_cx_get_namespace(interp, CONTEXT(interp));
     return Parrot_find_global_n(interp, ns, globalname);
 }
 

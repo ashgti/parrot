@@ -520,7 +520,7 @@ Introspection interface. C<key> can be:
         s = CONST_STRING(interp, "namespace");
 
         if (Parrot_str_equal(interp, item, s))
-            return CONTEXT_FIELD(interp, ctx, current_namespace);
+            return Parrot_cx_get_namespace(interp, ctx);
 
         s = CONST_STRING(interp, "continuation");
 
