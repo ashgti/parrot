@@ -184,7 +184,7 @@ recursion_limit(PARROT_INTERP, PMC *self, int l)
     return ret;
 }
 
-pmclass ParrotInterpreter no_ro {
+pmclass ParrotInterpreter need_ext no_ro {
     ATTR struct parrot_interp_t *interp; /* this PMC's interpreter */
     ATTR INTVAL                  tid;    /* thread id */
     ATTR PMC                    *args;   /* args passed to this thread */
@@ -478,7 +478,7 @@ Introspection interface. C<key> can be:
             Parrot_ex_throw_from_c_args(interp, NULL, CONTROL_ERROR,
                 "No such caller depth");
 
-        ctx = CURRENT_CONTEXT(interp);
+        ctx = CONTEXT(interp);
 
         if (outer) {
             for (; level; --level) {
@@ -531,7 +531,7 @@ Introspection interface. C<key> can be:
 
         if (Parrot_str_equal(interp, item, s)) {
             PMC        *sub_pmc = CONTEXT_FIELD(interp, ctx, current_sub);
-            if (ctx == CURRENT_CONTEXT(interp)) {
+            if (ctx == CONTEXT(interp)) {
                 /* We can't know the current program counter for the currently
                  * executing sub, so can't return annotations for that. */
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,

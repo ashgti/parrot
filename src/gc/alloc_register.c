@@ -320,7 +320,7 @@ PMC *
 Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
 {
     ASSERT_ARGS(Parrot_push_context)
-    PMC * const old = CURRENT_CONTEXT(interp);
+    PMC * const old = CONTEXT(interp);
     PMC * const ctx = Parrot_set_new_context(interp, n_regs_used);
 
     CONTEXT_FIELD(interp, ctx, caller_ctx)  = old;
@@ -349,11 +349,11 @@ void
 Parrot_pop_context(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_pop_context)
-    PMC * const ctx = CURRENT_CONTEXT(interp);
+    PMC * const ctx = CONTEXT(interp);
     PMC * const old = CONTEXT_FIELD(interp, ctx, caller_ctx);
 
     /* restore old, set cached interpreter base pointers */
-    CURRENT_CONTEXT(interp) = old;
+    CONTEXT(interp) = old;
 }
 
 
@@ -437,10 +437,10 @@ PMC *
 Parrot_set_new_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used))
 {
     ASSERT_ARGS(Parrot_set_new_context)
-    PMC *old = CURRENT_CONTEXT(interp);
+    PMC *old = CONTEXT(interp);
     PMC *ctx = Parrot_alloc_context(interp, number_regs_used, old);
 
-    CURRENT_CONTEXT(interp) = ctx;
+    CONTEXT(interp) = ctx;
 
     return ctx;
 }

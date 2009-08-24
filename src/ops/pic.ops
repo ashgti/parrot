@@ -138,10 +138,10 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     /* avoid load dependencies - intermix derefs
      * - yes, confusing but faster
      */
-    ctx = CURRENT_CONTEXT(interp);
-    src_pc = interp->current_args;
-    mic = (Parrot_MIC *) cur_opcode[1];
-    caller_ctx = CONTEXT_FIELD(interp, ctx, caller_ctx);
+    ctx         = CONTEXT(interp);
+    src_pc      = interp->current_args;
+    mic         = (Parrot_MIC *) cur_opcode[1];
+    caller_ctx  = CONTEXT_FIELD(interp, ctx, caller_ctx);
     if (src_pc) {
         src_pred = (void**) src_pc - CONTEXT_FIELD(interp, caller_ctx, pred_offset);
         sig = (PMC*)(src_pred[1]);
@@ -186,10 +186,10 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
     Parrot_cont *cc;
     int n;
 
-    ctx = CURRENT_CONTEXT(interp);
-    mic = (Parrot_MIC *) cur_opcode[1];
-    ccont = CONTEXT_FIELD(interp, ctx, current_cont);
-    cc = PMC_cont(ccont);
+    ctx     = CONTEXT(interp);
+    mic     = (Parrot_MIC *) cur_opcode[1];
+    ccont   = CONTEXT_FIELD(interp, ctx, current_cont);
+    cc      = PMC_cont(ccont);
     if (!cc->address) {
         interp->current_returns = CUR_OPCODE;
         n = VTABLE_get_integer(interp, mic->m.sig);
@@ -244,7 +244,7 @@ inline op pic_callr__(inconst PMC) :pic :flow {
     INTVAL i, n_args, *sig_bits;
     PMC *sig;
 
-    ctx = CURRENT_CONTEXT(interp);
+    ctx = CONTEXT(interp);
     mic = (Parrot_MIC *) cur_opcode[1];
     /* get_results */
     pc = CONTEXT_FIELD(interp, ctx, current_results);

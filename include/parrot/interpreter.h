@@ -193,8 +193,10 @@ typedef struct _Prederef {
     size_t n_allocated;                 /* allocated size of it */
 } Prederef;
 
-
-#define CONTEXT(interp) Parrot_cx_get_context(interp, interp->ctx)
+/*
+ * Get Context from interpeter.
+ */
+#define CONTEXT(interp) (interp->ctx)
 
 
 /*
@@ -203,7 +205,6 @@ typedef struct _Prederef {
  * Not considered as part of public API. Should be replaced with proper accessor
  * functions to manipulate Context.
  */
-#define CURRENT_CONTEXT(interp)             (interp->ctx)
 #define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_cx_get_context(interp, ctx))->name)
 #define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD(interp, interp->ctx, name)
 

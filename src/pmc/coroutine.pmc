@@ -144,7 +144,7 @@ Swaps the "context".
                         "tail call to coro not allowed");
 
             /* first time set current sub, cont, object */
-            caller_ctx = CURRENT_CONTEXT(interp);
+            caller_ctx = CONTEXT(interp);
             ctx        = Parrot_set_new_context(INTERP, co->n_regs_used);
 
             co->ctx                   = ctx;
@@ -188,10 +188,10 @@ Swaps the "context".
             /* and the recent call context */
             ccont                 = CONTEXT_FIELD(INTERP, ctx, current_cont);
             CONTEXT_FIELD(INTERP, ctx, caller_ctx) = PMC_cont(ccont)->to_ctx
-                                  = CURRENT_CONTEXT(interp);
+                                  = CONTEXT(interp);
 
             /* set context to coro context */
-            CURRENT_CONTEXT(interp) = ctx;
+            CONTEXT(interp) = ctx;
         }
         else {
             PMC *ccont;
@@ -214,7 +214,7 @@ Swaps the "context".
                                "Cannot resume dead coroutine.");
             }
 
-            CURRENT_CONTEXT(interp) = ctx;
+            CONTEXT(interp) = ctx;
         }
 
         /* toggle address */
