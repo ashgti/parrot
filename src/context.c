@@ -210,6 +210,45 @@ Parrot_cx_set_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *caller_ctx))
     c->caller_ctx = caller_ctx;
 }
 
+/*
+
+=item C<PMC* Parrot_cx_get_namespace(PARROT_INTERP, PMC *ctx)>
+
+Get namespace of Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_namespace;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_namespace(PARROT_INTERP, PMC *ctx, PMC *_namespace)>
+
+Set caller Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *_namespace))
+{
+    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_namespace = _namespace;
+}
+
 
 
 /*
