@@ -114,6 +114,62 @@ Parrot_cx_get_context(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
     return (Parrot_Context*)(VTABLE_get_pointer(interp, ctx));
 }
 
+/*
+
+=item C<UINTVAL Parrot_cx_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
+
+Get recursion depth from context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_cx_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_inc_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->recursion_depth;
+}
+
+/*
+
+=item C<INTVAL Parrot_cx_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
+
+Increase recurtion depth. Returns new recursion_depth value.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_cx_inc_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_inc_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return ++c->recursion_depth;
+}
+
+/*
+
+=item C<UINTVAL Parrot_cx_dec_recursion_depth(PARROT_INTERP, PMC *ctx)>
+
+Decrease recurtion depth. Returns new recursion_depth value.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_cx_dec_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    --c->recursion_depth;
+}
 
 /*
 
