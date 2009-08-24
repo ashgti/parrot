@@ -135,7 +135,7 @@ Parrot_cx_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
-=item C<INTVAL Parrot_cx_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
+=item C<UINTVAL Parrot_cx_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
 
 Increase recurtion depth. Returns new recursion_depth value.
 
@@ -242,7 +242,7 @@ Set caller Context.
 
 PARROT_EXPORT
 void
-Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *_namespace))
+Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_namespace))
 {
     ASSERT_ARGS(Parrot_cx_set_namespace)
     Parrot_Context *c = Parrot_cx_get_context(interp, ctx);

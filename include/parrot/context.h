@@ -129,10 +129,9 @@ void Parrot_cx_set_caller_ctx(PARROT_INTERP,
 PARROT_EXPORT
 void Parrot_cx_set_namespace(PARROT_INTERP,
     ARGIN(PMC *ctx),
-    ARGIN(PMC *_namespace))
+    ARGIN_NULLOK(PMC *_namespace))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
+        __attribute__nonnull__(2);
 
 #define ASSERT_ARGS_Parrot_cx_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
@@ -166,8 +165,7 @@ void Parrot_cx_set_namespace(PARROT_INTERP,
     || PARROT_ASSERT_ARG(caller_ctx)
 #define ASSERT_ARGS_Parrot_cx_set_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx) \
-    || PARROT_ASSERT_ARG(_namespace)
+    || PARROT_ASSERT_ARG(ctx)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/context.c */
 
