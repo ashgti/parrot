@@ -30,7 +30,7 @@ src/context.c - Parrot_Context functions.
 
 /*
  
-=item C<Parrot_ctx_get_string_constant()>
+=item C<Parrot_cx_get_string_constant()>
 
 Get string constant from context.
 
@@ -40,14 +40,14 @@ Get string constant from context.
 
 PARROT_EXPORT
 STRING*
-Parrot_ctx_get_string_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
-    Parrot_Context const * c = Parrot_ctx_get_context(interp, ctx);
+Parrot_cx_get_string_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
+    Parrot_Context const * c = Parrot_cx_get_context(interp, ctx);
     return c->constants[idx]->u.string;
 }
 
 /*
  
-=item C<Parrot_ctx_get_pmc_constant()>
+=item C<Parrot_cx_get_pmc_constant()>
 
 Get PMC constant from context.
 
@@ -58,15 +58,15 @@ Get PMC constant from context.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC*
-Parrot_ctx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
-    Parrot_Context const * c = Parrot_ctx_get_context(interp, ctx);
+Parrot_cx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
+    Parrot_Context const * c = Parrot_cx_get_context(interp, ctx);
     return c->constants[idx]->u.key;
 }
 
 
 /*
 
-=item C<struct PackFile_Constant ** Parrot_ctx_constants(PARROT_INTERP, PMC
+=item C<struct PackFile_Constant ** Parrot_cx_constants(PARROT_INTERP, PMC
 *ctx)>
 
 =cut
@@ -75,8 +75,8 @@ Parrot_ctx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC* ctx), INTVAL idx) {
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 struct PackFile_Constant **
-Parrot_ctx_constants(PARROT_INTERP, ARGIN(PMC *ctx)) {
-    ASSERT_ARGS(Parrot_ctx_constants)
+Parrot_cx_constants(PARROT_INTERP, ARGIN(PMC *ctx)) {
+    ASSERT_ARGS(Parrot_cx_constants)
     return ((Parrot_Context*)(VTABLE_get_pointer(interp, ctx)))->constants;
 }
 
@@ -84,7 +84,7 @@ Parrot_ctx_constants(PARROT_INTERP, ARGIN(PMC *ctx)) {
 
 /*
 
-=item C<Parrot_Context* Parrot_ctx_get_context(PARROT_INTERP, PMC *ctx)>
+=item C<Parrot_Context* Parrot_cx_get_context(PARROT_INTERP, PMC *ctx)>
 
 Fetch Parrot_Context from Context PMC.
 
@@ -94,7 +94,7 @@ Fetch Parrot_Context from Context PMC.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 Parrot_Context*
-Parrot_ctx_get_context(PARROT_INTERP, ARGIN(PMC *ctx)) {
+Parrot_cx_get_context(PARROT_INTERP, ARGIN(PMC *ctx)) {
     if (PMC_IS_NULL(ctx))
         return NULL;
 

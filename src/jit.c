@@ -287,7 +287,7 @@ set_register_usage(PARROT_INTERP,
         int arg_type;
         PMC *sig;
         if (argn >= args) {
-            sig = Parrot_ctx_get_pmc_constant(interp, CURRENT_CONTEXT(interp), cur_op[1]);
+            sig = Parrot_cx_get_pmc_constant(interp, CURRENT_CONTEXT(interp), cur_op[1]);
             arg_type = VTABLE_get_integer_keyed_int(interp,
                     sig, argn - args);
             arg_type &= (PARROT_ARG_TYPE_MASK | PARROT_ARG_CONSTANT);

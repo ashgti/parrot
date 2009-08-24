@@ -219,7 +219,7 @@ clear_regs(PARROT_INTERP, ARGMOD(PMC *pmcctx))
 {
     ASSERT_ARGS(clear_regs)
     int i;
-    Parrot_Context *ctx = Parrot_ctx_get_context(interp, pmcctx);
+    Parrot_Context *ctx = Parrot_cx_get_context(interp, pmcctx);
 
     /* NULL out registers - P/S have to be NULL for GC
      *
@@ -261,8 +261,8 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
         ARGIN_NULLOK(PMC *pmcold))
 {
     ASSERT_ARGS(init_context)
-    Parrot_Context *ctx = Parrot_ctx_get_context(interp, pmcctx);
-    Parrot_Context *old = Parrot_ctx_get_context(interp, pmcold);
+    Parrot_Context *ctx = Parrot_cx_get_context(interp, pmcctx);
+    Parrot_Context *old = Parrot_cx_get_context(interp, pmcold);
 
     ctx->gc_mark           = 0;
     ctx->current_results   = NULL;

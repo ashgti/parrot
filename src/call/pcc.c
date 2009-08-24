@@ -837,7 +837,7 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
             /* ensure that callees don't modify constant caller strings */
             if (constant)
                 UVal_str(st->val) = Parrot_str_new_COW(interp,
-                                        Parrot_ctx_get_string_constant(interp, st->src.ctx, idx));
+                                        Parrot_cx_get_string_constant(interp, st->src.ctx, idx));
             else
                 UVal_str(st->val) = CTX_REG_STR(st->src.ctx, idx);
 
@@ -848,7 +848,7 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
                                          : CTX_REG_NUM(st->src.ctx, idx);
             break;
         case PARROT_ARG_PMC:
-            UVal_pmc(st->val) = constant ? Parrot_ctx_get_pmc_constant(interp, st->src.ctx, idx)
+            UVal_pmc(st->val) = constant ? Parrot_cx_get_pmc_constant(interp, st->src.ctx, idx)
                                          : CTX_REG_PMC(st->src.ctx, idx);
 
             if (st->src.sig & PARROT_ARG_FLATTEN) {
@@ -1322,7 +1322,7 @@ locate_named_named(PARROT_INTERP, ARGMOD(call_state *st))
         n_named++;
         idx   = st->dest.u.op.pc[i];
         param = PARROT_ARG_CONSTANT_ISSET(st->dest.sig)
-                ? Parrot_ctx_get_string_constant(interp, st->dest.ctx, idx)
+                ? Parrot_cx_get_string_constant(interp, st->dest.ctx, idx)
                 : CTX_REG_STR(st->dest.ctx, idx);
 
         if (st->name == param || Parrot_str_equal(interp, st->name, param)) {
@@ -1575,7 +1575,7 @@ check_named(PARROT_INTERP, ARGMOD(call_state *st))
             else {
                 const   INTVAL idx   = st->dest.u.op.pc[last_name_pos];
                 STRING * const param = PARROT_ARG_CONSTANT_ISSET(sig)
-                    ? Parrot_ctx_get_string_constant(interp, st->dest.ctx, idx)
+                    ? Parrot_cx_get_string_constant(interp, st->dest.ctx, idx)
                     : CTX_REG_STR(st->dest.ctx, idx);
 
                 Parrot_ex_throw_from_c_args(interp, NULL,
