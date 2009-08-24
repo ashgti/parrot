@@ -945,7 +945,7 @@ slurpy arguments).
     METHOD set_outer(PMC *outer) {
         /* Set outer sub. */
         Parrot_Sub_attributes *sub;
-        PMC *tmp;
+        PMC *tmp1, *tmp2;
         PMC_get_sub(INTERP, SELF, sub);
 
         sub->outer_sub = outer;
@@ -963,13 +963,15 @@ slurpy arguments).
         /* If we've got a context around for the outer sub, set it as the
          * outer context. */
 
+        /* XXX This code looks very suspicious. */
         /* (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub */
-        tmp = CONTEXT_FIELD(interp, CURRENT_CONTEXT_FIELD(interp, caller_ctx), caller_ctx);
-        if (CONTEXT_FIELD(interp, tmp, current_sub) == outer)
-            sub->outer_ctx = tmp;
+        tmp1 = Parrot_cx_get_caller_ctx(interp, CONTEXT(interp));
+        tmp2 = Parrot_cx_get_caller_ctx(interp, tmp1);
+        if (CONTEXT_FIELD(interp, tmp2, current_sub) == outer)
+            sub->outer_ctx = tmp2;
         /* else if (CONTEXT(interp)->caller_ctx->current_sub == outer) */
-        else if (CONTEXT_FIELD(interp, CURRENT_CONTEXT_FIELD(interp, caller_ctx), current_sub) == outer)
-            sub->outer_ctx = CURRENT_CONTEXT_FIELD(interp, caller_ctx);
+        else if (CONTEXT_FIELD(interp, tmp1, current_sub) == outer)
+            sub->outer_ctx = tmp1;
     }
 
     METHOD get_multisig() {

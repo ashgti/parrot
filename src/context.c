@@ -173,6 +173,47 @@ Parrot_cx_dec_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
+=item C<PMC* Parrot_cx_get_caller_ctx(PARROT_INTERP, PMC *ctx)>
+
+Get caller Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->caller_ctx;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_caller_ctx(PARROT_INTERP, PMC *ctx, PMC *caller_ctx)>
+
+Set caller Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *caller_ctx))
+{
+    ASSERT_ARGS(Parrot_cx_dec_recursion_depth)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->caller_ctx = caller_ctx;
+}
+
+
+
+/*
+
 =back
 
 */
