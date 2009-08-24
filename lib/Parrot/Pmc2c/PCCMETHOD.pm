@@ -429,7 +429,7 @@ END
 
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        --CONTEXT_FIELD(interp, _ctx, recursion_depth);
+        Parrot_cx_dec_recursion_depth(interp, _ctx);
         CONTEXT_FIELD(interp, _ctx, caller_ctx) = CONTEXT_FIELD(interp, _caller_ctx, caller_ctx);
         interp->current_args = NULL;
     }

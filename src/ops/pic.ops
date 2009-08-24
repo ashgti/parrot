@@ -162,7 +162,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
         ccont = CONTEXT_FIELD(interp, ctx, current_cont);
         if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
             PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-            --CONTEXT_FIELD(interp, ctx, recursion_depth);
+            Parrot_cx_dec_recursion_depth(interp, ctx);
             CONTEXT_FIELD(interp, ctx, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
             interp->current_args = NULL;
         }

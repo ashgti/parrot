@@ -555,7 +555,7 @@ op get_params(inconst PMC) :flow {
     parrot_pass_args(interp, caller_ctx, ctx, src_indexes, dst_indexes, PARROT_PASS_PARAMS);
     if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-        --CONTEXT_FIELD(interp, ctx, recursion_depth);
+        Parrot_cx_dec_recursion_depth(interp, ctx);
         CONTEXT_FIELD(interp, ctx, caller_ctx) = CONTEXT_FIELD(interp, caller_ctx, caller_ctx);
         interp->current_args = NULL;
     }
