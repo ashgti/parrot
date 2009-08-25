@@ -22,15 +22,14 @@ typedef union {
 } Regs_ni;
 
 struct Parrot_Context {
-    /* common header with Interp_Context */
-    struct PMC            *caller_ctx;      /* caller context */
-    Regs_ni                bp;              /* pointers to FLOATVAL & INTVAL */
-    Regs_ps                bp_ps;           /* pointers to PMC & STR */
+    PMC     *caller_ctx;      /* caller context */
+    Regs_ni  bp;              /* pointers to FLOATVAL & INTVAL */
+    Regs_ps  bp_ps;           /* pointers to PMC & STR */
 
     /* end common header */
-    INTVAL                n_regs_used[4];   /* INSP in PBC points to Sub */
-    PMC                   *lex_pad;         /* LexPad PMC */
-    struct PMC            *outer_ctx;       /* outer context, if a closure */
+    INTVAL   n_regs_used[4];   /* INSP in PBC points to Sub */
+    PMC      *lex_pad;         /* LexPad PMC */
+    PMC      *outer_ctx;       /* outer context, if a closure */
 
     /* new call scheme and introspective variables */
     PMC      *current_sub;           /* the Sub we are executing */
