@@ -23,10 +23,10 @@ sub runstep {
     # should find g++ in most cases
     my $link = $conf->data->get('link') || 'c++';
 
-    if ( $libs !~ /-lpthread/ ) {
+    if ( $libs !~ /-lpthread\b/ ) {
         $libs .= ' -lpthread';
     }
-    if ( $libs !~ /-lrt/ ) {
+    if ( $libs !~ /-lrt\b/ ) {
         $libs .= ' -lrt';
     }
     my $ld_share_flags = $conf->data->get('ld_share_flags');
