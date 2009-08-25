@@ -282,7 +282,7 @@ Invokes the subroutine.
         /* plain subroutine call
          * create new context, place it in interpreter */
         context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
-        CONTEXT_FIELD(interp, context, current_sub)  = SELF;
+        Parrot_cx_set_sub(interp, context, SELF);
         CONTEXT_FIELD(interp, context, caller_ctx)   = caller_ctx;
         CONTEXT_FIELD(interp, context, current_pc)   = pc;
         Parrot_cx_set_continuation(interp, context, ccont);
@@ -335,7 +335,7 @@ Invokes the subroutine.
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
 
-                PMC_get_sub(INTERP, CONTEXT_FIELD(interp, c, current_sub), current_sub);
+                PMC_get_sub(INTERP, Parrot_cx_get_sub(interp, c), current_sub);
                 outer_pmc   = current_sub->outer_sub;
 
                 if (PMC_IS_NULL(outer_pmc))
@@ -346,7 +346,7 @@ Invokes the subroutine.
                 if (!outer_sub->ctx) {
                     PMC * const dummy = Parrot_alloc_context(INTERP,
                                                 outer_sub->n_regs_used, NULL);
-                    CONTEXT_FIELD(interp, dummy, current_sub)    = outer_pmc;
+                    Parrot_cx_set_sub(interp, dummy, outer_pmc);
 
                     if (!PMC_IS_NULL(outer_sub->lex_info)) {
                         Parrot_cx_set_lex_pad(interp, dummy, pmc_new_init(INTERP,
@@ -969,10 +969,10 @@ slurpy arguments).
         /* (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub */
         tmp1 = Parrot_cx_get_caller_ctx(interp, CONTEXT(interp));
         tmp2 = Parrot_cx_get_caller_ctx(interp, tmp1);
-        if (CONTEXT_FIELD(interp, tmp2, current_sub) == outer)
+        if (Parrot_cx_get_sub(interp, tmp2) == outer)
             sub->outer_ctx = tmp2;
         /* else if (CONTEXT(interp)->caller_ctx->current_sub == outer) */
-        else if (CONTEXT_FIELD(interp, tmp1, current_sub) == outer)
+        else if (Parrot_cx_get_sub(interp, tmp1) == outer)
             sub->outer_ctx = tmp1;
     }
 

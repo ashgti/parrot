@@ -215,7 +215,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;
 
     /* clear context introspection vars */
-    CURRENT_CONTEXT_FIELD(interp, current_sub)    = NULL;
+    Parrot_cx_set_sub(interp, CONTEXT(interp), NULL);
     Parrot_cx_set_continuation(interp, CONTEXT(interp), NULL); /* TODO Use PMCNULL */
     Parrot_cx_set_object(interp, CONTEXT(interp), NULL);
 

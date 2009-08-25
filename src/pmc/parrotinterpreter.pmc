@@ -498,19 +498,19 @@ Introspection interface. C<key> can be:
 
                 ctx = PMC_cont(cont)->to_ctx;
 
-                if (PMC_IS_NULL(CONTEXT_FIELD(interp, ctx, current_sub)))
+                if (PMC_IS_NULL(Parrot_cx_get_sub(interp, ctx)))
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such caller depth");
             }
         }
 
         if (item == outer)
-            return CONTEXT_FIELD(interp, ctx, current_sub);
+            return Parrot_cx_get_sub(interp, ctx);
 
         s = CONST_STRING(interp, "sub");
 
         if (Parrot_str_equal(interp, item, s))
-            return CONTEXT_FIELD(interp, ctx, current_sub);
+            return Parrot_cx_get_sub(interp, ctx);
 
         s = CONST_STRING(interp, "lexpad");
 
@@ -530,7 +530,7 @@ Introspection interface. C<key> can be:
         s = CONST_STRING(interp, "annotations");
 
         if (Parrot_str_equal(interp, item, s)) {
-            PMC        *sub_pmc = CONTEXT_FIELD(interp, ctx, current_sub);
+            PMC        *sub_pmc = Parrot_cx_get_sub(interp, ctx);
             if (ctx == CONTEXT(interp)) {
                 /* We can't know the current program counter for the currently
                  * executing sub, so can't return annotations for that. */

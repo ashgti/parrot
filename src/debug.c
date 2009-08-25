@@ -3559,8 +3559,8 @@ PDB_backtrace(PARROT_INTERP)
         if (!PMC_IS_NULL(old) && PMC_cont(old) &&
             CONTEXT_FIELD(interp, PMC_cont(old)->to_ctx, current_pc) ==
             CONTEXT_FIELD(interp, PMC_cont(sub)->to_ctx, current_pc) &&
-            CONTEXT_FIELD(interp, PMC_cont(old)->to_ctx, current_sub) ==
-            CONTEXT_FIELD(interp, PMC_cont(sub)->to_ctx, current_sub)) {
+            Parrot_cx_get_sub(interp, PMC_cont(old)->to_ctx) ==
+            Parrot_cx_get_sub(interp, PMC_cont(sub)->to_ctx)) {
                 ++rec_level;
         }
         else if (rec_level != 0) {

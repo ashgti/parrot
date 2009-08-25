@@ -325,7 +325,7 @@ Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
     Parrot_cx_set_caller_ctx(interp, ctx, old);
 
     /* doesn't change */
-    CONTEXT_FIELD(interp, ctx, current_sub) = CONTEXT_FIELD(interp, old, current_sub);
+    Parrot_cx_set_sub(interp, ctx, Parrot_cx_get_sub(interp, old));
 
     /* copy more ? */
     return ctx;

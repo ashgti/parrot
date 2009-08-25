@@ -445,6 +445,45 @@ Parrot_cx_set_object(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *object))
     c->current_object = object;
 }
 
+/*
+
+=item C<PMC* Parrot_cx_get_sub(PARROT_INTERP, PMC *ctx)>
+
+Get Sub executed inside Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_sub(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_sub)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_sub;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_sub(PARROT_INTERP, PMC *ctx, PMC *sub)>
+
+Set Sub executed inside Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_sub(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sub))
+{
+    ASSERT_ARGS(Parrot_cx_set_sub)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_sub = sub;
+}
+
 
 
 /*

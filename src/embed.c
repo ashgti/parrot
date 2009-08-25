@@ -910,7 +910,7 @@ set_current_sub(PARROT_INTERP)
                 const size_t offs = sub->start_offs;
 
                 if (offs == interp->resume_offset) {
-                    CURRENT_CONTEXT_FIELD(interp, current_sub) = sub_pmc;
+                    Parrot_cx_set_sub(interp, CONTEXT(interp), sub_pmc);
                     Parrot_cx_set_HLL(interp, CONTEXT(interp), sub->HLL_id);
                     return sub_pmc;
                 }
@@ -925,7 +925,7 @@ set_current_sub(PARROT_INTERP)
     sub_pmc                      = pmc_new(interp, enum_class_Sub);
     PMC_get_sub(interp, sub_pmc, sub_pmc_sub);
     sub_pmc_sub->start_offs      = 0;
-    CURRENT_CONTEXT_FIELD(interp, current_sub) = sub_pmc;
+    Parrot_cx_set_sub(interp, CONTEXT(interp), sub_pmc);
 
     return sub_pmc;
 }
@@ -970,14 +970,14 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
     Parrot_on_exit(interp, print_profile, NULL);
 
     /* Let's kick the tires and light the fires--call interpreter.c:runops. */
-    main_sub = CURRENT_CONTEXT_FIELD(interp, current_sub);
+    main_sub = Parrot_cx_get_sub(interp, CONTEXT(interp));
 
     /* if no sub was marked being :main, we create a dummy sub with offset 0 */
 
     if (!main_sub)
         main_sub = set_current_sub(interp);
 
-    CURRENT_CONTEXT_FIELD(interp, current_sub) = NULL;
+    Parrot_cx_set_sub(interp, CONTEXT(interp), NULL);
     CURRENT_CONTEXT_FIELD(interp, constants)   = interp->code->const_table->constants;
 
     Parrot_runops_fromc_args(interp, main_sub, "vP", userargv);

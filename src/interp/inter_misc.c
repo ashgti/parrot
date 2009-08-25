@@ -282,7 +282,7 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
     ASSERT_ARGS(interpinfo_p)
     switch (what) {
         case CURRENT_SUB:
-            return CURRENT_CONTEXT_FIELD(interp, current_sub);
+            return Parrot_cx_get_sub(interp, CONTEXT(interp));
         case CURRENT_CONT:
             {
             PMC * const cont = Parrot_cx_get_continuation(interp, CONTEXT(interp));

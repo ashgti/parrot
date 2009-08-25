@@ -286,7 +286,7 @@ Experimental: return caller PMC or PMCNULL if none.
 
     METHOD caller() {
         Parrot_cont *cc     = PMC_cont(SELF);
-        PMC         *caller = CONTEXT_FIELD(interp, cc->to_ctx, current_sub);
+        PMC         *caller = Parrot_cx_get_sub(interp, cc->to_ctx);
         Parrot_Sub_attributes  *sub;
 
         if (!caller)

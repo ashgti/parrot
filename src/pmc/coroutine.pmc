@@ -49,7 +49,7 @@ print_sub_name(PARROT_INTERP, PMC *sub_pmc)
     if (co->ctx && (PObj_get_FLAGS(sub_pmc) & SUB_FLAG_CORO_FF)) {
         Parrot_io_eprintf(tracer, " to '%Ss'",
                 Parrot_full_sub_name(interp,
-                    CONTEXT_FIELD(interp, Parrot_cx_get_caller_ctx(interp, co->ctx), current_sub)));
+                    Parrot_cx_get_sub(interp, Parrot_cx_get_caller_ctx(interp, co->ctx))));
     }
 
     Parrot_io_eprintf(tracer, "\n# ");
@@ -151,8 +151,8 @@ Swaps the "context".
 
             CONTEXT_FIELD(INTERP, ctx, caller_ctx)          = caller_ctx;
             PMC_cont(ccont)->from_ctx                       = ctx;
-            CONTEXT_FIELD(INTERP, ctx, current_sub)         = SELF;
-            Parrot_cx_set_HLL(interp, CONTEXT(interp), co->HLL_id);
+            Parrot_cx_set_sub(INTERP, ctx, SELF);
+            Parrot_cx_set_HLL(interp, ctx, co->HLL_id);
             Parrot_cx_set_namespace(INTERP, ctx, co->namespace_stash);
             Parrot_cx_set_continuation(INTERP, ctx, ccont);
             Parrot_cx_set_object(interp, ctx, NULL);

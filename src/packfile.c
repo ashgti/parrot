@@ -759,7 +759,7 @@ do_1_sub_pragma(PARROT_INTERP, ARGMOD(PMC *sub_pmc), pbc_action_enum_t action)
                                           / sizeof (opcode_t *);
 
                     PObj_get_FLAGS(sub_pmc)      &= ~SUB_FLAG_PF_MAIN;
-                    CURRENT_CONTEXT_FIELD(interp, current_sub)  = sub_pmc;
+                    Parrot_cx_set_sub(interp, CONTEXT(interp), sub_pmc);
                 }
                 else {
                     Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
