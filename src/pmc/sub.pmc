@@ -309,7 +309,7 @@ Invokes the subroutine.
             INTERP->current_object  = NULL;
         }
 
-        CONTEXT_FIELD(interp, context, current_HLL)       = sub->HLL_id;
+        Parrot_cx_set_HLL(interp, context, sub->HLL_id);
         Parrot_cx_set_namespace(interp, context, sub->namespace_stash);
 
         /* create pad if needed

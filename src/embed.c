@@ -911,7 +911,7 @@ set_current_sub(PARROT_INTERP)
 
                 if (offs == interp->resume_offset) {
                     CURRENT_CONTEXT_FIELD(interp, current_sub) = sub_pmc;
-                    CURRENT_CONTEXT_FIELD(interp, current_HLL) = sub->HLL_id;
+                    Parrot_cx_set_HLL(interp, CONTEXT(interp), sub->HLL_id);
                     return sub_pmc;
                 }
 

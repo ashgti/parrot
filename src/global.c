@@ -378,7 +378,7 @@ Parrot_make_namespace_autobase(PARROT_INTERP, ARGIN_NULLOK(PMC *key))
         base_ns = Parrot_cx_get_namespace(interp, CONTEXT(interp));
     else
         base_ns = VTABLE_get_pmc_keyed_int(interp, interp->HLL_namespace,
-            CURRENT_CONTEXT_FIELD(interp, current_HLL));
+            Parrot_cx_get_HLL(interp, CONTEXT(interp)));
     return Parrot_make_namespace_keyed(interp, base_ns, key);
 }
 
@@ -788,7 +788,7 @@ void
 Parrot_store_sub_in_namespace(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_store_sub_in_namespace)
-    const INTVAL cur_id = CURRENT_CONTEXT_FIELD(interp, current_HLL);
+    const INTVAL cur_id = Parrot_cx_get_HLL(interp, CONTEXT(interp));
 
     PMC        *ns;
     Parrot_Sub_attributes *sub;
@@ -798,7 +798,7 @@ Parrot_store_sub_in_namespace(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 
     /* store relative to HLL namespace */
     PMC_get_sub(interp, sub_pmc, sub);
-    CURRENT_CONTEXT_FIELD(interp, current_HLL) = sub->HLL_id;
+    Parrot_cx_set_HLL(interp, CONTEXT(interp), sub->HLL_id);
 
     ns = get_namespace_pmc(interp, sub_pmc);
 
@@ -824,7 +824,7 @@ Parrot_store_sub_in_namespace(PARROT_INTERP, ARGIN(PMC *sub_pmc))
     }
 
     /* restore HLL_id */
-    CURRENT_CONTEXT_FIELD(interp, current_HLL) = cur_id;
+    Parrot_cx_set_HLL(interp, CONTEXT(interp), cur_id);
     Parrot_unblock_GC_mark(interp);
 }
 
