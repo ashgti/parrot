@@ -212,6 +212,84 @@ Parrot_cx_set_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *caller_ctx))
 
 /*
 
+=item C<PMC* Parrot_cx_get_outer_ctx(PARROT_INTERP, PMC *ctx)>
+
+Get outer Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_outer_ctx)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->outer_ctx;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_outer_ctx(PARROT_INTERP, PMC *ctx, PMC *outer_ctx)>
+
+Set outer Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *outer_ctx))
+{
+    ASSERT_ARGS(Parrot_cx_set_outer_ctx)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->outer_ctx = outer_ctx;
+}
+
+/*
+
+=item C<PMC* Parrot_cx_get_lex_pad(PARROT_INTERP, PMC *ctx)>
+
+Get LexPad.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_lex_pad)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->lex_pad;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_lex_pad(PARROT_INTERP, PMC *ctx, PMC *lex_pad)>
+
+Set LexPad.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *lex_pad))
+{
+    ASSERT_ARGS(Parrot_cx_set_lex_pad)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->lex_pad = lex_pad;
+}
+
+/*
+
 =item C<PMC* Parrot_cx_get_namespace(PARROT_INTERP, PMC *ctx)>
 
 Get namespace of Context.
