@@ -1739,7 +1739,6 @@ Parrot_jit_begin_sub_regs(Parrot_jit_info_t *jit_info,
      */
     if (jit_info->flags & JIT_CODE_RECURSIVE) {
         char * L1;
-        PackFile_Constant ** constants;
         PMC *sig_result;
         opcode_t *result;
 
@@ -1748,9 +1747,8 @@ Parrot_jit_begin_sub_regs(Parrot_jit_info_t *jit_info,
         L1 = NATIVECODE;
         emitm_calll(NATIVECODE, 0);
         /* check type of return value */
-        constants = CURRENT_CONTEXT_FIELD(interp, constants);
-        result = CURRENT_CONTEXT_FIELD(interp, current_results);
-        sig_result = constants[result[1]]->u.key;
+        result      = Parrot_cx_get_results(interp, CONTEXT(interp));
+        sig_result  = Parrot_cx_get_pmc_constant(interp, CONTEXT(interp), result[1]);
         if (!VTABLE_elements(interp, sig_result))
             goto no_result;
         /* fetch args to %edx */

@@ -523,6 +523,45 @@ Parrot_cx_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
     c->current_pc = pc;
 }
 
+/*
+
+=item C<opcode_t* Parrot_cx_get_results(PARROT_INTERP, PMC *ctx)>
+
+Set ptr into code with get_results opcode.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+opcode_t*
+Parrot_cx_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_results)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_results;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_results(PARROT_INTERP, PMC *ctx, opcode_t *pc)>
+
+Set ptr into code with get_results opcode.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_results(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
+{
+    ASSERT_ARGS(Parrot_cx_set_results)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_results = pc;
+}
+
 
 /*
 

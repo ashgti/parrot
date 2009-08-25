@@ -709,7 +709,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
         if (!PMC_cont(ccont)->address)
             return 0;
         caller_ctx = PMC_cont(ccont)->to_ctx;
-        args       = CONTEXT_FIELD(interp, caller_ctx, current_results);
+        args       = Parrot_cx_get_results(interp, caller_ctx);
     }
     else {
         caller_ctx = Parrot_cx_get_caller_ctx(interp, ctx);
@@ -830,7 +830,7 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
     sig_results = (PMC *)(pc[1]);
     ASSERT_SIG_PMC(sig_results);
 
-    CONTEXT_FIELD(interp, ctx, current_results) = (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx);
+    Parrot_cx_set_results(interp, ctx, (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx));
     if (!parrot_pic_is_safe_to_jit(interp, sub, sig_args, sig_results, &flags))
         return 0;
 

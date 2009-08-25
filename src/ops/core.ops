@@ -527,7 +527,7 @@ op get_results(inconst PMC) :flow {
     PMC * const signature = $1;
     INTVAL argc;
 
-    CURRENT_CONTEXT_FIELD(interp, current_results) = _this;
+    Parrot_cx_set_results(interp, CONTEXT(interp), _this);
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }
@@ -586,8 +586,8 @@ op set_returns(inconst PMC) :flow {
             exit_fatal(1, "No caller_ctx for continuation %p.", ccont);
         }
 
-        src_indexes = interp->current_returns;
-        dest_indexes = CONTEXT_FIELD(interp, caller_ctx, current_results);
+        src_indexes             = interp->current_returns;
+        dest_indexes            = Parrot_cx_get_results(interp, caller_ctx);
         interp->current_returns = NULL;
         /* does this need to be here */
         interp->current_args = NULL;
@@ -597,7 +597,7 @@ op set_returns(inconst PMC) :flow {
     else if (CONTEXT_FIELD(interp, caller_ctx, results_signature)) {
     /* We have a dynamic result signature, from pcc_invoke */
         parrot_pass_args(interp, ctx, caller_ctx, interp->current_returns,
-                CONTEXT_FIELD(interp, caller_ctx, current_results), PARROT_PASS_RESULTS);
+                Parrot_cx_get_results(interp, caller_ctx), PARROT_PASS_RESULTS);
     }
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
@@ -618,7 +618,7 @@ inline op result_info(out PMC) {
     PMC *sig = NULL;
     if (cc && PMC_cont(cc)->to_ctx) {
         /* caller context has results */
-        opcode_t * const results = CONTEXT_FIELD(interp, PMC_cont(cc)->to_ctx, current_results);
+        opcode_t * const results = Parrot_cx_get_results(interp, PMC_cont(cc)->to_ctx);
         if (results) {
             /* get results PMC index and get PMC. */
             sig = PF_CONST(PMC_cont(cc)->seg, results[1])->u.key;

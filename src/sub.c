@@ -80,7 +80,7 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
         cc->address   = NULL;
     }
 
-    cc->current_results = CONTEXT_FIELD(interp, to_ctx, current_results);
+    cc->current_results = Parrot_cx_get_results(interp, to_ctx);
     return cc;
 }
 

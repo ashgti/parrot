@@ -531,10 +531,10 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
      * in the constants table. */
     if (CONTEXT_FIELD(interp, ctx, results_signature))
         Parrot_init_arg_indexes_and_sig_pmc(interp, ctx,
-                CONTEXT_FIELD(interp, ctx, current_results),
+                Parrot_cx_get_results(interp, ctx),
                 CONTEXT_FIELD(interp, ctx, results_signature), &st->dest);
     else
-        Parrot_init_arg_op(interp, ctx, CONTEXT_FIELD(interp, ctx, current_results), &st->dest);
+        Parrot_init_arg_op(interp, ctx, Parrot_cx_get_results(interp, ctx), &st->dest);
 
 }
 
@@ -2632,7 +2632,7 @@ set_context_sig_params(PARROT_INTERP, ARGIN(const char *signature),
 
     interp->current_args   = indexes[0];
     interp->args_signature = sigs[0];
-    CONTEXT_FIELD(interp, ctx, current_results)   = indexes[1];
+    Parrot_cx_set_results(interp, ctx, indexes[1]);
     CONTEXT_FIELD(interp, ctx, results_signature) = sigs[1];
     return ret_x;
 }
@@ -2867,7 +2867,7 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
 
     interp->current_args   = arg_indexes;
     interp->args_signature = args_sig;
-    CONTEXT_FIELD(interp, ctx, current_results)   = result_indexes;
+    Parrot_cx_set_results(interp, ctx, result_indexes);
     CONTEXT_FIELD(interp, ctx, results_signature) = results_sig;
 
     /* arg_accessors assigned in loop above */
