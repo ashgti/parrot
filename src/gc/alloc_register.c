@@ -264,7 +264,6 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
     Parrot_Context *ctx = Parrot_cx_get_context(interp, pmcctx);
     Parrot_Context *old = Parrot_cx_get_context(interp, pmcold);
 
-    ctx->gc_mark           = 0;
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
     ctx->lex_pad           = PMCNULL;
