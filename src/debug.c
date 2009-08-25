@@ -3520,7 +3520,7 @@ PDB_backtrace(PARROT_INTERP)
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
                 PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        CONTEXT_FIELD(interp, ctx, current_pc) - interp->code->base.data + 1, NULL);
+                        Parrot_cx_get_pc(interp, ctx) - interp->code->base.data + 1, NULL);
                 if (!PMC_IS_NULL(annot)) {
                     PMC *pfile = VTABLE_get_pmc_keyed_str(interp, annot,
                             Parrot_str_new_constant(interp, "file"));
@@ -3557,8 +3557,8 @@ PDB_backtrace(PARROT_INTERP)
 
         /* recursion detection */
         if (!PMC_IS_NULL(old) && PMC_cont(old) &&
-            CONTEXT_FIELD(interp, PMC_cont(old)->to_ctx, current_pc) ==
-            CONTEXT_FIELD(interp, PMC_cont(sub)->to_ctx, current_pc) &&
+            Parrot_cx_get_pc(interp, PMC_cont(old)->to_ctx) ==
+            Parrot_cx_get_pc(interp, PMC_cont(sub)->to_ctx) &&
             Parrot_cx_get_sub(interp, PMC_cont(old)->to_ctx) ==
             Parrot_cx_get_sub(interp, PMC_cont(sub)->to_ctx)) {
                 ++rec_level;
@@ -3573,7 +3573,7 @@ PDB_backtrace(PARROT_INTERP)
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
                 PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        CONTEXT_FIELD(interp, sub_cont->to_ctx, current_pc) - interp->code->base.data + 1,
+                        Parrot_cx_get_pc(interp, sub_cont->to_ctx) - interp->code->base.data + 1,
                         NULL);
 
                 if (!PMC_IS_NULL(annot)) {

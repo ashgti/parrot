@@ -782,7 +782,7 @@ sub, or for the point of the call a level deeper for the rest.
                         PackFile_ByteCode *seg = sub->seg;
                         opcode_t          *pc  = cont && cur_ctx == cont->to_ctx
                                                ? cont->address
-                                               : CONTEXT_FIELD(interp, cur_ctx, current_pc);
+                                               : Parrot_cx_get_pc(interp, cur_ctx);
 
                         annotations = PackFile_Annotations_lookup(interp,
                                         seg->annotations, pc - seg->base.data,

@@ -484,6 +484,44 @@ Parrot_cx_set_sub(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sub))
     c->current_sub = sub;
 }
 
+/*
+
+=item C<opcode_t* Parrot_cx_get_pc(PARROT_INTERP, PMC *ctx)>
+
+Get program counter of Sub invocation.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+opcode_t*
+Parrot_cx_get_pc(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_pc)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_pc;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_pc(PARROT_INTERP, PMC *ctx, opcode_t *pc)>
+
+Set program counter of Sub invocation.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
+{
+    ASSERT_ARGS(Parrot_cx_set_pc)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_pc = pc;
+}
 
 
 /*

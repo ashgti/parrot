@@ -291,14 +291,14 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     }
 
     /* return here if there is no current pc */
-    if (CONTEXT_FIELD(interp, ctx, current_pc) == NULL)
+    if (Parrot_cx_get_pc(interp, ctx) == NULL)
         return 1;
 
     /* calculate the current pc */
-    info->pc = CONTEXT_FIELD(interp, ctx, current_pc) - sub->seg->base.data;
+    info->pc = Parrot_cx_get_pc(interp, ctx) - sub->seg->base.data;
 
     /* determine the current source file/line */
-    if (CONTEXT_FIELD(interp, ctx, current_pc)) {
+    if (Parrot_cx_get_pc(interp, ctx)) {
         const size_t offs = info->pc;
         size_t i, n;
         opcode_t *pc = sub->seg->base.data;

@@ -283,8 +283,8 @@ Invokes the subroutine.
          * create new context, place it in interpreter */
         context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
         Parrot_cx_set_sub(interp, context, SELF);
-        CONTEXT_FIELD(interp, context, caller_ctx)   = caller_ctx;
-        CONTEXT_FIELD(interp, context, current_pc)   = pc;
+        Parrot_cx_set_caller_ctx(interp, context, caller_ctx);
+        Parrot_cx_set_pc(interp, context, pc);
         Parrot_cx_set_continuation(interp, context, ccont);
 
         /* check recursion/call depth */

@@ -107,7 +107,7 @@ sub goto_offset {
     my ( $self, $offset ) = @_;
 
     # this must be a single expression, in case it's in a single-statement if
-    return "do {\nCURRENT_CONTEXT_FIELD(interp, current_pc) = CUR_OPCODE + $offset;\n"
+    return "do {\nParrot_cx_set_pc(interp, CONTEXT(interp), CUR_OPCODE + $offset);\n"
     .      "goto **(void **)(cur_opcode += $offset);\n} while (1)";
 }
 
