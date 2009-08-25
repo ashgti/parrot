@@ -482,7 +482,7 @@ Introspection interface. C<key> can be:
 
         if (outer) {
             for (; level; --level) {
-                ctx = CONTEXT_FIELD(interp, ctx, outer_ctx);
+                ctx = Parrot_cx_get_outer_ctx(interp, ctx);
                 if (PMC_IS_NULL(ctx))
                     Parrot_ex_throw_from_c_args(interp, NULL,
                         CONTROL_ERROR, "No such outer depth");
@@ -515,7 +515,7 @@ Introspection interface. C<key> can be:
         s = CONST_STRING(interp, "lexpad");
 
         if (Parrot_str_equal(interp, item, s))
-            return CONTEXT_FIELD(interp, ctx, lex_pad);
+            return Parrot_cx_get_lex_pad(interp, ctx);
 
         s = CONST_STRING(interp, "namespace");
 

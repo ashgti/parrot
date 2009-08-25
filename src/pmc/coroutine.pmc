@@ -161,10 +161,10 @@ Swaps the "context".
 
             /* create pad if needed */
             if (!PMC_IS_NULL(co->lex_info)) {
-                CONTEXT_FIELD(INTERP, ctx, lex_pad) = pmc_new_init(INTERP,
+                Parrot_cx_set_lex_pad(INTERP, ctx, pmc_new_init(INTERP,
                         Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
-                        co->lex_info);
-                VTABLE_set_pointer(INTERP, CONTEXT_FIELD(INTERP, ctx, lex_pad), ctx);
+                        co->lex_info));
+                VTABLE_set_pointer(INTERP, Parrot_cx_get_lex_pad(INTERP, ctx), ctx);
             }
 
             PObj_get_FLAGS(SELF) |= SUB_FLAG_CORO_FF;

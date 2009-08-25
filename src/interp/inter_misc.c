@@ -294,7 +294,7 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
         case CURRENT_OBJECT:
             return CURRENT_CONTEXT_FIELD(interp, current_object);
         case CURRENT_LEXPAD:
-            return CURRENT_CONTEXT_FIELD(interp, lex_pad);
+            return Parrot_cx_get_lex_pad(interp, CONTEXT(interp));
         default:        /* or a warning only? */
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");

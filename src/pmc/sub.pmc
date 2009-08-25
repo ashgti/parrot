@@ -317,20 +317,20 @@ Invokes the subroutine.
          *      and factor out common code with coroutine pmc
          */
         if (!PMC_IS_NULL(sub->lex_info)) {
-            CONTEXT_FIELD(interp, context, lex_pad) = pmc_new_init(INTERP,
+            Parrot_cx_set_lex_pad(interp, context, pmc_new_init(INTERP,
                     Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
-                    sub->lex_info);
-            VTABLE_set_pointer(INTERP, CONTEXT_FIELD(interp, context, lex_pad), context);
+                    sub->lex_info));
+            VTABLE_set_pointer(INTERP, Parrot_cx_get_lex_pad(interp, context), context);
         }
 
         if (sub->outer_ctx) {
             /* set outer context */
-            CONTEXT_FIELD(interp, context, outer_ctx) = sub->outer_ctx;
+            Parrot_cx_set_outer_ctx(interp, context, sub->outer_ctx);
         }
         else {
             /* autoclose */
             PMC *c;
-            for (c = context; !CONTEXT_FIELD(interp, c, outer_ctx); c = CONTEXT_FIELD(interp, c, outer_ctx)) {
+            for (c = context; PMC_IS_NULL(Parrot_cx_get_outer_ctx(interp, c)); c = Parrot_cx_get_outer_ctx(interp, c)) {
 
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
@@ -349,17 +349,18 @@ Invokes the subroutine.
                     CONTEXT_FIELD(interp, dummy, current_sub)    = outer_pmc;
 
                     if (!PMC_IS_NULL(outer_sub->lex_info)) {
-                        CONTEXT_FIELD(interp, dummy, lex_pad )= pmc_new_init(INTERP,
+                        Parrot_cx_set_lex_pad(interp, dummy, pmc_new_init(INTERP,
                                Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
-                               outer_sub->lex_info);
-                        VTABLE_set_pointer(INTERP, CONTEXT_FIELD(interp, dummy, lex_pad), dummy);
+                               outer_sub->lex_info));
+                        VTABLE_set_pointer(INTERP, Parrot_cx_get_lex_pad(interp, dummy), dummy);
                     }
 
-                    CONTEXT_FIELD(interp, dummy, outer_ctx) = outer_sub->outer_ctx;
+                    if (!PMC_IS_NULL(outer_sub->outer_ctx))
+                        Parrot_cx_set_outer_ctx(interp, dummy, outer_sub->outer_ctx);
                     outer_sub->ctx = dummy;
                 }
 
-                CONTEXT_FIELD(interp, c, outer_ctx) = outer_sub->ctx;
+                Parrot_cx_set_outer_ctx(interp, c, outer_sub->ctx);
             }
         }
 

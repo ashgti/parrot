@@ -379,8 +379,8 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_find_pad)
     while (1) {
-        PMC * const lex_pad = CONTEXT_FIELD(interp, ctx, lex_pad);
-        PMC        *outer   = CONTEXT_FIELD(interp, ctx, outer_ctx);
+        PMC * const lex_pad = Parrot_cx_get_lex_pad(interp, ctx);
+        PMC        *outer   = Parrot_cx_get_outer_ctx(interp, ctx);
 
         if (!outer)
             return lex_pad;
