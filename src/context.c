@@ -312,7 +312,7 @@ Parrot_cx_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
 
 =item C<void Parrot_cx_set_namespace(PARROT_INTERP, PMC *ctx, PMC *_namespace)>
 
-Set caller Context.
+Set namespace of Context.
 
 =cut
 
@@ -331,7 +331,7 @@ Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_names
 
 =item C<INTVAL Parrot_cx_get_HLL(PARROT_INTERP, PMC *ctx)>
 
-Get namespace of Context.
+Get HLL of Context.
 
 =cut
 
@@ -351,7 +351,7 @@ Parrot_cx_get_HLL(PARROT_INTERP, ARGIN(PMC *ctx))
 
 =item C<void Parrot_cx_set_HLL(PARROT_INTERP, PMC *ctx, INTVAL hll)>
 
-Set caller Context.
+Set HLL of Context.
 
 =cut
 
@@ -391,7 +391,7 @@ Parrot_cx_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
 =item C<void Parrot_cx_set_continuation(PARROT_INTERP, PMC *ctx, PMC
 *_continuation)>
 
-Set caller Context.
+Set continuation of Context.
 
 =cut
 
