@@ -107,6 +107,11 @@ PMC* Parrot_cx_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PMC* Parrot_cx_get_object(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 PMC* Parrot_cx_get_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -171,6 +176,13 @@ void Parrot_cx_set_namespace(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+void Parrot_cx_set_object(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN_NULLOK(PMC *object))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 void Parrot_cx_set_outer_ctx(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN(PMC *outer_ctx))
@@ -199,6 +211,9 @@ void Parrot_cx_set_outer_ctx(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_cx_get_object __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_outer_ctx __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -231,6 +246,9 @@ void Parrot_cx_set_outer_ctx(PARROT_INTERP,
     || PARROT_ASSERT_ARG(ctx) \
     || PARROT_ASSERT_ARG(lex_pad)
 #define ASSERT_ARGS_Parrot_cx_set_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_cx_set_object __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_set_outer_ctx __attribute__unused__ int _ASSERT_ARGS_CHECK = \

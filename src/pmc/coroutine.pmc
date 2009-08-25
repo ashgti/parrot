@@ -155,7 +155,7 @@ Swaps the "context".
             Parrot_cx_set_HLL(interp, CONTEXT(interp), co->HLL_id);
             Parrot_cx_set_namespace(INTERP, ctx, co->namespace_stash);
             Parrot_cx_set_continuation(INTERP, ctx, ccont);
-            CONTEXT_FIELD(INTERP, ctx, current_object)      = NULL;
+            Parrot_cx_set_object(interp, ctx, NULL);
             INTERP->current_object                  = NULL;
             INTERP->current_cont                    = NULL;
 

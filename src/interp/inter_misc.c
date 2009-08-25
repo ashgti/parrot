@@ -292,7 +292,7 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
             return cont;
             }
         case CURRENT_OBJECT:
-            return CURRENT_CONTEXT_FIELD(interp, current_object);
+            return Parrot_cx_get_object(interp, CONTEXT(interp));
         case CURRENT_LEXPAD:
             return Parrot_cx_get_lex_pad(interp, CONTEXT(interp));
         default:        /* or a warning only? */

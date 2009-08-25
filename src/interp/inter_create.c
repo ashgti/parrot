@@ -217,7 +217,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     /* clear context introspection vars */
     CURRENT_CONTEXT_FIELD(interp, current_sub)    = NULL;
     Parrot_cx_set_continuation(interp, CONTEXT(interp), NULL); /* TODO Use PMCNULL */
-    CURRENT_CONTEXT_FIELD(interp, current_object) = NULL;
+    Parrot_cx_set_object(interp, CONTEXT(interp), NULL);
 
     /* Load the core op func and info tables */
     interp->op_lib          = PARROT_CORE_OPLIB_INIT(1);

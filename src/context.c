@@ -406,6 +406,45 @@ Parrot_cx_set_continuation(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_co
     c->current_cont = _continuation;
 }
 
+/*
+
+=item C<PMC* Parrot_cx_get_object(PARROT_INTERP, PMC *ctx)>
+
+Get object of Context (in method call).
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_object(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_object)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_object;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_object(PARROT_INTERP, PMC *ctx, PMC *object)>
+
+Set object of Context (in method call).
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_object(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *object))
+{
+    ASSERT_ARGS(Parrot_cx_set_object)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_object = object;
+}
+
 
 
 /*

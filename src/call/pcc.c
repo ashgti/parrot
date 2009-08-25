@@ -781,7 +781,7 @@ fetch_arg_sig(PARROT_INTERP, ARGMOD(call_state *st))
             break;
         case PARROT_ARG_PMC:
             if (st->src.u.sig.sig[st->src.i] == 'O')
-                UVal_pmc(st->val) = CURRENT_CONTEXT_FIELD(interp, current_object);
+                UVal_pmc(st->val) = Parrot_cx_get_object(interp, CONTEXT(interp));
             else {
                 UVal_pmc(st->val) = va_arg(*ap, PMC *);
             }

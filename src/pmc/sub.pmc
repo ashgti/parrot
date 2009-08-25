@@ -305,7 +305,7 @@ Invokes the subroutine.
         }
 
         if (!PMC_IS_NULL(INTERP->current_object)) {
-            CONTEXT_FIELD(interp, context, current_object) = INTERP->current_object;
+            Parrot_cx_set_object(interp, context, INTERP->current_object);
             INTERP->current_object  = NULL;
         }
 
