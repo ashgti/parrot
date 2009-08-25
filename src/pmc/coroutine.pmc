@@ -153,7 +153,7 @@ Swaps the "context".
             PMC_cont(ccont)->from_ctx                       = ctx;
             CONTEXT_FIELD(INTERP, ctx, current_sub)         = SELF;
             CONTEXT_FIELD(INTERP, ctx, current_HLL)         = co->HLL_id;
-            CONTEXT_FIELD(INTERP, ctx, current_namespace)   = co->namespace_stash;
+            Parrot_cx_set_namespace(INTERP, ctx, co->namespace_stash);
             CONTEXT_FIELD(INTERP, ctx, current_cont)        = ccont;
             CONTEXT_FIELD(INTERP, ctx, current_object)      = NULL;
             INTERP->current_object                  = NULL;
