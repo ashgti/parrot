@@ -327,6 +327,46 @@ Parrot_cx_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_names
     c->current_namespace = _namespace;
 }
 
+/*
+
+=item C<PMC* Parrot_cx_get_continuation(PARROT_INTERP, PMC *ctx)>
+
+Get continuation of Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PMC*
+Parrot_cx_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_continuation)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->current_cont;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_continuation(PARROT_INTERP, PMC *ctx, PMC
+*_continuation)>
+
+Set caller Context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_continuation(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_continuation))
+{
+    ASSERT_ARGS(Parrot_cx_set_continuation)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->current_cont = _continuation;
+}
+
 
 
 /*

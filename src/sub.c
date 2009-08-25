@@ -149,7 +149,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
     PMC *ctx = PMC_cont(cont)->from_ctx;
-    cont = CONTEXT_FIELD(interp, ctx, current_cont);
+    cont = Parrot_cx_get_continuation(interp, ctx);
 
     while (1) {
         /*
@@ -161,7 +161,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
         ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
-        cont = CONTEXT_FIELD(interp, ctx, current_cont);
+        cont = Parrot_cx_get_continuation(interp, ctx);
     }
 
 }

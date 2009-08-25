@@ -285,7 +285,7 @@ Invokes the subroutine.
         CONTEXT_FIELD(interp, context, current_sub)  = SELF;
         CONTEXT_FIELD(interp, context, caller_ctx)   = caller_ctx;
         CONTEXT_FIELD(interp, context, current_pc)   = pc;
-        CONTEXT_FIELD(interp, context, current_cont) = ccont;
+        Parrot_cx_set_continuation(interp, context, ccont);
 
         /* check recursion/call depth */
         if (Parrot_cx_inc_recursion_depth(INTERP, context) > INTERP->recursion_limit)

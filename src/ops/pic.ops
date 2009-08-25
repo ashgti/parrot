@@ -159,7 +159,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
         }
         else
             n = 2;
-        ccont = CONTEXT_FIELD(interp, ctx, current_cont);
+        ccont = Parrot_cx_get_continuation(interp, ctx);
         if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
             PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
             Parrot_cx_dec_recursion_depth(interp, ctx);
@@ -189,7 +189,7 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
 
     ctx     = CONTEXT(interp);
     mic     = (Parrot_MIC *) cur_opcode[1];
-    ccont   = CONTEXT_FIELD(interp, ctx, current_cont);
+    ccont   = Parrot_cx_get_continuation(interp, ctx);
     cc      = PMC_cont(ccont);
     if (!cc->address) {
         interp->current_returns = CUR_OPCODE;

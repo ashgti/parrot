@@ -346,7 +346,7 @@ class, the PMC arguments are shifted down.
          */
         if (cont && cont != NEED_CONTINUATION
         && (PObj_get_FLAGS(cont) & SUB_FLAG_TAILCALL)) {
-            cont = CURRENT_CONTEXT_FIELD(interp, current_cont);
+            cont = Parrot_cx_get_continuation(interp, CONTEXT(interp));
             next = VTABLE_invoke(INTERP, cont, next);
         }
 

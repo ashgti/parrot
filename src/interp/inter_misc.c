@@ -285,7 +285,7 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
             return CURRENT_CONTEXT_FIELD(interp, current_sub);
         case CURRENT_CONT:
             {
-            PMC * const cont = CURRENT_CONTEXT_FIELD(interp, current_cont);
+            PMC * const cont = Parrot_cx_get_continuation(interp, CONTEXT(interp));
             if (!PMC_IS_NULL(cont) && cont->vtable->base_type ==
                     enum_class_RetContinuation)
                 return VTABLE_clone(interp, cont);

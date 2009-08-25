@@ -3540,9 +3540,9 @@ PDB_backtrace(PARROT_INTERP)
     /* backtrace: follow the continuation chain */
     while (1) {
         Parrot_cont *sub_cont;
-        sub = CONTEXT_FIELD(interp, ctx, current_cont);
+        sub = Parrot_cx_get_continuation(interp, ctx);
 
-        if (!sub)
+        if (PMC_IS_NULL(sub))
             break;
 
         sub_cont = PMC_cont(sub);

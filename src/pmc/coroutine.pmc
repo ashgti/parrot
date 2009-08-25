@@ -154,7 +154,7 @@ Swaps the "context".
             CONTEXT_FIELD(INTERP, ctx, current_sub)         = SELF;
             CONTEXT_FIELD(INTERP, ctx, current_HLL)         = co->HLL_id;
             Parrot_cx_set_namespace(INTERP, ctx, co->namespace_stash);
-            CONTEXT_FIELD(INTERP, ctx, current_cont)        = ccont;
+            Parrot_cx_set_continuation(INTERP, ctx, ccont);
             CONTEXT_FIELD(INTERP, ctx, current_object)      = NULL;
             INTERP->current_object                  = NULL;
             INTERP->current_cont                    = NULL;
@@ -186,7 +186,7 @@ Swaps the "context".
             ctx                   = co->ctx;
 
             /* and the recent call context */
-            ccont                   = CONTEXT_FIELD(INTERP, ctx, current_cont);
+            ccont                   = Parrot_cx_get_continuation(INTERP, ctx);
             PMC_cont(ccont)->to_ctx = CONTEXT(interp);
             Parrot_cx_set_caller_ctx(interp, ctx, CONTEXT(interp));
 
@@ -201,7 +201,7 @@ Swaps the "context".
             /* switch back to last remembered code seg and context */
 
             wanted_seg            = co->caller_seg;
-            ccont                 = CONTEXT_FIELD(INTERP, co->ctx, current_cont);
+            ccont                 = Parrot_cx_get_continuation(INTERP, co->ctx);
             ctx                   = PMC_cont(ccont)->to_ctx;
 
             if (! ctx) {

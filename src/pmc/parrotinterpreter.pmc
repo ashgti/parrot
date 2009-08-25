@@ -490,7 +490,7 @@ Introspection interface. C<key> can be:
         }
         else {
             for (; level; --level) {
-                cont = CONTEXT_FIELD(interp, ctx, current_cont);
+                cont = Parrot_cx_get_continuation(interp, ctx);
 
                 if (PMC_IS_NULL(cont) || !PMC_cont(cont)->seg)
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -525,7 +525,7 @@ Introspection interface. C<key> can be:
         s = CONST_STRING(interp, "continuation");
 
         if (Parrot_str_equal(interp, item, s))
-            return VTABLE_clone(interp, CONTEXT_FIELD(interp, ctx, current_cont));
+            return VTABLE_clone(interp, Parrot_cx_get_continuation(interp, ctx));
 
         s = CONST_STRING(interp, "annotations");
 

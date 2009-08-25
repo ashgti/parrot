@@ -312,7 +312,7 @@ Experimental: return continuation PMC of this Continuation or PMCNULL if none.
 
     METHOD continuation() {
         Parrot_cont *cc   = PMC_cont(SELF);
-        PMC         *cont = CONTEXT_FIELD(interp, cc->to_ctx, current_cont);
+        PMC         *cont = Parrot_cx_get_continuation(interp, cc->to_ctx);
 
         if (cont)
             RETURN(PMC *cont);

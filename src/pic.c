@@ -705,7 +705,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
     /* check params */
 
     if (op == PARROT_OP_set_returns_pc) {
-        PMC * const ccont = CONTEXT_FIELD(interp, ctx, current_cont);
+        PMC * const ccont = Parrot_cx_get_continuation(interp, ctx);
         if (!PMC_cont(ccont)->address)
             return 0;
         caller_ctx = PMC_cont(ccont)->to_ctx;

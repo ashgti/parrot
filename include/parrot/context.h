@@ -87,6 +87,11 @@ Parrot_Context* Parrot_cx_get_context(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
+PMC* Parrot_cx_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 PMC* Parrot_cx_get_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -134,6 +139,13 @@ void Parrot_cx_set_caller_ctx(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
+void Parrot_cx_set_continuation(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN_NULLOK(PMC *_continuation))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 void Parrot_cx_set_lex_pad(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN(PMC *lex_pad))
@@ -167,6 +179,9 @@ void Parrot_cx_set_outer_ctx(PARROT_INTERP,
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_cx_get_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_lex_pad __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
@@ -192,6 +207,9 @@ void Parrot_cx_set_outer_ctx(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx) \
     || PARROT_ASSERT_ARG(caller_ctx)
+#define ASSERT_ARGS_Parrot_cx_set_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_set_lex_pad __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx) \
