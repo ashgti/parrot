@@ -399,8 +399,6 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     ctx->n_regs_used[REGNO_STR] = number_regs_used[REGNO_STR];
     ctx->n_regs_used[REGNO_PMC] = number_regs_used[REGNO_PMC];
 
-    ctx->regs_mem_size = reg_alloc;
-
     /* regs start past the context */
     p   = (void *) ((char *)ctx + ALIGNED_CTX_SIZE);
 

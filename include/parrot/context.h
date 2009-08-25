@@ -47,7 +47,6 @@ struct Parrot_Context {
     struct PackFile_Constant **constants;
 
     INTVAL                 current_HLL;     /* see also src/hll.c */
-    size_t                 regs_mem_size;   /* memory occupied by registers */
     int                    gc_mark;         /* marked in gc run */
 
     UINTVAL                warns;           /* Keeps track of what warnings
