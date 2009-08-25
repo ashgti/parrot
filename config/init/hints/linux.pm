@@ -26,6 +26,9 @@ sub runstep {
     if ( $libs !~ /-lpthread/ ) {
         $libs .= ' -lpthread';
     }
+    if ( $libs !~ /-lrt/ ) {
+        $libs .= ' -lrt';
+    }
     my $ld_share_flags = $conf->data->get('ld_share_flags');
     my $cc_shared      = $conf->data->get('cc_shared');
 
