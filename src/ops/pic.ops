@@ -143,7 +143,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     mic         = (Parrot_MIC *) cur_opcode[1];
     caller_ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
     if (src_pc) {
-        src_pred = (void**) src_pc - CONTEXT_FIELD(interp, caller_ctx, pred_offset);
+        src_pred = (void**) src_pc - Parrot_cx_get_pred_offset(interp, caller_ctx);
         sig = (PMC*)(src_pred[1]);
     }
     else {
@@ -200,7 +200,7 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
     interp->current_args = NULL;
     dest_pc = CONTEXT_FIELD(interp, caller_ctx, current_results);
     if (dest_pc) {
-        dest_pred = (void**) dest_pc - CONTEXT_FIELD(interp, caller_ctx, pred_offset);
+        dest_pred = (void**) dest_pc - Parrot_cx_get_pred_offset(interp, caller_ctx);
         sig = (PMC*)(dest_pred[1]);
     }
     else {
@@ -250,7 +250,7 @@ inline op pic_callr__(inconst PMC) :pic :flow {
     /* get_results */
     pc = CONTEXT_FIELD(interp, ctx, current_results);
     if (pc) {
-        pred_pc = (void**) pc - CONTEXT_FIELD(interp, ctx, pred_offset);
+        pred_pc = (void**) pc - Parrot_cx_get_pred_offset(interp, ctx);
         sig = (PMC*)(pred_pc[1]);
         ASSERT_SIG_PMC(sig);
         PARROT_ASSERT(VTABLE_elements(interp, sig) <= 1);

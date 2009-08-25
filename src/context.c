@@ -526,6 +526,54 @@ Parrot_cx_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
 
 /*
 
+=item C<size_t Parrot_cx_get_pred_offset(PARROT_INTERP, PMC *ctx)>
+
+Get pred_offset
+
+=cut
+
+*/
+
+PARROT_EXPORT
+size_t
+Parrot_cx_get_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_cx_get_pred_offset)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    return c->pred_offset;
+}
+
+
+/*
+
+=item C<void Parrot_cx_set_pred_offset(PARROT_INTERP, PMC *ctx, size_t
+pred_offset)>
+
+Set pred_offset
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_cx_set_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx), size_t pred_offset)
+{
+    ASSERT_ARGS(Parrot_cx_set_pred_offset)
+    Parrot_Context *c = Parrot_cx_get_context(interp, ctx);
+    c->pred_offset = pred_offset;
+}
+
+
+/*
+
+=back
+
+*/
+
+
+/*
+
 =back
 
 */

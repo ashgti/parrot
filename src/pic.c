@@ -805,9 +805,9 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
 
     ASSERT_SIG_PMC(sig_args);
     n                    = VTABLE_elements(interp, sig_args);
-    interp->current_args = (opcode_t*)pc + CONTEXT_FIELD(interp, ctx, pred_offset);
+    interp->current_args = (opcode_t*)pc + Parrot_cx_get_pred_offset(interp, ctx);
     pc                  += 2 + n;
-    op                   = (opcode_t*)pc + CONTEXT_FIELD(interp, ctx, pred_offset);
+    op                   = (opcode_t*)pc + Parrot_cx_get_pred_offset(interp, ctx);
 
     if (*op != PARROT_OP_set_p_pc)
         return 0;
@@ -821,7 +821,7 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
         return 0;
 
     pc += 3;    /* results */
-    op  = (opcode_t *)pc + CONTEXT_FIELD(interp, ctx, pred_offset);
+    op  = (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx);
 
     if (*op != PARROT_OP_get_results_pc)
         return 0;
@@ -830,7 +830,7 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
     sig_results = (PMC *)(pc[1]);
     ASSERT_SIG_PMC(sig_results);
 
-    CONTEXT_FIELD(interp, ctx, current_results) = (opcode_t *)pc + CONTEXT_FIELD(interp, ctx, pred_offset);
+    CONTEXT_FIELD(interp, ctx, current_results) = (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx);
     if (!parrot_pic_is_safe_to_jit(interp, sub, sig_args, sig_results, &flags))
         return 0;
 

@@ -3088,8 +3088,8 @@ Parrot_switch_to_cs(PARROT_INTERP, ARGIN(PackFile_ByteCode *new_cs), int really)
                                : new_cs->const_table->constants;
 
     /* new_cs->const_table->constants; */
-    CURRENT_CONTEXT_FIELD(interp, pred_offset) =
-        new_cs->base.data - (opcode_t*) new_cs->prederef.code;
+    Parrot_cx_set_pred_offset(interp, CONTEXT(interp),
+        new_cs->base.data - (opcode_t*) new_cs->prederef.code);
 
     if (really)
         prepare_for_run(interp);

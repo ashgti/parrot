@@ -76,7 +76,7 @@ sub defines {
     return $pred_def . <<END;
 /* defines - $0 -> $type */
 #  define opcode_to_prederef(i, op)   (op ? \\
-     (opcode_t*) (op   - CONTEXT_FIELD(interp, i->ctx, pred_offset)) : (opcode_t*)NULL)
+     (opcode_t*) (op   - Parrot_cx_get_pred_offset(interp, i->ctx)) : (opcode_t*)NULL)
 END
 }
 

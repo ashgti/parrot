@@ -128,6 +128,11 @@ PMC* Parrot_cx_get_pmc_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+size_t Parrot_cx_get_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 UINTVAL Parrot_cx_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -208,6 +213,13 @@ void Parrot_cx_set_pc(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+void Parrot_cx_set_pred_offset(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    size_t pred_offset)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 void Parrot_cx_set_sub(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN_NULLOK(PMC *sub))
@@ -249,6 +261,9 @@ void Parrot_cx_set_sub(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_cx_get_pmc_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_cx_get_pred_offset __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_get_recursion_depth __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
@@ -286,6 +301,9 @@ void Parrot_cx_set_sub(PARROT_INTERP,
     || PARROT_ASSERT_ARG(ctx) \
     || PARROT_ASSERT_ARG(outer_ctx)
 #define ASSERT_ARGS_Parrot_cx_set_pc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_cx_set_pred_offset __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_cx_set_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
