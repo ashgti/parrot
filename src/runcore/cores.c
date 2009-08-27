@@ -667,6 +667,8 @@ Registers the CGP runcore with Parrot.
 
 */
 
+#ifdef HAVE_COMPUTED_GOTO
+
 void
 Parrot_runcore_cgp_init(PARROT_INTERP)
 {
@@ -748,6 +750,7 @@ Parrot_runcore_cgp_jit_init(PARROT_INTERP)
     Parrot_runcore_register(interp, coredata);
 }
 
+#endif /* #ifdef HAVE_COMPUTED_GOTO */
 
 /*
 
