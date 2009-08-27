@@ -1164,29 +1164,25 @@ ARGIN(opcode_t *pc))
             if (strcmp(preop_file_name, postop_file_name))
                 fprintf(runcore->prof_fd, "F:%s\n", postop_file_name);
 
-            if (strcmp(preop_sub_name, postop_sub_name))
-                fprintf(runcore->prof_fd, "S:%s;%s\n",
-                        VTABLE_get_string(interp, preop_ctx->current_namespace)->strstart,
-                        postop_sub_name);
-
-            fprintf(runcore->prof_fd, "%d:%lli:%s:sub@0x%x:ctx@0x%x\n",
+            fprintf(runcore->prof_fd, "%d:%lli:%s\n",
                     postop_info.line, op_time,
-                    (interp->op_info_table)[*preop_pc].name,
-                    (unsigned int) preop_sub, (unsigned int) preop_ctx);
+                    (interp->op_info_table)[*preop_pc].name);
 
             if (preop_sub != CONTEXT(interp)->current_sub || Profiling_first_op_TEST(runcore)) {
                 Profiling_first_op_CLEAR(runcore);
 
                 if (info.subname->strstart) {
-                    fprintf(runcore->prof_fd, "CS:%s;%s@0x%x\n",
+                    fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
                             VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                             info.subname->strstart,
-                            (unsigned int) CONTEXT(interp)->current_sub);
+                            (unsigned int) CONTEXT(interp)->current_sub,
+                            (unsigned int) CONTEXT(interp));
                 }
                 else {
-                    fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%x\n",
+                    fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%X,0X%X\n",
                             VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                            (unsigned int) CONTEXT(interp)->current_sub);
+                            (unsigned int) CONTEXT(interp)->current_sub,
+                            (unsigned int) CONTEXT(interp));
                 }
             }
 

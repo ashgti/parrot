@@ -22,7 +22,6 @@ High-resolution timer support
 */
 
 #include <time.h>
-#include "parrot/platform.h"
 
 #define TIME_IN_NS(n) ((n).tv_sec * 1000*1000*1000 + (n).tv_nsec)
 
