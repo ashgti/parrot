@@ -143,14 +143,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
             /* Look up the name of the vtable function from the index. */
             const INTVAL vtable_index = Parrot_str_to_int(interp, vtable_index_str);
             const char * const meth_c = Parrot_vtable_slot_names[vtable_index];
-            STRING     *vtable_name   = Parrot_str_new(interp, meth_c, 0);
-
-            /* Strip leading underscores in the vtable name */
-            if (Parrot_str_find_index(interp, vtable_name, CONST_STRING(interp, "__"), 0) == 0) {
-                vtable_name = Parrot_str_substr(interp, vtable_name, 2,
-                    Parrot_str_byte_length(interp, vtable_name) - 2, NULL, 0);
-            }
-
+            STRING     * const vtable_name   = Parrot_str_new(interp, meth_c, 0);
             VTABLE_add_vtable_override(interp, self, vtable_name, vtable_sub);
         }
     }
@@ -279,8 +272,7 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
     if (!PMC_IS_NULL(dest)) {
         PARROT_ASSERT(!PMC_IS_NULL(class_));
         PARROT_ASSERT(class_->vtable->base_type == enum_class_Class);
-        obj = (Parrot_Object_attributes *)
-            Parrot_oo_new_object_attrs(interp, class_);
+        obj    = PARROT_OBJECT(pmc);
         cloned = dest;
     }
     else {
@@ -299,9 +291,8 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
     /* Flag that it is an object */
     PObj_is_object_SET(cloned);
 
-    /* Now create the underlying structure, and clone attributes list.class. */
-    cloned_guts               = mem_allocate_typed(Parrot_Object_attributes);
-    PMC_data(cloned)          = cloned_guts;
+    /* Now clone attributes list.class. */
+    cloned_guts               = (Parrot_Object_attributes *) PMC_data(cloned);
     cloned_guts->_class       = obj->_class;
     cloned_guts->attrib_store = NULL;
     cloned_guts->attrib_store = VTABLE_clone(interp, obj->attrib_store);
@@ -329,10 +320,6 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
             }
         }
     }
-
-    /* free object attributes if created directly */
-    if (!PMC_IS_NULL(dest))
-        mem_sys_free(obj);
 
     /* And we have ourselves a clone. */
     return cloned;
@@ -385,10 +372,17 @@ static PMC *
 get_pmc_proxy(PARROT_INTERP, INTVAL type)
 {
     ASSERT_ARGS(get_pmc_proxy)
+    PMC * type_class;
 
     /* Check if not a PMC or invalid type number */
     if (type > interp->n_vtable_max || type <= 0)
         return PMCNULL;
+
+    type_class = interp->vtables[type]->pmc_class;
+    if (type != enum_class_Class
+        && type_class->vtable->base_type == enum_class_Class) {
+        return type_class;
+    }
     else {
         PMC * const parrot_hll = Parrot_get_namespace_keyed_str(interp, interp->root_namespace, CONST_STRING(interp, "parrot"));
         PMC * const pmc_ns =
@@ -521,12 +515,7 @@ Parrot_oo_find_vtable_override(PARROT_INTERP,
     PMC                            *result =
         VTABLE_get_pmc_keyed_str(interp, _class->parent_overrides, name);
 
-    if (!PMC_IS_NULL(result)) {
-        return result;
-    }
-    else if (VTABLE_exists_keyed_str(interp, _class->parent_overrides, name))
-        return PMCNULL;
-    else {
+    if (PMC_IS_NULL(result)) {
         /* Walk and search for the vtable method. */
         const INTVAL num_classes = VTABLE_elements(interp, _class->all_parents);
         INTVAL       i;
@@ -542,11 +531,13 @@ Parrot_oo_find_vtable_override(PARROT_INTERP,
             if (!PMC_IS_NULL(result))
                 break;
         }
-
+        if (PMC_IS_NULL(result))
+            result = pmc_new(interp, enum_class_Undef);
         VTABLE_set_pmc_keyed_str(interp, _class->parent_overrides, name, result);
-
-        return result;
     }
+    if (result->vtable->base_type == enum_class_Undef)
+        result = PMCNULL;
+    return result;
 }
 
 

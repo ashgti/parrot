@@ -19,7 +19,7 @@ stored FLOATVALs.  It uses Float PMCs to do all necessary conversions.
 
 */
 
-pmclass FixedFloatArray need_ext auto_attrs provides array {
+pmclass FixedFloatArray auto_attrs provides array {
     ATTR INTVAL    size;
     ATTR FLOATVAL *float_array;
 
@@ -30,19 +30,6 @@ pmclass FixedFloatArray need_ext auto_attrs provides array {
 =head2 Methods
 
 =over 4
-
-=item C<void init()>
-
-Initializes the array.
-
-=cut
-
-*/
-
-    VTABLE void init() {
-    }
-
-/*
 
 =item C<void destroy()>
 
