@@ -57,11 +57,10 @@ struct profiling_runcore_t {
     UINTVAL                  level;      /* how many nested runloops */
     UINTVAL                  time_size;  /* how big is the following array */
     UHUGEINTVAL             *time;       /* time spent between DO_OP and start/end of a runcore */
-    /* XXX: this will need to be made cross-platform */
-    struct timespec          runcore_start;
-    struct timespec          op_start;
-    struct timespec          op_finish;
-    struct timespec          runcore_finish;
+    UHUGEINTVAL              runcore_start;
+    UHUGEINTVAL              op_start;
+    UHUGEINTVAL              op_finish;
+    UHUGEINTVAL              runcore_finish;
 };
 
 

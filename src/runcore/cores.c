@@ -266,8 +266,6 @@ next opcode, or examine and manipulate data from the executing program.
 #  define CLOCK_BEST CLOCK_REALTIME
 #endif
 
-#define TIME_IN_NS(n) ((n).tv_sec * 1000*1000*1000 + (n).tv_nsec)
-
 
 /* HEADERIZER HFILE: include/parrot/runcore_api.h */
 
@@ -1076,15 +1074,16 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
 ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profiling_core)
-            Parrot_Context_info prev_info, curr_info;
-    Parrot_Context     *prev_ctx;
-    opcode_t           *prev_pc;
+            Parrot_Context_info preop_info, postop_info;
+    Parrot_Context     *preop_ctx;
+    PMC                *preop_sub;
+    opcode_t           *preop_pc;
     static FILE        *prof_fd;
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "<unknown sub>";
     char                unknown_file[] = "<unknown file>";
 
-    clock_gettime(CLOCK_BEST, &runcore->runcore_start);
+    runcore->runcore_start = Parrot_hires_get_time();
 
     /* if we're in a nested runloop, */
     if (runcore->level != 0) {
@@ -1097,21 +1096,20 @@ ARGIN(opcode_t *pc))
 
         /* store the time between DO_OP and the start of this runcore in this
          * op's running total */
-        runcore->time[runcore->level] =
-            TIME_IN_NS(runcore->runcore_start) - TIME_IN_NS(runcore->op_start);
+        runcore->time[runcore->level] = runcore->runcore_start - runcore->op_start;
     }
 
-    prev_ctx = CONTEXT(interp);
-    Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
-    fprintf(runcore->prof_fd, "F:%s\n", curr_info.file->strstart);
+    preop_ctx = CONTEXT(interp);
+    Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
+    fprintf(runcore->prof_fd, "F:%s\n", postop_info.file->strstart);
     fprintf(runcore->prof_fd, "S:%s;%s\n",
-            VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
-            curr_info.subname->strstart);
+            VTABLE_get_string(interp, preop_ctx->current_namespace)->strstart,
+            postop_info.subname->strstart);
 
     while (pc) {
 
-        char *file_preop, *file_postop;
-        char *sub_preop,  *sub_postop;
+        char *preop_file_name, *postop_file_name;
+        char *preop_sub_name,  *postop_sub_name;
         INTVAL get_new_info = 1;
 
         if (pc < code_start || pc >= code_end) {
@@ -1120,78 +1118,83 @@ ARGIN(opcode_t *pc))
         }
 
         /* avoid an extra call to Parrot_Context_get_info */
-        mem_sys_memcopy(&prev_info, &curr_info, sizeof (Parrot_Context_info));
+        mem_sys_memcopy(&preop_info, &postop_info, sizeof (Parrot_Context_info));
 
-        Parrot_Context_get_info(interp, CONTEXT(interp), &curr_info);
-        file_preop = prev_info.file->strstart;
-        sub_preop  = prev_info.subname->strstart;
+        Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
+        preop_file_name = preop_info.file->strstart;
+        preop_sub_name  = preop_info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
-        prev_ctx = CONTEXT(interp);
-        prev_pc = pc;
+        preop_ctx = CONTEXT(interp);
+        preop_sub = preop_ctx->current_sub;
+        preop_pc = pc;
 
         runcore->level++;
         Profiling_exit_check_CLEAR(runcore);
-        clock_gettime(CLOCK_BEST, &runcore->op_start);
+        runcore->op_start = Parrot_hires_get_time();
         DO_OP(pc, interp);
-        clock_gettime(CLOCK_BEST, &runcore->op_finish);
+        runcore->op_finish = Parrot_hires_get_time();
 
         if (Profiling_exit_check_TEST(runcore)) {
-            op_time = TIME_IN_NS(runcore->op_finish) - TIME_IN_NS(runcore->runcore_finish);
+            op_time  = runcore->op_finish - runcore->runcore_finish;
             op_time += runcore->time[runcore->level];
             runcore->time[runcore->level] = 0;
         }
         else {
-            op_time = TIME_IN_NS(runcore->op_finish) - TIME_IN_NS(runcore->op_start);
+            op_time = runcore->op_finish - runcore->op_start;
         }
         runcore->level--;
 
-        file_postop = curr_info.file->strstart;
-        sub_postop  = curr_info.subname->strstart;
+        postop_file_name = postop_info.file->strstart;
+        postop_sub_name  = postop_info.subname->strstart;
 
-        if (!file_preop)  file_preop  = unknown_file;
-        if (!file_postop) file_postop = unknown_file;
-        if (!sub_preop)   sub_preop   = unknown_sub;
-        if (!sub_postop)  sub_postop  = unknown_sub;
+        if (!preop_file_name)  preop_file_name  = unknown_file;
+        if (!postop_file_name) postop_file_name = unknown_file;
+        if (!preop_sub_name)   preop_sub_name   = unknown_sub;
+        if (!postop_sub_name)  postop_sub_name  = unknown_sub;
 
-        if (prev_pc) {
+        if (preop_pc) {
 
             PMC                 *invoked;
+            /* XXX: find a more descriptive name */
             Parrot_Context_info  info;
 
             Parrot_Context_get_info(interp, CONTEXT(interp), &info);
 
-            if (strcmp(file_preop, file_postop))
-                fprintf(runcore->prof_fd, "F:%s\n", file_postop);
+            if (strcmp(preop_file_name, postop_file_name))
+                fprintf(runcore->prof_fd, "F:%s\n", postop_file_name);
 
-            if (strcmp(sub_preop, sub_postop))
+            if (strcmp(preop_sub_name, postop_sub_name))
                 fprintf(runcore->prof_fd, "S:%s;%s\n",
-                        VTABLE_get_string(interp, prev_ctx->current_namespace)->strstart,
-                        sub_postop);
+                        VTABLE_get_string(interp, preop_ctx->current_namespace)->strstart,
+                        postop_sub_name);
 
-            /* a change in context implies some sort of change in control flow */
-            if (prev_ctx != CONTEXT(interp) || Profiling_first_op_TEST(runcore)) {
+            fprintf(runcore->prof_fd, "%d:%lli:%s:sub@0x%x:ctx@0x%x\n",
+                    postop_info.line, op_time,
+                    (interp->op_info_table)[*preop_pc].name,
+                    (unsigned int) preop_sub, (unsigned int) preop_ctx);
+
+            if (preop_sub != CONTEXT(interp)->current_sub || Profiling_first_op_TEST(runcore)) {
                 Profiling_first_op_CLEAR(runcore);
-                if (info.subname->strstart && strcmp(sub_postop, info.subname->strstart)) {
-                    fprintf(runcore->prof_fd, "CS:%s@0x%x\n",
-                            info.fullname->strstart, (unsigned int) CONTEXT(interp));
+
+                if (info.subname->strstart) {
+                    fprintf(runcore->prof_fd, "CS:%s;%s@0x%x\n",
+                            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
+                            info.subname->strstart,
+                            (unsigned int) CONTEXT(interp)->current_sub);
                 }
                 else {
                     fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%x\n",
                             VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                            (unsigned int) CONTEXT(interp));
+                            (unsigned int) CONTEXT(interp)->current_sub);
                 }
             }
 
-            fprintf(runcore->prof_fd, "%d:%lli:%s:0x%x\n",
-                    curr_info.line, op_time,
-                    (interp->op_info_table)[*prev_pc].name,
-                    (unsigned int) CONTEXT(interp));
-        } /* if (prev_pc) */
+        } /* if (preop_pc) */
     } /* while (pc) */
 
     Profiling_exit_check_SET(runcore);
-    clock_gettime(CLOCK_BEST, &runcore->runcore_finish);
+    runcore->runcore_finish = Parrot_hires_get_time();;
     return pc;
 
 }
