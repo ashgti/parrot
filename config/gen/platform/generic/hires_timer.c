@@ -24,21 +24,6 @@ High-resolution timer support
 #include <time.h>
 #include "parrot/platform.h"
 
-
-/* Using real time can introduce error.  Hopefully all platforms will have
- * hints that specify a more useful clock.
- */
-
-#ifndef CLOCK_BEST
-#  if defined(CLOCK_PROCESS_CPUTIME_ID)
-#    define CLOCK_BEST CLOCK_PROCESS_CPUTIME_ID
-#  elif defined(CLOCK_PROF)
-#    define CLOCK_BEST CLOCK_PROF
-#  else
-#    define CLOCK_BEST CLOCK_REALTIME
-#  endif
-#endif
-
 #define TIME_IN_NS(n) ((n).tv_sec * 1000*1000*1000 + (n).tv_nsec)
 
 /*
