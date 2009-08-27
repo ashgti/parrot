@@ -288,25 +288,27 @@ CODE
 1
 OUTPUT
 
-pasm_output_is( <<'CODE', <<'OUTPUT', "if/unless with Integer PMC" );
-      new P0, ['Integer']
-      set P0, 10
-      if P0, OK1
+pir_output_is( <<'CODE', <<'OUTPUT', "if/unless with Integer PMC" );
+.sub main
+      new $P0, ['Integer']
+      set $P0, 10
+      if $P0, OK1
       print "not "
 OK1:  print "ok 1\n"
-      unless P0, BAD2
+      unless $P0, BAD2
       branch OK2
 BAD2: print "not "
 OK2:  print "ok 2\n"
-      set P0, 0
-      if P0, BAD3
+      set $P0, 0
+      if $P0, BAD3
       branch OK3
 BAD3: print "not "
 OK3:  print "ok 3\n"
-      unless P0, OK4
+      unless $P0, OK4
       print "not "
 OK4:  print "ok 4\n"
       end
+.end
 CODE
 ok 1
 ok 2
@@ -314,23 +316,23 @@ ok 3
 ok 4
 OUTPUT
 
-pasm_output_is( <<'CODE', <<'OUT', "add" );
-   new P0, ['Integer']
-   set P0, 5
-   new P1, ['Integer']
-   set P1, 10
-   new P2, ['Integer']
-   add P2, P0, P1
-   set S0, P2
-   print S0
-   print "\n"
-   set P0, "20"
-   set P1, "30"
-   add P2, P1, P0
-   set S0, P2
-   print S0
-   print "\n"
+pir_output_is( <<'CODE', <<'OUT', "add" );
+.sub main
+   new $P0, ['Integer']
+   set $P0, 5
+   new $P1, ['Integer']
+   set $P1, 10
+   new $P2, ['Integer']
+   add $P2, $P0, $P1
+   set $S0, $P2
+   say $S0
+   set $P0, "20"
+   set $P1, "30"
+   add $P2, $P1, $P0
+   set $S0, $P2
+   say $S0
    end
+.end
 CODE
 15
 50
