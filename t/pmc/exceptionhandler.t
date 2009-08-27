@@ -213,6 +213,7 @@ Tests the ExceptionHandler PMC.
 
 .sub can_handle :method
     .param pmc ex
+    noop
     .return(1)
 .end
 

@@ -873,22 +873,20 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
             iter = PMCNULL;
     }
     else {
+        ++already_doing;
 
-    ++already_doing;
-
-    /* Exceptions store the handler iterator for rethrow, other kinds of
-     * tasks don't (though they could). */
-    if (task->vtable->base_type == enum_class_Exception
-    && VTABLE_get_integer_keyed_str(interp, task, handled_str) == -1) {
-        iter    = VTABLE_get_attr_str(interp, task, iter_str);
-        context = (PMC *)VTABLE_get_pointer(interp, task);
-    }
-    else {
-        context = CONTEXT(interp);
-        if (!PMC_IS_NULL(CONTEXT_FIELD(interp, context, handlers)))
-            iter = VTABLE_get_iter(interp, CONTEXT_FIELD(interp, context, handlers));
-    }
-
+        /* Exceptions store the handler iterator for rethrow, other kinds of
+         * tasks don't (though they could). */
+        if (task->vtable->base_type == enum_class_Exception
+        && VTABLE_get_integer_keyed_str(interp, task, handled_str) == -1) {
+            iter    = VTABLE_get_attr_str(interp, task, iter_str);
+            context = (PMC *)VTABLE_get_pointer(interp, task);
+        }
+        else {
+            context = CONTEXT(interp);
+            if (!PMC_IS_NULL(CONTEXT_FIELD(interp, context, handlers)))
+                iter = VTABLE_get_iter(interp, CONTEXT_FIELD(interp, context, handlers));
+        }
     }
 
     while (context) {
@@ -899,7 +897,11 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
 
             if (!PMC_IS_NULL(handler)) {
                 INTVAL valid_handler = 0;
-                Parrot_PCCINVOKE(interp, handler, CONST_STRING(interp, "can_handle"),
+                if (handler->vtable->base_type == enum_class_Object)
+                    Parrot_pcc_invoke_method_from_c_args(interp, handler, CONST_STRING(interp, "can_handle"),
+                        "P->I", task, &valid_handler);
+                else
+                    Parrot_PCCINVOKE(interp, handler, CONST_STRING(interp, "can_handle"),
                         "P->I", task, &valid_handler);
 
                 if (valid_handler) {
