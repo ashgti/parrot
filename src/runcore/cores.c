@@ -1077,11 +1077,10 @@ runops_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore),
 ARGIN(opcode_t *pc))
 {
     ASSERT_ARGS(runops_profiling_core)
-            Parrot_Context_info preop_info, postop_info;
-    Parrot_Context     *preop_ctx;
+
+    Parrot_Context_info preop_info, postop_info;
     PMC                *preop_sub;
     opcode_t           *preop_pc;
-    static FILE        *prof_fd;
     HUGEINTVAL          op_time;
     char                unknown_sub[]  = "<unknown sub>";
     char                unknown_file[] = "<unknown file>";
@@ -1102,17 +1101,15 @@ ARGIN(opcode_t *pc))
         runcore->time[runcore->level] = runcore->runcore_start - runcore->op_start;
     }
 
-    preop_ctx = CONTEXT(interp);
     Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
     fprintf(runcore->prof_fd, "F:%s\n", postop_info.file->strstart);
     fprintf(runcore->prof_fd, "S:%s;%s\n",
-            VTABLE_get_string(interp, preop_ctx->current_namespace)->strstart,
+            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
             postop_info.subname->strstart);
 
     while (pc) {
 
         char *preop_file_name, *postop_file_name;
-        char *preop_sub_name,  *postop_sub_name;
         INTVAL get_new_info = 1;
 
         if (pc < code_start || pc >= code_end) {
@@ -1125,11 +1122,9 @@ ARGIN(opcode_t *pc))
 
         Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
         preop_file_name = preop_info.file->strstart;
-        preop_sub_name  = preop_info.subname->strstart;
 
         CONTEXT(interp)->current_pc = pc;
-        preop_ctx = CONTEXT(interp);
-        preop_sub = preop_ctx->current_sub;
+        preop_sub = CONTEXT(interp)->current_sub;
         preop_pc = pc;
 
         runcore->level++;
@@ -1149,12 +1144,9 @@ ARGIN(opcode_t *pc))
         runcore->level--;
 
         postop_file_name = postop_info.file->strstart;
-        postop_sub_name  = postop_info.subname->strstart;
 
         if (!preop_file_name)  preop_file_name  = unknown_file;
         if (!postop_file_name) postop_file_name = unknown_file;
-        if (!preop_sub_name)   preop_sub_name   = unknown_sub;
-        if (!postop_sub_name)  postop_sub_name  = unknown_sub;
 
         if (preop_pc) {
 
