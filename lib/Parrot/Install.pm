@@ -211,7 +211,7 @@ sub install_files {
 
     ref($files) eq 'ARRAY' or die "Error: parameter \$files must be an array\n";
     print("Installing ...\n");
-    foreach my $el ( @$files ) {
+    FILE: foreach my $el ( @$files ) {
         unless(ref($el) eq 'HASH') {
             my($ref) = ref($el);
             warn "Bad reference passed in \$files (want a HASH, got a '$ref')\n";
@@ -226,6 +226,32 @@ sub install_files {
         else {
             next unless -e $src;
             next if $^O eq 'cygwin' and -e "$src.exe"; # stat works, copy not
+            SYMLINK: {
+                if (! -l $src) { last SYMLINK; }
+
+                # check if the *system* supports symbolic linking 
+                use Config; 
+                if (! ($Config{d_symlink} && $Config{d_readlink})) { last SYMLINK; }
+
+                # copy as symbolic link;
+                # be extra cautious about existence of symlinks
+                # on a given OS
+                use Errno;
+                if(! exists $!{EPERM}) { last SYMLINK; } # Doesn't seem to support this
+                my $symlink_exists = eval {
+                    symlink(readlink($src), $dest); 1;
+                };
+                $@ and die $@;
+                if (! $symlink_exists) {
+                    if($!{EPERM}) {
+                        warn "Warning: filesystem does not support symbolic links!\n";
+                        last SYMLINK;
+                    }
+                    die "Error copying symlink: $!";
+                }
+                print "$dest\n"; 
+                next FILE; 
+            }
             copy( $src, $dest ) or die "Error: couldn't copy $src to $dest: $!\n";
             print "$dest\n";
         }
