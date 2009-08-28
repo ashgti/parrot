@@ -17,15 +17,6 @@ High-resolution timer support for win32
 
 =over 4
 
-=cut
-
-*/
-
-
-#define TIME_IN_NS(n) ((n).dwHighDateTime * 2^32 + (n).dwLowDateTime)
-
-/*
-
 =item C<UHUGEINTVAL Parrot_hires_get_time()>
 
 Return a high-resolution number representing how long Parrot has been running.
@@ -36,16 +27,16 @@ Return a high-resolution number representing how long Parrot has been running.
 
 UHUGEINTVAL Parrot_hires_get_time()
 {
-    FILETIME creation, exit, kernel, user;
-    GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user);
-    return TIME_IN_NS(kernel) + TIME_IN_NS(user);
+    LARGE_INTEGER ticks;
+    QueryPerformanceCounter(&ticks);
+    return (UHUGEINTVAL) ticks.QuadPart;
 }
 
 /*
 
 =item C<UINTVAL Parrot_hires_get_resolution()>
 
-Return the number of ns that each time unit from Parrot_hires_get_time represents.
+Return the number of nanoseconds that each time unit from Parrot_hires_get_time represents.
 
 =cut
 
@@ -53,7 +44,11 @@ Return the number of ns that each time unit from Parrot_hires_get_time represent
 
 UINTVAL Parrot_hires_get_resolution()
 {
-    return 100;
+    LARGE_INTEGER ticks;
+    /* QueryPerformanceCounter returns ticks per second, so divide 1 billion by
+     * that to find the length of each tick */
+    QueryPerformanceFrequency(&ticks);
+    return (UINTVAL) (1000*1000*1000 / ticks.QuadPart );
 }
 
 
