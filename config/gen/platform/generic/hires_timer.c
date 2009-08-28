@@ -44,7 +44,7 @@ UHUGEINTVAL Parrot_hires_get_time()
 
 /*
 
-=item C<UINTVAL Parrot_hires_get_resolution()>
+=item C<UINTVAL Parrot_hires_get_tick_duration()>
 
 Return the number of ns that each time unit from Parrot_hires_get_time represents.
 
@@ -52,11 +52,9 @@ Return the number of ns that each time unit from Parrot_hires_get_time represent
 
 */
 
-UINTVAL Parrot_hires_get_resolution()
+UINTVAL Parrot_hires_get_tick_duration()
 {
-    struct timespec ts;
-    clock_getres(CLOCK_BEST, &ts);
-    return (UINTVAL)TIME_IN_NS(ts);
+    return (UINTVAL) 1;
 }
 
 

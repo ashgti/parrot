@@ -34,7 +34,7 @@ UHUGEINTVAL Parrot_hires_get_time()
 
 /*
 
-=item C<UINTVAL Parrot_hires_get_resolution()>
+=item C<UINTVAL Parrot_hires_get_tick_duration()>
 
 Return the number of nanoseconds that each time unit from Parrot_hires_get_time represents.
 
@@ -42,7 +42,7 @@ Return the number of nanoseconds that each time unit from Parrot_hires_get_time 
 
 */
 
-UINTVAL Parrot_hires_get_resolution()
+UINTVAL Parrot_hires_get_tick_duration()
 {
     LARGE_INTEGER ticks;
     /* QueryPerformanceCounter returns ticks per second, so divide 1 billion by

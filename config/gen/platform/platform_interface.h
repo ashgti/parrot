@@ -131,7 +131,7 @@ int get_sys_timer_ms(void *handle);
  */
 
 UHUGEINTVAL Parrot_hires_get_time(void);
-UINTVAL     Parrot_hires_get_resolution(void);
+UINTVAL     Parrot_hires_get_tick_duration(void);
 
 
 struct parrot_string_t;
