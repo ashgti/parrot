@@ -1083,7 +1083,7 @@ ARGIN(opcode_t *pc))
     Parrot_Context_info preop_info, postop_info;
     PMC                *preop_sub;
     opcode_t           *preop_pc;
-    HUGEINTVAL          op_time;
+    UHUGEINTVAL         op_time;
     char                unknown_file[] = "<unknown file>";
 
     runcore->runcore_start = Parrot_hires_get_time();
@@ -1161,21 +1161,16 @@ ARGIN(opcode_t *pc))
                 postop_info.line, op_time,
                 (interp->op_info_table)[*preop_pc].name);
 
+        /* if the active sub changed while the previous op was executed... */
         if (preop_sub != CONTEXT(interp)->current_sub) {
 
+            /* if the current_sub is null, Parrot's probably done executing */
             if (CONTEXT(interp)->current_sub) {
-
                 STRING *sub_name;
                 GETATTR_Sub_name(interp, CONTEXT(interp)->current_sub, sub_name);
                 fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
                         VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                         sub_name->strstart,
-                        (unsigned int) CONTEXT(interp)->current_sub,
-                        (unsigned int) CONTEXT(interp));
-            }
-            else {
-                fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%X,0X%X\n",
-                        VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                         (unsigned int) CONTEXT(interp)->current_sub,
                         (unsigned int) CONTEXT(interp));
             }
