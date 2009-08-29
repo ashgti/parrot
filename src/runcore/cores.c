@@ -248,6 +248,8 @@ next opcode, or examine and manipulate data from the executing program.
 #include "parrot/oplib/core_ops_switch.h"
 #include "parrot/dynext.h"
 
+#include "../pmc/pmc_sub.h"
+
 #ifdef HAVE_COMPUTED_GOTO
 #  include "parrot/oplib/core_ops_cg.h"
 #  include "parrot/oplib/core_ops_cgp.h"
@@ -1082,7 +1084,6 @@ ARGIN(opcode_t *pc))
     PMC                *preop_sub;
     opcode_t           *preop_pc;
     HUGEINTVAL          op_time;
-    char                unknown_sub[]  = "<unknown sub>";
     char                unknown_file[] = "<unknown file>";
 
     runcore->runcore_start = Parrot_hires_get_time();
@@ -1102,15 +1103,20 @@ ARGIN(opcode_t *pc))
     }
 
     Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
-    fprintf(runcore->prof_fd, "F:%s\n", postop_info.file->strstart);
-    fprintf(runcore->prof_fd, "S:%s;%s\n",
-            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-            postop_info.subname->strstart);
+
+    if (Profiling_first_op_TEST(runcore)) {
+        Profiling_first_op_CLEAR(runcore);
+        fprintf(runcore->prof_fd, "F:%s\n", postop_info.file->strstart);
+        fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
+                VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
+                VTABLE_get_string(interp, CONTEXT(interp)->current_sub)->strstart,
+                (unsigned int) CONTEXT(interp)->current_sub,
+                (unsigned int) CONTEXT(interp));
+    }
 
     while (pc) {
 
         char *preop_file_name, *postop_file_name;
-        INTVAL get_new_info = 1;
 
         if (pc < code_start || pc >= code_end) {
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -1141,47 +1147,39 @@ ARGIN(opcode_t *pc))
         else {
             op_time = runcore->op_finish - runcore->op_start;
         }
-        runcore->level--;
 
+        runcore->level--;
         postop_file_name = postop_info.file->strstart;
 
         if (!preop_file_name)  preop_file_name  = unknown_file;
         if (!postop_file_name) postop_file_name = unknown_file;
 
-        if (preop_pc) {
+        if (strcmp(preop_file_name, postop_file_name))
+            fprintf(runcore->prof_fd, "F:%s\n", postop_file_name);
 
-            PMC                 *invoked;
-            /* XXX: find a more descriptive name */
-            Parrot_Context_info  info;
+        fprintf(runcore->prof_fd, "%d:%lli:%s\n",
+                postop_info.line, op_time,
+                (interp->op_info_table)[*preop_pc].name);
 
-            Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+        if (preop_sub != CONTEXT(interp)->current_sub) {
 
-            if (strcmp(preop_file_name, postop_file_name))
-                fprintf(runcore->prof_fd, "F:%s\n", postop_file_name);
+            if (CONTEXT(interp)->current_sub) {
 
-            fprintf(runcore->prof_fd, "%d:%lli:%s\n",
-                    postop_info.line, op_time,
-                    (interp->op_info_table)[*preop_pc].name);
-
-            if (preop_sub != CONTEXT(interp)->current_sub || Profiling_first_op_TEST(runcore)) {
-                Profiling_first_op_CLEAR(runcore);
-
-                if (info.subname->strstart) {
-                    fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
-                            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                            info.subname->strstart,
-                            (unsigned int) CONTEXT(interp)->current_sub,
-                            (unsigned int) CONTEXT(interp));
-                }
-                else {
-                    fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%X,0X%X\n",
-                            VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                            (unsigned int) CONTEXT(interp)->current_sub,
-                            (unsigned int) CONTEXT(interp));
-                }
+                STRING *sub_name;
+                GETATTR_Sub_name(interp, CONTEXT(interp)->current_sub, sub_name);
+                fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
+                        VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
+                        sub_name->strstart,
+                        (unsigned int) CONTEXT(interp)->current_sub,
+                        (unsigned int) CONTEXT(interp));
             }
-
-        } /* if (preop_pc) */
+            else {
+                fprintf(runcore->prof_fd, "CS:%s;<unknown sub>@0x%X,0X%X\n",
+                        VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
+                        (unsigned int) CONTEXT(interp)->current_sub,
+                        (unsigned int) CONTEXT(interp));
+            }
+        }
     } /* while (pc) */
 
     Profiling_exit_check_SET(runcore);
