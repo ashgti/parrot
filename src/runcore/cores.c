@@ -1041,17 +1041,20 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
 {
     ASSERT_ARGS(init_profiling_core)
 
+    runcore->profile_filename = Parrot_sprintf_c(interp, "parrot.%d.pprof", getpid());
+
     runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
     runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
 
-    runcore->profiling_flags = 0;
-    runcore->level           = 0;
-    runcore->time_size       = 32;
-    runcore->time            = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
-    runcore->prof_fd         = fopen("parrot.pprof", "w");
+    runcore->prev_runloop_filename = NULL;
+    runcore->profiling_flags       = 0;
+    runcore->level                 = 0;
+    runcore->time_size             = 32;
+    runcore->time                  = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
+    runcore->profile_fd            = fopen(runcore->profile_filename->strstart, "w");
 
-    if (!runcore->prof_fd) {
-        fprintf(stderr, "unable to open parrot_prof.out for writing");
+    if (!runcore->profile_fd) {
+        fprintf(stderr, "unable to open %s for writing", runcore->profile_filename->strstart);
         exit(1);
     }
 
@@ -1084,9 +1087,13 @@ ARGIN(opcode_t *pc))
     PMC                *preop_sub;
     opcode_t           *preop_pc;
     UHUGEINTVAL         op_time;
-    char                unknown_file[] = "<unknown file>";
+    STRING             *unknown_file = CONST_STRING(interp, "<unknown file>");
 
     runcore->runcore_start = Parrot_hires_get_time();
+    /* profile_filename appears to get prematurely recycled if it's not marked.
+     * Manually marking it or adding an unused STRING variable that points at
+     * it keeps it from an untimely demise. */
+    Parrot_gc_mark_PObj_alive(interp, (PObj*)runcore->profile_filename);
 
     /* if we're in a nested runloop, */
     if (runcore->level != 0) {
@@ -1104,19 +1111,32 @@ ARGIN(opcode_t *pc))
 
     Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
 
+    /* detect if the current file has changed while entering an inner runloop */
+    if (Parrot_str_compare(interp, runcore->prev_runloop_filename, postop_info.file))
+        Profiling_new_file_SET(runcore);
+    runcore->prev_runloop_filename = postop_info.file;
+
     if (Profiling_first_op_TEST(runcore)) {
-        Profiling_first_op_CLEAR(runcore);
-        fprintf(runcore->prof_fd, "F:%s\n", postop_info.file->strstart);
-        fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
+        
+        PMC    *argv         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_ARGV_LIST);
+        STRING *command_line = Parrot_str_join(interp, CONST_STRING(interp, " "), argv);
+        PMC    *executable   = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_EXECUTABLE);
+
+        /* The CLI line won't reflect any options passed to the parrot binary. */
+        fprintf(runcore->profile_fd, "CLI:%s %s\n", VTABLE_get_string(interp, executable)->strstart, command_line->strstart);
+        fprintf(runcore->profile_fd, "F:%s\n", postop_info.file->strstart);
+        fprintf(runcore->profile_fd, "CS:%s;%s@0x%X,0x%X\n",
                 VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                 VTABLE_get_string(interp, CONTEXT(interp)->current_sub)->strstart,
                 (unsigned int) CONTEXT(interp)->current_sub,
                 (unsigned int) CONTEXT(interp));
+
+        Profiling_first_op_CLEAR(runcore);
     }
 
     while (pc) {
 
-        char *preop_file_name, *postop_file_name;
+        STRING *preop_file_name, *postop_file_name;
 
         if (pc < code_start || pc >= code_end) {
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -1127,7 +1147,7 @@ ARGIN(opcode_t *pc))
         mem_sys_memcopy(&preop_info, &postop_info, sizeof (Parrot_Context_info));
 
         Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
-        preop_file_name = preop_info.file->strstart;
+        preop_file_name = preop_info.file;
 
         CONTEXT(interp)->current_pc = pc;
         preop_sub = CONTEXT(interp)->current_sub;
@@ -1149,15 +1169,17 @@ ARGIN(opcode_t *pc))
         }
 
         runcore->level--;
-        postop_file_name = postop_info.file->strstart;
+        postop_file_name = postop_info.file;
 
         if (!preop_file_name)  preop_file_name  = unknown_file;
         if (!postop_file_name) postop_file_name = unknown_file;
 
-        if (strcmp(preop_file_name, postop_file_name))
-            fprintf(runcore->prof_fd, "F:%s\n", postop_file_name);
+        if (Profiling_new_file_TEST(runcore) || Parrot_str_compare(interp, preop_file_name, postop_file_name)) {
+            Profiling_new_file_CLEAR(runcore);
+            fprintf(runcore->profile_fd, "F:%s\n", postop_file_name->strstart);
+        }
 
-        fprintf(runcore->prof_fd, "%d:%lli:%s\n",
+        fprintf(runcore->profile_fd, "%d:%lli:%s\n",
                 postop_info.line, op_time,
                 (interp->op_info_table)[*preop_pc].name);
 
@@ -1168,7 +1190,7 @@ ARGIN(opcode_t *pc))
             if (CONTEXT(interp)->current_sub) {
                 STRING *sub_name;
                 GETATTR_Sub_name(interp, CONTEXT(interp)->current_sub, sub_name);
-                fprintf(runcore->prof_fd, "CS:%s;%s@0x%X,0x%X\n",
+                fprintf(runcore->profile_fd, "CS:%s;%s@0x%X,0x%X\n",
                         VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                         sub_name->strstart,
                         (unsigned int) CONTEXT(interp)->current_sub,
@@ -1177,10 +1199,12 @@ ARGIN(opcode_t *pc))
         }
     } /* while (pc) */
 
+    if (runcore->level == 0) {
+        fprintf(stderr, "\nPROFILING RUNCORE: Wrote profile to %s .\n", runcore->profile_filename->strstart);
+    }
     Profiling_exit_check_SET(runcore);
     runcore->runcore_finish = Parrot_hires_get_time();;
     return pc;
-
 }
 
 
@@ -1201,7 +1225,7 @@ destroy_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore)
 {
     ASSERT_ARGS(destroy_profiling_core)
 
-    fclose(runcore->prof_fd);
+    fclose(runcore->profile_fd);
     mem_sys_free(runcore->time);
 
     return NULL;
