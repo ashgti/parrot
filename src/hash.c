@@ -1282,8 +1282,6 @@ parrot_hash_put(PARROT_INTERP, ARGMOD(Hash *hash),
     const UINTVAL hashval = (hash->hash_val)(interp, key, hash->seed);
     HashBucket   *bucket  = hash->bi[hashval & hash->mask];
 
-    //PARROT_ASSERT((hash->entry_type != enum_type_PMC) || value);
-
     /* Very complex assert that we'll not put non-constant stuff into constant hash */
     PARROT_ASSERT(
         PMC_IS_NULL(hash->container)
