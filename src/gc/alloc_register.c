@@ -219,7 +219,7 @@ clear_regs(PARROT_INTERP, ARGMOD(PMC *pmcctx))
 {
     ASSERT_ARGS(clear_regs)
     int i;
-    Parrot_Context *ctx = Parrot_pcc_get_context(interp, pmcctx);
+    Parrot_Context *ctx = Parrot_pcc_get_context_struct(interp, pmcctx);
 
     /* NULL out registers - P/S have to be NULL for GC
      *
@@ -261,8 +261,8 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
         ARGIN_NULLOK(PMC *pmcold))
 {
     ASSERT_ARGS(init_context)
-    Parrot_Context *ctx = Parrot_pcc_get_context(interp, pmcctx);
-    Parrot_Context *old = Parrot_pcc_get_context(interp, pmcold);
+    Parrot_Context *ctx = Parrot_pcc_get_context_struct(interp, pmcctx);
+    Parrot_Context *old = Parrot_pcc_get_context_struct(interp, pmcold);
 
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
@@ -540,7 +540,7 @@ INTVAL *
 Parrot_pcc_get_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_INTVAL_reg)
-    return &(Parrot_pcc_get_context(interp, ctx)->bp.regs_i[idx]);
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp.regs_i[idx]);
 }
 
 PARROT_EXPORT
@@ -549,7 +549,7 @@ FLOATVAL *
 Parrot_pcc_get_FLOATVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_FLOATVAL_reg)
-    return &(Parrot_pcc_get_context(interp, ctx)->bp.regs_n[-1L - idx]);
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp.regs_n[-1L - idx]);
 }
 
 PARROT_EXPORT
@@ -558,7 +558,7 @@ STRING **
 Parrot_pcc_get_STRING_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_STRING_reg)
-    return &(Parrot_pcc_get_context(interp, ctx)->bp_ps.regs_s[idx]);
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp_ps.regs_s[idx]);
 }
 
 PARROT_EXPORT
@@ -567,7 +567,7 @@ PMC **
 Parrot_pcc_get_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_PMC_reg)
-    return &(Parrot_pcc_get_context(interp, ctx)->bp_ps.regs_p[-1L - idx]);
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp_ps.regs_p[-1L - idx]);
 }
 
 

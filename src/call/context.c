@@ -45,7 +45,7 @@ void
 Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(struct PackFile_Constant **constants))
 {
     ASSERT_ARGS(Parrot_pcc_set_constants)
-    Parrot_Context * c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context * c = Parrot_pcc_get_context_struct(interp, ctx);
     c->constants = constants;
 }
 
@@ -66,7 +66,7 @@ STRING*
 Parrot_pcc_get_string_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_string_constant)
-    Parrot_Context const * c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const * c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->constants[idx]->u.string;
 }
 
@@ -87,7 +87,7 @@ PMC*
 Parrot_pcc_get_pmc_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_pmc_constant)
-    Parrot_Context const * c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const * c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->constants[idx]->u.key;
 }
 
@@ -115,7 +115,7 @@ Parrot_pcc_constants(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
-=item C<Parrot_Context* Parrot_pcc_get_context(PARROT_INTERP, PMC *ctx)>
+=item C<Parrot_Context* Parrot_pcc_get_context_struct(PARROT_INTERP, PMC *ctx)>
 
 Fetch Parrot_Context from Context PMC.
 
@@ -125,9 +125,9 @@ Fetch Parrot_Context from Context PMC.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 Parrot_Context*
-Parrot_pcc_get_context(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
+Parrot_pcc_get_context_struct(PARROT_INTERP, ARGIN_NULLOK(PMC *ctx))
 {
-    ASSERT_ARGS(Parrot_pcc_get_context)
+    ASSERT_ARGS(Parrot_pcc_get_context_struct)
     if (PMC_IS_NULL(ctx))
         return NULL;
 
@@ -149,7 +149,7 @@ UINTVAL
 Parrot_pcc_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_recursion_depth)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->recursion_depth;
 }
 
@@ -168,7 +168,7 @@ UINTVAL
 Parrot_pcc_inc_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_inc_recursion_depth)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     return ++c->recursion_depth;
 }
 
@@ -187,7 +187,7 @@ UINTVAL
 Parrot_pcc_dec_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_dec_recursion_depth)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     return --c->recursion_depth;
 }
 
@@ -207,7 +207,7 @@ PMC*
 Parrot_pcc_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_caller_ctx)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->caller_ctx;
 }
 
@@ -228,7 +228,7 @@ void
 Parrot_pcc_set_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *caller_ctx))
 {
     ASSERT_ARGS(Parrot_pcc_set_caller_ctx)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->caller_ctx = caller_ctx;
 }
 
@@ -248,7 +248,7 @@ PMC*
 Parrot_pcc_get_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_outer_ctx)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->outer_ctx;
 }
 
@@ -268,7 +268,7 @@ void
 Parrot_pcc_set_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *outer_ctx))
 {
     ASSERT_ARGS(Parrot_pcc_set_outer_ctx)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->outer_ctx = outer_ctx;
 }
 
@@ -288,7 +288,7 @@ PMC*
 Parrot_pcc_get_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_lex_pad)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->lex_pad;
 }
 
@@ -308,7 +308,7 @@ void
 Parrot_pcc_set_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *lex_pad))
 {
     ASSERT_ARGS(Parrot_pcc_set_lex_pad)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->lex_pad = lex_pad;
 }
 
@@ -328,7 +328,7 @@ PMC*
 Parrot_pcc_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_namespace)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_namespace;
 }
 
@@ -348,7 +348,7 @@ void
 Parrot_pcc_set_namespace(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_namespace))
 {
     ASSERT_ARGS(Parrot_pcc_set_namespace)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_namespace = _namespace;
 }
 
@@ -367,7 +367,7 @@ INTVAL
 Parrot_pcc_get_HLL(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_HLL)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_HLL;
 }
 
@@ -387,7 +387,7 @@ void
 Parrot_pcc_set_HLL(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL hll)
 {
     ASSERT_ARGS(Parrot_pcc_set_HLL)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_HLL = hll;
 }
 
@@ -407,7 +407,7 @@ PMC*
 Parrot_pcc_get_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_handlers)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->handlers;
 }
 
@@ -427,7 +427,7 @@ void
 Parrot_pcc_set_handers(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *handlers))
 {
     ASSERT_ARGS(Parrot_pcc_set_handers)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->handlers = handlers;
 }
 
@@ -447,7 +447,7 @@ PMC*
 Parrot_pcc_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_continuation)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_cont;
 }
 
@@ -468,7 +468,7 @@ void
 Parrot_pcc_set_continuation(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_continuation))
 {
     ASSERT_ARGS(Parrot_pcc_set_continuation)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_cont = _continuation;
 }
 
@@ -488,7 +488,7 @@ PMC*
 Parrot_pcc_get_object(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_object)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_object;
 }
 
@@ -508,7 +508,7 @@ void
 Parrot_pcc_set_object(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *object))
 {
     ASSERT_ARGS(Parrot_pcc_set_object)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_object = object;
 }
 
@@ -528,7 +528,7 @@ PMC*
 Parrot_pcc_get_sub(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_sub)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_sub;
 }
 
@@ -548,7 +548,7 @@ void
 Parrot_pcc_set_sub(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sub))
 {
     ASSERT_ARGS(Parrot_pcc_set_sub)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_sub = sub;
 }
 
@@ -568,7 +568,7 @@ opcode_t*
 Parrot_pcc_get_pc(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_pc)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_pc;
 }
 
@@ -588,7 +588,7 @@ void
 Parrot_pcc_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
 {
     ASSERT_ARGS(Parrot_pcc_set_pc)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_pc = pc;
 }
 
@@ -608,7 +608,7 @@ opcode_t*
 Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_results)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->current_results;
 }
 
@@ -628,7 +628,7 @@ void
 Parrot_pcc_set_results(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
 {
     ASSERT_ARGS(Parrot_pcc_set_results)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->current_results = pc;
 }
 
@@ -648,7 +648,7 @@ PMC*
 Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_results_signature)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->results_signature;
 }
 
@@ -669,7 +669,7 @@ void
 Parrot_pcc_set_results_signature(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sig))
 {
     ASSERT_ARGS(Parrot_pcc_set_results_signature)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->results_signature = sig;
 }
 
@@ -689,7 +689,7 @@ size_t
 Parrot_pcc_get_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_pred_offset)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context const *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->pred_offset;
 }
 
@@ -710,7 +710,7 @@ void
 Parrot_pcc_set_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx), size_t pred_offset)
 {
     ASSERT_ARGS(Parrot_pcc_set_pred_offset)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->pred_offset = pred_offset;
 }
 
@@ -730,7 +730,7 @@ UINTVAL
 Parrot_pcc_warnings_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_warnings_on)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->warns |= flags;
     return c->warns;
 }
@@ -751,9 +751,8 @@ void
 Parrot_pcc_warnings_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_warnings_off)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->warns &= ~flags;
-    return c->warns;
 }
 
 
@@ -773,13 +772,13 @@ UINTVAL
 Parrot_pcc_warnings_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_warnings_test)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->warns & flags;
 }
 
 /*
 
-=item C<UINTVAL Parrot_pcc_errors_on(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+=item C<void Parrot_pcc_errors_on(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
 
 Set errors flags.
 
@@ -788,13 +787,12 @@ Set errors flags.
 */
 
 PARROT_EXPORT
-UINTVAL
+void
 Parrot_pcc_errors_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_errors_on)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->errors |= flags;
-    return c->errors;
 }
 
 
@@ -813,9 +811,8 @@ void
 Parrot_pcc_errors_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_errors_off)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->errors &= ~flags;
-    return c->errors;
 }
 
 
@@ -834,14 +831,13 @@ UINTVAL
 Parrot_pcc_errors_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_errors_test)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->errors & flags;
 }
 
 /*
 
-=item C<UINTVAL Parrot_pcc_trace_flags_on(PARROT_INTERP, PMC *ctx, UINTVAL
-flags)>
+=item C<void Parrot_pcc_trace_flags_on(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
 
 Set trace flags.
 
@@ -850,13 +846,12 @@ Set trace flags.
 */
 
 PARROT_EXPORT
-UINTVAL
+void
 Parrot_pcc_trace_flags_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_trace_flags_on)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->trace_flags |= flags;
-    return c->trace_flags;
 }
 
 
@@ -875,9 +870,8 @@ void
 Parrot_pcc_trace_flags_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_trace_flags_off)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     c->trace_flags &= ~flags;
-    return c->trace_flags;
 }
 
 
@@ -897,7 +891,7 @@ UINTVAL
 Parrot_pcc_trace_flags_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_pcc_trace_flags_test)
-    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
     return c->trace_flags & flags;
 }
 

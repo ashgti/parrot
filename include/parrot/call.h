@@ -771,7 +771,7 @@ void Parrot_pcc_errors_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-UINTVAL Parrot_pcc_errors_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+void Parrot_pcc_errors_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -790,7 +790,7 @@ PMC* Parrot_pcc_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
-Parrot_Context* Parrot_pcc_get_context(PARROT_INTERP,
+Parrot_Context* Parrot_pcc_get_context_struct(PARROT_INTERP,
     ARGIN_NULLOK(PMC *ctx))
         __attribute__nonnull__(1);
 
@@ -997,7 +997,7 @@ void Parrot_pcc_trace_flags_off(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-UINTVAL Parrot_pcc_trace_flags_on(PARROT_INTERP,
+void Parrot_pcc_trace_flags_on(PARROT_INTERP,
     ARGIN(PMC *ctx),
     UINTVAL flags)
         __attribute__nonnull__(1)
@@ -1048,7 +1048,7 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_get_caller_ctx __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
-#define ASSERT_ARGS_Parrot_pcc_get_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_Parrot_pcc_get_context_struct __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_pcc_get_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
