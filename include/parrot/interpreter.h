@@ -231,7 +231,7 @@ struct _handler_node_t; /* forward def - exit.h */
 
 /* The actual interpreter structure */
 struct parrot_interp_t {
-    struct PMC           *ctx;                /* current Context */
+    PMC           *ctx;                       /* current Context */
 
     struct Arenas *arena_base;                /* Pointer to this interpreter's
                                                * arena */
