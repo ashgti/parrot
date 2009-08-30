@@ -585,7 +585,8 @@ Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
-=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, opcode_t *pc)>
+=item C<void Parrot_pcc_set_results_signature(PARROT_INTERP, PMC *ctx, PMC
+*sig)>
 
 Set ptr into code with get_results opcode.
 
@@ -646,10 +647,189 @@ Parrot_pcc_set_pred_offset(PARROT_INTERP, ARGIN(PMC *ctx), size_t pred_offset)
 
 /*
 
-=back
+=item C<UINTVAL Parrot_pcc_warnings_on(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Set warnings flags.
+
+=cut
 
 */
 
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_warnings_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->warns |= flags;
+    return c->warns;
+}
+
+
+/*
+
+=item C<void Parrot_pcc_warnings_off(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Clear warnings flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_warnings_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->warns &= ~flags;
+    return c->warns;
+}
+
+
+/*
+
+=item C<UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP, PMC *ctx, UINTVAL
+flags)>
+
+Test warnings flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_warnings_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    return c->warns & flags;
+}
+
+/*
+
+=item C<UINTVAL Parrot_pcc_errors_on(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Set errors flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_errors_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->errors |= flags;
+    return c->errors;
+}
+
+
+/*
+
+=item C<void Parrot_pcc_errors_off(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Clear errors flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_errors_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->errors &= ~flags;
+    return c->errors;
+}
+
+
+/*
+
+=item C<UINTVAL Parrot_pcc_errors_test(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Test errors flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_errors_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    return c->errors & flags;
+}
+
+/*
+
+=item C<UINTVAL Parrot_pcc_trace_flags_on(PARROT_INTERP, PMC *ctx, UINTVAL
+flags)>
+
+Set trace flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_trace_flags_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->trace_flags |= flags;
+    return c->trace_flags;
+}
+
+
+/*
+
+=item C<void Parrot_pcc_trace_flags_off(PARROT_INTERP, PMC *ctx, UINTVAL flags)>
+
+Clear trace flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_trace_flags_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->trace_flags &= ~flags;
+    return c->trace_flags;
+}
+
+
+/*
+
+=item C<UINTVAL Parrot_pcc_trace_flags_test(PARROT_INTERP, PMC *ctx, UINTVAL
+flags)>
+
+Test trace flags.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+UINTVAL
+Parrot_pcc_trace_flags_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
+{
+    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    return c->trace_flags & flags;
+}
 
 /*
 
