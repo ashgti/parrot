@@ -534,6 +534,16 @@ Parrot_clear_n(PARROT_INTERP)
         REG_NUM(interp, i) = 0.0;
 }
 
+/*
+
+=item C<void Parrot_pcc_get_INTVAL_reg(PARROT_INTERP)>
+
+Get pointer to INTVAL register.
+
+=cut
+
+*/
+
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 INTVAL *
@@ -542,6 +552,16 @@ Parrot_pcc_get_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
     ASSERT_ARGS(Parrot_pcc_get_INTVAL_reg)
     return &(Parrot_pcc_get_context_struct(interp, ctx)->bp.regs_i[idx]);
 }
+
+/*
+
+=item C<void Parrot_pcc_get_INTVAL_reg(PARROT_INTERP)>
+
+Get pointer to FLOATVAL register.
+
+=cut
+
+*/
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
@@ -552,6 +572,16 @@ Parrot_pcc_get_FLOATVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
     return &(Parrot_pcc_get_context_struct(interp, ctx)->bp.regs_n[-1L - idx]);
 }
 
+/*
+
+=item C<void Parrot_pcc_get_STRING_reg(PARROT_INTERP)>
+
+Get pointer to STRING register.
+
+=cut
+
+*/
+
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING **
@@ -560,6 +590,16 @@ Parrot_pcc_get_STRING_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
     ASSERT_ARGS(Parrot_pcc_get_STRING_reg)
     return &(Parrot_pcc_get_context_struct(interp, ctx)->bp_ps.regs_s[idx]);
 }
+
+/*
+
+=item C<void Parrot_pcc_get_PMC_reg(PARROT_INTERP)>
+
+Get pointer to PMC register.
+
+=cut
+
+*/
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
