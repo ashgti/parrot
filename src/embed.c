@@ -978,7 +978,7 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
         main_sub = set_current_sub(interp);
 
     Parrot_pcc_set_sub(interp, CONTEXT(interp), NULL);
-    CURRENT_CONTEXT_FIELD(interp, constants)   = interp->code->const_table->constants;
+    Parrot_pcc_set_constants(interp, interp->ctx, interp->code->const_table->constants);
 
     Parrot_runops_fromc_args(interp, main_sub, "vP", userargv);
 }
@@ -1247,7 +1247,7 @@ Parrot_run_native(PARROT_INTERP, native_func_t func)
     run_native = func;
 
     if (interp->code && interp->code->const_table)
-        CURRENT_CONTEXT_FIELD(interp, constants) = interp->code->const_table->constants;
+        Parrot_pcc_set_constants(interp, interp->ctx, interp->code->const_table->constants);
 
     runops(interp, interp->resume_offset);
 }

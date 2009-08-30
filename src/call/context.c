@@ -45,7 +45,7 @@ void
 Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(struct PackFile_Constant **constants))
 {
     ASSERT_ARGS(Parrot_pcc_set_constants)
-    Parrot_Context const * c = Parrot_pcc_get_context(interp, ctx);
+    Parrot_Context * c = Parrot_pcc_get_context(interp, ctx);
     c->constants = constants;
 }
 
