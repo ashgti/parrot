@@ -20,15 +20,15 @@
  * Macros to make accessing registers more convenient/readable.
  */
 
-#define CTX_REG_NUM(p, x) CONTEXT_FIELD(interp, p, bp.regs_n[-1L-(x)])
-#define CTX_REG_INT(p, x) CONTEXT_FIELD(interp, p, bp.regs_i[x])
-#define CTX_REG_PMC(p, x) CONTEXT_FIELD(interp, p, bp_ps.regs_p[-1L-(x)])
-#define CTX_REG_STR(p, x) CONTEXT_FIELD(interp, p, bp_ps.regs_s[x])
+#define CTX_REG_NUM(p, x) (*Parrot_pcc_get_FLOATVAL_reg(interp, (p), (x)))
+#define CTX_REG_INT(p, x) (*Parrot_pcc_get_INTVAL_reg(interp, (p), (x)))
+#define CTX_REG_PMC(p, x) (*Parrot_pcc_get_PMC_reg(interp, (p), (x)))
+#define CTX_REG_STR(p, x) (*Parrot_pcc_get_STRING_reg(interp, (p), (x)))
 
-#define REG_NUM(interp, x) CTX_REG_NUM((interp)->ctx, (x))
-#define REG_INT(interp, x) CTX_REG_INT((interp)->ctx, (x))
-#define REG_PMC(interp, x) CTX_REG_PMC((interp)->ctx, (x))
-#define REG_STR(interp, x) CTX_REG_STR((interp)->ctx, (x))
+#define REG_NUM(interp, x) (*Parrot_pcc_get_FLOATVAL_reg((interp), (interp)->ctx, (x)))
+#define REG_INT(interp, x) (*Parrot_pcc_get_INTVAL_reg((interp), (interp)->ctx, (x)))
+#define REG_PMC(interp, x) (*Parrot_pcc_get_PMC_reg((interp), (interp)->ctx, (x)))
+#define REG_STR(interp, x) (*Parrot_pcc_get_STRING_reg((interp), (interp)->ctx, (x)))
 
 /*
  * and a set of macros to access a register by offset, used
@@ -82,6 +82,36 @@ void parrot_gc_context(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+FLOATVAL * Parrot_pcc_get_FLOATVAL_reg(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    INTVAL idx)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+INTVAL * Parrot_pcc_get_INTVAL_reg(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    INTVAL idx)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC ** Parrot_pcc_get_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+STRING ** Parrot_pcc_get_STRING_reg(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    INTVAL idx)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 void Parrot_pop_context(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -120,6 +150,18 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_parrot_gc_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_Parrot_pcc_get_FLOATVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_INTVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_PMC_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_STRING_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pop_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_push_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \
