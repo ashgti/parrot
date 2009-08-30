@@ -843,7 +843,7 @@ fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
             break;
         }
         case PARROT_ARG_FLOATVAL:
-            UVal_num(st->val) = constant ? CONTEXT_FIELD(interp, st->src.ctx, constants[idx])->u.number
+            UVal_num(st->val) = constant ? Parrot_pcc_get_num_constant(interp, st->src.ctx, idx)
                                          : CTX_REG_NUM(st->src.ctx, idx);
             break;
         case PARROT_ARG_PMC:

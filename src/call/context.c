@@ -42,11 +42,53 @@ Get string constant from context.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void
-Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(struct PackFile_Constant **constants))
+Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx),
+        ARGIN_NULLOK(struct PackFile_Constant **constants))
 {
     ASSERT_ARGS(Parrot_pcc_set_constants)
     Parrot_Context * c = Parrot_pcc_get_context_struct(interp, ctx);
     c->constants = constants;
+}
+
+/*
+
+=item C<INTVAL Parrot_pcc_get_int_constant(PARROT_INTERP, PMC *ctx, INTVAL idx)>
+
+Get FLOATVAL constant from context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+INTVAL
+Parrot_pcc_get_int_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_pcc_get_int_constant)
+    Parrot_Context const * c = Parrot_pcc_get_context_struct(interp, ctx);
+    return c->constants[idx]->u.integer;
+}
+
+/*
+
+=item C<FLOATVAL Parrot_pcc_get_num_constant(PARROT_INTERP, PMC *ctx, INTVAL
+idx)>
+
+Get PMC constant from context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+FLOATVAL
+Parrot_pcc_get_num_constant(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_pcc_get_num_constant)
+    Parrot_Context const * c = Parrot_pcc_get_context_struct(interp, ctx);
+    return c->constants[idx]->u.number;
 }
 
 /*
