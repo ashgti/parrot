@@ -234,7 +234,7 @@ PARROT_EXPORT
 void
 Parrot_set_trace(PARROT_INTERP, UINTVAL flag)
 {
-    CURRENT_CONTEXT_FIELD(interp, trace_flags) |= flag;
+    Parrot_pcc_trace_flags_on(interp, interp->ctx, flag);
     Interp_core_SET(interp, PARROT_SLOW_CORE);
 }
 
@@ -289,7 +289,7 @@ PARROT_EXPORT
 void
 Parrot_clear_trace(PARROT_INTERP, UINTVAL flag)
 {
-    CURRENT_CONTEXT_FIELD(interp, trace_flags) &= ~flag;
+    Parrot_pcc_trace_flags_off(interp, interp->ctx, flag);
 }
 
 
@@ -343,7 +343,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_test_trace(PARROT_INTERP, UINTVAL flag)
 {
-    return CURRENT_CONTEXT_FIELD(interp, trace_flags) & flag;
+    return Parrot_pcc_trace_flags_test(interp, interp->ctx, flag);
 }
 
 
