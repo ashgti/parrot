@@ -528,10 +528,10 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
 
     /* Non-constant signatures are stored in ctx->results_signature instead of
      * in the constants table. */
-    if (CONTEXT_FIELD(interp, ctx, results_signature))
+    if (Parrot_pcc_get_results_signature(interp, ctx))
         Parrot_init_arg_indexes_and_sig_pmc(interp, ctx,
                 Parrot_pcc_get_results(interp, ctx),
-                CONTEXT_FIELD(interp, ctx, results_signature), &st->dest);
+                Parrot_pcc_get_results_signature(interp, ctx), &st->dest);
     else
         Parrot_init_arg_op(interp, ctx, Parrot_pcc_get_results(interp, ctx), &st->dest);
 
@@ -1893,9 +1893,9 @@ parrot_pass_args(PARROT_INTERP,
     }
     else /* (param_or_result == PARROT_PASS_RESULTS) */ {
         src_signature               = interp->returns_signature;
-        dest_signature              = CONTEXT_FIELD(interp, dest_ctx, results_signature);
+        dest_signature              = Parrot_pcc_get_results_signature(interp, dest_ctx);
         interp->returns_signature   = NULL;
-        CONTEXT_FIELD(interp, dest_ctx, results_signature) = NULL;
+        Parrot_pcc_set_results_signature(interp, dest_ctx, NULL);
     }
 
     Parrot_init_arg_indexes_and_sig_pmc(interp, src_ctx, src_indexes,
@@ -2632,7 +2632,7 @@ set_context_sig_params(PARROT_INTERP, ARGIN(const char *signature),
     interp->current_args   = indexes[0];
     interp->args_signature = sigs[0];
     Parrot_pcc_set_results(interp, ctx, indexes[1]);
-    CONTEXT_FIELD(interp, ctx, results_signature) = sigs[1];
+    Parrot_pcc_set_results_signature(interp, ctx, sigs[1]);
     return ret_x;
 }
 
@@ -2867,7 +2867,7 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
     interp->current_args   = arg_indexes;
     interp->args_signature = args_sig;
     Parrot_pcc_set_results(interp, ctx, result_indexes);
-    CONTEXT_FIELD(interp, ctx, results_signature) = results_sig;
+    Parrot_pcc_set_results_signature(interp, ctx, results_sig);
 
     /* arg_accessors assigned in loop above */
 

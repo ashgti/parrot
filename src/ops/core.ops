@@ -594,7 +594,7 @@ op set_returns(inconst PMC) :flow {
 
         parrot_pass_args(interp, ctx, caller_ctx, src_indexes, dest_indexes, PARROT_PASS_RESULTS);
     }
-    else if (CONTEXT_FIELD(interp, caller_ctx, results_signature)) {
+    else if (Parrot_pcc_get_results_signature(interp, caller_ctx)) {
     /* We have a dynamic result signature, from pcc_invoke */
         parrot_pass_args(interp, ctx, caller_ctx, interp->current_returns,
                 Parrot_pcc_get_results(interp, caller_ctx), PARROT_PASS_RESULTS);
