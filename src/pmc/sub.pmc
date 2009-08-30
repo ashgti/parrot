@@ -325,7 +325,11 @@ Invokes the subroutine.
         else {
             /* autoclose */
             PMC *c;
-            for (c = context; PMC_IS_NULL(Parrot_pcc_get_outer_ctx(interp, c)); c = Parrot_pcc_get_outer_ctx(interp, c)) {
+            for (
+                    c = context;
+                    PMC_IS_NULL(Parrot_pcc_get_outer_ctx(interp, c));
+                    c = Parrot_pcc_get_outer_ctx(interp, c)
+            ) {
 
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
@@ -374,8 +378,6 @@ Invokes the subroutine.
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
                 Parrot_pcc_set_caller_ctx(interp, context,
                         Parrot_pcc_get_caller_ctx(interp, caller_ctx));
-
-                //Parrot_free_context(INTERP, caller_ctx, 1);
             }
         }
 
