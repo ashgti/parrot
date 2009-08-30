@@ -393,6 +393,46 @@ Parrot_pcc_set_HLL(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL hll)
 
 /*
 
+=item C<PMC* Parrot_pcc_get_handlers(PARROT_INTERP, PMC *ctx)>
+
+Get scheduler handlers.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_handlers)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    return c->handlers;
+}
+
+
+/*
+
+=item C<void Parrot_pcc_set_handers(PARROT_INTERP, PMC *ctx, PMC *handlers)>
+
+Set scheduler handlers.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_handers(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC *handlers))
+{
+    ASSERT_ARGS(Parrot_pcc_set_handers)
+    Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
+    c->handlers = handlers;
+}
+
+/*
+
 =item C<PMC* Parrot_pcc_get_continuation(PARROT_INTERP, PMC *ctx)>
 
 Get continuation of Context.
