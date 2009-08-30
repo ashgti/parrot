@@ -430,7 +430,7 @@ END
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
         Parrot_pcc_dec_recursion_depth(interp, _ctx);
-        CONTEXT_FIELD(interp, _ctx, caller_ctx) = CONTEXT_FIELD(interp, _caller_ctx, caller_ctx);
+        Parrot_pcc_set_caller_ctx(interp, _ctx, Parrot_pcc_get_caller_ctx(interp, _caller_ctx));
         interp->current_args = NULL;
     }
     /* BEGIN PARMS SCOPE */
@@ -465,7 +465,7 @@ $method_returns
 
     interp->returns_signature = _return_sig;
     parrot_pass_args(interp, _ctx, _caller_ctx, _return_indexes,
-        CONTEXT_FIELD(interp, _caller_ctx, current_results), PARROT_PASS_RESULTS);
+        Parrot_pcc_get_results(interp, _caller_ctx), PARROT_PASS_RESULTS);
 END
     }
     $e_post->emit( <<"END", __FILE__, __LINE__ + 1 );
