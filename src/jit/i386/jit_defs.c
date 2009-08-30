@@ -1232,7 +1232,7 @@ jit_get_params_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP)
     PMC *sig_pmc;
     INTVAL *sig_bits, i, n;
 
-    sig_pmc = Parrot_cx_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
+    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
     GETATTR_FixedIntegerArray_int_array(interp, sig_pmc, sig_bits);
     n = VTABLE_elements(interp, sig_pmc);
     jit_info->n_args = n;
@@ -1369,7 +1369,7 @@ jit_set_returns_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP,
     PMC *sig_pmc;
     INTVAL *sig_bits, sig;
 
-    sig_pmc = Parrot_cx_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
+    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
     if (!VTABLE_elements(interp, sig_pmc))
         return;
     GETATTR_FixedIntegerArray_int_array(interp, sig_pmc, sig_bits);
@@ -1747,8 +1747,8 @@ Parrot_jit_begin_sub_regs(Parrot_jit_info_t *jit_info,
         L1 = NATIVECODE;
         emitm_calll(NATIVECODE, 0);
         /* check type of return value */
-        result      = Parrot_cx_get_results(interp, CONTEXT(interp));
-        sig_result  = Parrot_cx_get_pmc_constant(interp, CONTEXT(interp), result[1]);
+        result      = Parrot_pcc_get_results(interp, CONTEXT(interp));
+        sig_result  = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), result[1]);
         if (!VTABLE_elements(interp, sig_result))
             goto no_result;
         /* fetch args to %edx */

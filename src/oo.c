@@ -209,7 +209,7 @@ Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
                 {
                 PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp,
                                         interp->HLL_namespace,
-                                        Parrot_cx_get_HLL(interp, CONTEXT(interp)));
+                                        Parrot_pcc_get_HLL(interp, CONTEXT(interp)));
                 PMC * const ns     = Parrot_get_namespace_keyed(interp,
                                         hll_ns, key);
 
@@ -291,8 +291,9 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
     /* Flag that it is an object */
     PObj_is_object_SET(cloned);
 
-    /* Now clone attributes list.class. */
-    cloned_guts               = (Parrot_Object_attributes *) PMC_data(cloned);
+    /* Now create the underlying structure, and clone attributes list.class. */
+    cloned_guts               = mem_allocate_typed(Parrot_Object_attributes);
+    PMC_data(cloned)          = cloned_guts;
     cloned_guts->_class       = obj->_class;
     cloned_guts->attrib_store = NULL;
     cloned_guts->attrib_store = VTABLE_clone(interp, obj->attrib_store);
@@ -421,7 +422,7 @@ Parrot_oo_get_class_str(PARROT_INTERP, ARGIN(STRING *name))
 
     /* First check in current HLL namespace */
     PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp, interp->HLL_namespace,
-                           Parrot_cx_get_HLL(interp, CONTEXT(interp)));
+                           Parrot_pcc_get_HLL(interp, CONTEXT(interp)));
     PMC * const ns     = Parrot_get_namespace_keyed_str(interp, hll_ns, name);
     PMC * const _class = PMC_IS_NULL(ns)
                        ? PMCNULL : VTABLE_get_class(interp, ns);

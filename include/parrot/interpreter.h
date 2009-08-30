@@ -205,7 +205,7 @@ typedef struct _Prederef {
  * Not considered as part of public API. Should be replaced with proper accessor
  * functions to manipulate Context.
  */
-#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_cx_get_context((interp), (ctx)))->name)
+#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_pcc_get_context((interp), (ctx)))->name)
 #define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD((interp), (interp)->ctx, name)
 
 

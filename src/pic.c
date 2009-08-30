@@ -704,14 +704,14 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
     /* check params */
 
     if (op == PARROT_OP_set_returns_pc) {
-        PMC * const ccont = Parrot_cx_get_continuation(interp, ctx);
+        PMC * const ccont = Parrot_pcc_get_continuation(interp, ctx);
         if (!PMC_cont(ccont)->address)
             return 0;
         caller_ctx = PMC_cont(ccont)->to_ctx;
-        args       = Parrot_cx_get_results(interp, caller_ctx);
+        args       = Parrot_pcc_get_results(interp, caller_ctx);
     }
     else {
-        caller_ctx = Parrot_cx_get_caller_ctx(interp, ctx);
+        caller_ctx = Parrot_pcc_get_caller_ctx(interp, ctx);
         args       = interp->current_args;
     }
 
@@ -720,7 +720,7 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
         int          n;
 
         /* check current_args signature */
-        sig2 = Parrot_cx_get_pmc_constant(interp, caller_ctx, const_nr);
+        sig2 = Parrot_pcc_get_pmc_constant(interp, caller_ctx, const_nr);
         n    = parrot_pic_check_sig(interp, sig1, sig2, &type);
 
         if (n == -1)
@@ -804,9 +804,9 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
 
     ASSERT_SIG_PMC(sig_args);
     n                    = VTABLE_elements(interp, sig_args);
-    interp->current_args = (opcode_t*)pc + Parrot_cx_get_pred_offset(interp, ctx);
+    interp->current_args = (opcode_t*)pc + Parrot_pcc_get_pred_offset(interp, ctx);
     pc                  += 2 + n;
-    op                   = (opcode_t*)pc + Parrot_cx_get_pred_offset(interp, ctx);
+    op                   = (opcode_t*)pc + Parrot_pcc_get_pred_offset(interp, ctx);
 
     if (*op != PARROT_OP_set_p_pc)
         return 0;
@@ -820,7 +820,7 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
         return 0;
 
     pc += 3;    /* results */
-    op  = (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx);
+    op  = (opcode_t *)pc + Parrot_pcc_get_pred_offset(interp, ctx);
 
     if (*op != PARROT_OP_get_results_pc)
         return 0;
@@ -829,7 +829,7 @@ is_pic_func(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), int core_t
     sig_results = (PMC *)(pc[1]);
     ASSERT_SIG_PMC(sig_results);
 
-    Parrot_cx_set_results(interp, ctx, (opcode_t *)pc + Parrot_cx_get_pred_offset(interp, ctx));
+    Parrot_pcc_set_results(interp, ctx, (opcode_t *)pc + Parrot_pcc_get_pred_offset(interp, ctx));
     if (!parrot_pic_is_safe_to_jit(interp, sub, sig_args, sig_results, &flags))
         return 0;
 

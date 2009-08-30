@@ -3520,7 +3520,7 @@ PDB_backtrace(PARROT_INTERP)
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
                 PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        Parrot_cx_get_pc(interp, ctx) - interp->code->base.data + 1, NULL);
+                        Parrot_pcc_get_pc(interp, ctx) - interp->code->base.data + 1, NULL);
                 if (!PMC_IS_NULL(annot)) {
                     PMC *pfile = VTABLE_get_pmc_keyed_str(interp, annot,
                             Parrot_str_new_constant(interp, "file"));
@@ -3540,7 +3540,7 @@ PDB_backtrace(PARROT_INTERP)
     /* backtrace: follow the continuation chain */
     while (1) {
         Parrot_cont *sub_cont;
-        sub = Parrot_cx_get_continuation(interp, ctx);
+        sub = Parrot_pcc_get_continuation(interp, ctx);
 
         if (PMC_IS_NULL(sub))
             break;
@@ -3557,10 +3557,10 @@ PDB_backtrace(PARROT_INTERP)
 
         /* recursion detection */
         if (!PMC_IS_NULL(old) && PMC_cont(old) &&
-            Parrot_cx_get_pc(interp, PMC_cont(old)->to_ctx) ==
-            Parrot_cx_get_pc(interp, PMC_cont(sub)->to_ctx) &&
-            Parrot_cx_get_sub(interp, PMC_cont(old)->to_ctx) ==
-            Parrot_cx_get_sub(interp, PMC_cont(sub)->to_ctx)) {
+            Parrot_pcc_get_pc(interp, PMC_cont(old)->to_ctx) ==
+            Parrot_pcc_get_pc(interp, PMC_cont(sub)->to_ctx) &&
+            Parrot_pcc_get_sub(interp, PMC_cont(old)->to_ctx) ==
+            Parrot_pcc_get_sub(interp, PMC_cont(sub)->to_ctx)) {
                 ++rec_level;
         }
         else if (rec_level != 0) {
@@ -3573,7 +3573,7 @@ PDB_backtrace(PARROT_INTERP)
             Parrot_io_eprintf(interp, "%Ss", str);
             if (interp->code->annotations) {
                 PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        Parrot_cx_get_pc(interp, sub_cont->to_ctx) - interp->code->base.data + 1,
+                        Parrot_pcc_get_pc(interp, sub_cont->to_ctx) - interp->code->base.data + 1,
                         NULL);
 
                 if (!PMC_IS_NULL(annot)) {

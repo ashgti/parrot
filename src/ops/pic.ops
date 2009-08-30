@@ -141,9 +141,9 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     ctx         = CONTEXT(interp);
     src_pc      = interp->current_args;
     mic         = (Parrot_MIC *) cur_opcode[1];
-    caller_ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
+    caller_ctx  = Parrot_pcc_get_caller_ctx(interp, ctx);
     if (src_pc) {
-        src_pred = (void**) src_pc - Parrot_cx_get_pred_offset(interp, caller_ctx);
+        src_pred = (void**) src_pc - Parrot_pcc_get_pred_offset(interp, caller_ctx);
         sig = (PMC*)(src_pred[1]);
     }
     else {
@@ -159,12 +159,12 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
         }
         else
             n = 2;
-        ccont = Parrot_cx_get_continuation(interp, ctx);
+        ccont = Parrot_pcc_get_continuation(interp, ctx);
         if (PObj_get_FLAGS(ccont) & SUB_FLAG_TAILCALL) {
             PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-            Parrot_cx_dec_recursion_depth(interp, ctx);
-            Parrot_cx_set_caller_ctx(interp, ctx,
-                    Parrot_cx_get_caller_ctx(interp, caller_ctx));
+            Parrot_pcc_dec_recursion_depth(interp, ctx);
+            Parrot_pcc_set_caller_ctx(interp, ctx,
+                    Parrot_pcc_get_caller_ctx(interp, caller_ctx));
             interp->current_args = NULL;
         }
 
@@ -189,7 +189,7 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
 
     ctx     = CONTEXT(interp);
     mic     = (Parrot_MIC *) cur_opcode[1];
-    ccont   = Parrot_cx_get_continuation(interp, ctx);
+    ccont   = Parrot_pcc_get_continuation(interp, ctx);
     cc      = PMC_cont(ccont);
     if (!cc->address) {
         interp->current_returns = CUR_OPCODE;
@@ -198,9 +198,9 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
     }
     caller_ctx = cc->to_ctx;
     interp->current_args = NULL;
-    dest_pc = Parrot_cx_get_results(interp, caller_ctx);
+    dest_pc = Parrot_pcc_get_results(interp, caller_ctx);
     if (dest_pc) {
-        dest_pred = (void**) dest_pc - Parrot_cx_get_pred_offset(interp, caller_ctx);
+        dest_pred = (void**) dest_pc - Parrot_pcc_get_pred_offset(interp, caller_ctx);
         sig = (PMC*)(dest_pred[1]);
     }
     else {
@@ -248,9 +248,9 @@ inline op pic_callr__(inconst PMC) :pic :flow {
     ctx = CONTEXT(interp);
     mic = (Parrot_MIC *) cur_opcode[1];
     /* get_results */
-    pc = Parrot_cx_get_results(interp, ctx);
+    pc = Parrot_pcc_get_results(interp, ctx);
     if (pc) {
-        pred_pc = (void**) pc - Parrot_cx_get_pred_offset(interp, ctx);
+        pred_pc = (void**) pc - Parrot_pcc_get_pred_offset(interp, ctx);
         sig = (PMC*)(pred_pc[1]);
         ASSERT_SIG_PMC(sig);
         PARROT_ASSERT(VTABLE_elements(interp, sig) <= 1);

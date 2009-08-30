@@ -541,7 +541,7 @@ init_prederef(PARROT_INTERP, int which)
                 N * sizeof (void *));
 #endif
         /* calc and remember pred_offset */
-        Parrot_cx_set_pred_offset(interp, CONTEXT(interp), pc - (opcode_t *)temp);
+        Parrot_pcc_set_pred_offset(interp, CONTEXT(interp), pc - (opcode_t *)temp);
 
         /* fill with the prederef__ opcode function */
         if (which == PARROT_SWITCH_CORE || which == PARROT_SWITCH_JIT_CORE)

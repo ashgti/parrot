@@ -277,13 +277,13 @@ Invokes the subroutine.
         /* plain subroutine call
          * create new context, place it in interpreter */
         context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
-        Parrot_cx_set_sub(interp, context, SELF);
-        Parrot_cx_set_caller_ctx(interp, context, caller_ctx);
-        Parrot_cx_set_pc(interp, context, pc);
-        Parrot_cx_set_continuation(interp, context, ccont);
+        Parrot_pcc_set_sub(interp, context, SELF);
+        Parrot_pcc_set_caller_ctx(interp, context, caller_ctx);
+        Parrot_pcc_set_pc(interp, context, pc);
+        Parrot_pcc_set_continuation(interp, context, ccont);
 
         /* check recursion/call depth */
-        if (Parrot_cx_inc_recursion_depth(INTERP, context) > INTERP->recursion_limit)
+        if (Parrot_pcc_inc_recursion_depth(INTERP, context) > INTERP->recursion_limit)
             Parrot_ex_throw_from_c_args(INTERP, next, CONTROL_ERROR,
                     "maximum recursion depth exceeded");
 
@@ -300,37 +300,37 @@ Invokes the subroutine.
         }
 
         if (!PMC_IS_NULL(INTERP->current_object)) {
-            Parrot_cx_set_object(interp, context, INTERP->current_object);
+            Parrot_pcc_set_object(interp, context, INTERP->current_object);
             INTERP->current_object  = NULL;
         }
 
-        Parrot_cx_set_HLL(interp, context, sub->HLL_id);
-        Parrot_cx_set_namespace(interp, context, sub->namespace_stash);
+        Parrot_pcc_set_HLL(interp, context, sub->HLL_id);
+        Parrot_pcc_set_namespace(interp, context, sub->namespace_stash);
 
         /* create pad if needed
          * TODO move this up in front of argument passing
          *      and factor out common code with coroutine pmc
          */
         if (!PMC_IS_NULL(sub->lex_info)) {
-            Parrot_cx_set_lex_pad(interp, context, pmc_new_init(INTERP,
+            Parrot_pcc_set_lex_pad(interp, context, pmc_new_init(INTERP,
                     Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
                     sub->lex_info));
-            VTABLE_set_pointer(INTERP, Parrot_cx_get_lex_pad(interp, context), context);
+            VTABLE_set_pointer(INTERP, Parrot_pcc_get_lex_pad(interp, context), context);
         }
 
         if (sub->outer_ctx) {
             /* set outer context */
-            Parrot_cx_set_outer_ctx(interp, context, sub->outer_ctx);
+            Parrot_pcc_set_outer_ctx(interp, context, sub->outer_ctx);
         }
         else {
             /* autoclose */
             PMC *c;
-            for (c = context; PMC_IS_NULL(Parrot_cx_get_outer_ctx(interp, c)); c = Parrot_cx_get_outer_ctx(interp, c)) {
+            for (c = context; PMC_IS_NULL(Parrot_pcc_get_outer_ctx(interp, c)); c = Parrot_pcc_get_outer_ctx(interp, c)) {
 
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
 
-                PMC_get_sub(INTERP, Parrot_cx_get_sub(interp, c), current_sub);
+                PMC_get_sub(INTERP, Parrot_pcc_get_sub(interp, c), current_sub);
                 outer_pmc   = current_sub->outer_sub;
 
                 if (PMC_IS_NULL(outer_pmc))
@@ -341,21 +341,21 @@ Invokes the subroutine.
                 if (!outer_sub->ctx) {
                     PMC * const dummy = Parrot_alloc_context(INTERP,
                                                 outer_sub->n_regs_used, NULL);
-                    Parrot_cx_set_sub(interp, dummy, outer_pmc);
+                    Parrot_pcc_set_sub(interp, dummy, outer_pmc);
 
                     if (!PMC_IS_NULL(outer_sub->lex_info)) {
-                        Parrot_cx_set_lex_pad(interp, dummy, pmc_new_init(INTERP,
+                        Parrot_pcc_set_lex_pad(interp, dummy, pmc_new_init(INTERP,
                                Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
                                outer_sub->lex_info));
-                        VTABLE_set_pointer(INTERP, Parrot_cx_get_lex_pad(interp, dummy), dummy);
+                        VTABLE_set_pointer(INTERP, Parrot_pcc_get_lex_pad(interp, dummy), dummy);
                     }
 
                     if (!PMC_IS_NULL(outer_sub->outer_ctx))
-                        Parrot_cx_set_outer_ctx(interp, dummy, outer_sub->outer_ctx);
+                        Parrot_pcc_set_outer_ctx(interp, dummy, outer_sub->outer_ctx);
                     outer_sub->ctx = dummy;
                 }
 
-                Parrot_cx_set_outer_ctx(interp, c, outer_sub->ctx);
+                Parrot_pcc_set_outer_ctx(interp, c, outer_sub->ctx);
             }
         }
 
@@ -369,11 +369,11 @@ Invokes the subroutine.
             &&     pc[2] == PARROT_OP_get_params_pc))) {
 
                 /* TODO keep it or resize it */
-                Parrot_cx_dec_recursion_depth(INTERP, context);
+                Parrot_pcc_dec_recursion_depth(INTERP, context);
 
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-                Parrot_cx_set_caller_ctx(interp, context,
-                        Parrot_cx_get_caller_ctx(interp, caller_ctx));
+                Parrot_pcc_set_caller_ctx(interp, context,
+                        Parrot_pcc_get_caller_ctx(interp, caller_ctx));
 
                 //Parrot_free_context(INTERP, caller_ctx, 1);
             }
@@ -962,12 +962,12 @@ slurpy arguments).
 
         /* XXX This code looks very suspicious. */
         /* (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub */
-        tmp1 = Parrot_cx_get_caller_ctx(interp, CONTEXT(interp));
-        tmp2 = Parrot_cx_get_caller_ctx(interp, tmp1);
-        if (Parrot_cx_get_sub(interp, tmp2) == outer)
+        tmp1 = Parrot_pcc_get_caller_ctx(interp, CONTEXT(interp));
+        tmp2 = Parrot_pcc_get_caller_ctx(interp, tmp1);
+        if (Parrot_pcc_get_sub(interp, tmp2) == outer)
             sub->outer_ctx = tmp2;
         /* else if (CONTEXT(interp)->caller_ctx->current_sub == outer) */
-        else if (Parrot_cx_get_sub(interp, tmp1) == outer)
+        else if (Parrot_pcc_get_sub(interp, tmp1) == outer)
             sub->outer_ctx = tmp1;
     }
 

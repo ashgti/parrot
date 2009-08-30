@@ -231,9 +231,9 @@ destination to continue execution.
 
         /* pass args to where caller wants result */
         if (cc->current_results)
-            Parrot_cx_set_results(interp, to_ctx, cc->current_results);
+            Parrot_pcc_set_results(interp, to_ctx, cc->current_results);
 
-        if (Parrot_cx_get_results(interp, to_ctx) && INTERP->current_args) {
+        if (Parrot_pcc_get_results(interp, to_ctx) && INTERP->current_args) {
             /*
              * the register pointer is already switched back
              * to the caller, therefore the registers of the
@@ -242,7 +242,7 @@ destination to continue execution.
              * therefore we have to block GC
              */
             opcode_t *src_indexes  = interp->current_args;
-            opcode_t *dest_indexes = Parrot_cx_get_results(interp, to_ctx);
+            opcode_t *dest_indexes = Parrot_pcc_get_results(interp, to_ctx);
             interp->current_args   = NULL;
 
             Parrot_block_GC_mark(INTERP);
@@ -286,7 +286,7 @@ Experimental: return caller PMC or PMCNULL if none.
 
     METHOD caller() {
         Parrot_cont *cc     = PMC_cont(SELF);
-        PMC         *caller = Parrot_cx_get_sub(interp, cc->to_ctx);
+        PMC         *caller = Parrot_pcc_get_sub(interp, cc->to_ctx);
         Parrot_Sub_attributes  *sub;
 
         if (!caller)
@@ -312,7 +312,7 @@ Experimental: return continuation PMC of this Continuation or PMCNULL if none.
 
     METHOD continuation() {
         Parrot_cont *cc   = PMC_cont(SELF);
-        PMC         *cont = Parrot_cx_get_continuation(interp, cc->to_ctx);
+        PMC         *cont = Parrot_pcc_get_continuation(interp, cc->to_ctx);
 
         if (cont)
             RETURN(PMC *cont);

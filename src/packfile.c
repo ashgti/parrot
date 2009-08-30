@@ -759,7 +759,7 @@ do_1_sub_pragma(PARROT_INTERP, ARGMOD(PMC *sub_pmc), pbc_action_enum_t action)
                                           / sizeof (opcode_t *);
 
                     PObj_get_FLAGS(sub_pmc)      &= ~SUB_FLAG_PF_MAIN;
-                    Parrot_cx_set_sub(interp, CONTEXT(interp), sub_pmc);
+                    Parrot_pcc_set_sub(interp, CONTEXT(interp), sub_pmc);
                 }
                 else {
                     Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
@@ -3088,7 +3088,7 @@ Parrot_switch_to_cs(PARROT_INTERP, ARGIN(PackFile_ByteCode *new_cs), int really)
                                : new_cs->const_table->constants;
 
     /* new_cs->const_table->constants; */
-    Parrot_cx_set_pred_offset(interp, CONTEXT(interp),
+    Parrot_pcc_set_pred_offset(interp, CONTEXT(interp),
         new_cs->base.data - (opcode_t*) new_cs->prederef.code);
 
     if (really)

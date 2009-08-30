@@ -219,7 +219,7 @@ clear_regs(PARROT_INTERP, ARGMOD(PMC *pmcctx))
 {
     ASSERT_ARGS(clear_regs)
     int i;
-    Parrot_Context *ctx = Parrot_cx_get_context(interp, pmcctx);
+    Parrot_Context *ctx = Parrot_pcc_get_context(interp, pmcctx);
 
     /* NULL out registers - P/S have to be NULL for GC
      *
@@ -261,8 +261,8 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx),
         ARGIN_NULLOK(PMC *pmcold))
 {
     ASSERT_ARGS(init_context)
-    Parrot_Context *ctx = Parrot_cx_get_context(interp, pmcctx);
-    Parrot_Context *old = Parrot_cx_get_context(interp, pmcold);
+    Parrot_Context *ctx = Parrot_pcc_get_context(interp, pmcctx);
+    Parrot_Context *old = Parrot_pcc_get_context(interp, pmcold);
 
     ctx->current_results   = NULL;
     ctx->results_signature = NULL;
@@ -322,10 +322,10 @@ Parrot_push_context(PARROT_INTERP, ARGIN(const INTVAL *n_regs_used))
     PMC * const old = CONTEXT(interp);
     PMC * const ctx = Parrot_set_new_context(interp, n_regs_used);
 
-    Parrot_cx_set_caller_ctx(interp, ctx, old);
+    Parrot_pcc_set_caller_ctx(interp, ctx, old);
 
     /* doesn't change */
-    Parrot_cx_set_sub(interp, ctx, Parrot_cx_get_sub(interp, old));
+    Parrot_pcc_set_sub(interp, ctx, Parrot_pcc_get_sub(interp, old));
 
     /* copy more ? */
     return ctx;
@@ -349,7 +349,7 @@ Parrot_pop_context(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_pop_context)
     PMC * const ctx = CONTEXT(interp);
-    PMC * const old = Parrot_cx_get_caller_ctx(interp, ctx);
+    PMC * const old = Parrot_pcc_get_caller_ctx(interp, ctx);
 
     /* restore old, set cached interpreter base pointers */
     CONTEXT(interp) = old;

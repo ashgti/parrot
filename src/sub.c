@@ -80,7 +80,7 @@ new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
         cc->address   = NULL;
     }
 
-    cc->current_results = Parrot_cx_get_results(interp, to_ctx);
+    cc->current_results = Parrot_pcc_get_results(interp, to_ctx);
     return cc;
 }
 
@@ -149,7 +149,7 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
     PMC *ctx = PMC_cont(cont)->from_ctx;
-    cont = Parrot_cx_get_continuation(interp, ctx);
+    cont = Parrot_pcc_get_continuation(interp, ctx);
 
     while (1) {
         /*
@@ -160,8 +160,8 @@ invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
         if (!cont || cont->vtable != interp->vtables[enum_class_RetContinuation])
             break;
         cont->vtable = interp->vtables[enum_class_Continuation];
-        ctx  = Parrot_cx_get_caller_ctx(interp, ctx);
-        cont = Parrot_cx_get_continuation(interp, ctx);
+        ctx  = Parrot_pcc_get_caller_ctx(interp, ctx);
+        cont = Parrot_pcc_get_continuation(interp, ctx);
     }
 
 }
@@ -264,7 +264,7 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     info->fullname = NULL;
 
     /* is the current sub of the specified context valid? */
-    if (PMC_IS_NULL(Parrot_cx_get_sub(interp, ctx))) {
+    if (PMC_IS_NULL(Parrot_pcc_get_sub(interp, ctx))) {
         info->subname  = Parrot_str_new(interp, "???", 3);
         info->nsname   = info->subname;
         info->fullname = Parrot_str_new(interp, "??? :: ???", 10);
@@ -273,10 +273,10 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     }
 
     /* fetch Parrot_sub of the current sub in the given context */
-    if (!VTABLE_isa(interp, Parrot_cx_get_sub(interp, ctx), CONST_STRING(interp, "Sub")))
+    if (!VTABLE_isa(interp, Parrot_pcc_get_sub(interp, ctx), CONST_STRING(interp, "Sub")))
         return 1;
 
-    PMC_get_sub(interp, Parrot_cx_get_sub(interp, ctx), sub);
+    PMC_get_sub(interp, Parrot_pcc_get_sub(interp, ctx), sub);
     /* set the sub name */
     info->subname = sub->name;
 
@@ -287,18 +287,18 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
     }
     else {
         info->nsname   = VTABLE_get_string(interp, sub->namespace_name);
-        info->fullname = Parrot_full_sub_name(interp, Parrot_cx_get_sub(interp, ctx));
+        info->fullname = Parrot_full_sub_name(interp, Parrot_pcc_get_sub(interp, ctx));
     }
 
     /* return here if there is no current pc */
-    if (Parrot_cx_get_pc(interp, ctx) == NULL)
+    if (Parrot_pcc_get_pc(interp, ctx) == NULL)
         return 1;
 
     /* calculate the current pc */
-    info->pc = Parrot_cx_get_pc(interp, ctx) - sub->seg->base.data;
+    info->pc = Parrot_pcc_get_pc(interp, ctx) - sub->seg->base.data;
 
     /* determine the current source file/line */
-    if (Parrot_cx_get_pc(interp, ctx)) {
+    if (Parrot_pcc_get_pc(interp, ctx)) {
         const size_t offs = info->pc;
         size_t i, n;
         opcode_t *pc = sub->seg->base.data;
@@ -379,8 +379,8 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_find_pad)
     while (1) {
-        PMC * const lex_pad = Parrot_cx_get_lex_pad(interp, ctx);
-        PMC        *outer   = Parrot_cx_get_outer_ctx(interp, ctx);
+        PMC * const lex_pad = Parrot_pcc_get_lex_pad(interp, ctx);
+        PMC        *outer   = Parrot_pcc_get_outer_ctx(interp, ctx);
 
         if (!outer)
             return lex_pad;
@@ -412,7 +412,7 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
     Parrot_Sub_attributes *current_sub;
     Parrot_Sub_attributes *sub;
 
-    PMC_get_sub(interp, Parrot_cx_get_sub(interp, ctx), current_sub);
+    PMC_get_sub(interp, Parrot_pcc_get_sub(interp, ctx), current_sub);
 
     /* MultiSub gets special treatment */
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "MultiSub"))) {
@@ -532,7 +532,7 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
-        PMC * const sub = Parrot_cx_get_sub(interp, to_ctx);
+        PMC * const sub = Parrot_pcc_get_sub(interp, to_ctx);
 
         Parrot_io_eprintf(interp, "# Back in sub '%Ss', env %p\n",
                     Parrot_full_sub_name(interp, sub),

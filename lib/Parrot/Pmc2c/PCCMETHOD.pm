@@ -403,7 +403,7 @@ $set_params
     UNUSED(_return_indexes);
 
     if (_caller_ctx) {
-        _ccont = Parrot_cx_get_continuation(interp, _caller_ctx);
+        _ccont = Parrot_pcc_get_continuation(interp, _caller_ctx);
     }
     else {
         /* there is no point calling Parrot_ex_throw_from_c_args here, because
@@ -411,7 +411,7 @@ $set_params
         exit_fatal(1, "No caller_ctx for continuation \%p.", _ccont);
     }
 
-    Parrot_cx_set_continuation(interp, _ctx, _ret_cont);
+    Parrot_pcc_set_continuation(interp, _ctx, _ret_cont);
     PMC_cont(_ret_cont)->from_ctx       = _ctx;
 
     _current_args                       = interp->current_args;
@@ -429,7 +429,7 @@ END
 
     if (PObj_get_FLAGS(_ccont) & SUB_FLAG_TAILCALL) {
         PObj_get_FLAGS(_ccont) &= ~SUB_FLAG_TAILCALL;
-        Parrot_cx_dec_recursion_depth(interp, _ctx);
+        Parrot_pcc_dec_recursion_depth(interp, _ctx);
         CONTEXT_FIELD(interp, _ctx, caller_ctx) = CONTEXT_FIELD(interp, _caller_ctx, caller_ctx);
         interp->current_args = NULL;
     }
