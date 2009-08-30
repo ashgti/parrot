@@ -42,7 +42,7 @@ Get string constant from context.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void
-Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(struct PackFile_Constant **constants))
+Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(struct PackFile_Constant **constants))
 {
     ASSERT_ARGS(Parrot_pcc_set_constants)
     Parrot_Context * c = Parrot_pcc_get_context(interp, ctx);
@@ -202,6 +202,7 @@ Get caller Context.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -242,6 +243,7 @@ Get outer Context.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -281,6 +283,7 @@ Get LexPad.
 */
 
 PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
 PMC*
 Parrot_pcc_get_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -320,6 +323,7 @@ Get namespace of Context.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -398,6 +402,7 @@ Get continuation of Context.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -438,6 +443,7 @@ Get object of Context (in method call).
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_object(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -477,6 +483,7 @@ Get Sub executed inside Context.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_sub(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -516,6 +523,7 @@ Get program counter of Sub invocation.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 opcode_t*
 Parrot_pcc_get_pc(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -555,6 +563,7 @@ Set ptr into code with get_results opcode.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 opcode_t*
 Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
 {
@@ -594,6 +603,7 @@ Set ptr into code with get_results opcode.
 */
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
 {

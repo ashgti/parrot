@@ -783,6 +783,7 @@ UINTVAL Parrot_pcc_errors_test(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -794,6 +795,7 @@ Parrot_Context* Parrot_pcc_get_context(PARROT_INTERP,
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -804,26 +806,31 @@ INTVAL Parrot_pcc_get_HLL(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_pcc_get_lex_pad(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_namespace(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_object(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_outer_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 opcode_t* Parrot_pcc_get_pc(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -845,11 +852,13 @@ UINTVAL Parrot_pcc_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 opcode_t* Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -863,6 +872,7 @@ STRING* Parrot_pcc_get_string_constant(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_sub(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -884,10 +894,9 @@ PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void Parrot_pcc_set_constants(PARROT_INTERP,
     ARGIN(PMC *ctx),
-    ARGIN(struct PackFile_Constant **constants))
+    ARGIN_NULLOK(struct PackFile_Constant **constants))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
+        __attribute__nonnull__(2);
 
 PARROT_EXPORT
 void Parrot_pcc_set_continuation(PARROT_INTERP,
@@ -1082,8 +1091,7 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
     || PARROT_ASSERT_ARG(caller_ctx)
 #define ASSERT_ARGS_Parrot_pcc_set_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ctx) \
-    || PARROT_ASSERT_ARG(constants)
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_set_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
