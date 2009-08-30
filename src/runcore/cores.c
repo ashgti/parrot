@@ -1090,10 +1090,6 @@ ARGIN(opcode_t *pc))
     STRING             *unknown_file = CONST_STRING(interp, "<unknown file>");
 
     runcore->runcore_start = Parrot_hires_get_time();
-    /* profile_filename appears to get prematurely recycled if it's not marked.
-     * Manually marking it or adding an unused STRING variable that points at
-     * it keeps it from an untimely demise. */
-    Parrot_gc_mark_PObj_alive(interp, (PObj*)runcore->profile_filename);
 
     /* if we're in a nested runloop, */
     if (runcore->level != 0) {
@@ -1142,6 +1138,11 @@ ARGIN(opcode_t *pc))
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                     "attempt to access code outside of current code segment");
         }
+
+        /* HACK: profile_filename appears to get prematurely recycled if it's
+         * not marked.  Manually marking it or adding an unused STRING variable
+         * that points at it keeps it from an untimely demise. */
+        Parrot_gc_mark_PObj_alive(interp, (PObj*)runcore->profile_filename);
 
         /* avoid an extra call to Parrot_Context_get_info */
         mem_sys_memcopy(&preop_info, &postop_info, sizeof (Parrot_Context_info));
