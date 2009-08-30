@@ -881,6 +881,15 @@ void Parrot_pcc_set_caller_ctx(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+void Parrot_pcc_set_constants(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN(struct PackFile_Constant **constants))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
 void Parrot_pcc_set_continuation(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN_NULLOK(PMC *_continuation))
@@ -1071,6 +1080,10 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx) \
     || PARROT_ASSERT_ARG(caller_ctx)
+#define ASSERT_ARGS_Parrot_pcc_set_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx) \
+    || PARROT_ASSERT_ARG(constants)
 #define ASSERT_ARGS_Parrot_pcc_set_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)

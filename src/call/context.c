@@ -28,6 +28,26 @@ src/context.c - Parrot_Context functions.
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
+/*
+
+=item C<void Parrot_pcc_set_constants(PARROT_INTERP, PMC *ctx, struct
+PackFile_Constant **constants)>
+
+Get string constant from context.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+void
+Parrot_pcc_set_constants(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(struct PackFile_Constant **constants))
+{
+    ASSERT_ARGS(Parrot_pcc_set_constants)
+    Parrot_Context const * c = Parrot_pcc_get_context(interp, ctx);
+    c->constants = constants;
+}
 
 /*
 
@@ -659,7 +679,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_warnings_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_warnings_on)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->warns |= flags;
     return c->warns;
@@ -680,7 +700,7 @@ PARROT_EXPORT
 void
 Parrot_pcc_warnings_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_warnings_off)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->warns &= ~flags;
     return c->warns;
@@ -702,7 +722,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_warnings_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_warnings_test)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     return c->warns & flags;
 }
@@ -721,7 +741,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_errors_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_errors_on)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->errors |= flags;
     return c->errors;
@@ -742,7 +762,7 @@ PARROT_EXPORT
 void
 Parrot_pcc_errors_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_errors_off)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->errors &= ~flags;
     return c->errors;
@@ -763,7 +783,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_errors_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_errors_test)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     return c->errors & flags;
 }
@@ -783,7 +803,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_trace_flags_on(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_get_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_trace_flags_on)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->trace_flags |= flags;
     return c->trace_flags;
@@ -804,7 +824,7 @@ PARROT_EXPORT
 void
 Parrot_pcc_trace_flags_off(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_trace_flags_off)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     c->trace_flags &= ~flags;
     return c->trace_flags;
@@ -826,7 +846,7 @@ PARROT_EXPORT
 UINTVAL
 Parrot_pcc_trace_flags_test(PARROT_INTERP, ARGIN(PMC *ctx), UINTVAL flags)
 {
-    ASSERT_ARGS(Parrot_pcc_set_pred_offset)
+    ASSERT_ARGS(Parrot_pcc_trace_flags_test)
     Parrot_Context *c = Parrot_pcc_get_context(interp, ctx);
     return c->trace_flags & flags;
 }
