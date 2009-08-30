@@ -140,7 +140,7 @@ typedef Parrot_Run_core_t Run_Cores;
 
 #include "parrot/debugger.h"
 #include "parrot/multidispatch.h"
-#include "parrot/context.h"
+#include "parrot/call.h"
 
 typedef struct warnings_t {
     Warnings_classes classes;
@@ -225,21 +225,6 @@ typedef struct _context_mem {
 #endif
 
 } context_mem;
-
-/* Wrap the jump buffer in a struct, to make it a linked list. Jump buffers are
- * used to resume execution at a point in the runloop where an exception
- * handler can be run. Ultimately this information should be part of
- * Parrot_Context, but at this point a new context isn't created for every
- * runloop ID, so it still needs to be a separate stack for a while longer. */
-
-typedef struct parrot_runloop_t {
-    Parrot_jump_buff         resume;        /* jmp_buf */
-    struct parrot_runloop_t *prev;          /* interpreter's runloop
-                                             * jump buffer stack */
-    opcode_t                *handler_start; /* Used in exception handling */
-} parrot_runloop_t;
-
-typedef parrot_runloop_t Parrot_runloop;
 
 
 struct _handler_node_t; /* forward def - exit.h */

@@ -18,7 +18,6 @@ subroutines.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/context.h"
 #include "parrot/oplib/ops.h"
 #include "pcc.str"
 #include "../pmc/pmc_key.h"

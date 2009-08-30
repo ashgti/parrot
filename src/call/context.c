@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2009, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -17,10 +17,10 @@ src/context.c - Parrot_Context functions.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/context.h"
+#include "parrot/call.h"
 
 
-/* HEADERIZER HFILE: include/parrot/context.h */
+/* HEADERIZER HFILE: include/parrot/call.h */
 
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */

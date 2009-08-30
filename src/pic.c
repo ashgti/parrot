@@ -77,7 +77,6 @@ lookup of the cache has to be done in the opcode itself.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/context.h"
 #include "parrot/oplib/ops.h"
 #include "pmc/pmc_fixedintegerarray.h"
 #include "pmc/pmc_continuation.h"

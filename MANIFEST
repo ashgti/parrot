@@ -951,7 +951,6 @@ include/parrot/call.h                                       [main]include
 include/parrot/cclass.h                                     [main]include
 include/parrot/charset.h                                    [main]include
 include/parrot/compiler.h                                   [main]include
-include/parrot/context.h                                    [main]include
 include/parrot/core_types.h                                 [main]include
 include/parrot/datatypes.h                                  [main]include
 include/parrot/debugger.h                                   [main]include
@@ -1245,7 +1244,7 @@ src/atomic/sparc_v9.s                                       []
 src/byteorder.c                                             []
 src/call/ops.c                                              []
 src/call/pcc.c                                              []
-src/context.c                                               []
+src/call/context.c                                          []
 src/datatypes.c                                             []
 src/debug.c                                                 []
 src/dynext.c                                                []
