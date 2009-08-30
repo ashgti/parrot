@@ -1,5 +1,5 @@
-#!./parrot
-# Copyright (C) 2005-2008, Parrot Foundation.
+#!parrot
+# Copyright (C) 2005-2009, Parrot Foundation.
 # $Id$
 
 .sub _main :main
@@ -15,15 +15,16 @@
     .local pmc exports, curr_namespace, test_namespace
     curr_namespace = get_namespace
     test_namespace = get_namespace [ 'Test'; 'More' ]
-    exports = split " ", "ok is diag like skip todo is_deeply isa_ok isnt"
+    exports = split " ", "ok is diag like skip todo is_deeply isa_ok isnt pir_error_output_like"
     test_namespace.'export_to'(curr_namespace, exports)
 
     test_namespace = get_namespace [ 'Test'; 'Builder'; 'Tester' ]
     exports = split " ", "plan test_out test_diag test_fail test_pass test_test"
     test_namespace.'export_to'(curr_namespace, exports)
 
-    plan( 75 )
+    plan( 76 )
 
+    test_pir_error_output_like()
     test_skip()
     test_todo()
     test_ok()
@@ -35,6 +36,20 @@
     test_isa_ok()
 
     test.'finish'()
+.end
+
+.sub test_pir_error_output_like
+    test_fail('pir_error_output_like fails when there is no error')
+
+    pir_error_output_like( <<'CODE', 'somejunk', 'pir_error_output_like fails when there is no error')
+.sub main
+    print 'i like cheese'
+.end
+CODE
+#    ok(0,'pir_error_output_like fails when there is no error')
+#    diag('no error thrown')
+    test_diag( 'no error thrown' )
+    test_test( 'pir_error_output_like fails when there is no error')
 .end
 
 .sub test_ok
