@@ -467,7 +467,7 @@ Parrot_clear_i(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_i)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_INT]); ++i)
+    for (i = 0; i < Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT); ++i)
         REG_INT(interp, i) = 0;
 }
 
@@ -488,7 +488,7 @@ Parrot_clear_s(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_s)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_STR]); ++i)
+    for (i = 0; i < Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_STR); ++i)
         REG_STR(interp, i) = NULL;
 }
 
@@ -509,7 +509,7 @@ Parrot_clear_p(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_p)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_PMC]); ++i)
+    for (i = 0; i < Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_PMC); ++i)
         REG_PMC(interp, i) = PMCNULL;
 }
 
@@ -530,7 +530,7 @@ Parrot_clear_n(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_clear_n)
     int i;
-    for (i = 0; i < CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_NUM]); ++i)
+    for (i = 0; i < Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_NUM); ++i)
         REG_NUM(interp, i) = 0.0;
 }
 
@@ -612,7 +612,39 @@ Parrot_pcc_get_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
     return &(Parrot_pcc_get_context_struct(interp, ctx)->bp_ps.regs_p[-1L - idx]);
 }
 
+/*
 
+=item C<int Parrot_pcc_get_regs_used(PARROT_INTERP, PMC *ctx, int type)>
+
+Return number of used registers of particular type.
+
+=cut
+
+*/
+PARROT_EXPORT
+int
+Parrot_pcc_get_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type)
+{
+    ASSERT_ARGS(Parrot_pcc_get_regs_used)
+    return Parrot_pcc_get_context_struct(interp, ctx)->n_regs_used[type];
+}
+
+/*
+
+=item C<int Parrot_pcc_set_regs_used(PARROT_INTERP, PMC *ctx, int type)>
+
+Set number of used registers of particular type.
+
+=cut
+
+*/
+PARROT_EXPORT
+void
+Parrot_pcc_set_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type, INTVAL num)
+{
+    ASSERT_ARGS(Parrot_pcc_get_regs_used)
+    Parrot_pcc_get_context_struct(interp, ctx)->n_regs_used[type] = num;
+}
 
 /*
 
