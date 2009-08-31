@@ -1115,13 +1115,16 @@ ARGIN(opcode_t *pc))
     runcore->prev_runloop_filename = postop_info.file;
 
     if (Profiling_first_op_TEST(runcore)) {
-        
-        PMC    *argv         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_ARGV_LIST);
+
+        PMC    *argv         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
+                                                      IGLOBALS_ARGV_LIST);
+        PMC    *executable   = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
+                                                      IGLOBALS_EXECUTABLE);
         STRING *command_line = Parrot_str_join(interp, CONST_STRING(interp, " "), argv);
-        PMC    *executable   = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_EXECUTABLE);
 
         /* The CLI line won't reflect any options passed to the parrot binary. */
-        fprintf(runcore->profile_fd, "CLI:%s %s\n", VTABLE_get_string(interp, executable)->strstart, command_line->strstart);
+        fprintf(runcore->profile_fd, "CLI:%s %s\n",
+                VTABLE_get_string(interp, executable)->strstart, command_line->strstart);
         fprintf(runcore->profile_fd, "F:%s\n", postop_info.file->strstart);
         fprintf(runcore->profile_fd, "CS:%s;%s@0x%X,0x%X\n",
                 VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
@@ -1172,7 +1175,8 @@ ARGIN(opcode_t *pc))
         if (!preop_file_name)  preop_file_name  = unknown_file;
         if (!postop_file_name) postop_file_name = unknown_file;
 
-        if (Profiling_new_file_TEST(runcore) || Parrot_str_compare(interp, preop_file_name, postop_file_name)) {
+        if (Profiling_new_file_TEST(runcore) ||
+            Parrot_str_compare(interp, preop_file_name, postop_file_name)) {
             Profiling_new_file_CLEAR(runcore);
             fprintf(runcore->profile_fd, "F:%s\n", postop_file_name->strstart);
         }
@@ -1198,7 +1202,8 @@ ARGIN(opcode_t *pc))
     } /* while (pc) */
 
     if (runcore->level == 0) {
-        fprintf(stderr, "\nPROFILING RUNCORE: Wrote profile to %s .\n", runcore->profile_filename->strstart);
+        fprintf(stderr, "\nPROFILING RUNCORE: Wrote profile to %s .\n",
+                runcore->profile_filename->strstart);
     }
     Profiling_exit_check_SET(runcore);
     runcore->runcore_finish = Parrot_hires_get_time();;
