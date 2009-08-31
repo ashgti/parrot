@@ -536,7 +536,7 @@ Parrot_clear_n(PARROT_INTERP)
 
 /*
 
-=item C<void Parrot_pcc_get_INTVAL_reg(PARROT_INTERP)>
+=item C<INTVAL * Parrot_pcc_get_INTVAL_reg(PARROT_INTERP, PMC *ctx, INTVAL idx)>
 
 Get pointer to INTVAL register.
 
@@ -555,7 +555,8 @@ Parrot_pcc_get_INTVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 
 /*
 
-=item C<void Parrot_pcc_get_INTVAL_reg(PARROT_INTERP)>
+=item C<FLOATVAL * Parrot_pcc_get_FLOATVAL_reg(PARROT_INTERP, PMC *ctx, INTVAL
+idx)>
 
 Get pointer to FLOATVAL register.
 
@@ -574,7 +575,8 @@ Parrot_pcc_get_FLOATVAL_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 
 /*
 
-=item C<void Parrot_pcc_get_STRING_reg(PARROT_INTERP)>
+=item C<STRING ** Parrot_pcc_get_STRING_reg(PARROT_INTERP, PMC *ctx, INTVAL
+idx)>
 
 Get pointer to STRING register.
 
@@ -593,7 +595,7 @@ Parrot_pcc_get_STRING_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 
 /*
 
-=item C<void Parrot_pcc_get_PMC_reg(PARROT_INTERP)>
+=item C<PMC ** Parrot_pcc_get_PMC_reg(PARROT_INTERP, PMC *ctx, INTVAL idx)>
 
 Get pointer to PMC register.
 
