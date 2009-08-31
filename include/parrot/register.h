@@ -117,6 +117,14 @@ STRING ** Parrot_pcc_get_STRING_reg(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+void Parrot_pcc_set_regs_used(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    int type,
+    INTVAL num)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 void Parrot_pop_context(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -168,6 +176,9 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_get_STRING_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_set_regs_used __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pop_context __attribute__unused__ int _ASSERT_ARGS_CHECK = \

@@ -631,7 +631,8 @@ Parrot_pcc_get_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type)
 
 /*
 
-=item C<int Parrot_pcc_set_regs_used(PARROT_INTERP, PMC *ctx, int type)>
+=item C<void Parrot_pcc_set_regs_used(PARROT_INTERP, PMC *ctx, int type, INTVAL
+num)>
 
 Set number of used registers of particular type.
 
@@ -642,7 +643,7 @@ PARROT_EXPORT
 void
 Parrot_pcc_set_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type, INTVAL num)
 {
-    ASSERT_ARGS(Parrot_pcc_get_regs_used)
+    ASSERT_ARGS(Parrot_pcc_set_regs_used)
     Parrot_pcc_get_context_struct(interp, ctx)->n_regs_used[type] = num;
 }
 
