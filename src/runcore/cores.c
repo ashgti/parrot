@@ -1042,6 +1042,8 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
     ASSERT_ARGS(init_profiling_core)
 
     runcore->profile_filename = Parrot_sprintf_c(interp, "parrot.%d.pprof", getpid());
+    /* profile_filename gets collected if it's not marked or in the root set. */
+    gc_register_pmc(interp, (PMC *) runcore->profile_filename);
 
     runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
     runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
@@ -1138,11 +1140,6 @@ ARGIN(opcode_t *pc))
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                     "attempt to access code outside of current code segment");
         }
-
-        /* HACK: profile_filename appears to get prematurely recycled if it's
-         * not marked.  Manually marking it or adding an unused STRING variable
-         * that points at it keeps it from an untimely demise. */
-        Parrot_gc_mark_PObj_alive(interp, (PObj*)runcore->profile_filename);
 
         /* avoid an extra call to Parrot_Context_get_info */
         mem_sys_memcopy(&preop_info, &postop_info, sizeof (Parrot_Context_info));
