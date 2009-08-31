@@ -681,7 +681,7 @@ run_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
     &&  interp->run_core != PARROT_FAST_CORE)
             interp->run_core = PARROT_FAST_CORE;
 
-    CURRENT_CONTEXT_FIELD(interp, constants) = interp->code->const_table->constants;
+    Parrot_pcc_set_constants(interp, CONTEXT(interp), interp->code->const_table->constants);
 
     retval           = (PMC *)Parrot_runops_fromc_args(interp, sub_pmc, "P");
     interp->run_core = old;
@@ -3083,9 +3083,9 @@ Parrot_switch_to_cs(PARROT_INTERP, ARGIN(PackFile_ByteCode *new_cs), int really)
     }
 
     interp->code               = new_cs;
-    CURRENT_CONTEXT_FIELD(interp, constants) = really
+    Parrot_pcc_set_constants(interp, CONTEXT(interp), really
                                ? find_constants(interp, new_cs->const_table)
-                               : new_cs->const_table->constants;
+                               : new_cs->const_table->constants);
 
     /* new_cs->const_table->constants; */
     Parrot_pcc_set_pred_offset(interp, CONTEXT(interp),

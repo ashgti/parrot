@@ -339,16 +339,6 @@ static void too_many(PARROT_INTERP,
 /* Make sure we don't conflict with any other MAX() macros defined elsewhere */
 #define PARROT_MAX(a, b) (((a)) > (b) ? (a) : (b))
 
-#define SAVE_OFF_REGS(orig, next, save) \
-        CONTEXT_FIELD(interp, (save), bp)    = CONTEXT_FIELD(interp, (orig), bp);\
-        CONTEXT_FIELD(interp, (save), bp_ps) = CONTEXT_FIELD(interp, (orig), bp_ps);\
-        CONTEXT_FIELD(interp, (orig), bp)    = CONTEXT_FIELD(interp, (next), bp);\
-        CONTEXT_FIELD(interp, (orig), bp_ps) = CONTEXT_FIELD(interp, (next), bp_ps);
-
-#define RESTORE_REGS(orig, save) \
-        CONTEXT_FIELD(interp, (orig), bp)    = CONTEXT_FIELD(interp, (save), bp);\
-        CONTEXT_FIELD(interp, (orig), bp_ps) = CONTEXT_FIELD(interp, (save), bp_ps);
-
 /*
 
 =item C<PMC* Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, PMC* obj,
@@ -564,7 +554,7 @@ Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP, ARGIN(PMC *ctx),
     ASSERT_ARGS(Parrot_init_arg_indexes_and_sig_pmc)
     if (!sig_pmc && indexes) {
         ++indexes;
-        sig_pmc = CONTEXT_FIELD(interp, ctx, constants[*indexes])->u.key;
+        sig_pmc = Parrot_pcc_get_pmc_constant(interp, ctx, *indexes);
         ASSERT_SIG_PMC(sig_pmc);
         ++indexes;
     }
@@ -614,7 +604,7 @@ Parrot_init_arg_op(PARROT_INTERP, ARGIN(PMC *ctx),
 
     if (pc) {
         ++pc;
-        sig_pmc = CONTEXT_FIELD(interp, ctx, constants[*pc])->u.key;
+        sig_pmc = Parrot_pcc_get_pmc_constant(interp, ctx, *pc);
         ASSERT_SIG_PMC(sig_pmc);
         ++pc;
     }

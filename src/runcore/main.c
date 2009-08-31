@@ -188,10 +188,10 @@ prederef_args(ARGMOD(void **pc_prederef), PARROT_INTERP,
     ASSERT_ARGS(prederef_args)
     const PackFile_ConstTable * const const_table = interp->code->const_table;
 
-    const int regs_n = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_NUM]);
-    const int regs_i = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_INT]);
-    const int regs_p = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_PMC]);
-    const int regs_s = CURRENT_CONTEXT_FIELD(interp, n_regs_used[REGNO_STR]);
+    const int regs_n = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_NUM);
+    const int regs_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
+    const int regs_p = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_PMC);
+    const int regs_s = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_STR);
 
     /* prederef var part too */
     const int m = opinfo->op_count;
