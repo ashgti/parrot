@@ -325,11 +325,9 @@ Invokes the subroutine.
         else {
             /* autoclose */
             PMC *c;
-            for (
-                    c = context;
-                    PMC_IS_NULL(Parrot_pcc_get_outer_ctx(interp, c));
-                    c = Parrot_pcc_get_outer_ctx(interp, c)
-            ) {
+            for (c = context;
+                 PMC_IS_NULL(Parrot_pcc_get_outer_ctx(interp, c));
+                 c = Parrot_pcc_get_outer_ctx(interp, c)) {
 
                 PMC         *outer_pmc;
                 Parrot_Sub_attributes *current_sub, *outer_sub;
