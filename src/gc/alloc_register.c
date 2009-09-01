@@ -649,6 +649,77 @@ Parrot_pcc_set_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type, INTVAL num)
 
 /*
 
+=item C<Regs_ni* Parrot_pcc_get_regs_ni(PARROT_INTERP, PMC *ctx)>
+
+Get pointer to FLOANFAL and INTVAL registers.
+
+=cut
+
+*/
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Regs_ni*
+Parrot_pcc_get_regs_ni(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_regs_ni)
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp);
+}
+
+/*
+
+=item C<void Parrot_pcc_set_regs_ni(PARROT_INTERP, PMC *ctx, Regs_ni *bp)>
+
+Copy Regs_ni into Context.
+
+=cut
+
+*/
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void
+Parrot_pcc_set_regs_ni(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(Regs_ni *bp))
+{
+    ASSERT_ARGS(Parrot_pcc_set_regs_ni)
+    Parrot_pcc_get_context_struct(interp, ctx)->bp = *bp;
+}
+
+/*
+
+=item C<Regs_ps* Parrot_pcc_get_regs_ps(PARROT_INTERP, PMC *ctx)>
+
+Get pointer to PMC and STRING registers.
+
+=cut
+
+*/
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Regs_ps*
+Parrot_pcc_get_regs_ps(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_regs_ps)
+    return &(Parrot_pcc_get_context_struct(interp, ctx)->bp_ps);
+}
+
+/*
+
+=item C<void Parrot_pcc_set_regs_ps(PARROT_INTERP, PMC *ctx, Regs_ps *bp_ps)>
+
+Copy Regs_ps into Context.
+
+=cut
+
+*/
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void
+Parrot_pcc_set_regs_ps(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(Regs_ps *bp_ps))
+{
+    ASSERT_ARGS(Parrot_pcc_set_regs_ps)
+    Parrot_pcc_get_context_struct(interp, ctx)->bp_ps = *bp_ps;
+}
+/*
+
 =back
 
 =head1 SEE ALSO

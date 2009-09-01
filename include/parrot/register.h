@@ -15,6 +15,7 @@
 
 #include "parrot/string.h"
 #include "parrot/compiler.h"
+#include "parrot/context.h"         /* Parrot_Context */
 
 /*
  * Macros to make accessing registers more convenient/readable.
@@ -55,8 +56,6 @@
         (__CTX->n_regs_used[REGNO_PMC] - 1L - (x)))
 #define REG_OFFS_STR(x) (sizeof (STRING*) * (x) + _SIZEOF_INTS + _SIZEOF_PMCS)
 
-
-typedef struct Parrot_Context Parrot_Context; /* parrot/interpreter.h */
 
 /* HEADERIZER BEGIN: src/gc/alloc_register.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -104,6 +103,18 @@ PMC ** Parrot_pcc_get_PMC_reg(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Regs_ni* Parrot_pcc_get_regs_ni(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Regs_ps* Parrot_pcc_get_regs_ps(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 int Parrot_pcc_get_regs_used(PARROT_INTERP, ARGIN(PMC *ctx), int type)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -115,6 +126,24 @@ STRING ** Parrot_pcc_get_STRING_reg(PARROT_INTERP,
     INTVAL idx)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void Parrot_pcc_set_regs_ni(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN(Regs_ni *bp))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void Parrot_pcc_set_regs_ps(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN(Regs_ps *bp_ps))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
 
 PARROT_EXPORT
 void Parrot_pcc_set_regs_used(PARROT_INTERP,
@@ -172,12 +201,26 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_get_PMC_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_regs_ni __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_regs_ps __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_get_regs_used __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_get_STRING_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_set_regs_ni __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx) \
+    || PARROT_ASSERT_ARG(bp)
+#define ASSERT_ARGS_Parrot_pcc_set_regs_ps __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    || PARROT_ASSERT_ARG(ctx) \
+    || PARROT_ASSERT_ARG(bp_ps)
 #define ASSERT_ARGS_Parrot_pcc_set_regs_used __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
