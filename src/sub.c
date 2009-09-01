@@ -127,49 +127,6 @@ mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
 
 /*
 
-=item C<PMC * new_continuation(PARROT_INTERP, const PMC *to)>
-
-Returns a new C<PMC> to the context of C<to> with its own copy of the
-current interpreter context.  If C<to> is C<NULL>, then the C<to_ctx> is set
-to the current context.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-PMC *
-new_continuation(PARROT_INTERP, ARGIN_NULLOK(PMC *to))
-{
-    ASSERT_ARGS(new_continuation)
-    
-    PMC * const cc = to ? 
-        constant_pmc_new_init(interp, enum_class_Continuation, to) :
-        constant_pmc_new(interp, enum_class_Continuation);
-    return cc;
-}
-
-/*
-
-=item C<PMC * new_ret_continuation(PARROT_INTERP)>
-
-Returns a new RetContinuation C<PMC> pointing to the current context.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-PMC *
-new_ret_continuation(PARROT_INTERP)
-{
-    ASSERT_ARGS(new_ret_continuation)
-    PMC * const cc = pmc_new(interp, enum_class_RetContinuation);
-    return cc;
-}
-
 
 /*
 

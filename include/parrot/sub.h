@@ -223,16 +223,6 @@ void mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
         FUNC_MODIFIES(* ctx);
 
 void mark_context_start(void);
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-PMC * new_continuation(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *to))
-        __attribute__nonnull__(1);
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-PMC * new_ret_continuation(PARROT_INTERP)
-        __attribute__nonnull__(1);
 
 void Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
         __attribute__nonnull__(1)
