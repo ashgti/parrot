@@ -149,7 +149,7 @@ Swaps the "context".
             co->ctx                   = Parrot_context_ref(interp, ctx);
 
             ctx->caller_ctx           = caller_ctx;
-            PMC_cont(ccont)->from_ctx = ctx;
+            PARROT_CONTINUATION(ccont)->from_ctx = ctx;
             ctx->current_sub          = SELF;
             ctx->current_HLL          = co->HLL_id;
             ctx->current_namespace    = co->namespace_stash;
@@ -186,7 +186,7 @@ Swaps the "context".
 
             /* and the recent call context */
             ccont                 = ctx->current_cont;
-            ctx->caller_ctx       = PMC_cont(ccont)->to_ctx
+            ctx->caller_ctx       = PARROT_CONTINUATION(ccont)->to_ctx
                                   = CONTEXT(interp);
 
             /* set context to coro context */
@@ -203,7 +203,7 @@ Swaps the "context".
 
             wanted_seg            = co->caller_seg;
             ccont                 = co->ctx->current_cont;
-            ctx                   = PMC_cont(ccont)->to_ctx;
+            ctx                   = PARROT_CONTINUATION(ccont)->to_ctx;
 
             if (! ctx) {
                 /* This still isn't quite right, but it beats segfaulting.  See

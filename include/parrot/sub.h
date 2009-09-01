@@ -152,21 +152,9 @@ typedef struct Parrot_sub_arginfo {
 
 typedef struct Parrot_Sub_attributes Parrot_sub;
 typedef struct Parrot_Coroutine_attributes Parrot_coro;
+typedef struct Parrot_Continuation_attributes Parrot_cont;
 
-typedef struct Parrot_cont {
-    /* continuation destination */
-    PackFile_ByteCode *seg;          /* bytecode segment */
-    opcode_t *address;               /* start of bytecode, addr to continue */
-    struct Parrot_Context *to_ctx;   /* pointer to dest context */
-    /* a Continuation keeps the from_ctx alive */
-    struct Parrot_Context *from_ctx; /* sub, this cont is returning from */
-    opcode_t *current_results;       /* ptr into code with get_results opcode
-                                        full continuation only */
-    int runloop_id;                  /* id of the creating runloop. */
-    int invoked;                     /* flag when a handler has been invoked. */
-} Parrot_cont;
-
-#define PMC_cont(pmc) (PARROT_CONTINUATION(pmc)->cont)
+#define PMC_cont(pmc) PARROT_CONTINUATION(pmc)
 
 typedef struct Parrot_Context_info {
     STRING   *subname;
@@ -237,13 +225,13 @@ void mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
 void mark_context_start(void);
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Parrot_cont * new_continuation(PARROT_INTERP,
-    ARGIN_NULLOK(const Parrot_cont *to))
+PMC * new_continuation(PARROT_INTERP,
+    ARGIN_NULLOK(PMC *to))
         __attribute__nonnull__(1);
 
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Parrot_cont * new_ret_continuation(PARROT_INTERP)
+PMC * new_ret_continuation(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 void Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
@@ -252,17 +240,15 @@ void Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
         FUNC_MODIFIES(*sub_pmc);
 
 void Parrot_continuation_check(PARROT_INTERP,
-    ARGIN(const PMC *pmc),
-    ARGIN(const Parrot_cont *cc))
+    ARGIN(const PMC *pmc))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
+        __attribute__nonnull__(2);
+
 
 void Parrot_continuation_rewind_environment(PARROT_INTERP,
-    SHIM(PMC *pmc),
-    ARGIN(Parrot_cont *cc))
+    ARGIN(PMC *pmc))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
+        __attribute__nonnull__(2);
 
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
@@ -307,12 +293,11 @@ PMC* Parrot_find_pad(PARROT_INTERP,
     || PARROT_ASSERT_ARG(sub_pmc)
 #define ASSERT_ARGS_Parrot_continuation_check __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(cc)
+    || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_Parrot_continuation_rewind_environment \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(cc)
+    || PARROT_ASSERT_ARG(pmc)
 #define ASSERT_ARGS_Parrot_find_pad __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(lex_name) \

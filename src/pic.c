@@ -705,9 +705,9 @@ is_pic_param(PARROT_INTERP, ARGIN(void **pc), ARGOUT(Parrot_MIC *mic), opcode_t 
 
     if (op == PARROT_OP_set_returns_pc) {
         PMC * const ccont = ctx->current_cont;
-        if (!PMC_cont(ccont)->address)
+        if (!PARROT_CONTINUATION(ccont)->address)
             return 0;
-        caller_ctx = PMC_cont(ccont)->to_ctx;
+        caller_ctx = PARROT_CONTINUATION(ccont)->to_ctx;
         args       = caller_ctx->current_results;
     }
     else {

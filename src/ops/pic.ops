@@ -184,13 +184,13 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
     opcode_t *dest_pc;
     void **dest_pred;
     Parrot_Context *caller_ctx, *ctx;
-    Parrot_cont *cc;
+    Parrot_Continuation_attributes *cc;
     int n;
 
     ctx = CONTEXT(interp);
     mic = (Parrot_MIC *) cur_opcode[1];
     ccont = ctx->current_cont;
-    cc = PMC_cont(ccont);
+    cc = PARROT_CONTINUATION(ccont);
     if (!cc->address) {
         interp->current_returns = CUR_OPCODE;
         n = VTABLE_get_integer(interp, mic->m.sig);

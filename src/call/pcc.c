@@ -517,7 +517,7 @@ Parrot_init_ret_nci(PARROT_INTERP, ARGOUT(call_state *st), ARGIN(const char *sig
     /* if this NCI call was a taicall, return results to caller's get_results
      * this also means that we pass the caller's register base pointer */
     if (SUB_FLAG_TAILCALL_ISSET(current_cont))
-        ctx = PMC_cont(current_cont)->to_ctx;
+        ctx = PARROT_CONTINUATION(current_cont)->to_ctx;
 
     /* TODO simplify all */
     Parrot_init_arg_sig(interp, CONTEXT(interp), sig, NULL, &st->src);
@@ -2864,7 +2864,7 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
     interp->current_object       = pmc;
     interp->current_cont         = NEED_CONTINUATION;
     ctx->current_cont            = ret_cont;
-    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
+    PARROT_CONTINUATION(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
     pccinvoke_meth               = VTABLE_find_method(interp, pmc, method_name);
 
     if (PMC_IS_NULL(pccinvoke_meth))
@@ -3007,7 +3007,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     }
     interp->current_cont         = NEED_CONTINUATION;
     ctx->current_cont            = ret_cont;
-    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
+    PARROT_CONTINUATION(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);

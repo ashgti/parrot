@@ -127,9 +127,9 @@ mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
 
 /*
 
-=item C<Parrot_cont * new_continuation(PARROT_INTERP, const Parrot_cont *to)>
+=item C<PMC * new_continuation(PARROT_INTERP, const PMC *to)>
 
-Returns a new C<Parrot_cont> to the context of C<to> with its own copy of the
+Returns a new C<PMC> to the context of C<to> with its own copy of the
 current interpreter context.  If C<to> is C<NULL>, then the C<to_ctx> is set
 to the current context.
 
@@ -139,34 +139,22 @@ to the current context.
 
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Parrot_cont *
-new_continuation(PARROT_INTERP, ARGIN_NULLOK(const Parrot_cont *to))
+PMC *
+new_continuation(PARROT_INTERP, ARGIN_NULLOK(PMC *to))
 {
     ASSERT_ARGS(new_continuation)
-    Parrot_cont    * const cc     = mem_allocate_typed(Parrot_cont);
-    Parrot_Context * const to_ctx = to ? to->to_ctx : CONTEXT(interp);
-
-    cc->to_ctx        = to_ctx;
-    cc->from_ctx      = Parrot_context_ref(interp, CONTEXT(interp));
-    cc->runloop_id    = 0;
-    if (to) {
-        cc->seg       = to->seg;
-        cc->address   = to->address;
-    }
-    else {
-        cc->seg       = interp->code;
-        cc->address   = NULL;
-    }
-
-    cc->current_results = to_ctx->current_results;
+    
+    PMC * const cc = to ? 
+        constant_pmc_new_init(interp, enum_class_Continuation, to) :
+        constant_pmc_new(interp, enum_class_Continuation);
     return cc;
 }
 
 /*
 
-=item C<Parrot_cont * new_ret_continuation(PARROT_INTERP)>
+=item C<PMC * new_ret_continuation(PARROT_INTERP)>
 
-Returns a new C<Parrot_cont> pointing to the current context.
+Returns a new RetContinuation C<PMC> pointing to the current context.
 
 =cut
 
@@ -174,27 +162,20 @@ Returns a new C<Parrot_cont> pointing to the current context.
 
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Parrot_cont *
+PMC *
 new_ret_continuation(PARROT_INTERP)
 {
     ASSERT_ARGS(new_ret_continuation)
-    Parrot_cont * const cc = mem_allocate_typed(Parrot_cont);
-
-    cc->to_ctx          = CONTEXT(interp);
-    cc->from_ctx        = CONTEXT(interp);    /* filled in during a call */
-    cc->runloop_id      = 0;
-    cc->seg             = interp->code;
-    cc->current_results = NULL;
-    cc->address         = NULL;
+    PMC * const cc = pmc_new(interp, enum_class_RetContinuation);
     return cc;
 }
+
 
 /*
 
 =item C<PMC * new_ret_continuation_pmc(PARROT_INTERP, opcode_t *address)>
 
-Returns a new C<RetContinuation> PMC. Uses one from the cache,
-if possible; otherwise, creates a new one.
+Returns a new C<RetContinuation> PMC, and sets address field to C<address>
 
 =cut
 
@@ -226,7 +207,8 @@ void
 invalidate_retc_context(PARROT_INTERP, ARGMOD(PMC *cont))
 {
     ASSERT_ARGS(invalidate_retc_context)
-    Parrot_Context *ctx = PMC_cont(cont)->from_ctx;
+
+    Parrot_Context *ctx = PARROT_CONTINUATION(cont)->from_ctx;
     cont = ctx->current_cont;
 
     Parrot_set_context_threshold(interp, ctx);
@@ -589,8 +571,7 @@ parrot_new_closure(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 
 /*
 
-=item C<void Parrot_continuation_check(PARROT_INTERP, const PMC *pmc, const
-Parrot_cont *cc)>
+=item C<void Parrot_continuation_check(PARROT_INTERP, const PMC *pmc>
 
 Verifies that the provided continuation is sane.
 
@@ -599,11 +580,10 @@ Verifies that the provided continuation is sane.
 */
 
 void
-Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
-    ARGIN(const Parrot_cont *cc))
+Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc))
 {
     ASSERT_ARGS(Parrot_continuation_check)
-    Parrot_Context *to_ctx       = cc->to_ctx;
+    Parrot_Context *to_ctx       = PARROT_CONTINUATION(pmc)->to_ctx;
     Parrot_Context *from_ctx     = CONTEXT(interp);
 
 #if CTX_LEAK_DEBUG
@@ -620,8 +600,7 @@ Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc),
 
 /*
 
-=item C<void Parrot_continuation_rewind_environment(PARROT_INTERP, PMC *pmc,
-Parrot_cont *cc)>
+=item C<void Parrot_continuation_rewind_environment(PARROT_INTERP, PMC *pmc>
 
 Restores the appropriate context for the continuation.
 
@@ -630,11 +609,11 @@ Restores the appropriate context for the continuation.
 */
 
 void
-Parrot_continuation_rewind_environment(PARROT_INTERP, SHIM(PMC *pmc),
-        ARGIN(Parrot_cont *cc))
+Parrot_continuation_rewind_environment(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_continuation_rewind_environment)
-    Parrot_Context * const to_ctx = cc->to_ctx;
+
+    Parrot_Context * const to_ctx = PARROT_CONTINUATION(pmc)->to_ctx;
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
