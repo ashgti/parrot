@@ -292,7 +292,7 @@ runops_fast_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     ASSERT_ARGS(runops_fast_core)
 
     /* disable pc */
-    Parrot_pcc_set_pc(interp, CONTEXT(interp), NULL);
+    Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), NULL);
 
     while (pc) {
         if (pc < code_start || pc >= code_end)
@@ -328,7 +328,7 @@ runops_cgoto_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     ASSERT_ARGS(runops_cgoto_core)
 
     /* disable pc */
-    Parrot_pcc_set_pc(interp, CONTEXT(interp), NULL);
+    Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), NULL);
 
 #ifdef HAVE_COMPUTED_GOTO
     pc = cg_core(pc, interp);
@@ -407,7 +407,7 @@ runops_trace_core(PARROT_INTERP, ARGIN(opcode_t *pc))
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                 "attempt to access code outside of current code segment");
 
-        Parrot_pcc_set_pc(interp, CONTEXT(interp), pc);
+        Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), pc);
 
         DO_OP(pc, interp);
         trace_op(interp, code_start, code_end, pc);
@@ -461,7 +461,7 @@ runops_slow_core(PARROT_INTERP, ARGIN(opcode_t *pc))
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                 "attempt to access code outside of current code segment");
 
-        Parrot_pcc_set_pc(interp, CONTEXT(interp), pc);
+        Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), pc);
 
         DO_OP(pc, interp);
     }
@@ -494,7 +494,7 @@ runops_gc_debug_core(PARROT_INTERP, ARGIN(opcode_t *pc))
                 "attempt to access code outside of current code segment");
 
         Parrot_gc_mark_and_sweep(interp, GC_TRACE_FULL);
-        Parrot_pcc_set_pc(interp, CONTEXT(interp), pc);
+        Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), pc);
 
         DO_OP(pc, interp);
     }
@@ -534,7 +534,7 @@ runops_profile_core(PARROT_INTERP, ARGIN(opcode_t *pc))
     while (pc) {/* && pc >= code_start && pc < code_end) */
         opcode_t cur_op;
 
-        Parrot_pcc_set_pc(interp, CONTEXT(interp), pc);
+        Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), pc);
         profile->cur_op                   = cur_op = *pc + PARROT_PROF_EXTRA;
         profile->starttime                = Parrot_floatval_time();
         profile->data[cur_op].numcalls++;
@@ -595,7 +595,7 @@ runops_debugger_core(PARROT_INTERP, ARGIN(opcode_t *pc))
                     pc);
         }
 
-        Parrot_pcc_set_pc(interp, CONTEXT(interp), pc);
+        Parrot_pcc_set_pc(interp, CURRENT_CONTEXT(interp), pc);
         DO_OP(pc, interp);
 
         if (interp->pdb->state & PDB_STOPPED) {

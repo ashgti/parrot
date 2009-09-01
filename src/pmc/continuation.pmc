@@ -221,7 +221,7 @@ destination to continue execution.
 
     VTABLE opcode_t *invoke(void *next) {
         Parrot_cont *cc           = PMC_cont(SELF);
-        PMC         *from_ctx     = CONTEXT(interp);
+        PMC         *from_ctx     = CURRENT_CONTEXT(interp);
         PMC         *to_ctx       = cc->to_ctx;
         opcode_t    *pc           = cc->address;
         UNUSED(next)

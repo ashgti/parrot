@@ -169,7 +169,7 @@ Parrot_runops_fromc(PARROT_INTERP, ARGIN(PMC *sub))
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
             "Subroutine returned a NULL address");
 
-    ctx    = CONTEXT(interp);
+    ctx    = CURRENT_CONTEXT(interp);
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return ctx;
@@ -212,7 +212,7 @@ runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
 
     char new_sig[10];
     const char *sig_p;
-    PMC * const old_ctx = CONTEXT(interp);
+    PMC * const old_ctx = CURRENT_CONTEXT(interp);
 
     interp->current_cont   = new_ret_continuation_pmc(interp, NULL);
     interp->current_object = obj;
@@ -264,7 +264,7 @@ runops_args(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj),
             "no get_params in sub");
      */
 
-    ctx    = CONTEXT(interp);
+    ctx    = CURRENT_CONTEXT(interp);
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return ctx;
@@ -304,7 +304,7 @@ Parrot_run_meth_fromc(PARROT_INTERP, ARGIN(PMC *sub), ARGIN_NULLOK(PMC *obj), SH
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
             "Subroutine returned a NULL address");
 
-    ctx    = CONTEXT(interp);
+    ctx    = CURRENT_CONTEXT(interp);
     offset = dest - interp->code->base.data;
     runops(interp, offset);
     return set_retval(interp, 0, ctx);

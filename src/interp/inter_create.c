@@ -215,9 +215,9 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;
 
     /* clear context introspection vars */
-    Parrot_pcc_set_sub(interp, CONTEXT(interp), NULL);
-    Parrot_pcc_set_continuation(interp, CONTEXT(interp), NULL); /* TODO Use PMCNULL */
-    Parrot_pcc_set_object(interp, CONTEXT(interp), NULL);
+    Parrot_pcc_set_sub(interp, CURRENT_CONTEXT(interp), NULL);
+    Parrot_pcc_set_continuation(interp, CURRENT_CONTEXT(interp), NULL); /* TODO Use PMCNULL */
+    Parrot_pcc_set_object(interp, CURRENT_CONTEXT(interp), NULL);
 
     /* Load the core op func and info tables */
     interp->op_lib          = PARROT_CORE_OPLIB_INIT(1);

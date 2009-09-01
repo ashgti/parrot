@@ -447,7 +447,7 @@ inline op invoke(invar PMC, invar PMC) :flow {
 
 inline op yield() :flow {
     opcode_t *dest = expr NEXT();
-    PMC * const p = Parrot_pcc_get_sub(interp, CONTEXT(interp));
+    PMC * const p = Parrot_pcc_get_sub(interp, CURRENT_CONTEXT(interp));
     dest = (opcode_t *)p->vtable->invoke(interp, p, dest);
     goto ADDRESS(dest);
 }
@@ -456,14 +456,14 @@ inline op tailcall(invar PMC) :flow {
     opcode_t *dest;
     PMC * const p = $1;
     dest = expr NEXT();
-    interp->current_cont = Parrot_pcc_get_continuation(interp, CONTEXT(interp));
+    interp->current_cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
     PObj_get_FLAGS(interp->current_cont) |= SUB_FLAG_TAILCALL;
     dest = (opcode_t *)p->vtable->invoke(interp, p, dest);
     goto ADDRESS(dest);
 }
 
 inline op returncc() :flow {
-    PMC * const p = Parrot_pcc_get_continuation(interp, CONTEXT(interp));
+    PMC * const p = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
     opcode_t * const dest = (opcode_t *)p->vtable->invoke(interp,
             p, expr NEXT());
     goto ADDRESS(dest);
@@ -527,7 +527,7 @@ op get_results(inconst PMC) :flow {
     PMC * const signature = $1;
     INTVAL argc;
 
-    Parrot_pcc_set_results(interp, CONTEXT(interp), _this);
+    Parrot_pcc_set_results(interp, CURRENT_CONTEXT(interp), _this);
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }
@@ -541,7 +541,7 @@ op get_params(inconst PMC) :flow {
     opcode_t *src_indexes, *dst_indexes;
 
     interp->current_params = _this;
-    ctx     = CONTEXT(interp);
+    ctx     = CURRENT_CONTEXT(interp);
     ccont   = Parrot_pcc_get_continuation(interp, ctx);
 
     caller_ctx  = Parrot_pcc_get_caller_ctx(interp, ctx);
@@ -573,7 +573,7 @@ op set_returns(inconst PMC) :flow {
     opcode_t *src_indexes, *dest_indexes;
 
     interp->current_returns = _this;
-    ctx                     = CONTEXT(interp);
+    ctx                     = CURRENT_CONTEXT(interp);
     caller_ctx              = Parrot_pcc_get_caller_ctx(interp, ctx);
     ccont                   = Parrot_pcc_get_continuation(interp, ctx);
 
@@ -614,7 +614,7 @@ specified in F<docs/pdds/pdd03_calling_conventions.pod>.
 
 inline op result_info(out PMC) {
     /* Get context of callee from return continuation. */
-    PMC * const cc = Parrot_pcc_get_continuation(interp, CONTEXT(interp));
+    PMC * const cc = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
     PMC *sig = NULL;
     if (cc && PMC_cont(cc)->to_ctx) {
         /* caller context has results */
@@ -1466,3 +1466,5 @@ as the Parrot interpreter itself.
  * End:
  * vim: expandtab shiftwidth=4:
  */
+
+

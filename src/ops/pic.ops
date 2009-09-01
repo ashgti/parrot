@@ -138,7 +138,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     /* avoid load dependencies - intermix derefs
      * - yes, confusing but faster
      */
-    ctx         = CONTEXT(interp);
+    ctx         = CURRENT_CONTEXT(interp);
     src_pc      = interp->current_args;
     mic         = (Parrot_MIC *) cur_opcode[1];
     caller_ctx  = Parrot_pcc_get_caller_ctx(interp, ctx);
@@ -187,7 +187,7 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
     Parrot_cont *cc;
     int n;
 
-    ctx     = CONTEXT(interp);
+    ctx     = CURRENT_CONTEXT(interp);
     mic     = (Parrot_MIC *) cur_opcode[1];
     ccont   = Parrot_pcc_get_continuation(interp, ctx);
     cc      = PMC_cont(ccont);
@@ -245,7 +245,7 @@ inline op pic_callr__(inconst PMC) :pic :flow {
     INTVAL i, n_args, *sig_bits;
     PMC *sig;
 
-    ctx = CONTEXT(interp);
+    ctx = CURRENT_CONTEXT(interp);
     mic = (Parrot_MIC *) cur_opcode[1];
     /* get_results */
     pc = Parrot_pcc_get_results(interp, ctx);

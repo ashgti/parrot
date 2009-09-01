@@ -883,7 +883,7 @@ Parrot_cx_find_handler_local(PARROT_INTERP, ARGIN(PMC *task))
             context = (PMC *)VTABLE_get_pointer(interp, task);
         }
         else {
-            context = CONTEXT(interp);
+            context = CURRENT_CONTEXT(interp);
             if (!PMC_IS_NULL(Parrot_pcc_get_handlers(interp, context)))
                 iter = VTABLE_get_iter(interp, Parrot_pcc_get_handlers(interp, context));
         }

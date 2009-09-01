@@ -2211,7 +2211,7 @@ char
 PDB_check_condition(PARROT_INTERP, ARGIN(const PDB_condition_t *condition))
 {
     ASSERT_ARGS(PDB_check_condition)
-    PMC *ctx = CONTEXT(interp);
+    PMC *ctx = CURRENT_CONTEXT(interp);
 
     TRACEDEB_MSG("PDB_check_condition");
 
@@ -3512,7 +3512,7 @@ PDB_backtrace(PARROT_INTERP)
 
     /* information about the current sub */
     PMC *sub = interpinfo_p(interp, CURRENT_SUB);
-    PMC *ctx = CONTEXT(interp);
+    PMC *ctx = CURRENT_CONTEXT(interp);
 
     if (!PMC_IS_NULL(sub)) {
         str = Parrot_Context_infostr(interp, ctx);
@@ -3634,7 +3634,7 @@ GDB_print_reg(PARROT_INTERP, int t, int n)
     ASSERT_ARGS(GDB_print_reg)
     char * string;
 
-    if (n >= 0 && n < Parrot_pcc_get_regs_used(interp, CONTEXT(interp), t)) {
+    if (n >= 0 && n < Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), t)) {
         switch (t) {
             case REGNO_INT:
                 return Parrot_str_from_int(interp, IREG(n))->strstart;
@@ -3699,7 +3699,7 @@ GDB_P(PARROT_INTERP, ARGIN(const char *s))
     }
     if (! s[1]) {
         /* Print all registers of this type. */
-        const int max_reg = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), t);
+        const int max_reg = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), t);
         int n;
 
         for (n = 0; n < max_reg; n++) {

@@ -265,7 +265,7 @@ Invokes the subroutine.
          *
          */
         pc                   = sub->seg->base.data + sub->start_offs;
-        caller_ctx           = CONTEXT(interp);
+        caller_ctx           = CURRENT_CONTEXT(interp);
         ccont                = INTERP->current_cont;
         INTERP->current_cont = NULL;
 
@@ -962,7 +962,7 @@ slurpy arguments).
 
         /* XXX This code looks very suspicious. */
         /* (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub */
-        tmp1 = Parrot_pcc_get_caller_ctx(interp, CONTEXT(interp));
+        tmp1 = Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp));
         tmp2 = Parrot_pcc_get_caller_ctx(interp, tmp1);
         if (Parrot_pcc_get_sub(interp, tmp2) == outer)
             sub->outer_ctx = tmp2;

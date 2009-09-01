@@ -188,10 +188,10 @@ prederef_args(ARGMOD(void **pc_prederef), PARROT_INTERP,
     ASSERT_ARGS(prederef_args)
     const PackFile_ConstTable * const const_table = interp->code->const_table;
 
-    const int regs_n = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_NUM);
-    const int regs_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
-    const int regs_p = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_PMC);
-    const int regs_s = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_STR);
+    const int regs_n = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_NUM);
+    const int regs_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
+    const int regs_p = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_PMC);
+    const int regs_s = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_STR);
 
     /* prederef var part too */
     const int m = opinfo->op_count;
@@ -541,7 +541,7 @@ init_prederef(PARROT_INTERP, int which)
                 N * sizeof (void *));
 #endif
         /* calc and remember pred_offset */
-        Parrot_pcc_set_pred_offset(interp, CONTEXT(interp), pc - (opcode_t *)temp);
+        Parrot_pcc_set_pred_offset(interp, CURRENT_CONTEXT(interp), pc - (opcode_t *)temp);
 
         /* fill with the prederef__ opcode function */
         if (which == PARROT_SWITCH_CORE || which == PARROT_SWITCH_JIT_CORE)
