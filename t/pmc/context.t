@@ -24,6 +24,7 @@ TODO: Implement real tests when Context PMC will be migrated to use ATTRibutes.
     plan(1)
 
     $P0 = new ['Context']
+    sweep 1
     ok(1, 'Instantiated .Context')
 .end
 

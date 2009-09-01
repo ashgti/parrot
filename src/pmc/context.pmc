@@ -56,6 +56,10 @@ Mark Context as alive.
         PObj *obj;
         int   i;
 
+        /* If Context wasn't initialised just return */
+        if (!ctx)
+            return;
+
         obj = (PObj *)ctx->caller_ctx;
         if (obj)
             Parrot_gc_mark_PObj_alive(interp, obj);
