@@ -951,6 +951,7 @@ include/parrot/call.h                                       [main]include
 include/parrot/cclass.h                                     [main]include
 include/parrot/charset.h                                    [main]include
 include/parrot/compiler.h                                   [main]include
+include/parrot/context.h                                    [main]include
 include/parrot/core_types.h                                 [main]include
 include/parrot/datatypes.h                                  [main]include
 include/parrot/debugger.h                                   [main]include
