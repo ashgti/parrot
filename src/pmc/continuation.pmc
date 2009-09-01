@@ -100,6 +100,7 @@ Initializes the continuation.
         attrs->address   = PARROT_CONTINUATION(values)->address;
         attrs->current_results = attrs->to_ctx->current_results;
 
+        PObj_active_destroy_SET(SELF);
         PObj_custom_mark_destroy_SETALL(SELF);
 
         /* PANIC("don't do that"); */
@@ -159,9 +160,6 @@ Destroys the continuation.
 #endif
             if (cc->from_ctx)
                 Parrot_free_context(interp, cc->from_ctx, 1);
-
-            if (cc->to_ctx)
-                Parrot_free_context(interp, cc->to_ctx, 1);
         }
     }
 /*
