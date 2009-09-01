@@ -205,8 +205,6 @@ typedef struct _Prederef {
  * functions to manipulate Context.
  */
 #define CURRENT_CONTEXT(interp) ((interp)->ctx)
-#define CONTEXT_FIELD(interp, ctx, name)    ((Parrot_pcc_get_context_struct((interp), (ctx)))->name)
-#define CURRENT_CONTEXT_FIELD(interp, name) CONTEXT_FIELD((interp), (interp)->ctx, name)
 
 
 #define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated
