@@ -199,7 +199,7 @@ Parrot_pcc_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 
 =item C<UINTVAL Parrot_pcc_inc_recursion_depth(PARROT_INTERP, PMC *ctx)>
 
-Increase recurtion depth. Returns new recursion_depth value.
+Increase recurtion depth. Returns previous recursion_depth value.
 
 =cut
 
@@ -211,7 +211,7 @@ Parrot_pcc_inc_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_inc_recursion_depth)
     Parrot_Context *c = Parrot_pcc_get_context_struct(interp, ctx);
-    return ++c->recursion_depth;
+    return c->recursion_depth++;
 }
 
 /*

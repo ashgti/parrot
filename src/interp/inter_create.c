@@ -211,9 +211,6 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
 
     create_initial_context(interp);
 
-    /* main is called as a Sub too - this will get depth 0 then */
-    CURRENT_CONTEXT_FIELD(interp, recursion_depth) = (UINTVAL)-1;
-
     /* clear context introspection vars */
     Parrot_pcc_set_sub(interp, CURRENT_CONTEXT(interp), NULL);
     Parrot_pcc_set_continuation(interp, CURRENT_CONTEXT(interp), NULL); /* TODO Use PMCNULL */
