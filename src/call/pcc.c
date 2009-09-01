@@ -1198,15 +1198,18 @@ clone_key_arg(PARROT_INTERP, ARGMOD(call_state *st))
             Regs_ps bp_ps;
 
             /* clone sets key values according to refered register items */
-            bp    = CURRENT_CONTEXT_FIELD(interp, bp);
-            bp_ps = CURRENT_CONTEXT_FIELD(interp, bp_ps);
-            CURRENT_CONTEXT_FIELD(interp, bp)    = CONTEXT_FIELD(interp, st->src.ctx, bp);
-            CURRENT_CONTEXT_FIELD(interp, bp_ps) = CONTEXT_FIELD(interp, st->src.ctx, bp_ps);
+            bp    = *Parrot_pcc_get_regs_ni(interp, CURRENT_CONTEXT(interp));
+            bp_ps = *Parrot_pcc_get_regs_ps(interp, CURRENT_CONTEXT(interp));
+
+            Parrot_pcc_set_regs_ni(interp, CURRENT_CONTEXT(interp),
+                    Parrot_pcc_get_regs_ni(interp, st->src.ctx));
+            Parrot_pcc_set_regs_ps(interp, CURRENT_CONTEXT(interp),
+                    Parrot_pcc_get_regs_ps(interp, st->src.ctx));
 
             UVal_pmc(st->val) = VTABLE_clone(interp, key);
 
-            CURRENT_CONTEXT_FIELD(interp, bp)    = bp;
-            CURRENT_CONTEXT_FIELD(interp, bp_ps) = bp_ps;
+            Parrot_pcc_set_regs_ni(interp, CURRENT_CONTEXT(interp), &bp);
+            Parrot_pcc_set_regs_ps(interp, CURRENT_CONTEXT(interp), &bp_ps);
 
             return;
         }

@@ -154,7 +154,7 @@ inline op pic_get_params__(inconst PMC) :pic :flow {
     if (lru->u.signature == sig) {
         if (sig) {
             n = ((arg_pass_f)lru->f.real_function)(interp, sig,
-                    (char*)CONTEXT_FIELD(interp, caller_ctx, bp.regs_i), src_pred,
+                    (char*)Parrot_pcc_get_regs_ni(interp, caller_ctx)->regs_i, src_pred,
                     _reg_base, (void**)cur_opcode);
         }
         else
@@ -212,7 +212,7 @@ inline op pic_set_returns__(inconst PMC) :pic :flow {
         if (sig) {
             n = ((arg_pass_f)lru->f.real_function)(interp, mic->m.sig,
                     _reg_base, (void**)cur_opcode,
-                    (char*)CONTEXT_FIELD(interp, caller_ctx, bp.regs_i), dest_pred);
+                    (char*)Parrot_pcc_get_regs_ni(interp, caller_ctx)->regs_i, dest_pred);
         }
         else
             n = 2;

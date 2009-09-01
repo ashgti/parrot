@@ -91,7 +91,7 @@ sub goto_address {
         return "if ($addr == 0)
           return 0;
    Parrot_cx_handle_tasks(interp, interp->scheduler);
-   _reg_base = (char*)CURRENT_CONTEXT_FIELD(interp, bp.regs_i);
+   _reg_base = (char*)Parrot_pcc_get_regs_ni(interp, CURRENT_CONTEXT(interp))->regs_i;
    goto **(void **)(cur_opcode = opcode_to_prederef(interp, $addr))";
     }
 }
