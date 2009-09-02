@@ -1490,6 +1490,8 @@ Parrot_get_results_pc {
         Parrot_jit_emit_get_INTERP(interp, jit_info->native_ptr, emit_EAX);
         emitm_movl_m_r(interp, NATIVECODE, emit_EAX, emit_EAX, emit_None, 1,
                 offsetof(Interp, ctx));
+        emitm_movl_m_r(interp, NATIVECODE, emit_EAX, emit_EAX, emit_None, 1,
+                offsetof(PMC, data));
         emitm_movl_i_m(NATIVECODE, jit_info->cur_op, emit_EAX, emit_None, 1,
                 offsetof(Parrot_Context, current_results));
     }

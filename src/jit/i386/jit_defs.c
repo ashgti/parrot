@@ -871,9 +871,6 @@ Parrot_emit_jump_to_eax(Parrot_jit_info_t *jit_info,
     }
 #endif
     /* get base pointer */
-    // XXX Broken!
-    //emitm_movl_m_r(interp, jit_info->native_ptr, emit_EBX, emit_EBX, 0, 1,
-    //        offsetof(Interp, ctx.bp));
     emitm_movl_m_r(interp, jit_info->native_ptr, emit_EBX, emit_EBX, 0, 1,
             offsetof(Interp, ctx));
     emitm_movl_m_r(interp, jit_info->native_ptr, emit_EBX, emit_EBX, 0, 1,
