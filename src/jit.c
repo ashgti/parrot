@@ -1428,7 +1428,7 @@ parrot_build_asm(PARROT_INTERP, ARGIN(opcode_t *code_start), ARGIN(opcode_t *cod
 
     /* remember register usage */
     for (i = 0; i < 4; i++)
-        n_regs_used[i] = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), i);
+        n_regs_used[i] = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), i);
 
     set_reg_usage(interp, code_start);
 
@@ -1682,7 +1682,7 @@ parrot_build_asm(PARROT_INTERP, ARGIN(opcode_t *code_start), ARGIN(opcode_t *cod
 
     /* restore register usage */
     for (i = 0; i < 4; i++)
-        Parrot_pcc_set_regs_used(interp, CONTEXT(interp), i, n_regs_used[i]);
+        Parrot_pcc_set_regs_used(interp, CURRENT_CONTEXT(interp), i, n_regs_used[i]);
 
     /* Do fixups before converting offsets */
     (arch_info->jit_dofixup)(jit_info, interp);
