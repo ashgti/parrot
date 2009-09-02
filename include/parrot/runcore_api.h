@@ -39,9 +39,9 @@ struct runcore_t {
 
 
 typedef enum Parrot_profiling_flags {
-    PROFILING_EXIT_CHECK_FLAG = 1 << 0,
-    PROFILING_FIRST_OP_FLAG   = 1 << 1,
-    PROFILING_NEW_FILE_FLAG   = 1 << 2
+    PROFILING_EXIT_CHECK_FLAG  = 1 << 0,
+    PROFILING_FIRST_OP_FLAG    = 1 << 1,
+    PROFILING_NEW_CONTEXT_FLAG = 1 << 2
 } Parrot_profiling_flags;
 
 struct profiling_runcore_t {
@@ -60,7 +60,7 @@ struct profiling_runcore_t {
     Parrot_profiling_flags   profiling_flags;
     FILE                    *profile_fd;
     STRING                  *profile_filename;
-    STRING                  *prev_runloop_filename;
+    Parrot_Context          *prev_ctx;
     UINTVAL                  level;      /* how many nested runloops */
     UINTVAL                  time_size;  /* how big is the following array */
     UHUGEINTVAL             *time;       /* time spent between DO_OP and start/end of a runcore */
@@ -92,10 +92,9 @@ typedef enum Parrot_runcore_flags {
 #define Profiling_first_op_SET(o)   Profiling_flag_SET(FIRST_OP, o)
 #define Profiling_first_op_CLEAR(o) Profiling_flag_CLEAR(FIRST_OP, o)
 
-#define Profiling_new_file_TEST(o)  Profiling_flag_TEST(NEW_FILE, o)
-#define Profiling_new_file_SET(o)   Profiling_flag_SET(NEW_FILE, o)
-#define Profiling_new_file_CLEAR(o) Profiling_flag_CLEAR(NEW_FILE, o)
-
+#define Profiling_new_context_TEST(o)  Profiling_flag_TEST(NEW_CONTEXT, o)
+#define Profiling_new_context_SET(o)   Profiling_flag_SET(NEW_CONTEXT, o)
+#define Profiling_new_context_CLEAR(o) Profiling_flag_CLEAR(NEW_CONTEXT, o)
 
 #define Runcore_flag_SET(runcore, flag) \
     ((runcore)->flags |= flag)

@@ -1048,7 +1048,6 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
     runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
     runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
 
-    runcore->prev_runloop_filename = NULL;
     runcore->profiling_flags       = 0;
     runcore->level                 = 0;
     runcore->time_size             = 32;
@@ -1109,10 +1108,10 @@ ARGIN(opcode_t *pc))
 
     Parrot_Context_get_info(interp, CONTEXT(interp), &postop_info);
 
-    /* detect if the current file has changed while entering an inner runloop */
-    if (Parrot_str_compare(interp, runcore->prev_runloop_filename, postop_info.file))
-        Profiling_new_file_SET(runcore);
-    runcore->prev_runloop_filename = postop_info.file;
+    /* detect if the current context has changed while entering an inner runloop */
+    if (runcore->prev_ctx && runcore->prev_ctx != CONTEXT(interp))
+        Profiling_new_context_SET(runcore);
+    runcore->prev_ctx = CONTEXT(interp);
 
     if (Profiling_first_op_TEST(runcore)) {
 
@@ -1123,12 +1122,13 @@ ARGIN(opcode_t *pc))
         STRING *command_line = Parrot_str_join(interp, CONST_STRING(interp, " "), argv);
 
         /* The CLI line won't reflect any options passed to the parrot binary. */
+        fprintf(runcore->profile_fd, "VERSION:1\n");
         fprintf(runcore->profile_fd, "CLI:%s %s\n",
                 VTABLE_get_string(interp, executable)->strstart, command_line->strstart);
-        fprintf(runcore->profile_fd, "F:%s\n", postop_info.file->strstart);
-        fprintf(runcore->profile_fd, "CS:%s;%s@0x%X,0x%X\n",
+        fprintf(runcore->profile_fd, "CS:{ns:%s;%s}{file:%s}{sub:0x%X}{ctx:0x%X}\n",
                 VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                 VTABLE_get_string(interp, CONTEXT(interp)->current_sub)->strstart,
+                postop_info.file->strstart,
                 (unsigned int) CONTEXT(interp)->current_sub,
                 (unsigned int) CONTEXT(interp));
 
@@ -1175,30 +1175,27 @@ ARGIN(opcode_t *pc))
         if (!preop_file_name)  preop_file_name  = unknown_file;
         if (!postop_file_name) postop_file_name = unknown_file;
 
-        if (Profiling_new_file_TEST(runcore) ||
-            Parrot_str_compare(interp, preop_file_name, postop_file_name)) {
-            Profiling_new_file_CLEAR(runcore);
-            fprintf(runcore->profile_fd, "F:%s\n", postop_file_name->strstart);
-        }
-
-        fprintf(runcore->profile_fd, "%d:%lli:%s\n",
+        fprintf(runcore->profile_fd, "OP:{line:%d}{time:%lli}{op:%s}\n",
                 postop_info.line, op_time,
                 (interp->op_info_table)[*preop_pc].name);
 
-        /* if the active sub changed while the previous op was executed... */
-        if (preop_sub != CONTEXT(interp)->current_sub) {
+        /* if current context changed during the previous op... */
+        if (Profiling_new_context_TEST(runcore) || preop_sub != CONTEXT(interp)->current_sub) {
 
             /* if the current_sub is null, Parrot's probably done executing */
+            Profiling_new_context_CLEAR(runcore);
             if (CONTEXT(interp)->current_sub) {
                 STRING *sub_name;
                 GETATTR_Sub_name(interp, CONTEXT(interp)->current_sub, sub_name);
-                fprintf(runcore->profile_fd, "CS:%s;%s@0x%X,0x%X\n",
+                fprintf(runcore->profile_fd, "CS:{ns:%s;%s}{file:%s}{sub:0x%X}{ctx:0x%X}\n",
                         VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
                         sub_name->strstart,
+                        postop_file_name->strstart,
                         (unsigned int) CONTEXT(interp)->current_sub,
                         (unsigned int) CONTEXT(interp));
             }
         }
+
     } /* while (pc) */
 
     if (runcore->level == 0) {
