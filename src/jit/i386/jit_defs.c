@@ -1232,7 +1232,7 @@ jit_get_params_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP)
     PMC *sig_pmc;
     INTVAL *sig_bits, i, n;
 
-    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
+    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), CUR_OPCODE[1]);
     GETATTR_FixedIntegerArray_int_array(interp, sig_pmc, sig_bits);
     n = VTABLE_elements(interp, sig_pmc);
     jit_info->n_args = n;
@@ -1268,7 +1268,7 @@ jit_save_regs(Parrot_jit_info_t *jit_info, PARROT_INTERP)
     int i, used_i, save_i;
     const jit_arch_regs *reg_info;
 
-    used_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
+    used_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
     reg_info = &jit_info->arch_info->regs[jit_info->code_type];
     save_i = reg_info->n_preserved_I;
     for (i = save_i; i < used_i; ++i) {
@@ -1284,7 +1284,7 @@ jit_restore_regs(Parrot_jit_info_t *jit_info, PARROT_INTERP)
     int i, used_i, save_i;
     const jit_arch_regs *reg_info;
 
-    used_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
+    used_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
     reg_info = &jit_info->arch_info->regs[jit_info->code_type];
     save_i = reg_info->n_preserved_I;
     /* note - reversed order of jit_save_regs  */
@@ -1308,8 +1308,8 @@ jit_save_regs_call(Parrot_jit_info_t *jit_info, PARROT_INTERP, int skip)
     int i, used_i, used_n;
     const jit_arch_regs *reg_info;
 
-    used_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
-    used_n = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_NUM);
+    used_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
+    used_n = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_NUM);
     jit_emit_sub_ri_i(interp, jit_info->native_ptr, emit_ESP,
             (used_i * sizeof (INTVAL) + used_n * sizeof (FLOATVAL)));
     reg_info = &jit_info->arch_info->regs[jit_info->code_type];
@@ -1339,8 +1339,8 @@ jit_restore_regs_call(Parrot_jit_info_t *jit_info, PARROT_INTERP,
     int i, used_i, used_n;
     const jit_arch_regs *reg_info;
 
-    used_i = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_INT);
-    used_n = Parrot_pcc_get_regs_used(interp, CONTEXT(interp), REGNO_NUM);
+    used_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
+    used_n = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_NUM);
     reg_info = &jit_info->arch_info->regs[jit_info->code_type];
 
     for (i = 0; i < used_i; ++i) {
@@ -1369,7 +1369,7 @@ jit_set_returns_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP,
     PMC *sig_pmc;
     INTVAL *sig_bits, sig;
 
-    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
+    sig_pmc = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), CUR_OPCODE[1]);
     if (!VTABLE_elements(interp, sig_pmc))
         return;
     GETATTR_FixedIntegerArray_int_array(interp, sig_pmc, sig_bits);
@@ -1442,12 +1442,12 @@ jit_set_args_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP,
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
             "set_args_jit - can't do that yet ");
 
-    sig_args  = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), CUR_OPCODE[1]);
+    sig_args  = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), CUR_OPCODE[1]);
 
     if (!VTABLE_elements(interp, sig_args))
         return;
     params = jit_info->optimizer->sections->begin;
-    sig_params = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), params[1]);
+    sig_params = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), params[1]);
     ASSERT_SIG_PMC(sig_params);
     GETATTR_FixedIntegerArray_int_array(interp, sig_args, sig_bits);
     n = VTABLE_elements(interp, sig_args);
@@ -1457,7 +1457,7 @@ jit_set_args_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP,
      */
     result = CUR_OPCODE + 2 + n + 3; /* set_args, set_p_pc */
     PARROT_ASSERT(*result == PARROT_OP_get_results_pc);
-    sig_result = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), result[1]);
+    sig_result = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), result[1]);
     ASSERT_SIG_PMC(sig_result);
 
     if (!VTABLE_elements(interp, sig_result))
@@ -1745,8 +1745,8 @@ Parrot_jit_begin_sub_regs(Parrot_jit_info_t *jit_info,
         L1 = NATIVECODE;
         emitm_calll(NATIVECODE, 0);
         /* check type of return value */
-        result      = Parrot_pcc_get_results(interp, CONTEXT(interp));
-        sig_result  = Parrot_pcc_get_pmc_constant(interp, CONTEXT(interp), result[1]);
+        result      = Parrot_pcc_get_results(interp, CURRENT_CONTEXT(interp));
+        sig_result  = Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), result[1]);
         if (!VTABLE_elements(interp, sig_result))
             goto no_result;
         /* fetch args to %edx */
