@@ -260,14 +260,9 @@ next opcode, or examine and manipulate data from the executing program.
 #  include "../jit.h"
 #endif
 
-#if defined(CLOCK_PROCESS_CPUTIME_ID)
-#  define CLOCK_BEST CLOCK_PROCESS_CPUTIME_ID
-#elif defined(CLOCK_PROF)
-#  define CLOCK_BEST CLOCK_PROF
-#else
-#  define CLOCK_BEST CLOCK_REALTIME
+#ifdef WIN32
+#  define getpid _getpid
 #endif
-
 
 /* HEADERIZER HFILE: include/parrot/runcore_api.h */
 
