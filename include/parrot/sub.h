@@ -223,20 +223,16 @@ void mark_context(PARROT_INTERP, ARGMOD(Parrot_Context* ctx))
         FUNC_MODIFIES(* ctx);
 
 void mark_context_start(void);
-
 void Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*sub_pmc);
 
-void Parrot_continuation_check(PARROT_INTERP,
-    ARGIN(const PMC *pmc))
+void Parrot_continuation_check(PARROT_INTERP, ARGIN(const PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-
-void Parrot_continuation_rewind_environment(PARROT_INTERP,
-    ARGIN(PMC *pmc))
+void Parrot_continuation_rewind_environment(PARROT_INTERP, ARGIN(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -274,10 +270,6 @@ PMC* Parrot_find_pad(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_mark_context_start __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_new_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_new_ret_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_capture_lex __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     || PARROT_ASSERT_ARG(sub_pmc)

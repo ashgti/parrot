@@ -92,7 +92,7 @@ Initializes the continuation.
     /*if they pass in a PMC to initialize with*/
     VTABLE void init_pmc(PMC *values) {
         Parrot_Continuation_attributes *attrs = PARROT_CONTINUATION(SELF);
-        
+
         attrs->to_ctx = PARROT_CONTINUATION(values)->to_ctx;
         attrs->from_ctx = Parrot_context_ref(interp, CONTEXT(interp));
         attrs->runloop_id    = 0;
@@ -113,7 +113,7 @@ Initializes the continuation.
         invalidate_retc_context(INTERP, SELF);
     }
 
-    
+
 
 /*
 
@@ -128,8 +128,8 @@ Marks the continuation as live.
     VTABLE void mark() {
         Parrot_Continuation_attributes *cc = PARROT_CONTINUATION(SELF);
 
-        if(cc->seg)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)cc->seg); 
+        if (cc->seg)
+            Parrot_gc_mark_PObj_alive(interp, (PObj *)cc->seg);
 
         if (cc->to_ctx)
             mark_context(INTERP, cc->to_ctx);
