@@ -1138,9 +1138,7 @@ ARGIN(opcode_t *pc))
         fprintf(runcore->profile_fd, "VERSION:1\n");
         fprintf(runcore->profile_fd, "CLI:%s %s\n", exec_cstr, command_line_cstr);
         fprintf(runcore->profile_fd, "CS:{ns:%s;%s}{file:%s}{sub:0x%X}{ctx:0x%X}\n",
-                ns_cstr,
-                sub_cstr,
-                filename_cstr,
+                ns_cstr, sub_cstr, filename_cstr,
                 (unsigned int) CONTEXT(interp)->current_sub,
                 (unsigned int) CONTEXT(interp));
 
@@ -1149,6 +1147,7 @@ ARGIN(opcode_t *pc))
         mem_sys_free(ns_cstr);
         mem_sys_free(sub_cstr);
         mem_sys_free(filename_cstr);
+
         Profiling_first_op_CLEAR(runcore);
     }
 
