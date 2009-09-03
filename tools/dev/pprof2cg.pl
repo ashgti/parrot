@@ -3,10 +3,6 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
-
-no warnings;
-use v5.10.0;
-use warnings;
 use strict;
 
 use Data::Dumper;
@@ -136,10 +132,10 @@ sub print_stats {
                     for my $attr (sort keys %{ $stats->{$file}{$ns}{$line_num}[$op_numbr] }) {
                         print "{ $attr => $stats->{$file}{$ns}{$line_num}[$op_numbr]{$attr} } ";
                     }
-                    say "";
+                    print "\n";
                 }
             }
-            say "";
+            print "\n";
         }
     }
 }
@@ -194,7 +190,7 @@ sub write_cg_profile {
 
     open(OUT_FH, ">$filename") or die "couldn't open parrot.out for writing";
 
-    say OUT_FH <<"HEADER";
+    print OUT_FH <<"HEADER";
 version: 1
 creator: 3.4.1-Debian
 pid: 5751
@@ -210,14 +206,15 @@ positions: line
 events: Ir
 summary: $stats->{'global_stats'}{'total_time'}
 
+
 HEADER
 
     for my $file (grep {$_ ne 'global_stats'} keys %$stats) {
 
-        say OUT_FH "fl=$file";
+        print OUT_FH "fl=$file\n";
 
         for my $ns (keys %{ $stats->{$file} }) {
-            say OUT_FH "\nfn=$ns";
+            print OUT_FH "\nfn=$ns\n";
 
             for my $line (sort keys %{ $stats->{$file}{$ns} }) {
 
@@ -229,15 +226,15 @@ HEADER
                     $op_time += $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
                     $curr_op++;
                 }
-                say OUT_FH "$line $op_time";
+                print OUT_FH "$line $op_time\n";
 
                 if ($curr_op < $op_count && $stats->{$file}{$ns}{$line}[$curr_op]{'op_name'} eq 'CALL') {
                     my $call_target = $stats->{$file}{$ns}{$line}[$curr_op]{'target'};
                     my $call_count  = $stats->{$file}{$ns}{$line}[$curr_op]{'hits'};
                     my $call_cost   = $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
 
-                    say OUT_FH "cfn=$call_target";
-                    say OUT_FH "calls=$call_count $call_cost";
+                    print OUT_FH "cfn=$call_target\n";
+                    print OUT_FH "calls=$call_count $call_cost\n";
                 }
 
                 if ($curr_op < $op_count) {
@@ -246,12 +243,12 @@ HEADER
                         $op_time += $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
                         $curr_op++;
                     }
-                    say OUT_FH "$line $op_time";
+                    print OUT_FH "$line $op_time\n";
                 }
             }
         }
     }
 
-    say OUT_FH "totals: $stats->{'global_stats'}{'total_time'}";
+    print OUT_FH "totals: $stats->{'global_stats'}{'total_time'}\n";
     close OUT_FH;
 }
