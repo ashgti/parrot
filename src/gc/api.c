@@ -361,20 +361,7 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
     Small_Object_Pool * const pool = (PObj_constant_TEST(pmc)) ?
         interp->arena_base->constant_pmc_pool : interp->arena_base->pmc_pool;
 
-    if (PObj_active_destroy_TEST(pmc))
-        VTABLE_destroy(interp, pmc);
-
-    Parrot_gc_free_pmc_sync(interp, pmc);
-    if (PMC_data(pmc) && pmc->vtable->attr_size) {
-#if GC_USE_FIXED_SIZE_ALLOCATOR
-        Parrot_gc_free_pmc_attributes(interp, pmc, pmc->vtable->attr_size);
-#else
-        mem_sys_free(PMC_data(pmc));
-        PMC_data(pmc) = NULL;
-#endif
-    }
-    PARROT_ASSERT(NULL == PMC_data(pmc));
-
+    Parrot_pmc_destroy(interp, pmc);
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
     pool->add_free_object(interp, pool, (PObj *)pmc);
@@ -419,10 +406,13 @@ void
 Parrot_gc_add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_add_pmc_sync)
+
+    /* This mutex already exists, leave it alone. */
     if (PMC_sync(pmc))
-        /* This mutex already exists, leave it alone. */
         return;
+
     PMC_sync(pmc) = mem_allocate_typed(Sync);
+
     if (!PMC_sync(pmc))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: PMC Sync allocation failed!\n");
@@ -1692,7 +1682,7 @@ Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void * data
 
 =head1 SEE ALSO
 
-F<include/parrot/gc_api.h>, F<src/cpu_dep.c> and F<docs/pdds/pdd09_gc.pod>.
+F<include/parrot/gc_api.h>, F<src/gc/system.c> and F<docs/pdds/pdd09_gc.pod>.
 
 =head1 HISTORY
 

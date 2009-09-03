@@ -220,11 +220,16 @@ Sets the value of the string to that of the specified C<string>.
 */
 
     VTABLE void set_string_native(STRING *value) {
+        /* in lieu of a STRINGNULL, promote any NULL STRINGs to empty ones */
+        if (!value)
+            value = Parrot_str_new(INTERP, NULL, 0);
+
         /* Only allow constant PMCs to embed constant strings */
         if (PObj_constant_TEST(SELF) && !PObj_constant_TEST(value)) {
             char *copy = Parrot_str_to_cstring(INTERP, value);
             value      = Parrot_str_new_init(INTERP, copy, strlen(copy),
-                    PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET, PObj_constant_FLAG);
+                PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
+                PObj_constant_FLAG);
             Parrot_str_free_cstring(copy);
         }
 
@@ -645,6 +650,16 @@ Replace the string at C<key> with the chr of C<value>.
         return string_ord(INTERP, s, pos);
     }
 
+    VTABLE PMC *get_pmc_keyed(PMC *key) {
+        return SELF.get_pmc_keyed_int(VTABLE_get_integer(INTERP, key));
+    }
+
+    VTABLE PMC *get_pmc_keyed_int(INTVAL pos) {
+        PMC * const dest = pmc_new(INTERP, SELF->vtable->base_type);
+        VTABLE_set_string_native(INTERP, dest, SELF.get_string_keyed_int(pos));
+        return dest;
+    }
+
     VTABLE void set_string_keyed(PMC *key, STRING * const value) {
         SELF.set_string_keyed_int(VTABLE_get_integer(INTERP, key), value);
     }
@@ -665,6 +680,14 @@ Replace the string at C<key> with the chr of C<value>.
         STRING * const c = string_chr(INTERP, (UINTVAL) value);
         Parrot_str_replace(INTERP, s, pos, 1, c, NULL);
         VTABLE_set_string_native(INTERP, SELF, s);
+    }
+
+    VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
+        SELF.set_pmc_keyed_int(VTABLE_get_integer(INTERP, key), value);
+    }
+
+    VTABLE void set_pmc_keyed_int(INTVAL pos, PMC *value) {
+        SELF.set_string_keyed_int(pos, VTABLE_get_string(INTERP, value));
     }
 /*
 

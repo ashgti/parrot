@@ -1891,6 +1891,8 @@ parrot_pass_args(PARROT_INTERP,
         Parrot_pcc_set_results_signature(interp, dest_ctx, NULL);
     }
 
+    memset(&st, 0, sizeof st);
+
     Parrot_init_arg_indexes_and_sig_pmc(interp, src_ctx, src_indexes,
         src_signature, &st.src);
 
@@ -2953,8 +2955,8 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     INTVAL n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
     /* Each of these is 8K. Do we want 16K on the stack? */
-    opcode_t arg_indexes[PCC_ARG_MAX];
-    opcode_t result_indexes[PCC_ARG_MAX];
+    opcode_t arg_indexes[PCC_ARG_MAX] = {0};
+    opcode_t result_indexes[PCC_ARG_MAX] = {0};
 
     /* create the signature string, and the various PMCs that are needed to
        store all the parameters and parameter counts. */

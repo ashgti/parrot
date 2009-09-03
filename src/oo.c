@@ -286,14 +286,13 @@ Parrot_oo_clone_object(PARROT_INTERP, ARGIN(PMC *pmc),
 
     /* Set custom GC mark and destroy on the object. */
     PObj_custom_mark_SET(cloned);
-    PObj_active_destroy_SET(cloned);
+    PObj_custom_destroy_SET(cloned);
 
     /* Flag that it is an object */
     PObj_is_object_SET(cloned);
 
-    /* Now create the underlying structure, and clone attributes list.class. */
-    cloned_guts               = mem_allocate_typed(Parrot_Object_attributes);
-    PMC_data(cloned)          = cloned_guts;
+    /* Now clone attributes list.class. */
+    cloned_guts               = (Parrot_Object_attributes *) PMC_data(cloned);
     cloned_guts->_class       = obj->_class;
     cloned_guts->attrib_store = NULL;
     cloned_guts->attrib_store = VTABLE_clone(interp, obj->attrib_store);

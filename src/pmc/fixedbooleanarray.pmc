@@ -45,7 +45,7 @@ Initializes the array.
 */
 
     VTABLE void init() {
-        PObj_active_destroy_SET(SELF);
+        PObj_custom_destroy_SET(SELF);
     }
 
 /*
@@ -97,7 +97,7 @@ Creates and returns a copy of the array.
             SET_ATTR_bit_array(INTERP, dest, clone_bit_array);
         }
 
-        PObj_active_destroy_SET(dest);
+        PObj_custom_destroy_SET(dest);
         return dest;
     }
 
@@ -550,15 +550,15 @@ Used to unarchive the string.
 
         if (info->extra_flags == EXTRA_IS_NULL) {
             unsigned char * bit_array;
+            UINTVAL         threshold;
             const INTVAL    size      = VTABLE_shift_integer(INTERP, io);
             STRING * const  s         = VTABLE_shift_string(INTERP, io);
 
-            bit_array = (unsigned char*)mem_sys_allocate_zeroed(s->bufused);
-            mem_sys_memcopy(bit_array, s->strstart, s->bufused);
+            bit_array = (unsigned char *)Parrot_str_to_cstring(INTERP, s);
+            threshold = Parrot_str_byte_length(interp, s) * BITS_PER_CHAR;
 
             SET_ATTR_size(INTERP, SELF, size);
-            SET_ATTR_resize_threshold(INTERP, SELF,
-                    s->bufused * BITS_PER_CHAR);
+            SET_ATTR_resize_threshold(INTERP, SELF, threshold);
             SET_ATTR_bit_array(INTERP, SELF, bit_array);
         }
     }
