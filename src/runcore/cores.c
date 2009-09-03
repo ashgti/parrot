@@ -1041,7 +1041,7 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
 {
     ASSERT_ARGS(init_profiling_core)
 
-    runcore->profile_filename = Parrot_sprintf_c(interp, "parrot.%d.pprof", getpid());
+    runcore->profile_filename = Parrot_sprintf_c(interp, "parrot.pprof.%d", getpid());
     /* profile_filename gets collected if it's not marked or in the root set. */
     gc_register_pmc(interp, (PMC *) runcore->profile_filename);
 

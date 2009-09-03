@@ -25,10 +25,11 @@ format.
 Generate a profile by passing C<-Rprofiling> to parrot, for example C<./parrot
 -Rprofiling perl6.pbc hello.p6>.  Once execution completes, parrot will print a
 message specifying the location of profile.  The profile will usually be named
-parrot.XXXX.pprof, where XXXX is the PID of the parrot process.
+parrot.pprof.XXXX, where XXXX is the PID of the parrot process.
 
 To generate a Callgrind-compatible profile, run this script with the pprof
-filename as the first argument.
+filename as the first argument.  The output file will be in parrot.out.XXXX,
+where XXXX again is the PID of the original parrot process.
 
 =cut
 
@@ -41,12 +42,14 @@ sub main {
     my $argv = shift;
     my $stats = {};
     my $filename = $argv->[0];
+    $stats->{'global_stats'}{'filename'} = $filename;
     open FH, "<$filename" or die "couldn't open $filename for reading";
     while (<FH>) {
         my $line = $_;
         process_line($line, $stats);
     }
-    print_stats($stats);
+    #print_stats($stats);
+    write_cg_profile($stats);
 }
 
 
@@ -77,6 +80,8 @@ sub process_line {
             my $is_call      = !scalar(grep {$_->{'ctx'} eq $cs_hash->{'ctx'}} @ctx_stack);
 
             if ($is_first) {
+                #KCachegrind starts on the "main" function
+                $cs_hash->{'ns'} = 'main';
                 $ctx_stack[0] = $cs_hash;
             }
             elsif ($is_redundant) {
@@ -90,11 +95,11 @@ sub process_line {
                 };
                 store_stats($stats, $ctx_stack[0], 0, $extra );
             unshift @ctx_stack, $cs_hash;
-        }
-        else {
-            shift @ctx_stack while ($ctx_stack[0]->{'ctx'} ne $cs_hash->{'ctx'});
-        }
-        print Dumper(\@ctx_stack);
+            }
+            else {
+                shift @ctx_stack while ($ctx_stack[0]->{'ctx'} ne $cs_hash->{'ctx'});
+            }
+            #print Dumper(\@ctx_stack);
         }
         elsif (/^OP:(.*)$/) {
             my $op_hash = split_vars($1);
@@ -110,10 +115,10 @@ sub process_line {
             my $extra = { op_name => $op_hash->{'op'} };
             store_stats($stats, $ctx_stack[0], $op_hash->{'time'}, $extra);
 
-        $extra->{'no_hits'} = 1;
-        for my $frame (@ctx_stack[1 .. $#ctx_stack]) {
-            store_stats($stats, $frame, $op_hash->{'time'}, $extra);
-                }
+            $extra->{'no_hits'} = 1;
+            for my $frame (@ctx_stack[1 .. $#ctx_stack]) {
+                store_stats($stats, $frame, $op_hash->{'time'}, $extra);
+            }
         }
     }
 }
@@ -184,8 +189,10 @@ sub store_stats {
 sub write_cg_profile {
 
     my $stats = shift;
+    my $filename = $stats->{'global_stats'}{'filename'};
+    $filename =~ s/\.pprof\./.out./;
 
-    open(OUT_FH, ">parrot.out") or die "couldn't open parrot.out for writing";
+    open(OUT_FH, ">$filename") or die "couldn't open parrot.out for writing";
 
     say OUT_FH <<"HEADER";
 version: 1
@@ -209,44 +216,37 @@ HEADER
 
         say OUT_FH "fl=$file";
 
-        for my $func (keys %{ $stats->{$file} }) {
-            say OUT_FH "\nfn=$func";
+        for my $ns (keys %{ $stats->{$file} }) {
+            say OUT_FH "\nfn=$ns";
 
-            for my $line (sort keys %{ $stats->{$file}{$func} }) {
+            for my $line (sort keys %{ $stats->{$file}{$ns} }) {
 
-                if ($stats->{$file}{$func}{$line}{line_calls_func}) {
+                my $curr_op  = 0;
+                my $op_count = scalar(@{$stats->{$file}{$ns}{$line}});
+                my $op_time  = 0;
 
-                    my $line_time = 0;
-                    my $func_op_num = 0;
-
-                    for my $op_num (sort grep {$_ ne 'line_calls_func'} keys %{ $stats->{$file}{$func}{$line} }) {
-
-                        if ($stats->{$file}{$func}{$line}{$op_num}{op} eq "FUNCTION_CALL") {
-                            $func_op_num = $op_num;
-                        }
-                        else {
-                            $line_time += $stats->{$file}{$func}{$line}{$op_num}{time};
-                        }
-                    }
-                    say OUT_FH "$line $line_time";
-
-                    my $func_name = $stats->{$file}{$func}{$line}{$func_op_num}{func_name};
-                    my $hits      = $stats->{$file}{$func}{$line}{$func_op_num}{hits};
-                    $line_time = $stats->{$file}{$func}{$line}{$func_op_num-1}{time};
-                    say OUT_FH "cfn=$func_name";
-                    say OUT_FH "calls=$hits $line_time";
-
-                    my $func_time = $stats->{$file}{$func}{$line}{$func_op_num}{time};
-
-                    say OUT_FH "$line $func_time";
+                while ($curr_op < $op_count && $stats->{$file}{$ns}{$line}[$curr_op]{'op_name'} ne 'CALL') {
+                    $op_time += $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
+                    $curr_op++;
                 }
-                else {
-                    #aggregate all lines
-                    my $line_time = 0;
-                    for my $op_num (sort grep {$_ ne 'line_calls_func'} keys %{ $stats->{$file}{$func}{$line} }) {
-                        $line_time += $stats->{$file}{$func}{$line}{$op_num}{time};
+                say OUT_FH "$line $op_time";
+
+                if ($curr_op < $op_count && $stats->{$file}{$ns}{$line}[$curr_op]{'op_name'} eq 'CALL') {
+                    my $call_target = $stats->{$file}{$ns}{$line}[$curr_op]{'target'};
+                    my $call_count  = $stats->{$file}{$ns}{$line}[$curr_op]{'hits'};
+                    my $call_cost   = $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
+
+                    say OUT_FH "cfn=$call_target";
+                    say OUT_FH "calls=$call_count $call_cost";
+                }
+
+                if ($curr_op < $op_count) {
+                    $op_time = 0;
+                    while ($curr_op < $op_count) {
+                        $op_time += $stats->{$file}{$ns}{$line}[$curr_op]{'time'};
+                        $curr_op++;
                     }
-                    say OUT_FH "$line $line_time";
+                    say OUT_FH "$line $op_time";
                 }
             }
         }
