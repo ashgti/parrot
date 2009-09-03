@@ -1041,24 +1041,29 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
 {
     ASSERT_ARGS(init_profiling_core)
 
+    char *profile_filename;
+
     runcore->profile_filename = Parrot_sprintf_c(interp, "parrot.pprof.%d", getpid());
+    profile_filename          = Parrot_str_to_cstring(interp, runcore->profile_filename);     
     /* profile_filename gets collected if it's not marked or in the root set. */
     gc_register_pmc(interp, (PMC *) runcore->profile_filename);
 
     runcore->runops  = (Parrot_runcore_runops_fn_t)  runops_profiling_core;
     runcore->destroy = (Parrot_runcore_destroy_fn_t) destroy_profiling_core;
 
-    runcore->profiling_flags       = 0;
-    runcore->level                 = 0;
-    runcore->time_size             = 32;
-    runcore->time                  = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
-    runcore->profile_fd            = fopen(runcore->profile_filename->strstart, "w");
+    runcore->profiling_flags = 0;
+    runcore->level           = 0;
+    runcore->time_size       = 32;
+    runcore->time            = mem_allocate_n_typed(runcore->time_size, UHUGEINTVAL);
+    runcore->profile_fd      = fopen(profile_filename, "w");
 
     if (!runcore->profile_fd) {
-        fprintf(stderr, "unable to open %s for writing", runcore->profile_filename->strstart);
+        fprintf(stderr, "unable to open %s for writing", profile_filename);
+        mem_sys_free(profile_filename);
         exit(1);
     }
 
+    mem_sys_free(profile_filename);
     Profiling_first_op_SET(runcore);
 
     return runops_profiling_core(interp, runcore, pc);
@@ -1115,23 +1120,35 @@ ARGIN(opcode_t *pc))
 
     if (Profiling_first_op_TEST(runcore)) {
 
-        PMC    *argv         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
-                                                      IGLOBALS_ARGV_LIST);
-        PMC    *executable   = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
-                                                      IGLOBALS_EXECUTABLE);
+        PMC    *argv         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_ARGV_LIST);
+        PMC    *executable   = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_EXECUTABLE);
         STRING *command_line = Parrot_str_join(interp, CONST_STRING(interp, " "), argv);
+
+        char *exec_cstr, *command_line_cstr, *ns_cstr, *sub_cstr, *filename_cstr;
+
+        exec_cstr         = Parrot_str_to_cstring(interp, VTABLE_get_string(interp, executable));
+        command_line_cstr = Parrot_str_to_cstring(interp, command_line);
+        filename_cstr     = Parrot_str_to_cstring(interp, postop_info.file);
+        ns_cstr           = Parrot_str_to_cstring(interp,
+                              VTABLE_get_string(interp, CONTEXT(interp)->current_namespace));
+        sub_cstr          = Parrot_str_to_cstring(interp,
+                              VTABLE_get_string(interp, CONTEXT(interp)->current_sub));
 
         /* The CLI line won't reflect any options passed to the parrot binary. */
         fprintf(runcore->profile_fd, "VERSION:1\n");
-        fprintf(runcore->profile_fd, "CLI:%s %s\n",
-                VTABLE_get_string(interp, executable)->strstart, command_line->strstart);
+        fprintf(runcore->profile_fd, "CLI:%s %s\n", exec_cstr, command_line_cstr);
         fprintf(runcore->profile_fd, "CS:{ns:%s;%s}{file:%s}{sub:0x%X}{ctx:0x%X}\n",
-                VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                VTABLE_get_string(interp, CONTEXT(interp)->current_sub)->strstart,
-                postop_info.file->strstart,
+                ns_cstr,
+                sub_cstr,
+                filename_cstr,
                 (unsigned int) CONTEXT(interp)->current_sub,
                 (unsigned int) CONTEXT(interp));
 
+        mem_sys_free(exec_cstr);
+        mem_sys_free(command_line_cstr);
+        mem_sys_free(ns_cstr);
+        mem_sys_free(sub_cstr);
+        mem_sys_free(filename_cstr);
         Profiling_first_op_CLEAR(runcore);
     }
 
@@ -1186,21 +1203,31 @@ ARGIN(opcode_t *pc))
             Profiling_new_context_CLEAR(runcore);
             if (CONTEXT(interp)->current_sub) {
                 STRING *sub_name;
+                char *sub_cstr, *filename_cstr, *ns_cstr;
+
+                sub_cstr      = Parrot_str_to_cstring(interp, sub_name);
+                filename_cstr = Parrot_str_to_cstring(interp, postop_file_name);
+                ns_cstr       = Parrot_str_to_cstring(interp,
+                                  VTABLE_get_string(interp, CONTEXT(interp)->current_namespace));
+
                 GETATTR_Sub_name(interp, CONTEXT(interp)->current_sub, sub_name);
                 fprintf(runcore->profile_fd, "CS:{ns:%s;%s}{file:%s}{sub:0x%X}{ctx:0x%X}\n",
-                        VTABLE_get_string(interp, CONTEXT(interp)->current_namespace)->strstart,
-                        sub_name->strstart,
-                        postop_file_name->strstart,
+                        ns_cstr, sub_cstr, filename_cstr,
                         (unsigned int) CONTEXT(interp)->current_sub,
                         (unsigned int) CONTEXT(interp));
+
+                mem_sys_free(sub_cstr);
+                mem_sys_free(filename_cstr);
+                mem_sys_free(ns_cstr);
             }
         }
 
     } /* while (pc) */
 
     if (runcore->level == 0) {
-        fprintf(stderr, "\nPROFILING RUNCORE: Wrote profile to %s .\n",
-                runcore->profile_filename->strstart);
+        char *filename_cstr = Parrot_str_to_cstring(interp, runcore->profile_filename);
+        fprintf(stderr, "\nPROFILING RUNCORE: Wrote profile to %s .\n", filename_cstr);
+        mem_sys_free(filename_cstr);
     }
     Profiling_exit_check_SET(runcore);
     runcore->runcore_finish = Parrot_hires_get_time();;
