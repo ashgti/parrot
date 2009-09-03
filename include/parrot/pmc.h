@@ -53,6 +53,7 @@ PARROT_EXPORT
 void Parrot_create_mro(PARROT_INTERP, INTVAL type)
         __attribute__nonnull__(1);
 
+PARROT_EXPORT
 void Parrot_pmc_destroy(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
