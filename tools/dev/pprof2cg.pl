@@ -30,29 +30,33 @@ where XXXX again is the PID of the original parrot process.
 =cut
 
 
-my @ctx_stack = ();
 
 main(\@ARGV);
 
 sub main {
-    my $argv = shift;
-    my $stats = {};
-    my $filename = $argv->[0];
+    my $argv      = shift;
+    my $stats     = {};
+    my $ctx_stack = [];
+    my $filename  = $argv->[0];
+
     $stats->{'global_stats'}{'filename'} = $filename;
     open FH, "<$filename" or die "couldn't open $filename for reading";
+
     while (<FH>) {
         my $line = $_;
-        process_line($line, $stats);
+        process_line($line, $stats, $ctx_stack);
     }
-    #print_stats($stats);
+
+    print_stats($stats);
     write_cg_profile($stats);
 }
 
 
 sub process_line {
 
-    my $line  = shift;
-    my $stats = shift;
+    my $line      = shift;
+    my $stats     = shift;
+    my $ctx_stack = shift;
 
     for ($line) {
         if (/^#/) {
@@ -71,50 +75,51 @@ sub process_line {
         elsif (/^CS:(.*)$/) {
 
             my $cs_hash      = split_vars($1);
-            my $is_first     = $#ctx_stack == -1;
-            my $is_redundant = !$is_first && ($ctx_stack[0]{'ctx'} eq $cs_hash->{'ctx'});
-            my $is_call      = !scalar(grep {$_->{'ctx'} eq $cs_hash->{'ctx'}} @ctx_stack);
+            my $is_first     = scalar(@$ctx_stack) == 0;
+            my $is_redundant = !$is_first && ($ctx_stack->[0]{'ctx'} eq $cs_hash->{'ctx'});
+            my $is_call      = !scalar(grep {$_->{'ctx'} eq $cs_hash->{'ctx'}} @$ctx_stack);
 
             if ($is_first) {
-                #KCachegrind starts on the "main" function
-                $cs_hash->{'ns'} = 'main';
-                $ctx_stack[0] = $cs_hash;
+                $ctx_stack->[0] = $cs_hash;
             }
             elsif ($is_redundant) {
                 #don't do anything
             }
             elsif ($is_call) {
-                $ctx_stack[0]{'op_num'}++;
+                $ctx_stack->[0]{'op_num'}++;
                 my $extra = {
                     op_name => "CALL",
                     target  => $cs_hash->{'ns'}
                 };
-                store_stats($stats, $ctx_stack[0], 0, $extra );
-            unshift @ctx_stack, $cs_hash;
+                store_stats($stats, $ctx_stack->[0], 0, $extra );
+            unshift @$ctx_stack, $cs_hash;
             }
             else {
-                shift @ctx_stack while ($ctx_stack[0]->{'ctx'} ne $cs_hash->{'ctx'});
+                shift @$ctx_stack while ($ctx_stack->[0]->{'ctx'} ne $cs_hash->{'ctx'});
             }
-            #print Dumper(\@ctx_stack);
+            #print Dumper($ctx_stack);
         }
         elsif (/^OP:(.*)$/) {
             my $op_hash = split_vars($1);
 
-            if (exists $ctx_stack[0]{'line'} && $op_hash->{'line'} == $ctx_stack[0]{'line'}) {
-                $ctx_stack[0]{'op_num'}++;
+            if (exists $ctx_stack->[0]{'line'} && $op_hash->{'line'} == $ctx_stack->[0]{'line'}) {
+                $ctx_stack->[0]{'op_num'}++;
             }
             else {
-                $ctx_stack[0]{'op_num'} = 0;
+                $ctx_stack->[0]{'op_num'} = 0;
             }
 
-            $ctx_stack[0]{'line'} = $op_hash->{'line'};
+            $ctx_stack->[0]{'line'} = $op_hash->{'line'};
             my $extra = { op_name => $op_hash->{'op'} };
-            store_stats($stats, $ctx_stack[0], $op_hash->{'time'}, $extra);
+            store_stats($stats, $ctx_stack->[0], $op_hash->{'time'}, $extra);
 
             $extra->{'no_hits'} = 1;
-            for my $frame (@ctx_stack[1 .. $#ctx_stack]) {
+            for my $frame (@$ctx_stack[1 .. scalar(@$ctx_stack)-1 ]) {
                 store_stats($stats, $frame, $op_hash->{'time'}, $extra);
             }
+        }
+        else {
+            die "Unrecognized line format: \"$line\"";
         }
     }
 }
