@@ -22,7 +22,42 @@ structure in PMC_data.
 
 #include "parrot/packfile.h"
 
-pmclass Context {
+pmclass Context auto_attrs {
+    ATTR PMC     *caller_ctx;      /* caller context */
+    ATTR Regs_ni  bp;              /* pointers to FLOATVAL & INTVAL */
+    ATTR Regs_ps  bp_ps;           /* pointers to PMC & STR */
+
+    /* end common header */
+    ATTR INTVAL   n_regs_used[4];   /* INSP in PBC points to Sub */
+    ATTR PMC      *lex_pad;         /* LexPad PMC */
+    ATTR PMC      *outer_ctx;       /* outer context, if a closure */
+
+    /* new call scheme and introspective variables */
+    ATTR PMC      *current_sub;           /* the Sub we are executing */
+
+    /* for now use a return continuation PMC */
+    ATTR PMC      *handlers;              /* local handlers for the context */
+    ATTR PMC      *current_cont;          /* the return continuation PMC */
+    ATTR PMC      *current_object;        /* current object if a method call */
+    ATTR PMC      *current_namespace;     /* The namespace we're currently in */
+    ATTR PMC      *results_signature;     /* non-const results signature PMC */
+    ATTR opcode_t *current_pc;            /* program counter of Sub invocation */
+    ATTR opcode_t *current_results;       /* ptr into code with get_results opcode */
+
+    /* deref the constants - we need it all the time */
+    ATTR PackFile_Constant **constants;
+
+    ATTR INTVAL    current_HLL;     /* see also src/hll.c */
+
+    ATTR UINTVAL   warns;           /* Keeps track of what warnings
+                                    * have been activated */
+    ATTR UINTVAL   errors;          /* fatals that can be turned off */
+    ATTR UINTVAL   trace_flags;
+    ATTR UINTVAL   recursion_depth; /* Sub call recursion depth */
+
+    /* code->prederefed.code - code->base.data in opcodes
+     * to simplify conversion between code ptrs in e.g. invoke */
+    ATTR size_t pred_offset;
 
 /*
 
@@ -35,7 +70,6 @@ Initialize new Context. See C<Parrot_alloc_context>.
 */
 
     VTABLE void init() {
-        PMC_data(SELF) = NULL;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -52,7 +86,7 @@ Mark Context as alive.
 
     VTABLE void mark()
     {
-        Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
+        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
         PObj *obj;
         int   i;
 
@@ -125,7 +159,7 @@ Destroy Context and memory allocated by C<Parrot_alloc_context>.
 
     VTABLE void destroy() {
         /* We own this pointer */
-        Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
+        Parrot_Context_attributes * const ctx = PARROT_CONTEXT(SELF);
         mem_sys_free(ctx);
     }
 
