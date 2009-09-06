@@ -850,6 +850,7 @@ This handles comparisons of array-like and hash-like structures.
     .local pmc ex
     .local string error_msg
     .get_results (ex)
+    pop_eh
     error_msg = ex
     test.'like'(error_msg, pattern, description)
 
