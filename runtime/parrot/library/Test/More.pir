@@ -66,12 +66,12 @@ This class defines the following functions:
 .namespace [ 'Test'; 'More' ]
 
 .sub _initialize :load
-    .local pmc test
-    get_hll_global test, [ 'Test'; 'More' ], '_test'
-    unless null test goto done
 
     load_bytecode 'Test/Builder.pbc'
 
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+    unless null test goto done
     test = new [ 'Test'; 'Builder' ]
 
     set_hll_global [ 'Test'; 'More' ], '_test', test
@@ -818,7 +818,9 @@ This handles comparisons of array-like and hash-like structures.
     .return( equal )
 .end
 
-=item C<pir_error_output_like( target, pattern, description )>
+=item C<pir_error_output_like( codestring, pattern, description )>
+
+Takes PIR code in C<codestring> and a pattern to match, as well as an optional description. Passes if the codestring throws an error that matches the pattern, false otherwise.
 
 =cut
 
