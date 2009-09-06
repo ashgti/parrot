@@ -66,12 +66,16 @@ This class defines the following functions:
 .namespace [ 'Test'; 'More' ]
 
 .sub _initialize :load
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+    unless null test goto done
+
     load_bytecode 'Test/Builder.pbc'
 
-    .local pmc test
     test = new [ 'Test'; 'Builder' ]
 
     set_hll_global [ 'Test'; 'More' ], '_test', test
+done:
 .end
 
 =item C<plan( number_or_no_plan )>
