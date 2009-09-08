@@ -24,6 +24,17 @@ Tests the Object PMC.
 =cut
 
 pir_output_is( <<'CODE', <<'OUT', ':vtable and init' );
+.sub main :main
+   $P0 = newclass [ "Test" ]
+   $P1 = new [ "Test" ]
+   print "ok\n"
+.end
+
+.namespace [ "Test" ]
+
+.sub init :method :vtable
+   print "init\n"
+.end
 CODE
 init
 ok
