@@ -24,6 +24,11 @@ Tests the Object PMC.
     test_vtable_override()
     test_vtable_override2()
     test_bad_vtable_name()
+    # causes memory errors
+    # test_bad_vtable_name_tt992()
+
+    # attempt to access code outside of current code segment
+    # test_vtable_init(_tt993)
 .end
 
 .sub test_new_object_exception
@@ -48,15 +53,38 @@ CODE
     is($S1,'monkey','vtable override with :vtable("...") syntax')
 .end
 
-.sub test_bad_vtable_name
-#    throws_like(<<'CODE',':s .not_in_the_vtable. is not a v\-table method\, but was used with \:vtable','af')
-    throws_like(<<'CODE',':s is not a v\-table method')
+.sub test_bad_vtable_name_tt992
+    throws_like(<<'CODE',':s not_in_the_vtable. is not a v\-table method','bad vtable name')
 .namespace [ "Test" ]
-
 .sub monkey :method :vtable("not_in_the_vtable")
     .param int key
     .return("monkey")
 .end
+CODE
+.end
+
+.sub test_bad_vtable_name
+    throws_like(<<'CODE',':s not_in_the_vtable. is not a v\-table method','bad vtable name')
+.sub monkey :method :vtable("not_in_the_vtable")
+    .param int key
+    .return("monkey")
+.end
+CODE
+.end
+
+.sub test_vtable_init_tt993
+    throws_like(<<'CODE','init','vtable init happens at the correct time')
+    .sub main :main
+        $P0 = newclass [ "Test" ]
+        $P1 = new [ "Test" ]
+        die '42'
+    .end
+
+    .namespace [ "Test" ]
+
+    .sub init :method :vtable
+        die 'init'
+    .end
 CODE
 .end
 

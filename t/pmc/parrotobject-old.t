@@ -23,31 +23,7 @@ Tests the Object PMC.
 
 =cut
 
-pir_error_output_like( <<'CODE', <<'OUT', ':vtable with bad name' );
-.namespace [ "Test" ]
-
-.sub monkey :method :vtable("not_in_the_vtable")
-    .param int key
-    .return("monkey")
-.end
-CODE
-/'not_in_the_vtable' is not a v-table method, but was used with :vtable/
-OUT
-
-# '
-
 pir_output_is( <<'CODE', <<'OUT', ':vtable and init' );
-.sub main :main
-   $P0 = newclass [ "Test" ]
-   $P1 = new [ "Test" ]
-   print "ok\n"
-.end
-
-.namespace [ "Test" ]
-
-.sub init :method :vtable
-   print "init\n"
-.end
 CODE
 init
 ok
