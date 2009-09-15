@@ -58,15 +58,17 @@ E_NOTE
     closedir $ops_fh;
 
     opendir my $dynops_fh, catdir(qw/src dynoplibs/) or die "opendir dynoplibs: $!";
-    my @dynops = map { "dyn_$_" } sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
+    my @dynops = sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
     closedir $dynops_fh;
 
-    my $TEMP_pod = join ' ', map { s/\.ops$/.pod/; "ops/$_" } (@ops, @dynops);
+    my $TEMP_pod = join q{ } =>
+            map { my $t = $_; $t =~ s/\.ops$/.pod/; "ops/$t" } (@ops,@dynops);
+
 
     my $slash       = $conf->data->get('slash');
     my $new_perldoc = $conf->data->get('new_perldoc');
 
-    foreach my $ops (@ops, @dynops) {
+    foreach my $ops (@ops) {
         my $pod = $ops;
         $pod =~ s/\.ops$/.pod/;
         if ( $new_perldoc ) {
@@ -82,6 +84,26 @@ END
 ops$slash$pod: ..${slash}src${slash}ops${slash}$ops
 \t\$(PERLDOC) -u ..${slash}ops${slash}$ops > ops${slash}$pod
 \t\$(CHMOD) 0644 ..${slash}ops${slash}$pod
+
+END
+        }
+    }
+    foreach my $ops (@dynops) {
+        my $pod = $ops;
+        $pod =~ s/\.ops$/.pod/;
+        if ( $new_perldoc ) {
+            $TEMP_pod_build .= <<"END"
+dynoplibs$slash$pod: ..${slash}src${slash}dynoplibs${slash}$ops
+\t\$(PERLDOC) -ud dynoplibs${slash}$pod ..${slash}src${slash}dynoplibs${slash}$ops
+\t\$(CHMOD) 0644 dynoplibs${slash}$pod
+
+END
+        }
+        else {
+            $TEMP_pod_build .= <<"END"
+dynoplibs$slash$pod: ..${slash}src${slash}dynoplibs${slash}$ops
+\t\$(PERLDOC) -u ..${slash}dynoplibs${slash}$ops > dynoplibs${slash}$pod
+\t\$(CHMOD) 0644 ..${slash}dynoplibs${slash}$pod
 
 END
         }
