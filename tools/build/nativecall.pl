@@ -231,10 +231,9 @@ sub print_head {
  * - if it returns NULL, the hardcoded version will do the job
  */
 
-#if defined(HAS_JIT) && defined(I386)
+#if defined(CAN_BUILD_CALL_FRAMES)
 #  include "parrot/exec.h"
 #  include "jit.h"
-#  define CAN_BUILD_CALL_FRAMES
 #endif
 
 /*

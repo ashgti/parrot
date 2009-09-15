@@ -23,28 +23,36 @@ use strict;
 use warnings;
 
 use base qw(Parrot::Configure::Step);
-#use Parrot::Configure::Utils qw(copy_if_diff);
 
 sub _init {
     my $self = shift;
     my %data;
     $data{description} = q{Determine JIT capability};
     $data{result}      = q{};
-
     return \%data;
 }
 
 sub runstep {
     my ( $self, $conf ) = @_;
 
+    my $osname  = $conf->data->get('osname');
+    my $cpuarch = $conf->data->get('cpuarch');
+    my $nvsize  = $conf->data->get('nvsize');
+
+    if ( $nvsize == 8 && $cpuarch eq 'i386' && $osname ne 'darwin' ) {
+        $conf->data->set( cc_hasjit => '-DCAN_BUILD_CALL_FRAMES' );
+    }
+    else {
+        $conf->data->set( cc_hasjit => '' );
+    }
+
     $conf->data->set(
         jitarchname    => 'nojit',
-        jitcpuarch     => $conf->data->get('cpuarch'),
-        jitcpu         => $conf->data->get('cpuarch'),
-        jitosname      => $conf->data->get('osname'),
+        jitcpuarch     => $cpuarch,
+        jitcpu         => $cpuarch,
+        jitosname      => $osname,
         jitcapable     => 0,
         execcapable    => 0,
-        cc_hasjit      => '',
         TEMP_jit_o     => '',
         TEMP_exec_h    => '',
         TEMP_exec_o    => '',
