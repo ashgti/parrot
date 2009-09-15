@@ -61,7 +61,7 @@ E_NOTE
     my @dynops = map { "dyn_$_" } sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
     closedir $dynops_fh;
 
-    my $TEMP_pod = join q{ } => map { s/\.ops$/.pod/; "ops/$_" } @ops;
+    my $TEMP_pod = join ' ', map { s/\.ops$/.pod/; "ops/$_" } (@ops, @dynops);
 
     my $slash       = $conf->data->get('slash');
     my $new_perldoc = $conf->data->get('new_perldoc');
