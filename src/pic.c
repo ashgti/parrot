@@ -85,11 +85,6 @@ lookup of the cache has to be done in the opcode itself.
 #  include "parrot/oplib/core_ops_cgp.h"
 #endif
 
-#ifdef HAS_JIT
-#  include "parrot/exec.h"
-#  include "jit.h"
-#endif
-
 /* needs a Makefile dependency */
 /* #include "pmc/pmc_integer.h" */
 
