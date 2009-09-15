@@ -58,11 +58,10 @@ E_NOTE
     closedir $ops_fh;
 
     opendir my $dynops_fh, catdir(qw/src dynoplibs/) or die "opendir dynoplibs: $!";
-    my @dynops = sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
+    my @dynops = map { "dyn_$_" } sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
     closedir $dynops_fh;
 
-    my $TEMP_pod = join q{ } =>
-        map { my $t = $_; $t =~ s/\.ops$/.pod/; "ops/$t" } @ops;
+    my $TEMP_pod = join q{ } => map { s/\.ops$/.pod/; "ops/$_" } @ops;
 
     my $slash       = $conf->data->get('slash');
     my $new_perldoc = $conf->data->get('new_perldoc');
