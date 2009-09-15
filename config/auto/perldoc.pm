@@ -21,6 +21,7 @@ use strict;
 use warnings;
 
 use File::Temp qw (tempfile );
+use File::Spec::Functions;
 use base qw(Parrot::Configure::Step);
 use Parrot::Configure::Utils ':auto';
 
@@ -52,9 +53,13 @@ sub runstep {
 
 E_NOTE
 
-    opendir OPS, 'src/ops' or die "opendir ops: $!";
-    my @ops = sort grep { !/^\./ && /\.ops$/ } readdir OPS;
-    closedir OPS;
+    opendir my $ops_fh, catdir(qw/src ops/) or die "opendir ops: $!";
+    my @ops = sort grep { !/^\./ && /\.ops$/ } readdir $ops_fh;
+    closedir $ops_fh;
+
+    opendir my $dynops_fh, catdir(qw/src dynoplibs/) or die "opendir dynoplibs: $!";
+    my @dynops = sort grep { !/^\./ && /\.ops$/ } readdir $dynops_fh;
+    closedir $dynops_fh;
 
     my $TEMP_pod = join q{ } =>
         map { my $t = $_; $t =~ s/\.ops$/.pod/; "ops/$t" } @ops;
@@ -62,7 +67,7 @@ E_NOTE
     my $slash       = $conf->data->get('slash');
     my $new_perldoc = $conf->data->get('new_perldoc');
 
-    foreach my $ops (@ops) {
+    foreach my $ops (@ops, @dynops) {
         my $pod = $ops;
         $pod =~ s/\.ops$/.pod/;
         if ( $new_perldoc ) {
