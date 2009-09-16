@@ -37,14 +37,6 @@ sub runstep {
 
     my $osname  = $conf->data->get('osname');
     my $cpuarch = $conf->data->get('cpuarch');
-    my $nvsize  = $conf->data->get('nvsize');
-
-    if ( $nvsize == 8 && $cpuarch eq 'i386' && $osname ne 'darwin' ) {
-        $conf->data->set( cc_hasjit => '-DCAN_BUILD_CALL_FRAMES' );
-    }
-    else {
-        $conf->data->set( cc_hasjit => '' );
-    }
 
     $conf->data->set(
         jitarchname    => 'nojit',
@@ -53,6 +45,7 @@ sub runstep {
         jitosname      => $osname,
         jitcapable     => 0,
         execcapable    => 0,
+        cc_hasjit      => '',
         TEMP_jit_o     => '',
         TEMP_exec_h    => '',
         TEMP_exec_o    => '',
