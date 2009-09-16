@@ -232,8 +232,7 @@ sub print_head {
  */
 
 #if defined(CAN_BUILD_CALL_FRAMES)
-#  include "parrot/exec.h"
-#  include "jit.h"
+#  include "frame_builder.h"
 #endif
 
 /*

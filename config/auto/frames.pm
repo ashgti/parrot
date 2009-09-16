@@ -42,7 +42,20 @@ sub runstep {
         $can_build_call_frames = 1;
     }
 
-    $conf->data->set( can_build_call_frames => $can_build_call_frames );
+    if ( $can_build_call_frames ) {
+        $conf->data->set(
+            can_build_call_frames => 1,
+            cc_build_call_frames  => '-DCAN_BUILD_CALL_FRAMES',
+        );
+    }
+    else {
+        $conf->data->set(
+            can_build_call_frames => 0,
+            cc_build_call_frames  => '',
+        );
+    }
+
+
     $self->set_result($can_build_call_frames?'yes':'no');
     return 1;
 }
