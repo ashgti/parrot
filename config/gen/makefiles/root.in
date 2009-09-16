@@ -419,8 +419,6 @@ INTERP_O_FILES := \
     $(SRC_DIR)/extend_vtable$(O) \
     $(SRC_DIR)/gc/alloc_memory$(O) \
     $(SRC_DIR)/gc/api$(O) \
-    $(SRC_DIR)/gc/generational_ms$(O) \
-    $(SRC_DIR)/gc/incremental_ms$(O) \
     $(SRC_DIR)/gc/gc_ms$(O) \
     $(SRC_DIR)/gc/gc_inf$(O) \
     $(SRC_DIR)/gc/mark_sweep$(O) \
@@ -1076,10 +1074,6 @@ $(SRC_DIR)/gc/gc_inf$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_inf.c
 
 $(SRC_DIR)/gc/api$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_private.h
 
-$(SRC_DIR)/gc/generational_ms$(O) : $(GENERAL_H_FILES)
-
-$(SRC_DIR)/gc/incremental_ms$(O) : $(GENERAL_H_FILES)
-
 $(SRC_DIR)/gc/alloc_resources$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/gc/res_lea$(O) : $(GENERAL_H_FILES)
@@ -1162,9 +1156,6 @@ $(SRC_DIR)/gc/alloc_memory$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/main$(O) : $(SRC_DIR)/main.c $(GENERAL_H_FILES)
 
-$(SRC_DIR)/pic$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_fixedintegerarray.h \
-	$(SRC_DIR)/pmc/pmc_continuation.h
-
 $(SRC_DIR)/multidispatch$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/multidispatch.str \
 	$(SRC_DIR)/pmc/pmc_nci.h $(SRC_DIR)/pmc/pmc_sub.h
 
@@ -1224,8 +1215,6 @@ $(IO_DIR)/filehandle$(O) : $(INC_DIR)/parrot.h $(SRC_DIR)/pmc/pmc_filehandle.h $
 
 $(OPS_DIR)/core_ops$(O) : $(GENERAL_H_FILES) $(OPS_DIR)/core_ops.c \
 	$(SRC_DIR)/pmc/pmc_continuation.h $(SRC_DIR)/pmc/pmc_parrotlibrary.h
-
-$(OPS_DIR)/pic.ops : $(SRC_DIR)/pmc/pmc_fixedintegerarray.h
 
 # core_ops depends upon config.h so that it gets updated along with
 # updates to config.h's version numbers
