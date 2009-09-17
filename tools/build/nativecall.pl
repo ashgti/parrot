@@ -230,14 +230,7 @@ sub print_head {
  * - if it returns NULL, the hardcoded version will do the job
  */
 
-#if defined(CAN_BUILD_CALL_FRAMES)
-#  include "frame_builder.h"
-#endif
-
-#define GET_NCI_I(n) get_nci_I(interp, &st, n)
-#define GET_NCI_S(n) get_nci_S(interp, &st, n)
-#define GET_NCI_N(n) get_nci_N(interp, &st, n)
-#define GET_NCI_P(n) get_nci_P(interp, &st, n)
+#include "frame_builder.h"
 
 #ifndef CAN_BUILD_CALL_FRAMES
 /* All our static functions that call in various ways. Yes, terribly

@@ -439,7 +439,7 @@ INTERP_O_FILES := \
     $(SRC_DIR)/longopt$(O) \
     $(SRC_DIR)/misc$(O) \
     $(SRC_DIR)/multidispatch$(O) \
-#IF(can_build_call_frames):    $(SRC_DIR)/frame_builder$(O) \
+    $(SRC_DIR)/frame_builder$(O) \
     $(SRC_DIR)/nci$(O) \
     $(SRC_DIR)/oo$(O) \
     $(SRC_DIR)/packfile$(O) \
@@ -618,7 +618,7 @@ STR_FILES := \
     $(SRC_DIR)/key.str \
     $(SRC_DIR)/library.str \
     $(SRC_DIR)/multidispatch.str \
-#IF(can_build_call_frames):    $(SRC_DIR)/frame_builder.str \
+    $(SRC_DIR)/frame_builder.str \
     $(SRC_DIR)/nci.str \
     $(SRC_DIR)/packfile.str \
     $(SRC_DIR)/pmc.str \
@@ -1183,12 +1183,12 @@ $(SRC_DIR)/dataypes$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/dataypes.c
 $(SRC_DIR)/exit$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/exit.c
 
 $(SRC_DIR)/nci$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/nci.c $(SRC_DIR)/nci.str \
-#IF(can_build_call_frames):        $(SRC_DIR)/frame_builder$(O) \
+        $(SRC_DIR)/frame_builder$(O) \
         $(SRC_DIR)/pmc/pmc_managedstruct.h \
         $(SRC_DIR)/pmc/pmc_nci.h \
         $(SRC_DIR)/pmc/pmc_pointer.h
 
-#IF(can_build_call_frames):$(SRC_DIR)/frame_builder$(O) : $(SRC_DIR)/frame_builder.h   $(GENERAL_H_FILES) $(SRC_DIR)/frame_builder.c $(SRC_DIR)/frame_builder.str
+$(SRC_DIR)/frame_builder$(O) : $(SRC_DIR)/frame_builder.h $(GENERAL_H_FILES) $(SRC_DIR)/frame_builder.c $(SRC_DIR)/frame_builder.str
 
 $(SRC_DIR)/vtables$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/vtables.c
 

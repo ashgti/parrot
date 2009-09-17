@@ -364,6 +364,11 @@ PARROT_CANNOT_RETURN_NULL
 PMC*
 get_nci_P(PARROT_INTERP, ARGMOD(call_state *st), int n);
 
+#define GET_NCI_I(n) get_nci_I(interp, &st, n)
+#define GET_NCI_S(n) get_nci_S(interp, &st, n)
+#define GET_NCI_N(n) get_nci_N(interp, &st, n)
+#define GET_NCI_P(n) get_nci_P(interp, &st, n)
+
 /*
  * set return value
  */
