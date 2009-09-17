@@ -80,13 +80,6 @@ to get destroyed.
 
 */
 
-#ifdef JIT_CAPABLE
-#  if EXEC_CAPABLE
-#    include "parrot/exec.h"
-#  endif /* EXEC_CAPABLE */
-#  include "jit.h"
-#endif
-
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 Parrot_Interp
@@ -571,8 +564,8 @@ again:
     if (!(pf->options & PFOPT_HEADERONLY))
         do_sub_pragmas(interp, pf->cur_cs, PBC_PBC, NULL);
 
-    /* JITting and/or prederefing the sub/the bytecode is done
-     * in switch_to_cs before actual usage of the segment */
+    /* Prederefing the sub/the bytecode is done in switch_to_cs before
+     * actual usage of the segment */
 
 #ifdef PARROT_HAS_HEADER_SYSMMAN
     /* the man page states that it's ok to close a mmaped file */

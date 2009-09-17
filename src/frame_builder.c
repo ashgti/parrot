@@ -6,15 +6,26 @@ $Id$
 /* HEADERIZER HFILE: none */
 /* HEADERIZER STOP */
 
-#include <assert.h>
 #include "parrot/parrot.h"
-#include "parrot/hash.h"
-#include "parrot/oplib/ops.h"
 #include "pmc/pmc_fixedintegerarray.h"
 #include "pmc/pmc_unmanagedstruct.h"
-#include "pmc/pmc_pointer.h"
-#include "jit.h"
-#include "jit_emit.h"
+#include "frame_builder.h"
+
+void
+Parrot_jit_newfixup(Parrot_jit_info_t *jit_info)
+{
+    Parrot_jit_fixup_t *fixup;
+
+    fixup = mem_allocate_zeroed_typed(Parrot_jit_fixup_t);
+
+    /* Insert fixup at the head of the list */
+    fixup->next = jit_info->arena.fixups;
+    jit_info->arena.fixups = fixup;
+
+    /* Fill in the native code offset */
+    fixup->native_offset =
+        (ptrdiff_t)(jit_info->native_ptr - jit_info->arena.start);
+}   
 
 INTVAL
 get_nci_I(PARROT_INTERP, ARGMOD(call_state *st), int n)
@@ -892,7 +903,7 @@ void
 Parrot_jit_vtable_n_op(Parrot_jit_info_t *jit_info,
                 PARROT_INTERP, int n, int *args)
 {
-    int        nvtable = op_jit[*jit_info->cur_op].extcall;
+    int        nvtable = NULL; /*op_jit[*jit_info->cur_op].extcall;*/
     size_t     offset;
     op_info_t *op_info = &interp->op_info_table[*jit_info->cur_op];
     int        pi;
@@ -966,17 +977,11 @@ Parrot_jit_vtable_n_op(Parrot_jit_info_t *jit_info,
                             &interp->code->const_table->
                             constants[pi]->u.number);
 store:
-#if NUMVAL_SIZE == 8
                 /* make room for double */
                 emitm_addb_i_r(jit_info->native_ptr, -8, emit_ESP);
                 emitm_fstpl(interp, jit_info->native_ptr, emit_ESP, emit_None, 1, 0);
                 /* additional stack adjustment */
                 st += 4;
-#else
-                emitm_addb_i_r(jit_info->native_ptr, -12, emit_ESP);
-                emitm_fstpt(jit_info->native_ptr, emit_ESP, emit_None, 1, 0);
-                st += 8;
-#endif
                 break;
 
             case PARROT_ARG_SC:
@@ -1579,84 +1584,6 @@ Parrot_jit_dofixup(Parrot_jit_info_t *jit_info, PARROT_INTERP)
 
 int control_word = 0x27f;
 
-#ifdef JIT_CGP
-
-/*
- * This is the somewhat complicated program flow
- *
- * JIT code                     prederef code
- * 1) jit_begin
- *    stack_enter
- *    call cgp_core  -->        set stack frame
- *                              jump to retaddr
- *    test EAX, 0    <--        also from HALT
- *    jnz code_start
- *    stack_leave
- *    ret
- * code_start: of JIT code
- *    jit code
- *    ....
- *
- * 2) normal_op
- *    mov prederef_code_ptr, esi
- *    call *(esi)    ---->      prederefed (non JITted code)
- *                              ....
- *    ....           <----      ret
- *    jit_code
- *    ....
- * 3) HALT == jit_end
- *    mov prederefed_op_func[0], esi
- *    jump *esi      ----->     cleanup prederef stack frame
- *                              xor eax,eax ; return 0
- *                              ret (--> after call cgp_core in 1)
- *
- */
-
-void
-Parrot_jit_begin(Parrot_jit_info_t *jit_info,
-                 PARROT_INTERP)
-{
-    jit_emit_stack_frame_enter(jit_info->native_ptr);
-    emitm_fldcw(interp, jit_info->native_ptr, &control_word);
-    emitm_pushl_r(jit_info->native_ptr, emit_EBX);
-    /* get the pc from stack:  mov 12(%ebp), %ebx */
-    emitm_movl_m_r(interp, jit_info->native_ptr, emit_EBX, emit_EBP, emit_None, 1, 12);
-    /* emit cgp_core(1, interp) */
-    /* get the interpreter from stack:  mov 8(%ebp), %eax */
-    emitm_movl_m_r(interp, jit_info->native_ptr, emit_EAX, emit_EBP, emit_None, 1, 8);
-    emitm_pushl_r(jit_info->native_ptr, emit_EAX);
-    /*
-     * TODO define the offset of the interpreter on the stack
-     *      relative to %ebp
-     */
-    emitm_pushl_i(jit_info->native_ptr, 1);
-    /* use EAX as flag, when jumping back on init, EAX==1 */
-    jit_emit_mov_ri_i(interp, jit_info->native_ptr, emit_EAX, 1);
-    if (!jit_info->objfile)
-        call_func(jit_info, (void (*)(void))cgp_core);
-#  if EXEC_CAPABLE
-    else {
-        Parrot_exec_add_text_rellocation_func(jit_info->objfile,
-            jit_info->native_ptr, "cgp_core");
-        emitm_calll(jit_info->native_ptr, EXEC_CALLDISP);
-    }
-#  endif
-    /* when cur_opcode == 1, cgp_core jumps back here
-     * when EAX == 0, the official return from HALT was called */
-    jit_emit_test_r_i(jit_info->native_ptr, emit_EAX);
-    emitm_jxs(jit_info->native_ptr, emitm_jnz, 5);
-    emitm_popl_r(jit_info->native_ptr, emit_EBX);
-    jit_emit_stack_frame_leave(jit_info->native_ptr);
-    emitm_ret(jit_info->native_ptr);
-    /* get PC = ebx to eax, jump there */
-    jit_emit_mov_rr_i(jit_info->native_ptr, emit_EAX, emit_EBX);
-    Parrot_emit_jump_to_eax(jit_info, interp);
-
-/* code_start: */
-}
-
-#else /* JIT_CGP */
-
 void
 Parrot_jit_begin(Parrot_jit_info_t *jit_info,
                  PARROT_INTERP)
@@ -1700,8 +1627,6 @@ Parrot_jit_begin(Parrot_jit_info_t *jit_info,
     /* jump to restart pos or first op */
     Parrot_emit_jump_to_eax(jit_info, interp);
 }
-
-#endif /* JIT_CGP */
 
 /*
  * create a JITted version of a PIR sub, where everything
@@ -1825,76 +1750,6 @@ Parrot_jit_emit_finit(Parrot_jit_info_t *jit_info)
     jit_emit_finit(jit_info->native_ptr);
 }
 
-#ifdef JIT_CGP
-/*
- * XXX needs some fixing
- * s. t/sub/pmc_{8,9}.t: the 2 print in tail call without that 'end'
- *    are recognized as one non JITted block
- */
-void
-Parrot_jit_normal_op(Parrot_jit_info_t *jit_info,
-                     PARROT_INTERP)
-{
-    Parrot_jit_optimizer_section_ptr cur_section =
-        jit_info->optimizer->cur_section;
-    int last_is_branch = 0;
-    void ** offset;
-
-    PARROT_ASSERT(op_jit[*jit_info->cur_op].extcall == 1);
-    if (cur_section->done == 1)
-        return;
-    else if (cur_section->done == -1 && --cur_section->ins_count > 0)
-        return;
-    /* check, where section ends
-     */
-    if (interp->op_info_table[*cur_section->end].jump)
-        last_is_branch = 1;
-    else if (cur_section->next && !cur_section->next->isjit)
-        last_is_branch = 1;
-    /* if more then 1 op, then jump to CGP, branches are never
-     * executed in CGP, they are handled below */
-    if (cur_section->done >= 0 &&
-            (INTVAL)cur_section->op_count >= 2 + last_is_branch) {
-        int saved = 0;
-        offset = (jit_info->cur_op - interp->code->base.data) +
-            interp->code->prederef.code;
-
-        jit_emit_mov_ri_i(interp, jit_info->native_ptr, emit_ESI, offset);
-        emitm_callm(jit_info->native_ptr, emit_ESI, 0, 0, 0);
-        /* now patch a B<cpu_ret> opcode after the end of the
-         * prederefed (non JIT) section */
-        if (last_is_branch) {
-            offset = (cur_section->end - interp->code->base.data) +
-                interp->code->prederef.code;
-            cur_section->done = -1;
-            /* ins to skip */
-            cur_section->ins_count = cur_section->op_count - 1;
-        }
-        else {
-            /* There must be a next section: either we have a B<end>
-             * or a JITed branch,
-             * when the branch is non JIT, we are in the above case
-             */
-            offset = (cur_section->next->begin - interp->code->base.data)
-                + interp->code->prederef.code;
-            cur_section->done = 1;
-        }
-        *offset = ((op_func_t*)interp->op_lib->op_func_table)[PARROT_OP_cpu_ret];
-    }
-    else {
-        /* else call normal funtion */
-        emitm_pushl_i(jit_info->native_ptr, interp);
-        emitm_pushl_i(jit_info->native_ptr, jit_info->cur_op);
-        call_func(jit_info,
-            (void (*)(void))interp->op_func_table[*(jit_info->cur_op)]);
-        emitm_addb_i_r(jit_info->native_ptr, 8, emit_ESP);
-        /* when this was a branch, then EAX is now the offset
-         * in the byte_code
-         */
-    }
-}
-
-#else /* JIT_CGP */
 extern int jit_op_count(void);
 
 void
@@ -1904,10 +1759,10 @@ Parrot_jit_normal_op(Parrot_jit_info_t *jit_info,
     int cur_op = *jit_info->cur_op;
     static int check;
 
-    if (cur_op >= jit_op_count()) {
+/*    if (cur_op >= jit_op_count()) {
         cur_op = CORE_OPS_wrapper__;
     }
-
+*/
     if ((++check & 0x7) == 0) {
         /*
          * every 8 ??? normal ops, we emit a check for event processing
@@ -1962,8 +1817,6 @@ Parrot_jit_normal_op(Parrot_jit_info_t *jit_info,
     emitm_addb_i_r(jit_info->native_ptr, 8, emit_ESP);
 #  endif
 }
-
-#endif /* JIT_CGP */
 
 void
 Parrot_jit_cpcf_op(Parrot_jit_info_t *jit_info,
@@ -2423,70 +2276,6 @@ Parrot_jit_build_call_func(PARROT_INTERP, PMC *pmc_nci, STRING *signature, int *
         *sizeptr = JIT_ALLOC_SIZE;
     Parrot_str_free_cstring(signature_str);
     return (void *)D2FPTR(jit_info.arena.start);
-}
-
-const char i_map[] =
-    { emit_EDI, emit_ESI, emit_EDX, emit_ECX };
-const char floatval_map[] =
-    { 1, 2, 3, 4, 5 };         /* ST(1) .. (ST(4) */
-
-const char i_map_sub[] =
-    { emit_EDX, emit_ECX, emit_EBX, emit_EDI, emit_ESI };
-
-const jit_arch_info arch_info = {
-    jit_mov_rm_offs,
-    jit_mov_rm_n_offs,
-    jit_mov_mr_offs,
-    jit_mov_mr_n_offs,
-    Parrot_jit_dofixup,
-    (jit_arch_f)0,              /* no cache flush needed */
-    {
-        {
-            Parrot_jit_begin,   /* emit code prologue */
-            4,                  /* 4 mapped ints */
-            2,                  /* first 2 are preserved */
-            i_map,
-            4,                  /* 4 mapped float regs */
-            0,                  /* ABI sez it's not preserved */
-            floatval_map
-        },
-        /* unused */
-        {
-            Parrot_jit_begin_sub,   /* emit code prologue */
-            4,                  /* 4 mapped ints */
-            2,                  /* first 2 are *non*preserved */
-            i_map_sub,
-            4,                  /* 4 mapped float regs */
-            0,                  /* ABI sez it's not preserved */
-            floatval_map
-        },
-        /*
-         * compile a sub to registers only
-         * if a mapped count is 0, code containing this register kind
-         * will not be created
-         *
-         * TODO implement FLOATVAL arg passing and set mapped
-         * register count.
-         */
-        {
-            Parrot_jit_begin_sub_regs,   /* emit code prologue */
-            5,                  /* 5 mapped ints */
-            2,                  /* first 2 are *non*preserved */
-            i_map_sub,
-            5,                  /* TODO 0 mapped float regs */
-            5,                  /* ABI sez it's not preserved */
-            floatval_map
-        }
-    }
-};
-
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-const jit_arch_info *
-Parrot_jit_init(PARROT_INTERP)
-{
-    return &arch_info;
 }
 
 /*

@@ -29,7 +29,6 @@ about the structure of the frozen bytecode.
 #include "parrot/extend.h"
 #include "parrot/packfile.h"
 #include "parrot/runcore_api.h"
-#include "jit.h"
 #include "../compilers/imcc/imc.h"
 #include "packfile.str"
 #include "pmc/pmc_sub.h"
