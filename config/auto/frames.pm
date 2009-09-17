@@ -3,7 +3,7 @@
 
 =head1 NAME
 
-config/auto/frmes - 
+config/auto/frmes
 
 =head1 DESCRIPTION
 
@@ -37,20 +37,20 @@ sub runstep {
     my $cpuarch = $conf->data->get('cpuarch');
     my $nvsize  = $conf->data->get('nvsize');
 
-    if (defined $conf->options->get('buildframes') || ($nvsize == 8
-        && $cpuarch eq 'i386' && $osname ne 'darwin')) {
+    if (defined $conf->options->get('buildframes')) {
+        $can_build_call_frames = $conf->options->get('buildframes');
+    }
+    elsif ($nvsize == 8 && $cpuarch eq 'i386' && $osname ne 'darwin') {
         $can_build_call_frames = 1;
     }
 
     if ( $can_build_call_frames ) {
         $conf->data->set(
-            can_build_call_frames => 1,
             cc_build_call_frames  => '-DCAN_BUILD_CALL_FRAMES',
         );
     }
     else {
         $conf->data->set(
-            can_build_call_frames => 0,
             cc_build_call_frames  => '',
         );
     }
