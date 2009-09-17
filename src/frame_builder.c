@@ -25,7 +25,7 @@ Parrot_jit_newfixup(Parrot_jit_info_t *jit_info)
     /* Fill in the native code offset */
     fixup->native_offset =
         (ptrdiff_t)(jit_info->native_ptr - jit_info->arena.start);
-}   
+}
 
 INTVAL
 get_nci_I(PARROT_INTERP, ARGMOD(call_state *st), int n)
@@ -1773,49 +1773,49 @@ Parrot_jit_normal_op(Parrot_jit_info_t *jit_info,
  * decide to reuse the argument space though.  If you are *absolutely sure*
  * this does not happen define PARROT_JIT_STACK_REUSE_INTERP.
  */
-#  ifdef PARROT_JIT_STACK_REUSE_INTERP
+#ifdef PARROT_JIT_STACK_REUSE_INTERP
         /*
         * op functions have the signature (cur_op, interp)
         * we use the interpreter already on stack and only push the
         * cur_op
         */
-#  else
+#else
         /* push interpreter */
         Parrot_jit_emit_get_INTERP(interp, jit_info->native_ptr, emit_ECX);
         emitm_pushl_r(jit_info->native_ptr, emit_ECX);
-#  endif
+#endif
 
         emitm_pushl_i(jit_info->native_ptr, CORE_OPS_check_events);
 
         call_func(jit_info,
             (void (*) (void)) (interp->op_func_table[CORE_OPS_check_events]));
-#  ifdef PARROT_JIT_STACK_REUSE_INTERP
+#ifdef PARROT_JIT_STACK_REUSE_INTERP
         emitm_addb_i_r(jit_info->native_ptr, 4, emit_ESP);
-#  else
+#else
         emitm_addb_i_r(jit_info->native_ptr, 8, emit_ESP);
-#  endif
+#endif
     }
 
-#  ifdef PARROT_JIT_STACK_REUSE_INTERP
+#ifdef PARROT_JIT_STACK_REUSE_INTERP
     /*
     * op functions have the signature (cur_op, interp)
     * we use the interpreter already on stack and only push the
     * cur_op
     */
-#  else
+#else
     Parrot_jit_emit_get_INTERP(interp, jit_info->native_ptr, emit_ECX);
     emitm_pushl_r(jit_info->native_ptr, emit_ECX);
-#  endif
+#endif
 
     emitm_pushl_i(jit_info->native_ptr, jit_info->cur_op);
 
     call_func(jit_info,
             (void (*) (void))(interp->op_func_table[cur_op]));
-#  ifdef PARROT_JIT_STACK_REUSE_INTERP
+#ifdef PARROT_JIT_STACK_REUSE_INTERP
     emitm_addb_i_r(jit_info->native_ptr, 4, emit_ESP);
-#  else
+#else
     emitm_addb_i_r(jit_info->native_ptr, 8, emit_ESP);
-#  endif
+#endif
 }
 
 void

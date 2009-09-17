@@ -223,7 +223,7 @@ typedef struct Parrot_jit_info_t {
 
 typedef void (*jit_fn_t)(Parrot_jit_info_t *jit_info,
                          PARROT_INTERP);
-                        
+
 /*  Parrot_jit_fn_info_t
  *      The table of opcodes.
  *
@@ -251,7 +251,7 @@ void Parrot_exec_cpcf_op(Parrot_jit_info_t *jit_info,
 
 void Parrot_exec_normal_op(Parrot_jit_info_t *jit_info,
                           PARROT_INTERP);
-                                                                                
+
 void Parrot_exec_restart_op(Parrot_jit_info_t *jit_info,
                           PARROT_INTERP);
 
@@ -269,7 +269,7 @@ void Parrot_jit_emit_mov_rm_n_offs(
 void Parrot_jit_emit_mov_rm_offs(
     Interp *, int dst_reg, int base_reg, size_t offs);
 
-/*                                                                              
+/*
  * interface to architecture specific details
  */
 typedef void (*jit_arch_f)(Parrot_jit_info_t *, Interp *);
@@ -287,7 +287,7 @@ typedef struct jit_arch_regs {
     int n_preserved_F;
     const char *map_F;
 } jit_arch_regs;
-                                                                                
+
 typedef void (*mov_RM_f)(PARROT_INTERP, Parrot_jit_info_t *,
         int cpu_reg, int base_reg, INTVAL offs);
 typedef void (*mov_MR_f)(PARROT_INTERP, Parrot_jit_info_t *,
@@ -296,7 +296,7 @@ typedef void (*mov_MR_f)(PARROT_INTERP, Parrot_jit_info_t *,
 typedef struct jit_arch_info_t {
     /* CPU <- Parrot reg move functions */
     mov_RM_f mov_RM_i;
-    mov_RM_f mov_RM_n;   
+    mov_RM_f mov_RM_n;
     /* Parrot <- CPU reg move functions */
     mov_MR_f mov_MR_i;
     mov_MR_f mov_MR_n;
@@ -305,7 +305,7 @@ typedef struct jit_arch_info_t {
     jit_arch_f jit_dofixup;
     /* flush caches */
     jit_arch_f jit_flush_cache;
-    /* register mapping info */                                                 
+    /* register mapping info */
     const jit_arch_regs regs[JIT_CODE_TYPES];
 } jit_arch_info;
 
@@ -323,7 +323,7 @@ void *Parrot_jit_build_call_func(Interp *, PMC *, STRING *, int *);
 /* custom pmc callback functions */
 void Parrot_jit_free_buffer(PARROT_INTERP, void *ptr, void *priv);
 PMC* Parrot_jit_clone_buffer(PARROT_INTERP, PMC *pmc, void *priv);
-struct jit_buffer_private_data {                                                
+struct jit_buffer_private_data {
     int size;
 };
 
@@ -364,10 +364,10 @@ PARROT_CANNOT_RETURN_NULL
 PMC*
 get_nci_P(PARROT_INTERP, ARGMOD(call_state *st), int n);
 
-#define GET_NCI_I(n) get_nci_I(interp, &st, n)
-#define GET_NCI_S(n) get_nci_S(interp, &st, n)
-#define GET_NCI_N(n) get_nci_N(interp, &st, n)
-#define GET_NCI_P(n) get_nci_P(interp, &st, n)
+#define GET_NCI_I(n) get_nci_I(interp, &st, (n))
+#define GET_NCI_S(n) get_nci_S(interp, &st, (n))
+#define GET_NCI_N(n) get_nci_N(interp, &st, (n))
+#define GET_NCI_P(n) get_nci_P(interp, &st, (n))
 
 /*
  * set return value
