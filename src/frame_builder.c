@@ -14,6 +14,8 @@ $Id$
 
 /*
 
+=over 4
+
 =item C<void Parrot_jit_free_buffer(PARROT_INTERP, void *ptr, void *priv)>
 
 This is a callback to implement the proper freeing semantics.  It is called by
@@ -37,6 +39,8 @@ Parrot_jit_free_buffer(PARROT_INTERP, void *ptr, void *priv)
 
 This is a callback to implement the proper cloning semantics for jit buffers.
 It is called by the ManagedStruct PMC's clone() function.
+
+=back
 
 =cut
 
