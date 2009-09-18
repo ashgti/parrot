@@ -955,18 +955,6 @@ Parrot_emit_jump_to_eax(Parrot_jit_info_t *jit_info,
                 offsetof(Parrot_jit_arena_t, op_map));
 
     }
-#if EXEC_CAPABLE
-    else {
-        int *reg;
-        emitm_subl_i_r(jit_info->native_ptr,
-            jit_info->objfile->bytecode_header_size, emit_EAX);
-        Parrot_exec_add_text_rellocation(jit_info->objfile,
-            jit_info->native_ptr, RTYPE_DATA, "program_code", -4);
-        reg = Parrot_exec_add_text_rellocation_reg(jit_info->objfile,
-                jit_info->native_ptr, "opcode_map", 0, 0);
-        jit_emit_mov_ri_i(interp, jit_info->native_ptr, emit_EDX, (long) reg);
-    }
-#endif
     /* get base pointer */
     emitm_movl_m_r(interp, jit_info->native_ptr, emit_EBX, emit_EBX, 0, 1,
             offsetof(Interp, ctx));
@@ -1051,14 +1039,6 @@ Parrot_jit_vtable_n_op(Parrot_jit_info_t *jit_info,
                 /*
                  * TODO not all constants are shared between interpreters
                  */
-#if EXEC_CAPABLE
-                if (jit_info->objfile) {
-                    jit_emit_fload_m_n(interp, jit_info->native_ptr, CONST(i));
-                    Parrot_exec_add_text_rellocation(jit_info->objfile,
-                            jit_info->native_ptr, RTYPE_DATA, "const_table", -4);
-                }
-                else
-#endif
                     jit_emit_fload_m_n(interp, jit_info->native_ptr,
                             &interp->code->const_table->
                             constants[pi]->u.number);
@@ -1071,14 +1051,6 @@ store:
                 break;
 
             case PARROT_ARG_SC:
-#if EXEC_CAPABLE
-                if (jit_info->objfile) {
-                    emitm_pushl_m(jit_info->native_ptr, CONST(i));
-                    Parrot_exec_add_text_rellocation(jit_info->objfile,
-                            jit_info->native_ptr, RTYPE_DATA, "const_table", -4);
-                }
-                else
-#endif
                     emitm_pushl_i(jit_info->native_ptr,
                             interp->code->const_table->
                             constants[pi]->u.string);
@@ -1086,15 +1058,6 @@ store:
 
             case PARROT_ARG_KC:
             case PARROT_ARG_PC:
-#if EXEC_CAPABLE
-                if (jit_info->objfile) {
-                    emitm_pushl_m(jit_info->native_ptr, CONST(i));
-                    Parrot_exec_add_text_rellocation(jit_info->objfile,
-                            jit_info->native_ptr, RTYPE_DATA,
-                            "const_table", -4);
-                }
-                else
-#endif
                     emitm_pushl_i(jit_info->native_ptr,
                             interp->code->const_table->
                             constants[pi]->u.key);

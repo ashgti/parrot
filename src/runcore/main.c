@@ -496,43 +496,6 @@ stop_prederef(PARROT_INTERP)
 }
 
 
-#if EXEC_CAPABLE
-
-/*
-
-=item C<void exec_init_prederef(PARROT_INTERP, void *prederef_arena)>
-
-C<< interp->op_lib >> = prederefed oplib
-
-The "normal" C<op_lib> has a copy in the interpreter structure - but get
-the C<op_code> lookup function from standard core prederef has no
-C<op_info_table>
-
-=cut
-
-*/
-
-void
-exec_init_prederef(PARROT_INTERP, ARGIN(void *prederef_arena))
-{
-    ASSERT_ARGS(exec_init_prederef)
-    Parrot_runcore_t *old_runcore = interp->run_core;
-    Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "cgp"));
-
-    load_prederef(interp, interp->run_core);
-    interp->run_core = old_runcore;
-
-    if (!interp->code->prederef.code) {
-        void ** const temp = (void **)prederef_arena;
-
-        interp->code->prederef.code = temp;
-        /* TODO */
-    }
-}
-
-#endif
-
-
 /*
 
 =item C<void * init_jit(PARROT_INTERP, opcode_t *pc)>
