@@ -40,10 +40,6 @@ have the same number of elements because there is a one-to-one mapping.
 #include "parrot/oplib/ops.h"
 #include "main.str"
 
-#if JIT_CAPABLE
-#  include "parrot/exec.h"
-#  include "../jit.h"
-#endif
 #ifdef HAVE_COMPUTED_GOTO
 #  include "parrot/oplib/core_ops_cg.h"
 #  include "parrot/oplib/core_ops_cgp.h"

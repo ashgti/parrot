@@ -255,11 +255,6 @@ next opcode, or examine and manipulate data from the executing program.
 #  include "parrot/oplib/core_ops_cgp.h"
 #endif
 
-#if JIT_CAPABLE
-#  include "parrot/exec.h"
-#  include "../jit.h"
-#endif
-
 #ifdef WIN32
 #  define getpid _getpid
 #endif
