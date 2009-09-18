@@ -807,15 +807,6 @@ Parrot_runcode(PARROT_INTERP, int argc, ARGIN(char **argv))
     /* Set up @ARGS (or whatever this language calls it) in userargv. */
     userargv = setup_argv(interp, argc, argv);
 
-#if EXEC_CAPABLE
-
-    /* s. runops_exec interpreter.c */
-    if (Parrot_str_equal(interp, interp->run_core->name,
-        Parrot_str_new_constant(interp, "exec")))
-        Parrot_exec_run = 1;
-
-#endif
-
     /*
      * If any profile information was gathered, print it out
      * before exiting, then print debug infos if turned on.

@@ -462,10 +462,6 @@ static int sub_pragma(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
-#if EXEC_CAPABLE
-    extern int Parrot_exec_run;
-#endif
-
 /* offset not in ptr diff, but in byte */
 #define OFFS(pf, cursor) ((pf) ? ((const char *)(cursor) - (const char *)((pf)->src)) : 0)
 /**
@@ -3694,10 +3690,6 @@ PackFile_ConstTable_clear(PARROT_INTERP, ARGMOD(PackFile_ConstTable *self))
 }
 
 
-#if EXEC_CAPABLE
-PackFile_Constant *exec_const_table;
-#endif
-
 /*
 
 =item C<const opcode_t * PackFile_ConstTable_unpack(PARROT_INTERP,
@@ -3749,13 +3741,7 @@ PackFile_ConstTable_unpack(PARROT_INTERP, ARGIN(PackFile_Segment *seg),
     for (i = 0; i < self->const_count; i++) {
         TRACE_PRINTF(("PackFile_ConstTable_unpack(): Unpacking constant %ld/%ld\n",
             i, self->const_count));
-
-#if EXEC_CAPABLE
-        if (Parrot_exec_run)
-            self->constants[i] = &exec_const_table[i];
-        else
-#endif
-            self->constants[i] = PackFile_Constant_new(interp);
+        self->constants[i] = PackFile_Constant_new(interp);
 
         cursor = PackFile_Constant_unpack(interp, self, self->constants[i],
                     cursor);

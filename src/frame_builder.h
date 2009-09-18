@@ -211,11 +211,7 @@ typedef struct Parrot_jit_info_t {
     int                             flags;
     const struct jit_arch_info_t    *arch_info;
     int                              n_args;
-#if EXEC_CAPABLE
-    Parrot_exec_objfile_t           *objfile;
-#else
     void                            *objfile;
-#endif /* EXEC_CAPABLE */
 } Parrot_jit_info_t;
 
 #define Parrot_jit_fixup_target(jit_info, fixup) \
@@ -526,19 +522,11 @@ char * emit_shift_r_m(PARROT_INTERP, char *pc, int opcode, int reg,
     *(long *)(pc) = (long)(imm); \
     (pc) += 4; }
 
-#if EXEC_CAPABLE
-#  define emitm_pushl_m(pc, mem) { \
+#define emitm_pushl_m(pc, mem) { \
        *((pc)++) = (char) 0xff; \
        *((pc)++) = (char) 0x35; \
        *(long *)(pc) = (long)(mem); \
        (pc) += 4; }
-#else /* EXEC_CAPABLE */
-#  define emitm_pushl_m(pc, mem) { \
-       *((pc)++) = (char) 0xff; \
-       *((pc)++) = (char) 0x35; \
-       *(long *)(pc) = (long)(mem); \
-       (pc) += 4; }
-#endif /* EXEC_CAPABLE */
 
 char * emit_pushl_m(PARROT_INTERP, char *pc, int base, int i, int scale,
     long disp);
@@ -1348,16 +1336,9 @@ extern unsigned char *lastpc;
     *((pc)++) = (char) 0xff; \
     *((pc)++) = (char) 0xd0 | ((reg) - 1); }
 
-#if EXEC_CAPABLE
-#  define emitm_callm(pc, b, i, s, d) { \
-       *((pc)++) = (char) 0xff; \
-       (pc) = emit_r_X((interp), (pc), emit_reg(emit_b010), (b), (i), (s), (d));\
-       }
-#else /* EXEC_CAPABLE */
 #  define emitm_callm(pc, b, i, s, d) { \
        *((pc)++) = (char) 0xff; \
        (pc) = emit_r_X((interp), (pc), emit_reg(emit_b010), (b), (i), (s), (d)); }
-#endif /* EXEC_CAPABLE */
 
 #  define emitm_jumps(pc, disp) { \
     *((pc)++) = (char) 0xeb; \
@@ -1371,16 +1352,9 @@ extern unsigned char *lastpc;
     *((pc)++) = (char) 0xff; \
     *((pc)++) = (char)(0xe0 | ((reg) - 1)); }
 
-#if EXEC_CAPABLE
-#  define emitm_jumpm(pc, b, i, s, d) { \
-       *((pc)++) = (char) 0xff; \
-       (pc) = emit_r_X((interp), (pc), emit_reg(emit_b100), (b), (i), (s), (d)); \
-       }
-#else /* EXEC_CAPABLE */
 #  define emitm_jumpm(pc, b, i, s, d) { \
        *((pc)++) = (char) 0xff; \
        (pc) = emit_r_X((interp), (pc), emit_reg(emit_b100), (b), (i), (s), (d)); }
-#endif /* EXEC_CAPABLE */
 
 /* Conditional jumps */
 
@@ -1971,46 +1945,6 @@ void Parrot_jit_vtable_ifp_op(Parrot_jit_info_t *jit_info, PARROT_INTERP);
 
 #endif /* JIT_VTABLE_OPS */
 
-#if EXEC_CAPABLE
-#  ifdef JIT_CGP
-#    ifdef EXEC_SHARED
-#      define exec_emit_end(interp, pc) { \
-           jit_emit_mov_rm_i((pc), c, 2); \
-           Parrot_exec_add_text_rellocation(jit_info->objfile, \
-             jit_info->native_ptr, RTYPE_COM, "cgp_core", 0); \
-           emitm_movl_m_r((interp), jit_info->native_ptr, emit_ESI, emit_ESI, \
-             emit_None, 1, 0); \
-           emitm_addb_i_r(jit_info->native_ptr, \
-             (int)((ptrcast_t)((op_func_t*) \
-               (interp)->op_lib->op_func_table)[0]) - (int)cgp_core, \
-                 emit_ESI); \
-           emitm_jumpr((pc), emit_ESI); \
-         }
-#    else /* EXEC_SHARED */
-#      define exec_emit_end(interp, pc) { \
-           jit_emit_mov_ri_i((interp), (pc), emit_ESI, \
-             (int)((ptrcast_t)((op_func_t*) \
-               (interp)->op_lib->op_func_table)[0]) - (int)cgp_core); \
-           Parrot_exec_add_text_rellocation(jit_info->objfile, \
-             jit_info->native_ptr, RTYPE_COM, "cgp_core", -4); \
-           emitm_jumpr((pc), emit_ESI); \
-         }
-#    endif /* EXEC_SHARED */
-
-#  else /* JIT_CGP */
-
-#    define exec_emit_end(pc) jit_emit_end(pc)
-
-#  endif /* JIT_CGP */
-#endif /* EXEC_CAPABLE */
-
-#ifdef JIT_CGP
-#  define jit_emit_end(interp, pc) { \
-       jit_emit_mov_ri_i((interp), (pc), emit_ESI, \
-         (ptrcast_t)((op_func_t*)(interp)->op_lib->op_func_table) [0]); \
-       emitm_jumpr((pc), emit_ESI); \
-     }
-#else /* JIT_CGP */
 #  define jit_emit_end(pc) { \
        jit_emit_add_ri_i((interp), (pc), emit_ESP, 4); \
        emitm_popl_r((pc), emit_EDI); \
@@ -2019,8 +1953,6 @@ void Parrot_jit_vtable_ifp_op(Parrot_jit_info_t *jit_info, PARROT_INTERP);
        emitm_popl_r((pc), emit_EBP); \
        emitm_ret(pc); \
      }
-
-#endif /* JIT_CGP */
 
 void jit_get_params_pc(Parrot_jit_info_t *jit_info, PARROT_INTERP);
 
