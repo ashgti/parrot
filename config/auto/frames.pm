@@ -31,7 +31,7 @@ sub _init {
 sub runstep {
     my ( $self, $conf ) = @_;
 
-    my $can_build_call_frames = 0;
+    my $can_build_call_frames;
 
     my $osname  = $conf->data->get('osname');
     my $cpuarch = $conf->data->get('cpuarch');
@@ -42,6 +42,9 @@ sub runstep {
     }
     elsif ($nvsize == 8 && $cpuarch eq 'i386' && $osname ne 'darwin') {
         $can_build_call_frames = 1;
+    }
+    else {
+        $can_build_call_frames = 0;
     }
 
     if ( $can_build_call_frames ) {
