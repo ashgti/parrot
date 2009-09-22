@@ -34,16 +34,16 @@ Tests role composition in the OO implementation.
     multi_composition()
 .end
 
-.sub badger :method
+.sub badger :method :nsentry
     .return('Badger!')
 .end
-.sub badger2 :method
+.sub badger2 :method :nsentry
     .return('Second Badger!')
 .end
-.sub mushroom :method
+.sub mushroom :method :nsentry
     .return('Mushroom!')
 .end
-.sub snake :method
+.sub snake :method :nsentry
     .return('Snake!')
 .end
 .sub fire

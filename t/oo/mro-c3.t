@@ -27,19 +27,19 @@ Tests the C3 Method Resolution order for the OO implementation.
     diamond_inheritance()
 .end
 
-.sub method_A :method
+.sub method_A :method :nsentry
     .return('Method from A')
 .end
 
-.sub method_B :method
+.sub method_B :method :nsentry
     .return('Method from B')
 .end
 
-.sub method_C :method
+.sub method_C :method :nsentry
     .return('Method from C')
 .end
 
-.sub method_D :method
+.sub method_D :method :nsentry
     .return('Method from D')
 .end
 

@@ -991,13 +991,13 @@ pir_output_is( <<'CODE', <<'OUTPUT', "OO argument passing" );
     f(o, "ok 4\n")
 .end
 .namespace ["Foo"]
-.sub bar :method
+.sub bar :method :nsentry
     .param string s
     print self
     print " "
     print s
 .end
-.sub baz :method
+.sub baz :method :nsentry
     .param string s
     print self
     print " "

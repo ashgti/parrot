@@ -458,7 +458,7 @@ t_class_meth:
     is(result, 42, 'new() added method returns expected value')
 .end
 
-.sub add :method
+.sub add :method :nsentry
     $P0 = getattribute self, "x"
     $P1 = getattribute self, "y"
     $P2 = new ['Integer']

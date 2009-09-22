@@ -757,7 +757,10 @@ store_sub_in_multi(PARROT_INTERP, ARGIN(PMC *sub_pmc), ARGIN(PMC *ns))
     PMC        *multisub;
 
     PMC_get_sub(interp, sub_pmc, sub);
-    ns_entry_name = sub->ns_entry_name;
+    ns_entry_name = Parrot_str_equal(interp, sub->method_name, CONST_STRING(interp, ""))
+                    ? sub->ns_entry_name
+                    : sub->method_name;
+
     multisub      = VTABLE_get_pmc_keyed_str(interp, ns, ns_entry_name);
 
     /* is there an existing MultiSub PMC? or do we need to create one? */
