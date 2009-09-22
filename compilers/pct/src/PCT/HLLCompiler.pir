@@ -862,7 +862,7 @@ based on double-colon separators.
 
 =cut
 
-.sub 'parse_name' :method
+.sub 'parse_name' :method :nsentry
     .param string name
     $P0 = split '::', name
     .return ($P0)
