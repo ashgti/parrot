@@ -242,6 +242,7 @@ Deprecated; use add_parent(class, parentclass)
     unless $I0 goto method_loop
   add_method:
     $P0 = methods[$S0]
+    if null $P0 goto method_loop
     $I0 = isa $P0, 'NCI'
     if $I0 goto method_loop
     push_eh err
