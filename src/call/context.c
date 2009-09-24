@@ -783,6 +783,87 @@ Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
+=item C<void Parrot_pcc_set_caller_sig(PARROT_INTERP, PMC *ctx, PMC
+*sig)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_caller_sig(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sig))
+{
+    ASSERT_ARGS(Parrot_pcc_set_caller_sig)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->caller_sig = sig;
+}
+
+/*
+
+=item C<PMC* Parrot_pcc_get_caller_sig(PARROT_INTERP, PMC *ctx)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_caller_sig(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_caller_sig)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->caller_sig;
+}
+
+/*
+
+=item C<void Parrot_pcc_set_current_sig(PARROT_INTERP, PMC *ctx, PMC
+*sig)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_current_sig(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sig))
+{
+    ASSERT_ARGS(Parrot_pcc_set_current_sig)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->current_sig = sig;
+}
+
+/*
+
+=item C<PMC* Parrot_pcc_get_current_sig(PARROT_INTERP, PMC *ctx)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_current_sig(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_current_sig)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->current_sig;
+}
+
+
+/*
+
 =item C<void Parrot_pcc_set_results_signature(PARROT_INTERP, PMC *ctx, PMC
 *sig)>
 
