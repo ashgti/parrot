@@ -535,8 +535,8 @@ op get_results(inconst PMC) :flow {
 
     Parrot_pcc_set_current_sig(interp, CURRENT_CONTEXT(interp),
             Parrot_pcc_build_sig_object_returns_from_op(interp,
-            Parrot_pcc_get_current_sig(interp, CURRENT_CONTEXT(interp)),
-            signature, raw_returns);
+                Parrot_pcc_get_current_sig(interp, CURRENT_CONTEXT(interp)),
+                signature, raw_returns));
 
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
@@ -550,7 +550,7 @@ op get_params(inconst PMC) :flow {
     INTVAL argc;
 
     ctx = CURRENT_CONTEXT(interp);
-    ccont = Parrot_pcc_get_current_continuation(interp, ctx);
+    ccont = Parrot_pcc_get_continuation(interp, ctx);
 
     caller_ctx = Parrot_pcc_get_caller_ctx(interp, ctx);
     call_object = Parrot_pcc_get_current_sig(interp, caller_ctx);
@@ -575,7 +575,7 @@ op set_returns(inconst PMC) :flow {
     INTVAL argc;
 
     ctx = CURRENT_CONTEXT(interp);
-    ccont = Parrot_pcc_get_current_continuation(interp, ctx);
+    ccont = Parrot_pcc_get_continuation(interp, ctx);
 
     caller_ctx = Parrot_pcc_get_caller_ctx(interp, ctx);
     call_object = Parrot_pcc_get_current_sig(interp, caller_ctx);

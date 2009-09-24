@@ -105,19 +105,6 @@ static void convert_arg_from_str(PARROT_INTERP, ARGMOD(call_state *st))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*st);
 
-PARROT_CANNOT_RETURN_NULL
-static PMC * count_signature_elements(PARROT_INTERP,
-    ARGIN(const char *signature),
-    ARGMOD(PMC *args_sig),
-    ARGMOD(PMC *results_sig),
-    int flag)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*args_sig)
-        FUNC_MODIFIES(*results_sig);
-
 static void dissect_aggregate_arg(PARROT_INTERP,
     ARGMOD(PMC *call_object),
     ARGIN(PMC *aggregate))
@@ -218,18 +205,6 @@ static void set_context_sig_returns(PARROT_INTERP,
         FUNC_MODIFIES(*indexes)
         FUNC_MODIFIES(*result_list);
 
-static void set_context_sig_returns_varargs(PARROT_INTERP,
-    ARGMOD(PMC *ctx),
-    ARGMOD(opcode_t **indexes),
-    ARGIN(const char *ret_x),
-    va_list returns)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*ctx)
-        FUNC_MODIFIES(*indexes);
-
 static int set_retval_util(PARROT_INTERP,
     ARGIN(const char *sig),
     ARGIN(PMC *ctx),
@@ -303,21 +278,16 @@ static void too_many(PARROT_INTERP,
 #define ASSERT_ARGS_convert_arg_from_str __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(st)
-#define ASSERT_ARGS_count_signature_elements __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(signature) \
-    || PARROT_ASSERT_ARG(args_sig) \
-    || PARROT_ASSERT_ARG(results_sig)
 #define ASSERT_ARGS_dissect_aggregate_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(aggregate)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(aggregate)
 #define ASSERT_ARGS_extract_named_arg_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(raw_sig) \
-    || PARROT_ASSERT_ARG(raw_args)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(name) \
+    && PARROT_ASSERT_ARG(raw_sig) \
+    && PARROT_ASSERT_ARG(raw_args)
 #define ASSERT_ARGS_fetch_arg_op __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(st)
@@ -339,9 +309,9 @@ static void too_many(PARROT_INTERP,
        PARROT_ASSERT_ARG(st)
 #define ASSERT_ARGS_parse_signature_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(signature) \
-    || PARROT_ASSERT_ARG(arg_flags) \
-    || PARROT_ASSERT_ARG(return_flags)
+    && PARROT_ASSERT_ARG(signature) \
+    && PARROT_ASSERT_ARG(arg_flags) \
+    && PARROT_ASSERT_ARG(return_flags)
 #define ASSERT_ARGS_set_context_sig_params __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(signature) \
@@ -355,12 +325,6 @@ static void too_many(PARROT_INTERP,
     && PARROT_ASSERT_ARG(ctx) \
     && PARROT_ASSERT_ARG(indexes) \
     && PARROT_ASSERT_ARG(result_list)
-#define ASSERT_ARGS_set_context_sig_returns_varargs \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    && PARROT_ASSERT_ARG(ctx) \
-    && PARROT_ASSERT_ARG(indexes) \
-    && PARROT_ASSERT_ARG(ret_x)
 #define ASSERT_ARGS_set_retval_util __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(sig) \
@@ -411,7 +375,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     PMC            *call_object;
     INTVAL          arg_index;
     INTVAL          arg_count  = VTABLE_elements(interp, raw_sig);
-    Parrot_Context *ctx        = CONTEXT(interp);
+    PMC            *ctx        = CURRENT_CONTEXT(interp);
     STRING         *string_sig = Parrot_str_new(interp, "", 0);
 
     if (PMC_IS_NULL(signature)) {
@@ -442,7 +406,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "N"));
                 if (constant)
                     VTABLE_push_float(interp, call_object,
-                            ctx->constants[raw_index]->u.number);
+                            Parrot_pcc_get_num_constant(interp, ctx, raw_index));
                 else
                     VTABLE_push_float(interp, call_object, CTX_REG_NUM(ctx, raw_index));
                 break;
@@ -453,7 +417,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 if (constant)
                     /* ensure that callees don't modify constant caller strings */
                     string_value = Parrot_str_new_COW(interp,
-                                            ctx->constants[raw_index]->u.string);
+                                            Parrot_pcc_get_string_constant(interp, ctx, raw_index));
                 else
                     string_value = CTX_REG_STR(ctx, raw_index);
 
@@ -472,7 +436,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 PMC *pmc_value;
                 string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
                 if (constant)
-                    pmc_value = ctx->constants[raw_index]->u.key;
+                    pmc_value = Parrot_pcc_get_pmc_constant(interp, ctx, raw_index);
                 else
                     pmc_value = CTX_REG_PMC(ctx, raw_index);
 
@@ -513,7 +477,7 @@ extract_named_arg_from_op(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(STRING 
         INTVAL arg_index)
 {
     ASSERT_ARGS(extract_named_arg_from_op)
-    Parrot_Context *ctx = CONTEXT(interp);
+    PMC   *ctx = CURRENT_CONTEXT(interp);
     INTVAL arg_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, arg_index);
 
@@ -534,7 +498,7 @@ extract_named_arg_from_op(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(STRING 
             string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "N"));
             if (constant)
                 VTABLE_set_number_keyed_str(interp, call_object, name,
-                        ctx->constants[raw_index]->u.number);
+                        Parrot_pcc_get_num_constant(interp, ctx, raw_index));
             else
                 VTABLE_set_number_keyed_str(interp, call_object, name,
                         CTX_REG_NUM(ctx, raw_index));
@@ -545,7 +509,7 @@ extract_named_arg_from_op(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(STRING 
                 /* ensure that callees don't modify constant caller strings */
                 VTABLE_set_string_keyed_str(interp, call_object, name,
                         Parrot_str_new_COW(interp,
-                                        ctx->constants[raw_index]->u.string));
+                                Parrot_pcc_get_string_constant(interp, ctx, raw_index)));
             else
                 VTABLE_set_string_keyed_str(interp, call_object, name,
                         CTX_REG_STR(ctx, raw_index));
@@ -554,7 +518,7 @@ extract_named_arg_from_op(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(STRING 
             string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
             if (constant)
                 VTABLE_set_pmc_keyed_str(interp, call_object, name,
-                        ctx->constants[raw_index]->u.key);
+                        Parrot_pcc_get_pmc_constant(interp, ctx, raw_index));
             else
                 VTABLE_set_pmc_keyed_str(interp, call_object, name,
                         CTX_REG_PMC(ctx, raw_index));
@@ -643,7 +607,7 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     STRING         *string_sig;
     INTVAL          arg_index;
     INTVAL          arg_count = VTABLE_elements(interp, raw_sig);
-    Parrot_Context *ctx       = CONTEXT(interp);
+    PMC            *ctx       = CURRENT_CONTEXT(interp);
     PMC            *returns   = pmc_new(interp, enum_class_ResizablePMCArray);
 
     if (PMC_IS_NULL(signature)) {
@@ -816,6 +780,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                         i++; /* skip 'i' */
                     }
                     break;
+                }
                 case '-':
                     i++; /* skip '>' */
                     in_return_sig = 1;
@@ -862,7 +827,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_params))
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_op)
-    Parrot_Context *ctx = CONTEXT(interp);
+    PMC    *ctx = CURRENT_CONTEXT(interp);
     INTVAL  positional_elements = VTABLE_elements(interp, call_object);
     INTVAL  param_count    = VTABLE_elements(interp, raw_sig);
     STRING *param_name     = NULL;
@@ -933,7 +898,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
             /* Just store the name for now (this parameter is only the
              * name). The next parameter is the actual value. */
             param_name = PARROT_ARG_CONSTANT_ISSET(param_flags)
-                               ? ctx->constants[raw_index]->u.string
+                               ? Parrot_pcc_get_string_constant(interp, ctx, raw_index)
                                : CTX_REG_STR(ctx, raw_index);
 
             continue;
@@ -1341,7 +1306,7 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
 {
     ASSERT_ARGS(Parrot_pcc_fill_returns_from_op)
     INTVAL return_list_elements;
-    Parrot_Context *ctx = CONTEXT(interp);
+    PMC        *ctx = CURRENT_CONTEXT(interp);
     PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     PMC * const caller_return_flags = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
     INTVAL raw_return_count     = VTABLE_elements(interp, raw_sig);
@@ -1408,7 +1373,7 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                 }
                 if (constant)
                     VTABLE_set_number_native(interp, result_item,
-                            ctx->constants[raw_index]->u.number);
+                            Parrot_pcc_get_num_constant(interp, ctx, raw_index));
                 else
                     VTABLE_set_number_native(interp, result_item, CTX_REG_NUM(ctx, raw_index));
                 return_list_index++;
@@ -1419,15 +1384,17 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD(PMC *call_object),
                             pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String)));
                 }
                 if (constant)
-                    VTABLE_set_string_native(interp, result_item, Parrot_str_new_COW(interp,
-                                        ctx->constants[raw_index]->u.string));
+                    VTABLE_set_string_native(interp, result_item,
+                            Parrot_str_new_COW(interp,
+                                    Parrot_pcc_get_string_constant(interp, ctx, raw_index)));
                 else
                     VTABLE_set_string_native(interp, result_item, CTX_REG_STR(ctx, raw_index));
                 return_list_index++;
                 break;
             case PARROT_ARG_PMC:
                 if (constant)
-                    VTABLE_set_pmc(interp, result_item, ctx->constants[raw_index]->u.key);
+                    VTABLE_set_pmc(interp, result_item,
+                            Parrot_pcc_get_pmc_constant(interp, ctx, raw_index));
                 else
                     VTABLE_set_pmc(interp, result_item, CTX_REG_PMC(ctx, raw_index));
                 return_list_index++;
@@ -3849,13 +3816,13 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
 
     opcode_t *dest;
     INTVAL n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    Parrot_Context *ctx  = Parrot_push_context(interp, n_regs_used);
+    PMC        *ctx      = Parrot_push_context(interp, n_regs_used);
     PMC * const ret_cont = new_ret_continuation_pmc(interp, NULL);
 
-    ctx->current_sig             = call_object;
-    ctx->current_cont            = ret_cont;
+    Parrot_pcc_set_current_sig(interp, ctx, call_object);
+    Parrot_pcc_set_continuation(interp, ctx, ret_cont);
     interp->current_cont         = NEED_CONTINUATION;
-    PMC_cont(ret_cont)->from_ctx = Parrot_context_ref(interp, ctx);
+    PMC_cont(ret_cont)->from_ctx = ctx;
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
@@ -3874,7 +3841,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         interp->run_core = old_core;
     }
     gc_unregister_pmc(interp, call_object);
-    ctx->current_sig = NULL;
+    Parrot_pcc_set_current_sig(interp, ctx, NULL);
     Parrot_pop_context(interp);
 }
 

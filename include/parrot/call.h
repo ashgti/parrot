@@ -250,7 +250,7 @@ PMC* Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP,
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
+PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP,
     ARGIN_NULLOK(PMC *signature),
     ARGIN(PMC *raw_sig),
@@ -427,49 +427,49 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
     && PARROT_ASSERT_ARG(sig)
 #define ASSERT_ARGS_parrot_pass_args __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src_ctx) \
-    || PARROT_ASSERT_ARG(dest_ctx)
+    && PARROT_ASSERT_ARG(src_ctx) \
+    && PARROT_ASSERT_ARG(dest_ctx)
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(raw_sig) \
-    || PARROT_ASSERT_ARG(raw_args)
+    && PARROT_ASSERT_ARG(raw_sig) \
+    && PARROT_ASSERT_ARG(raw_args)
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_varargs \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sig)
+    && PARROT_ASSERT_ARG(sig)
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_returns_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(raw_sig) \
-    || PARROT_ASSERT_ARG(raw_args)
+    && PARROT_ASSERT_ARG(raw_sig) \
+    && PARROT_ASSERT_ARG(raw_args)
 #define ASSERT_ARGS_Parrot_pcc_fill_params_from_c_args \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(signature)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(signature)
 #define ASSERT_ARGS_Parrot_pcc_fill_params_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(raw_sig) \
-    || PARROT_ASSERT_ARG(raw_params)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(raw_sig) \
+    && PARROT_ASSERT_ARG(raw_params)
 #define ASSERT_ARGS_Parrot_pcc_fill_returns_from_c_args \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(signature)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(signature)
 #define ASSERT_ARGS_Parrot_pcc_fill_returns_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(call_object) \
-    || PARROT_ASSERT_ARG(raw_sig) \
-    || PARROT_ASSERT_ARG(raw_returns)
+    && PARROT_ASSERT_ARG(call_object) \
+    && PARROT_ASSERT_ARG(raw_sig) \
+    && PARROT_ASSERT_ARG(raw_returns)
 #define ASSERT_ARGS_Parrot_pcc_invoke_from_sig_object \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_obj) \
-    || PARROT_ASSERT_ARG(call_object)
+    && PARROT_ASSERT_ARG(sub_obj) \
+    && PARROT_ASSERT_ARG(call_object)
 #define ASSERT_ARGS_Parrot_pcc_invoke_method_from_c_args \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
@@ -926,6 +926,12 @@ PMC* Parrot_pcc_get_caller_ctx(PARROT_INTERP, ARGIN(PMC *ctx))
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
+PMC* Parrot_pcc_get_caller_sig(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
 Parrot_Context* Parrot_pcc_get_context_struct(PARROT_INTERP,
     ARGIN_NULLOK(PMC *ctx))
         __attribute__nonnull__(1);
@@ -933,6 +939,12 @@ Parrot_Context* Parrot_pcc_get_context_struct(PARROT_INTERP,
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_continuation(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC* Parrot_pcc_get_current_sig(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -1096,6 +1108,13 @@ void Parrot_pcc_set_caller_ctx(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
+void Parrot_pcc_set_caller_sig(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN_NULLOK(PMC *sig))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void Parrot_pcc_set_constants(PARROT_INTERP,
     ARGIN(PMC *ctx),
@@ -1107,6 +1126,13 @@ PARROT_EXPORT
 void Parrot_pcc_set_continuation(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN_NULLOK(PMC *_continuation))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+void Parrot_pcc_set_current_sig(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN_NULLOK(PMC *sig))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -1314,9 +1340,15 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_get_caller_ctx __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_caller_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    && PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_get_context_struct __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp)
 #define ASSERT_ARGS_Parrot_pcc_get_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    && PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_get_current_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_get_FLOATVAL_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -1399,10 +1431,16 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(ctx) \
     && PARROT_ASSERT_ARG(caller_ctx)
+#define ASSERT_ARGS_Parrot_pcc_set_caller_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    && PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_set_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_set_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+       PARROT_ASSERT_ARG(interp) \
+    && PARROT_ASSERT_ARG(ctx)
+#define ASSERT_ARGS_Parrot_pcc_set_current_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
     && PARROT_ASSERT_ARG(ctx)
 #define ASSERT_ARGS_Parrot_pcc_set_handers __attribute__unused__ int _ASSERT_ARGS_CHECK = \

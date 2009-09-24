@@ -783,8 +783,7 @@ Parrot_pcc_get_results_signature(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
-=item C<void Parrot_pcc_set_caller_sig(PARROT_INTERP, PMC *ctx, PMC
-*sig)>
+=item C<void Parrot_pcc_set_caller_sig(PARROT_INTERP, PMC *ctx, PMC *sig)>
 
 TODO
 
@@ -823,8 +822,7 @@ Parrot_pcc_get_caller_sig(PARROT_INTERP, ARGIN(PMC *ctx))
 
 /*
 
-=item C<void Parrot_pcc_set_current_sig(PARROT_INTERP, PMC *ctx, PMC
-*sig)>
+=item C<void Parrot_pcc_set_current_sig(PARROT_INTERP, PMC *ctx, PMC *sig)>
 
 TODO
 

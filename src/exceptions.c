@@ -38,9 +38,7 @@ static PMC * build_exception_from_args(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_CAN_RETURN_NULL
-static void pass_exception_args(PARROT_INTERP,
-    ARGIN(const char *sig),
-    ...)
+static void pass_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -49,7 +47,7 @@ static void pass_exception_args(PARROT_INTERP,
     && PARROT_ASSERT_ARG(format)
 #define ASSERT_ARGS_pass_exception_args __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sig)
+    && PARROT_ASSERT_ARG(sig)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -248,7 +246,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
 
 /*
 
-=item C<static opcode_t * pass_exception_args(PARROT_INTERP, const char *sig, ...)>
+=item C<static void pass_exception_args(PARROT_INTERP, const char *sig, ...)>
 
 Passes arguments to the exception handler routine. These are retrieved with
 the .get_results() directive in PIR code.
