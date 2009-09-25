@@ -400,14 +400,14 @@ sub rewrite_pccmethod {
     rewrite_pccinvoke( $self, $pmc );
 
     $e->emit( <<"END", __FILE__, __LINE__ + 1 );
-    PMC *_caller_ct, *_ctx, *_ccont, *_call_object;
+    PMC *_caller_ctx, *_ctx, *_ccont, *_call_object;
 
-    _ctx = PARROT_CONTEXT(interp);
+    _ctx = CURRENT_CONTEXT(interp);
     _ccont = Parrot_pcc_get_continuation(interp, _ctx);
 
-    _caller_ctx = _ctx->caller_ctx;
-    _call_object = _ctx->current_sig;
-    _ctx->current_sig = NULL;
+    _caller_ctx = Parrot_pcc_get_caller_ctx(interp, _ctx);
+    _call_object = Parrot_pcc_get_current_sig(interp, _ctx);
+    Parrot_pcc_set_current_sig(interp, _ctx, NULL);
 
     { /* BEGIN PARMS SCOPE */
 END
