@@ -852,10 +852,12 @@ void Parrot_pcc_set_call_sig_raw_returns(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/call/callsignature.c */
 
-#define ASSERT_SIG_PMC(sig) \
+#define ASSERT_SIG_PMC(sig) do {\
+    PARROT_ASSERT(!PMC_IS_NULL(sig)); \
     PARROT_ASSERT(PObj_is_PMC_TEST(sig)); \
     PARROT_ASSERT((sig)->vtable->base_type == enum_class_FixedIntegerArray); \
 } while (0)
+
 
 /* XXX Remove interp from this */
 #define ADD_OP_VAR_PART(interp, seg, pc, n) do { \
