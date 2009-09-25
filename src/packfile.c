@@ -679,7 +679,7 @@ run_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
             interp->code->const_table->constants);
 
     Parrot_pcc_invoke_sub_from_c_args(interp, sub_pmc, "->P", &retval);
-    interp->run_core = old;
+    interp->run_core = old_core;
 
     return retval;
 }

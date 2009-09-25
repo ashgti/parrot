@@ -299,7 +299,9 @@ Parrot_run_callback(PARROT_INTERP,
     PMC     *sub;
     STRING  *sig_str;
     char    *p;
-    char     pasm_sig[5];
+    char     ch;
+    char    *sig_cstr;
+    char     pasm_sig[4];
     INTVAL   i_param;
     PMC     *p_param;
     void    *param = NULL;      /* avoid -Ox warning */
