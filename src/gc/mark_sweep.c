@@ -460,47 +460,6 @@ Parrot_gc_clear_live_bits(PARROT_INTERP, ARGIN(const Fixed_Size_Pool *pool))
 
 /*
 
-=item C<int Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)>
-
-Returns 0 if this is a lazy GC run and we've found all impatient PMCs.
-Returns 1 if we've traced the entire list.
-
-=cut
-
-*/
-
-int
-Parrot_gc_trace_children(PARROT_INTERP, size_t how_many)
-{
-    ASSERT_ARGS(Parrot_gc_trace_children)
-    Memory_Pools * const mem_pools = interp->mem_pools;
-    const int      lazy_gc    = mem_pools->lazy_gc;
-    PMC           *current    = mem_pools->gc_mark_start;
-
-    /*
-     * First phase of mark is finished. Now if we are the owner
-     * of a shared pool, we must run the mark phase of other
-     * interpreters in our pool, so that live shared PMCs in that
-     * interpreter are appended to our mark_ptrs chain.
-     *
-     * If there is a count of shared PMCs and we have already seen
-     * all these, we could skip that.
-     */
-    pt_gc_mark_root_finished(interp);
-
-    if (lazy_gc && mem_pools->num_early_PMCs_seen >=
-            mem_pools->num_early_gc_PMCs) {
-        return 0;
-    }
-
-    mem_pools->gc_mark_start = current;
-    mem_pools->gc_trace_ptr  = NULL;
-
-    return 1;
-}
-
-/*
-
 =item C<void Parrot_add_to_free_list(PARROT_INTERP, Fixed_Size_Pool *pool,
 Fixed_Size_Arena *arena)>
 
