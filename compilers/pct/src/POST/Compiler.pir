@@ -136,6 +136,7 @@ Return pir for an operation node.
     if pirop == 'callmethod' goto pirop_callmethod
     if pirop == 'return' goto pirop_return
     if pirop == 'tailcall' goto pirop_tailcall
+    if pirop == 'yield' goto pirop_yield
     if pirop == 'inline' goto pirop_inline
 
   pirop_opcode:
@@ -161,6 +162,10 @@ Return pir for an operation node.
   pirop_tailcall:
     name = shift arglist
     fmt = '    .tailcall %n(%,)'
+    goto pirop_emit
+
+  pirop_yield:
+    fmt = '    .yield (%,)'
     goto pirop_emit
 
   pirop_inline:

@@ -26,6 +26,7 @@ for compiling programs in Parrot.
     p6meta.'new_class'('PAST::Block', 'parent'=>base)
     p6meta.'new_class'('PAST::Control', 'parent'=>base)
     p6meta.'new_class'('PAST::VarList', 'parent'=>base)
+    p6meta.'new_class'('PAST::Regex', 'parent'=>base)
 
     .return ()
 .end
@@ -737,6 +738,15 @@ Get/set any pirflags for this block.
     .param pmc value           :optional
     .param int has_value       :opt_flag
     .tailcall self.'attr'('bindvalue', value, has_value)
+.end
+
+
+.namespace ['PAST';'Regex']
+
+.sub 'pasttype' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('pasttype', value, has_value)
 .end
 
 

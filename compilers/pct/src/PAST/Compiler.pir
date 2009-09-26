@@ -179,6 +179,24 @@ Compile the abstract syntax tree given by C<past> into POST.
     .tailcall self.'as_post'(past, 'rtype'=>'v')
 .end
 
+=item post_new(type, args :slurpy, options :slurpy :named)
+
+Helper function to quickly create POST nodes; looks up
+the POST protoobject corresponding to C<type>, then invokes
+the ".new" method on that protoobject passing C<args> and
+C<options>.
+
+=cut
+
+.sub 'post_new' :method
+    .param string type
+    .param pmc args            :slurpy
+    .param pmc options         :slurpy :named
+
+    $P0 = get_hll_global ['POST'], type
+    .tailcall $P0.'new'(args :flat, options :flat :named)
+.end
+
 =item escape(str)
 
 Return C<str> as a PIR constant string.

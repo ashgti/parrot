@@ -19,6 +19,7 @@ PCT_TARGETS := \
   $(PARROT_LIBRARY)/PCT/PAST.pbc \
   $(PARROT_LIBRARY)/PCT/Grammar.pbc \
   $(PARROT_LIBRARY)/PCT/HLLCompiler.pbc \
+  $(PARROT_LIBRARY)/PCT/Regex.pbc \
   $(PARROT_LIBRARY)/PCT/Dumper.pbc
 
 PCT_SOURCES := \
@@ -28,9 +29,11 @@ PCT_SOURCES := \
   src/PCT/HLLCompiler.pir \
   src/PCT/Node.pir \
   src/PAST/Compiler.pir \
+  src/PAST/Compiler-Regex.pir \
   src/PAST/Node.pir \
   src/POST/Compiler.pir \
-  src/POST/Node.pir
+  src/POST/Node.pir \
+  src/Regex/Cursor.pir
 
 # the default target
 all: $(PARROT_LIBRARY)/PCT.pbc
@@ -41,6 +44,7 @@ $(PARROT_LIBRARY)/PCT.pbc: $(PARROT) $(PCT_SOURCES)
 	$(PARROT) -o $(PARROT_LIBRARY)/PCT/Grammar.pbc --output-pbc src/PCT/Grammar.pir
 	$(PARROT) -o $(PARROT_LIBRARY)/PCT/HLLCompiler.pbc --output-pbc src/PCT/HLLCompiler.pir
 	$(PARROT) -o $(PARROT_LIBRARY)/PCT/Dumper.pbc --output-pbc src/PCT/Dumper.pir
+	$(PARROT) -o $(PARROT_LIBRARY)/PCT/Regex.pbc --output-pbc src/Regex.pir
 
 # This is a listing of all targets, that are meant to be called by users
 help:

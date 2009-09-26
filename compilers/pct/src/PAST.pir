@@ -17,6 +17,8 @@ to build the PAST.pbc module.
 
 .include 'src/PAST/Compiler.pir'
 
+.include 'src/PAST/Compiler-Regex.pir'
+
 .include 'src/POST/Node.pir'
 
 .include 'src/POST/Compiler.pir'
