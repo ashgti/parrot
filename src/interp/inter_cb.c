@@ -41,9 +41,10 @@ static void callback_CD(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*user_data);
 
-static void verify_CD(ARGIN(char *external_data), ARGMOD(PMC *user_data))
+static void verify_CD(
+    ARGIN(char *external_data),
+    ARGMOD_NULLOK(PMC *user_data))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
         FUNC_MODIFIES(*user_data);
 
 #define ASSERT_ARGS_callback_CD __attribute__unused__ int _ASSERT_ARGS_CHECK = \
@@ -51,8 +52,7 @@ static void verify_CD(ARGIN(char *external_data), ARGMOD(PMC *user_data))
     && PARROT_ASSERT_ARG(external_data) \
     && PARROT_ASSERT_ARG(user_data)
 #define ASSERT_ARGS_verify_CD __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(external_data) \
-    && PARROT_ASSERT_ARG(user_data)
+       PARROT_ASSERT_ARG(external_data)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -76,8 +76,7 @@ Parrot_make_cb(PARROT_INTERP, ARGMOD(PMC* sub), ARGIN(PMC* user_data),
 {
     ASSERT_ARGS(Parrot_make_cb)
     PMC *cb, *cb_sig;
-    int type;
-    char * sig_str;
+    int type = 0;
     STRING *sc;
     char * const signature = Parrot_str_to_cstring(interp, cb_signature);
     /*
@@ -93,32 +92,23 @@ Parrot_make_cb(PARROT_INTERP, ARGMOD(PMC* sub), ARGIN(PMC* user_data),
     sc = CONST_STRING(interp, "_sub");
     VTABLE_setprop(interp, user_data, sc, sub);
     /* only ASCII signatures are supported */
-    sig_str = signature;
+    if (strlen(signature) == 3) {
+        /* Callback return type ignored */
 
-    if (strlen(sig_str) != 3) {
-        mem_sys_free(signature);
-        Parrot_ex_throw_from_c_args(interp, NULL, 1,
-            "unhandled signature '%Ss' in make_cb", cb_signature);
-    }
-
-    ++sig_str;     /* Skip callback return type */
-
-    if (*sig_str == 'U') {
-        type = 'D';
-    }
-    else {
-        ++sig_str;
-        if (*sig_str == 'U') {
-            type = 'C';
+        if (signature[1] == 'U') {
+            type = 'D';
         }
         else {
-            mem_sys_free(signature);
-            Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                "unhandled signature '%Ss' in make_cb", cb_signature);
+            if (signature[2] == 'U') {
+                type = 'C';
+            }
         }
     }
+    Parrot_str_free_cstring(signature);
+    if (type != 'C' && type != 'D')
+        Parrot_ex_throw_from_c_args(interp, NULL, 1,
+            "unhandled signature '%Ss' in make_cb", cb_signature);
 
-    mem_sys_free(signature);
     cb_sig = pmc_new(interp, enum_class_String);
     VTABLE_set_string_native(interp, cb_sig, cb_signature);
     sc = CONST_STRING(interp, "_signature");
@@ -164,7 +154,7 @@ Verify user_data PMC then continue with callback_CD
 */
 
 static void
-verify_CD(ARGIN(char *external_data), ARGMOD(PMC *user_data))
+verify_CD(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
 {
     ASSERT_ARGS(verify_CD)
     PARROT_INTERP = NULL;
@@ -177,7 +167,11 @@ verify_CD(ARGIN(char *external_data), ARGMOD(PMC *user_data))
      */
 
     /* a NULL pointer or a pointer not aligned is very likely wrong */
-    if (!user_data || ((UINTVAL)user_data & 3))
+    if (!user_data)
+        PANIC(interp, "user_data is NULL");
+    if (PMC_IS_NULL(user_data))
+        PANIC(interp, "user_data is PMCNULL");
+    if ((UINTVAL)user_data & 3)
         PANIC(interp, "user_data doesn't look like a pointer");
 
     /*
@@ -187,12 +181,11 @@ verify_CD(ARGIN(char *external_data), ARGMOD(PMC *user_data))
      */
     LOCK(interpreter_array_mutex);
     for (i = 0; i < n_interpreters; ++i) {
-        if (interpreter_array[i] == NULL)
-            continue;
-        interp = interpreter_array[i];
-        if (interp)
-            if (Parrot_gc_ptr_is_pmc(interp, user_data))
-                break;
+        Parrot_Interp checkinterp = interpreter_array [i];
+        if (checkinterp && Parrot_gc_ptr_is_pmc(checkinterp, user_data)) {
+            interp = checkinterp;
+            break;
+        }
     }
     UNLOCK(interpreter_array_mutex);
     if (!interp)
@@ -394,7 +387,7 @@ NCI callback functions. See pdd16.
 
 PARROT_EXPORT
 void
-Parrot_callback_C(ARGIN(char *external_data), ARGMOD(PMC *user_data))
+Parrot_callback_C(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
 {
     ASSERT_ARGS(Parrot_callback_C)
     verify_CD(external_data, user_data);
@@ -402,7 +395,7 @@ Parrot_callback_C(ARGIN(char *external_data), ARGMOD(PMC *user_data))
 
 PARROT_EXPORT
 void
-Parrot_callback_D(ARGMOD(PMC *user_data), ARGIN(char *external_data))
+Parrot_callback_D(ARGMOD(PMC *user_data), ARGMOD_NULLOK(char *external_data))
 {
     ASSERT_ARGS(Parrot_callback_D)
     verify_CD(external_data, user_data);
