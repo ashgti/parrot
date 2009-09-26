@@ -101,9 +101,6 @@ implementation, and malloc wrappers for various purposes. These are unused.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void cleanup_next_for_GC_pool(ARGIN(Fixed_Size_Pool *pool))
-        __attribute__nonnull__(1);
-
 static void fix_pmc_syncs(
     ARGMOD(Interp *dest_interp),
     ARGIN(Fixed_Size_Pool *pool))
@@ -147,8 +144,6 @@ static int sweep_cb_pmc(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-#define ASSERT_ARGS_cleanup_next_for_GC_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(pool)
 #define ASSERT_ARGS_fix_pmc_syncs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
        PARROT_ASSERT_ARG(dest_interp) \
     && PARROT_ASSERT_ARG(pool)
