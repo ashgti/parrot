@@ -1318,54 +1318,6 @@ Parrot_gc_get_pmc_index(PARROT_INTERP, ARGIN(PMC* pmc))
 
 /*
 
-=item C<void Parrot_gc_cleanup_next_for_GC(PARROT_INTERP)>
-
-Cleans up the C<next_for_GC> pointers. Sets all of them in the PMC and Constant
-PMC pools to NULL.
-
-=cut
-
-*/
-
-void
-Parrot_gc_cleanup_next_for_GC(PARROT_INTERP)
-{
-    ASSERT_ARGS(Parrot_gc_cleanup_next_for_GC)
-    cleanup_next_for_GC_pool(interp->mem_pools->pmc_pool);
-    cleanup_next_for_GC_pool(interp->mem_pools->constant_pmc_pool);
-}
-
-/*
-
-=item C<static void cleanup_next_for_GC_pool(Fixed_Size_Pool *pool)>
-
-Sets all the C<next_for_GC> pointers to C<NULL>.
-
-=cut
-
-*/
-
-static void
-cleanup_next_for_GC_pool(ARGIN(Fixed_Size_Pool *pool))
-{
-    ASSERT_ARGS(cleanup_next_for_GC_pool)
-    Fixed_Size_Arena *arena;
-
-    for (arena = pool->last_Arena; arena; arena = arena->prev) {
-        PMC *p = (PMC *)arena->start_objects;
-        UINTVAL i;
-
-        for (i = 0; i < arena->used; i++) {
-            if (!PObj_on_free_list_TEST(p)) {
-                PMC_next_for_GC(p) = PMCNULL;
-            }
-            p++;
-        }
-    }
-}
-
-/*
-
 =item C<int Parrot_gc_active_sized_buffers(PARROT_INTERP)>
 
 Returns the number of actively used sized buffers.
