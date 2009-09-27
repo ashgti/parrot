@@ -309,7 +309,7 @@ sub make_arg {
     /b/ && do {
         push @{$temps_ref},          "STRING *t_$temp_num;";
         push @{$fill_params_ref},    "&t_$temp_num";
-        return "PObj_bufstart(t_$temp_num)";
+        return "Buffer_bufstart(t_$temp_num)";
     };
     /B/ && do {
         push @{$temps_ref},           "char *s_$temp_num;";
