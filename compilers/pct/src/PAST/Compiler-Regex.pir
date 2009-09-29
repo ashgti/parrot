@@ -311,7 +311,7 @@ second child of this node.
     (cur, pos, rep, fail) = self.'!rxregs'('cur pos rep fail')
 
     .local string qname
-    .local pmc ops, q1label, q2label, q2reg, cpost
+    .local pmc ops, q1label, q2label, btreg, cpost
     $S0 = concat 'quant', backtrack
     qname = self.'unique'($S0)
     ops = self.'post_new'('Ops', 'node'=>node)
@@ -319,7 +319,6 @@ second child of this node.
     q1label = self.'post_new'('Label', 'result'=>$S0)
     $S0 = concat qname, '_done'
     q2label = self.'post_new'('Label', 'result'=>$S0)
-    q2reg = self.'uniquereg'('I')
     cpost = self.'concat'(node)
 
     $S0 = max
@@ -332,10 +331,12 @@ second child of this node.
     $S0 = '*'
   have_s0:
     ops.'push_pirop'('inline', qname, min, $S0, 'inline'=>'  # rx %0 ** %1..%2')
-    ops.'push_pirop'('set_addr', q2reg, q2label)
 
+  if backtrack == 'f' goto frugal
 
   greedy:
+    btreg = self.'uniquereg'('I')
+    ops.'push_pirop'('set_addr', btreg, q2label)
     .local int needmark
     .local string peekcut
     needmark = needrep
@@ -346,15 +347,15 @@ second child of this node.
   greedy_1:
     if min == 0 goto greedy_2
     unless needmark goto greedy_loop
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, -1, q2reg)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, -1, btreg)
     goto greedy_loop
   greedy_2:
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, q2reg)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, btreg)
   greedy_loop:
     ops.'push'(q1label)
     ops.'push'(cpost)
     unless needmark goto greedy_3
-    ops.'push_pirop'('callmethod', peekcut, cur, q2reg, 'result'=>rep)
+    ops.'push_pirop'('callmethod', peekcut, cur, btreg, 'result'=>rep)
     unless needrep goto greedy_3
     ops.'push_pirop'('inc', rep)
   greedy_3:
@@ -362,13 +363,46 @@ second child of this node.
     ops.'push_pirop'('ge', rep, max, q2label)
   greedy_4:
     unless max != 1 goto greedy_5
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, rep, pos, q2reg)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, rep, pos, btreg)
     ops.'push_pirop'('goto', q1label)
   greedy_5:
     ops.'push'(q2label)
     unless min > 1 goto greedy_6
     ops.'push_pirop'('lt', rep, min, fail)
   greedy_6:
+    .return (ops)
+
+  frugal:
+    .local pmc ireg
+    ireg = self.'uniquereg'('I')
+    if min == 0 goto frugal_1
+    unless needrep goto frugal_2
+    ops.'push_pirop'('set', rep, 0)
+    goto frugal_2
+  frugal_1:
+    ops.'push_pirop'('set_addr', '$I10', q1label)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, '$I10')
+    ops.'push_pirop'('goto', q2label)
+  frugal_2:
+    ops.'push'(q1label)
+    unless needrep goto frugal_3
+    ops.'push_pirop'('set', ireg, rep)
+  frugal_3:
+    ops.'push'(cpost)
+    unless needrep goto frugal_4
+    ops.'push_pirop'('add', rep, ireg, 1)
+  frugal_4:
+    unless min > 1 goto frugal_5
+    ops.'push_pirop'('lt', rep, min, q1label)
+  frugal_5:
+    unless max > 1 goto frugal_6
+    ops.'push_pirop'('ge', rep, max, q2label)
+  frugal_6:
+    unless max != 1 goto frugal_7
+    ops.'push_pirop'('set_addr', '$I10', q1label)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, ireg, pos, '$I10')
+  frugal_7:
+    ops.'push'(q2label)
     .return (ops)
 .end
 
