@@ -37,7 +37,7 @@ Return the POST representation of the regex AST rooted by C<node>.
     .local string prefix, rname, rtype
     prefix = self.'unique'('rx')
     concat prefix, '_'
-    $P0 = split ' ', 'tgt string pos int off int len int rep int cur pmc'
+    $P0 = split ' ', 'tgt string pos int off int len int rep int cur pmc act pmc'
     $P1 = iter $P0
   iter_loop:
     unless $P1 goto iter_done
@@ -61,14 +61,57 @@ Return the POST representation of the regex AST rooted by C<node>.
     $P0 = self.'post_regex'(node)
     ops.'push'($P0)
     ops.'push'(faillabel)
-    $S0 = concat '(', rep
-    concat $S0, ','
-    concat $S0, pos
-    concat $S0, ',$I10)'
-    ops.'push_pirop'('callmethod', "'!mark_cut'", cur, 'result'=>$S0)
+    self.'!cursorop'(ops, '!mark_cut', 3, rep, pos, '$I10')
     ops.'push_pirop'('jump', '$I10')
     .return (ops)
 .end
+
+=item !cursorop(ops, func, retelems, arg :slurpy)
+
+Helper function to push POST nodes onto C<ops> that perform C<func>
+on the regex's current cursor.  By default this ends up being a method
+call on the cursor, but some values of C<func> can result in inlined
+code to perform the equivalent operation without using the method call.
+
+The C<retelems> argument is the number of elements in C<arg> that
+represent return values from the function; any remaining elements in arg
+are passed to the function as input arguments.
+
+=cut
+
+.sub '!cursorop' :method
+    .param pmc ops
+    .param string func
+    .param int retelems
+    .param pmc args            :slurpy
+
+    if retelems < 1 goto result_done
+    .local pmc retargs
+    retargs = new ['ResizableStringArray']
+    $I0 = retelems
+  retargs_loop:
+    unless $I0 > 0 goto retargs_done
+    $S0 = shift args
+    push retargs, $S0
+    dec $I0
+    goto retargs_loop
+  retargs_done:
+    .local string result
+    result = join ', ', retargs
+    result = concat '(', result
+    concat result, ')'
+  result_done:
+
+    .local pmc cur
+    cur = self.'!rxregs'('cur')
+    $S0 = self.'escape'(func)
+    $P0 = ops.'push_pirop'('callmethod', $S0, cur, args :flat)
+    if retelems < 1 goto done
+    $P0.'result'(result)
+  done:
+    .return (ops)
+.end
+    
 
 =item !rxregs(keystr)
 
@@ -178,7 +221,7 @@ given, then "concat" is assumed.
     $S0 = concat name, $S0
     alabel = self.'post_new'('Label', 'result'=>$S0)
     ops.'push_pirop'('set_addr', '$I10', alabel)
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, '$I10')
+    self.'!cursorop'(ops, '!mark_push', 0, 0, pos, '$I10')
     ops.'push'(apost)
     ops.'push_pirop'('goto', endlabel)
     goto iter_loop
@@ -277,10 +320,41 @@ second child of this node.
 .sub 'pass' :method :multi(_,['PAST';'Regex'])
     .param pmc node
 
-    .local pmc cur, ops
-    cur = self.'!rxregs'('cur')
-    ops = self.'post_new'('Ops', 'result'=>cur)
-    ops.'push_pirop'('yield', cur)
+    .local pmc ops
+    ops = self.'reduce'(node)
+    ops.'push_pirop'('inline', 'inline'=>'  # rx pass')
+    $S0 = ops.'result'()
+    ops.'push_pirop'('yield', $S0)
+    .return (ops)
+.end
+
+
+=item reduce
+
+=cut
+
+.sub 'reduce' :method :multi(_,['PAST';'Regex'])
+    .param pmc node
+
+    .local pmc cur, act
+    (cur, act) = self.'!rxregs'('cur act')
+
+    .local pmc ops, name, redlabel
+    ops = self.'post_new'('Ops', 'node'=>node, 'result'=>cur)
+    $P0 = node.'name'()
+    unless $P0 goto done
+    name = self.'as_post'($P0, 'rtype'=>'~')
+    redlabel = self.'post_new'('Label', 'name'=>'rxreduce_')
+
+    ops.'push_pirop'('inline', name, 'inline'=>'  # rx reduce %0')
+    ops.'push'(name)
+    ops.'push_pirop'('if_null', act, redlabel)
+    ops.'push_pirop'('find_method', '$P10', act, name)
+    ops.'push_pirop'('if_null', '$P10', redlabel)
+    self.'!cursorop'(ops, '!MATCH', 1, '$P11')
+    ops.'push_pirop'('callmethod', '$P10', act, '$P11')
+    ops.'push'(redlabel)
+  done:
     .return (ops)
 .end
 
@@ -312,7 +386,7 @@ second child of this node.
 
     .local string qname
     .local pmc ops, q1label, q2label, btreg, cpost
-    $S0 = concat 'quant', backtrack
+    $S0 = concat 'rxquant', backtrack
     qname = self.'unique'($S0)
     ops = self.'post_new'('Ops', 'node'=>node)
     $S0 = concat qname, '_loop'
@@ -340,22 +414,22 @@ second child of this node.
     .local int needmark
     .local string peekcut
     needmark = needrep
-    peekcut = '"!mark_peek"'
+    peekcut = '!mark_peek'
     if backtrack != 'r' goto greedy_1
     needmark = 1
-    peekcut = '"!mark_cut"'
+    peekcut = '!mark_cut'
   greedy_1:
     if min == 0 goto greedy_2
     unless needmark goto greedy_loop
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, -1, btreg)
+    self.'!cursorop'(ops, '!mark_push', 0, 0, -1, btreg)
     goto greedy_loop
   greedy_2:
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, btreg)
+    self.'!cursorop'(ops, '!mark_push', 0, 0, pos, btreg)
   greedy_loop:
     ops.'push'(q1label)
     ops.'push'(cpost)
     unless needmark goto greedy_3
-    ops.'push_pirop'('callmethod', peekcut, cur, btreg, 'result'=>rep)
+    self.'!cursorop'(ops, peekcut, 1, rep, btreg)
     unless needrep goto greedy_3
     ops.'push_pirop'('inc', rep)
   greedy_3:
@@ -363,7 +437,7 @@ second child of this node.
     ops.'push_pirop'('ge', rep, max, q2label)
   greedy_4:
     unless max != 1 goto greedy_5
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, rep, pos, btreg)
+    self.'!cursorop'(ops, '!mark_push', 0, rep, pos, btreg)
     ops.'push_pirop'('goto', q1label)
   greedy_5:
     ops.'push'(q2label)
@@ -381,7 +455,7 @@ second child of this node.
     goto frugal_2
   frugal_1:
     ops.'push_pirop'('set_addr', '$I10', q1label)
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, '$I10')
+    self.'!cursorop'(ops, '!mark_push', 0, 0, pos, '$I10')
     ops.'push_pirop'('goto', q2label)
   frugal_2:
     ops.'push'(q1label)
@@ -400,7 +474,7 @@ second child of this node.
   frugal_6:
     unless max != 1 goto frugal_7
     ops.'push_pirop'('set_addr', '$I10', q1label)
-    ops.'push_pirop'('callmethod', '"!mark_push"', cur, ireg, pos, '$I10')
+    self.'!cursorop'(ops, '!mark_push', 0, ireg, pos, '$I10')
   frugal_7:
     ops.'push'(q2label)
     .return (ops)
