@@ -743,6 +743,27 @@ Get/set any pirflags for this block.
 
 .namespace ['PAST';'Regex']
 
+.sub 'backtrack' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('backtrack', value, has_value)
+.end
+
+
+.sub 'min' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('min', value, has_value)
+.end
+
+
+.sub 'max' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('max', value, has_value)
+.end
+
+
 .sub 'pasttype' :method
     .param pmc value           :optional
     .param int has_value       :opt_flag

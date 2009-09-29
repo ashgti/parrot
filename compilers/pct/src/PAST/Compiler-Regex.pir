@@ -37,7 +37,7 @@ Return the POST representation of the regex AST rooted by C<node>.
     .local string prefix, rname, rtype
     prefix = self.'unique'('rx')
     concat prefix, '_'
-    $P0 = split ' ', 'tgt string pos int off int len int cur pmc'
+    $P0 = split ' ', 'tgt string pos int off int len int rep int cur pmc'
     $P1 = iter $P0
   iter_loop:
     unless $P1 goto iter_done
@@ -55,17 +55,17 @@ Return the POST representation of the regex AST rooted by C<node>.
     faillabel = self.'post_new'('Label', 'result'=>$S1)
     reghash['fail'] = faillabel
 
-    .local string cur, pos
-    (cur, pos) = self.'!rxregs'('cur pos')
+    .local string cur, rep, pos
+    (cur, rep, pos) = self.'!rxregs'('cur rep pos')
 
     $P0 = self.'post_regex'(node)
     ops.'push'($P0)
     ops.'push'(faillabel)
-    $S0 = concat '(', cur
+    $S0 = concat '(', rep
     concat $S0, ','
     concat $S0, pos
     concat $S0, ',$I10)'
-    ops.'push_pirop'('callmethod', "'!popmark'", cur, 'result'=>$S0)
+    ops.'push_pirop'('callmethod', "'!mark_cut'", cur, 'result'=>$S0)
     ops.'push_pirop'('jump', '$I10')
     .return (ops)
 .end
@@ -100,7 +100,8 @@ given in C<keystr>.
 
 Return the POST representation of the regex component given by C<node>.
 Normally this is handled by redispatching to a method corresponding to
-the node's "pasttype" and "backtrack" attributes.
+the node's "pasttype" and "backtrack" attributes.  If no "pasttype" is
+given, then "concat" is assumed.
 
 =cut
 
@@ -111,6 +112,9 @@ the node's "pasttype" and "backtrack" attributes.
 
     .local string pasttype
     pasttype = node.'pasttype'()
+    if pasttype goto have_pasttype
+    pasttype = 'concat'
+  have_pasttype:
     $P0 = find_method self, pasttype
     $P1 = self.$P0(node)
     unless have_cur goto done
@@ -135,70 +139,52 @@ the node's "pasttype" and "backtrack" attributes.
 .end
 
 
-=item regex_mark(prefix)
-
-Create a label starting with C<prefix> and POST instructions
-to set a backtrack to the label in the current cursor.
-
-=cut
-
-.sub 'regex_mark' :method
-    .param string prefix
-
-    .local pmc cur, pos, ops, backlabel
-    (cur, pos) = self.'!rxregs'('cur pos')
-    ops = self.'post_new'('Ops')
-    backlabel = self.'post_new'('Label', 'name'=>prefix)
-    ops.'push_pirop'('set_addr', '$I10', backlabel)
-    ops.'push_pirop'('callmethod', "'!pushmark'", cur, pos, '$I10')
-    .return (ops, backlabel)
-.end
-
-
 =item alt(PAST::Regex node)
-
-Create POST to alternate among child regexes of C<node>, including
-backtracking.
 
 =cut
 
 .sub 'alt' :method :multi(_, ['PAST';'Regex'])
     .param pmc node
 
-    .local pmc cur
-    cur = self.'!rxregs'('cur')
+    .local pmc cur, pos
+    (cur, pos) = self.'!rxregs'('cur pos')
 
-    .local pmc ops, iter, cpast, cpost
+    .local string name
+    name = self.'unique'('alt')
+    concat name, '_'
+
+    .local pmc ops, iter
     ops = self.'post_new'('Ops', 'node'=>node, 'result'=>cur)
-
     iter = node.'iterator'()
     unless iter goto done
 
-    # get post for first alternative
-    .local pmc apast, apost, amark, alabel, endlabel
-    apast = shift iter
-    apost = self.'post_regex'(apast, cur)
-    ops.'push'(apost)
-    unless iter goto done
+    .local int acount
+    .local pmc alabel, endlabel
+    acount = 0
+    $S0 = acount
+    $S0 = concat name, $S0
+    alabel = self.'post_new'('Label', 'result'=>$S0)
+    $S0 = concat name, 'end'
+    endlabel = self.'post_new'('Label', 'result'=>$S0)
 
-    endlabel = self.'post_new'('Label', 'name'=>'rx_alt_end_')
-
-    # for all remaining alternatives, we put a label at the end
-    # of the previous alternative, generate a label and backtracking
-    # mark for the new alternative, and add those to our ops list
   iter_loop:
-    ops.'push_pirop'('goto', endlabel)
+    ops.'push'(alabel)
+    .local pmc apast, apost
     apast = shift iter
     apost = self.'post_regex'(apast, cur)
-    (amark, alabel) = self.'regex_mark'('rx_alt_')
-    ops.'unshift'(amark)
-    ops.'push'(alabel)
+    unless iter goto iter_done
+    inc acount
+    $S0 = acount
+    $S0 = concat name, $S0
+    alabel = self.'post_new'('Label', 'result'=>$S0)
+    ops.'push_pirop'('set_addr', '$I10', alabel)
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, '$I10')
     ops.'push'(apost)
-    if iter goto iter_loop
-
-  d1:
+    ops.'push_pirop'('goto', endlabel)
+    goto iter_loop
+  iter_done:
+    ops.'push'(apost)
     ops.'push'(endlabel)
-
   done:
     .return (ops)
 .end
@@ -284,6 +270,10 @@ second child of this node.
 .end
 
 
+=item pass(PAST::Regex node)
+
+=cut
+
 .sub 'pass' :method :multi(_,['PAST';'Regex'])
     .param pmc node
 
@@ -293,7 +283,94 @@ second child of this node.
     ops.'push_pirop'('yield', cur)
     .return (ops)
 .end
-    
+
+
+=item quant(PAST::Regex node)
+
+=cut
+
+.sub 'quant' :method :multi(_,['PAST';'Regex'])
+    .param pmc node
+
+    .local string backtrack
+    backtrack = node.'backtrack'()
+    if backtrack goto have_backtrack
+    backtrack = 'g'
+  have_backtrack:
+
+     .local int min, max
+     min = node.'min'()
+     $P0 = node.'max'()
+     max = $P0
+     $I0 = defined $P0
+     if $I0 goto have_max
+     max = -1                          # -1 represents Inf
+   have_max:
+
+    .local pmc cur, pos, rep, fail
+    (cur, pos, rep, fail) = self.'!rxregs'('cur pos rep fail')
+
+    .local string qname
+    .local pmc ops, q1label, q2label, q2reg, cpost
+    $S0 = concat 'quant', backtrack
+    qname = self.'unique'($S0)
+    ops = self.'post_new'('Ops', 'node'=>node)
+    $S0 = concat qname, '_loop'
+    q1label = self.'post_new'('Label', 'result'=>$S0)
+    $S0 = concat qname, '_done'
+    q2label = self.'post_new'('Label', 'result'=>$S0)
+    q2reg = self.'uniquereg'('I')
+    cpost = self.'concat'(node)
+
+    $S0 = max
+    .local int needrep
+    $I0 = isgt min, 1
+    $I1 = isgt max, 1
+    needrep = or $I0, $I1
+
+    unless max < 0 goto have_s0
+    $S0 = '*'
+  have_s0:
+    ops.'push_pirop'('inline', qname, min, $S0, 'inline'=>'  # rx %0 ** %1..%2')
+    ops.'push_pirop'('set_addr', q2reg, q2label)
+
+
+  greedy:
+    .local int needmark
+    .local string peekcut
+    needmark = needrep
+    peekcut = '"!mark_peek"'
+    if backtrack != 'r' goto greedy_1
+    needmark = 1
+    peekcut = '"!mark_cut"'
+  greedy_1:
+    if min == 0 goto greedy_2
+    unless needmark goto greedy_loop
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, -1, q2reg)
+    goto greedy_loop
+  greedy_2:
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, 0, pos, q2reg)
+  greedy_loop:
+    ops.'push'(q1label)
+    ops.'push'(cpost)
+    unless needmark goto greedy_3
+    ops.'push_pirop'('callmethod', peekcut, cur, q2reg, 'result'=>rep)
+    unless needrep goto greedy_3
+    ops.'push_pirop'('inc', rep)
+  greedy_3:
+    unless max > 1 goto greedy_4
+    ops.'push_pirop'('ge', rep, max, q2label)
+  greedy_4:
+    unless max != 1 goto greedy_5
+    ops.'push_pirop'('callmethod', '"!mark_push"', cur, rep, pos, q2reg)
+    ops.'push_pirop'('goto', q1label)
+  greedy_5:
+    ops.'push'(q2label)
+    unless min > 1 goto greedy_6
+    ops.'push_pirop'('lt', rep, min, fail)
+  greedy_6:
+    .return (ops)
+.end
 
 =back
 
