@@ -3,23 +3,23 @@
 
 =head1 NAME
 
-RX::Cursor - RX Cursor nodes
+Regex::Cursor - Regex Cursor nodes
 
 =head1 DESCRIPTION
 
-This file implements the RX::Cursor class, used for managing regular
-expression control flow.  RX::Cursor is also a base class for
+This file implements the Regex::Cursor class, used for managing regular
+expression control flow.  Regex::Cursor is also a base class for
 grammars.
 
 =cut
 
-.namespace ['RX';'Cursor']
+.namespace ['Regex';'Cursor']
 
 .sub '' :anon :load :init
     load_bytecode 'P6object.pbc'
     .local pmc p6meta
     p6meta = new 'P6metaclass'
-    $P0 = p6meta.'new_class'('RX::Cursor', 'attr'=>'$!target $!from $!pos @!pstack')
+    $P0 = p6meta.'new_class'('Regex::Cursor', 'attr'=>'$!target $!from $!pos @!pstack')
     .return ()
 .end
 
