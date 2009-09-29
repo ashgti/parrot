@@ -61,7 +61,8 @@ Return the POST representation of the regex AST rooted by C<node>.
     $P0 = self.'post_regex'(node)
     ops.'push'($P0)
     ops.'push'(faillabel)
-    self.'!cursorop'(ops, '!mark_cut', 3, rep, pos, '$I10')
+    self.'!cursorop'(ops, '!mark_fail', 3, rep, pos, '$I10')
+    ops.'push_pirop'('lt', pos, 0, faillabel)
     ops.'push_pirop'('jump', '$I10')
     .return (ops)
 .end
@@ -417,7 +418,7 @@ second child of this node.
     peekcut = '!mark_peek'
     if backtrack != 'r' goto greedy_1
     needmark = 1
-    peekcut = '!mark_cut'
+    peekcut = '!mark_commit'
   greedy_1:
     if min == 0 goto greedy_2
     unless needmark goto greedy_loop
