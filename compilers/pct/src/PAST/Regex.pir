@@ -49,18 +49,22 @@ at this node.
 =cut
 
 .sub 'peek' :method
+    .local pmc list
+    list = new ['ResizablePMCArray']
+
     $I0 = isa self, ['PAST';'Regex']
     unless $I0 goto peek_stop
 
-    .local pmc child_it, list
+    .local pmc child_it
     child_it = self.'iterator'()
-    list = new ['ResizablePMCArray']
 
     .local string pasttype
     pasttype = self.'pasttype'()
-    if pasttype == 'literal' goto literal
     if pasttype == 'concat' goto concat
     if pasttype == '' goto concat
+    if pasttype == 'literal' goto literal
+    if pasttype == 'alt' goto alt
+    if pasttype == 'alt_longest' goto alt_longest
 
   peek_stop:
     list = 0
@@ -69,6 +73,23 @@ at this node.
   peek_zero:
     list = 1
     list[0] = ''
+    .return (list)
+
+  # temporal alternation returns the prefixes of its first child
+  alt:
+    unless child_it goto peek_stop
+    $P0 = shift child_it
+    .tailcall 'peek'($P0)
+
+  # declarative alternation returns prefixes of all children
+  alt_longest:
+    unless child_it goto alt_longest_done
+    $P0 = shift child_it
+    $P1 = 'peek'($P0)
+    $I0 = elements list
+    splice list, $P1, $I0, 0
+    goto alt_longest
+  alt_longest_done:
     .return (list)
 
   concat:

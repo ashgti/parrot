@@ -234,6 +234,19 @@ given, then "concat" is assumed.
 .end
 
 
+=item alt_longest(PAST::Regex node)
+
+Same as 'alt' above, but use declarative/LTM semantics.
+(Currently we cheat and just use 'alt' above.)
+
+=cut
+
+.sub 'alt_longest' :method
+    .param pmc node
+    .tailcall self.'alt'(node)
+.end
+
+
 =item concat(PAST::Regex node)
 
 Handle a concatenation of regexes.
