@@ -11,4 +11,5 @@ my $past :=
   );
 
 say(PAST::Compiler.compile($past, :target('pir')));
+for $past.peek { say($_); }
 

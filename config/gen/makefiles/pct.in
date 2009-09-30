@@ -31,9 +31,11 @@ PCT_SOURCES := \
   src/PAST/Compiler.pir \
   src/PAST/Compiler-Regex.pir \
   src/PAST/Node.pir \
+  src/PAST/Regex.pir \
   src/POST/Compiler.pir \
   src/POST/Node.pir \
-  src/Regex/Cursor.pir
+  src/Regex/Cursor.pir \
+  src/Regex/Match.pir
 
 # the default target
 all: $(PARROT_LIBRARY)/PCT.pbc
