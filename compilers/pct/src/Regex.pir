@@ -13,6 +13,8 @@ Regex.pbc .
 
 .include 'src/Regex/Cursor.pir'
 
+.include 'src/Regex/Match.pir'
+
 =head1 AUTHOR
 
 Patrick Michaud <pmichaud@pobox.com> is the author and maintainer.
