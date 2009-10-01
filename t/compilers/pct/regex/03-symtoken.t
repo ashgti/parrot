@@ -60,7 +60,7 @@ t/compilers/pct/regex/03-symtoken.t - tests for PCT::Regex symtokens
 
     .local pmc plus
     plus = abc.'infix:sym<+>'()
-    ok(plus, 'Matched plus following abc')
+    ok(plus, 'Matched + following abc')
     match = plus.'MATCH'()
     ok(match, '?$/')
     $I0 = match.'from'()
@@ -69,5 +69,32 @@ t/compilers/pct/regex/03-symtoken.t - tests for PCT::Regex symtokens
     is($I0, 4, "$/.to")
     $S0 = match['sym']
     is($S0, '+', "$<sym>")
+
+    .local pmc plus2
+    plus2 = abc.'infix:sym<++>'()
+    ok(plus2, 'Matched ++ following abc')
+    match = plus2.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 3, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 5, "$/.to")
+    $S0 = match['sym']
+    is($S0, '++', "$<sym>")
+
+    $P0 = plus2.'infix:sym<++>'()
+    nok($P0, "Didn't match another ++ after abc++")
+
+    .local pmc plusminus
+    plusminus = plus.'infix:sym<+->'()
+    ok(plusminus, 'Matched +- following abc+')
+    match = plusminus.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 4, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 6, "$/.to")
+    $S0 = match['sym']
+    is($S0, '+-', "$<sym>")
     
 .end
