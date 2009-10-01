@@ -407,9 +407,9 @@ sub rewrite_pccmethod {
     _ctx = CURRENT_CONTEXT(interp);
     _ccont = Parrot_pcc_get_continuation(interp, _ctx);
 
-    _caller_ctx = Parrot_pcc_get_caller_ctx(interp, _ctx); 
-    _call_object = Parrot_pcc_get_signature(interp, _ctx); 
-    Parrot_pcc_set_signature(interp, _ctx, NULL); 
+    _caller_ctx = Parrot_pcc_get_caller_ctx(interp, _ctx);
+    _call_object = Parrot_pcc_get_signature(interp, _ctx);
+    Parrot_pcc_set_signature(interp, _ctx, NULL);
 
     { /* BEGIN PARMS SCOPE */
 END
