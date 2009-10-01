@@ -1197,7 +1197,7 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
     ctx->handlers          = PMCNULL;
     ctx->caller_ctx        = NULL;
     ctx->pred_offset       = 0;
-    ctx->caller_ctx        = old;
+    ctx->caller_sig        = NULL;
     ctx->current_sig       = NULL;
 
     if (old) {
@@ -1212,6 +1212,7 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
         /* end COW */
         ctx->recursion_depth   = old->recursion_depth;
         ctx->caller_ctx        = pmcold;
+        ctx->caller_sig        = old->current_sig;
     }
     else {
         ctx->constants         = NULL;
