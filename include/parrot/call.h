@@ -291,11 +291,10 @@ void Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP,
 
 PARROT_EXPORT
 void Parrot_pcc_fill_returns_from_op(PARROT_INTERP,
-    ARGMOD(PMC *call_object),
+    ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
     ARGIN(opcode_t *raw_returns))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*call_object);
@@ -460,7 +459,6 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
 #define ASSERT_ARGS_Parrot_pcc_fill_returns_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(call_object) \
     , PARROT_ASSERT_ARG(raw_sig) \
     , PARROT_ASSERT_ARG(raw_returns))
 #define ASSERT_ARGS_Parrot_pcc_invoke_from_sig_object \

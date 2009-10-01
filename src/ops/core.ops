@@ -583,7 +583,8 @@ op set_returns(inconst PMC) :flow {
 
     Parrot_pcc_fill_returns_from_op(interp, call_object, signature, raw_returns);
 
-    gc_unregister_pmc(interp, call_object);
+    if (!PMC_IS_NULL(call_object))
+        gc_unregister_pmc(interp, call_object);
     Parrot_pcc_set_signature(interp, ctx, NULL);
 
     argc = VTABLE_elements(interp, signature);
