@@ -314,7 +314,7 @@ sub make_arg {
     /B/ && do {
         push @{$temps_ref},           "char *s_$temp_num;";
         push @{$temps_ref},           "char *t_$temp_num;";
-        push @{$temps_ref},           "void** v_$temp_num = (void **) &t_$temp_num;";
+        push @{$temps_ref},           "char** v_$temp_num = &t_$temp_num;";
         push @{$temps_ref},           "STRING *ts_$temp_num;";
         push @{$fill_params_ref},     "&ts_$temp_num";
         push @{$extra_preamble_ref},
