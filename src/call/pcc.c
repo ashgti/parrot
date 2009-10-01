@@ -4039,7 +4039,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     Parrot_pcc_set_signature(interp, ctx, call_object);
     Parrot_pcc_set_continuation(interp, ctx, ret_cont);
     interp->current_cont         = NEED_CONTINUATION;
-    PMC_cont(ret_cont)->from_ctx = ctx;
+    PARROT_CONTINUATION(ret_cont)->from_ctx = ctx;
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
