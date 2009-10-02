@@ -31,13 +31,26 @@ grammars.
 
 =item MATCH()
 
-Return this cursor's current Match object.
+Return this cursor's current Match object.  If it doesn't have one,
+create one.
 
 =cut
 
 .sub 'MATCH' :method
     .local pmc match
     match = getattribute self, '$!match'
+    unless null match goto have_match
+    match = new ['Regex';'Match']
+    setattribute self, '$!match', match
+
+    $P0 = getattribute self, '$!target'
+    setattribute match, '$!target', $P0
+    $P0 = getattribute self, '$!from'
+    setattribute match, '$!from', $P0
+    $P0 = box -1
+    setattribute match, '$!to', $P0
+
+  have_match:
     .return (match)
 .end
 
@@ -110,6 +123,11 @@ Create and initialize a new cursor from C<self>.
     .return (cur, from, target)
 .end
 
+
+=item !cursor_bind(subcur, names :slurpy)
+
+Bind C<subcur>'s match object as submatches of the current cursor
+under C<names>.
 
 =item !mark_push(rep, pos, mark)
 
@@ -205,16 +223,11 @@ Generate a successful match at pos.
     .param int has_name        :opt_flag
 
     .local pmc match
-    match = new ['Regex';'Match']
-    setattribute self, '$!match', match
+    match = self.'MATCH'()
 
     $P0 = box pos
-    setattribute self, '$!pos', $P0
     setattribute match, '$!to', $P0
-    $P0 = getattribute self, '$!from'
-    setattribute match, '$!from', $P0
-    $P0 = getattribute self, '$!target'
-    setattribute match, '$!target', $P0
+    setattribute self, '$!pos', $P0
 
     .local pmc action
     unless has_name goto action_done
