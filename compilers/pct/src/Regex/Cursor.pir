@@ -20,6 +20,8 @@ grammars.
     .local pmc p6meta
     p6meta = new 'P6metaclass'
     $P0 = p6meta.'new_class'('Regex::Cursor', 'attr'=>'$!target $!from $!pos $!match @!bstack @!mstack')
+    $P0 = box 0
+    set_global '$!generation', $P0
     .return ()
 .end
 
@@ -105,7 +107,6 @@ Create and initialize a new cursor from C<self>.
 
     .return (cur, from, target)
 .end
-
 
 
 =item !mark_push(rep, pos, mark)
@@ -303,6 +304,21 @@ Perform a match for protoregex C<name>.
 .end
 
 
+=item !protoregex_generation()
+
+Set the C<$!generation> flag to indicate that protoregexes need to
+be recalculated.
+
+=cut
+
+.sub '!protoregex_generation' :method
+    $P0 = get_global '$!generation'
+    # don't change this to 'inc' -- we want to ensure new PMC
+    $P1 = add $P0, 1
+    set_global '$!generation', $P1
+    .return ($P1)
+.end
+
 =item !protoregex_gen_table(parrotclass)
 
 Generate a new protoregex table for C<parrotclass>.  This involves
@@ -458,7 +474,7 @@ the current grammar.
     $P0 = self.'HOW'()
     $P0.'add_method'(self, name, symtoken)
 
-    # self.'!regenerate'()
+    self.'!protoregex_generation'()
 .end
 
 .sub '' :method :subid('symtoken')
