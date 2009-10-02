@@ -1098,7 +1098,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
     ASSERT_ARGS(Parrot_pcc_fill_params_from_c_args)
     va_list args;
     PMC *ctx = CURRENT_CONTEXT(interp);
-    INTVAL  positional_elements = VTABLE_elements(interp, call_object);
+    INTVAL  positional_elements;
     INTVAL  param_count      = 0;
     STRING *param_name       = NULL;
     INTVAL  param_index      = 0;
@@ -1121,6 +1121,20 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
      * for parameters and return values. */
     if (PARROT_ERRORS_test(interp, PARROT_ERRORS_PARAM_COUNT_FLAG))
             err_check = 1;
+
+    /* A null call object is fine if there are no arguments and no returns. */
+    if (PMC_IS_NULL(call_object)) {
+        if (param_count > 0) {
+            if (err_check)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too few arguments: 0 passed, %d expected",
+                        param_count);
+            else
+                return;
+        }
+    }
+
+    positional_elements = VTABLE_elements(interp, call_object);
 
     va_start(args, signature);
     for (param_index = 0; param_index < param_count; param_index++) {
@@ -1371,11 +1385,11 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* A null call object is fine if there are no arguments and no returns. */
     if (PMC_IS_NULL(call_object)) {
-        if (return_list_elements > 0) {
+        if (raw_return_count > 0) {
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many return values: %d passed, 0 expected",
-                        return_list_elements);
+                        raw_return_count);
             return;
         }
     }
