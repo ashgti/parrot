@@ -15,6 +15,8 @@ Regex.pbc .
 
 .include 'src/Regex/Match.pir'
 
+.include 'src/Regex/P6Regex.pir'
+
 =head1 AUTHOR
 
 Patrick Michaud <pmichaud@pobox.com> is the author and maintainer.

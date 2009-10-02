@@ -19,7 +19,7 @@ grammars.
     load_bytecode 'P6object.pbc'
     .local pmc p6meta
     p6meta = new 'P6metaclass'
-    $P0 = p6meta.'new_class'('Regex::Cursor', 'attr'=>'$!target $!from $!pos $!match @!bstack @!mstack')
+    $P0 = p6meta.'new_class'('Regex::Cursor', 'attr'=>'$!target $!from $!pos $!match $!action @!bstack @!mstack')
     $P0 = box 0
     set_global '$!generation', $P0
     .return ()
@@ -57,7 +57,7 @@ Return the cursor's current position.
 
 =over 4
 
-=item !cursor_init(target, pos)
+=item !cursor_init(target)
 
 Create a new cursor for matching C<target>.
 
@@ -94,7 +94,7 @@ Create and initialize a new cursor from C<self>.
     parrotclass = getattribute $P0, 'parrotclass'
     cur = new parrotclass
 
-    .local pmc from, pos, target
+    .local pmc from, pos, target, action
     from = getattribute self, '$!pos'
     from = clone from
     setattribute cur, '$!from', from
@@ -104,6 +104,8 @@ Create and initialize a new cursor from C<self>.
 
     target = getattribute self, '$!target'
     setattribute cur, '$!target', target
+    action = getattribute self, '$!action'
+    setattribute cur, '$!action', action
 
     .return (cur, from, target)
 .end
@@ -199,6 +201,8 @@ Generate a successful match at pos.
 
 .sub '!matchify' :method
     .param int pos
+    .param string name         :optional
+    .param int has_name        :opt_flag
 
     .local pmc match
     match = new ['Regex';'Match']
@@ -211,6 +215,16 @@ Generate a successful match at pos.
     setattribute match, '$!from', $P0
     $P0 = getattribute self, '$!target'
     setattribute match, '$!target', $P0
+
+    .local pmc action
+    unless has_name goto action_done
+    action = getattribute self, '$!action'
+    if null action goto action_done
+    $P0 = find_method action, name
+    if null $P0 goto action_done
+    action.$P0(match)
+  action_done:
+
     .return (match)
 .end
 
