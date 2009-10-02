@@ -17,6 +17,8 @@ Regex.pbc .
 
 .include 'src/Regex/P6Regex.pir'
 
+.include 'src/Regex/Dumper.pir'
+
 =head1 AUTHOR
 
 Patrick Michaud <pmichaud@pobox.com> is the author and maintainer.

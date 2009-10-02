@@ -40,9 +40,9 @@ create one.
     .local pmc match
     match = getattribute self, '$!match'
     unless null match goto have_match
+
     match = new ['Regex';'Match']
     setattribute self, '$!match', match
-
     $P0 = getattribute self, '$!target'
     setattribute match, '$!target', $P0
     $P0 = getattribute self, '$!from'
@@ -111,8 +111,7 @@ Create and initialize a new cursor from C<self>.
     from = getattribute self, '$!pos'
     from = clone from
     setattribute cur, '$!from', from
-
-    pos = box -1
+    pos = clone from
     setattribute cur, '$!pos', pos
 
     target = getattribute self, '$!target'
@@ -124,10 +123,17 @@ Create and initialize a new cursor from C<self>.
 .end
 
 
-=item !cursor_bind(subcur, names :slurpy)
+=item !cursor_pos(pos)
 
-Bind C<subcur>'s match object as submatches of the current cursor
-under C<names>.
+Set the cursor's position to C<pos>.
+
+=cut
+
+.sub '!cursor_pos' :method
+    .param pmc pos
+    setattribute self, '$!pos', pos
+.end
+
 
 =item !mark_push(rep, pos, mark)
 
@@ -239,6 +245,59 @@ Generate a successful match at pos.
   action_done:
 
     .return (match)
+.end
+
+
+=item !match_arrays(names :slurpy)
+
+Bind submatches C<names> of the current Match object to arrays.
+
+=cut
+
+.sub '!match_arrays' :method
+    .param pmc names           :slurpy
+
+    .local pmc match, names_it
+    match = self.'MATCH'()
+    names_it = iter names
+  names_loop:
+    unless names_it goto names_done
+    $P0 = shift names_it
+    $P1 = new ['ResizablePMCArray']
+    match[$P0] = $P1
+    goto names_loop
+  names_done:
+.end
+
+
+=item !match_bind(subcur, names :slurpy)
+
+Bind C<subcur>'s match object as submatches of the current cursor
+under C<names>.
+
+=cut
+
+.sub '!match_bind' :method
+    .param pmc subcur
+    .param pmc names           :slurpy
+
+    .local pmc match, submatch, names_it
+    match = self.'MATCH'()
+    submatch = subcur.'MATCH'()
+    names_it = iter names
+  names_loop:
+    unless names_it goto names_done
+    $P0 = shift names_it
+    $P1 = match[$P0]
+    if null $P1 goto bind_1
+    $I0 = isa $P1, ['ResizablePMCArray']
+    unless $I0 goto bind_1
+    push $P1, submatch
+    goto names_loop
+  bind_1:
+    match[$P0] = submatch
+    goto names_loop
+  names_done:
 .end
 
 
