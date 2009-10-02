@@ -346,7 +346,10 @@ sub create_function {
     $other_decl ||= "";
 
     $other_decl .= join( "\n    ", @{$temps_ref} );
-    my $call_object_decl = 'PMC *call_object;';
+    my $call_object_decl = <<"CALLOBJECT";
+    PMC *ctx         = CURRENT_CONTEXT(interp);
+    PMC *call_object = Parrot_pcc_get_signature(interp, ctx);
+CALLOBJECT
     my $extra_preamble   = join( "\n    ", @{$extra_preamble_ref} );
     my $extra_postamble  = join( "\n    ", @{$extra_postamble_ref} );
     my $return_data_decl =
