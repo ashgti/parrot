@@ -46,7 +46,7 @@ t/compilers/pct/regex/04-protoregex.t -- basic protoregex tests
 
     .local pmc abc, match
     abc = cur.'term'()
-    ok(abc, 'Matched initial abc')
+    ok(abc, 'Matched <term> abc')
     match = abc.'MATCH'()
     ok(match, '?$/')
     $I0 = match.'from'()
@@ -58,7 +58,7 @@ t/compilers/pct/regex/04-protoregex.t -- basic protoregex tests
 
     .local pmc op
     op = abc.'infix'()
-    ok(op, 'Matched operator after abc')
+    ok(op, 'Matched <infix> after abc')
     match = op.'MATCH'()
     ok(match, '?$/')
     $I0 = match.'from'()
@@ -67,6 +67,62 @@ t/compilers/pct/regex/04-protoregex.t -- basic protoregex tests
     is($I0, 5, "$/.to")
     $S0 = match['sym']
     is($S0, '++', "$<sym>")
+
+    .local pmc op2
+    op2 = op.'infix'()
+    ok(op2, 'Matched <infix> after ++')
+    match = op2.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 5, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 6, "$/.to")
+    $S0 = match['sym']
+    is($S0, '-', "$<sym>")
+
+    # add another protoregex, to make sure we recalculate protoregex table
+    xyz.'!symtoken_add'('term:sym<abc+>', 'abc+')
+
+    .local pmc abc, match
+    abc = cur.'term'()
+    ok(abc, 'Matched initial abc+ <term>')
+    match = abc.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 0, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 4, "$/.to")
+    $S0 = match['sym']
+    is($S0, 'abc+', "$<sym>")
+
+    .local pmc op
+    op = abc.'infix'()
+    ok(op, 'Matched <infix> after abc+')
+    match = op.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 4, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 6, "$/.to")
+    $S0 = match['sym']
+    is($S0, '+-', "$<sym>")
+
+    .local pmc op2
+    op2 = op.'infix'()
+    nok(op2, 'Failed <infix> match after +-')
+
+    cur = xyz.'!cursor_init'('abd++-')
+
+    abc = cur.'term'()
+    ok(abc, 'Matched <term> ab')
+    match = abc.'MATCH'()
+    ok(match, '?$/')
+    $I0 = match.'from'()
+    is($I0, 0, "$/.from")
+    $I0 = match.'to'()
+    is($I0, 2, "$/.to")
+    $S0 = match['sym']
+    is($S0, 'ab', "$<sym>")
 .end
 
 
