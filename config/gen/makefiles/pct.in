@@ -72,6 +72,9 @@ help:
 test: all
 	cd $(TOOL_DIR) && prove -r t/compilers/pct
 
+rxtest: all
+	cd $(TOOL_DIR) && prove -r t/compilers/pct/regex
+
 testclean:
 	$(RM_F) $(TEST_DIR)/*.pir \
 	    $(TEST_DIR)/*.pbc
