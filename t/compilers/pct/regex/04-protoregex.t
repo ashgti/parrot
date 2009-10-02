@@ -21,6 +21,8 @@ t/compilers/pct/regex/04-protoregex.t -- basic protoregex tests
     exports        = split ' ', 'plan diag ok nok is todo'
     test_namespace.'export_to'(curr_namespace, exports)
 
+    plan(32)
+
     load_bytecode 'PCT/Regex.pbc'
 
     # create a grammar for us to test
