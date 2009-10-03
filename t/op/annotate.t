@@ -61,7 +61,6 @@ Test various use cases of the annotate directive.
     .local pmc exception
     pop_eh
     .get_results (exception)
-    pop_eh
 
     $P0 = exception.'annotations'('file')
     is ($P0, 'foo.p6', "file annotation got OK")
@@ -111,7 +110,6 @@ Test various use cases of the annotate directive.
     .local pmc exception, bt, frame, ann
     pop_eh
     .get_results (exception)
-    pop_eh
     bt = exception.'backtrace'()
     $I0 = elements bt
     $I0 = $I0 > 3
