@@ -165,7 +165,7 @@ sub pcc_signature {
     my $return_type_char = $self->trans($return_type);
     my $sig              = join ('', map { $self->trans($_) } @{$types}) .
                            '->';
-    
+
     my $result_decl    = '';
     my $return_stmt    = '';
 
@@ -173,7 +173,8 @@ sub pcc_signature {
         $return_stmt = "return ($return_type) NULL;" if $return_type_char =~ /P|I|S|V/;
         $return_stmt = 'return (FLOATVAL) 0;'        if $return_type_char =~ /N/;
         $return_stmt = 'return;'                     if $return_type_char =~ /v/;
-    } else {
+    }
+    else {
         $result_decl = "$return_type result;";
         $args .= ', &result';
         $sig .= $return_type_char;
