@@ -1084,6 +1084,7 @@ Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
     void *result;
     char  return_sig = signature[0];
     const char *arg_sig = signature;
+    Parrot_sub *sub;
 
     arg_sig++;
     va_start(args, signature);
@@ -1112,6 +1113,8 @@ Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
                         "Dispatch: invalid return type %c!", return_sig);
     }
 
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
     return result;
@@ -1139,6 +1142,7 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
     Parrot_Int  result;
     char        return_sig  = signature[0];
     const char *arg_sig     = signature;
+    Parrot_sub *sub;
 
     arg_sig++;
     va_start(args, signature);
@@ -1149,6 +1153,8 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
      * hackish, added for backward compatibility in deprecated API function,
      * see TT #XXX). */
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
     return result;
@@ -1176,6 +1182,7 @@ Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
     Parrot_Float    result;
     char            return_sig  = signature[0];
     const char     *arg_sig     = signature;
+    Parrot_sub     *sub;
 
     arg_sig++;
     va_start(args, signature);
@@ -1186,6 +1193,8 @@ Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
      * hackish, added for backward compatibility in deprecated API function,
      * see TT #XXX). */
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "N"), &result);
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
     return result;
@@ -1209,7 +1218,7 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 void *
-Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
+Parrot_call_method(PARROT_INTERP, Parrot_PMC sub_pmc, Parrot_PMC obj,
                         Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method)
@@ -1218,6 +1227,7 @@ Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
     void *result;
     char  return_sig = signature[0];
     char *arg_sig = (char*)malloc(strlen(signature)+2);
+    Parrot_sub *sub;
     arg_sig[0] = 'P';
     arg_sig[1] = 'i';
     arg_sig[2] = 0;
@@ -1250,7 +1260,9 @@ Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
                         "Dispatch: invalid return type %c!", return_sig);
     }
 
-    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
     return result;
 }
@@ -1271,7 +1283,7 @@ as a variadic argument list.
 
 PARROT_EXPORT
 Parrot_Int
-Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
+Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
         Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method_ret_int)
@@ -1280,6 +1292,7 @@ Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
     Parrot_Int result;
     char  return_sig = signature[0];
     char *arg_sig = (char*)malloc(strlen(signature)+2);
+    Parrot_sub *sub;
     arg_sig[0] = 'P';
     arg_sig[1] = 'i';
     arg_sig[2] = 0;
@@ -1291,7 +1304,9 @@ Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
     free(arg_sig);
     
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
-    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
     
     return result;
 }
@@ -1309,7 +1324,7 @@ Call a parrot method for the given object.
 
 PARROT_EXPORT
 Parrot_Float
-Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
+Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
         Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method_ret_float)
@@ -1318,6 +1333,7 @@ Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
     Parrot_Float result;
     char  return_sig = signature[0];
     char *arg_sig = (char*)malloc(strlen(signature)+2);
+    Parrot_sub *sub;
     arg_sig[0] = 'P';
     arg_sig[1] = 'i';
     arg_sig[2] = 0;
@@ -1329,7 +1345,9 @@ Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
     free(arg_sig);
     
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "N"), &result);
-    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    PMC_get_sub(interp, sub_pmc, sub);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
     
     return result;
 }
