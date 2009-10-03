@@ -27,6 +27,23 @@ subroutines following the Parrot Calling Conventions.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_CAN_RETURN_NULL
+static void parse_signature_string(PARROT_INTERP,
+    ARGIN(const char *signature),
+    ARGMOD(PMC **arg_flags),
+    ARGMOD(PMC **return_flags))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        FUNC_MODIFIES(*arg_flags)
+        FUNC_MODIFIES(*return_flags);
+
+#define ASSERT_ARGS_parse_signature_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(signature) \
+    , PARROT_ASSERT_ARG(arg_flags) \
+    , PARROT_ASSERT_ARG(return_flags))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
