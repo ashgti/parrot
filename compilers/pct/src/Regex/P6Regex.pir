@@ -151,19 +151,35 @@ Regex::P6Regex - Parser/compiler for Perl 6 regexes
     .local string target
     .local int pos
     (cur, pos, target) = self.'!cursor_start'()
-    $S0 = substr target, pos, 1
-    if $S0 != '*' goto fail
-    inc pos
+    $I0 = cur.'!literal'('*')
+    unless $I0 goto fail
     cur.'!match_bind'('*', 'sym')
-    goto done
-    cur.'!cursor_pos'(pos)
-    quantmod = cur.'quantmod'()
+    quantmod = cur.'!subrule'('quantmod', 'quantmod')
     unless quantmod goto fail
-    pos = quantmod.'pos'()
-    cur.'!match_bind'(quantmod, 'quantmod')
   done:
-    cur.'!matchify'('pos'=>pos)
+    cur.'!matchify'()
   fail:
+    .return (cur)
+.end
+
+
+=item quantmod
+
+    token quantmod { ':'? [ '?' | '!' | '+' ]? }
+
+=cut
+
+.sub 'quantmod' :method
+    .local pmc cur
+    cur = self.'!cursor_start'()
+    cur.'!literal'(':')
+    $I0 = cur.'!literal'('?')
+    if $I0 goto done
+    $I0 = cur.'!literal'('!')
+    if $I0 goto done
+    $I0 = cur.'!literal'('+')
+  done:
+    cur.'!matchify'()
     .return (cur)
 .end
 

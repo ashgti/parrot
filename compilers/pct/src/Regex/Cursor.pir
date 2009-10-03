@@ -545,6 +545,42 @@ called C<name>.
 .end
 
 
+=item !literal(str [, pos :named('pos')] )
+
+Perform a literal match of C<str> using the current cursor
+(starting at C<pos>, if supplied).  If the match is successful, 
+the cursor is moved to the end of the literal string.
+
+=cut
+
+.sub '!literal' :method
+    .param string str
+    .param pmc pos             :named('pos') :optional
+    .param int has_pos         :opt_flag
+
+    unless has_pos goto pos_0
+    setattribute self, '$!pos', pos
+    goto pos_done
+  pos_0:
+    pos = getattribute self, '$!pos'
+  pos_done:
+
+    .local string target
+    $P0 = getattribute self, '$!target'
+    target = $P0
+
+    $I0 = pos
+    $I1 = length str
+    $S0 = substr target, $I0, $I1
+    unless $S0 == str goto fail
+    add $P0, pos, $I1
+    setattribute self, '$!pos', $P0
+    .return (1, pos)
+  fail:
+    .return (0, pos)    
+.end
+
+
 =item !subrule(subname [, bindnames :slurpy] [, pos :named('pos')] )
 
 Perform a subrule match on C<name>, binding any successful
