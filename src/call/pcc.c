@@ -105,19 +105,6 @@ static void convert_arg_from_str(PARROT_INTERP, ARGMOD(call_state *st))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*st);
 
-PARROT_CANNOT_RETURN_NULL
-static PMC * count_signature_elements(PARROT_INTERP,
-    ARGIN(const char *signature),
-    ARGMOD(PMC *args_sig),
-    ARGMOD(PMC *results_sig),
-    int flag)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*args_sig)
-        FUNC_MODIFIES(*results_sig);
-
 static int fetch_arg_op(PARROT_INTERP, ARGMOD(call_state *st))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -237,11 +224,6 @@ static void too_many(PARROT_INTERP,
 #define ASSERT_ARGS_convert_arg_from_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(st))
-#define ASSERT_ARGS_count_signature_elements __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(signature) \
-    , PARROT_ASSERT_ARG(args_sig) \
-    , PARROT_ASSERT_ARG(results_sig))
 #define ASSERT_ARGS_fetch_arg_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(st))
@@ -261,25 +243,11 @@ static void too_many(PARROT_INTERP,
     , PARROT_ASSERT_ARG(sti))
 #define ASSERT_ARGS_null_val __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(st))
-#define ASSERT_ARGS_set_context_sig_params __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(signature) \
-    , PARROT_ASSERT_ARG(n_regs_used) \
-    , PARROT_ASSERT_ARG(sigs) \
-    , PARROT_ASSERT_ARG(indexes) \
-    , PARROT_ASSERT_ARG(ctx) \
-    , PARROT_ASSERT_ARG(sig_obj))
 #define ASSERT_ARGS_set_context_sig_returns __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx) \
     , PARROT_ASSERT_ARG(indexes) \
     , PARROT_ASSERT_ARG(result_list))
-#define ASSERT_ARGS_set_context_sig_returns_varargs \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ctx) \
-    , PARROT_ASSERT_ARG(indexes) \
-    , PARROT_ASSERT_ARG(ret_x))
 #define ASSERT_ARGS_set_retval_util __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(sig) \
@@ -2059,117 +2027,6 @@ commit_last_arg(PARROT_INTERP, int index, int cur,
     }
 }
 
-
-/*
-
-=item C<static PMC * count_signature_elements(PARROT_INTERP, const char
-*signature, PMC *args_sig, PMC *results_sig, int flag)>
-
-Counts the number of each type of register in a signature object. Returns
-the total number of parameter arguments, the total number of result
-arguments, and the number of each type needed for register allocation.
-Adds the necessary registers to a new context and returns the context.
-
-=cut
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-static PMC *
-count_signature_elements(PARROT_INTERP, ARGIN(const char *signature),
-    ARGMOD(PMC *args_sig), ARGMOD(PMC *results_sig), int flag)
-{
-    ASSERT_ARGS(count_signature_elements)
-    const char  *x;
-
-    /*Count of number of each type of arg and result, INSP->INSP */
-    int          max_regs[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    /* variables from PCCINVOKE impl in PCCMETHOD.pm */
-    /* args INSP, returns INSP */
-    INTVAL n_regs_used[]     = { 0, 0, 0, 0, 0, 0, 0, 0 };
-
-    /* # of args, # of results */
-    int arg_ret_cnt[2]       = { 0, 0 };
-
-    unsigned int seen_arrow  = 0;
-
-    /* Increment these values if we are not calling from a CallSignature PMC */
-    if (flag) {
-        arg_ret_cnt[seen_arrow]++;
-        max_regs[REGNO_PMC]++;
-    }
-
-    /* Loop through the signature string to count the number of each
-       type of object required. We need to know so we can allocate
-       an appropriate number of registers for it. */
-    for (x = signature; *x != '\0'; x++) {
-        switch (*x) {
-            case '-':
-                /* detect -> separator */
-                seen_arrow = 1;
-                ++x;
-                if (*x != '>')
-                    Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "PCCINVOKE: invalid signature separator %c!",
-                        *x);
-                break;
-            case 'I':
-                arg_ret_cnt[seen_arrow]++;
-                max_regs[seen_arrow * 4 + REGNO_INT]++;
-                break;
-            case 'N':
-                arg_ret_cnt[seen_arrow]++;
-                max_regs[seen_arrow * 4 + REGNO_NUM]++;
-                break;
-            case 'S':
-                arg_ret_cnt[seen_arrow]++;
-                max_regs[seen_arrow * 4 + REGNO_STR]++;
-                break;
-            case 'P':
-                arg_ret_cnt[seen_arrow]++;
-                {
-                    /* Lookahead to see if PMC is marked as invocant */
-                    if (*(++x) == 'i') {
-                        max_regs[REGNO_PMC]++;
-                    }
-                    else {
-                        x--; /* Undo lookahead */
-                        max_regs[seen_arrow * 4 + REGNO_PMC]++;
-                    }
-                }
-                break;
-            case 'f':
-            case 'n':
-            case 's':
-            case 'o':
-            case 'p':
-            /* case 'l': */ /* lookahead parameter */
-            case 'i':
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_OPERATION,
-                    "Parrot_PCCINVOKE: invalid reg type %c!", *x);
-        }
-    }
-
-    /* calculate max reg types needed for both args and results */
-    n_regs_used[0] = PARROT_MAX(max_regs[0], max_regs[4]);
-    n_regs_used[1] = PARROT_MAX(max_regs[1], max_regs[5]);
-    n_regs_used[2] = PARROT_MAX(max_regs[2], max_regs[6]);
-    n_regs_used[3] = PARROT_MAX(max_regs[3], max_regs[7]);
-
-    /* initialize arg and return sig FIAs with collected info */
-    if (arg_ret_cnt[0] > 0)
-        VTABLE_set_integer_native(interp, args_sig, arg_ret_cnt[0]);
-
-    if (arg_ret_cnt[1] > 0)
-        VTABLE_set_integer_native(interp, results_sig, arg_ret_cnt[1]);
-
-    return Parrot_push_context(interp, n_regs_used);
-}
 
 
 /*
