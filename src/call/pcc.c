@@ -152,18 +152,6 @@ static void null_val(int sig, ARGMOD(call_state *st))
         FUNC_MODIFIES(*st);
 
 PARROT_CAN_RETURN_NULL
-static void parse_signature_string(PARROT_INTERP,
-    ARGIN(const char *signature),
-    ARGMOD(PMC **arg_flags),
-    ARGMOD(PMC **return_flags))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*arg_flags)
-        FUNC_MODIFIES(*return_flags);
-
-PARROT_CAN_RETURN_NULL
 static const char * set_context_sig_params(PARROT_INTERP,
     ARGIN(const char *signature),
     ARGMOD(INTVAL *n_regs_used),
@@ -306,11 +294,6 @@ static void too_many(PARROT_INTERP,
     , PARROT_ASSERT_ARG(sti))
 #define ASSERT_ARGS_null_val __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(st))
-#define ASSERT_ARGS_parse_signature_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(signature) \
-    , PARROT_ASSERT_ARG(arg_flags) \
-    , PARROT_ASSERT_ARG(return_flags))
 #define ASSERT_ARGS_set_context_sig_params __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(signature) \
@@ -2444,90 +2427,6 @@ set_context_sig_returns_varargs(PARROT_INTERP, ARGMOD(PMC *ctx),
     }
 
     Parrot_pop_context(interp);
-}
-
-/*
-
-=item C<static void parse_signature_string(PARROT_INTERP, const char *signature,
-PMC **arg_flags, PMC **return_flags)>
-
-Parses a signature string and creates call and return signature integer
-arrays. The two integer arrays should be passed in as references to a
-PMC.
-
-=cut
-
-*/
-
-PARROT_CAN_RETURN_NULL
-static void
-parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
-        ARGMOD(PMC **arg_flags), ARGMOD(PMC **return_flags))
-{
-    ASSERT_ARGS(parse_signature_string)
-    PMC *current_array;
-    const char *x;
-    INTVAL flags = 0;
-    INTVAL set = 0;
-
-    if (PMC_IS_NULL(*arg_flags))
-        *arg_flags = pmc_new(interp, enum_class_ResizableIntegerArray);
-    current_array = *arg_flags;
-
-    for (x = signature; *x != '\0'; x++) {
-
-        /* detect -> separator */
-        if (*x == '-') {
-            /* skip '>' */
-            x++;
-            /* Switch to the return argument flags. */
-            if (PMC_IS_NULL(*return_flags))
-                *return_flags = pmc_new(interp, enum_class_ResizableIntegerArray);
-            current_array = *return_flags;
-        }
-        /* parse arg type */
-        else if (isupper((unsigned char)*x)) {
-            /* Starting a new argument, so store the previous argument,
-             * if there was one. */
-            if (set) {
-                VTABLE_push_integer(interp, current_array, flags);
-                set = 0;
-            }
-
-            switch (*x) {
-                case 'I': flags = PARROT_ARG_INTVAL;   set++; break;
-                case 'N': flags = PARROT_ARG_FLOATVAL; set++; break;
-                case 'S': flags = PARROT_ARG_STRING;   set++; break;
-                case 'P': flags = PARROT_ARG_PMC;      set++; break;
-                default:
-                  Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_OPERATION,
-                    "invalid signature string element %c!", *x);
-            }
-
-        }
-        /* parse arg adverbs */
-        else if (islower((unsigned char)*x)) {
-            switch (*x) {
-                case 'c': flags |= PARROT_ARG_CONSTANT;     break;
-                case 'f': flags |= PARROT_ARG_FLATTEN;      break;
-                case 'i': flags |= PARROT_ARG_INVOCANT;     break;
-                case 'l': flags |= PARROT_ARG_LOOKAHEAD;    break;
-                case 'n': flags |= PARROT_ARG_NAME;         break;
-                case 'o': flags |= PARROT_ARG_OPTIONAL;     break;
-                case 'p': flags |= PARROT_ARG_OPT_FLAG;     break;
-                case 's': flags |= PARROT_ARG_SLURPY_ARRAY; break;
-                default:
-                    Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "invalid signature string element %c!", *x);
-            }
-        }
-    }
-
-    /* Store the final argument, if there was one. */
-    if (set)
-        VTABLE_push_integer(interp, current_array, flags);
 }
 
 /*
