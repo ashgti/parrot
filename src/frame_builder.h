@@ -82,17 +82,6 @@ get_nci_p(PARROT_INTERP, ARGMOD(call_state *st), int n);
 #define GET_NCI_p(n) get_nci_p(interp, &st, (n))
 
 /*
- * set return value
- */
-void set_nci_I(PARROT_INTERP, ARGOUT(call_state *st), INTVAL val);
-
-void set_nci_N(PARROT_INTERP, ARGOUT(call_state *st), FLOATVAL val);
-
-void set_nci_S(PARROT_INTERP, ARGOUT(call_state *st), STRING *val);
-
-void set_nci_P(PARROT_INTERP, ARGOUT(call_state *st), PMC* val);
-
-/*
  * if we have a delegated method like typeof_i_p, that returns an INTVAL
  * and that is all in a sequence of JITted opcodes, and when these INTVAL
  * is MAPped, we got a problem. So the EXT_CALL flag is disabled - mapped
