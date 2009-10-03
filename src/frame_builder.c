@@ -177,53 +177,6 @@ get_nci_p(PARROT_INTERP, ARGMOD(call_state *st), int n)
         return NULL;
 }
 
-/*
- * set return value
- */
-void
-set_nci_I(PARROT_INTERP, ARGOUT(call_state *st), INTVAL val)
-{
-    Parrot_init_ret_nci(interp, st, "I");
-    if (st->dest.i < st->dest.n) {
-        UVal_int(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-void
-set_nci_N(PARROT_INTERP, ARGOUT(call_state *st), FLOATVAL val)
-{
-    Parrot_init_ret_nci(interp, st, "N");
-    if (st->dest.i < st->dest.n) {
-        UVal_num(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-void
-set_nci_S(PARROT_INTERP, ARGOUT(call_state *st), STRING *val)
-{
-    Parrot_init_ret_nci(interp, st, "S");
-    if (st->dest.i < st->dest.n) {
-        UVal_str(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-void
-set_nci_P(PARROT_INTERP, ARGOUT(call_state *st), PMC* val)
-{
-    Parrot_init_ret_nci(interp, st, "P");
-    if (st->dest.i < st->dest.n) {
-        UVal_pmc(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
 int
 emit_is8bit(long disp)
 {
@@ -461,8 +414,9 @@ Parrot_jit_build_call_func(PARROT_INTERP, PMC *pmc_nci, STRING *signature, int *
     emitm_movl_m_r(interp, pc, emit_EAX, emit_EBP, 0, 1, 8);
     emitm_movl_r_m(interp, pc, emit_EAX, emit_EBP, 0, 1, temp_calls_offset + 0);
 
-    if (sig && *sig)
-      emitm_call_cfunc(pc, Parrot_init_arg_nci);
+    // FIXME This whole function require major rework
+    //if (sig && *sig)
+    //  emitm_call_cfunc(pc, Parrot_init_arg_nci);
 
     while (*sig) {
         emitm_movl_i_m(pc, arg_count, emit_EBP, 0, 1, temp_calls_offset + 8);
