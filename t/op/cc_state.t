@@ -53,7 +53,7 @@ pcc_like(
 ## G
 pcc_error_like(
     { params => ".param pmc abc" },
-    '/too few arguments passed \(0\) - 1 param expected/',
+    '/too few positional arguments: 0 passed, 1 \(or more\) expected/',
     'G1: argument underflow: required param',
 );
 
