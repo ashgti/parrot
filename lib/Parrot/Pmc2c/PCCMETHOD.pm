@@ -338,13 +338,13 @@ sub process_pccmethod_args {
             push @{ $args->[ +(REGNO_STR) ] }, $argn;
             $signature .= 'Sn';
             $declarations .= "$tis $dummy_name = CONST_STRING_GEN(interp, $named_name);\n";
-            push @vararg_list, $dummy_name;
+            push @vararg_list, "&$dummy_name";
         }
 
         push @{ $args->[ $type ] }, $arg;
         $signature .= gen_arg_pcc_sig($arg);
         if ( $arg_type eq 'arg' ) {
-            my $tis  = $reg_type_info->{$type}{s};     #reg_type_info string
+            my $tis  = $reg_type_info->{$type}{"s"};     #reg_type_info string
             $declarations .= "$tis $name;\n";
             push @vararg_list, "&$name"
         }
