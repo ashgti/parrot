@@ -1213,15 +1213,45 @@ Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
                         Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method)
-    void    *result;
-    va_list ap;
+    va_list args;
+    PMC  *sig_object;
+    void *result;
+    char  return_sig = signature[0];
+    char *arg_sig = (char*)malloc(strlen(signature)+2);
+    arg_sig[0] = 'P';
+    arg_sig[1] = 'i';
+    arg_sig[2] = 0;
+    strcat(arg_sig, signature + 1);
 
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, obj, arg_sig, args);
+    va_end(args);
+    free(arg_sig);
+
+    /* Add the return argument onto the call signature object (a bit
+     * hackish, added for backward compatibility in deprecated API function,
+     * see TT #XXX). */
+    switch (return_sig) {
+        case 'v':
+        {
+            Parrot_String full_sig = VTABLE_get_string(interp, sig_object);
+            Parrot_str_concat(interp, full_sig,
+                    Parrot_str_new_constant(interp, "->"), 0);
+            break;
+        }
+        case 'V':
+        case 'P':
+        {
+            append_result(interp, sig_object, Parrot_str_new_constant(interp, "P"), &result);
+            break;
+        }
+        default:
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "Dispatch: invalid return type %c!", return_sig);
+    }
+
+    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+
     return result;
 }
 
@@ -1245,15 +1275,24 @@ Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
         Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method_ret_int)
+    va_list args;
+    PMC  *sig_object;
     Parrot_Int result;
-    va_list    ap;
+    char  return_sig = signature[0];
+    char *arg_sig = (char*)malloc(strlen(signature)+2);
+    arg_sig[0] = 'P';
+    arg_sig[1] = 'i';
+    arg_sig[2] = 0;
+    strcat(arg_sig, signature + 1);
 
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist_reti(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, obj, arg_sig, args);
+    va_end(args);
+    free(arg_sig);
+    
+    append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
+    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    
     return result;
 }
 
@@ -1274,15 +1313,24 @@ Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
         Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_method_ret_float)
+    va_list args;
+    PMC  *sig_object;
     Parrot_Float result;
-    va_list      ap;
+    char  return_sig = signature[0];
+    char *arg_sig = (char*)malloc(strlen(signature)+2);
+    arg_sig[0] = 'P';
+    arg_sig[1] = 'i';
+    arg_sig[2] = 0;
+    strcat(arg_sig, signature + 1);
 
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist_retf(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, obj, arg_sig, args);
+    va_end(args);
+    free(arg_sig);
+    
+    append_result(interp, sig_object, Parrot_str_new_constant(interp, "N"), &result);
+    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    
     return result;
 }
 
