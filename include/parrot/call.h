@@ -174,15 +174,6 @@ int Parrot_init_arg_indexes_and_sig_pmc(PARROT_INTERP,
         FUNC_MODIFIES(*sti);
 
 PARROT_EXPORT
-void Parrot_init_arg_nci(PARROT_INTERP,
-    ARGOUT(call_state *st),
-    ARGIN(const char *sig))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*st);
-
-PARROT_EXPORT
 int Parrot_init_arg_op(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN_NULLOK(opcode_t *pc),
@@ -202,15 +193,6 @@ int Parrot_init_arg_sig(PARROT_INTERP,
         __attribute__nonnull__(3)
         __attribute__nonnull__(5)
         FUNC_MODIFIES(*sti);
-
-PARROT_EXPORT
-void Parrot_init_ret_nci(PARROT_INTERP,
-    ARGOUT(call_state *st),
-    ARGIN(const char *sig))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*st);
 
 PARROT_EXPORT
 void parrot_pass_args(PARROT_INTERP,
@@ -334,10 +316,6 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx) \
     , PARROT_ASSERT_ARG(sti))
-#define ASSERT_ARGS_Parrot_init_arg_nci __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(st) \
-    , PARROT_ASSERT_ARG(sig))
 #define ASSERT_ARGS_Parrot_init_arg_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx) \
@@ -347,10 +325,6 @@ STRING* set_retval_s(PARROT_INTERP, int sig_ret, ARGIN(PMC *ctx))
     , PARROT_ASSERT_ARG(ctx) \
     , PARROT_ASSERT_ARG(sig) \
     , PARROT_ASSERT_ARG(sti))
-#define ASSERT_ARGS_Parrot_init_ret_nci __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(st) \
-    , PARROT_ASSERT_ARG(sig))
 #define ASSERT_ARGS_parrot_pass_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src_ctx) \
