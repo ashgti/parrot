@@ -44,15 +44,12 @@ Regex::P6Regex - Parser/compiler for Perl 6 regexes
     .local int pos
     cur = self.'!cursor_start'()
     cur.'!match_arrays'('noun')
-    noun = cur.'quantified_atom'()
+    noun = cur.'!subrule'('quantified_atom', 'noun')
     unless noun goto fail
   noun_quant_1:
-    pos = noun.'pos'()
-    cur.'!match_bind'(noun, 'noun')
-    cur.'!cursor_pos'(pos)
-    noun = cur.'quantified_atom'()
+    noun = cur.'!subrule'('quantified_atom', 'noun')
     if noun goto noun_quant_1
-    cur.'!matchify'(pos, 'termish')
+    cur.'!matchify'('termish')
   fail:
     .return (cur)
 .end
@@ -62,6 +59,7 @@ Regex::P6Regex - Parser/compiler for Perl 6 regexes
 
     token quantified_atom {
         <atom>
+        <quantifier>?
     }
 
 =cut
@@ -73,15 +71,15 @@ Regex::P6Regex - Parser/compiler for Perl 6 regexes
     .return ()
   peek_done:
 
-    .local pmc cur, atom
+    .local pmc cur, atom, quantifier
     .local int pos
     cur = self.'!cursor_start'()
-    atom = cur.'atom'()
+    cur.'!match_arrays'('quantifier')
+    atom = cur.'!subrule'('atom', 'atom')
     unless atom goto fail
-    $P0 = atom.'MATCH'()
-    cur.'!match_bind'(atom, 'atom')
-    pos = atom.'pos'()
-    cur.'!matchify'(pos, 'quantified_atom')
+    quantifier = cur.'!subrule'('quantifier', 'quantifier')
+  done:
+    cur.'!matchify'('quantified_atom')
   fail:
     .return (cur)
 .end
@@ -121,12 +119,54 @@ Regex::P6Regex - Parser/compiler for Perl 6 regexes
     if len == 1 goto word_done
     dec eow
   word_done:
-    cur.'!matchify'(eow, 'atom')
+    cur.'!matchify'('atom', 'pos'=>eow)
     .return (cur)
 
   metachar:
     .return (cur)
 .end
+
+
+=item quantifier
+
+    proto token quantifier { ... }
+    token quantifier:sym<*> { <sym> <quantmod> }
+    token quantifier:sym<+> { <sym> <quantmod> }
+    token quantifier:sym<?> { <sym> <quantmod> }
+
+=cut
+
+.sub 'quantifier' :method
+    .tailcall self.'!protoregex'('quantifier')
+.end
+
+.sub 'quantifier:sym<*>' :method
+    .param pmc peek            :named('peek') :optional
+    
+    if null peek goto peek_done
+    .return ('*')
+  peek_done:
+
+    .local pmc cur, quantmod
+    .local string target
+    .local int pos
+    (cur, pos, target) = self.'!cursor_start'()
+    $S0 = substr target, pos, 1
+    if $S0 != '*' goto fail
+    inc pos
+    cur.'!match_bind'('*', 'sym')
+    goto done
+    cur.'!cursor_pos'(pos)
+    quantmod = cur.'quantmod'()
+    unless quantmod goto fail
+    pos = quantmod.'pos'()
+    cur.'!match_bind'(quantmod, 'quantmod')
+  done:
+    cur.'!matchify'('pos'=>pos)
+  fail:
+    .return (cur)
+.end
+
 
 =back
 

@@ -217,23 +217,28 @@ match state.
 .end
 
 
-=item !matchify(pos)
+=item !matchify([name] [, 'pos'=>pos])
 
 Generate a successful match at pos.
 
 =cut
 
 .sub '!matchify' :method
-    .param int pos
     .param string name         :optional
     .param int has_name        :opt_flag
+    .param pmc pos             :named('pos') :optional
+    .param int has_pos         :opt_flag
+
+    unless has_pos goto pos_0
+    setattribute self, '$!pos', pos
+    goto pos_done
+  pos_0:
+    pos = getattribute self, '$!pos'
+  pos_done:
 
     .local pmc match
     match = self.'MATCH'()
-
-    $P0 = box pos
-    setattribute match, '$!to', $P0
-    setattribute self, '$!pos', $P0
+    setattribute match, '$!to', pos
 
     .local pmc action
     unless has_name goto action_done
@@ -270,20 +275,23 @@ Bind submatches C<names> of the current Match object to arrays.
 .end
 
 
-=item !match_bind(subcur, names :slurpy)
+=item !match_bind(bindval, names :slurpy)
 
-Bind C<subcur>'s match object as submatches of the current cursor
+Bind C<bindval>'s match object as submatches of the current cursor
 under C<names>.
 
 =cut
 
 .sub '!match_bind' :method
-    .param pmc subcur
+    .param pmc bindval
     .param pmc names           :slurpy
 
-    .local pmc match, submatch, names_it
+    .local pmc match, names_it
     match = self.'MATCH'()
-    submatch = subcur.'MATCH'()
+    $I0 = isa bindval, ['Regex';'Cursor']
+    unless $I0 goto have_bindval
+    bindval = bindval.'MATCH'()
+  have_bindval:
     names_it = iter names
   names_loop:
     unless names_it goto names_done
@@ -292,10 +300,10 @@ under C<names>.
     if null $P1 goto bind_1
     $I0 = isa $P1, ['ResizablePMCArray']
     unless $I0 goto bind_1
-    push $P1, submatch
+    push $P1, bindval
     goto names_loop
   bind_1:
-    match[$P0] = submatch
+    match[$P0] = bindval
     goto names_loop
   names_done:
 .end
@@ -537,6 +545,42 @@ called C<name>.
 .end
 
 
+=item !subrule(subname [, bindnames :slurpy] [, pos :named('pos')] )
+
+Perform a subrule match on C<name>, binding any successful
+match objects into C<bindnames>.  If the subrule successfully
+matches, then the cursor invocant is updated to the end of 
+the subrule match, otherwise the cursor is unchanged.
+Returns the cursor from the attempted subrule match.
+
+=cut
+
+.sub '!subrule' :method
+    .param string subname
+    .param pmc bindnames       :slurpy
+    .param pmc pos             :named('pos') :optional
+    .param int has_pos         :opt_flag
+
+    unless has_pos goto pos_done
+    setattribute self, '$!pos', pos
+  pos_done:
+
+    # invoke the subrule
+    .local pmc subcur
+    subcur = self.subname()
+    # if the subrule failed, we're done
+    unless subcur goto done
+    # update current cursor's position
+    pos = getattribute subcur, '$!pos'
+    setattribute self, '$!pos', pos
+    # bind any results
+    unless bindnames goto done
+    self.'!match_bind'(subcur, bindnames :flat)
+  done:
+    .return (subcur, pos)
+.end
+
+
 =item !symtoken_add(name, sym)
 
 Add a regex C<name> for matching fixed-string C<sym> tokens to
@@ -591,7 +635,7 @@ the current grammar.
     pos += $I0
   pass:
     .local pmc match
-    match = cur.'!matchify'(pos)
+    match = cur.'!matchify'('pos'=>pos)
     match['sym'] = sym
   fail:
     .return (cur)
