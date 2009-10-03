@@ -1234,7 +1234,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                         INTVAL * const int_pointer = va_arg(args, INTVAL*);
                         INTVAL int_value = 0;
                         if (_value_exists)
-                            int_value = VTABLE_get_integer_keyed_str(interp, call_object, param_name);
+                            int_value = VTABLE_get_integer_keyed_str(interp,
+                                                                     call_object, param_name);
                         *int_pointer = int_value;
                     }
                     break;
@@ -1243,7 +1244,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                         FLOATVAL * const float_pointer = va_arg(args, FLOATVAL*);
                         FLOATVAL float_value = 0.0;
                         if (_value_exists)
-                            float_value = VTABLE_get_number_keyed_str(interp, call_object, param_name);
+                            float_value = VTABLE_get_number_keyed_str(interp,
+                                                                      call_object, param_name);
                         *float_pointer = float_value;
                     }
                     break;
@@ -1252,7 +1254,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                         STRING ** const string_pointer = va_arg(args, STRING**);
                         STRING * str_value = NULL;
                         if (_value_exists)
-                            str_value = VTABLE_get_string_keyed_str(interp, call_object, param_name);
+                            str_value = VTABLE_get_string_keyed_str(interp,
+                                                                    call_object, param_name);
                         *string_pointer = str_value;
                     }
                     break;
@@ -1352,7 +1355,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
             case PARROT_ARG_STRING:
                 {
                     STRING ** const string_pointer = va_arg(args, STRING**);
-                    STRING * const str_value = VTABLE_get_string_keyed_int(interp, call_object, positional_index);
+                    STRING * const str_value =
+                             VTABLE_get_string_keyed_int(interp, call_object, positional_index);
                     *string_pointer = str_value;
                 }
                 positional_index++;
@@ -1360,7 +1364,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
             case PARROT_ARG_PMC:
                 {
                     PMC ** const pmc_pointer = va_arg(args, PMC**);
-                    PMC * const pmc_value = VTABLE_get_pmc_keyed_int(interp, call_object, positional_index);
+                    PMC * const pmc_value = VTABLE_get_pmc_keyed_int(interp,
+                                                                     call_object, positional_index);
                     *pmc_pointer = pmc_value;
                 }
                 positional_index++;
@@ -1430,7 +1435,8 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     else
         return_list_elements = VTABLE_elements(interp, return_list);
 
-    caller_return_flags = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
+    caller_return_flags = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp,
+                                                                                "return_flags"));
 
 
     if (raw_return_count > return_list_elements) {
@@ -1454,7 +1460,8 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (PMC_IS_NULL(result_item))
             continue; /* Go on to next return arg. */
 
-        result_flags = VTABLE_get_integer_keyed_int(interp, caller_return_flags, return_list_index);
+        result_flags = VTABLE_get_integer_keyed_int(interp, caller_return_flags,
+                                                            return_list_index);
         item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
@@ -1536,7 +1543,8 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
     va_list args;
     INTVAL return_list_elements;
     PMC *ctx = CURRENT_CONTEXT(interp);
-    PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    PMC * const return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp,
+                                                                                    "returns"));
     INTVAL raw_return_count = 0;
     INTVAL return_index = 0;
     INTVAL return_list_index = 0;
