@@ -900,6 +900,12 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         const INTVAL raw_index = raw_params[param_index + 2];
 
+        /* If it's also optional, set that info */
+        if (param_flags & PARROT_ARG_OPTIONAL) {
+            got_optional = 1;
+            optional_count++;
+        }
+
         /* opt_flag parameter */
         if (param_flags & PARROT_ARG_OPT_FLAG) {
             if (optional_count <= 0)
@@ -956,6 +962,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         else if (!STRING_IS_NULL(param_name)) {
             /* The previous parameter was a parameter name. Now set the
              * value of the named parameter.*/
+
             if (VTABLE_exists_keyed_str(interp, call_object, param_name)) {
                 named_count++;
 
@@ -1029,13 +1036,12 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             continue; /* on to next parameter */
         }
 
-        /* Otherwise, we have a positional argument to assign to the
-         * positional parameter, so go ahead and assign it. */
-        if (param_flags & PARROT_ARG_OPTIONAL) {
-            got_optional = 1;
-            optional_count++;
-        }
+        /* If last argument was an optional, but this arg isn't the
+           corresponding opt_flag, reset the flag. */
+        if (got_optional && !param_flags & PARROT_ARG_OPTIONAL)
+            got_optional = -1;
 
+        /* It's a (possibly optional) positional. Fill it. */
         switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
             case PARROT_ARG_INTVAL:
                 CTX_REG_INT(ctx, raw_index) =
@@ -1140,6 +1146,11 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
     for (param_index = 0; param_index < param_count; param_index++) {
         INTVAL param_flags = VTABLE_get_integer_keyed_int(interp,
                     raw_sig, param_index);
+
+        if (param_flags & PARROT_ARG_OPTIONAL) {
+            got_optional = 1;
+            optional_count++;
+        }
 
         /* opt_flag parameter */
         if (param_flags & PARROT_ARG_OPT_FLAG) {
@@ -1302,12 +1313,11 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
             continue; /* on to next parameter */
         }
 
-        /* Otherwise, we have a positional argument to assign to the
-         * positional parameter, so go ahead and assign it. */
-        if (param_flags & PARROT_ARG_OPTIONAL) {
-            got_optional = 1;
-            optional_count++;
-        }
+        /* If the last argument was an optional but this one isn't the
+           corresponding opt_flag, reset the state info because we won't
+           get it. */
+        if (got_optional && !(param_flags & PARROT_ARG_OPTIONAL))
+            got_optional = -1;
 
         switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
             case PARROT_ARG_INTVAL:
