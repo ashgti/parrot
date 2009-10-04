@@ -1417,7 +1417,7 @@ PMC * variables.
 
 PARROT_EXPORT
 void
-Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
+Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_pcc_fill_returns_from_c_args)
