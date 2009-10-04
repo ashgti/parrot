@@ -755,7 +755,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     arg_index = 0;
     param_index = 0;
     while (1) {
-        INTVAL optional_param = 0;
         INTVAL param_flags;
 
         /* Check if we've used up all the parameters. */
@@ -775,11 +774,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         }
 
         param_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, param_index);
-
-        /* If the parameter is optional, set a flag for error checking */
-        if (param_flags & PARROT_ARG_OPTIONAL) {
-            optional_param = 1;
-        }
 
         /* If the parameter is slurpy, collect all remaining positional
          * arguments into an array.*/
@@ -861,7 +855,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             }
 
             /* Mark the option flag for the filled parameter. */
-            if (optional_param) {
+            if (param_flags & PARROT_ARG_OPTIONAL) {
                 INTVAL next_param_flags;
 
                 if (param_index + 1 < param_count) {
@@ -876,7 +870,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         }
         /* We have no more positional arguments, fill the optional parameter
          * with a default value. */
-        else if (optional_param) {
+        else if (param_flags & PARROT_ARG_OPTIONAL) {
             INTVAL next_param_flags;
 
             /* We don't handle optional named params here, handle them in the
@@ -918,7 +912,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* Now iterate over the named arguments and parameters. */
     while (1) {
-        INTVAL optional_param = 0;
         STRING *param_name    = NULL;
         INTVAL param_flags;
 
@@ -933,11 +926,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (!(param_flags & PARROT_ARG_NAME)) {
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named parameters must follow all positional parameters");
-        }
-
-        /* If the parameter is optional, set a flag for error checking */
-        if (param_flags & PARROT_ARG_OPTIONAL) {
-            optional_param = 1;
         }
 
         /* Collected ("slurpy") named parameter */
@@ -1024,7 +1012,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 }
 
                 /* Mark the option flag for the filled parameter. */
-                if (optional_param) {
+                if (param_flags & PARROT_ARG_OPTIONAL) {
                     INTVAL next_param_flags;
 
                     if (param_index + 1 < param_count) {
@@ -1037,7 +1025,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     }
                 }
             }
-            else if (optional_param) {
+            else if (param_flags & PARROT_ARG_OPTIONAL) {
                 INTVAL next_param_flags;
 
                 assign_default_param_value(interp, param_index, param_flags,
