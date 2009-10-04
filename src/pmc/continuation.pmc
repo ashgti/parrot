@@ -245,6 +245,8 @@ destination to continue execution.
 
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
+#if 0
+        FIXME FIXME FIXME Continuation results passing should be updated. Or maybe fully removed?
 
         /* pass args to where caller wants result */
         if (cc->current_results)
@@ -267,7 +269,7 @@ destination to continue execution.
                              src_indexes, dest_indexes, PARROT_PASS_PARAMS);
             Parrot_unblock_GC_mark(INTERP);
         }
-
+#endif
         /* switch segment */
         INTERP->current_args = NULL;
 
