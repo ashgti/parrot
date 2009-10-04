@@ -1,6 +1,6 @@
 /*
 Copyright (C) 2001-2009, Parrot Foundation.
-$Id: pcc.c 41637 2009-10-03 14:46:07Z jkeenan $
+$Id$
 
 =head1 Arguments and Returns
 
