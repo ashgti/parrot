@@ -1056,7 +1056,7 @@ slurpy arguments).
     METHOD set_outer(PMC *outer) {
         /* Set outer sub. */
         Parrot_Sub_attributes *sub;
-        PMC *tmp1, *tmp2;
+        PMC *tmp1;
         PMC_get_sub(INTERP, SELF, sub);
 
         sub->outer_sub = outer;
