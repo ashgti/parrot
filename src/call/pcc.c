@@ -232,7 +232,8 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
 
     /* PIR Subs need runops to run their opcodes. Methods and NCI subs
      * don't. */
-    if (sub_obj->vtable->base_type == enum_class_Sub
+    if ((sub_obj->vtable->base_type == enum_class_Sub
+         || (sub_obj->vtable->base_type == enum_class_Eval))
             && PMC_IS_NULL(interp->current_object)) {
         Parrot_runcore_t *old_core = interp->run_core;
         const opcode_t offset = dest - interp->code->base.data;
