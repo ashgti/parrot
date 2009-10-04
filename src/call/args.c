@@ -962,6 +962,10 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
                             VTABLE_set_pmc_keyed_str(interp, collect_named, name,
                                     VTABLE_get_pmc_keyed_str(interp, call_object, name));
+                            /* Mark the name as used, cannot be filled again. */
+                            if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                                named_used_list = pmc_new(interp, enum_class_Hash);
+                            VTABLE_set_integer_keyed_str(interp, named_used_list, name, 1);
                             named_count++;
                         }
                     }
