@@ -825,11 +825,9 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             raw_sig, param_index);
 
                 /* Mark the name as used, cannot be filled again. */
-                if (err_check) {
-                    if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
-                        named_used_list = pmc_new(interp, enum_class_Hash);
-                    VTABLE_set_integer_keyed_str(interp, named_used_list, param_name, 1);
-                }
+                if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                    named_used_list = pmc_new(interp, enum_class_Hash);
+                VTABLE_set_integer_keyed_str(interp, named_used_list, param_name, 1);
             }
             else if (named_count > 0) {
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -946,9 +944,31 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (param_flags & PARROT_ARG_SLURPY_ARRAY) {
             PMC * const collect_named = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
+            PMC *named_arg_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
+            if (!PMC_IS_NULL(named_arg_list)) {
+                INTVAL named_arg_count = VTABLE_elements(interp, named_arg_list);
+                INTVAL named_arg_index;
+                PMC *named_key = pmc_new(interp, enum_class_Key);
+                VTABLE_set_integer_native(interp, named_key, 0);
+                SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
+
+                /* Low-level hash iteration. */
+                for (named_arg_index = 0; named_arg_index < named_arg_count; named_arg_index++) {
+                    if (!PMC_IS_NULL(named_key)) {
+                        STRING *name = (STRING *)parrot_hash_get_idx(interp,
+                                        (Hash *)VTABLE_get_pointer(interp, named_arg_list), named_key);
+                        PARROT_ASSERT(name);
+                        if ((PMC_IS_NULL(named_used_list)) ||
+                                !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
+                            VTABLE_set_pmc_keyed_str(interp, collect_named, name,
+                                    VTABLE_get_pmc_keyed_str(interp, call_object, name));
+                            named_count++;
+                        }
+                    }
+                }
+            }
 
             *accessor->pmc(interp, arg_info, param_index) = collect_named;
-            named_count += VTABLE_elements(interp, collect_named);
             break; /* End of named parameters. */
         }
 
@@ -970,11 +990,9 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             if (VTABLE_exists_keyed_str(interp, call_object, param_name)) {
 
                 /* Mark the name as used, cannot be filled again. */
-                if (err_check) {
-                    if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
-                        named_used_list = pmc_new(interp, enum_class_Hash);
-                    VTABLE_set_integer_keyed_str(interp, named_used_list, param_name, 1);
-                }
+                if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                    named_used_list = pmc_new(interp, enum_class_Hash);
+                VTABLE_set_integer_keyed_str(interp, named_used_list, param_name, 1);
                 named_count++;
 
                 /* Fill the named parameter. */
