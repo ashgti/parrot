@@ -1155,10 +1155,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item,
-                            pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer)));
-                }
                 if (constant)
                     VTABLE_set_integer_native(interp, result_item, raw_index);
                 else
@@ -1166,10 +1162,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 return_list_index++;
                 break;
             case PARROT_ARG_FLOATVAL:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item,
-                        pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float)));
-                }
                 if (constant)
                     VTABLE_set_number_native(interp, result_item,
                             Parrot_pcc_get_num_constant(interp, ctx, raw_index));
@@ -1178,10 +1170,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 return_list_index++;
                 break;
             case PARROT_ARG_STRING:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item,
-                            pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String)));
-                }
                 if (constant)
                     VTABLE_set_string_native(interp, result_item, Parrot_str_new_COW(interp,
                             Parrot_pcc_get_string_constant(interp, ctx, raw_index)));
@@ -1298,26 +1286,14 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(
-                        interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer)));
-                }
                 VTABLE_set_integer_native(interp, result_item, va_arg(args, INTVAL));
                 return_list_index++;
                 break;
             case PARROT_ARG_FLOATVAL:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(
-                        interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float)));
-                }
                 VTABLE_set_number_native(interp, result_item, va_arg(args, FLOATVAL));
                 return_list_index++;
                 break;
             case PARROT_ARG_STRING:
-                if (Parrot_str_equal(interp, item_sig, CONST_STRING(interp, "P"))) {
-                    VTABLE_set_pmc(interp, result_item, pmc_new(
-                        interp, Parrot_get_ctx_HLL_type(interp, enum_class_String)));
-                }
                 VTABLE_set_string_native(interp, result_item,
                         Parrot_str_new_COW(interp, va_arg(args, STRING *)));
                 return_list_index++;
