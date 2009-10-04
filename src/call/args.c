@@ -28,15 +28,15 @@ subroutines following the Parrot Calling Conventions.
 /*
 Set of functions used in generic versions of fill_params and fill_returns.
 */
-typedef INTVAL*   (*intval_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef FLOATVAL* (*numval_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef STRING**  (*string_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef PMC**     (*pmc_func_t)   (PARROT_INTERP, void *payload, INTVAL index);
+typedef INTVAL*   (*intval_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef FLOATVAL* (*numval_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef STRING**  (*string_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef PMC**     (*pmc_func_t)   (PARROT_INTERP, void *arg_info, INTVAL index);
 
-typedef INTVAL    (*intval_constant_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef FLOATVAL  (*numval_constant_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef STRING*   (*string_constant_func_t)(PARROT_INTERP, void *payload, INTVAL index);
-typedef PMC*      (*pmc_constant_func_t)   (PARROT_INTERP, void *payload, INTVAL index);
+typedef INTVAL    (*intval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef FLOATVAL  (*numval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef STRING*   (*string_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef PMC*      (*pmc_constant_func_t)   (PARROT_INTERP, void *arg_info, INTVAL index);
 
 typedef struct pcc_set_funcs {
     intval_func_t   intval;
@@ -77,7 +77,7 @@ static void extract_named_arg_from_op(PARROT_INTERP,
 static void fill_params(PARROT_INTERP,
     ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
-    ARGIN(void *payload),
+    ARGIN(void *arg_info),
     ARGIN(struct pcc_set_funcs *funcs))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3)
@@ -190,7 +190,7 @@ static STRING** string_from_varargs(PARROT_INTERP,
 #define ASSERT_ARGS_fill_params __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_sig) \
-    , PARROT_ASSERT_ARG(payload) \
+    , PARROT_ASSERT_ARG(arg_info) \
     , PARROT_ASSERT_ARG(funcs))
 #define ASSERT_ARGS_intval_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -695,7 +695,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
 /*
 
 =item C<static void fill_params(PARROT_INTERP, PMC *call_object, PMC *raw_sig,
-void *payload, struct pcc_set_funcs *funcs)>
+void *arg_info, struct pcc_set_funcs *funcs)>
 
 Gets args for the current function call and puts them into position.
 First it gets the positional non-slurpy parameters, then the positional
@@ -708,7 +708,7 @@ slurpy parameters.
 
 static void
 fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
-        ARGIN(PMC *raw_sig), ARGIN(void *payload), ARGIN(struct pcc_set_funcs *funcs))
+        ARGIN(PMC *raw_sig), ARGIN(void *arg_info), ARGIN(struct pcc_set_funcs *funcs))
 {
     ASSERT_ARGS(fill_params)
     PMC    *ctx = CURRENT_CONTEXT(interp);
@@ -762,7 +762,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                         EXCEPTION_INVALID_OPERATION,
                         "unable to determine if optional argument was passed");
 
-            *funcs->intval(interp, payload, param_index) = got_optional;
+            *funcs->intval(interp, arg_info, param_index) = got_optional;
             got_optional = -1;
             continue; /* on to next parameter */
         }
@@ -773,7 +773,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 PMC * const collect_named = pmc_new(interp,
                         Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
 
-                *funcs->pmc(interp, payload, param_index) = collect_named;
+                *funcs->pmc(interp, arg_info, param_index) = collect_named;
                 named_count += VTABLE_elements(interp, collect_named);
             }
             /* Collect positional arguments into array */
@@ -789,7 +789,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     VTABLE_push_pmc(interp, collect_positional,
                             VTABLE_get_pmc_keyed_int(interp, call_object, positional_index));
                 }
-                *funcs->pmc(interp, payload, param_index) = collect_positional;
+                *funcs->pmc(interp, arg_info, param_index) = collect_positional;
             }
 
             continue; /* on to next parameter */
@@ -799,8 +799,8 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             /* Just store the name for now (this parameter is only the
              * name). The next parameter is the actual value. */
             param_name = PARROT_ARG_CONSTANT_ISSET(param_flags)
-                               ? funcs->string_constant(interp, payload, param_index)
-                               : *funcs->string(interp, payload, param_index);
+                               ? funcs->string_constant(interp, arg_info, param_index)
+                               : *funcs->string(interp, arg_info, param_index);
 
             continue;
         }
@@ -813,19 +813,19 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
                 switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
                     case PARROT_ARG_INTVAL:
-                        *funcs->intval(interp, payload, param_index) =
+                        *funcs->intval(interp, arg_info, param_index) =
                                 VTABLE_get_integer_keyed_str(interp, call_object, param_name);
                         break;
                     case PARROT_ARG_FLOATVAL:
-                        *funcs->numval(interp, payload, param_index) =
+                        *funcs->numval(interp, arg_info, param_index) =
                                 VTABLE_get_number_keyed_str(interp, call_object, param_name);
                         break;
                     case PARROT_ARG_STRING:
-                        *funcs->string(interp, payload, param_index) =
+                        *funcs->string(interp, arg_info, param_index) =
                                 VTABLE_get_string_keyed_str(interp, call_object, param_name);
                         break;
                     case PARROT_ARG_PMC:
-                        *funcs->pmc(interp, payload, param_index) =
+                        *funcs->pmc(interp, arg_info, param_index) =
                                 VTABLE_get_pmc_keyed_str(interp, call_object, param_name);
                         break;
                     default:
@@ -861,16 +861,16 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             optional_count++;
             switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
                 case PARROT_ARG_INTVAL:
-                    *funcs->intval(interp, payload, param_index) = 0;
+                    *funcs->intval(interp, arg_info, param_index) = 0;
                     break;
                 case PARROT_ARG_FLOATVAL:
-                    *funcs->numval(interp, payload, param_index) = 0.0;
+                    *funcs->numval(interp, arg_info, param_index) = 0.0;
                     break;
                 case PARROT_ARG_STRING:
-                    *funcs->string(interp, payload, param_index) = NULL;
+                    *funcs->string(interp, arg_info, param_index) = NULL;
                     break;
                 case PARROT_ARG_PMC:
-                    *funcs->pmc(interp, payload, param_index) = PMCNULL;
+                    *funcs->pmc(interp, arg_info, param_index) = PMCNULL;
                     break;
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -889,22 +889,22 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         /* It's a (possibly optional) positional. Fill it. */
         switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
             case PARROT_ARG_INTVAL:
-                *funcs->intval(interp, payload, param_index) =
+                *funcs->intval(interp, arg_info, param_index) =
                         VTABLE_get_integer_keyed_int(interp, call_object, positional_index);
                 positional_index++;
                 break;
             case PARROT_ARG_FLOATVAL:
-                *funcs->numval(interp, payload, param_index) =
+                *funcs->numval(interp, arg_info, param_index) =
                         VTABLE_get_number_keyed_int(interp, call_object, positional_index);
                 positional_index++;
                 break;
             case PARROT_ARG_STRING:
-                *funcs->string(interp, payload, param_index) =
+                *funcs->string(interp, arg_info, param_index) =
                         VTABLE_get_string_keyed_int(interp, call_object, positional_index);
                 positional_index++;
                 break;
             case PARROT_ARG_PMC:
-                *funcs->pmc(interp, payload, param_index) =
+                *funcs->pmc(interp, arg_info, param_index) =
                         VTABLE_get_pmc_keyed_int(interp, call_object, positional_index);
                 positional_index++;
                 break;
@@ -943,7 +943,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_op)
 
-    static pcc_set_funcs f = {
+    static pcc_set_funcs function_pointers = {
         (intval_func_t)intval_from_op,
         (numval_func_t)numval_from_op,
         (string_func_t)string_from_op,
@@ -955,7 +955,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         (pmc_constant_func_t)pmc_constant_from_op,
     };
 
-    fill_params(interp, call_object, raw_sig, raw_params, &f);
+    fill_params(interp, call_object, raw_sig, raw_params, &function_pointers);
 }
 /*
 
@@ -985,7 +985,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
     va_list args;
     PMC    *raw_sig  = PMCNULL;
     PMC    *invalid_sig = PMCNULL;
-    static pcc_set_funcs f = {
+    static pcc_set_funcs function_pointers = {
         (intval_func_t)intval_from_varargs,
         (numval_func_t)numval_from_varargs,
         (string_func_t)string_from_varargs,
@@ -1003,7 +1003,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                 "returns should not be included in the parameter list");
 
     va_start(args, signature);
-    fill_params(interp, call_object, raw_sig, &args, &f);
+    fill_params(interp, call_object, raw_sig, &args, &function_pointers);
     va_end(args);
 }
 
