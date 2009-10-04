@@ -37,8 +37,6 @@ The name of a test function is usually 'nci_<signature>'. E.g. the function
 #include <stdlib.h>
 #include <string.h>
 #include <parrot/config.h>
-#include <parrot/interpreter.h>
-#include <parrot/core_types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -749,7 +747,7 @@ Prints "ok" if C<PMC> is not null, prints "got null" otherwise.
 PARROT_EXPORT void
 nci_vP(void *pmc)
 {
-    if (!PMC_IS_NULL((Parrot_PMC*)pmc))
+    if (pmc)
         puts("ok");
     else
         puts("got null");
