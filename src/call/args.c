@@ -712,16 +712,16 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 {
     ASSERT_ARGS(fill_params)
     PMC    *ctx = CURRENT_CONTEXT(interp);
-    INTVAL  param_count    = VTABLE_elements(interp, raw_sig);
+    INTVAL  param_count      = VTABLE_elements(interp, raw_sig);
     INTVAL  positional_elements;
-    STRING *param_name     = NULL;
-    INTVAL  param_index    = 0;
+    STRING *param_name       = NULL;
+    INTVAL  param_index      = 0;
     INTVAL  positional_index = 0;
-    INTVAL  named_count    = 0;
-    INTVAL  slurpy_count   = 0;
-    INTVAL  optional_count = 0;
-    INTVAL  err_check      = 0;
-    INTVAL  got_optional   = -1;
+    INTVAL  named_count      = 0;
+    INTVAL  slurpy_count     = 0;
+    INTVAL  optional_count   = 0;
+    INTVAL  err_check        = 0;
+    INTVAL  got_optional     = -1;
 
     /* Check if we should be throwing errors. This is configured separately
      * for parameters and return values. */
@@ -959,6 +959,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     fill_params(interp, call_object, raw_sig, raw_params, &function_pointers);
 }
+
 /*
 
 =item C<void Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, PMC *call_object,
