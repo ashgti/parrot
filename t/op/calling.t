@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 94;
+use Parrot::Test tests => 95;
 
 =head1 NAME
 
@@ -1748,6 +1748,36 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "named - 2 flatten" );
     returncc
 CODE
 10 20
+ok
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "named - 3 slurpy hash PIR" );
+.sub main :main
+    foo('a' => 10 , 'b' => 20, 'c' => 30)
+    print "ok\n"
+    end
+.end
+.sub foo
+    .param int a :named('a')
+    .param pmc bar :slurpy :named
+    print a
+    print ' '
+    elements $I1, bar
+    print $I1
+    print ' '
+    typeof $S0, bar
+    print $S0
+    print ' '
+    set $I2, bar['b']
+    print $I2
+    print ' '
+    set $I2, bar['c']
+    print $I2
+    print "\n"
+.end
+
+CODE
+10 2 Hash 20 30
 ok
 OUTPUT
 
