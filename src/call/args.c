@@ -62,6 +62,7 @@ static void assign_default_param_value(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
+PARROT_CAN_RETURN_NULL
 static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -100,44 +101,56 @@ static void fill_params(PARROT_INTERP,
         FUNC_MODIFIES(*call_object);
 
 static INTVAL intval_constant_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 static INTVAL intval_constant_from_varargs(PARROT_INTERP,
-    void *data,
+    ARGIN(void *data),
     INTVAL index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static INTVAL* intval_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static INTVAL* intval_from_varargs(PARROT_INTERP,
-    va_list *args,
+    ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 static FLOATVAL numval_constant_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 static FLOATVAL numval_constant_from_varargs(PARROT_INTERP,
-    void *data,
+    ARGIN(void *data),
     INTVAL index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static FLOATVAL* numval_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static FLOATVAL* numval_from_varargs(PARROT_INTERP,
-    va_list *args,
+    ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 PARROT_CAN_RETURN_NULL
 static void parse_signature_string(PARROT_INTERP,
@@ -151,45 +164,61 @@ static void parse_signature_string(PARROT_INTERP,
         FUNC_MODIFIES(*arg_flags)
         FUNC_MODIFIES(*return_flags);
 
+PARROT_CAN_RETURN_NULL
 static PMC* pmc_constant_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CAN_RETURN_NULL
 static PMC* pmc_constant_from_varargs(PARROT_INTERP,
-    void* data,
+    ARGIN(void *data),
     INTVAL index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static PMC** pmc_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static PMC** pmc_from_varargs(PARROT_INTERP,
-    va_list *args,
+    ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CAN_RETURN_NULL
 static STRING* string_constant_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CAN_RETURN_NULL
 static STRING* string_constant_from_varargs(PARROT_INTERP,
-    void *data,
+    ARGIN(void *data),
     INTVAL index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static STRING** string_from_op(PARROT_INTERP,
-    opcode_t *raw_params,
+    ARGIN(opcode_t *raw_params),
     INTVAL param_index)
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
 static STRING** string_from_varargs(PARROT_INTERP,
-    va_list *args,
+    ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1);
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 #define ASSERT_ARGS_assign_default_param_value __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -214,42 +243,58 @@ static STRING** string_from_varargs(PARROT_INTERP,
     , PARROT_ASSERT_ARG(arg_info) \
     , PARROT_ASSERT_ARG(accessor))
 #define ASSERT_ARGS_intval_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_intval_constant_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_intval_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_intval_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(args))
 #define ASSERT_ARGS_numval_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_numval_constant_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_numval_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_numval_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(args))
 #define ASSERT_ARGS_parse_signature_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(signature) \
     , PARROT_ASSERT_ARG(arg_flags) \
     , PARROT_ASSERT_ARG(return_flags))
 #define ASSERT_ARGS_pmc_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_pmc_constant_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_pmc_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_pmc_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(args))
 #define ASSERT_ARGS_string_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_string_constant_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_string_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_params))
 #define ASSERT_ARGS_string_from_varargs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(args))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -1607,7 +1652,7 @@ INTVAL index)>
 =item C<static STRING* string_constant_from_varargs(PARROT_INTERP, void *data,
 INTVAL index)>
 
-=item C<static PMC* pmc_constant_from_varargs(PARROT_INTERP, void* data, INTVAL
+=item C<static PMC* pmc_constant_from_varargs(PARROT_INTERP, void *data, INTVAL
 index)>
 
  - More specific comments can be added later
@@ -1618,7 +1663,7 @@ index)>
 
 PARROT_CANNOT_RETURN_NULL
 static INTVAL*
-intval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+intval_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(intval_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1627,7 +1672,7 @@ intval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CANNOT_RETURN_NULL
 static FLOATVAL*
-numval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+numval_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(numval_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1636,7 +1681,7 @@ numval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CANNOT_RETURN_NULL
 static STRING**
-string_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+string_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(string_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1645,7 +1690,7 @@ string_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CANNOT_RETURN_NULL
 static PMC**
-pmc_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+pmc_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(pmc_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1653,7 +1698,7 @@ pmc_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 }
 
 static INTVAL
-intval_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+intval_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(intval_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1661,7 +1706,7 @@ intval_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 }
 
 static FLOATVAL
-numval_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+numval_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(numval_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1670,7 +1715,7 @@ numval_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CAN_RETURN_NULL
 static STRING*
-string_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+string_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(string_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1679,7 +1724,7 @@ string_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CAN_RETURN_NULL
 static PMC*
-pmc_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
+pmc_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param_index)
 {
     ASSERT_ARGS(pmc_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
@@ -1688,7 +1733,7 @@ pmc_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 
 PARROT_CANNOT_RETURN_NULL
 static INTVAL*
-intval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
+intval_from_varargs(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
     ASSERT_ARGS(intval_from_varargs)
     return va_arg(*args, INTVAL*);
@@ -1696,7 +1741,7 @@ intval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 
 PARROT_CANNOT_RETURN_NULL
 static FLOATVAL*
-numval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
+numval_from_varargs(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
     ASSERT_ARGS(numval_from_varargs)
     return va_arg(*args, FLOATVAL*);
@@ -1704,7 +1749,7 @@ numval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 
 PARROT_CANNOT_RETURN_NULL
 static STRING**
-string_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
+string_from_varargs(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
     ASSERT_ARGS(string_from_varargs)
     return va_arg(*args, STRING**);
@@ -1712,14 +1757,14 @@ string_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 
 PARROT_CANNOT_RETURN_NULL
 static PMC**
-pmc_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
+pmc_from_varargs(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
     ASSERT_ARGS(pmc_from_varargs)
     return va_arg(*args, PMC**);
 }
 
 static INTVAL
-intval_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
+intval_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(intval_constant_from_varargs)
     PARROT_ASSERT(!"Wrong call");
@@ -1727,7 +1772,7 @@ intval_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
 }
 
 static FLOATVAL
-numval_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
+numval_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(numval_constant_from_varargs)
     PARROT_ASSERT(!"Wrong call");
@@ -1736,7 +1781,7 @@ numval_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
 
 PARROT_CAN_RETURN_NULL
 static STRING*
-string_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
+string_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(string_constant_from_varargs)
     PARROT_ASSERT(!"Wrong call");
@@ -1745,7 +1790,7 @@ string_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
 
 PARROT_CAN_RETURN_NULL
 static PMC*
-pmc_constant_from_varargs(PARROT_INTERP, void* data, INTVAL index)
+pmc_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(pmc_constant_from_varargs)
     PARROT_ASSERT(!"Wrong call");
@@ -1764,6 +1809,7 @@ tailcalled function or method.
 
 */
 
+PARROT_CAN_RETURN_NULL
 static PMC*
 clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
 {
