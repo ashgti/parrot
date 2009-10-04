@@ -841,11 +841,13 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
              * argument, fall through to positional argument handling. */
             param_name = NULL;
         }
+        else {
+            /* Positional non-collected */
+            if (named_count > 0)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "named parameters must follow all positional parameters");
+        }
 
-        /* Positional non-collected */
-        if (named_count > 0)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                    "named parameters must follow all positional parameters");
         if (slurpy_count > 0)
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "slurpy parameters must follow ordinary positional parameters");
