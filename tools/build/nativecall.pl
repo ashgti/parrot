@@ -312,14 +312,13 @@ sub make_arg {
         return "Buffer_bufstart(t_$temp_num)";
     };
     /B/ && do {
-        push @{$temps_ref},           "char *s_$temp_num;";
         push @{$temps_ref},           "char *t_$temp_num;";
         push @{$temps_ref},           "char** v_$temp_num = &t_$temp_num;";
         push @{$temps_ref},           "STRING *ts_$temp_num;";
         push @{$fill_params_ref},     "&ts_$temp_num";
         push @{$extra_preamble_ref},
             "t_$temp_num = ts_$temp_num ? Parrot_str_to_cstring(interp, ts_$temp_num) : (char *) NULL;";
-        push @{$extra_postamble_ref}, "do { if (s_$temp_num) Parrot_str_free_cstring(s_$temp_num); } while (0);";
+        push @{$extra_postamble_ref}, "do { if (t_$temp_num) Parrot_str_free_cstring(t_$temp_num); } while (0);";
         return "v_$temp_num";
     };
     /J/ && do {
