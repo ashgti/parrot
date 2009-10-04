@@ -62,7 +62,7 @@ static void assign_default_param_value(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
-static void dissect_aggregate_arg(PARROT_INTERP,
+static STRING * dissect_aggregate_arg(PARROT_INTERP,
     ARGMOD(PMC *call_object),
     ARGIN(PMC *aggregate))
         __attribute__nonnull__(1)
@@ -332,18 +332,19 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
             case PARROT_ARG_PMC:
             {
                 PMC *pmc_value;
-                string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
                 if (constant)
                     pmc_value = Parrot_pcc_get_pmc_constant(interp, ctx, raw_index);
                 else
                     pmc_value = CTX_REG_PMC(ctx, raw_index);
 
                 if (arg_flags & PARROT_ARG_FLATTEN) {
-                    dissect_aggregate_arg(interp, call_object, pmc_value);
-                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "f"));
+                    STRING * const flat_list = dissect_aggregate_arg(interp, call_object, pmc_value);
+                    string_sig = Parrot_str_append(interp, string_sig, flat_list);
                 }
-                else
+                else {
+                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
                     VTABLE_push_pmc(interp, call_object, CTX_REG_PMC(ctx, raw_index));
+                }
 
                 break;
             }
@@ -430,8 +431,8 @@ extract_named_arg_from_op(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(STRING 
 
 /*
 
-=item C<static void dissect_aggregate_arg(PARROT_INTERP, PMC *call_object, PMC
-*aggregate)>
+=item C<static STRING * dissect_aggregate_arg(PARROT_INTERP, PMC *call_object,
+PMC *aggregate)>
 
 Takes an aggregate PMC and splits it up into individual arguments,
 adding each one to the CallSignature PMC. If the aggregate is an array,
@@ -442,17 +443,19 @@ hash, its key/value pairs are added as named arguments.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING *
 dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggregate))
 {
     ASSERT_ARGS(dissect_aggregate_arg)
-
+    STRING * sub_string = Parrot_str_new(interp, NULL, 0);
     if (VTABLE_does(interp, aggregate, CONST_STRING(interp, "array"))) {
         INTVAL elements = VTABLE_elements(interp, aggregate);
         INTVAL index;
         for (index = 0; index < elements; index++) {
             VTABLE_push_pmc(interp, call_object,
                     VTABLE_get_pmc_keyed_int(interp, aggregate, index));
+            sub_string = Parrot_str_append(interp, sub_string, CONST_STRING(interp, "P"));
         }
     }
     else if (VTABLE_does(interp, aggregate, CONST_STRING(interp, "hash"))) {
@@ -470,6 +473,7 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
                 PARROT_ASSERT(name);
                 VTABLE_set_pmc_keyed_str(interp, call_object, name,
                     VTABLE_get_pmc_keyed_str(interp, aggregate, name));
+                sub_string = Parrot_str_append(interp, sub_string, CONST_STRING(interp, "SnP"));
             }
         }
     }
@@ -477,7 +481,7 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                 "flattened parameters must be a hash or array");
     }
-
+    return sub_string;
 }
 
 /*
