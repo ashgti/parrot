@@ -956,7 +956,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 for (named_arg_index = 0; named_arg_index < named_arg_count; named_arg_index++) {
                     if (!PMC_IS_NULL(named_key)) {
                         STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                        (Hash *)VTABLE_get_pointer(interp, named_arg_list), named_key);
+                                    (Hash *)VTABLE_get_pointer(interp, named_arg_list), named_key);
                         PARROT_ASSERT(name);
                         if ((PMC_IS_NULL(named_used_list)) ||
                                 !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
@@ -1090,7 +1090,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 for (named_arg_index = 0; named_arg_index < named_arg_count; named_arg_index++) {
                     if (!PMC_IS_NULL(named_key)) {
                         STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                        (Hash *)VTABLE_get_pointer(interp, named_arg_list), named_key);
+                                    (Hash *)VTABLE_get_pointer(interp, named_arg_list), named_key);
                         PARROT_ASSERT(name);
                         if (!VTABLE_exists_keyed_str(interp, named_used_list, name)) {
                             Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1105,10 +1105,23 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     }
 }
 
+/*
+
+=item C<static void assign_default_param_value(PARROT_INTERP, INTVAL
+param_index, INTVAL param_flags, void *arg_info, struct pcc_set_funcs
+*accessor)>
+
+Assign an appropriate default value to the parameter depending on its type
+
+=cut
+
+*/
+
 static void
 assign_default_param_value(PARROT_INTERP, INTVAL param_index, INTVAL param_flags,
         ARGIN(void *arg_info), ARGIN(struct pcc_set_funcs *accessor))
 {
+    ASSERT_ARGS(assign_default_param_value)
     switch (PARROT_ARG_TYPE_MASK_MASK(param_flags)) {
         case PARROT_ARG_INTVAL:
             *accessor->intval(interp, arg_info, param_index) = 0;
