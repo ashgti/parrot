@@ -190,7 +190,7 @@ integer or PMC).
 
     VTABLE INTVAL get_integer() {
         Parrot_CPointer_attributes * const data = PARROT_CPOINTER(SELF);
-        
+
         if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "I"))) {
             INTVAL * const int_pointer = (INTVAL *) data->pointer;
             return *int_pointer;
@@ -405,7 +405,7 @@ Returns the PMC value that the pointer points to (if the pointer is to a PMC).
 
     VTABLE PMC *get_pmc() {
         const Parrot_CPointer_attributes * const data = PARROT_CPOINTER(SELF);
-        
+
         if (Parrot_str_equal(interp, data->sig, CONST_STRING(interp, "I"))) {
             INTVAL * const int_pointer = (INTVAL *) data->pointer;
             return get_integer_pmc(INTERP, *int_pointer);
