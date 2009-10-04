@@ -1192,6 +1192,7 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
     ctx->results_signature = NULL;
     ctx->lex_pad           = PMCNULL;
     ctx->outer_ctx         = NULL;
+    ctx->current_sub       = NULL;
     ctx->current_cont      = NULL;
     ctx->current_object    = NULL;
     ctx->handlers          = PMCNULL;
