@@ -62,6 +62,11 @@ static void assign_default_param_value(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
+static void assign_default_result_value(PARROT_INTERP,
+    PMC *result,
+    INTVAL result_flags)
+        __attribute__nonnull__(1);
+
 PARROT_CAN_RETURN_NULL
 static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(1)
@@ -93,6 +98,17 @@ static void fill_params(PARROT_INTERP,
     ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
     ARGIN(void *arg_info),
+    ARGIN(struct pcc_set_funcs *accessor))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5)
+        FUNC_MODIFIES(*call_object);
+
+static void fill_results(PARROT_INTERP,
+    ARGMOD_NULLOK(PMC *call_object),
+    ARGIN(PMC *raw_sig),
+    ARGIN(void *return_info),
     ARGIN(struct pcc_set_funcs *accessor))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3)
@@ -224,6 +240,8 @@ static STRING** string_from_varargs(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(arg_info) \
     , PARROT_ASSERT_ARG(accessor))
+#define ASSERT_ARGS_assign_default_result_value __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_clone_key_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(key))
@@ -241,6 +259,11 @@ static STRING** string_from_varargs(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_sig) \
     , PARROT_ASSERT_ARG(arg_info) \
+    , PARROT_ASSERT_ARG(accessor))
+#define ASSERT_ARGS_fill_results __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(raw_sig) \
+    , PARROT_ASSERT_ARG(return_info) \
     , PARROT_ASSERT_ARG(accessor))
 #define ASSERT_ARGS_intval_constant_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -1190,6 +1213,41 @@ assign_default_param_value(PARROT_INTERP, INTVAL param_index, INTVAL param_flags
 
 /*
 
+=item C<static void assign_default_result_value(PARROT_INTERP, PMC *result,
+INTVAL result_flags)>
+
+Assign an appropriate default value to the result depending on its type
+
+=cut
+
+*/
+
+static void
+assign_default_result_value(PARROT_INTERP, PMC *result, INTVAL result_flags)
+{
+    ASSERT_ARGS(assign_default_result_value)
+    switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
+        case PARROT_ARG_INTVAL:
+            VTABLE_set_integer_native(interp, result, 0);
+            break;
+        case PARROT_ARG_FLOATVAL:
+            VTABLE_set_number_native(interp, result, 0.0);
+            break;
+        case PARROT_ARG_STRING:
+            VTABLE_set_string_native(interp, result, NULL);
+            break;
+        case PARROT_ARG_PMC:
+            VTABLE_set_pmc(interp, result, PMCNULL);
+            break;
+        default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_OPERATION, "invalid parameter type");
+            break;
+    }
+}
+
+/*
+
 =item C<void Parrot_pcc_fill_params_from_op(PARROT_INTERP, PMC *call_object, PMC
 *raw_sig, opcode_t *raw_params)>
 
@@ -1276,6 +1334,466 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 
 /*
 
+=item C<static void fill_results(PARROT_INTERP, PMC *call_object, PMC *raw_sig,
+void *return_info, struct pcc_set_funcs *accessor)>
+
+Gets returns for the current return and puts them into position.
+First it gets the positional non-slurpy returns, then the positional
+slurpy returns, then the named returns, and finally the named
+slurpy returns.
+
+=cut
+
+*/
+
+static void
+fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
+        ARGIN(PMC *raw_sig), ARGIN(void *return_info), ARGIN(struct pcc_set_funcs *accessor))
+{
+    ASSERT_ARGS(fill_results)
+    PMC    *ctx = CURRENT_CONTEXT(interp);
+    PMC    *named_used_list = PMCNULL;
+    INTVAL  return_count    = VTABLE_elements(interp, raw_sig);
+    INTVAL  result_count;
+    INTVAL  positional_returns = 0; /* initialized by a loop later */
+    INTVAL  i = 0;                  /* used by the initialization loop */
+    STRING *result_name     = NULL;
+    INTVAL  return_index    = 0;
+    INTVAL  result_index    = 0;
+    INTVAL  positional_index = 0;
+    INTVAL  named_count    = 0;
+    INTVAL  err_check      = 0;
+    PMC    *result_list;
+    PMC    *result_sig;
+
+    /* Check if we should be throwing errors. This is configured separately
+     * for parameters and return values. */
+    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_PARAM_COUNT_FLAG))
+            err_check = 1;
+
+    /* A null call object is fine if there are no returns and no results. */
+    /* XXX How can I check for this?  Results are stored in call_object...
+    if (PMC_IS_NULL(call_object)) {
+        if (result_count > 0) {
+            if (err_check)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too few returns: 0 passed, %d expected",
+                        result_count);
+        }
+        return;
+    } */
+
+    result_list    = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
+    result_count = VTABLE_elements(interp, result_sig);
+
+    /* the call obj doesn't have the returns as positionals, so instead we loop
+     * over raw_sig and count the number of non-named
+     *
+     * XXX Do we need to check for :flat?
+     */
+    for(i = 0; i < return_count; i++) {
+        INTVAL flags = VTABLE_get_integer_keyed_int(interp, raw_sig, i);
+        if (!(flags & PARROT_ARG_NAME))
+            positional_returns++;
+    }
+
+    /* Parrot_io_eprintf(interp, "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n", return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig), VTABLE_get_repr(interp, result_sig)); */
+
+    while (1) {
+        INTVAL result_flags;
+        INTVAL return_flags;
+        PMC *result_item;
+        INTVAL constant;
+
+        /* Check if we've used up all the results. */
+        if (result_index >= result_count) {
+            if (return_index >= positional_returns) {
+                /* We've used up all the returns and results, we're done. */
+                break;
+            }
+            else if (err_check) {
+                /* We've used up all the results, but have extra positional
+                 * returns left over. */
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too many positional returns: %d passed, %d expected",
+                        positional_returns, result_index);
+            }
+            return;
+        }
+
+        result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
+        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+        constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
+
+        /* If the result is slurpy, collect all remaining positional
+         * returns into an array.*/
+        if (result_flags & PARROT_ARG_SLURPY_ARRAY) {
+            PMC *collect_positional;
+
+            /* Can't handle named slurpy here, go on to named return handling. */
+            if (result_flags & PARROT_ARG_NAME)
+                break;
+
+            if (named_count > 0)
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "named results must follow all positional results");
+
+            collect_positional = pmc_new(interp,
+                    Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
+            for (; return_index < positional_returns; return_index++) {
+                return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+                constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
+                switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
+                    case PARROT_ARG_INTVAL:
+                        VTABLE_push_integer(interp, collect_positional, constant?
+                                accessor->intval_constant(interp, return_info, return_index)
+                                :*accessor->intval(interp, return_info, return_index));
+                        break;
+                    case PARROT_ARG_FLOATVAL:
+                        VTABLE_push_float(interp, collect_positional, constant?
+                                accessor->numval_constant(interp, return_info, return_index)
+                                :*accessor->numval(interp, return_info, return_index));
+                        break;
+                    case PARROT_ARG_STRING:
+                        VTABLE_push_string(interp, collect_positional, constant?
+                                accessor->string_constant(interp, return_info, return_index)
+                                :*accessor->string(interp, return_info, return_index));
+                        break;
+                    case PARROT_ARG_PMC:
+                        VTABLE_push_pmc(interp, collect_positional, constant?
+                                accessor->pmc_constant(interp, return_info, return_index)
+                                :*accessor->pmc(interp, return_info, return_index));
+                        break;
+                    default:
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION, "invalid return type");
+                        break;
+                }
+            }
+            VTABLE_set_pmc(interp, result_item, collect_positional);
+            result_index++;
+            break; /* Terminate the positional return loop. */
+        }
+
+        /* We have a positional return, fill the result with it. */
+        if (return_index < positional_returns) {
+
+            /* Fill a named result with a positional return. */
+            if (result_flags & PARROT_ARG_NAME) {
+                STRING *result_name;
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "named returns NYI");
+                if (!(result_flags & PARROT_ARG_STRING))
+                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                            "named results must have a name specified");
+                result_name = PARROT_ARG_CONSTANT_ISSET(result_flags)
+                                   ? accessor->string_constant(interp, return_info, result_index)
+                                   : *accessor->string(interp, return_info, result_index);
+                named_count++;
+                result_index++;
+                if (result_index >= result_count)
+                    continue;
+                result_flags = VTABLE_get_integer_keyed_int(interp,
+                            raw_sig, result_index);
+
+                /* Mark the name as used, cannot be filled again. */
+                if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                    named_used_list = pmc_new(interp, enum_class_Hash);
+                VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
+            }
+            else if (named_count > 0) {
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "named results must follow all positional results");
+            }
+
+            /* Check for :lookahead result goes here. */
+
+            /* Go ahead and fill the result with a positional return. */
+            switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
+                case PARROT_ARG_INTVAL:
+                    if (constant)
+                        VTABLE_set_integer_native(interp, result_item,
+                            accessor->intval_constant(interp, return_info, return_index));
+                    else
+                        VTABLE_set_integer_native(interp, result_item,
+                            *accessor->intval(interp, return_info, return_index));
+                    break;
+                case PARROT_ARG_FLOATVAL:
+                    if (constant)
+                        VTABLE_set_number_native(interp, result_item,
+                            accessor->numval_constant(interp, return_info, return_index));
+                    else
+                        VTABLE_set_number_native(interp, result_item,
+                            *accessor->numval(interp, return_info, return_index));
+                    break;
+                case PARROT_ARG_STRING:
+                    if (constant)
+                        VTABLE_set_string_native(interp, result_item,
+                            accessor->string_constant(interp, return_info, return_index));
+                    else
+                        VTABLE_set_string_native(interp, result_item,
+                            *accessor->string(interp, return_info, return_index));
+                    break;
+                case PARROT_ARG_PMC:
+                    if (constant)
+                        VTABLE_set_pmc(interp, result_item,
+                            accessor->pmc_constant(interp, return_info, return_index));
+                    else
+                        VTABLE_set_pmc(interp, result_item,
+                            *accessor->pmc(interp, return_info, return_index));
+                    break;
+                default:
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION, "invalid return type");
+                    break;
+            }
+
+            /* Mark the option flag for the filled result. */
+            if (result_flags & PARROT_ARG_OPTIONAL) {
+                INTVAL next_result_flags;
+
+                if (result_index + 1 < result_count) {
+                    next_result_flags = VTABLE_get_integer_keyed_int(interp,
+                            raw_sig, result_index + 1);
+                    if (next_result_flags & PARROT_ARG_OPT_FLAG) {
+                        result_index++;
+                        VTABLE_set_integer_native(interp, result_item, 1);
+                    }
+                }
+            }
+        }
+        /* We have no more positional returns, fill the optional result
+         * with a default value. */
+        else if (result_flags & PARROT_ARG_OPTIONAL) {
+            INTVAL next_result_flags;
+
+            /* We don't handle optional named results here, handle them in the
+             * next loop. */
+            if (result_flags & PARROT_ARG_NAME)
+                break;
+
+            assign_default_result_value(interp, result_item, result_flags);
+
+            /* Mark the option flag for the result to FALSE, it was filled
+             * with a default value. */
+            if (result_index + 1 < result_count) {
+                next_result_flags = VTABLE_get_integer_keyed_int(interp,
+                        raw_sig, result_index + 1);
+                if (next_result_flags & PARROT_ARG_OPT_FLAG) {
+                    result_index++;
+                    VTABLE_set_integer_native(interp, result_item, 0);
+                }
+            }
+        }
+        /* We don't have an return for the result, and it's not optional,
+         * so it's an error. */
+        else {
+            /* We don't handle named results here, go to the next loop. */
+            if (result_flags & PARROT_ARG_NAME)
+                break;
+
+            if (err_check)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too few positional returns: %d passed, %d (or more) expected",
+                        positional_returns, result_index + 1);
+        }
+
+        /* Go on to next return and result. */
+        return_index++;
+        result_index++;
+    }
+
+    /* Now iterate over the named returns and results. */
+    while (1) {
+        STRING *result_name    = NULL;
+        PMC *result_item;
+        INTVAL result_flags;
+
+        /* Check if we've used up all the results. We'll check for leftover
+         * named returns after the loop. */
+        if (result_index >= result_count)
+            break;
+
+        result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
+        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+
+        /* All remaining results must be named. */
+        if (!(result_flags & PARROT_ARG_NAME)) {
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named results must follow all positional results");
+        }
+
+        /* Collected ("slurpy") named result */
+        if (result_flags & PARROT_ARG_SLURPY_ARRAY) {
+            PMC * const collect_named = pmc_new(interp,
+                    Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
+            PMC *named_return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
+            if (!PMC_IS_NULL(named_return_list)) {
+                INTVAL named_return_count = VTABLE_elements(interp, named_return_list);
+                INTVAL named_return_index;
+                PMC *named_key = pmc_new(interp, enum_class_Key);
+                VTABLE_set_integer_native(interp, named_key, 0);
+                SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
+
+                /* Low-level hash iteration. */
+                for (named_return_index = 0; named_return_index < named_return_count; named_return_index++) {
+                    if (!PMC_IS_NULL(named_key)) {
+                        STRING *name = (STRING *)parrot_hash_get_idx(interp,
+                                    (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
+                        PARROT_ASSERT(name);
+                        if ((PMC_IS_NULL(named_used_list)) ||
+                                !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
+                            VTABLE_set_pmc_keyed_str(interp, collect_named, name,
+                                    VTABLE_get_pmc_keyed_str(interp, call_object, name));
+                            /* Mark the name as used, cannot be filled again. */
+                            if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                                named_used_list = pmc_new(interp, enum_class_Hash);
+                            VTABLE_set_integer_keyed_str(interp, named_used_list, name, 1);
+                            named_count++;
+                        }
+                    }
+                }
+            }
+
+            VTABLE_set_pmc(interp, result_item, collect_named);
+            break; /* End of named results. */
+        }
+
+        /* Store the name. */
+       if (!(result_flags & PARROT_ARG_STRING))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named results must have a name specified");
+        result_name = PARROT_ARG_CONSTANT_ISSET(result_flags)
+                               ? accessor->string_constant(interp, return_info, result_index)
+                               : *accessor->string(interp, return_info, result_index);
+
+        if (!STRING_IS_NULL(result_name)) {
+            /* The next result is the actual value. */
+            result_index++;
+            if (result_index >= result_count)
+                continue;
+            result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
+
+            if (VTABLE_exists_keyed_str(interp, call_object, result_name)) {
+
+                /* Mark the name as used, cannot be filled again. */
+                if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
+                    named_used_list = pmc_new(interp, enum_class_Hash);
+                VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
+                named_count++;
+
+                /* Fill the named result. */
+                switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
+                    case PARROT_ARG_INTVAL:
+                        VTABLE_set_integer_native(interp, result_item, 
+                            *accessor->intval(interp, return_info, result_index));
+                        break;
+                    case PARROT_ARG_FLOATVAL:
+                        VTABLE_set_number_native(interp, result_item, 
+                            *accessor->numval(interp, return_info, result_index));
+                        break;
+                    case PARROT_ARG_STRING:
+                        VTABLE_set_string_native(interp, result_item, 
+                            *accessor->string(interp, return_info, result_index));
+                        break;
+                    case PARROT_ARG_PMC:
+                        VTABLE_set_pmc(interp, result_item, 
+                            *accessor->pmc(interp, return_info, result_index));
+                        break;
+                    default:
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION, "invalid result type");
+                        break;
+                }
+
+                /* Mark the option flag for the filled result. */
+                if (result_flags & PARROT_ARG_OPTIONAL) {
+                    INTVAL next_result_flags;
+
+                    if (result_index + 1 < result_count) {
+                        next_result_flags = VTABLE_get_integer_keyed_int(interp,
+                                raw_sig, result_index + 1);
+                        if (next_result_flags & PARROT_ARG_OPT_FLAG) {
+                            result_index++;
+                            VTABLE_set_integer_native(interp, result_item, 1);
+                        }
+                    }
+                }
+            }
+            else if (result_flags & PARROT_ARG_OPTIONAL) {
+                INTVAL next_result_flags;
+
+                assign_default_result_value(interp, result_item, result_flags);
+
+                /* Mark the option flag for the result to FALSE, it was filled
+                 * with a default value. */
+                if (result_index + 1 < result_count) {
+                    next_result_flags = VTABLE_get_integer_keyed_int(interp,
+                            raw_sig, result_index + 1);
+                    if (next_result_flags & PARROT_ARG_OPT_FLAG) {
+                        result_index++;
+                        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+                        VTABLE_set_integer_native(interp, result_item, 1);
+                    }
+                }
+            }
+            /* We don't have an return for the result, and it's not optional,
+             * so it's an error. */
+            else {
+                if (err_check)
+                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                            "too few named returns: no return for required result '%S'",
+                            result_name);
+            }
+        }
+
+        result_index++;
+    }
+
+    /* Double check that all named returns were assigned to results. */
+    if (err_check) {
+        PMC *named_return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
+        if (!PMC_IS_NULL(named_return_list)) {
+            INTVAL named_return_count = VTABLE_elements(interp, named_return_list);
+            if (PMC_IS_NULL(named_used_list))
+                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                            "too many named returns: %d passed, 0 used",
+                            named_return_count);
+            if (named_return_count > named_count) {
+                /* At this point we know we have named returns that weren't
+                 * assigned to results. We're going to throw an exception
+                 * anyway, so spend a little extra effort to tell the user *which*
+                 * named return is extra. */
+                INTVAL named_return_index;
+                PMC *named_key = pmc_new(interp, enum_class_Key);
+                VTABLE_set_integer_native(interp, named_key, 0);
+                SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
+
+                /* Low-level hash iteration. */
+                for (named_return_index = 0; named_return_index < named_return_count; named_return_index++) {
+                    if (!PMC_IS_NULL(named_key)) {
+                        STRING *name = (STRING *)parrot_hash_get_idx(interp,
+                                    (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
+                        PARROT_ASSERT(name);
+                        if (!VTABLE_exists_keyed_str(interp, named_used_list, name)) {
+                            Parrot_ex_throw_from_c_args(interp, NULL,
+                                    EXCEPTION_INVALID_OPERATION,
+                                    "too many named returns: '%S' not used",
+                                    name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+/*
+
 =item C<void Parrot_pcc_fill_returns_from_op(PARROT_INTERP, PMC *call_object,
 PMC *raw_sig, opcode_t *raw_returns)>
 
@@ -1300,6 +1818,18 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     INTVAL return_index = 0;
     INTVAL return_list_index = 0;
     INTVAL err_check      = 0;
+    static pcc_set_funcs function_pointers = {
+        (intval_func_t)intval_from_op,
+        (numval_func_t)numval_from_op,
+        (string_func_t)string_from_op,
+        (pmc_func_t)pmc_from_op,
+
+        (intval_constant_func_t)intval_constant_from_op,
+        (numval_constant_func_t)numval_constant_from_op,
+        (string_constant_func_t)string_constant_from_op,
+        (pmc_constant_func_t)pmc_constant_from_op,
+    };
+
 
     /* Check if we should be throwing errors. This is configured separately
      * for parameters and return values. */
@@ -1317,84 +1847,9 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         return;
     }
 
-    return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
-    if (PMC_IS_NULL(return_list)) {
-        if (raw_return_count > 0) {
-            if (err_check)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                        "too many return values: %d passed, 0 expected",
-                        raw_return_count);
-        }
-        return;
-    }
-    else
-        return_list_elements = VTABLE_elements(interp, return_list);
+    fill_results(interp, call_object, raw_sig, raw_returns, &function_pointers);
 
-    caller_return_flags = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
-
-
-    if (raw_return_count > return_list_elements) {
-        if (err_check)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                    "too many return values: %d passed, %d expected",
-                    raw_return_count, return_list_elements);
-    }
-
-    for (return_index = 0; return_index < raw_return_count; return_index++) {
-        INTVAL return_flags = VTABLE_get_integer_keyed_int(interp,
-                    raw_sig, return_index);
-        INTVAL result_flags;
-
-        const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(return_flags);
-        const INTVAL raw_index = raw_returns[return_index + 2];
-        PMC *result_item = VTABLE_get_pmc_keyed_int(interp, return_list, return_list_index);
-        STRING *item_sig;
-
-        /* Gracefully ignore extra returns when error checking is off. */
-        if (PMC_IS_NULL(result_item))
-            continue; /* Go on to next return arg. */
-
-        result_flags = VTABLE_get_integer_keyed_int(interp, caller_return_flags, return_list_index);
-        item_sig = VTABLE_get_string_keyed_str(interp, result_item, CONST_STRING(interp, ''));
-
-        switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
-            case PARROT_ARG_INTVAL:
-                if (constant)
-                    VTABLE_set_integer_native(interp, result_item, raw_index);
-                else
-                    VTABLE_set_integer_native(interp, result_item, CTX_REG_INT(ctx, raw_index));
-                return_list_index++;
-                break;
-            case PARROT_ARG_FLOATVAL:
-                if (constant)
-                    VTABLE_set_number_native(interp, result_item,
-                            Parrot_pcc_get_num_constant(interp, ctx, raw_index));
-                else
-                    VTABLE_set_number_native(interp, result_item, CTX_REG_NUM(ctx, raw_index));
-                return_list_index++;
-                break;
-            case PARROT_ARG_STRING:
-                if (constant)
-                    VTABLE_set_string_native(interp, result_item, Parrot_str_new_COW(interp,
-                            Parrot_pcc_get_string_constant(interp, ctx, raw_index)));
-                else
-                    VTABLE_set_string_native(interp, result_item, CTX_REG_STR(ctx, raw_index));
-                return_list_index++;
-                break;
-            case PARROT_ARG_PMC:
-                if (constant)
-                    VTABLE_set_pmc(interp, result_item,
-                            Parrot_pcc_get_pmc_constant(interp, ctx, raw_index));
-                else
-                    VTABLE_set_pmc(interp, result_item, CTX_REG_PMC(ctx, raw_index));
-                return_list_index++;
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION, "invalid parameter type");
-                break;
-        }
-    }
+    return;
 }
 
 /*
