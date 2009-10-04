@@ -62,6 +62,7 @@ static void assign_default_param_value(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
+PARROT_CANNOT_RETURN_NULL
 static STRING * dissect_aggregate_arg(PARROT_INTERP,
     ARGMOD(PMC *call_object),
     ARGIN(PMC *aggregate))
@@ -1608,6 +1609,7 @@ index)>
 
 */
 
+PARROT_CANNOT_RETURN_NULL
 static INTVAL*
 intval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1616,6 +1618,7 @@ intval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return &REG_INT(interp, raw_index);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static FLOATVAL*
 numval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1624,6 +1627,7 @@ numval_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return &REG_NUM(interp, raw_index);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static STRING**
 string_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1632,6 +1636,7 @@ string_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return &REG_STR(interp, raw_index);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static PMC**
 pmc_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1656,6 +1661,7 @@ numval_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return Parrot_pcc_get_num_constant(interp, CURRENT_CONTEXT(interp), raw_index);
 }
 
+PARROT_CAN_RETURN_NULL
 static STRING*
 string_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1664,6 +1670,7 @@ string_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return Parrot_pcc_get_string_constant(interp, CURRENT_CONTEXT(interp), raw_index);
 }
 
+PARROT_CAN_RETURN_NULL
 static PMC*
 pmc_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
 {
@@ -1672,8 +1679,7 @@ pmc_constant_from_op(PARROT_INTERP, opcode_t *raw_params, INTVAL param_index)
     return Parrot_pcc_get_pmc_constant(interp, CURRENT_CONTEXT(interp), raw_index);
 }
 
-
-
+PARROT_CANNOT_RETURN_NULL
 static INTVAL*
 intval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 {
@@ -1681,6 +1687,7 @@ intval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
     return va_arg(*args, INTVAL*);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static FLOATVAL*
 numval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 {
@@ -1688,6 +1695,7 @@ numval_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
     return va_arg(*args, FLOATVAL*);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static STRING**
 string_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 {
@@ -1695,6 +1703,7 @@ string_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
     return va_arg(*args, STRING**);
 }
 
+PARROT_CANNOT_RETURN_NULL
 static PMC**
 pmc_from_varargs(PARROT_INTERP, va_list *args, SHIM(INTVAL param_index))
 {
@@ -1718,6 +1727,7 @@ numval_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
     return 0.0;
 }
 
+PARROT_CAN_RETURN_NULL
 static STRING*
 string_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
 {
@@ -1726,6 +1736,7 @@ string_constant_from_varargs(PARROT_INTERP, void *data, INTVAL index)
     return NULL;
 }
 
+PARROT_CAN_RETURN_NULL
 static PMC*
 pmc_constant_from_varargs(PARROT_INTERP, void* data, INTVAL index)
 {
