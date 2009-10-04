@@ -23,28 +23,6 @@ Various functions that call the run loop.
 
 /* HEADERIZER HFILE: include/parrot/call.h */
 
-/* HEADERIZER BEGIN: static */
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static PMC * runops_args(PARROT_INTERP,
-    ARGIN(PMC *sub),
-    ARGIN_NULLOK(PMC *obj),
-    SHIM(STRING *meth),
-    ARGIN(const char *sig),
-    va_list ap)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5);
-
-#define ASSERT_ARGS_runops_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(sub) \
-    , PARROT_ASSERT_ARG(sig))
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-/* HEADERIZER END: static */
-
 #define STACKED_EXCEPTIONS 1
 #define RUNLOOP_TRACE      0
 
