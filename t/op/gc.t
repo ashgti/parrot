@@ -192,7 +192,7 @@ GC related bugs.
     .local pmc o, cl
     cl = newclass 'Foo'
     o = new 'Foo'
-    ok(1)
+    ok(1, "end vanishing_return_continuation")
 .end
 
 # END: vanishing_return_continuation
