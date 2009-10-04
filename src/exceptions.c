@@ -38,17 +38,6 @@ static PMC * build_exception_from_args(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_CAN_RETURN_NULL
-static opcode_t * pass_exception_args(PARROT_INTERP,
-    ARGIN(const char *sig),
-    ARGIN(opcode_t *dest),
-    ARGIN(PMC * old_ctx),
-    ...)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4);
-
-PARROT_CAN_RETURN_NULL
 static void setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -56,11 +45,6 @@ static void setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
 #define ASSERT_ARGS_build_exception_from_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(format))
-#define ASSERT_ARGS_pass_exception_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(sig) \
-    , PARROT_ASSERT_ARG(dest) \
-    , PARROT_ASSERT_ARG(old_ctx))
 #define ASSERT_ARGS_setup_exception_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(sig))
@@ -285,36 +269,6 @@ setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
     CALLSIGNATURE_is_exception_SET(sig_obj);
 
     Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), sig_obj);
-}
-
-/*
-
-=item C<static opcode_t * pass_exception_args(PARROT_INTERP, const char *sig,
-opcode_t *dest, PMC * old_ctx, ...)>
-
-Passes arguments to the exception handler routine. These are retrieved with
-the .get_results() directive in PIR code.
-
-Note: DEPRECATED
-
-=cut
-
-*/
-
-PARROT_CAN_RETURN_NULL
-static opcode_t *
-pass_exception_args(PARROT_INTERP, ARGIN(const char *sig),
-        ARGIN(opcode_t *dest), ARGIN(PMC * old_ctx), ...)
-{
-    ASSERT_ARGS(pass_exception_args)
-    va_list   ap;
-    opcode_t *next;
-
-    va_start(ap, old_ctx);
-    next = parrot_pass_args_fromc(interp, sig, dest, old_ctx, ap);
-    va_end(ap);
-
-    return next;
 }
 
 /*
