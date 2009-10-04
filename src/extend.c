@@ -1202,8 +1202,8 @@ Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
 
 /*
 
-=item C<void * Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
-Parrot_String method, const char *signature, ...)>
+=item C<void * Parrot_call_method(PARROT_INTERP, Parrot_PMC sub_pmc, Parrot_PMC
+obj, Parrot_String method, const char *signature, ...)>
 
 Call the parrot subroutine C<sub> as a method on PMC object C<obj>. The method
 should have the name C<method> as a Parrot_string, and should have a function
@@ -1269,7 +1269,7 @@ Parrot_call_method(PARROT_INTERP, Parrot_PMC sub_pmc, Parrot_PMC obj,
 
 /*
 
-=item C<Parrot_Int Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
+=item C<Parrot_Int Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
 Parrot_PMC obj, Parrot_String method, const char *signature, ...)>
 
 Call the parrot subroutine C<sub> as a method on PMC object C<obj>. The method
@@ -1313,8 +1313,8 @@ Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
 
 /*
 
-=item C<Parrot_Float Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
-Parrot_PMC obj, Parrot_String method, const char *signature, ...)>
+=item C<Parrot_Float Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC
+sub_pmc, Parrot_PMC obj, Parrot_String method, const char *signature, ...)>
 
 Call a parrot method for the given object.
 
