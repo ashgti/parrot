@@ -1302,12 +1302,12 @@ Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
     sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, obj, arg_sig, args);
     va_end(args);
     free(arg_sig);
-    
+
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
     PMC_get_sub(interp, sub_pmc, sub);
     Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
-    
+
     return result;
 }
 
@@ -1343,12 +1343,12 @@ Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
     sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, obj, arg_sig, args);
     va_end(args);
     free(arg_sig);
-    
+
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "N"), &result);
     PMC_get_sub(interp, sub_pmc, sub);
     Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
-    
+
     return result;
 }
 
