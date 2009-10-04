@@ -33,8 +33,8 @@ typedef FLOATVAL* (*numval_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
 typedef STRING**  (*string_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
 typedef PMC**     (*pmc_func_t)   (PARROT_INTERP, void *arg_info, INTVAL index);
 
-typedef INTVAL    (*intval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
-typedef FLOATVAL  (*numval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef INTVAL (*intval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
+typedef FLOATVAL (*numval_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
 typedef STRING*   (*string_constant_func_t)(PARROT_INTERP, void *arg_info, INTVAL index);
 typedef PMC*      (*pmc_constant_func_t)   (PARROT_INTERP, void *arg_info, INTVAL index);
 
