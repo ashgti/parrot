@@ -811,6 +811,9 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             /* Fill a named parameter with a positional argument. */
             if (param_flags & PARROT_ARG_NAME) {
+                if (!(param_flags & PARROT_ARG_STRING))
+                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                            "named parameters must have a name specified");
                 STRING *param_name = PARROT_ARG_CONSTANT_ISSET(param_flags)
                                    ? accessor->string_constant(interp, arg_info, param_index)
                                    : *accessor->string(interp, arg_info, param_index);
@@ -950,6 +953,9 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         }
 
         /* Store the name. */
+       if (!(param_flags & PARROT_ARG_STRING))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named parameters must have a name specified");
         param_name = PARROT_ARG_CONSTANT_ISSET(param_flags)
                                ? accessor->string_constant(interp, arg_info, param_index)
                                : *accessor->string(interp, arg_info, param_index);
