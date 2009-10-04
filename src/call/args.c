@@ -583,9 +583,8 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few arguments: 0 passed, %d expected",
                         param_count);
-            else
-                return;
         }
+        return;
     }
 
     positional_elements = VTABLE_elements(interp, call_object);
@@ -831,9 +830,8 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few arguments: 0 passed, %d expected",
                         param_count);
-            else
-                return;
         }
+        return;
     }
 
     positional_elements = VTABLE_elements(interp, call_object);
@@ -1120,8 +1118,8 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many return values: %d passed, 0 expected",
                         raw_return_count);
-            return;
         }
+        return;
     }
     else
         return_list_elements = VTABLE_elements(interp, return_list);
@@ -1242,21 +1240,21 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 
     /* A null call object is fine if there are no arguments and no returns. */
     if (PMC_IS_NULL(call_object)) {
-        if (raw_return_count > 0) {
+        if (raw_return_count > 0)
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many return values: %d passed, 0 expected",
                         raw_return_count);
-        }
         return;
     }
 
     return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     if (PMC_IS_NULL(return_list)) {
-        if (err_check)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                    "too many return values: %d passed, 0 expected",
-                    raw_return_count, return_list_elements);
+        if (raw_return_count > 0)
+            if (err_check)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too many return values: %d passed, 0 expected",
+                        raw_return_count, return_list_elements);
         return;
     }
     else
