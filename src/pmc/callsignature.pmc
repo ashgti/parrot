@@ -190,6 +190,10 @@ integers.
 Retrieves the flags for the call signature return arguments, an array of
 integers.
 
+=item named
+
+Retrieves the hash of named arguments.
+
 =back
 
 =cut
@@ -207,6 +211,9 @@ integers.
         }
         else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "return_flags"))) {
             GET_ATTR_return_flags(interp, SELF, value);
+        }
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "named"))) {
+            GET_ATTR_hash(interp, SELF, value);
         }
         else {
             /* If unknown attribute name, throw an exception. */
