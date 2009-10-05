@@ -2157,7 +2157,7 @@ intval_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param
 {
     ASSERT_ARGS(intval_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
-    return Parrot_pcc_get_int_constant(interp, CURRENT_CONTEXT(interp), raw_index);
+    return raw_index; //Parrot_pcc_get_int_constant(interp, CURRENT_CONTEXT(interp), raw_index);
 }
 
 static FLOATVAL
