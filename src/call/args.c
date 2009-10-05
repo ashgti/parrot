@@ -1815,6 +1815,9 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
 {
     ASSERT_ARGS(clone_key_arg)
 
+    /* This function is sligtly broken. We need correct way to calculate caller_ctx to clone Keys */
+    return key;
+
     if (PMC_IS_NULL(key))
         return key;
 
