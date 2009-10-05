@@ -1372,7 +1372,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             err_check = 1;
 
     /* A null call object is fine if there are no returns and no results. */
-    /* XXX How can I check for this?  Results are stored in call_object...
     if (PMC_IS_NULL(call_object)) {
         if (result_count > 0) {
             if (err_check)
@@ -1381,9 +1380,19 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                         result_count);
         }
         return;
-    } */
+    }
 
     result_list    = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    if (PMC_IS_NULL(result_list)) {
+        if (result_count > 0) {
+            if (err_check)
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too few returns: 0 passed, %d expected",
+                        result_count);
+        }
+        return;
+    }
+
     result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
     result_count = VTABLE_elements(interp, result_sig);
 
