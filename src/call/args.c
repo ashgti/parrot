@@ -391,7 +391,8 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                     pmc_value = CTX_REG_PMC(ctx, raw_index);
 
                 if (arg_flags & PARROT_ARG_FLATTEN) {
-                    STRING * const flat_list = dissect_aggregate_arg(interp, call_object, pmc_value);
+                    STRING * const flat_list = dissect_aggregate_arg(
+                                                   interp, call_object, pmc_value);
                     string_sig = Parrot_str_append(interp, string_sig, flat_list);
                 }
                 else {
@@ -1702,7 +1703,7 @@ intval_constant_from_op(PARROT_INTERP, ARGIN(opcode_t *raw_params), INTVAL param
 {
     ASSERT_ARGS(intval_constant_from_op)
     const INTVAL raw_index      = raw_params[param_index + 2];
-    return raw_index; //Parrot_pcc_get_int_constant(interp, CURRENT_CONTEXT(interp), raw_index);
+    return raw_index;
 }
 
 static FLOATVAL
@@ -1815,7 +1816,10 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
 {
     ASSERT_ARGS(clone_key_arg)
 
-    /* This function is sligtly broken. We need correct way to calculate caller_ctx to clone Keys */
+    /*
+     * This function is sligtly broken. We need correct way to calculate caller_ctx to clone Keys
+     */
+
     return key;
 
     if (PMC_IS_NULL(key))
@@ -1831,9 +1835,11 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
             Regs_ni bp;
             Regs_ps bp_ps;
             PMC *res;
-            /* XXX We are 2 levels below original Key Context. Why? */
-            /* Next line intentionally left too long to bring attention */
-            PMC *caller_ctx = Parrot_pcc_get_caller_ctx(interp, Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp)));
+            /*
+             * XXX We are 2 levels below original Key Context. Why?
+             */
+            PMC *caller_ctx = Parrot_pcc_get_caller_ctx(
+                              interp, Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp)));
 
             PARROT_ASSERT(!PMC_IS_NULL(caller_ctx) || !"Need caller_ctx to clone Key");
 
