@@ -2283,7 +2283,11 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
             Regs_ni bp;
             Regs_ps bp_ps;
             PMC *res;
-            PMC *caller_ctx = Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp));
+            /* XXX We are 2 levels below original Key Context. Why? */
+            /* Next line intentionally left too long to bring attention */
+            PMC *caller_ctx = Parrot_pcc_get_caller_ctx(interp, Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp)));
+
+            PARROT_ASSERT(!PMC_IS_NULL(caller_ctx) || !"Need caller_ctx to clone Key");
 
             /* clone sets key values according to refered register items */
             bp    = *Parrot_pcc_get_regs_ni(interp, CURRENT_CONTEXT(interp));
