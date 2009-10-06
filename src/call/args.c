@@ -1337,7 +1337,7 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 =item C<static void fill_results(PARROT_INTERP, PMC *call_object, PMC *raw_sig,
 void *return_info, struct pcc_set_funcs *accessor)>
 
-Gets returns for the current return and puts them into position.
+Gets return values for the current return and puts them into position.
 First it gets the positional non-slurpy returns, then the positional
 slurpy returns, then the named returns, and finally the named
 slurpy returns.
@@ -1363,7 +1363,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     INTVAL  positional_index = 0;
     INTVAL  named_count    = 0;
     INTVAL  err_check      = 0;
-    PMC    *result_list;
+    PMC    *positional_result_list;
     PMC    *result_sig;
 
     /* Check if we should be throwing errors. This is configured separately
@@ -1372,18 +1372,19 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             err_check = 1;
 
     /* A null call object is fine if there are no returns and no results. */
-    /* XXX How can I check for this?  Results are stored in call_object...
-    if (PMC_IS_NULL(call_object)) {
-        if (result_count > 0) {
+    if (PMC_IS_NULL(call_object)) { /* No results to be filled. */
+        /* If the return_count is 0, then there are no return values waiting to
+         * fill the results, so no error. */
+        if (return_count > 0) {
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few returns: 0 passed, %d expected",
                         result_count);
         }
         return;
-    } */
+    }
 
-    result_list    = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
+    positional_result_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
     result_count = VTABLE_elements(interp, result_sig);
 
@@ -1424,7 +1425,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
         return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
-        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+        result_item = VTABLE_get_pmc_keyed_int(interp, positional_result_list, result_index);
         constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
 
         /* If the result is slurpy, collect all remaining positional
@@ -1618,7 +1619,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             break;
 
         result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
-        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+        result_item = VTABLE_get_pmc_keyed_int(interp, positional_result_list, result_index);
 
         /* All remaining results must be named. */
         if (!(result_flags & PARROT_ARG_NAME)) {
@@ -1735,7 +1736,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             raw_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
-                        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+                        result_item = VTABLE_get_pmc_keyed_int(interp, positional_result_list, result_index);
                         VTABLE_set_integer_native(interp, result_item, 1);
                     }
                 }
