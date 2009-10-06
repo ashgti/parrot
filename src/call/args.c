@@ -782,7 +782,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         ARGIN(PMC *raw_sig), ARGIN(void *arg_info), ARGIN(struct pcc_set_funcs *accessor))
 {
     ASSERT_ARGS(fill_params)
-    PMC    *ctx = CURRENT_CONTEXT(interp);
     PMC    *named_used_list = PMCNULL;
     INTVAL  param_count     = VTABLE_elements(interp, raw_sig);
     INTVAL  positional_args;
