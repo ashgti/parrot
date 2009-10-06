@@ -1354,7 +1354,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     PMC    *ctx = CURRENT_CONTEXT(interp);
     PMC    *named_used_list = PMCNULL;
     INTVAL  return_count    = VTABLE_elements(interp, raw_sig);
-    INTVAL  result_count;
+    INTVAL  positional_result_count;
     INTVAL  positional_returns = 0; /* initialized by a loop later */
     INTVAL  i = 0;                  /* used by the initialization loop */
     STRING *result_name     = NULL;
@@ -1379,14 +1379,14 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few returns: 0 passed, %d expected",
-                        result_count);
+                        positional_result_count);
         }
         return;
     }
 
     positional_result_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
-    result_count = VTABLE_elements(interp, result_sig);
+    positional_result_count = VTABLE_elements(interp, positional_result_list);
 
     /* the call obj doesn't have the returns as positionals, so instead we loop
      * over raw_sig and count the number of non-named
@@ -1407,10 +1407,11 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         PMC *result_item;
         INTVAL constant;
 
-        /* Check if we've used up all the results. */
-        if (result_index >= result_count) {
-            if (return_index >= positional_returns) {
-                /* We've used up all the returns and results, we're done. */
+        /* Check if we've used up all the returns. */
+        if (return_index >= return_count) {
+            if (result_index >= positional_result_count) {
+                /* We've used up all the positional returns and results, we're
+                 * done with this loop. */
                 break;
             }
             else if (err_check) {
@@ -1418,7 +1419,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                  * returns left over. */
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many positional returns: %d passed, %d expected",
-                        positional_returns, result_index);
+                        return_index, positional_result_count);
             }
             return;
         }
@@ -1444,7 +1445,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             collect_positional = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
-            for (; return_index < positional_returns; return_index++) {
+            /* Iterate over all positional arguments in the returns list. */
+            while (!(return_flags & PARROT_ARG_NAME)) {
                 return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
                 constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
                 switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
@@ -1473,6 +1475,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 EXCEPTION_INVALID_OPERATION, "invalid return type");
                         break;
                 }
+                return_index++;
             }
             VTABLE_set_pmc(interp, result_item, collect_positional);
             result_index++;
@@ -1480,13 +1483,11 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         }
 
         /* We have a positional return, fill the result with it. */
-        if (return_index < positional_returns) {
+        if (result_index < positional_result_count) {
 
             /* Fill a named result with a positional return. */
             if (result_flags & PARROT_ARG_NAME) {
                 STRING *result_name;
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                        "named returns NYI");
                 if (!(result_flags & PARROT_ARG_STRING))
                     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                             "named results must have a name specified");
@@ -1495,7 +1496,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                    : *accessor->string(interp, return_info, result_index);
                 named_count++;
                 result_index++;
-                if (result_index >= result_count)
+                if (result_index >= positional_result_count)
                     continue;
                 result_flags = VTABLE_get_integer_keyed_int(interp,
                             raw_sig, result_index);
@@ -1556,7 +1557,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             if (result_flags & PARROT_ARG_OPTIONAL) {
                 INTVAL next_result_flags;
 
-                if (result_index + 1 < result_count) {
+                if (result_index + 1 < positional_result_count) {
                     next_result_flags = VTABLE_get_integer_keyed_int(interp,
                             raw_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
@@ -1580,7 +1581,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             /* Mark the option flag for the result to FALSE, it was filled
              * with a default value. */
-            if (result_index + 1 < result_count) {
+            if (result_index + 1 < positional_result_count) {
                 next_result_flags = VTABLE_get_integer_keyed_int(interp,
                         raw_sig, result_index + 1);
                 if (next_result_flags & PARROT_ARG_OPT_FLAG) {
@@ -1615,7 +1616,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         /* Check if we've used up all the results. We'll check for leftover
          * named returns after the loop. */
-        if (result_index >= result_count)
+        if (result_index >= positional_result_count)
             break;
 
         result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
@@ -1674,7 +1675,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (!STRING_IS_NULL(result_name)) {
             /* The next result is the actual value. */
             result_index++;
-            if (result_index >= result_count)
+            if (result_index >= positional_result_count)
                 continue;
             result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
 
@@ -1714,7 +1715,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 if (result_flags & PARROT_ARG_OPTIONAL) {
                     INTVAL next_result_flags;
 
-                    if (result_index + 1 < result_count) {
+                    if (result_index + 1 < positional_result_count) {
                         next_result_flags = VTABLE_get_integer_keyed_int(interp,
                                 raw_sig, result_index + 1);
                         if (next_result_flags & PARROT_ARG_OPT_FLAG) {
@@ -1731,7 +1732,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
                 /* Mark the option flag for the result to FALSE, it was filled
                  * with a default value. */
-                if (result_index + 1 < result_count) {
+                if (result_index + 1 < positional_result_count) {
                     next_result_flags = VTABLE_get_integer_keyed_int(interp,
                             raw_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
