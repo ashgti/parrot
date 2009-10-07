@@ -1395,13 +1395,18 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
      *
      * XXX Do we need to check for :flat?
      */
-    for(i = 0; i < return_count; i++) {
+    for (i = 0; i < return_count; i++) {
         INTVAL flags = VTABLE_get_integer_keyed_int(interp, raw_sig, i);
         if (!(flags & PARROT_ARG_NAME))
             positional_returns++;
     }
 
-    /* Parrot_io_eprintf(interp, "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n", return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig), VTABLE_get_repr(interp, result_sig)); */
+    /*
+     * Parrot_io_eprintf(interp,
+ *  "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
+     *     return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig),
+     *     VTABLE_get_repr(interp, result_sig));
+     */
 
     while (1) {
         INTVAL result_flags;
@@ -1643,10 +1648,12 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
 
                 /* Low-level hash iteration. */
-                for (named_return_index = 0; named_return_index < named_return_count; named_return_index++) {
+                for (named_return_index = 0;
+                     named_return_index < named_return_count;
+                     named_return_index++) {
                     if (!PMC_IS_NULL(named_key)) {
                         STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                    (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
+                                  (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
                         PARROT_ASSERT(name);
                         if ((PMC_IS_NULL(named_used_list)) ||
                                 !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
@@ -1692,19 +1699,19 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 /* Fill the named result. */
                 switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
                     case PARROT_ARG_INTVAL:
-                        VTABLE_set_integer_native(interp, result_item, 
+                        VTABLE_set_integer_native(interp, result_item,
                             *accessor->intval(interp, return_info, result_index));
                         break;
                     case PARROT_ARG_FLOATVAL:
-                        VTABLE_set_number_native(interp, result_item, 
+                        VTABLE_set_number_native(interp, result_item,
                             *accessor->numval(interp, return_info, result_index));
                         break;
                     case PARROT_ARG_STRING:
-                        VTABLE_set_string_native(interp, result_item, 
+                        VTABLE_set_string_native(interp, result_item,
                             *accessor->string(interp, return_info, result_index));
                         break;
                     case PARROT_ARG_PMC:
-                        VTABLE_set_pmc(interp, result_item, 
+                        VTABLE_set_pmc(interp, result_item,
                             *accessor->pmc(interp, return_info, result_index));
                         break;
                     default:
@@ -1739,7 +1746,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             raw_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
-                        result_item = VTABLE_get_pmc_keyed_int(interp, positional_result_list, result_index);
+                        result_item = VTABLE_get_pmc_keyed_int(interp,
+                                          positional_result_list, result_index);
                         VTABLE_set_integer_native(interp, result_item, 1);
                     }
                 }
@@ -1777,10 +1785,12 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
 
                 /* Low-level hash iteration. */
-                for (named_return_index = 0; named_return_index < named_return_count; named_return_index++) {
+                for (named_return_index = 0;
+                     named_return_index < named_return_count;
+                     named_return_index++) {
                     if (!PMC_IS_NULL(named_key)) {
                         STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                    (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
+                                  (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
                         PARROT_ASSERT(name);
                         if (!VTABLE_exists_keyed_str(interp, named_used_list, name)) {
                             Parrot_ex_throw_from_c_args(interp, NULL,
