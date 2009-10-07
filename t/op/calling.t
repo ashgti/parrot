@@ -1406,7 +1406,10 @@ CODE
 ok
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "clone_key_arg" );
+my @todo = ( todo => 'broken with JIT (TT #983)' )
+    if ( defined $ENV{TEST_PROG_ARGS} and
+        $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ );
+pir_output_is( <<'CODE', <<'OUTPUT', "clone_key_arg", @todo );
 .sub main :main
     foo()
     print "ok\n"
@@ -2394,7 +2397,7 @@ CODE
 2
 OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', "arg mismatch with no params", todo=> 'RT #39844' );
+pir_error_output_like( <<'CODE', <<'OUTPUT', "arg mismatch with no params", todo=> 'TT #1033' );
 .sub main :main
   foo(1)
 .end

@@ -68,9 +68,6 @@ called set a breakpoint.
 When you re run/continue the program begin debugged it will pay
 no attention to the debug ops.
 
-RT #42377: clone the interpreter to allow people to play into the
-debugger and then continue the normal execution of the program.
-
 =cut
 
 op debug_break() :base_debug {
@@ -121,7 +118,7 @@ Get the current line number.
 
 inline op getline(out INT) {
   Parrot_Context_info info;
-  Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+  Parrot_Context_get_info(interp, CURRENT_CONTEXT(interp), &info);
   $1 = info.line;
 }
 
@@ -133,7 +130,7 @@ Get the name of the current file.
 
 inline op getfile(out STR) {
   Parrot_Context_info info;
-  Parrot_Context_get_info(interp, CONTEXT(interp), &info);
+  Parrot_Context_get_info(interp, CURRENT_CONTEXT(interp), &info);
   $1 = info.file;
 }
 

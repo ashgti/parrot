@@ -37,6 +37,7 @@ Test various use cases of the annotate directive.
   failed:
     .local pmc exception
     .get_results (exception)
+    pop_eh
     $P0 = exception.'annotations'()
     isa_ok ($P0, 'Hash', 'annotations gives back hash')
     $I0 = elements $P0
@@ -59,6 +60,7 @@ Test various use cases of the annotate directive.
   failed:
     .local pmc exception
     .get_results (exception)
+    pop_eh
 
     $P0 = exception.'annotations'('file')
     is ($P0, 'foo.p6', "file annotation got OK")
@@ -107,6 +109,7 @@ Test various use cases of the annotate directive.
   failed:
     .local pmc exception, bt, frame, ann
     .get_results (exception)
+    pop_eh
     bt = exception.'backtrace'()
     $I0 = elements bt
     $I0 = $I0 > 3
@@ -167,7 +170,7 @@ Test various use cases of the annotate directive.
 .sub 'parrotinterpreter_annotations'
     .annotate 'file', 'answer.p6'
     .annotate 'line', 42
-    $P0 = new 'ParrotInterpreter'
+    $P0 = getinterp
 
     .annotate 'line', 43
     'test_callee'()
@@ -175,7 +178,7 @@ Test various use cases of the annotate directive.
 
 .sub 'test_callee'
     .annotate 'line', 100
-    $P0 = new 'ParrotInterpreter'
+    $P0 = getinterp
     $P1 = $P0['annotations'; 1]
     $S0 = $P1['file']
     'is'($S0, 'answer.p6', 'annotations for caller sub returend with level 1')
@@ -186,7 +189,7 @@ Test various use cases of the annotate directive.
 
 .sub 'test_outer' :outer('parrotinterpreter_annotations')
     .annotate 'line', 101
-    $P0 = new 'ParrotInterpreter'
+    $P0 = getinterp
     $P1 = $P0['outer'; 'annotations'; 1]
     $S0 = $P1['file']
     'is'($S0, 'answer.p6', 'annotations for outer sub returend with level 1')

@@ -46,8 +46,8 @@ PARROT_CONST_FUNCTION
 static int convert_flags_to_unix(INTVAL flags);
 
 static INTVAL io_is_tty_unix(PIOHANDLE fd);
-#define ASSERT_ARGS_convert_flags_to_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_io_is_tty_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_convert_flags_to_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_io_is_tty_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -502,7 +502,7 @@ Parrot_io_read_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
     STRING * const s = Parrot_io_make_string(interp, buf, 2048);
 
     const size_t len = s->bufused;
-    void * const buffer = s->strstart;
+    void * const buffer = Buffer_bufstart(s);
 
     for (;;) {
         const int bytes = read(file_descriptor, buffer, len);

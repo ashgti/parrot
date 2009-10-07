@@ -67,12 +67,10 @@ typedef enum {
     PARROT_SWITCH_CORE      = 0x02,         /*   P   = prederef   */
     PARROT_CGP_CORE         = 0x06,         /*  CP                */
     PARROT_CGOTO_CORE       = 0x04,         /*  C    = cgoto      */
-    PARROT_JIT_CORE         = 0x10,         /* J     = JIT        */
-    PARROT_CGP_JIT_CORE     = 0x16,         /* JCP                */
-    PARROT_SWITCH_JIT_CORE  = 0x12,         /* J P                */
     PARROT_EXEC_CORE        = 0x20,         /* TODO Parrot_exec_run variants */
     PARROT_GC_DEBUG_CORE    = 0x40,         /* run GC before each op */
-    PARROT_DEBUGGER_CORE    = 0x80          /* used by parrot debugger */
+    PARROT_DEBUGGER_CORE    = 0x80,         /* used by parrot debugger */
+    PARROT_PROFILING_CORE   = 0x160         /* used by parrot debugger */
 } Parrot_Run_core_t;
 /* &end_gen */
 
@@ -124,14 +122,14 @@ typedef Parrot_Run_core_t Run_Cores;
 #define Interp_debug_CLEAR(interp, flag) ((interp)->debug_flags &= ~(flag))
 #define Interp_debug_TEST(interp, flag)  ((interp)->debug_flags & (flag))
 
-#define Interp_trace_SET(interp, flag)   (CONTEXT(interp)->trace_flags |= (flag))
-#define Interp_trace_CLEAR(interp, flag) (CONTEXT(interp)->trace_flags &= ~(flag))
-#define Interp_trace_TEST(interp, flag)  (CONTEXT(interp)->trace_flags & (flag))
+#define Interp_trace_SET(interp, flag)   Parrot_pcc_trace_flags_on(interp, interp->ctx, (flag))
+#define Interp_trace_CLEAR(interp, flag) Parrot_pcc_trace_flags_off(interp, interp->ctx, (flag))
+#define Interp_trace_TEST(interp, flag)  Parrot_pcc_trace_flags_test(interp, interp->ctx, (flag))
 
 #define Interp_core_SET(interp, core)   ((interp)->run_core = (core))
 #define Interp_core_TEST(interp, core)  ((interp)->run_core == (core))
 
-#include "parrot/register.h"
+#include "parrot/context.h"
 #include "parrot/parrot.h"
 #include "parrot/warnings.h"
 
@@ -140,100 +138,16 @@ typedef Parrot_Run_core_t Run_Cores;
 
 #include "parrot/debugger.h"
 #include "parrot/multidispatch.h"
+#include "parrot/call.h"
 
 typedef struct warnings_t {
     Warnings_classes classes;
 } *Warnings;
 
-/* ProfData have these extra items in front followed by
- * one entry per op at (op + extra) */
-
-typedef enum {
-     PARROT_PROF_GC_p1,        /* pass 1 mark root set */
-     PARROT_PROF_GC_p2,        /* pass 2 mark next_for_GC */
-     PARROT_PROF_GC_cp,        /* collect PMCs */
-     PARROT_PROF_GC_cb,        /* collect buffers */
-     PARROT_PROF_GC,
-     PARROT_PROF_EXCEPTION,
-     PARROT_PROF_EXTRA
-} profile_extra_enum;
-
-/* data[op_count] is time spent for exception handling */
-typedef struct ProfData {
-    int op;
-    UINTVAL numcalls;
-    FLOATVAL time;
-} ProfData;
-
-typedef struct _RunProfile {
-    FLOATVAL starttime;
-    FLOATVAL gc_time;
-    opcode_t cur_op;
-    ProfData *data;
-} RunProfile;
-
 /* Forward declaration for imc_info_t -- the actual struct is
  * defined in imcc/imc.h */
 struct _imc_info_t;
 
-typedef union {
-    PMC         **regs_p;
-    STRING      **regs_s;
-} Regs_ps;
-
-typedef union {
-    FLOATVAL     *regs_n;
-    INTVAL       *regs_i;
-} Regs_ni;
-
-/* If CTX_LEAK_DEBUG is enabled, then turning on PARROT_CTX_DESTROY_DEBUG_FLAG
-   will print tons of detail about when Parrot_Context structures are allocated
-   and deallocated to stderr.  If CTX_LEAK_DEBUG is disabled, then all of the
-   relevant code is omitted, and PARROT_CTX_DESTROY_DEBUG_FLAG has no effect.
- */
-#define CTX_LEAK_DEBUG 1
-
-struct Parrot_Context {
-    /* common header with Interp_Context */
-    struct Parrot_Context *caller_ctx;      /* caller context */
-    Regs_ni                bp;              /* pointers to FLOATVAL & INTVAL */
-    Regs_ps                bp_ps;           /* pointers to PMC & STR */
-
-    /* end common header */
-    INTVAL                n_regs_used[4];   /* INSP in PBC points to Sub */
-    PMC                   *lex_pad;         /* LexPad PMC */
-    struct Parrot_Context *outer_ctx;       /* outer context, if a closure */
-
-    /* new call scheme and introspective variables */
-    PMC      *current_sub;           /* the Sub we are executing */
-
-    /* for now use a return continuation PMC */
-    PMC      *handlers;              /* local handlers for the context */
-    PMC      *current_cont;          /* the return continuation PMC */
-    PMC      *current_object;        /* current object if a method call */
-    PMC      *current_namespace;     /* The namespace we're currently in */
-    PMC      *results_signature;     /* non-const results signature PMC */
-    opcode_t *current_pc;            /* program counter of Sub invocation */
-    opcode_t *current_results;       /* ptr into code with get_results opcode */
-
-    /* deref the constants - we need it all the time */
-    struct PackFile_Constant **constants;
-
-    INTVAL                 current_HLL;     /* see also src/hll.c */
-    size_t                 regs_mem_size;   /* memory occupied by registers */
-    int                    ref_count;       /* how often refered to */
-    int                    gc_mark;         /* marked in gc run */
-
-    UINTVAL                warns;           /* Keeps track of what warnings
-                                             * have been activated */
-    UINTVAL                errors;          /* fatals that can be turned off */
-    UINTVAL                trace_flags;
-    UINTVAL                recursion_depth; /* Sub call recursion depth */
-
-    /* code->prederefed.code - code->base.data in opcodes
-     * to simplify conversion between code ptrs in e.g. invoke */
-    size_t pred_offset;
-};
 
 struct _Thread_data;    /* in thread.h */
 struct _Caches;         /* caches .h */
@@ -250,64 +164,38 @@ typedef struct _Prederef {
     size_t n_allocated;                 /* allocated size of it */
 } Prederef;
 
+/*
+ * Get Context from interpeter.
+ */
+#define CONTEXT(interp)         Parrot_pcc_get_context_struct((interp), (interp)->ctx)
 
 /*
- * This is an 'inlined' copy of the first 3 Context items for
- * faster access of registers mainly
- * During a context switch a 3 pointers are set
+ * Helper macros to fetch fields from context.
+ *
+ * Not considered as part of public API. Should be replaced with proper accessor
+ * functions to manipulate Context.
  */
-typedef struct Interp_Context {
-    /* common header */
-    struct Parrot_Context *state;       /* context  */
-    Regs_ni                bp;          /* pointers to FLOATVAL & INTVAL */
-    Regs_ps                bp_ps;       /* pointers to PMC & STR */
-    /* end common header */
-} Interp_Context;
+#define CURRENT_CONTEXT(interp) ((interp)->ctx)
 
-#define CONTEXT(interp) ((interp)->ctx.state)
-
-#define CHUNKED_CTX_MEM 0           /* no longer works, but will be reinstated
-                                     * some day; see src/register.c for details.
-                                    */
 
 typedef struct _context_mem {
-#if CHUNKED_CTX_MEM
-    char *data;                     /* ctx + register store */
-    char *free;                     /* free to allocate */
-    char *threshold;                /* continuation threshold */
-    struct _context_mem *prev;      /* previous allocated area */
-#else
     void **free_list;               /* array of free-lists, per size free slots */
     int n_free_slots;               /* amount of allocated */
-#endif
-
 } context_mem;
-
-/* Wrap the jump buffer in a struct, to make it a linked list. Jump buffers are
- * used to resume execution at a point in the runloop where an exception
- * handler can be run. Ultimately this information should be part of
- * Parrot_Context, but at this point a new context isn't created for every
- * runloop ID, so it still needs to be a separate stack for a while longer. */
-
-typedef struct parrot_runloop_t {
-    Parrot_jump_buff         resume;        /* jmp_buf */
-    struct parrot_runloop_t *prev;          /* interpreter's runloop
-                                             * jump buffer stack */
-    opcode_t                *handler_start; /* Used in exception handling */
-} parrot_runloop_t;
-
-typedef parrot_runloop_t Parrot_runloop;
-
 
 struct _handler_node_t; /* forward def - exit.h */
 
 /* The actual interpreter structure */
 struct parrot_interp_t {
-    struct Interp_Context ctx;
-    context_mem           ctx_mem;            /* ctx memory managment */
+    PMC           *ctx;                       /* current Context */
 
-    struct Arenas *arena_base;                /* Pointer to this interpreter's
+    struct Memory_Pools *mem_pools;                /* Pointer to this interpreter's
                                                * arena */
+
+    struct GC_Subsystem *gc_sys;              /*functions and data specific
+                                                  to current GC subsystem*/
+
+    PMC *gc_registry;                         /* root set of registered PMCs */
 
     PMC     *class_hash;                      /* Hash of classes */
     VTABLE **vtables;                         /* array of vtable ptrs */
@@ -339,10 +227,9 @@ struct parrot_interp_t {
 
     UINTVAL debug_flags;                      /* debug settings */
 
-    INTVAL run_core;                          /* type of core to run the ops */
-
-    /* TODO profile per code segment or global */
-    RunProfile *profile;                      /* profile counters */
+    struct runcore_t  *run_core;              /* type of core to run the ops */
+    struct runcore_t **cores;                 /* array of known runcores */
+    UINTVAL            num_cores;             /* number of known runcores */
 
     INTVAL resume_flag;
     size_t resume_offset;
@@ -380,7 +267,6 @@ struct parrot_interp_t {
     /* 8:   PMC *PBC_Libs                Hash of load_bytecode cde */
     /* 9:   PMC *Executable              String PMC with name from argv[0]. */
 
-    PMC *gc_registry;                         /* root set of registered PMCs */
 
     PMC *HLL_info;                            /* HLL names and types */
     PMC *HLL_namespace;                       /* cache of HLL toplevel ns */
@@ -388,8 +274,6 @@ struct parrot_interp_t {
     PMC *root_namespace;                      /* namespace hash */
     PMC *scheduler;                           /* concurrency scheduler */
 
-    MMD_table *binop_mmd_funcs;               /* Table of MMD functions */
-    UINTVAL    n_binop_mmd_funcs;             /* MMD function count */
     MMD_Cache *op_mmd_cache;                  /* MMD cache for builtins. */
 
     struct _Caches * caches;                  /* see caches.h */
@@ -411,7 +295,6 @@ struct parrot_interp_t {
 
     UINTVAL recursion_limit;                  /* Sub call resursion limit */
 
-    UINTVAL gc_generation;                    /* GC generation number */
 
     opcode_t *current_args;                   /* ptr into code w/ set_args op */
     opcode_t *current_params;                 /* ... w/ get_params op */
@@ -521,11 +404,11 @@ void Parrot_really_destroy(PARROT_INTERP,
     SHIM(void *arg))
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_make_interpreter __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_Parrot_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_really_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_make_interpreter __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_Parrot_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_really_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/interp/inter_create.c */
 
@@ -533,16 +416,19 @@ void Parrot_really_destroy(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_EXPORT
-void Parrot_callback_C(ARGIN(char *external_data), ARGMOD(PMC *user_data))
+void Parrot_callback_C(
+    ARGIN(char *external_data),
+    ARGMOD_NULLOK(PMC *user_data))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
         FUNC_MODIFIES(*user_data);
 
 PARROT_EXPORT
-void Parrot_callback_D(ARGMOD(PMC *user_data), ARGIN(char *external_data))
+void Parrot_callback_D(
+    ARGMOD(PMC *user_data),
+    ARGMOD_NULLOK(char *external_data))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*user_data);
+        FUNC_MODIFIES(*user_data)
+        FUNC_MODIFIES(*external_data);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
@@ -566,21 +452,19 @@ void Parrot_run_callback(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(* user_data);
 
-#define ASSERT_ARGS_Parrot_callback_C __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(external_data) \
-    || PARROT_ASSERT_ARG(user_data)
-#define ASSERT_ARGS_Parrot_callback_D __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(user_data) \
-    || PARROT_ASSERT_ARG(external_data)
-#define ASSERT_ARGS_Parrot_make_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_Parrot_callback_C __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(external_data))
+#define ASSERT_ARGS_Parrot_callback_D __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(user_data))
+#define ASSERT_ARGS_Parrot_make_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub) \
-    || PARROT_ASSERT_ARG(user_data) \
-    || PARROT_ASSERT_ARG(cb_signature)
-#define ASSERT_ARGS_Parrot_run_callback __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub) \
+    , PARROT_ASSERT_ARG(user_data) \
+    , PARROT_ASSERT_ARG(cb_signature))
+#define ASSERT_ARGS_Parrot_run_callback __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(user_data) \
-    || PARROT_ASSERT_ARG(external_data)
+    , PARROT_ASSERT_ARG(user_data) \
+    , PARROT_ASSERT_ARG(external_data))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/interp/inter_cb.c */
 
@@ -657,35 +541,35 @@ PARROT_WARN_UNUSED_RESULT
 STRING * sysinfo_s(PARROT_INTERP, INTVAL info_wanted)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_interpinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_interpinfo_p __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_interpinfo_s __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_compile_file __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_interpinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_interpinfo_p __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_interpinfo_s __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_compile_file __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(fullname) \
-    || PARROT_ASSERT_ARG(error)
-#define ASSERT_ARGS_Parrot_compreg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(fullname) \
+    , PARROT_ASSERT_ARG(error))
+#define ASSERT_ARGS_Parrot_compreg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(type) \
-    || PARROT_ASSERT_ARG(func)
-#define ASSERT_ARGS_Parrot_mark_method_writes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(type) \
+    , PARROT_ASSERT_ARG(func))
+#define ASSERT_ARGS_Parrot_mark_method_writes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_register_nci_method __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_register_nci_method __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(func) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(proto)
-#define ASSERT_ARGS_register_raw_nci_method_in_ns __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(func) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(proto))
+#define ASSERT_ARGS_register_raw_nci_method_in_ns __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(func) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_sysinfo_i __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_sysinfo_s __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(func) \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_sysinfo_i __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_sysinfo_s __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/interp/inter_misc.c */
 
@@ -695,9 +579,7 @@ void runops_int(Interp *, size_t offset);
 void exec_init_prederef(PARROT_INTERP,
     void *prederef_arena);
 void prepare_for_run(PARROT_INTERP);
-void *init_jit(PARROT_INTERP, opcode_t *pc);
-PARROT_EXPORT void dynop_register(PARROT_INTERP, PMC* op_lib);
-void do_prederef(void **pc_prederef, PARROT_INTERP, int type);
+PARROT_EXPORT void dynop_register(PARROT_INTERP, PMC *op_lib);
 
 /* interpreter.pmc */
 void clone_interpreter(Parrot_Interp dest, Parrot_Interp self, INTVAL flags);
@@ -706,12 +588,6 @@ void Parrot_setup_event_func_ptrs(PARROT_INTERP);
 
 PARROT_EXPORT void disable_event_checking(PARROT_INTERP);
 PARROT_EXPORT void enable_event_checking(PARROT_INTERP);
-
-#if CTX_LEAK_DEBUG
-#  define Parrot_context_ref(a, b) Parrot_context_ref_trace((a), (b), __FILE__, __LINE__)
-#else /* !CTX_LEAK_DEBUG */
-#  define Parrot_context_ref(a, b) (((b)->ref_count++), (b))
-#endif /* CTX_LEAK_DEBUG */
 
 #else /* !PARROT_IN_CORE */
 

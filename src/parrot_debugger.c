@@ -145,6 +145,7 @@ and C<debug_break> ops in F<ops/debug.ops>.
 #include "../compilers/imcc/parser.h"
 #include "parrot/embed.h"
 #include "parrot/debugger.h"
+#include "parrot/runcore_api.h"
 
 static void PDB_printwelcome(void);
 static void PDB_run_code(PARROT_INTERP, int argc, char *argv[]);
@@ -263,9 +264,8 @@ main(int argc, char *argv[])
     else
         PDB_printwelcome();
 
-    interp->run_core = PARROT_DEBUGGER_CORE;
+    Parrot_runcore_switch(interp, Parrot_str_new_constant(interp, "debugger"));
     PDB_run_code(interp, argc - nextarg, argv + nextarg);
-
 
     Parrot_exit(interp, 0);
 }

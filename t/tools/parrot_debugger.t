@@ -128,12 +128,12 @@ pdb_output_like( <<PIR, "pir", "t", qr/set I0, 242/, 'trace (pir)');
 .end
 PIR
 
-pdb_output_like( <<PASM, "pasm", "t 2", qr/\d+ set I0, 242\s*I0=\d+\s*\d+ set I1, 1982/, 'trace multiple statements');
+pdb_output_like( <<PASM, "pasm", "t 2", qr/\d+ set I0, 242\s*I0=-?\d+\s*\d+ set I1, 1982/, 'trace multiple statements');
     set I0, 242
     set I1, 1982
 PASM
 
-pdb_output_like( <<PIR, "pir", "t 2", qr/\d+ set I0, 242\s*I0=\d+\s*\d+ set I1, 1982/, 'trace multiple statements (pir)');
+pdb_output_like( <<PIR, "pir", "t 2", qr/\d+ set I0, 242\s*I0=-?\d+\s*\d+ set I1, 1982/, 'trace multiple statements (pir)');
 .sub main :main
     \$I0 = 242
     \$I1 = 1982
@@ -240,6 +240,12 @@ pdb_output_like( <<PIR, "pir", "t\na I0 17", qr/I0 = 17/, 'assign to an integer 
 .end
 PIR
 
+pdb_output_like( <<PIR, "pir", "t\na i0 17", qr/I0 = 17/, 'assign to an integer register (lowercase)');
+.sub main :main
+    \$I0 = 242
+.end
+PIR
+
 pdb_output_like( <<PIR, "pir", "a Z0 42", qr/Invalid register type Z/, 'assign to an invalid register');
 .sub main :main
     \$I0 = 242
@@ -295,7 +301,7 @@ pdb_output_like( <<PIR, "pir", "t\nw I0 == 2\nt", qr/Adding watchpoint/, 'watchp
 .end
 PIR
 
-BEGIN { $tests += 44 }
+BEGIN { $tests += 45 }
 
 BEGIN { plan tests => $tests; }
 

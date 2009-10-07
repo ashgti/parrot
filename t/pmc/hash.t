@@ -23,7 +23,7 @@ well.
     .include 'except_types.pasm'
     .include 'datatypes.pasm'
 
-    plan(161)
+    plan(168)
 
     initial_hash_tests()
     more_than_one_hash()
@@ -71,6 +71,9 @@ well.
     integer_keys()
     value_types_convertion()
     elements_in_hash()
+    equality_tests()
+
+    pmc_keys()
 .end
 
 .sub initial_hash_tests
@@ -1367,6 +1370,79 @@ postit_end:
     $I0 = elements hash
     is($I0, 0, "Hash has 0 items after delete")
 
+.end
+
+.sub 'equality_tests'
+    .local pmc hash1, hash2, hash3, hash4, hash5
+    hash1 = new ['Hash']
+    hash2 = new ['Hash']
+    hash3 = new ['Hash']
+    hash4 = new ['Hash']
+
+    hash1['one'] = "Hello Parrot!"
+    hash1['two'] = 1664
+    hash1['three'] = 2.718
+
+    hash2['ONE'] = "Hello Parrot!"
+    hash2['TWO'] = 1664
+    hash2['THREE'] = 2.718
+
+    $P0 = box "Hello Parrot!"
+    hash3['one'] = $P0
+    $P0 = box 1664
+    hash3['two'] = $P0
+    $P0 = box 2.718
+    hash3['three'] = $P0
+
+    hash4['one'] = "Goodbye Parrot!"
+    hash4['two'] = 1664
+    hash4['three'] = 2.718
+
+    hash5 = clone hash1
+
+    isnt(hash1, hash2, 'Hashes with different keys')
+    is(hash1, hash3, 'Equal hashes, physically disjoint')
+    isnt(hash1, hash4, 'Different hash values')
+    is(hash1, hash5, 'Clones are equal')
+.end
+
+# Switch to use PMC keys instead of strings.
+.sub 'pmc_keys'
+    .include "hash_key_type.pasm"
+    .local pmc hash
+    hash = new ['Hash']
+    hash = .Hash_key_type_PMC
+
+    $P0 = new ['ResizableStringArray']
+    push $P0, "foo"
+    hash[$P0] = 'FOO'
+    # Autoconvert INTVAL to Integer
+    hash[42]  = 'bar'
+    $S0       = 'foo'
+    # Autoconvert STRING to String
+    hash[$S0] = 'BAZ'
+
+    $I0 = elements hash
+    is($I0, 3, "Got 3 elements in Hash")
+
+    # Iterate over keys and get types. We should have 3 different types:
+    # ResizableStringArray, Integer and String
+    .local pmc types, it
+    types = new ['Hash']
+    it = iter hash
+  loop:
+    unless it goto done
+    $P0 = shift it
+    $P1 = $P0.'key'()
+    $S0 = typeof $P1
+    types[$S0] = 1
+    goto loop
+  done:
+    
+    $I0 = elements types
+    is($I0, 3, "Got 3 different types of PMC keys")
+    $I0 = types['ResizableStringArray']
+    ok($I0, "Including ResizableStringArray")
 .end
 
 # Local Variables:

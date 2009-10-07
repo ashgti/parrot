@@ -1,5 +1,65 @@
 # $Id$
 
+New in 1.6.0
+- Functionality
+  + Added a fixed-size structure allocator to the Garbage Collector
+  + Added a "lazy" mode to the PObj and Fixed-Size memory allocators
+  + Added a profiling runcore, which generates Callgrind-compatible output
+  + Added lexical subsystem opcodes: find_dynamic_lex, store_dynamic_lex
+  + Converted Contexts to garbage-collectable PMC structures
+  + Created a new Context API
+  + Enhanced the PMC allocator to automatically allocate ATTR structures
+- Performance
+  + Optimized opcodes to cache the current Context for subsequent lookups
+  + Reduced string comparisons in VTABLE_isa
+- Maintenance and cleanup
+  + Began proper encapsulation of STRING API
+  + Unified all PMC destruction functions
+  + Unified Continuation PMC and Parrot_cont structure
+  + Unified Sub PMC and Parrot_sub structure
+  + Removed PMC_EXT structure
+  + Removed PMC_Sync from PMC
+  + Removed UnionVal from PMC structure
+- Bugfix
+  + Fixed several stack-walking bugs in Garbage Collector code
+  + Fixed bug when copying a NULL STRING, now returns empty STRING struct
+- Tests
+  + Converted several Perl5 tests to PIR
+  + Expanded test coverage of NameSpace PMC
+- Compilers
+  + Made Parrot Compiler Toolkit available in the base install
+
+New in 1.5.0
+- Core
+  + Removed several deprecated functions and features
+  + Removed bsr, jsr, branch_cs, and ret opcodes
+  + Removed global stacks system
+  + Changed OPS file format to include explicit preamble
+  + Changed all "new 'Iterator'" instructions into 'iter' instructions
+  + Removed Configure.pl options for specifying non-working GC cores
+  + Removed unexecuting code as found by Coverity
+  + Improvements to the Parrot Debugger
+  + Added experimental fixed-size structure allocator to the GC
+  + Added experimental lazy arena allocation to the GC
+  + Refactored hashes, keys, and iterators
+  + Added "corevm" make target to build Parrot without all the supporting libraries
+  + Removed Random PMC type and added in a "rand" dynop
+  + Optimization and Improvements to the NCI thunk generator
+  + New include file libpaths.pasm
+- Compilers
+  + Multiple .local with same name and different type is now an error on IMCC.
+- Platforms
+  + Improved support for detecting Fink and Macports
+  + Updated search directories for libraries
+- Documentation
+  + "Parrot Developers Guide: PIR" released to publisher and available to purchase
+  + Improved documentation about Parrot Debugger
+  + Update PGE Documentation
+- Miscellaneous
+  + Deprecate 'PASM1' compiler object, update to warn instead of segfault
+  + Added tests
+  + Fixes to code, documentation, and standards
+
 New in 1.4.0
 - Core
   + Key and Iterator refactor

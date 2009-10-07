@@ -508,7 +508,7 @@ TODO: {
     .local pmc thread
     thread = new ['ParrotThread']
     .local pmc _thread_func
-    _thread_func = get_global ['main'], 'thread_test_func'
+    _thread_func = get_hll_global ['main'], 'thread_test_func'
     $I0 = .PARROT_CLONE_CODE
     bor $I0, $I0, .PARROT_CLONE_CLASSES
     print "in thread:\n"
@@ -535,7 +535,7 @@ Bar? 1
 OUTPUT
 }
 
-pir_output_is( <<'CODE', <<'OUTPUT', "CLONE_CODE | CLONE_CLASSES; superclass built-in" );
+pir_output_is( <<'CODE', <<'OUTPUT', "CLONE_CODE | CLONE_CLASSES; superclass built-in", todo => 'likely incorrect test');
 .namespace [ 'Foo' ]
 
 .sub foometh :method
@@ -831,10 +831,10 @@ pir_output_is(
     .local pmc the_value
     the_value = new ['PerlInt']
     the_value = 42
-    store_global 'Foo', 'x', the_value
-    $I0 = typeof passed_value
-    $I1 = typeof the_value
-    $I0 = $I0 - $I1
+    set_hll_global ['Foo'], 'x', the_value
+    $S0 = typeof passed_value
+    $S1 = typeof the_value
+    $I0 = iseq $S0, $S1
     print $I0
     print "\n"
     .local pmc ns
@@ -848,7 +848,7 @@ pir_output_is(
 okay:
     print "ok (equal)\n"
 
-    $I0 = fortytwo
+    $I0 = the_value
     print $I0
     print "\n"
 .end

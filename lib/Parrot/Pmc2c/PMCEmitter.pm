@@ -421,7 +421,6 @@ sub vtable_flags {
     my ($self) = @_;
 
     my $vtbl_flag = 0;
-    $vtbl_flag .= '|VTABLE_PMC_NEEDS_EXT'     if $self->flag('need_ext');
     $vtbl_flag .= '|VTABLE_PMC_IS_SINGLETON'  if $self->flag('singleton');
     $vtbl_flag .= '|VTABLE_IS_SHARED_FLAG'    if $self->flag('is_shared');
     $vtbl_flag .= '|VTABLE_IS_READONLY_FLAG'  if $self->flag('is_ro');
@@ -464,7 +463,8 @@ sub vtable_decl {
         NULL,       /* mro */
         NULL,       /* attribute_defs */
         NULL,       /* ro_variant_vtable */
-        $methlist
+        $methlist,
+	0           /* attr size */
     };
 ENDOFCODE
     return $cout;
@@ -581,14 +581,6 @@ EOC
     $cout .= "\";\n";
 
     my $const = ( $self->{flags}{dynpmc} ) ? " " : " const ";
-    if ( @$multi_funcs ) {
-        $cout .= $multi_strings . <<"EOC";
-
-   $const multi_func_list _temp_multi_func_list[] = {
-        $multi_list
-    };
-EOC
-    }
 
     my $flags = $self->vtable_flags;
     $cout .= <<"EOC";
@@ -640,6 +632,7 @@ EOC
             vt_${k}                 = Parrot_${classname}_${k}_get_vtable(interp);
             vt_${k}->base_type      = $enum_name;
             vt_${k}->flags          = $k_flags;
+
             vt_${k}->attribute_defs = attr_defs;
 
             vt_${k}->base_type           = entry;
@@ -728,7 +721,11 @@ EOC
 
 
     if ( @$multi_funcs ) {
-        $cout .= <<"EOC";
+        $cout .= $multi_strings . <<"EOC";
+
+            $const multi_func_list _temp_multi_func_list[] = {
+                $multi_list
+            };
 #define N_MULTI_LIST (sizeof(_temp_multi_func_list)/sizeof(_temp_multi_func_list[0]))
             Parrot_mmd_add_multi_list_from_c_args(interp,
                 _temp_multi_func_list, N_MULTI_LIST);
@@ -761,12 +758,30 @@ sub update_vtable_func {
     my $classname = $self->name;
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
+    # Sets the attr_size field:
+    # If the auto_attrs flag is set, use the current data,
+    # else check if this PMC has init or init_pmc vtable functions,
+    # setting it to 0 in that case, and keeping the value from the
+    # parent otherwise.
+    my $set_attr_size = '';
+    if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
+        $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
+    }
+    else {
+        $set_attr_size .= "0" if exists($self->{has_method}{init}) ||
+                                 exists($self->{has_method}{init_pmc});
+    }
+    $set_attr_size =     "    vt->attr_size = " . $set_attr_size . ";\n"
+        if $set_attr_size ne '';
+
     my $vtable_updates = '';
     for my $name ( @{ $self->vtable->names } ) {
         if (exists $self->{has_method}{$name}) {
             $vtable_updates .= "    vt->$name = Parrot_${classname}_${name};\n";
         }
     }
+
+    $vtable_updates .= $set_attr_size;
 
     $cout .= <<"EOC";
 
@@ -792,6 +807,8 @@ EOC
             $vtable_updates .= "    vt->$name = Parrot_${classname}_${name};\n";
         }
     }
+
+    $vtable_updates .= $set_attr_size;
 
     $cout .= <<"EOC";
 
@@ -1095,7 +1112,7 @@ sub gen_defaul_case_wrapping {
     elsif ($letter eq 'P') {
         return (
             'PPP->P',
-            'PMC *retval;',
+            'PMC *retval = PMCNULL;',
             ", &retval",
             "return retval;",
         );

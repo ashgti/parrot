@@ -1040,13 +1040,13 @@ Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub)
     va_list     ap;
     void       *result;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
 
     PARROT_CALLIN_START(interp);
 
     va_start(ap, signature);
     PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     result = Parrot_runops_fromc_arglist(interp, sub_pmc, signature, ap);
     va_end(ap);
 
@@ -1073,13 +1073,13 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub_ret_int)
     va_list     ap;
     Parrot_Int  result;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
 
     PARROT_CALLIN_START(interp);
 
     va_start(ap, signature);
     PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     result = Parrot_runops_fromc_arglist_reti(interp, sub_pmc, signature, ap);
     va_end(ap);
 
@@ -1106,13 +1106,13 @@ Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
     ASSERT_ARGS(Parrot_call_sub_ret_float)
     va_list       ap;
     Parrot_Float  result;
-    Parrot_sub   *sub;
+    Parrot_Sub_attributes   *sub;
 
     PARROT_CALLIN_START(interp);
 
     va_start(ap, signature);
     PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     result = Parrot_runops_fromc_arglist_retf(interp, sub_pmc, signature, ap);
     va_end(ap);
 

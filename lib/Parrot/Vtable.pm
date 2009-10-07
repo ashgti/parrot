@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -11,9 +11,9 @@ Parrot::Vtable - Functions for manipulating vtables
 
 =head1 DESCRIPTION
 
-C<Parrot::Vtable> provides a collection of functions for manipulating
-PMC vtables. It is used by F<tools/build/jit2c.pl>, F<tools/build/pmc2c.pl>,
-F<tools/build/vtable_h.pl>, F<tools/dev/gen_class.pl>.
+C<Parrot::Vtable> provides a collection of functions for manipulating PMC
+vtables. It is used by F<tools/build/pmc2c.pl>, F<tools/build/vtable_h.pl>, and
+F<tools/dev/gen_class.pl>.
 
 =head2 Functions
 
@@ -169,7 +169,7 @@ typedef struct _vtable {
     PMC    *_namespace;     /* Pointer to namespace for this class */
     INTVAL  base_type;      /* 'type' value for MMD */
     STRING *whoami;         /* Name of class this vtable is for */
-    UINTVAL flags;          /* Flags. Duh */
+    UINTVAL flags;          /* VTABLE flags (constant, is_ro, etc). */
     STRING *provides_str;   /* space-separated list of interfaces */
     Hash   *isa_hash;       /* Hash of class names */
     PMC    *pmc_class;      /* for PMCs: a PMC of that type
@@ -185,6 +185,10 @@ EOF
         next if ( $entry->[4] =~ /MMD_/ );
         $struct .= "    $entry->[1]_method_t $entry->[1];\n";
     }
+
+    $struct .= <<'EOF';
+    UINTVAL attr_size;      /* Size of the attributes struct */
+EOF
 
     $struct .= "} _vtable;\n";
 
@@ -261,7 +265,7 @@ static PARROT_OBSERVER const char * const Parrot_vtable_slot_names[] = {
     "",   /* Pointer to namespace for this class */
     "",   /* 'type' value for MMD */
     "",   /* Name of class this vtable is for */
-    "",   /* Flags. Duh */
+    "",   /* VTABLE flags (constant, is_ro, etc). */
     "",   /* space-separated list of interfaces */
     "",   /* space-separated list of classes */
     "",   /* class */

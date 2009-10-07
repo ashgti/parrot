@@ -93,33 +93,33 @@ static STRING* try_load_path(PARROT_INTERP, ARGMOD(STRING* path))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(* path);
 
-#define ASSERT_ARGS_cnv_to_win32_filesep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_get_search_paths __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_is_abs_path __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(file)
-#define ASSERT_ARGS_path_append __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_cnv_to_win32_filesep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_get_search_paths __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_is_abs_path __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(file))
+#define ASSERT_ARGS_path_append __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(l_path) \
-    || PARROT_ASSERT_ARG(r_path)
-#define ASSERT_ARGS_path_concat __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(l_path) \
+    , PARROT_ASSERT_ARG(r_path))
+#define ASSERT_ARGS_path_concat __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(l_path) \
-    || PARROT_ASSERT_ARG(r_path)
-#define ASSERT_ARGS_path_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(l_path) \
+    , PARROT_ASSERT_ARG(r_path))
+#define ASSERT_ARGS_path_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
+    , PARROT_ASSERT_ARG(path))
 #define ASSERT_ARGS_path_guarantee_trailing_separator \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_try_bytecode_extensions __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_try_bytecode_extensions __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_try_load_path __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_try_load_path __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
+    , PARROT_ASSERT_ARG(path))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -640,9 +640,7 @@ Parrot_lib_add_path_from_cstring(PARROT_INTERP,
 =item C<STRING* Parrot_locate_runtime_file_str(PARROT_INTERP, STRING *file,
 enum_runtime_ft type)>
 
-Locate the full path for C<file_name> and the given file type(s). If
-successful, returns a C-string allocated with C<Parrot_str_to_cstring> or
-NULL otherwise.  Remember to free the string with C<Parrot_str_free_cstring()>.
+Locate the full path for C<file_name> and the given file type(s).
 
 The C<enum_runtime_ft type> is one or more of the types defined in
 F<include/parrot/library.h>.
@@ -780,11 +778,10 @@ char*
 Parrot_get_runtime_prefix(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_get_runtime_prefix)
-    int     free_it;
-    char * const env = Parrot_getenv("PARROT_RUNTIME", &free_it);
+    char * const env = Parrot_getenv(interp, CONST_STRING(interp, "PARROT_RUNTIME"));
 
     if (env)
-        return free_it ? env : mem_sys_strdup(env);
+        return env;
     else {
         PMC    * const config_hash =
             VTABLE_get_pmc_keyed_int(interp, interp->iglobals, (INTVAL) IGLOBALS_CONFIG_HASH);
@@ -815,15 +812,12 @@ STRING *
 Parrot_get_runtime_path(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_get_runtime_path)
-    int     free_it;
-    char * const env = Parrot_getenv("PARROT_RUNTIME", &free_it);
+    char * const env = Parrot_getenv(interp, CONST_STRING(interp, "PARROT_RUNTIME"));
     STRING *result;
 
     if (env)
     {
         result = Parrot_str_new(interp, env, 0);
-        if (free_it)
-             free(env);
     }
     else {
         PMC    * const config_hash =

@@ -71,7 +71,7 @@ foreach my $path (@files) {
             $missing = 'missing';
         }
         if ($missing) {
-            push @missing_docs, "$path ($missing)\n$function_decl\n";
+            push @missing_docs, "$path ($missing)\n$function_decl\nWant:\n$escaped_decl\n";
         }
     }
 
@@ -79,7 +79,7 @@ foreach my $path (@files) {
         local $TODO = 'Missing function docs' if $todos{$path};
 
     ok ( ! @missing_docs, $path)
-        or diag( scalar @missing_docs
+        or diag( @missing_docs
             . " function(s) lacking documentation:\n"
             . join ("\n", @missing_docs, "\n"));
     }
@@ -93,7 +93,6 @@ compilers/imcc/pbc.c
 compilers/imcc/pcc.c
 compilers/imcc/reg_alloc.c
 compilers/imcc/symreg.c
-compilers/pirc/src/bcgen.c
 compilers/pirc/src/pircapi.c
 compilers/pirc/src/pircompiler.c
 compilers/pirc/src/piremit.c
@@ -124,32 +123,17 @@ examples/c/pbc_info.c
 examples/compilers/japhc.c
 src/atomic/gcc_x86.c
 src/debug.c
-src/gc/gc_malloc.c
 src/gc/generational_ms.c
 src/gc/res_lea.c
 src/io/io_string.c
-src/jit/amd64/jit_defs.c
-src/jit/arm/exec_dep.c
-src/jit/i386/exec_dep.c
-src/jit/ppc/exec_dep.c
 src/nci_test.c
 src/pbc_dump.c
-src/pic.c
-src/pic_jit.c
 src/string/charset/ascii.c
 src/string/charset/binary.c
 src/string/charset/iso-8859-1.c
 src/string/charset/unicode.c
 src/tsq.c
-src/jit/alpha/jit_emit.h
-src/jit/arm/jit_emit.h
-src/jit/hppa/jit_emit.h
 include/parrot/atomic/gcc_pcc.h
-src/jit/ia64/jit_emit.h
-src/jit/mips/jit_emit.h
-src/jit/ppc/jit_emit.h
-src/jit/skeleton/jit_emit.h
-src/jit/sun4/jit_emit.h
 
 # Local Variables:
 #   mode: cperl

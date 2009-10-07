@@ -2,13 +2,14 @@
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
 # Please re-sort this file after *EVERY* modification
-blib/lib/libparrot.1.4.0.dylib                    [main]lib
+blib/lib/libparrot.1.6.0.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
-blib/lib/libparrot.so.1.4.0                       [main]lib
+blib/lib/libparrot.so.1.6.0                       [main]lib
 blib/lib/libparrot.so                             [main]lib
-compilers/json/JSON/grammar.pbc                   [json]
+compilers/data_json/data_json.pbc                 [data_json]
 compilers/json/JSON.pbc                           [json]
+compilers/json/JSON/grammar.pbc                   [json]
 compilers/json/JSON/pge2pir.pbc                   [json]
 compilers/nqp/nqp.pbc                             [nqp]
 config/gen/call_list/opengl.in                    []
@@ -63,6 +64,8 @@ installable_pbc_merge.exe                         [main]bin
 installable_pbc_merge                             [main]bin
 installable_pbc_to_exe.exe                        [main]bin
 installable_pbc_to_exe                            [main]bin
+installable_parrot_nqp.exe                        [main]bin
+installable_parrot_nqp                            [main]bin
 lib/Parrot/Config/Generated.pm                    [devel]lib
 libparrot.dll                                     [main]bin
 libparrot.lib                                     [main]bin
@@ -125,6 +128,7 @@ runtime/parrot/include/interpinfo.pasm            [main]
 runtime/parrot/include/interptrace.pasm           [main]
 runtime/parrot/include/iotypes.pasm               [main]
 runtime/parrot/include/iterator.pasm              [main]
+runtime/parrot/include/libpaths.pasm              [main]
 runtime/parrot/include/longopt.pasm               [main]
 runtime/parrot/include/opengl_defines.pasm        [main]
 runtime/parrot/include/parrotlib.pbc              [main]
@@ -171,10 +175,10 @@ runtime/parrot/library/Parrot/HLLCompiler.pbc     [main]
 runtime/parrot/library/parrotlib.pbc              [main]
 runtime/parrot/library/pcore.pbc                  [main]
 runtime/parrot/library/pcre.pbc                   [main]
-runtime/parrot/library/PCT/Grammar.pbc            [pct]
-runtime/parrot/library/PCT/HLLCompiler.pbc        [pct]
-runtime/parrot/library/PCT/PAST.pbc               [pct]
-runtime/parrot/library/PCT.pbc                    [pct]
+runtime/parrot/library/PCT/Grammar.pbc            [main]
+runtime/parrot/library/PCT/HLLCompiler.pbc        [main]
+runtime/parrot/library/PCT/PAST.pbc               [main]
+runtime/parrot/library/PCT.pbc                    [main]
 runtime/parrot/library/PGE/Dumper.pbc             [main]
 runtime/parrot/library/PGE/Glob.pbc               [main]
 runtime/parrot/library/PGE/Hs.pbc                 [main]
@@ -203,6 +207,7 @@ runtime/parrot/library/Test/Builder.pbc           [main]
 runtime/parrot/library/Test/Class.pbc             [main]
 runtime/parrot/library/Test/More.pbc              [main]
 runtime/parrot/library/TGE.pbc                    [tge]
+runtime/parrot/library/uuid.pbc                   [main]
 runtime/parrot/library/YAML/Dumper/Base.pmc       [main]
 runtime/parrot/library/YAML/Dumper/Default.pmc    [main]
 runtime/parrot/library/YAML/Dumper.pbc            [main]

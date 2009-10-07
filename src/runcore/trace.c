@@ -38,9 +38,9 @@ static STRING* trace_class_name(PARROT_INTERP, ARGIN(const PMC* pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_trace_class_name __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_trace_class_name __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
+    , PARROT_ASSERT_ARG(pmc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -105,7 +105,7 @@ trace_pmc_dump(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc))
 {
     ASSERT_ARGS(trace_pmc_dump)
     Interp * const debugger = debugger_or_interp(interp);
-    Parrot_sub    *sub;
+    Parrot_Sub_attributes    *sub;
 
     if (!pmc) {
         Parrot_io_eprintf(debugger, "(null)");

@@ -64,6 +64,16 @@ Current list of VTABLE functions will be reviewed and cleaned.
 
 L<https://trac.parrot.org/parrot/ticket/866>
 
+=item Use of undocumented variables in class_init [eligible in 2.1]
+
+The current implementation allows the class_init vtable function body to
+use local symbols from the generated part. For example, some PMC used
+to use the pass counter. In the future, the class_init body from the PMC
+file may not be inserted directly in the body of the generated one,
+so this usage will not be allowed.
+
+L<https://trac.parrot.org/parrot/ticket/918>
+
 =back
 
 =head1 Opcodes
@@ -122,7 +132,7 @@ Assigning to registers [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/906>
 
-=item named class/pmc lookup in pir syntax such as new, isa, subclass, 
+=item named class/pmc lookup in pir syntax such as new, isa, subclass,
     get_class, etc [eligible in 1.1]
 
 Class PMC name resolution will be the following.
@@ -143,6 +153,10 @@ L<https://trac.parrot.org/parrot/ticket/159>
 
 L<https://trac.parrot.org/parrot/ticket/511>
 
+=item continuation-based ExceptionHandlers [eligible in 2.1]
+
+L<https://trac.parrot.org/parrot/ticket/1091>
+
 =back
 
 =head1 Functions
@@ -151,15 +165,7 @@ L<https://trac.parrot.org/parrot/ticket/511>
 
 =item mmd_cvt_to_types [eligible in 1.1]
 
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=60626>
-
-=item src/pic.c and src/pic_jit.c [eligible in 1.1]
-
-These two files were a thin prototype implementation of Polymorphic Inline
-Caching that only ever applied to 4 opcodes, one of which has now been removed.
-The files (and all functions in them) are deprecated, and will be removed.
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=60048>
+L<https://trac.parrot.org/parrot/ticket/907>
 
 =item Subs marked with C<:vtable>/C<:method> aren't in namespace [eligible in 1.1]
 
@@ -200,6 +206,10 @@ diagnostic message.
 
 L<https://trac.parrot.org/parrot/ticket/872>
 
+=item Parrot_oo_get_namespace [eligible in 2.1]
+
+L<https://trac.parrot.org/parrot/ticket/1069>
+
 =back
 
 =head1 Compiler tools
@@ -210,7 +220,8 @@ L<https://trac.parrot.org/parrot/ticket/872>
 
 =item C<PASM1 compiler> [eligible in 2.1]
 
-See PDB_compile.
+See PDB_compile. Note that the current version of the C<PASM1> compiler
+issues a warning and is not functional. (However, it used to segfault.)
 
 =back
 
@@ -234,7 +245,7 @@ L<https://trac.parrot.org/parrot/ticket/843>
 
 =item PCT::HLLCompiler stages [eligible in 1.1]
 
-The interface of various methods for adding, removing, and modifying 
+The interface of various methods for adding, removing, and modifying
 the list stages in a PCT::HLLCompiler object is subject to change.
 The existing actual stages will remain; only the mechanism for specifying
 the order of individual stages is likely to change.
@@ -244,7 +255,7 @@ L<https://trac.parrot.org/parrot/ticket/462>
 =item PCT::HLLCompiler from Perl 5's Test::Harness [eligible in 1.1]
 
 In order to facilitate using PCT::HLLCompiler with test harnesses,
-the C<command_line> method of PCT::HLLCompiler object exits silently 
+the C<command_line> method of PCT::HLLCompiler object exits silently
 if it detects that it is being run in a sample run from Perl's
 Test::Harness.  Currently this detection is done by checking the
 second command line argument for "@INC"; future releases may
@@ -269,7 +280,7 @@ L<https://trac.parrot.org/parrot/ticket/868>
 =item C< $(...) > syntax  [eligible in 1.5]
 
 The C< $(...) > syntax for obtaining a result object from a Match
-object will no longer work.  The new syntax is to invoke the 
+object will no longer work.  The new syntax is to invoke the
 C<.ast> method on the Match object.
 
 L<https://trac.parrot.org/parrot/ticket/459>
@@ -277,7 +288,7 @@ L<https://trac.parrot.org/parrot/ticket/459>
 =item Quoted items [eligible in 1.5]
 
 Double-quoted strings will interpret unescaped $-names
-as interpolated variables in the string.  Bare slashes 
+as interpolated variables in the string.  Bare slashes
 will introduce regular expressions.  The C<< <foo bar> >>
 syntax will produce an array of strings instead of a single
 string.
@@ -303,21 +314,6 @@ L<https://trac.parrot.org/parrot/ticket/842>
 Replaced with makefiles.
 
 L<https://trac.parrot.org/parrot/ticket/338>
-
-=back
-
-=head1 pmc2c syntax
-
-=over 4
-
-=item "pmclass" with name not matching file's basename [eligible in 1.5]
-
-When foo.pmc contains a the line "pmclass bar", pmc2c generates a pmc_foo.h
-but tries to include pmc_bar.h.  This is a bug, but it's possible someone out
-there is using it.  This usage will result in a warning for now; after
-the 1.4 release, this warning will be upgraded to an error.
-
-L<https://trac.parrot.org/parrot/ticket/665>
 
 =back
 

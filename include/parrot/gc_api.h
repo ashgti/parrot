@@ -43,31 +43,11 @@ typedef enum {
     POOL_ALL    = 0x07
 } pool_iter_enum;
 
-struct Small_Object_Pool;
-struct Small_Object_Arena;
-struct Arenas;
-
-typedef int (*pool_iter_fn)(PARROT_INTERP, struct Small_Object_Pool *, int, void*);
-
-typedef struct Memory_Block {
-    size_t free;
-    size_t size;
-    struct Memory_Block *prev;
-    struct Memory_Block *next;
-    char *start;
-    char *top;
-} Memory_Block;
-
-typedef struct Memory_Pool {
-    Memory_Block *top_block;
-    void (*compact)(PARROT_INTERP, struct Memory_Pool *);
-    size_t minimum_block_size;
-    size_t total_allocated; /* total bytes allocated to this pool */
-    size_t guaranteed_reclaimable;     /* bytes that can definitely be reclaimed*/
-    size_t possibly_reclaimable;     /* bytes that can possibly be reclaimed
-                                      * (above plus COW-freed bytes) */
-    FLOATVAL reclaim_factor; /* minimum percentage we will reclaim */
-} Memory_Pool;
+struct Memory_Block;
+struct Var_Size_Pool;
+struct Fixed_Size_Pool;
+struct Fixed_Size_Arena;
+struct Memory_Pools;
 
 typedef enum {
     GC_TRACE_FULL        = 1,
@@ -75,25 +55,12 @@ typedef enum {
     GC_TRACE_SYSTEM_ONLY = 3
 } Parrot_gc_trace_type;
 
-typedef void (*add_free_object_fn_type)(PARROT_INTERP, struct Small_Object_Pool *, void *);
-typedef void * (*get_free_object_fn_type)(PARROT_INTERP, struct Small_Object_Pool *);
-typedef void (*alloc_objects_fn_type)(PARROT_INTERP, struct Small_Object_Pool *);
-typedef void (*gc_object_fn_type)(PARROT_INTERP, struct Small_Object_Pool *, PObj *);
+typedef int (*pool_iter_fn)(PARROT_INTERP, struct Fixed_Size_Pool *, int, void*);
+typedef void (*add_free_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *, void *);
+typedef void * (*get_free_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *);
+typedef void (*alloc_objects_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *);
+typedef void (*gc_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *, PObj *);
 
-/*
- * macros used in arena scan code to convert from object pointers
- * to arena pointers ...
- */
-
-#if PARROT_GC_GMS
-#  define GC_HEADER_SIZE (sizeof (Gc_gms_hdr))
-#  define PObj_to_ARENA(o) PObj_to_GMSH(o)
-#  define ARENA_to_PObj(p) GMSH_to_PObj((Gc_gms_hdr*)(p))
-#else
-#  define GC_HEADER_SIZE 0
-#  define PObj_to_ARENA(o) (o)
-#  define ARENA_to_PObj(p) (p)
-#endif
 
 /* &gen_from_enum(interpinfo.pasm) prefix(INTERPINFO_) */
 
@@ -145,9 +112,20 @@ void Parrot_block_GC_sweep(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
+void Parrot_gc_mark_PMC_alive_fun(PARROT_INTERP, ARGMOD_NULLOK(PMC *obj))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*obj);
+
+PARROT_EXPORT
 void Parrot_gc_mark_PObj_alive(PARROT_INTERP, ARGMOD(PObj *obj))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        FUNC_MODIFIES(*obj);
+
+PARROT_EXPORT
+void Parrot_gc_mark_STRING_alive_fun(PARROT_INTERP,
+    ARGMOD_NULLOK(STRING *obj))
+        __attribute__nonnull__(1)
         FUNC_MODIFIES(*obj);
 
 PARROT_EXPORT
@@ -172,11 +150,6 @@ int Parrot_gc_active_pmcs(PARROT_INTERP)
 int Parrot_gc_active_sized_buffers(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void Parrot_gc_add_pmc_ext(PARROT_INTERP, ARGMOD(PMC *pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*pmc);
-
 void Parrot_gc_add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -194,9 +167,7 @@ void * Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-void * Parrot_gc_allocate_pmc_attributes(PARROT_INTERP,
-    ARGMOD(PMC *pmc),
-    size_t size)
+void * Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
@@ -207,9 +178,6 @@ void Parrot_gc_allocate_string_storage(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*str);
-
-void Parrot_gc_cleanup_next_for_GC(PARROT_INTERP)
-        __attribute__nonnull__(1);
 
 void Parrot_gc_compact_memory_pool(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -232,14 +200,11 @@ void Parrot_gc_destroy_header_pools(PARROT_INTERP)
 void Parrot_gc_destroy_memory_pools(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-UINTVAL Parrot_gc_extended_pmcs(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 void Parrot_gc_finalize(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 void Parrot_gc_free_bufferlike_header(PARROT_INTERP,
-    ARGMOD(PObj *obj),
+    ARGMOD(Buffer *obj),
     size_t size)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -247,27 +212,25 @@ void Parrot_gc_free_bufferlike_header(PARROT_INTERP,
 
 void Parrot_gc_free_fixed_size_storage(PARROT_INTERP,
     size_t size,
-    ARGMOD(void * data))
+    ARGMOD(void *data))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3)
-        FUNC_MODIFIES(* data);
+        FUNC_MODIFIES(*data);
 
-void Parrot_gc_free_pmc_attributes(PARROT_INTERP,
-    ARGMOD(PMC *pmc),
-    size_t item_size)
+void Parrot_gc_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
-
-void Parrot_gc_free_pmc_ext(PARROT_INTERP, ARGMOD(PMC *p))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*p);
 
 void Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
+
+void Parrot_gc_free_pmc_sync(PARROT_INTERP, ARGMOD(PMC *p))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*p);
 
 void Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
         __attribute__nonnull__(1)
@@ -356,182 +319,154 @@ int Parrot_gc_total_pmcs(PARROT_INTERP)
 int Parrot_gc_total_sized_buffers(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_Parrot_block_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_block_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_mark_PObj_alive __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_Parrot_block_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_block_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_mark_PMC_alive_fun __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_mark_PObj_alive __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(obj)
-#define ASSERT_ARGS_Parrot_is_blocked_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_is_blocked_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_unblock_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_unblock_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_active_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(obj))
+#define ASSERT_ARGS_Parrot_gc_mark_STRING_alive_fun \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_is_blocked_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_is_blocked_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_unblock_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_unblock_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_active_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_active_sized_buffers \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_add_pmc_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_add_pmc_sync __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_Parrot_gc_add_pmc_sync __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
+    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_allocate_buffer_storage_aligned \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(buffer)
+    , PARROT_ASSERT_ARG(buffer))
 #define ASSERT_ARGS_Parrot_gc_allocate_fixed_size_storage \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_allocate_pmc_attributes \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
+    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_allocate_string_storage \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(str)
-#define ASSERT_ARGS_Parrot_gc_cleanup_next_for_GC __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_compact_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_completely_unblock __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_count_collect_runs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_Parrot_gc_compact_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_completely_unblock __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_count_collect_runs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_count_lazy_mark_runs \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_count_mark_runs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_count_mark_runs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_destroy_header_pools \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_destroy_memory_pools \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_extended_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_free_bufferlike_header \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(obj)
+    , PARROT_ASSERT_ARG(obj))
 #define ASSERT_ARGS_Parrot_gc_free_fixed_size_storage \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(data)
-#define ASSERT_ARGS_Parrot_gc_free_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(data))
+#define ASSERT_ARGS_Parrot_gc_free_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_Parrot_gc_free_pmc_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_Parrot_gc_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(p)
-#define ASSERT_ARGS_Parrot_gc_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_Parrot_gc_free_pmc_sync __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_Parrot_gc_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(p))
+#define ASSERT_ARGS_Parrot_gc_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_Parrot_gc_get_pmc_index __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(s))
+#define ASSERT_ARGS_Parrot_gc_get_pmc_index __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
+    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_headers_alloc_since_last_collect \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_impatient_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_initialize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_impatient_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_initialize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(stacktop)
-#define ASSERT_ARGS_Parrot_gc_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(stacktop))
+#define ASSERT_ARGS_Parrot_gc_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_mem_alloc_since_last_collect \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_merge_header_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_merge_header_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(dest_interp) \
-    || PARROT_ASSERT_ARG(source_interp)
+    , PARROT_ASSERT_ARG(source_interp))
 #define ASSERT_ARGS_Parrot_gc_new_bufferlike_header \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_new_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_new_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_new_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_new_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_pmc_needs_early_collection \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_Parrot_gc_ptr_in_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_Parrot_gc_ptr_in_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(bufstart)
-#define ASSERT_ARGS_Parrot_gc_ptr_is_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(bufstart))
+#define ASSERT_ARGS_Parrot_gc_ptr_is_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ptr)
+    , PARROT_ASSERT_ARG(ptr))
 #define ASSERT_ARGS_Parrot_gc_reallocate_buffer_storage \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(buffer)
+    , PARROT_ASSERT_ARG(buffer))
 #define ASSERT_ARGS_Parrot_gc_reallocate_string_storage \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(str)
-#define ASSERT_ARGS_Parrot_gc_total_copied __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_Parrot_gc_total_copied __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_total_memory_allocated \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_total_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_gc_total_sized_buffers __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_total_pmcs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_gc_total_sized_buffers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/api.c */
 
 void Parrot_gc_inf_init(PARROT_INTERP);
 
-/* write barrier */
-#if PARROT_GC_MS
-#  define GC_WRITE_BARRIER(interp, agg, old, _new) do { } while (0)
-#  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do { } while (0)
+#if defined(NDEBUG) && defined(PARROT_IN_CORE)
+#  define Parrot_gc_mark_STRING_alive(interp, obj) \
+          do if (! STRING_IS_NULL(obj)) PObj_live_SET(obj); while (0)
+#else
+#  define Parrot_gc_mark_STRING_alive(interp, obj) Parrot_gc_mark_STRING_alive_fun((interp), (obj))
 #endif
 
-#if PARROT_GC_GMS
-#  define GC_WRITE_BARRIER(interp, agg, old, _new) do { \
-    UINTVAL gen_agg, gen_new; \
-    if (!(_new) || PMC_IS_NULL(_new)) \
-        break; \
-    gen_agg = PObj_to_GMSH(agg)->gen->gen_no; \
-    gen_new = PObj_to_GMSH(_new)->gen->gen_no; \
-    if (gen_agg < gen_new) \
-        parrot_gc_gms_wb((interp), (agg), (old), (_new)); \
-} while (0)
-
-#  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do { \
-    UINTVAL gen_agg, gen_new, gen_key; \
-    if (!(_new) || PMC_IS_NULL(_new)) \
-        break; \
-    gen_agg = PObj_to_GMSH(agg)->gen->gen_no; \
-    gen_new = PObj_to_GMSH(_new)->gen->gen_no; \
-    gen_key = PObj_to_GMSH(new_key)->gen->gen_no; \
-    if (gen_agg < gen_new || gen_agg < gen_key) \
-        parrot_gc_gms_wb_key((interp), (agg), (old), (old_key), (_new), (new_key)); \
-} while (0)
-
-#endif
-
-#if PARROT_GC_INF
-#  define GC_WRITE_BARRIER(interp, agg, old, _new) do { } while (0)
-#  define GC_WRITE_BARRIER_KEY(interp, agg, old, old_key, _new, new_key) do { } while (0)
-#endif
+#define Parrot_gc_mark_PMC_alive(interp, obj) Parrot_gc_mark_PMC_alive_fun((interp), (obj))
 
 #endif /* PARROT_GC_API_H_GUARD */
 

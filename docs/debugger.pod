@@ -20,17 +20,16 @@ A good (well, at least some) knowledge of the Parrot internals is obviously
 required to read this document. Some familiarity with debugging principles is
 also mandatory beyond this point.
 
+
 =head1 BUILDING parrot_debugger
 
-The debugger is not built with Parrot, but you should make it with its specific
-target:
+The debugger is built along with Parrot when you run 'make', but if you want to build 
+*only* the debugger, then you can run:
 
   make parrot_debugger
 
-(where C<make> is the same C<make> incarnation you used to build Parrot).
-
-If everything goes well, you should come up with a F<parrot_debugger>
-executable in the same directory as the Parrot program.
+Which will create a new parrot_debugger executable in the same directory as the parrot
+executable.
 
 =head1 THE DEBUGGER SHELL
 
@@ -65,8 +64,8 @@ may be outdated in respect to the actual debugger, so let it speak for itself).
 Most commands can be shortened to their first letter. When available, this is
 signaled by the letter in parentheses after the command name Thus, C<help (h)>
 means that the command can be given as 'help' or just 'h'. On the other hand,
-C<load> can only be given as 'load', verbatim.  And the debugger is case
-sensitive.
+C<load> can only be given as 'load', verbatim.  Debugger commands are case
+sensitive (LOAD is not a valid command) but Parrot register names are not.
 
 A blank line always repeats the last command entered.
 
@@ -76,6 +75,21 @@ something bad will happen. Feel free to report bugs, or better yet patch the
 source code (see L</FILES> below).
 
 =over 4
+
+=item assign
+
+Assign to a Parrot register. For example:
+
+    (pdb)    a I0 42
+
+        I0 = 42
+
+    (pdb)    a N1 3.14
+
+        N1 = 3.14
+
+The first command sets I0 to 42 and the second sets N1 to 3.14. Register names are not
+case sensitive, so you can use either i0 or I0 .
 
 =item disassemble
 
@@ -276,7 +290,7 @@ Example:
 
 =item print (p)
 
-Print the interpreter registers. The syntax is:
+Print the interpreter registers. Register names are not case sensitive. The syntax is:
 
   print VALUE
 

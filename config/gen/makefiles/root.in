@@ -103,7 +103,7 @@ CC               := @cc@
 CC_INC           := @cc_inc@
 C_LIBS           := @libs@
 CC_SHARED        := @cc_shared@
-CFLAGS           := $(CC_INC) @ccflags@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@ $(CC_SHARED)
+CFLAGS           := $(CC_INC) @ccflags@ @cc_build_call_frames@ @cc_debug@ @ccwarn@ @cg_flag@ @gc_flag@ @clock_best@ $(CC_SHARED)
 LINK_DYNAMIC     := @link_dynamic@
 LINK             := @link@
 LINKFLAGS        := @linkflags@ @link_debug@ @ld_debug@
@@ -111,7 +111,6 @@ LD               := @ld@
 LDFLAGS          := @ldflags@ @ld_debug@
 RECONFIGURE      := $(PERL) tools/dev/reconfigure.pl
 INNO_SETUP       := iscc
-JIT_BUILD_TOOL   := $(BUILD_TOOLS_DIR)/jit2c.pl
 TEMPDIR          := @tempdir@
 #IF(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
 
@@ -147,6 +146,7 @@ NONGEN_HEADERS   := @TEMP_nongen_headers@
 GEN_MAKEFILES := \
     Makefile \
     docs/Makefile \
+    compilers/data_json/Makefile \
     compilers/json/Makefile \
     compilers/ncigen/Makefile \
     compilers/nqp/Makefile \
@@ -246,12 +246,9 @@ GEN_SOURCES := \
     $(SRC_DIR)/core_ops.c \
     $(SRC_DIR)/nci.c \
     $(SRC_DIR)/core_ops_switch.c \
-    $(SRC_DIR)/jit_cpu.c \
     $(SRC_DIR)/parrot_config.c \
     $(SRC_DIR)/null_config.c \
     $(SRC_DIR)/install_config.c \
-    $(SRC_DIR)/exec_cpu.c \
-    $(SRC_DIR)/jit_defs.c \
     $(SRC_DIR)/extend_vtable.c
 
 GEN_MODULES := \
@@ -321,14 +318,11 @@ GEN_LIBRARY := \
     $(LIBRARY_DIR)/libpcre.pbc \
     $(LIBRARY_DIR)/postgres.pbc
 
-# the dependencies of $(SRC_DIR)/jit_emit.h are done explicitly
-# including this file in GEN_HEADERS causes unnecessary recompile of all
 FLUID_FILES_1 := \
     $(GEN_OPSFILES) \
     $(GEN_HEADERS) \
     $(GEN_SOURCES) \
     $(GEN_MODULES) \
-    $(SRC_DIR)/jit_emit.h
 
 FLUID_FILES_2 := \
     $(GEN_LIBRARY) \
@@ -424,10 +418,7 @@ INTERP_O_FILES := \
     $(SRC_DIR)/extend$(O) \
     $(SRC_DIR)/extend_vtable$(O) \
     $(SRC_DIR)/gc/alloc_memory$(O) \
-    $(SRC_DIR)/gc/alloc_register$(O) \
     $(SRC_DIR)/gc/api$(O) \
-    $(SRC_DIR)/gc/generational_ms$(O) \
-    $(SRC_DIR)/gc/incremental_ms$(O) \
     $(SRC_DIR)/gc/gc_ms$(O) \
     $(SRC_DIR)/gc/gc_inf$(O) \
     $(SRC_DIR)/gc/mark_sweep$(O) \
@@ -441,23 +432,24 @@ INTERP_O_FILES := \
     $(SRC_DIR)/interp/inter_create$(O)  \
     $(SRC_DIR)/interp/inter_misc$(O)  \
     $(SRC_DIR)/call/ops$(O)  \
+    $(SRC_DIR)/call/context$(O) \
     $(SRC_DIR)/key$(O) \
     $(SRC_DIR)/library$(O) \
     $(SRC_DIR)/list$(O) \
     $(SRC_DIR)/longopt$(O) \
     $(SRC_DIR)/misc$(O) \
     $(SRC_DIR)/multidispatch$(O) \
+    $(SRC_DIR)/frame_builder$(O) \
     $(SRC_DIR)/nci$(O) \
     $(SRC_DIR)/oo$(O) \
     $(SRC_DIR)/packfile$(O) \
     $(SRC_DIR)/packout$(O) \
-    $(SRC_DIR)/pic_jit$(O) \
-    $(SRC_DIR)/pic$(O) \
     $(SRC_DIR)/platform$(O) \
     $(SRC_DIR)/pmc_freeze$(O) \
     $(SRC_DIR)/pmc$(O) \
     $(SRC_DIR)/runcore/main$(O)  \
     $(SRC_DIR)/runcore/cores$(O) \
+    $(SRC_DIR)/runcore/profiling$(O) \
     $(SRC_DIR)/scheduler$(O) \
     $(SRC_DIR)/spf_render$(O) \
     $(SRC_DIR)/spf_vtable$(O) \
@@ -472,11 +464,8 @@ INTERP_O_FILES := \
     \
     $(PF_DIR)/pf_items$(O) \
     \
-    @asmfun_o@ \
     @TEMP_cg_o@ \
-    @TEMP_exec_o@ \
     @TEMP_atomic_o@ \
-    @TEMP_jit_o@ \
     @TEMP_gc_o@ \
 #IF(platform_asm):    $(SRC_DIR)/platform_asm$(O) \
 
@@ -506,6 +495,7 @@ PDB                 := $(CUR_DIR)/parrot_debugger$(EXE)
 PBC_TO_EXE          := $(CUR_DIR)/pbc_to_exe$(EXE)
 PARROT_CONFIG       := $(CUR_DIR)/parrot_config$(EXE)
 PIRC                := $(CUR_DIR)/pirc$(EXE)
+NQP                 := $(CUR_DIR)/parrot_nqp$(EXE)
 
 # Installable executables
 INSTALLABLEPARROT   := $(CUR_DIR)/installable_parrot$(EXE)
@@ -515,6 +505,7 @@ INSTALLABLEPBCMERGE := $(CUR_DIR)/installable_pbc_merge$(EXE)
 INSTALLABLEPBCTOEXE := $(CUR_DIR)/installable_pbc_to_exe$(EXE)
 INSTALLABLEPDB      := $(CUR_DIR)/installable_parrot_debugger$(EXE)
 INSTALLABLECONFIG   := $(CUR_DIR)/installable_parrot_config$(EXE)
+INSTALLABLENQP      := $(CUR_DIR)/installable_parrot_nqp$(EXE)
 
 # Libraries
 LIBPARROT_STATIC    := @blib_dir@/@libparrot_static@
@@ -595,6 +586,7 @@ all : \
     $(PBCMERGE) \
     $(PDB) \
     $(PDUMP) \
+    $(NQP) \
 
 corevm : \
     flags_dummy \
@@ -629,11 +621,15 @@ STR_FILES := \
     $(SRC_DIR)/key.str \
     $(SRC_DIR)/library.str \
     $(SRC_DIR)/multidispatch.str \
+    $(SRC_DIR)/frame_builder.str \
     $(SRC_DIR)/nci.str \
     $(SRC_DIR)/packfile.str \
     $(SRC_DIR)/pmc.str \
     $(SRC_DIR)/pmc_freeze.str \
     $(SRC_DIR)/oo.str \
+    $(SRC_DIR)/runcore/cores.str \
+    $(SRC_DIR)/runcore/main.str \
+    $(SRC_DIR)/runcore/profiling.str \
     $(SRC_DIR)/scheduler.str \
     $(SRC_DIR)/spf_render.str \
     $(SRC_DIR)/spf_vtable.str \
@@ -779,7 +775,7 @@ world : all parrot_utils
 
 parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBCMERGE) $(PBC_TO_EXE) $(PARROT_CONFIG)
 
-installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG)
+installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBCMERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG) $(INSTALLABLENQP)
 
 
 flags_dummy :
@@ -815,6 +811,10 @@ $(PIRC) : $(PARROT)
 	$(MAKE) compilers/pirc
 	$(CP) compilers/pirc/pirc$(EXE) $(PIRC)
 	$(CHMOD) 0755 $(PIRC)
+
+$(NQP) : $(PBC_TO_EXE) compilers.dummy
+	$(CP) compilers/nqp/nqp.pbc parrot_nqp.pbc
+	$(PBC_TO_EXE) parrot_nqp.pbc
 
 $(MINIPARROT) : $(SRC_DIR)/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
     lib/Parrot/OpLib/core.pm $(SRC_DIR)/null_config$(O)
@@ -914,8 +914,12 @@ $(INSTALLABLECONFIG) : $(SRC_DIR)/install_config$(O) $(PARROT_CONFIG) $(PBC_TO_E
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
 	$(PBC_TO_EXE) parrot_config.pbc --install
 
-$(INSTALLABLEPBCTOEXE) : $(PBC_TO_EXE)
+$(INSTALLABLEPBCTOEXE) : $(PBC_TO_EXE) $(SRC_DIR)/install_config$(O)
 	$(PBC_TO_EXE) pbc_to_exe.pbc --install
+
+$(INSTALLABLENQP) : compilers/nqp/nqp.pbc $(SRC_DIR)/install_config$(O) $(PBC_TO_EXE)
+	$(CP) compilers/nqp/nqp.pbc parrot_nqp.pbc
+	$(PBC_TO_EXE) parrot_nqp.pbc --install
 
 #
 # Parrot Debugger
@@ -949,7 +953,8 @@ $(DIS) : $(SRC_DIR)/pbc_disassemble$(O) $(LIBPARROT)
     @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
-$(INSTALLABLEDIS) : $(SRC_DIR)/pbc_disassemble$(O) $(LIBPARROT)
+$(INSTALLABLEDIS) : $(SRC_DIR)/pbc_disassemble$(O) \
+	$(SRC_DIR)/install_config$(O) $(LIBPARROT)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/pbc_disassemble$(O) \
     @rpath_lib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
@@ -968,7 +973,8 @@ $(PDUMP) : $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) $(LIBPARROT)
 
 $(SRC_DIR)/pbc_dump$(O) : $(INC_DIR)/parrot.h $(GEN_HEADERS)
 
-$(INSTALLABLEPDUMP) : $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) $(LIBPARROT)
+$(INSTALLABLEPDUMP) : $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
+	$(SRC_DIR)/install_config$(O) $(LIBPARROT)
 	$(LINK) @ld_out@$@ \
     $(SRC_DIR)/pbc_dump$(O) \
     $(SRC_DIR)/packdump$(O) \
@@ -1064,29 +1070,8 @@ $(SRC_DIR)/list$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/library$(O) : $(GENERAL_H_FILES)
 
-$(SRC_DIR)/jit$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/jit_emit.h $(SRC_DIR)/pmc/pmc_sub.h $(SRC_DIR)/pmc/pmc_managedstruct.h
-
-$(SRC_DIR)/jit_debug$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/debug.str
-
-$(SRC_DIR)/jit_debug_xcoff$(O) : $(GENERAL_H_FILES)
-
-$(SRC_DIR)/jit_cpu$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/jit_emit.h
-
-$(SRC_DIR)/exec$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h
-
-$(SRC_DIR)/exec_dep$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h $(SRC_DIR)/pmc/managedstruct.c
-
-$(SRC_DIR)/exec_cpu$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h
-
-$(SRC_DIR)/jit_defs$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@ $(SRC_DIR)/jit_emit.h \
-	$(SRC_DIR)/pmc/pmc_fixedintegerarray.h $(SRC_DIR)/pmc/pmc_unmanagedstruct.h $(SRC_DIR)/pmc/pmc_pointer.h
-
 $(INC_DIR)/extend_vtable.h $(SRC_DIR)/extend_vtable.c $(SRC_DIR)/vtable.h : src/vtable.tbl $(BUILD_TOOLS_DIR)/vtable_extend.pl lib/Parrot/Vtable.pm
 	$(PERL) $(BUILD_TOOLS_DIR)/vtable_extend.pl
-
-$(SRC_DIR)/exec_start$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@
-
-$(SRC_DIR)/exec_save$(O) : $(GENERAL_H_FILES) @TEMP_exec_h@
 
 $(SRC_DIR)/key$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/key.str $(SRC_DIR)/pmc/pmc_key.h
 
@@ -1097,10 +1082,6 @@ $(SRC_DIR)/gc/gc_ms$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_ms.c
 $(SRC_DIR)/gc/gc_inf$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_inf.c
 
 $(SRC_DIR)/gc/api$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_private.h
-
-$(SRC_DIR)/gc/generational_ms$(O) : $(GENERAL_H_FILES)
-
-$(SRC_DIR)/gc/incremental_ms$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/gc/alloc_resources$(O) : $(GENERAL_H_FILES)
 
@@ -1142,12 +1123,19 @@ $(SRC_DIR)/thread$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_sub.h \
 $(SRC_DIR)/extend$(O) : $(GENERAL_H_FILES) $(INC_DIR)/extend.h \
 	$(SRC_DIR)/pmc/pmc_sub.h
 
-$(SRC_DIR)/runcore/main$(O) : $(SRC_DIR)/runcore/main.c $(GENERAL_H_FILES) \
+$(SRC_DIR)/runcore/main$(O) : $(SRC_DIR)/runcore/main.c \
+	$(SRC_DIR)/runcore/main.str $(GENERAL_H_FILES) \
 	$(SRC_DIR)/pmc/pmc_parrotlibrary.h
+
+$(SRC_DIR)/runcore/profiling$(O) : $(SRC_DIR)/runcore/profiling.str $(GENERAL_H_FILES) \
+	$(SRC_DIR)/pmc/pmc_sub.h
 
 $(SRC_DIR)/call/pcc$(O) : $(SRC_DIR)/call/pcc.c $(GENERAL_H_FILES) \
 	$(SRC_DIR)/call/pcc.str $(SRC_DIR)/pmc/pmc_fixedintegerarray.h \
 	$(SRC_DIR)/pmc/pmc_key.h $(SRC_DIR)/pmc/pmc_continuation.h
+
+$(SRC_DIR)/call/context$(O) : $(SRC_DIR)/call/context.c $(GENERAL_H_FILES) \
+	$(SRC_DIR)/pmc/pmc_sub.h
 
 $(SRC_DIR)/interp/inter_cb$(O) : $(SRC_DIR)/interp/inter_cb.c \
 	$(GENERAL_H_FILES) $(SRC_DIR)/interp/inter_cb.str
@@ -1177,11 +1165,6 @@ $(SRC_DIR)/gc/alloc_memory$(O) : $(GENERAL_H_FILES)
 
 $(SRC_DIR)/main$(O) : $(SRC_DIR)/main.c $(GENERAL_H_FILES)
 
-$(SRC_DIR)/pic$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_fixedintegerarray.h \
-	$(SRC_DIR)/pmc/pmc_continuation.h
-
-$(SRC_DIR)/pic_jit$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_sub.h
-
 $(SRC_DIR)/multidispatch$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/multidispatch.str \
 	$(SRC_DIR)/pmc/pmc_nci.h $(SRC_DIR)/pmc/pmc_sub.h
 
@@ -1194,9 +1177,8 @@ $(SRC_DIR)/packout$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_key.h
 
 $(SRC_DIR)/parrot$(O) : $(GENERAL_H_FILES)
 
-$(SRC_DIR)/gc/alloc_register$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/pmc/pmc_sub.h
-
-$(SRC_DIR)/runcore/cores$(O) : $(GENERAL_H_FILES)
+$(SRC_DIR)/runcore/cores$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/runcore/cores.str \
+	$(SRC_DIR)/pmc/pmc_sub.h
 
 $(SRC_DIR)/tsq$(O) : $(GENERAL_H_FILES)
 
@@ -1208,9 +1190,12 @@ $(SRC_DIR)/dataypes$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/dataypes.c
 $(SRC_DIR)/exit$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/exit.c
 
 $(SRC_DIR)/nci$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/nci.c $(SRC_DIR)/nci.str \
+        $(SRC_DIR)/frame_builder$(O) \
         $(SRC_DIR)/pmc/pmc_managedstruct.h \
         $(SRC_DIR)/pmc/pmc_nci.h \
         $(SRC_DIR)/pmc/pmc_pointer.h
+
+$(SRC_DIR)/frame_builder$(O) : $(SRC_DIR)/frame_builder.h $(GENERAL_H_FILES) $(SRC_DIR)/frame_builder.c $(SRC_DIR)/frame_builder.str
 
 $(SRC_DIR)/vtables$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/vtables.c
 
@@ -1242,8 +1227,6 @@ $(IO_DIR)/filehandle$(O) : $(INC_DIR)/parrot.h $(SRC_DIR)/pmc/pmc_filehandle.h $
 
 $(OPS_DIR)/core_ops$(O) : $(GENERAL_H_FILES) $(OPS_DIR)/core_ops.c \
 	$(SRC_DIR)/pmc/pmc_continuation.h $(SRC_DIR)/pmc/pmc_parrotlibrary.h
-
-$(OPS_DIR)/pic.ops : $(SRC_DIR)/pmc/pmc_fixedintegerarray.h
 
 # core_ops depends upon config.h so that it gets updated along with
 # updates to config.h's version numbers
@@ -1283,21 +1266,6 @@ $(OPS_DIR)/core_ops_switch.c : $(OPS_FILES) $(BUILD_TOOLS_DIR)/ops2c.pl \
 
 $(INC_DIR)/vtable.h : src/vtable.tbl $(BUILD_TOOLS_DIR)/vtable_h.pl lib/Parrot/Vtable.pm
 	$(PERL) $(BUILD_TOOLS_DIR)/vtable_h.pl
-
-$(SRC_DIR)/jit_emit.h : $(SRC_DIR)/jit/@jitcpuarch@/jit_emit.h
-	$(CP) $(SRC_DIR)/jit/@jitcpuarch@/jit_emit.h $(SRC_DIR)/jit_emit.h
-$(SRC_DIR)/exec_dep.h : $(SRC_DIR)/jit/@jitcpuarch@/exec_dep.h
-	$(CP) $(SRC_DIR)/jit/@jitcpuarch@/exec_dep.h $(SRC_DIR)/exec_dep.h
-$(SRC_DIR)/jit_cpu.c : lib/Parrot/OpLib/core.pm $(SRC_DIR)/jit_emit.h \
-    $(SRC_DIR)/jit/@jitcpuarch@/core.jit $(JIT_BUILD_TOOL)
-	$(PERL) $(JIT_BUILD_TOOL) @jitcpuarch@ $(SRC_DIR)/jit_cpu.c
-$(SRC_DIR)/jit_defs.c : $(SRC_DIR)/jit/@jitcpuarch@/jit_emit.h \
-	$(SRC_DIR)/jit/@jitcpuarch@/jit_defs.c
-	$(CP) $(SRC_DIR)/jit/@jitcpuarch@/jit_defs.c $(SRC_DIR)/jit_defs.c
-$(SRC_DIR)/exec_cpu.c : lib/Parrot/OpLib/core.pm $(SRC_DIR)/jit_emit.h \
-    $(SRC_DIR)/jit/@jitcpuarch@/core.jit @TEMP_exec_h@ $(SRC_DIR)/exec_dep.h $(JIT_BUILD_TOOL)
-	$(PERL) $(JIT_BUILD_TOOL) @jitcpuarch@ $(SRC_DIR)/exec_cpu.c
-@TEMP_exec_dep@
 
 # imcc file dependencies
 #
@@ -1410,6 +1378,7 @@ compilers.dummy : $(PARROT) $(GEN_LIBRARY)
 	$(MAKE) compilers/tge
 	$(MAKE) compilers/nqp
 	$(MAKE) compilers/json
+	$(MAKE) compilers/data_json
 
 compilers-clean :
 	$(MAKE) compilers/pct clean
@@ -1417,6 +1386,7 @@ compilers-clean :
 	$(MAKE) compilers/tge clean
 	$(MAKE) compilers/nqp clean
 	$(MAKE) compilers/json clean
+	$(MAKE) compilers/data_json clean
 	$(MAKE) compilers/pirc clean
 
 ###############################################################################
@@ -1452,6 +1422,15 @@ RUNCORE_TEST_FILES := \
 SRC_TEST_FILES := \
     t/src/*.t
 TOOLS_TEST_FILES := \
+    t/tools/*.t
+EXTRA_TEST_FILES := \
+    t/compilers/json/*.t \
+    t/compilers/pct/*.t \
+    t/compilers/pge/*.t \
+    t/compilers/pge/p5regex/*.t \
+    t/compilers/pge/perl6regex/*.t \
+    t/compilers/tge/*.t \
+    t/library/*.t \
     t/tools/*.t
 PMC2CUTILS_DIR := t/tools/pmc2cutils
 OPS2PMUTILS_DIR := t/tools/ops2pm
@@ -1523,12 +1502,13 @@ fulltest :
 #IF(cg_flag):	testC \
 	testf \
 #IF(cg_flag):	testg \
-#IF(jitcapable):	testj \
 	testr \
 	testS \
 	src_tests \
 	run_tests \
 	perl_tests \
+	extra_tests \
+	nqp_test \
 	codetest \
 	benchmark_tests \
 	manifest_tests \
@@ -1551,9 +1531,9 @@ testf : test_prep
 testg : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) -g $(RUNCORE_TEST_FILES)
 
-# JIT core
+# JIT core - target retained, but falls back to standard core
 testj : test_prep
-	$(PERL) t/harness $(EXTRA_TEST_ARGS) -j $(RUNCORE_TEST_FILES)
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(RUNCORE_TEST_FILES)
 
 # normal core, write and run Parrot Byte Code
 testr : test_prep
@@ -1563,13 +1543,13 @@ testr : test_prep
 testS : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) -S $(RUNCORE_TEST_FILES)
 
-# Computed goto jitted core
+# Computed goto jitted core - target retained, but falls back to standard core
 testCj : test_prep
-	$(PERL) t/harness $(EXTRA_TEST_ARGS) -Cj $(RUNCORE_TEST_FILES)
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(RUNCORE_TEST_FILES)
 
-# switched jitted core
+# switched jitted core - target retained, but falls back to standard core
 testSj : test_prep
-	$(PERL) t/harness $(EXTRA_TEST_ARGS) -Sj $(RUNCORE_TEST_FILES)
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(RUNCORE_TEST_FILES)
 
 # test the EXEC stuff
 testexec: test_prep
@@ -1623,6 +1603,10 @@ distro_tests : test_prep
 configure_tests :
 	$(PERL) t/harness $(CONFIGURE_TEST_FILES)
 
+# extra tests - tests needed by make fulltest and make cover for completion
+extra_tests : test_prep
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(EXTRA_TEST_FILES)
+
 ###############################################################################
 #
 # Cleaning Targets:
@@ -1661,8 +1645,10 @@ prog-clean :
     $(INSTALLABLEPBCTOEXE) \
     $(INSTALLABLEPDB) \
     $(INSTALLABLECONFIG) \
+    $(INSTALLABLENQP) \
     pbc_to_exe.pbc pbc_to_exe.c pbc_to_exe$(O) pbc_to_exe$(EXE) \
     parrot_config$(EXE) parrot_config.c parrot_config$(O) parrot_config.pbc \
+    parrot_nqp$(EXE) parrot_nqp.c parrot_nqp$(O) parrot_nqp.pbc \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
@@ -1673,7 +1659,6 @@ prog-clean :
     $(SRC_DIR)/null_config$(O) \
     $(SRC_DIR)/parrot_config$(O) \
     $(SRC_DIR)/install_config$(O) \
-    $(SRC_DIR)/exec_start$(O) \
     $(SRC_DIR)/nci_test$(O) \
     $(LIBNCI_TEST_SO) \
     $(SRC_DIR)/glut_callbacks$(O) \
@@ -1698,6 +1683,7 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(INSTALLABLEPBCMERGE) \
     $(INSTALLABLEPDB) \
     $(INSTALLABLECONFIG) \
+    $(INSTALLABLENQP) \
     $(IMCC_DIR)/main$(O) \
     $(PDUMP) $(SRC_DIR)/pbc_dump$(O) $(SRC_DIR)/packdump$(O) \
     $(PDB) $(SRC_DIR)/parrot_debugger$(O) \
@@ -1709,12 +1695,6 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(SRC_DIR)/null_config$(O) \
     $(SRC_DIR)/parrot_config$(O) \
     $(SRC_DIR)/install_config$(O) \
-    $(SRC_DIR)/asmfun.s \
-    $(SRC_DIR)/jit_emit.h \
-    $(SRC_DIR)/jit_cpu.c \
-    $(SRC_DIR)/exec_cpu.c \
-    $(SRC_DIR)/jit_defs.c \
-    $(SRC_DIR)/exec_start$(O) \
     install_config.fpmc \
     $(SRC_DIR)/nci_test$(O) \
     $(LIBNCI_TEST_SO) \
@@ -1771,6 +1751,7 @@ test-clean :
     "t/op/*.pbc" \
     "t/oo/*.pbc" \
     "t/pmc/*.pbc" \
+    "t/dynpmc/*.pbc" \
     "t/stress/*.pbc" \
     "t/tools/*.pbc"
 	$(RM_F) \
@@ -1884,7 +1865,7 @@ SUNLINTOPTS := \
 
 sunlint :
 	rm -f *.ln
-	$(SUNLINT) $(CC_INC) @cc_hasjit@ "-Isrc/pmc" $(SUNLINTOPTS) $(LINTABLE_CFILES)
+	$(SUNLINT) $(CC_INC) "-Isrc/pmc" $(SUNLINTOPTS) $(LINTABLE_CFILES)
 
 BSD_LINT_FLAGS := -a -aa -b -c -e -h -n -p -r -u -x -z -F -H -V
 
@@ -2044,7 +2025,7 @@ SPLINT_SOURCE := `echo $(O_FILES) | $(PERL) -pe @PQ@s/\.o/\.c/g@PQ@`
 
 splint-all : $(PARROT)
 	$(MKPATH) $(SPLINT_TMP)
-	$(SPLINT) $(CC_INC) @cc_hasjit@ "-Isrc/pmc" "-Icompilers/ast" $(SPLINTFLAGS) $(SPLINTFLAGS_TEST) \
+	$(SPLINT) $(CC_INC) "-Isrc/pmc" "-Icompilers/ast" $(SPLINTFLAGS) $(SPLINTFLAGS_TEST) \
 	$(SPLINT_SOURCE) \
 	$(SPLINT) $(CC_INC) $(SPLINTFLAGS) $(SPLINTFLAGS_TEST) $(IMCC_DIR)/main.c
 
@@ -2055,7 +2036,7 @@ splint-all : $(PARROT)
 
 splint : all
 	$(MKPATH) $(SPLINT_TMP)
-	$(SPLINT) $(CC_INC) @cc_hasjit@ "-Isrc/pmc" "-Icompilers/ast" $(SPLINTFLAGS) $(SPLINTFLAGS_TEST) \
+	$(SPLINT) $(CC_INC) "-Isrc/pmc" "-Icompilers/ast" $(SPLINTFLAGS) $(SPLINTFLAGS_TEST) \
 	+partial -DNDEBUG \
 	$(SPLINT_SOURCE) \
 		| grep -v 'Source code error generation point'
@@ -2063,15 +2044,20 @@ splint : all
 COVER_FLAGS := -fprofile-arcs -ftest-coverage
 COVER_DIRS := \
     $(SRC_DIR) \
+    $(SRC_DIR)/call \
     $(SRC_DIR)/dynoplibs \
     $(SRC_DIR)/dynpmc \
     $(SRC_DIR)/gc \
+    $(SRC_DIR)/interp \
     $(SRC_DIR)/ops \
     $(SRC_DIR)/packfile \
     $(SRC_DIR)/pmc \
+    $(SRC_DIR)/runcore \
     $(SRC_DIR)/string \
     $(SRC_DIR)/string/charset \
     $(SRC_DIR)/string/encoding \
+    $(BUILD_DIR) \
+    $(BUILD_DIR)/t/perl \
     $(IO_DIR) \
     $(IMCC_DIR)
 
@@ -2081,13 +2067,17 @@ cover: \
 #IF(cg_flag):    cover-testC \
     cover-testf \
 #IF(cg_flag):    cover-testg \
-#IF(jitcapable):    cover-testj \
     cover-testr \
     cover-testS \
     cover-src \
+    cover-run \
     cover-perl \
+    cover-extra \
+    cover-nqp \
     cover-codingstd \
     cover-benchmark \
+    cover-manifest \
+    cover-examples \
     cover-distro
 	build_dir=$$PWD; \
     for dir in $(COVER_DIRS); \
@@ -2127,14 +2117,29 @@ cover-testS: cover.dummy
 cover-src: cover.dummy
 	-@make@ src_tests
 
+cover-run: cover.dummy
+	-@make@ run_tests
+
 cover-perl: cover.dummy
 	-@make@ perl_tests
+
+cover-extra: cover.dummy
+	-@make@ extra_tests
+
+cover-nqp: cover.dummy
+	-@make@ nqp_test
 
 cover-codingstd: cover.dummy
 	-@make@ codingstd_tests
 
 cover-benchmark: cover.dummy
 	-@make@ benchmark_tests
+
+cover-manifest: cover.dummy
+	-@make@ manifest_tests
+
+cover-examples: cover.dummy
+	-@make@ examples_tests
 
 cover-distro: cover.dummy
 	-@make@ distro_tests
@@ -2202,8 +2207,8 @@ win32-inno-installer : world installable
 #
 ###############################################################################
 
-exec : $(SRC_DIR)/exec_start$(O) $(SRC_DIR)/parrot_config$(O) $(LIBPARROT)
-	$(LINK) @ld_out@$(EXEC)$(EXE) $(EXEC)$(O) $(SRC_DIR)/exec_start$(O) $(SRC_DIR)/parrot_config$(O) @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
+exec : $(SRC_DIR)/parrot_config$(O) $(LIBPARROT)
+	$(LINK) @ld_out@$(EXEC)$(EXE) $(EXEC)$(O) $(SRC_DIR)/parrot_config$(O) @rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
 
 ###### OS depend targets ##########
 

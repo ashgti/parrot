@@ -179,10 +179,6 @@ static PMC* mk_multi_sig(PARROT_INTERP, ARGIN(const SymReg *r))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_WARN_UNUSED_RESULT
-static int old_blocks(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 static void store_fixup(PARROT_INTERP,
     ARGIN(const SymReg *r),
     int pc,
@@ -204,96 +200,86 @@ static void verify_signature(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_add_1_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_add_1_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key) \
-    || PARROT_ASSERT_ARG(s_key)
-#define ASSERT_ARGS_add_const_num __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_add_const_pmc_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key) \
+    , PARROT_ASSERT_ARG(s_key))
+#define ASSERT_ARGS_add_const_num __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_add_const_pmc_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_str __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_table __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_add_const_table_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_table __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_add_const_table_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key)
-#define ASSERT_ARGS_add_const_table_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key))
+#define ASSERT_ARGS_add_const_table_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_build_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_build_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key_reg)
-#define ASSERT_ARGS_constant_folding __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key_reg))
+#define ASSERT_ARGS_constant_folding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_find_global_label __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_find_global_label __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(sym) \
-    || PARROT_ASSERT_ARG(pc)
-#define ASSERT_ARGS_find_outer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(sym) \
+    , PARROT_ASSERT_ARG(pc))
+#define ASSERT_ARGS_find_outer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_find_sub_by_subid __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_find_sub_by_subid __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(lookup) \
-    || PARROT_ASSERT_ARG(sym) \
-    || PARROT_ASSERT_ARG(pc)
-#define ASSERT_ARGS_fixup_globals __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_codesize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(lookup) \
+    , PARROT_ASSERT_ARG(sym) \
+    , PARROT_ASSERT_ARG(pc))
+#define ASSERT_ARGS_fixup_globals __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_codesize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(src_lines)
-#define ASSERT_ARGS_get_old_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(src_lines))
+#define ASSERT_ARGS_get_old_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ins_line)
-#define ASSERT_ARGS_imcc_globals_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_make_new_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ins_line))
+#define ASSERT_ARGS_imcc_globals_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_make_new_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_make_pmc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_make_pmc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_mk_multi_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_mk_multi_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_old_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_store_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_store_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_store_key_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_store_key_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(str)
-#define ASSERT_ARGS_store_sub_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_verify_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_store_sub_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_verify_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(pc)
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(pc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
-
-#ifdef HAS_JIT
-
-PARROT_WARN_UNUSED_RESULT
-static int old_blocks(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-#endif /* HAS_JIT */
 
 /*
 
@@ -481,84 +467,6 @@ e_pbc_open(PARROT_INTERP, SHIM(void *param))
 
     return 0;
 }
-
-
-#ifdef HAS_JIT
-
-/*
-
-=item C<static int old_blocks(PARROT_INTERP)>
-
-Gets the size/line of bytecode in ops at this point.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-static int
-old_blocks(PARROT_INTERP)
-{
-    ASSERT_ARGS(old_blocks)
-    const  subs_t *s;
-    size_t         size = 0;
-
-    for (s = IMCC_INFO(interp)->globals->cs->subs; s; s = s->prev) {
-        size += s->n_basic_blocks;
-    }
-
-    return size;
-}
-
-
-/*
-
-=item C<opcode_t * make_jit_info(PARROT_INTERP, const IMC_Unit *unit)>
-
-Creates JIT information for this compilation unit.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-opcode_t *
-make_jit_info(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
-{
-    ASSERT_ARGS(make_jit_info)
-    const size_t old  = old_blocks(interp);
-    const size_t size = unit->n_basic_blocks + old;
-
-    if (!IMCC_INFO(interp)->globals->cs->jit_info) {
-        const size_t len  = strlen(IMCC_INFO(interp)->globals->cs->seg->base.name) + 5;
-        char * const name = mem_allocate_n_typed(len, char);
-
-        snprintf(name, len, "%s_JIT",
-            IMCC_INFO(interp)->globals->cs->seg->base.name);
-
-        IMCC_INFO(interp)->globals->cs->jit_info =
-                PackFile_Segment_new_seg(interp,
-                    interp->code->base.dir, PF_UNKNOWN_SEG, name, 1);
-
-        mem_sys_free(name);
-    }
-
-    /* store current size */
-    IMCC_INFO(interp)->globals->cs->subs->n_basic_blocks = unit->n_basic_blocks;
-
-    /* offset of block start and end, 4 * registers_used */
-    IMCC_INFO(interp)->globals->cs->jit_info->data =
-        mem_realloc_n_typed(IMCC_INFO(interp)->globals->cs->jit_info->data,
-            size * 4, opcode_t);
-
-    IMCC_INFO(interp)->globals->cs->jit_info->size = size * 4;
-
-    return IMCC_INFO(interp)->globals->cs->jit_info->data + old * 4;
-}
-
-#endif /* HAS_JIT */
-
 
 /*
 
@@ -1205,7 +1113,7 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
                 while (n) {
                     STRING     *lex_name;
                     const int   k = n->color;
-                    Parrot_sub *sub;
+                    Parrot_Sub_attributes *sub;
                     PARROT_ASSERT(k >= 0);
 
                     lex_name = constants[k]->u.string;
@@ -1213,8 +1121,8 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
 
                     PMC_get_sub(interp, sub_pmc, sub);
                     IMCC_debug(interp, DEBUG_PBC_CONST,
-                            "add lexical '%s' to sub name '%s'\n",
-                            n->name, (char*)sub->name->strstart);
+                            "add lexical '%s' to sub name '%Ss'\n",
+                            n->name, sub->name);
 
                     Parrot_PCCINVOKE(interp, lex_info,
                             string_from_literal(interp, "declare_lex_preg"),
@@ -1255,7 +1163,8 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
     subs_t      *s;
     PMC         *current;
     STRING      *cur_name;
-    Parrot_sub *sub;
+    char        *cur_name_str;
+    Parrot_Sub_attributes *sub;
     size_t      len;
 
     if (!unit->outer)
@@ -1280,19 +1189,22 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
     }
 
     /* could be eval too; check if :outer is the current sub */
-    current = CONTEXT(interp)->current_sub;
+    current = Parrot_pcc_get_sub(interp, CURRENT_CONTEXT(interp));
 
-    if (!current)
+    if (PMC_IS_NULL(current))
         IMCC_fatal(interp, 1, "Undefined :outer sub '%s'.\n",
                    unit->outer->name);
 
     PMC_get_sub(interp, current, sub);
     cur_name = sub->name;
 
-    if (cur_name->strlen == len
-    && (memcmp((char*)cur_name->strstart, unit->outer->name, len) == 0))
+    cur_name_str = Parrot_str_to_cstring(interp,  sub->name);
+    if (strlen(cur_name_str) == len
+    && (memcmp(cur_name_str, unit->outer->name, len) == 0)) {
+        Parrot_str_free_cstring(cur_name_str);
         return current;
-
+    }
+    Parrot_str_free_cstring(cur_name_str);
     return NULL;
 }
 
@@ -1320,9 +1232,9 @@ static int
 add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
 {
     ASSERT_ARGS(add_const_pmc_sub)
-    PMC                 *ns_pmc;
-    PMC                 *sub_pmc;
-    Parrot_sub          *sub, *outer_sub;
+    PMC                   *ns_pmc;
+    PMC                   *sub_pmc;
+    Parrot_Sub_attributes *sub, *outer_sub;
 
     const int            k            = add_const_table(interp);
     PackFile_ConstTable * const ct    = interp->code->const_table;
@@ -1434,7 +1346,7 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
     sub->namespace_name = ns_pmc;
     sub->start_offs     = offs;
     sub->end_offs       = end;
-    sub->HLL_id         = CONTEXT(interp)->current_HLL;
+    sub->HLL_id         = Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp));
 
     for (i = 0; i < 4; ++i)
         sub->n_regs_used[i] = unit->n_regs_used[i];
@@ -1511,14 +1423,13 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         PMC_get_sub(interp, sub->outer_sub, outer_sub);
 
     IMCC_debug(interp, DEBUG_PBC_CONST,
-            "add_const_pmc_sub '%s' flags %x color %d (%s) "
-            "lex_info %s :outer(%s)\n",
+            "add_const_pmc_sub '%s' flags %x color %d (%Ss) "
+            "lex_info %s :outer(%Ss)\n",
             r->name, r->pcc_sub->pragma, k,
-            (char *) sub_pmc->vtable->whoami->strstart,
+            sub_pmc->vtable->whoami,
             sub->lex_info ? "yes" : "no",
-            sub->outer_sub ?
-                (char *)outer_sub->name->strstart :
-                "*none*");
+            sub->outer_sub? outer_sub->name :
+            Parrot_str_new(interp, "*none*", 0));
 
     /*
      * create entry in our fixup (=symbol) table
@@ -2107,24 +2018,14 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
         constant_folding(interp, unit);
         store_sub_size(interp, code_size, ins_size);
 
-        /*
-         * allocate code and pic_index
-         *
-         * pic_index is half the size of the code, as one PIC-cacheable opcode
-         * is at least two opcodes wide - see below how to further decrease
-         * this storage
-         */
+        /* allocate code */
         interp->code->base.data       = (opcode_t *)
             mem_sys_realloc(interp->code->base.data, bytes);
 
         /* reallocating this removes its mmaped-ness; needs encapsulation */
         interp->code->base.pf->is_mmap_ped = 0;
 
-        interp->code->pic_index->data = (opcode_t *)
-            mem_sys_realloc(interp->code->pic_index->data, bytes / 2);
-
         interp->code->base.size       = oldsize + code_size;
-        interp->code->pic_index->size = (oldsize + code_size) / 2;
 
         IMCC_INFO(interp)->pc  = (opcode_t *)interp->code->base.data + oldsize;
         IMCC_INFO(interp)->npc = 0;
@@ -2248,21 +2149,6 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
                 (opcode_t)ins->line;
 
         op = (opcode_t)ins->opnum;
-
-        /* add PIC idx */
-        if (parrot_PIC_op_is_cached(op)) {
-            const size_t offs = IMCC_INFO(interp)->pc - interp->code->base.data;
-            /*
-             * for pic_idx fitting into a short, we could
-             * further reduce the size by storing shorts
-             * the relation code_size / pic_index_size could
-             * indicate the used storage
-             *
-             * drawback: if we reach 0xffff, we'd have to resize again
-             */
-            interp->code->pic_index->data[offs / 2] =
-                ++IMCC_INFO(interp)->globals->cs->pic_idx;
-        }
 
         /* Start generating the bytecode */
         *(IMCC_INFO(interp)->pc)++   = op;

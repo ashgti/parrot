@@ -103,46 +103,46 @@ static QUEUE_ENTRY * remove_queued_suspend_gc(PARROT_INTERP)
 PARROT_CAN_RETURN_NULL
 static void* thread_func(ARGIN_NULLOK(void *arg));
 
-#define ASSERT_ARGS_detach __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_get_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_is_suspended_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_make_local_args_copy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_detach __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_get_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_is_suspended_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_make_local_args_copy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(old_interp)
-#define ASSERT_ARGS_make_local_copy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(old_interp))
+#define ASSERT_ARGS_make_local_copy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(from) \
-    || PARROT_ASSERT_ARG(arg)
-#define ASSERT_ARGS_mutex_unlock __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(arg)
-#define ASSERT_ARGS_pt_check_tid __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(from)
-#define ASSERT_ARGS_pt_gc_count_threads __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_gc_wait_for_stage __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_gc_wakeup_check __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_ns_clone __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(from) \
+    , PARROT_ASSERT_ARG(arg))
+#define ASSERT_ARGS_mutex_unlock __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(arg))
+#define ASSERT_ARGS_pt_check_tid __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(from))
+#define ASSERT_ARGS_pt_gc_count_threads __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_gc_wait_for_stage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_gc_wakeup_check __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_ns_clone __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(d) \
-    || PARROT_ASSERT_ARG(dest_ns) \
-    || PARROT_ASSERT_ARG(s) \
-    || PARROT_ASSERT_ARG(source_ns)
-#define ASSERT_ARGS_pt_suspend_all_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_suspend_one_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_thread_signal __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(d) \
+    , PARROT_ASSERT_ARG(dest_ns) \
+    , PARROT_ASSERT_ARG(s) \
+    , PARROT_ASSERT_ARG(source_ns))
+#define ASSERT_ARGS_pt_suspend_all_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_suspend_one_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_thread_signal __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pt_thread_wait __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_remove_queued_suspend_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_thread_func __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+    , PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_thread_wait __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_remove_queued_suspend_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_thread_func __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -201,7 +201,7 @@ make_local_copy(PARROT_INTERP, ARGIN(Parrot_Interp from), ARGIN(PMC *arg))
          * working as one might expect mainly because the segment is
          * not correctly copied
          */
-        Parrot_sub     *ret_val_sub, *arg_sub;
+        Parrot_Sub_attributes *ret_val_sub, *arg_sub;
 
         ret_val               = Parrot_clone(interp, arg);
         PMC_get_sub(interp, ret_val, ret_val_sub);
@@ -632,7 +632,7 @@ pt_ns_clone(PARROT_INTERP, ARGOUT(Parrot_Interp d), ARGOUT(PMC *dest_ns),
 
             if (PMC_IS_NULL(dval)) {
                 PMC * const copy = make_local_copy(d, s, val);
-                Parrot_sub *val_sub;
+                Parrot_Sub_attributes *val_sub;
 
                 if (val->vtable->base_type == enum_class_Sub)
                     PMC_get_sub(interp, val, val_sub);
@@ -1620,8 +1620,7 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
 =item C<void pt_gc_start_mark(PARROT_INTERP)>
 
 Record that the mark phase of GC is about to begin. In the presence of shared
-PMCs, we can only run one GC run at a time because C<< PMC->next_for_GC >> may
-be changed.
+PMCs, we can only run one GC run at a time.
 
 C<flags> are the GC flags. We check if we need to collect shared objects or
 not.
@@ -1696,8 +1695,7 @@ pt_gc_start_mark(PARROT_INTERP)
 
     DEBUG_ONLY(fprintf(stderr, "actually mark\n"));
     /*
-     * We can't allow parallel running GCs; both would mess with shared PMCs'
-     * next_for_GC pointers
+     * We can't allow parallel running GCs.
      */
     LOCK(interpreter_array_mutex);
     DEBUG_ONLY(fprintf(stderr, "got marking lock\n"));

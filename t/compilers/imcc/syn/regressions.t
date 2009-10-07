@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 15;
+use Parrot::Test tests => 17;
 
 pir_error_output_like( <<'CODE', <<'OUT', 'invalid get_results syntax');
 .sub main :main
@@ -37,7 +37,7 @@ ok 1 - caught div_i_ic_ic exception
 ok 2 - caught div_n_nc_nc exception
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'comments before .param(RT #46499)');
+pir_output_is( <<'CODE', <<'OUT', 'comments before .param(TT #1035)');
 .sub main :main
   comments(1,2)
 .end
@@ -51,7 +51,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'comments between .param(RT #46499)', todo => 'broken');
+pir_output_is( <<'CODE', <<'OUT', 'comments between .param(TT #1035)', todo => 'broken');
 .sub main :main
   comments(1,2)
 .end
@@ -65,7 +65,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'whitespace before .param(RT #46499)');
+pir_output_is( <<'CODE', <<'OUT', 'whitespace before .param(TT #1035)');
 .sub main :main
   comments(1,2)
 .end
@@ -79,7 +79,7 @@ CODE
 hello
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'whitespace between .param(RT #46499)', todo => 'broken');
+pir_output_is( <<'CODE', <<'OUT', 'whitespace between .param(TT #1035)', todo => 'broken');
 .sub main :main
   comments(1,2)
 .end
@@ -93,7 +93,7 @@ CODE
 hello
 OUT
 
-pir_error_output_like( <<'CODE', <<'OUT', 'off by one error message (RT #40204)', todo=>'broken');
+pir_error_output_like( <<'CODE', <<'OUT', 'off by one error message (TT #1016)', );
 .sub foo :main
   $P0 = new 'Hash'
   $P1 = $P0['x']
@@ -154,7 +154,7 @@ ok 1
 OUT
 
 my $register = "9" x 4096;
-pir_output_is( <<"CODE", <<'OUT', 'long register numbers in PIR (RT #41788)');
+pir_output_is( <<"CODE", <<'OUT', 'long register numbers in PIR (TT #1025)');
 .sub main
       \$P$register = new 'Integer'
       \$P$register = 3
@@ -167,7 +167,7 @@ OUT
 TODO: {
     local $TODO = "works in PIR, not PASM";
 
-pasm_output_is( <<"CODE", <<'OUT', 'long register numbers in PASM (RT #41788)');
+pasm_output_is( <<"CODE", <<'OUT', 'long register numbers in PASM (TT #1025)');
       new P$register, 'Integer'
       assign P$register, 3
   say P$register
@@ -199,6 +199,47 @@ pir_error_output_like( <<'CODE', <<'OUT', 'No segfault from syntax error, RT #60
 CODE
 /syntax error.+unexpected/
 OUT
+
+SKIP: {
+    skip( 'Hang on Linux i386 and amd64', 1 );
+pir_output_like( <<'CODE', <<'OUT', 'Segfault, TT #1027', todo=>'segfaulting');
+.sub main :main
+push_eh handler
+test()
+## NB: This makes sure the sub call PC is sufficiently
+## different from the exception handler PC.
+print "foo\n"
+print "bar\n"
+.return ()
+handler:
+.local pmc exception
+.local string message
+.get_results (exception, message)
+print "Error: "
+print message
+.end
+
+.sub test
+## Throw an exception.
+$P0 = new 'Exception'
+$P0 = 'oops'
+throw $P0
+.end
+CODE
+/.*/
+OUT
+}
+
+# We shouldn't crash (and valgrind shoudn't report invalid reads)
+pir_output_is( <<'CODE', <<'OUT', 'exit is last op in sub (TT#1009)');
+.sub main :main
+    exit 0
+.end
+CODE
+OUT
+
+
+
 
 # Local Variables:
 #   mode: cperl

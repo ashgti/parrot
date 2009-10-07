@@ -29,9 +29,6 @@ them, with default behaviour.
 
 =head2 Remarks
 
-C<< binop_mmd_funcs->x >> and C<< ->y >> are table sizes
-not highest type in table.
-
 =head2 Functions
 
 =over 4
@@ -171,69 +168,69 @@ static PMC * Parrot_mmd_sort_candidates(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_distance_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_mmd_add_multi_global __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_distance_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_mmd_add_multi_global __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_name) \
-    || PARROT_ASSERT_ARG(sub_obj)
-#define ASSERT_ARGS_mmd_add_multi_to_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_name) \
+    , PARROT_ASSERT_ARG(sub_obj))
+#define ASSERT_ARGS_mmd_add_multi_to_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ns_name) \
-    || PARROT_ASSERT_ARG(sub_name) \
-    || PARROT_ASSERT_ARG(sub_obj)
+    , PARROT_ASSERT_ARG(ns_name) \
+    , PARROT_ASSERT_ARG(sub_name) \
+    , PARROT_ASSERT_ARG(sub_obj))
 #define ASSERT_ARGS_mmd_build_type_tuple_from_long_sig \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(long_sig)
+    , PARROT_ASSERT_ARG(long_sig))
 #define ASSERT_ARGS_mmd_build_type_tuple_from_type_list \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(type_list)
-#define ASSERT_ARGS_mmd_cache_key_from_types __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(type_list))
+#define ASSERT_ARGS_mmd_cache_key_from_types __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(types)
-#define ASSERT_ARGS_mmd_cache_key_from_values __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(types))
+#define ASSERT_ARGS_mmd_cache_key_from_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(values)
-#define ASSERT_ARGS_mmd_cvt_to_types __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(values))
+#define ASSERT_ARGS_mmd_cvt_to_types __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(multi_sig)
-#define ASSERT_ARGS_mmd_distance __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(multi_sig))
+#define ASSERT_ARGS_mmd_distance __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(arg_tuple)
-#define ASSERT_ARGS_mmd_search_by_sig_obj __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc) \
+    , PARROT_ASSERT_ARG(arg_tuple))
+#define ASSERT_ARGS_mmd_search_by_sig_obj __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(sig_obj) \
-    || PARROT_ASSERT_ARG(candidates)
-#define ASSERT_ARGS_mmd_search_global __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(sig_obj) \
+    , PARROT_ASSERT_ARG(candidates))
+#define ASSERT_ARGS_mmd_search_global __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(cl)
-#define ASSERT_ARGS_mmd_search_local __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(cl))
+#define ASSERT_ARGS_mmd_search_local __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(candidates)
-#define ASSERT_ARGS_Parrot_mmd_arg_tuple_func __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(candidates))
+#define ASSERT_ARGS_Parrot_mmd_arg_tuple_func __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_mmd_get_cached_multi_sig \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_Parrot_mmd_maybe_candidate __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_Parrot_mmd_maybe_candidate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(cl)
-#define ASSERT_ARGS_Parrot_mmd_search_scopes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc) \
+    , PARROT_ASSERT_ARG(cl))
+#define ASSERT_ARGS_Parrot_mmd_search_scopes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(meth)
-#define ASSERT_ARGS_Parrot_mmd_sort_candidates __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(meth))
+#define ASSERT_ARGS_Parrot_mmd_sort_candidates __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(arg_tuple) \
-    || PARROT_ASSERT_ARG(cl)
+    , PARROT_ASSERT_ARG(arg_tuple) \
+    , PARROT_ASSERT_ARG(cl))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -816,8 +813,8 @@ Parrot_mmd_get_cached_multi_sig(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_mmd_get_cached_multi_sig)
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "Sub"))) {
-        Parrot_sub *sub;
-        PMC        *multi_sig;
+        Parrot_Sub_attributes *sub;
+        PMC                   *multi_sig;
 
         PMC_get_sub(interp, sub_pmc, sub);
         multi_sig = sub->multi_signature;
@@ -856,7 +853,7 @@ mmd_distance(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *arg_tuple))
 {
     ASSERT_ARGS(mmd_distance)
     PMC        *multi_sig, *mro;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     INTVAL      args, dist, i, j, n, m;
 
     /* has to be a builtin multi method */
@@ -1229,7 +1226,8 @@ mmd_add_multi_to_namespace(PARROT_INTERP, ARGIN(STRING *ns_name),
 {
     ASSERT_ARGS(mmd_add_multi_to_namespace)
     PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp,
-                        interp->HLL_namespace, CONTEXT(interp)->current_HLL);
+                        interp->HLL_namespace,
+                        Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp)));
     PMC * const ns     = Parrot_make_namespace_keyed_str(interp, hll_ns, ns_name);
     PMC        *multi_sub = Parrot_get_global(interp, ns, sub_name);
 
@@ -1261,7 +1259,7 @@ Parrot_mmd_add_multi_from_long_sig(PARROT_INTERP,
         ARGIN(STRING *sub_name), ARGIN(STRING *long_sig), ARGIN(PMC *sub_obj))
 {
     ASSERT_ARGS(Parrot_mmd_add_multi_from_long_sig)
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     STRING     *sub_str     = CONST_STRING(interp, "Sub");
     STRING     *closure_str = CONST_STRING(interp, "Closure");
     PMC        *type_list   = Parrot_str_split(interp, CONST_STRING(interp, ","), long_sig);

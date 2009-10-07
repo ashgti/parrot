@@ -92,7 +92,7 @@ E: yDNA@cpan.org
 N: Andrew Whitworth
 D: Internals development
 D: Documentation
-D: Release manager for 0.8.2 and 1.3.0
+D: Release manager for 0.8.2, 1.3.0 and 1.5.0
 E: wknight8111@gmail.com
 U: Whiteknight
 
@@ -191,6 +191,11 @@ W: http://www.brentdax.com/
 U: bdwheele
 N: Brian Wheeler
 E: bdwheele@indiana.edu
+
+U: brianwisti
+N: Brian Wisti
+E: brian.wisti@gmail.com
+D: PIR Test demonstrating that $I1 and $I01 are different variables
 
 N: Bruce Gray
 U: util
@@ -305,7 +310,7 @@ N: Daniel Arbelo Arrocha
 U: darbelo
 A: arbelo
 D: OpenBSD fixes and testing, gsoc2009-decnum-dynpmcs
-E: dany.arbelo@gmail.com
+E: arbelo@gmail.com
 
 N: Dave Woldrich
 D: Win32 build fixes
@@ -480,6 +485,10 @@ U: particle
 E: Jerry.Gay@gmail.com
 D: Whatever
 S: Seattle, WA
+
+N: Jesse Taylor
+U: jrtayloriv
+E: jrtayloriv@gmail.com
 
 N: Jesse Vincent
 U: jesse

@@ -9,6 +9,7 @@
 ** platform_interface.h
 */
 #include "parrot/config.h"
+#include "parrot/interpreter.h"
 
 /*
 ** I/O:
@@ -84,11 +85,9 @@ char* Parrot_asctime_r(const struct tm*, char *);
  * Env
  */
 
-void Parrot_setenv(const char *name, const char *value);
-void Parrot_unsetenv(const char *name);
-/* free_it is set by the function to either 0 or 1; if set to 1,
-   the return value of the function needs to be mem_sys_free()d after use */
-char * Parrot_getenv(const char *name, int *free_it);
+void Parrot_setenv(PARROT_INTERP, STRING *name, STRING *value);
+void Parrot_unsetenv(PARROT_INTERP, STRING *name);
+char * Parrot_getenv(PARROT_INTERP, STRING *name);
 
 /*
 ** Dynamic Loading:
@@ -125,6 +124,13 @@ int get_sys_timer_ms(void *handle);
 #  define get_sys_timer_ms(h) 0
 
 #endif
+
+/*
+ * high-resolution timer support
+ */
+
+UHUGEINTVAL Parrot_hires_get_time(void);
+UINTVAL     Parrot_hires_get_tick_duration(void);
 
 
 struct parrot_string_t;

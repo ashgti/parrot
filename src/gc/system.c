@@ -72,26 +72,26 @@ static void trace_mem_block(PARROT_INTERP,
 static void trace_system_stack(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_find_common_mask __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_max_buffer_address __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_max_pmc_address __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_min_buffer_address __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_min_pmc_address __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_is_buffer_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_find_common_mask __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_max_buffer_address __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_max_pmc_address __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_min_buffer_address __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_min_pmc_address __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_is_buffer_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ptr)
-#define ASSERT_ARGS_is_pmc_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ptr))
+#define ASSERT_ARGS_is_pmc_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ptr)
-#define ASSERT_ARGS_trace_mem_block __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_trace_system_stack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(ptr))
+#define ASSERT_ARGS_trace_mem_block __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_trace_system_stack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -172,18 +172,18 @@ trace_system_areas(PARROT_INTERP)
         struct ucontext ucp;
         void *current_regstore_top;
 
+        /* Trace the memory block for the register backing stack, which
+           is separate from the normal system stack. The register backing
+           stack starts at memory address 0x80000FFF80000000 and ends at
+           current_regstore_top. */
+        size_t base = 0x80000fff80000000;
+
         getcontext(&ucp);
 
         /* flush_reg_store() is defined in config/gen/platforms/ia64/asm.s.
            it calls the flushrs opcode to perform the register flush, and
            returns the address of the register backing stack. */
         current_regstore_top = flush_reg_store();
-
-        /* Trace the memory block for the register backing stack, which
-           is separate from the normal system stack. The register backing
-           stack starts at memory address 0x80000FFF80000000 and ends at
-           current_regstore_top. */
-        size_t base = 0x80000fff80000000;
 
 #  endif /* __hpux */
 
@@ -238,6 +238,7 @@ trace_system_stack(PARROT_INTERP)
        the "bottom" of the stack. We must trace the entire area between the
        top and bottom. */
     const size_t lo_var_ptr = (size_t)interp->lo_var_ptr;
+    PARROT_ASSERT(lo_var_ptr);
 
     trace_mem_block(interp, (size_t)lo_var_ptr,
             (size_t)&lo_var_ptr);
@@ -262,14 +263,14 @@ static size_t
 get_max_buffer_address(PARROT_INTERP)
 {
     ASSERT_ARGS(get_max_buffer_address)
-    Arenas * const arena_base = interp->arena_base;
+    Memory_Pools * const mem_pools = interp->mem_pools;
     size_t         max        = 0;
     UINTVAL        i;
 
-    for (i = 0; i < arena_base->num_sized; i++) {
-        if (arena_base->sized_header_pools[i]) {
-            if (arena_base->sized_header_pools[i]->end_arena_memory > max)
-                max = arena_base->sized_header_pools[i]->end_arena_memory;
+    for (i = 0; i < mem_pools->num_sized; i++) {
+        if (mem_pools->sized_header_pools[i]) {
+            if (mem_pools->sized_header_pools[i]->end_arena_memory > max)
+                max = mem_pools->sized_header_pools[i]->end_arena_memory;
         }
     }
 
@@ -297,15 +298,15 @@ static size_t
 get_min_buffer_address(PARROT_INTERP)
 {
     ASSERT_ARGS(get_min_buffer_address)
-    Arenas * const arena_base = interp->arena_base;
+    Memory_Pools * const mem_pools = interp->mem_pools;
     size_t         min        = (size_t) -1;
     UINTVAL        i;
 
-    for (i = 0; i < arena_base->num_sized; i++) {
-        if (arena_base->sized_header_pools[i]
-        &&  arena_base->sized_header_pools[i]->start_arena_memory) {
-            if (arena_base->sized_header_pools[i]->start_arena_memory < min)
-                min = arena_base->sized_header_pools[i]->start_arena_memory;
+    for (i = 0; i < mem_pools->num_sized; i++) {
+        if (mem_pools->sized_header_pools[i]
+        &&  mem_pools->sized_header_pools[i]->start_arena_memory) {
+            if (mem_pools->sized_header_pools[i]->start_arena_memory < min)
+                min = mem_pools->sized_header_pools[i]->start_arena_memory;
         }
     }
 
@@ -328,7 +329,7 @@ static size_t
 get_max_pmc_address(PARROT_INTERP)
 {
     ASSERT_ARGS(get_max_pmc_address)
-    return interp->arena_base->pmc_pool->end_arena_memory;
+    return interp->mem_pools->pmc_pool->end_arena_memory;
 }
 
 
@@ -349,7 +350,7 @@ static size_t
 get_min_pmc_address(PARROT_INTERP)
 {
     ASSERT_ARGS(get_min_pmc_address)
-    return interp->arena_base->pmc_pool->start_arena_memory;
+    return interp->mem_pools->pmc_pool->start_arena_memory;
 }
 
 
@@ -450,9 +451,6 @@ trace_mem_block(PARROT_INTERP, size_t lo_var_ptr, size_t hi_var_ptr)
              * free headers... */
             if (pmc_min <= ptr && ptr < pmc_max &&
                     is_pmc_ptr(interp, (void *)ptr)) {
-                /* ...so ensure that Parrot_gc_mark_PObj_alive checks PObj_on_free_list_FLAG
-                 * before adding it to the next_for_GC list, to have
-                 * vtable->mark() called. */
                 Parrot_gc_mark_PObj_alive(interp, (PObj *)ptr);
             }
             else if (buffer_min <= ptr && ptr < buffer_max &&
@@ -483,12 +481,12 @@ static int
 is_buffer_ptr(PARROT_INTERP, ARGIN(const void *ptr))
 {
     ASSERT_ARGS(is_buffer_ptr)
-    Arenas * const arena_base = interp->arena_base;
+    Memory_Pools * const mem_pools = interp->mem_pools;
     UINTVAL        i;
 
-    for (i = 0; i < arena_base->num_sized; i++) {
-        if (arena_base->sized_header_pools[i]
-        &&  contained_in_pool(arena_base->sized_header_pools[i], ptr))
+    for (i = 0; i < mem_pools->num_sized; i++) {
+        if (mem_pools->sized_header_pools[i]
+            &&  contained_in_pool(interp, mem_pools->sized_header_pools[i], ptr))
             return 1;
     }
 
@@ -511,7 +509,7 @@ static int
 is_pmc_ptr(PARROT_INTERP, ARGIN(const void *ptr))
 {
     ASSERT_ARGS(is_pmc_ptr)
-    return contained_in_pool(interp->arena_base->pmc_pool, ptr);
+        return contained_in_pool(interp, interp->mem_pools->pmc_pool, ptr);
 }
 
 

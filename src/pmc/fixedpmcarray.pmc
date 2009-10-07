@@ -27,7 +27,7 @@ never be set for user arrays.
 #define PMC_size(x)  ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->size
 #define PMC_array(x) ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->pmc_array
 
-pmclass FixedPMCArray need_ext provides array {
+pmclass FixedPMCArray auto_attrs provides array {
     ATTR INTVAL   size;      /* number of elements in the array */
     ATTR PMC    **pmc_array; /* pointer to PMC array */
 
@@ -44,8 +44,15 @@ Sort this array, optionally using the provided cmp_func
     METHOD sort(PMC *cmp_func :optional) {
         const INTVAL n = SELF.elements();
 
-        if (n > 1)
-           Parrot_quicksort(interp, (void **)PMC_array(SELF), n, cmp_func);
+        if (n > 1) {
+           /* XXX Workaround for TT #218 */
+           if (PObj_is_object_TEST(SELF)) {
+              PMC *parent = SELF.get_attr_str(CONST_STRING(interp, "proxy"));
+              Parrot_pcc_invoke_method_from_c_args(interp, parent, CONST_STRING(interp, "sort"), "P->", cmp_func);
+           }
+           else
+               Parrot_quicksort(interp, (void **)PMC_array(SELF), n, cmp_func);
+        }
     }
 
 /*
@@ -65,10 +72,6 @@ Initializes the array.
 */
 
     VTABLE void init() {
-        Parrot_FixedPMCArray_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_FixedPMCArray_attributes);
-
-        PMC_data(SELF) = attrs;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -83,11 +86,8 @@ Destroys the array.
 */
 
     VTABLE void destroy() {
-        if (PMC_array(SELF)) {
+        if (PMC_array(SELF))
             mem_sys_free(PMC_array(SELF));
-        }
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
     }
 
 /*
@@ -105,8 +105,8 @@ Creates and returns a copy of the array.
         const INTVAL size = PMC_size(SELF);
 
         if (size) {
-            PMC_size(dest) = size;
-            PMC_array(dest)    = mem_allocate_n_typed(size, PMC *);
+            PMC_size(dest)  = size;
+            PMC_array(dest) = mem_allocate_n_typed(size, PMC *);
             mem_copy_n_typed(PMC_array(dest), PMC_array(SELF), size, PMC *);
             PObj_custom_mark_destroy_SETALL(dest);
         }
@@ -196,12 +196,10 @@ RT #46673 implement freeze/thaw and use that instead.
 
         for (i = 0; i < n; ++i) {
             PMC * const val = SELF.get_pmc_keyed_int(i);
+            if (i > 0)
+                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ", "));
 
             res = Parrot_str_append(INTERP, res, VTABLE_get_repr(INTERP, val));
-            if (n == 1)
-                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ","));
-            else if (i < n - 1)
-                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ", "));
         }
 
         res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ")"));
@@ -372,6 +370,10 @@ array.
                     _("FixedPMCArray: Can't resize!"));
         if (!size)
             return;
+
+        if (size < 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    _("FixedPMCArray: Cannot set array size to a negative number"));
 
         PMC_size(SELF) = size;
         data           = mem_allocate_n_typed(size, PMC *);
@@ -547,7 +549,6 @@ Sets the PMC value of the element at index C<key> to C<*src>.
                 _("FixedPMCArray: index out of bounds!"));
 
         data      = PMC_array(SELF);
-        GC_WRITE_BARRIER(INTERP, SELF, data[key], src);
         data[key] = src;
     }
 
@@ -592,7 +593,7 @@ The C<==> operation. Compares two array to hold equal elements.
     VTABLE INTVAL is_equal(PMC *value) {
         INTVAL j, n;
 
-        if (value->vtable->base_type != enum_class_FixedPMCArray)
+        if (value->vtable->base_type != SELF->vtable->base_type)
             return 0;
 
         n = SELF.elements();
@@ -786,8 +787,7 @@ Mark the array.
             return;
 
         for (i = PMC_size(SELF) - 1; i >= 0; --i)
-            if (data[i])
-                Parrot_gc_mark_PObj_alive(interp, (PObj *)data[i]);
+            Parrot_gc_mark_PMC_alive(interp, data[i]);
     }
 
 

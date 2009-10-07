@@ -1,0 +1,266 @@
+/*
+Copyright (C) 2001-2009, Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/context.pmc - Interpreter Context.
+
+=head1 DESCRIPTION
+
+Stores context of execution. Currently we store pointer to Parrot_Context
+structure in PMC_data.
+
+=head2 Vtable Functions
+
+=over 4
+
+=cut
+
+*/
+
+
+#include "parrot/packfile.h"
+#include "pmc_sub.h"
+
+pmclass Context {
+
+/*
+
+=item C<void init()>
+
+Initialize new Context. See C<Parrot_alloc_context>.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        PMC_data(SELF) = NULL;
+        PObj_custom_mark_destroy_SETALL(SELF);
+    }
+
+
+/*
+
+=item C<void mark()>
+
+Mark Context as alive.
+
+=cut
+
+*/
+
+    VTABLE void mark()
+    {
+        Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
+        UINTVAL i;
+
+        /* If Context wasn't initialised just return */
+        if (!ctx)
+            return;
+
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->caller_ctx);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->lex_pad);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->outer_ctx);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->current_sub);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->handlers);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->current_cont);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->current_object);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->current_namespace);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->results_signature);
+
+        if (!ctx->n_regs_used)
+            return;
+
+        for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; ++i) {
+            PMC *p = ctx->bp_ps.regs_p[-1L-(i)];
+            /* Original code from CTX_REG_PMC */
+            if (p)
+                Parrot_gc_mark_PMC_alive(interp, p);
+        }
+
+        for (i = 0; i < ctx->n_regs_used[REGNO_STR]; ++i) {
+            STRING *s = ctx->bp_ps.regs_s[i];
+            if (s)
+                Parrot_gc_mark_STRING_alive(interp, s);
+        }
+    }
+
+/*
+
+=item C<void destroy()>
+
+Destroy Context and memory allocated by C<Parrot_alloc_context>.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+        /* We own this pointer */
+        Parrot_Context * const ctx = PMC_data_typed(SELF, Parrot_Context*);
+
+        if (!ctx)
+            return;
+
+#ifdef GC_USE_FIXED_SIZE_ALLOCATOR
+        Parrot_gc_free_fixed_size_storage(interp,
+                Parrot_pcc_calculate_context_size(INTERP, ctx->n_regs_used),
+                ctx);
+#else
+        mem_sys_free(ctx);
+#endif
+        PMC_data(SELF) = NULL;
+    }
+
+/*
+
+=item C<void *get_pointer()>
+
+Return pointer to underlying Parrot_Context structure.
+
+=cut
+
+*/
+
+    VTABLE void *get_pointer() {
+        return PMC_data(SELF);
+    }
+
+/*
+
+=item C<void set_pointer(void *)>
+
+Set new Parrot_Context structure.
+
+=cut
+
+*/
+    VTABLE void set_pointer(void *context) {
+        PMC_data(SELF) = context;
+    }
+
+/*
+
+=item C<PMC *get_pmc_keyed_str(STRING *key)>
+
+Introspection interface. C<key> can be:
+
+    caller_ctx          ... return Caller Context
+    lex_pad             ... return LexPad
+    outer_ctx           ... return Outer Context
+    current_sub         ... return current Sub
+    handlers            ... return list of ExceptioHandlers
+    current_cont        ... return current Continuation
+    current_object      ... return current Object (if in method call)
+    current_namespace   ... return current Namespace
+=cut
+
+*/
+    VTABLE PMC *get_pmc_keyed_str(STRING *key) {
+        Parrot_Context *ctx = PMC_data_typed(SELF, Parrot_Context*);
+
+        if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "caller_ctx")))
+            return ctx->caller_ctx;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "lex_pad")))
+            return ctx->lex_pad;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "outer_ctx")))
+            return ctx->outer_ctx;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_sub")))
+            return ctx->current_sub;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_cont")))
+            return ctx->current_cont;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_object")))
+            return ctx->current_object;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_namespace")))
+            return ctx->current_namespace;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "handlers")))
+            return ctx->handlers;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "results_signature")))
+            return ctx->results_signature;
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_HLL")))
+            /* This function from src/hash.c. */
+            /* We probably have to move it to more suitable place */
+            return get_integer_pmc(INTERP, ctx->current_HLL);
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_hll")))
+            return get_string_pmc(INTERP, Parrot_get_HLL_name(INTERP, ctx->current_HLL));
+
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ATTRIB_NOT_FOUND,
+                "No such item %Ss", key);
+    }
+
+    VTABLE PMC *get_pmc_keyed(PMC *key) {
+        return STATICSELF.get_pmc_keyed_str(VTABLE_get_string(INTERP, key));
+    }
+
+/*
+
+=item C<PMC *backtrace>
+
+Gets a representation of the backtrace starting from this Context.
+Returns an array of hashes. Each array element represents a caller in
+the backtrace, the most recent caller first. The hash has two keys: C<sub>,
+which holds the PMC representing the sub, and C<annotations> which is a hash
+of the annotations at the point where the exception was thrown for the current
+sub, or for the point of the call a level deeper for the rest.
+
+=cut
+
+*/
+
+    METHOD backtrace(PMC *resume :optional, INTVAL has_resume :opt_flag) {
+        PMC *result  = pmc_new(interp, enum_class_ResizablePMCArray);
+        PMC *cur_ctx = SELF;
+        Parrot_Continuation_attributes *cont = has_resume ? PMC_cont(resume) : NULL;
+
+        /* Get starting context, then loop over them. */
+        while (cur_ctx) {
+            PMC        *frame       = pmc_new(interp, enum_class_Hash);
+            PMC        *annotations = NULL;
+            Parrot_Sub_attributes *sub;
+
+            /* Get sub and put it in the hash. */
+            PMC *sub_pmc = Parrot_pcc_get_sub(interp, cur_ctx);
+
+            if (!sub_pmc)
+                sub_pmc = PMCNULL;
+
+            VTABLE_set_pmc_keyed_str(interp, frame, CONST_STRING(interp, "sub"), sub_pmc);
+
+            /* Look up any annotations and put them in the hash. */
+            if (!PMC_IS_NULL(sub_pmc)) {
+                PMC_get_sub(interp, sub_pmc, sub);
+
+                if (sub->seg->annotations) {
+                    PackFile_ByteCode *seg = sub->seg;
+                    opcode_t          *pc  = cont && cur_ctx == cont->to_ctx
+                                             ? cont->address
+                                             : Parrot_pcc_get_pc(interp, cur_ctx);
+
+                    annotations = PackFile_Annotations_lookup(interp,
+                        seg->annotations, pc - seg->base.data,
+                        NULL);
+                }
+            }
+
+            if (!annotations)
+                annotations = pmc_new(interp, enum_class_Hash);
+
+            VTABLE_set_pmc_keyed_str(interp, frame, CONST_STRING(interp, "annotations"), annotations);
+
+            /* Push frame and go to next caller. */
+            VTABLE_push_pmc(interp, result, frame);
+            cur_ctx = Parrot_pcc_get_caller_ctx(interp, cur_ctx);
+        }
+
+        RETURN(PMC *result);
+    }
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

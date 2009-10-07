@@ -10,13 +10,14 @@ sub runstep {
     my ( $self, $conf ) = @_;
 
     my $libs = $conf->data->get('libs');
-    if ( $libs !~ /-lpthread/ ) {
+    if ( $libs !~ /-lpthread\b/ ) {
         $libs .= ' -lpthread';
     }
     if ( $libs !~ /-lrt\b/ ) {
         $libs .= ' -lrt';    # Needed for sched_yield.
     }
     $conf->data->set( libs => $libs );
+    $conf->data->set( clock_best => '-DCLOCK_BEST=CLOCK_PROCESS_CPUTIME_ID' );
 
     ################################################################
     # If we're going to be using ICU (or any other C++-compiled library) we

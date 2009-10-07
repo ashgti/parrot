@@ -26,8 +26,9 @@ about the structure of the frozen bytecode.
 
 #include "parrot/parrot.h"
 #include "parrot/embed.h"
+#include "parrot/extend.h"
 #include "parrot/packfile.h"
-#include "jit.h"
+#include "parrot/runcore_api.h"
 #include "../compilers/imcc/imc.h"
 #include "packfile.str"
 #include "pmc/pmc_sub.h"
@@ -335,135 +336,131 @@ static int sub_pragma(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_byte_code_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_byte_code_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_byte_code_new __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_clone_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_byte_code_new __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_clone_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(old_const)
-#define ASSERT_ARGS_compile_or_load_file __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(old_const))
+#define ASSERT_ARGS_compile_or_load_file __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_const_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_const_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_const_new __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_create_seg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_const_new __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_create_seg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(dir) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(file_name)
-#define ASSERT_ARGS_default_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_default_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(dir) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(file_name))
+#define ASSERT_ARGS_default_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_default_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_default_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_default_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(dest)
-#define ASSERT_ARGS_default_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_default_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(dest))
+#define ASSERT_ARGS_default_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_default_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_directory_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_directory_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_directory_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_directory_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_directory_new __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_directory_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_directory_new __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_directory_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_directory_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_directory_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_directory_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_directory_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(segp) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_do_1_sub_pragma __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(segp) \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_do_1_sub_pragma __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_find_const_iter __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_find_const_iter __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(seg)
-#define ASSERT_ARGS_find_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(seg))
+#define ASSERT_ARGS_find_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ct)
-#define ASSERT_ARGS_find_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ct))
+#define ASSERT_ARGS_find_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(ft) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_find_fixup_iter __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_find_fixup_iter __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(seg) \
-    || PARROT_ASSERT_ARG(user_data)
-#define ASSERT_ARGS_fixup_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(seg) \
+    , PARROT_ASSERT_ARG(user_data))
+#define ASSERT_ARGS_fixup_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_fixup_new __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_fixup_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_fixup_new __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_fixup_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_fixup_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_fixup_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_fixup_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_fixup_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(seg) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_make_annotation_value_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(seg) \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_make_annotation_value_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_make_code_pointers __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(seg)
-#define ASSERT_ARGS_mark_1_seg __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_make_code_pointers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(seg))
+#define ASSERT_ARGS_mark_1_seg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ct)
-#define ASSERT_ARGS_PackFile_append_pbc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_PackFile_set_header __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(header)
-#define ASSERT_ARGS_pf_debug_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_pf_debug_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ct))
+#define ASSERT_ARGS_PackFile_append_pbc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_PackFile_set_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(header))
+#define ASSERT_ARGS_pf_debug_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_pf_debug_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_pf_debug_new __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_pf_debug_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_pf_debug_new __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_pf_debug_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_pf_debug_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_pf_debug_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_pf_debug_packed_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_pf_debug_unpack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(cursor)
-#define ASSERT_ARGS_pf_register_standard_funcs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(cursor))
+#define ASSERT_ARGS_pf_register_standard_funcs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pf)
-#define ASSERT_ARGS_run_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pf))
+#define ASSERT_ARGS_run_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_segment_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_segment_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_sort_segs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(dir)
-#define ASSERT_ARGS_sub_pragma __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pf) \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_sort_segs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(dir))
+#define ASSERT_ARGS_sub_pragma __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_pmc)
+    , PARROT_ASSERT_ARG(sub_pmc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
-
-#if EXEC_CAPABLE
-    extern int Parrot_exec_run;
-#endif
 
 /* offset not in ptr diff, but in byte */
 #define OFFS(pf, cursor) ((pf) ? ((const char *)(cursor) - (const char *)((pf)->src)) : 0)
@@ -581,8 +578,6 @@ make_code_pointers(ARGMOD(PackFile_Segment *seg))
             }
             break;
         case PF_UNKNOWN_SEG:
-            if (memcmp(seg->name, "PIC_idx", 7) == 0)
-                pf->cur_cs->pic_index = seg;
             break;
         case PF_DEBUG_SEG:
             pf->cur_cs->debugs       = (PackFile_Debug *)seg;
@@ -618,7 +613,7 @@ sub_pragma(PARROT_INTERP, pbc_action_enum_t action, ARGIN(const PMC *sub_pmc))
      * These casts are a quick fix to allow parrot build with c++,
      * a refactor of the macros will be a cleaner solution.  */
     DECL_CONST_CAST;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     int         todo    = 0;
     const int   pragmas = PObj_get_FLAGS(sub_pmc) &  SUB_FLAG_PF_MASK
                                                   & ~SUB_FLAG_IS_OUTER;
@@ -671,20 +666,20 @@ static PMC*
 run_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 {
     ASSERT_ARGS(run_sub)
-    const INTVAL old = interp->run_core;
-    PMC *retval;
+    Parrot_runcore_t *old_core = interp->run_core;
+    PMC              *retval;
 
     /* turn off JIT and prederef - both would act on the whole
      * PackFile which probably isn't worth the effort */
-    if (interp->run_core != PARROT_CGOTO_CORE
-    &&  interp->run_core != PARROT_SLOW_CORE
-    &&  interp->run_core != PARROT_FAST_CORE)
-            interp->run_core = PARROT_FAST_CORE;
+    if (PARROT_RUNCORE_JIT_OPS_TEST(interp->run_core)
+    ||  PARROT_RUNCORE_PREDEREF_OPS_TEST(interp->run_core))
+        Parrot_runcore_switch(interp, CONST_STRING(interp, "fast"));
 
-    CONTEXT(interp)->constants = interp->code->const_table->constants;
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp),
+            interp->code->const_table->constants);
 
     retval           = (PMC *)Parrot_runops_fromc_args(interp, sub_pmc, "P");
-    interp->run_core = old;
+    interp->run_core = old_core;
 
     return retval;
 }
@@ -707,7 +702,7 @@ static PMC*
 do_1_sub_pragma(PARROT_INTERP, ARGMOD(PMC *sub_pmc), pbc_action_enum_t action)
 {
     ASSERT_ARGS(do_1_sub_pragma)
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     PMC_get_sub(interp, sub_pmc, sub);
 
     switch (action) {
@@ -759,7 +754,7 @@ do_1_sub_pragma(PARROT_INTERP, ARGMOD(PMC *sub_pmc), pbc_action_enum_t action)
                                           / sizeof (opcode_t *);
 
                     PObj_get_FLAGS(sub_pmc)      &= ~SUB_FLAG_PF_MAIN;
-                    CONTEXT(interp)->current_sub  = sub_pmc;
+                    Parrot_pcc_set_sub(interp, CURRENT_CONTEXT(interp), sub_pmc);
                 }
                 else {
                     Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
@@ -810,13 +805,11 @@ mark_1_seg(PARROT_INTERP, ARGMOD(PackFile_ConstTable *ct))
             case PFC_PMC:
             case PFC_KEY:
                 pmc = constants[i]->u.key;
-                if (pmc)
-                    Parrot_gc_mark_PObj_alive(interp, (PObj *)pmc);
+                Parrot_gc_mark_PMC_alive(interp, pmc);
                 break;
             case PFC_STRING:
                 string = constants[i]->u.string;
-                if (string)
-                    Parrot_gc_mark_PObj_alive(interp, (PObj *)string);
+                Parrot_gc_mark_STRING_alive(interp, string);
                 break;
             default:
                 /* Do nothing. */
@@ -922,7 +915,7 @@ do_sub_pragmas(PARROT_INTERP, ARGIN(PackFile_ByteCode *self),
             {
                 /* offset is an index into const_table holding the Sub PMC */
                 PMC           *sub_pmc;
-                Parrot_sub    *sub;
+                Parrot_Sub_attributes    *sub;
                 const opcode_t ci = ft->fixups[i]->offset;
 
                 if (ci < 0 || ci >= ct->const_count)
@@ -1005,8 +998,9 @@ PackFile_unpack(PARROT_INTERP, ARGMOD(PackFile *self),
     /* Ensure the bytecode version is one we can read. Currently, we only
      * support bytecode versions matching the current one.
      *
-     * tools/dev/pbc_header.pl --upd t/native_pbc/ *.pbc
-     * stamps version and fingerprint in the native tests. */
+     * tools/dev/pbc_header.pl --upd t/native_pbc/(ASTERISK).pbc
+     * stamps version and fingerprint in the native tests.
+     * NOTE: (ASTERISK) is *, we don't want to fool the C preprocessor. */
     if (header->bc_major != PARROT_PBC_MAJOR
     ||  header->bc_minor != PARROT_PBC_MINOR) {
         Parrot_io_eprintf(NULL, "PackFile_unpack: This Parrot cannot read "
@@ -1768,9 +1762,6 @@ PF_create_default_segs(PARROT_INTERP, ARGIN(const char *file_name), int add)
 
     cur_cs->const_table->code = cur_cs;
 
-    cur_cs->pic_index = create_seg(interp, &pf->directory,
-            PF_UNKNOWN_SEG, "PIC_idx", file_name, add);
-
     return cur_cs;
 }
 
@@ -2048,6 +2039,7 @@ directory_unpack(PARROT_INTERP, ARGMOD(PackFile_Segment *segp), ARGIN(const opco
     size_t                     i;
     int                        offs;
 
+    PARROT_ASSERT(pf);
     dir->num_segments = PF_fetch_opcode(pf, &cursor);
     TRACE_PRINTF(("directory_unpack: %ld num_segments\n", dir->num_segments));
     mem_realloc_n_typed(dir->segments, dir->num_segments, PackFile_Segment *);
@@ -2197,12 +2189,24 @@ directory_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
     PackFile_Directory * const dir = (PackFile_Directory *)self;
     size_t i;
 
-    for (i = 0; i < dir->num_segments; i++)
-        PackFile_Segment_destroy(interp, dir->segments[i]);
+    for (i = 0; i < dir->num_segments; i++) {
+        PackFile_Segment *segment = dir->segments[i];
+        /* Prevent repeated destruction */
+        dir->segments[i] = NULL;
+
+        /* XXX Black magic here.
+         * There are some failures that looks like a segment directory
+         * inserted into another. Until that problems gets fixed,
+         * these checks are a workaround.
+         */
+        if (segment && segment != self && segment->type != PF_DIR_SEG)
+            PackFile_Segment_destroy(interp, segment);
+    }
 
     if (dir->segments) {
         mem_sys_free(dir->segments);
         dir->segments = NULL;
+        dir->num_segments = 0;
     }
 }
 
@@ -2553,10 +2557,6 @@ byte_code_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
     ASSERT_ARGS(byte_code_destroy)
     PackFile_ByteCode * const byte_code = (PackFile_ByteCode *)self;
 
-#ifdef HAS_JIT
-    Parrot_destroy_jit(byte_code->jit_info);
-#endif
-    parrot_PIC_destroy(byte_code);
     if (byte_code->prederef.code) {
         Parrot_free_memalign(byte_code->prederef.code);
         byte_code->prederef.code = NULL;
@@ -2569,7 +2569,6 @@ byte_code_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
 
     byte_code->fixups      = NULL;
     byte_code->const_table = NULL;
-    byte_code->pic_index   = NULL;
     byte_code->debugs      = NULL;
 }
 
@@ -3082,13 +3081,13 @@ Parrot_switch_to_cs(PARROT_INTERP, ARGIN(PackFile_ByteCode *new_cs), int really)
     }
 
     interp->code               = new_cs;
-    CONTEXT(interp)->constants = really
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), really
                                ? find_constants(interp, new_cs->const_table)
-                               : new_cs->const_table->constants;
+                               : new_cs->const_table->constants);
 
     /* new_cs->const_table->constants; */
-    CONTEXT(interp)->pred_offset =
-        new_cs->base.data - (opcode_t*) new_cs->prederef.code;
+    Parrot_pcc_set_pred_offset(interp, CURRENT_CONTEXT(interp),
+        new_cs->base.data - (opcode_t*) new_cs->prederef.code);
 
     if (really)
         prepare_for_run(interp);
@@ -3119,7 +3118,7 @@ clone_constant(PARROT_INTERP, ARGIN(PackFile_Constant *old_const))
     if (old_const->type == PFC_PMC
     &&  VTABLE_isa(interp, old_const->u.key, _sub)) {
         PMC        *old_sub_pmc, *new_sub_pmc;
-        Parrot_sub *old_sub,     *new_sub;
+        Parrot_Sub_attributes *old_sub,     *new_sub;
         PackFile_Constant * const ret = mem_allocate_typed(PackFile_Constant);
 
         ret->type = old_const->type;
@@ -3689,10 +3688,6 @@ PackFile_ConstTable_clear(PARROT_INTERP, ARGMOD(PackFile_ConstTable *self))
 }
 
 
-#if EXEC_CAPABLE
-PackFile_Constant *exec_const_table;
-#endif
-
 /*
 
 =item C<const opcode_t * PackFile_ConstTable_unpack(PARROT_INTERP,
@@ -3744,13 +3739,7 @@ PackFile_ConstTable_unpack(PARROT_INTERP, ARGIN(PackFile_Segment *seg),
     for (i = 0; i < self->const_count; i++) {
         TRACE_PRINTF(("PackFile_ConstTable_unpack(): Unpacking constant %ld/%ld\n",
             i, self->const_count));
-
-#if EXEC_CAPABLE
-        if (Parrot_exec_run)
-            self->constants[i] = &exec_const_table[i];
-        else
-#endif
-            self->constants[i] = PackFile_Constant_new(interp);
+        self->constants[i] = PackFile_Constant_new(interp);
 
         cursor = PackFile_Constant_unpack(interp, self, self->constants[i],
                     cursor);
@@ -4708,6 +4697,13 @@ compile_or_load_file(PARROT_INTERP, ARGIN(STRING *path),
     ASSERT_ARGS(compile_or_load_file)
     char * const filename = Parrot_str_to_cstring(interp, path);
 
+    INTVAL regs_used[] = { 2, 2, 2, 2 }; /* Arbitrary values */
+    const int parrot_hll_id = 0;
+    PMC * context = Parrot_push_context(interp, regs_used);
+    Parrot_pcc_set_HLL(interp, context, parrot_hll_id);
+    Parrot_pcc_set_namespace(interp, context,
+            Parrot_get_HLL_namespace(interp, parrot_hll_id));
+
     if (file_type == PARROT_RUNTIME_FT_PBC) {
         PackFile * const pf = PackFile_append_pbc(interp, filename);
         Parrot_str_free_cstring(filename);
@@ -4735,6 +4731,8 @@ compile_or_load_file(PARROT_INTERP, ARGIN(STRING *path),
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LIBRARY_ERROR,
                 "compiler returned NULL ByteCode '%Ss' - %Ss", path, err);
     }
+
+    Parrot_pop_context(interp);
 }
 
 /*
@@ -4788,13 +4786,19 @@ Parrot_load_language(PARROT_INTERP, ARGIN_NULLOK(STRING *lang_name))
             wo_ext, path);
 
     /* Add the include and dynext paths to the global search */
+
+    /* Get the base path of the located module */
     parrot_split_path_ext(interp, path, &found_path, &found_ext);
     name_length = Parrot_str_length(interp, lang_name);
-    found_path = Parrot_str_substr(interp, found_path, -name_length, name_length, NULL, 0);
+    found_path = Parrot_str_substr(interp, found_path, 0,
+            Parrot_str_length(interp, found_path)-name_length, NULL, 0);
+
     Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "include/")),
             PARROT_LIB_PATH_INCLUDE);
     Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "dynext/")),
             PARROT_LIB_PATH_DYNEXT);
+    Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "library/")),
+            PARROT_LIB_PATH_LIBRARY);
 
 
     /* Check if the file found was actually a bytecode file (.pbc extension) or
@@ -4920,7 +4924,9 @@ void
 PackFile_fixup_subs(PARROT_INTERP, pbc_action_enum_t what, ARGIN_NULLOK(PMC *eval))
 {
     ASSERT_ARGS(PackFile_fixup_subs)
+    PARROT_CALLIN_START(interp);
     do_sub_pragmas(interp, interp->code, what, eval);
+    PARROT_CALLIN_END(interp);
 }
 
 

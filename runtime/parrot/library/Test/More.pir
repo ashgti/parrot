@@ -13,7 +13,7 @@ Test::More - Parrot extension for testing modules
     .local pmc exports, curr_namespace, test_namespace
     curr_namespace = get_namespace
     test_namespace = get_namespace [ 'Test'; 'More' ]
-    exports        = split ' ', 'plan diag ok nok is is_deeply like isa_ok skip isnt todo'
+    exports        = split ' ', 'plan diag ok nok is is_deeply like isa_ok skip isnt todo throws_like'
 
     test_namespace.'export_to'(curr_namespace, exports)
 
@@ -92,19 +92,20 @@ already declared a plan or if you pass an invalid argument.
 
 =item C<ok( passed, description )>
 
-Records a test as pass or fail depending on the truth of the integer C<passed>,
+Records a test as pass or fail depending on the truth of the PMC C<passed>,
 recording it with the optional test description in C<description>.
 
 =cut
 
 .sub ok
-    .param int    passed
+    .param pmc    passed
     .param string description     :optional
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
-    test.'ok'( passed, description )
+    $I0 = istrue passed
+    test.'ok'( $I0, description )
 .end
 
 =item C<nok( passed, description )>
@@ -115,14 +116,14 @@ C<passed>, recording it with the optional test description in C<description>.
 =cut
 
 .sub nok
-    .param int passed
+    .param pmc passed
     .param string description :optional
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
     .local int reverse_passed
-    reverse_passed = not passed
+    reverse_passed = isfalse passed
 
     test.'ok'( reverse_passed, description )
 .end
@@ -518,9 +519,32 @@ This handles comparisons of array-like and hash-like structures.
 
     .local string left_value
     .local string right_value
-    right_value = pop position
-    left_value  = pop position
+    .local pmc left, right
 
+    right = pop position
+    left  = pop position
+
+ check_right_null:
+    .local int rnull
+    rnull = isnull right
+    unless rnull goto set_right
+    right_value = 'nonexistent'
+    goto check_left_null
+
+ set_right:
+    right_value = right
+
+ check_left_null:
+    .local int lnull
+    lnull = isnull left
+    unless lnull goto set_left
+    left_value = 'undef'
+    goto create_diag
+
+ set_left:
+    left_value = left
+
+ create_diag:
     .local string nested_path
     nested_path = join '][', position
 
@@ -814,6 +838,54 @@ This handles comparisons of array-like and hash-like structures.
     .return( equal )
 .end
 
+=item C<throws_like( codestring, pattern, description )>
+
+Takes PIR code in C<codestring> and a PGE pattern to match in C<pattern>, as
+well as an optional message in C<description>. Passes a test if the PIR throws
+an exception that matches the pattern, fails the test otherwise.
+
+=cut
+
+.sub throws_like
+    .param string target
+    .param string pattern
+    .param string description :optional
+
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+
+    .local pmc comp
+    .local pmc compfun
+    .local pmc compiler
+    compiler = compreg 'PIR'
+
+    .local pmc eh
+    eh = new 'ExceptionHandler'
+    set_addr eh, handler            # set handler label for exceptions
+    push_eh eh
+
+    compfun = compiler(target)
+    compfun()                       # eval the target code
+
+    pop_eh
+
+    # if it doesn't throw an exception, fail
+    test.'ok'( 0, description )
+    test.'diag'( 'no error thrown' )
+
+    goto done
+
+  handler:
+    .local pmc ex
+    .local string error_msg
+    .get_results (ex)
+    pop_eh
+    error_msg = ex
+    like(error_msg, pattern, description)
+
+  done:
+.end
+
 =item C<like( target, pattern, description )>
 
 Similar to is, but using the Parrot Grammar Engine to compare the string
@@ -854,7 +926,11 @@ optional test description in C<description>.
   match_success:
     goto pass_it
   match_fail:
-    diagnostic = "match failed"
+    diagnostic = "match failed: target '"
+    diagnostic .= target
+    diagnostic .= "' does not match pattern '"
+    diagnostic .= pattern
+    diagnostic .= "'"
     goto report
   rule_fail:
     diagnostic = "rule error"
@@ -995,7 +1071,7 @@ to the Perl 6 internals mailing list.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2008, Parrot Foundation.
+Copyright (C) 2005-2009, Parrot Foundation.
 
 =cut
 

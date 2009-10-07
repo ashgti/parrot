@@ -33,9 +33,9 @@ whichever is more convenient.
 
 /*
 
-=item C<void Parrot_setenv(const char *name, const char *value)>
+=item C<void Parrot_setenv(PARROT_INTERP, STRING *str_name, STRING *str_value)>
 
-Sets the environment variable C<name> to the value C<value>. Creates the
+Sets the environment variable C<str_name> to the value C<str_value>. Creates the
 environment variable if it does not exist, and silently overwrite a variable if
 it does exist.
 
@@ -44,8 +44,10 @@ it does exist.
 */
 
 void
-Parrot_setenv(const char *name, const char *value)
+Parrot_setenv(PARROT_INTERP, STRING *str_name, STRING *str_value)
 {
+    char * name  = Parrot_str_to_cstring(interp, str_name);
+    char * value = Parrot_str_to_cstring(interp, str_value);
     assert(name  != NULL);
     assert(value != NULL);
 
@@ -66,6 +68,9 @@ Parrot_setenv(const char *name, const char *value)
             strcpy(envstring + name_len, "=");
             strcpy(envstring + name_len + 1, value);
 
+            Parrot_str_free_cstring(name);
+            Parrot_str_free_cstring(value);
+
             if (_putenv(envstring) == 0) {
                 /* success */
                 mem_sys_free(envstring);
@@ -81,40 +86,37 @@ Parrot_setenv(const char *name, const char *value)
 
 /*
 
-=item C<char * Parrot_getenv(const char *name, int *free_it)>
+=item C<char * Parrot_getenv(PARROT_INTERP, STRING *str_name)>
 
-Gets the environment variable C<name>, if it exists. Returns status in
-C<free_it>. C<free_it> must be a non-null pointer to an integer to receive the
-status. Status code is 1 on success, 0 on failure. Returns the contents of the
-environment variable in a C<malloc>'d memory location that needs to be freed
-later.
+Gets the environment variable C<str_name>, if it exists. Returns the contents
+of the environment variable in a C<malloc>'d memory location that needs to be
+freed later.
 
 =cut
 
 */
 
 char *
-Parrot_getenv(ARGIN(const char *name), NOTNULL(int *free_it))
+Parrot_getenv(PARROT_INTERP, ARGIN(STRING *str_name))
 {
+    char *name       = Parrot_str_to_cstring(interp, str_name);
     const DWORD size = GetEnvironmentVariable(name, NULL, 0);
     char *buffer     = NULL;
 
     if (size == 0) {
-        *free_it = 0;
+        Parrot_str_free_cstring(name);
         return NULL;
-    }
-    else {
-        *free_it = 1;
     }
     buffer = (char *)mem_sys_allocate(size);
     GetEnvironmentVariable(name, buffer, size);
+    Parrot_str_free_cstring(name);
 
     return buffer;
 }
 
 /*
 
-=item C<void Parrot_unsetenv(const char *name)>
+=item C<void Parrot_unsetenv(PARROT_INTERP, STRING *name)>
 
 Deletes an environment variable by assigning an empty string to the specified variable.
 
@@ -123,13 +125,13 @@ Deletes an environment variable by assigning an empty string to the specified va
 */
 
 void
-Parrot_unsetenv(const char *name)
+Parrot_unsetenv(PARROT_INTERP, STRING *name)
 {
 /* You can remove a variable from the environment by specifying an empty
    string -- in other words, by specifying only varname=.
        -- _putenv, _wputenv (CRT) documentation
 */
-    Parrot_setenv(name, "");
+    Parrot_setenv(interp, name, "");
 }
 
 /*

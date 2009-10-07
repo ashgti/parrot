@@ -37,8 +37,8 @@ PARROT_CANNOT_RETURN_NULL
 static const char * convert_flags_to_stdio(INTVAL flags);
 
 static INTVAL io_is_tty_portable(PIOHANDLE fptr);
-#define ASSERT_ARGS_convert_flags_to_stdio __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_io_is_tty_portable __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_convert_flags_to_stdio __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_io_is_tty_portable __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -375,7 +375,7 @@ Parrot_io_read_portable(PARROT_INTERP, SHIM(PMC *filehandle),
     ASSERT_ARGS(Parrot_io_read_portable)
     FILE   * const fptr   = (FILE *)Parrot_io_get_os_handle(interp, filehandle);
     STRING * const s      = Parrot_io_make_string(interp, buf, 2048);
-    void   * const buffer = s->strstart;
+    void   * const buffer = Buffer_bufstart(s);
     const   size_t len    = s->bufused;
     const   size_t bytes  = fread(buffer, 1, len, fptr);
 

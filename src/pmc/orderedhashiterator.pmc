@@ -21,7 +21,7 @@ src/pmc/orderedhashiterator.pmc - Implementation of Iterator for OrderedHash.
 #include "pmc_hash.h"
 #include "pmc_hashiteratorkey.h"
 
-pmclass OrderedHashIterator extends Iterator no_ro {
+pmclass OrderedHashIterator extends Iterator no_ro auto_attrs {
     ATTR PMC        *pmc_hash;      /* the Hash which this Iterator iterates */
     ATTR Hash       *parrot_hash;   /* Underlying implementation of hash */
     ATTR INTVAL      pos;           /* */
@@ -41,7 +41,7 @@ Defaults iteration mode to iterate from start.
 
     VTABLE void init_pmc(PMC *hash) {
         Parrot_OrderedHashIterator_attributes * const attrs =
-            mem_allocate_zeroed_typed(Parrot_OrderedHashIterator_attributes);
+           (Parrot_OrderedHashIterator_attributes *) PMC_data(SELF);
 
         attrs->pmc_hash         = hash;
         attrs->parrot_hash      = (Hash*)VTABLE_get_pointer(INTERP, hash);
@@ -49,24 +49,8 @@ Defaults iteration mode to iterate from start.
         /* Will be decreased on initial advance_to_next */
         /* XXX Do we really need to support this use-case ? */
         attrs->elements         = attrs->parrot_hash->entries;
-        PMC_data(SELF)          = attrs;
 
-        PObj_custom_mark_destroy_SETALL(SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-destroys this PMC
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
+        PObj_custom_mark_SET(SELF);
     }
 
 /*
@@ -81,8 +65,7 @@ Marks the hash as live.
 
     VTABLE void mark() {
         PMC * const hash = PARROT_ORDEREDHASHITERATOR(SELF)->pmc_hash;
-        if (hash)
-             Parrot_gc_mark_PObj_alive(INTERP, (PObj *)hash);
+        Parrot_gc_mark_PMC_alive(INTERP, hash);
     }
 
 /*
@@ -198,9 +181,8 @@ the next one.
 
         /* Reuse HashIteratorKey */
         ret = pmc_new(INTERP, enum_class_HashIteratorKey);
-        /* Poke directly into HIK. We don't want to create any kind of public API for this */
-        PARROT_HASHITERATORKEY(ret)->parrot_hash = attrs->parrot_hash;
-        PARROT_HASHITERATORKEY(ret)->bucket      = bucket;
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 0, attrs->parrot_hash);
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 1, bucket);
 
         return ret;
     }
@@ -233,9 +215,8 @@ the next one for reverse iterator.
 
         /* Reuse HashIteratorKey */
         ret = pmc_new(INTERP, enum_class_HashIteratorKey);
-        /* Poke directly into HIK. We don't want to create any kind of public API for this */
-        PARROT_HASHITERATORKEY(ret)->parrot_hash = attrs->parrot_hash;
-        PARROT_HASHITERATORKEY(ret)->bucket      = bucket;
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 0, attrs->parrot_hash);
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 1, bucket);
 
         return ret;
     }

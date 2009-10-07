@@ -75,7 +75,7 @@ advance_to_next(PARROT_INTERP, PMC *self) {
     return bucket;
 }
 
-pmclass HashIterator extends Iterator no_ro {
+pmclass HashIterator extends Iterator no_ro auto_attrs {
     ATTR PMC        *pmc_hash;      /* the Hash which this Iterator iterates */
     ATTR Hash       *parrot_hash;   /* Underlying implementation of hash */
     ATTR HashBucket *bucket;        /* Current bucket */
@@ -96,7 +96,7 @@ Defaults iteration mode to iterate from start.
 
     VTABLE void init_pmc(PMC *hash) {
         Parrot_HashIterator_attributes * const attrs =
-            mem_allocate_zeroed_typed(Parrot_HashIterator_attributes);
+            (Parrot_HashIterator_attributes *) PMC_data(SELF);
 
         attrs->pmc_hash         = hash;
         attrs->parrot_hash      = (Hash*)VTABLE_get_pointer(INTERP, hash);
@@ -106,28 +106,12 @@ Defaults iteration mode to iterate from start.
         /* Will be decreased on initial advance_to_next */
         /* XXX Do we really need to support this use-case ? */
         attrs->elements         = attrs->parrot_hash->entries + 1;
-        PMC_data(SELF)          = attrs;
 
-        PObj_custom_mark_destroy_SETALL(SELF);
+        PObj_custom_mark_SET(SELF);
 
         /* Initial state of iterator is "before start" */
         /* So, advance to first element */
         advance_to_next(INTERP, SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-destroys this PMC
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
     }
 
 /*
@@ -142,8 +126,7 @@ Marks the hash as live.
 
     VTABLE void mark() {
         PMC *hash = PARROT_HASHITERATOR(SELF)->pmc_hash;
-        if (hash)
-             Parrot_gc_mark_PObj_alive(INTERP, (PObj *)hash);
+        Parrot_gc_mark_PMC_alive(INTERP, hash);
         /* We don't mark underlying parrot_hash. Hash PMC will mark it */
     }
 
@@ -247,9 +230,8 @@ the next one.
                 "StopIteration");
 
         ret = pmc_new(INTERP, enum_class_HashIteratorKey);
-        /* Poke directly into HIK. We don't want to create any kind of public API for this */
-        PARROT_HASHITERATORKEY(ret)->parrot_hash = attrs->parrot_hash;
-        PARROT_HASHITERATORKEY(ret)->bucket      = attrs->bucket;
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 0, attrs->parrot_hash);
+        VTABLE_set_pointer_keyed_int(INTERP, ret, 1, attrs->bucket);
 
         /* Move to next bucket */
         advance_to_next(INTERP, SELF);
@@ -262,8 +244,10 @@ the next one.
 */
 
     VTABLE STRING* shift_string() {
-        PMC * const key = SELF.shift_pmc();
-        return VTABLE_get_string(INTERP, key);
+        PMC    * const key = SELF.shift_pmc();
+        STRING * const ret = VTABLE_get_string(INTERP, key);
+        temporary_pmc_free(INTERP, key);
+        return ret;
     }
 
 }

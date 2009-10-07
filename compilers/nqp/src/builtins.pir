@@ -129,6 +129,22 @@ test counter to 0 and outputs the TAP plan line.
     .return ()
 .end
 
+=item C<eval(lang,code)>
+
+=cut
+
+.sub 'eval'
+    .param string text
+    .param string lang
+    .local pmc c, code
+    lang = downcase lang
+    load_language lang
+    c = compreg lang
+    code = c.'compile'(text)
+    $P0 = code()
+    .return ($P0)
+.end
+
 =back
 
 =cut

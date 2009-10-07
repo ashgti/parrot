@@ -48,9 +48,25 @@ static void make_writable(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
 
-#define ASSERT_ARGS_make_writable __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+PARROT_INLINE
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+static const CHARSET * string_rep_compatible(SHIM_INTERP,
+    ARGIN(const STRING *a),
+    ARGIN(const STRING *b),
+    ARGOUT(const ENCODING **e))
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        FUNC_MODIFIES(*e);
+
+#define ASSERT_ARGS_make_writable __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(s)
+    , PARROT_ASSERT_ARG(s))
+#define ASSERT_ARGS_string_rep_compatible __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(a) \
+    , PARROT_ASSERT_ARG(b) \
+    , PARROT_ASSERT_ARG(e))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -89,16 +105,16 @@ Parrot_str_write_COW(PARROT_INTERP, ARGMOD(STRING *s))
          * also be sure not to allocate from the constant pool
          */
         PObj_flags_CLEARALL(&for_alloc);
-        Parrot_gc_allocate_string_storage(interp, &for_alloc, PObj_buflen(s));
+        Parrot_gc_allocate_string_storage(interp, &for_alloc, Buffer_buflen(s));
 
         /* now copy memory over */
         mem_sys_memcopy(for_alloc.strstart, s->strstart, s->bufused);
 
         /* and finally use that string memory */
 
-        PObj_bufstart(s) = PObj_bufstart(&for_alloc);
+        Buffer_bufstart(s) = Buffer_bufstart(&for_alloc);
         s->strstart      = for_alloc.strstart;
-        PObj_buflen(s)   = PObj_buflen(&for_alloc);
+        Buffer_buflen(s)   = Buffer_buflen(&for_alloc);
 
         /* COW_FLAG | external_FLAG */
         PObj_is_external_CLEARALL(s);
@@ -148,7 +164,7 @@ Parrot_str_new_COW(PARROT_INTERP, ARGMOD(STRING *s))
         /* XXX FIXME hack to avoid cross-interpreter issue until it
          * is fixed correctly. */
         if (n_interpreters > 1 && PObj_is_movable_TESTALL(s) &&
-                !Parrot_gc_ptr_in_memory_pool(interp, PObj_bufstart(s))) {
+                !Parrot_gc_ptr_in_memory_pool(interp, Buffer_bufstart(s))) {
             Parrot_str_write_COW(interp, d);
             Parrot_io_eprintf(interp, "cross-interpreter copy of "
                                      "relocatable string '%Ss' into tid %d\n",
@@ -214,11 +230,6 @@ Parrot_str_set(PARROT_INTERP, ARGIN_NULLOK(STRING *dest), ARGMOD(STRING *src))
         return dest;
     if (dest) { /* && dest != src */
         /* they are different, dest is not an external string */
-#ifdef GC_IS_MALLOC
-        if (!PObj_is_cowed_TESTALL(dest) && PObj_bufstart(dest)) {
-            mem_sys_free(PObj_bufallocstart(dest));
-        }
-#endif
         dest = Parrot_str_reuse_COW(interp, src, dest);
     }
     else
@@ -338,7 +349,7 @@ string_capacity(SHIM_INTERP, ARGIN(const STRING *s))
 {
     ASSERT_ARGS(string_capacity)
 
-    return ((ptrcast_t)PObj_bufstart(s) + PObj_buflen(s) -
+    return ((ptrcast_t)Buffer_bufstart(s) + Buffer_buflen(s) -
             (ptrcast_t)s->strstart);
 }
 
@@ -378,8 +389,8 @@ Parrot_str_new_noinit(PARROT_INTERP,
 
 /*
 
-=item C<const CHARSET * string_rep_compatible(PARROT_INTERP, const STRING *a,
-const STRING *b, const ENCODING **e)>
+=item C<static const CHARSET * string_rep_compatible(PARROT_INTERP, const STRING
+*a, const STRING *b, const ENCODING **e)>
 
 Find the "lowest" possible charset and encoding for the given string. E.g.
 
@@ -392,10 +403,10 @@ Returs NULL, if no compatible string representation can be found.
 
 */
 
-PARROT_EXPORT
+PARROT_INLINE
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-const CHARSET *
+static const CHARSET *
 string_rep_compatible(SHIM_INTERP,
     ARGIN(const STRING *a), ARGIN(const STRING *b), ARGOUT(const ENCODING **e))
 {
@@ -406,8 +417,8 @@ string_rep_compatible(SHIM_INTERP,
     }
 
     /* a table could possibly simplify the logic */
-    if (a->encoding == Parrot_utf8_encoding_ptr &&
-            b->charset == Parrot_ascii_charset_ptr) {
+    if (a->encoding == Parrot_utf8_encoding_ptr
+    &&  b->charset == Parrot_ascii_charset_ptr) {
         if (a->strlen == a->bufused) {
             *e = Parrot_fixed_8_encoding_ptr;
             return b->charset;
@@ -415,8 +426,9 @@ string_rep_compatible(SHIM_INTERP,
         *e = a->encoding;
         return a->charset;
     }
-    if (b->encoding == Parrot_utf8_encoding_ptr &&
-            a->charset == Parrot_ascii_charset_ptr) {
+
+    if (b->encoding == Parrot_utf8_encoding_ptr
+    &&  a->charset == Parrot_ascii_charset_ptr) {
         if (b->strlen == b->bufused) {
             *e = Parrot_fixed_8_encoding_ptr;
             return a->charset;
@@ -424,11 +436,15 @@ string_rep_compatible(SHIM_INTERP,
         *e = b->encoding;
         return b->charset;
     }
+
     if (a->encoding != b->encoding)
         return NULL;
+
     if (a->encoding != Parrot_fixed_8_encoding_ptr)
         return NULL;
+
     *e = Parrot_fixed_8_encoding_ptr;
+
     if (a->charset == b->charset)
         return a->charset;
     if (b->charset == Parrot_ascii_charset_ptr)
@@ -439,8 +455,10 @@ string_rep_compatible(SHIM_INTERP,
         return a->charset;
     if (b->charset == Parrot_binary_charset_ptr)
         return b->charset;
+
     return NULL;
 }
+
 
 /*
 
@@ -464,8 +482,8 @@ Parrot_str_concat(PARROT_INTERP, ARGIN_NULLOK(STRING *a),
             ARGIN_NULLOK(STRING *b), UINTVAL Uflags)
 {
     ASSERT_ARGS(Parrot_str_concat)
-    if (a != NULL && a->strlen != 0) {
-        if (b != NULL && b->strlen != 0) {
+    if (a && a->strlen) {
+        if (b && b->strlen) {
             const ENCODING *enc;
             const CHARSET  *cs = string_rep_compatible(interp, a, b, &enc);
             STRING         *result;
@@ -524,7 +542,7 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
         return a;
 
     /* Is A real? */
-    if (a == NULL || PObj_bufstart(a) == NULL)
+    if (a == NULL || Buffer_bufstart(a) == NULL)
         return Parrot_str_copy(interp, b);
 
     saneify_string(a);
@@ -536,6 +554,7 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
         return Parrot_str_concat(interp, a, b, 0);
 
     cs = string_rep_compatible(interp, a, b, &enc);
+
     if (cs) {
         a->charset  = cs;
         a->encoding = enc;
@@ -806,8 +825,8 @@ Parrot_str_new_init(PARROT_INTERP, ARGIN_NULLOK(const char *buffer), UINTVAL len
            it was safe by setting PObj_external_FLAG.
            (The cast is necessary to pacify TenDRA's tcc.)
            */
-        PObj_bufstart(s) = s->strstart = PARROT_const_cast(char *, buffer);
-        PObj_buflen(s)   = s->bufused  = len;
+        Buffer_bufstart(s) = s->strstart = PARROT_const_cast(char *, buffer);
+        Buffer_buflen(s)   = s->bufused  = len;
 
         if (encoding == Parrot_fixed_8_encoding_ptr)
             s->strlen = len;
@@ -855,7 +874,7 @@ Parrot_str_resize(PARROT_INTERP, ARGMOD(STRING *s), UINTVAL addlen)
 
     /* Don't check buflen, if we are here, we already checked. */
     Parrot_gc_reallocate_string_storage(interp,
-        s, PObj_buflen(s) + string_max_bytes(interp, s, addlen));
+        s, Buffer_buflen(s) + string_max_bytes(interp, s, addlen));
     return s;
 }
 
@@ -1328,7 +1347,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     diff = (end_byte - start_byte) - rep->bufused;
 
     if (diff >= 0
-    || ((INTVAL)src->bufused - (INTVAL)PObj_buflen(src)) <= diff) {
+    || ((INTVAL)src->bufused - (INTVAL)Buffer_buflen(src)) <= diff) {
         Parrot_str_write_COW(interp, src);
 
         if (diff != 0) {
@@ -2479,11 +2498,11 @@ Parrot_str_pin(PARROT_INTERP, ARGMOD(STRING *s))
      */
     Parrot_str_write_COW(interp, s);
 
-    size   = PObj_buflen(s);
+    size   = Buffer_buflen(s);
     memory = (char *)mem_sys_allocate(size);
 
-    mem_sys_memcopy(memory, PObj_bufstart(s), size);
-    PObj_bufstart(s) = memory;
+    mem_sys_memcopy(memory, Buffer_bufstart(s), size);
+    Buffer_bufstart(s) = memory;
     s->strstart      = memory;
 
     /* Mark the memory as both from the system and immobile */
@@ -2516,10 +2535,10 @@ Parrot_str_unpin(PARROT_INTERP, ARGMOD(STRING *s))
         return;
 
     Parrot_str_write_COW(interp, s);
-    size = PObj_buflen(s);
+    size = Buffer_buflen(s);
 
     /* We need a handle on the fixed memory so we can get rid of it later */
-    memory = PObj_bufstart(s);
+    memory = Buffer_bufstart(s);
 
     /* Reallocate it the same size
      * NOTE can't use Parrot_gc_reallocate_string_storage because of the LEA
@@ -2530,7 +2549,7 @@ Parrot_str_unpin(PARROT_INTERP, ARGMOD(STRING *s))
     Parrot_block_GC_sweep(interp);
     Parrot_gc_allocate_string_storage(interp, s, size);
     Parrot_unblock_GC_sweep(interp);
-    mem_sys_memcopy(PObj_bufstart(s), memory, size);
+    mem_sys_memcopy(Buffer_bufstart(s), memory, size);
 
     /* Mark the memory as neither immobile nor system allocated */
     PObj_sysmem_CLEAR(s);
@@ -2722,7 +2741,7 @@ Parrot_str_escape_truncate(PARROT_INTERP,
         i += hex->strlen;
 
         /* and usable len */
-        charlen = PObj_buflen(result);
+        charlen = Buffer_buflen(result);
         dp      = (unsigned char *)result->strstart;
 
         PARROT_ASSERT(i <= charlen);
@@ -2836,7 +2855,7 @@ Parrot_str_unescape(PARROT_INTERP,
     if (encoding != result->encoding)
         Parrot_str_length(interp, result);
 
-    if (!CHARSET_VALIDATE(interp, result, 0))
+    if (!CHARSET_VALIDATE(interp, result))
         Parrot_ex_throw_from_c_args(interp, NULL,
             EXCEPTION_INVALID_STRING_REPRESENTATION, "Malformed string");
 

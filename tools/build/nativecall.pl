@@ -68,7 +68,7 @@ my %sig_table = (
     I => { as_proto => "INTVAL", sig_char => "I" },
     N => { as_proto => "FLOATVAL", sig_char => "N" },
     b => { as_proto => "void *", as_return => "", sig_char => "S" },
-    B => { as_proto => "void **", as_return => "", sig_char => "S" },
+    B => { as_proto => "char **", as_return => "", sig_char => "S" },
     # These should be replaced by modifiers in the future
     2 => { as_proto => "short *",  sig_char => "P", return_type => "short",
            ret_assign => "set_nci_I(interp, &st, *return_data);" },
@@ -219,7 +219,6 @@ sub print_head {
 #include "pmc/pmc_nci.h"
 #include "pmc/pmc_pointer.h"
 #include "nci.str"
-#include "jit.h"
 
 /* HEADERIZER HFILE: none */
 /* HEADERIZER STOP */
@@ -231,122 +230,7 @@ sub print_head {
  * - if it returns NULL, the hardcoded version will do the job
  */
 
-#if defined(HAS_JIT) && defined(I386)
-#  include "parrot/exec.h"
-#  include "jit.h"
-#  define CAN_BUILD_CALL_FRAMES
-#endif
-
-/*
- * helper funcs - get argument n
- */
-static INTVAL
-get_nci_I(PARROT_INTERP, ARGMOD(call_state *st), int n)
-{
-    if (n >= st->src.n)
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "too few arguments passed to NCI function");
-
-    Parrot_fetch_arg_nci(interp, st);
-
-    return UVal_int(st->val);
-}
-
-static FLOATVAL
-get_nci_N(PARROT_INTERP, ARGMOD(call_state *st), int n)
-{
-    if (n >= st->src.n)
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "too few arguments passed to NCI function");
-
-    Parrot_fetch_arg_nci(interp, st);
-
-    return UVal_num(st->val);
-}
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING*
-get_nci_S(PARROT_INTERP, ARGMOD(call_state *st), int n)
-{
-    /* TODO or act like below? */
-    if (n >= st->src.n)
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-            "too few arguments passed to NCI function");
-
-    Parrot_fetch_arg_nci(interp, st);
-
-    return UVal_str(st->val);
-}
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static PMC*
-get_nci_P(PARROT_INTERP, ARGMOD(call_state *st), int n)
-{
-    /*
-     * excessive args are passed as NULL
-     * used by e.g. MMD infix like __add
-     */
-    if (n < st->src.n)
-        Parrot_fetch_arg_nci(interp, st);
-    else
-        UVal_pmc(st->val) = PMCNULL;
-
-    return UVal_pmc(st->val);
-}
-
-#define GET_NCI_I(n) get_nci_I(interp, &st, n)
-#define GET_NCI_S(n) get_nci_S(interp, &st, n)
-#define GET_NCI_N(n) get_nci_N(interp, &st, n)
-#define GET_NCI_P(n) get_nci_P(interp, &st, n)
-
-/*
- * set return value
- */
-static void
-set_nci_I(PARROT_INTERP, ARGOUT(call_state *st), INTVAL val)
-{
-    Parrot_init_ret_nci(interp, st, "I");
-    if (st->dest.i < st->dest.n) {
-        UVal_int(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-static void
-set_nci_N(PARROT_INTERP, ARGOUT(call_state *st), FLOATVAL val)
-{
-    Parrot_init_ret_nci(interp, st, "N");
-    if (st->dest.i < st->dest.n) {
-        UVal_num(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-static void
-set_nci_S(PARROT_INTERP, ARGOUT(call_state *st), STRING *val)
-{
-    Parrot_init_ret_nci(interp, st, "S");
-    if (st->dest.i < st->dest.n) {
-        UVal_str(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
-
-static void
-set_nci_P(PARROT_INTERP, ARGOUT(call_state *st), PMC* val)
-{
-    Parrot_init_ret_nci(interp, st, "P");
-    if (st->dest.i < st->dest.n) {
-        UVal_pmc(st->val) = val;
-        Parrot_convert_arg(interp, st);
-        Parrot_store_arg(interp, st);
-    }
-}
+#include "frame_builder.h"
 
 #ifndef CAN_BUILD_CALL_FRAMES
 /* All our static functions that call in various ways. Yes, terribly
@@ -368,9 +252,9 @@ sub make_arg {
     local $_ = $argtype;
     my $temp_num = ${$temp_cnt_ref}++;
     /p/ && do {
-        push @{$temps_ref},          "PMC *t_$temp_num;";
-        push @{$extra_preamble_ref}, "t_$temp_num = GET_NCI_P($reg_num);";
-        return "VTABLE_get_pointer(interp, t_$temp_num)";
+        push @{$temps_ref},          "void *t_$temp_num;";
+        push @{$extra_preamble_ref}, "t_$temp_num = GET_NCI_p($reg_num);";
+        return "t_$temp_num";
     };
     /V/ && do {
         push @{$temps_ref},          "PMC *t_$temp_num;";
@@ -405,10 +289,10 @@ sub make_arg {
     /b/ && do {
         push @{$temps_ref},          "STRING *t_$temp_num;";
         push @{$extra_preamble_ref}, "t_$temp_num = GET_NCI_S($reg_num);";
-        return "PObj_bufstart(t_$temp_num)";
+        return "Buffer_bufstart(t_$temp_num)";
     };
     /B/ && do {
-        push @{$temps_ref}, "char *s_$temp_num;\n    char *t_$temp_num;\n    void** v_$temp_num = (void **) &t_$temp_num;";
+        push @{$temps_ref}, "char *s_$temp_num;\n    char *t_$temp_num;\n    char** v_$temp_num = &t_$temp_num;";
         push @{$extra_preamble_ref},
             "{STRING * s= GET_NCI_S($reg_num); t_$temp_num = s ? Parrot_str_to_cstring(interp, s) : (char *) NULL; s_$temp_num = t_$temp_num;}";
         push @{$extra_postamble_ref}, "do { if (s_$temp_num) Parrot_str_free_cstring(s_$temp_num); } while (0);";
@@ -420,7 +304,7 @@ sub make_arg {
     /[OP\@]/ && do {
         push @{$temps_ref},          "PMC *t_$temp_num;";
         push @{$extra_preamble_ref}, "t_$temp_num = GET_NCI_P($reg_num);";
-        return "PMC_IS_NULL(t_$temp_num) ? NULL : t_$temp_num";
+        return "t_$temp_num";
     };
     return;
 }

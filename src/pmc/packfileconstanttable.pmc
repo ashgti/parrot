@@ -24,7 +24,7 @@ PDD13 for the design spec.
 
 */
 
-pmclass PackfileConstantTable extends PackfileSegment {
+pmclass PackfileConstantTable auto_attrs extends PackfileSegment {
     /* ResizablePMCArray for storing constants */
     ATTR PMC *constants;
 
@@ -43,12 +43,12 @@ Create empty PackfileConstantTable.
 
     VTABLE void init() {
         Parrot_PackfileConstantTable_attributes * attrs =
-                mem_allocate_zeroed_typed(Parrot_PackfileConstantTable_attributes);
+                PMC_data_typed(SELF, Parrot_PackfileConstantTable_attributes*);
 
         attrs->constants = pmc_new(interp, enum_class_ResizablePMCArray);
         attrs->types     = pmc_new(interp, enum_class_ResizableIntegerArray);
 
-        PObj_custom_mark_destroy_SETALL(SELF);
+        PObj_custom_mark_SET(SELF);
         PMC_data(SELF) = attrs;
     }
 
@@ -66,34 +66,11 @@ Marks the object as live.
         Parrot_PackfileConstantTable_attributes * attrs =
                 PARROT_PACKFILECONSTANTTABLE(SELF);
 
-        if (attrs->constants)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)attrs->constants);
-        if (attrs->types)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)attrs->types);
+        Parrot_gc_mark_PMC_alive(interp, attrs->constants);
+        Parrot_gc_mark_PMC_alive(interp, attrs->types);
 
         SUPER();
     }
-
-/*
-
-=item C<void destroy()>
-
-Destroys the PMC and frees all allocated memory.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        Parrot_PackfileConstantTable_attributes * attrs =
-                PARROT_PACKFILECONSTANTTABLE(SELF);
-
-        if (attrs) {
-            mem_sys_free(attrs);
-            PMC_data(SELF) = NULL;
-        }
-    }
-
 
 
 /*
@@ -352,8 +329,6 @@ Get or create constant for passed value.
 
 =cut
 
-TODO: Add same for PMCs.
-
 */
     MULTI INTVAL get_or_create_constant(STRING *value) {
         Parrot_PackfileConstantTable_attributes *attrs =
@@ -393,6 +368,44 @@ TODO: Add same for PMCs.
         /* Constant not found. Add new one */
         VTABLE_set_number_keyed_int(interp, SELF, i, value);
         return i;
+    }
+
+    MULTI INTVAL get_or_create_constant(PMC *value) {
+        Parrot_PackfileConstantTable_attributes *attrs =
+                PARROT_PACKFILECONSTANTTABLE(SELF);
+        INTVAL   num = VTABLE_elements(interp, attrs->types);
+        INTVAL   i;
+        PMC     *val;
+        INTVAL   val_type = value->vtable->base_type == enum_class_Key
+                            ? PFC_KEY
+                            : PFC_PMC;
+
+        for (i=0; i < num; ++i) {
+            INTVAL type = VTABLE_get_integer_keyed_int(interp, attrs->types, i);
+            if (type != val_type)
+                continue;
+
+            val = VTABLE_get_pmc_keyed_int(interp, attrs->constants, i);
+            if (VTABLE_is_equal(INTERP, value, val))
+                return i;
+        }
+        /* Constant not found. Add new one */
+        VTABLE_set_pmc_keyed_int(interp, SELF, i, value);
+        return i;
+    }
+
+/*
+
+=item C<METHOD type()>
+
+Set segment type.
+
+=cut
+
+*/
+
+    METHOD type() {
+        RETURN(INTVAL PF_CONST_SEG);
     }
 
 

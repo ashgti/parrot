@@ -160,10 +160,11 @@ typedef union value {
 
 /* represent a .const or .globalconst declaration */
 typedef struct constdecl {
-    char const   *name;
-    int           global;
-    value_type    type;
-    value         val;
+    char const   *name;         /* name of the .const/.globalconst */
+    STRING       *name1;
+    int           global;       /* flag to indicate whether it's a .globalconst or .const */
+    value_type    type;         /* selector for the value union "val" */
+    value         val;          /* the value of this .const/.globalconst */
 
 } constdecl;
 
@@ -176,10 +177,19 @@ typedef struct constant {
 
 } constant;
 
-/* for representing a label operand */
+/* for representing a label operand, as used in the following example:
+  
+  if x > y goto L1
+  
+  L1 is here the label operand, and the "goto L1" part of the above statement
+  will be represented by some offset.
+
+*/
 typedef struct label {
-    int         offset;
-    char const *name;
+    int         offset;        /* the offset that is used as the operand. */
+    char const *name;          /* name of the label that is 
+                                  (perhaps conditionally) being jumped to */
+    STRING     *name1;                                  
 
 } label;
 
@@ -198,6 +208,7 @@ typedef struct expression {
         struct target  *t;
         constant       *c;
         char const     *id;
+        STRING         *id1;
         struct key     *k;
         struct label   *l;
 
@@ -223,7 +234,7 @@ typedef struct key_entry {
  * by which to pass the key.
  */
 typedef struct key {
-    key_entry *head;
+    key_entry *head;      /* pointer to the first key entry */
     int        keylength; /* number of entries */
 
 } key;
@@ -239,6 +250,7 @@ typedef struct target {
     struct syminfo *info;           /* pointer to symbol/pir_reg's information */
     target_flag     flags;          /* flags like :slurpy etc. */
     char const     *alias;          /* if this is a named parameter, this is the alias */
+    STRING         *alias1;
     struct key     *key;            /* the key of this target, i.e. $P0[$P1], $P1 is key. */
 
     struct target  *next;
@@ -256,6 +268,7 @@ typedef struct argument {
     expression      *value; /* the value of this argument */
     int              flags; /* :flat or :named, if specified */
     char const      *alias; /* value of the :named flag */
+    STRING          *alias1;
 
     struct argument *next;  /* points to the next argument */
 
@@ -288,7 +301,9 @@ typedef struct invocation {
 typedef struct instruction {
     unsigned            offset;       /* sequence number of this instruction */
     char         const *label;        /* label of this instruction */
+    STRING             *label1;
     char         const *opname;       /* name of the instruction, such as "print" and "set" */
+    STRING             *opname1;
     expression         *operands;     /* operands like "$I0" and "42" in "set $I0, 42" */
     int                 oplabelbits;  /* bits indicating which operands are labels */
     struct op_info_t   *opinfo;       /* pointer to the op_info containing this op's meta data */
@@ -308,6 +323,7 @@ typedef struct instruction {
 typedef struct bucket {
     union bucket_union {
         char const          *str;
+        STRING              *pstr;
         struct symbol       *sym;
         struct local_label  *loc;
         struct global_label *glob;
@@ -338,6 +354,7 @@ typedef struct hashtable {
 typedef struct annotation {
     opcode_t     offset;
     char const  *key;      /* key of annotation */
+    STRING      *key1;
     constant    *value;    /* value of annotation */
 
     struct annotation *next; /* next annotation; annotations are stored in a list */

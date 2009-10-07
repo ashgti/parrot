@@ -50,11 +50,11 @@ static INTVAL convert_flags_to_win32(
 PARROT_WARN_UNUSED_RESULT
 static INTVAL io_is_tty_win32(PIOHANDLE fd);
 
-#define ASSERT_ARGS_convert_flags_to_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_convert_flags_to_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(fdwAccess) \
-    || PARROT_ASSERT_ARG(fdwShareMode) \
-    || PARROT_ASSERT_ARG(fdwCreate)
-#define ASSERT_ARGS_io_is_tty_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+    , PARROT_ASSERT_ARG(fdwShareMode) \
+    , PARROT_ASSERT_ARG(fdwCreate))
+#define ASSERT_ARGS_io_is_tty_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -439,7 +439,7 @@ Parrot_io_read_win32(PARROT_INTERP,
 
     s = Parrot_io_make_string(interp, buf, 2048);
     len = s->bufused;
-    buffer = s->strstart;
+    buffer = Buffer_bufstart(s);
 
     if (ReadFile(Parrot_io_get_os_handle(interp, filehandle),
                 (LPVOID) buffer, (DWORD) len, &countread, NULL)) {

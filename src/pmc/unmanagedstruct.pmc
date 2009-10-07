@@ -382,7 +382,7 @@ ret_pmc(PARROT_INTERP, PMC *pmc, char *p, int type, INTVAL idx)
             ret  = *(PMC**) p;
 
             /* now check if initializer has a signature attached */
-            if (ptr->pmc_ext && PMC_metadata(ptr)) {
+            if (PMC_metadata(ptr)) {
                 STRING *signature_str = CONST_STRING(interp, "_signature");
                 PMC *sig = VTABLE_getprop(interp, ptr, signature_str);
                 if (VTABLE_defined(interp, sig)) {
@@ -398,9 +398,8 @@ ret_pmc(PARROT_INTERP, PMC *pmc, char *p, int type, INTVAL idx)
             /* check the metadata for an initializer */
 
             /* grab the struct from the metadata */
-            if (ptr->pmc_ext && PMC_metadata(ptr)) {
+            if (PMC_metadata(ptr))
                 ret = VTABLE_getprop(interp, ptr, CONST_STRING(interp, "_struct"));
-            }
             else {
                 Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_INVALID_OPERATION,
@@ -503,7 +502,7 @@ set_string(PARROT_INTERP, char *p, int type, STRING *value)
     if (type == enum_type_cstr) {
         /* assuming 0-terminated C-string here;
          * we can't use Parrot_str_to_cstring easily */
-        char *cstr  = value->strstart;
+        char *cstr  = (char *)Buffer_bufstart(value);
         *(char **)p = cstr;
     }
     else
@@ -651,7 +650,7 @@ calc_offsets(PARROT_INTERP, PMC *pmc, PMC *value, size_t toff)
     return toff;
 }
 
-pmclass UnManagedStruct need_ext no_ro {
+pmclass UnManagedStruct auto_attrs no_ro {
     ATTR void   *ptr;   /* the struct that this UnManagedStruct isn't managing */
     ATTR PMC    *init;  /* the initializer used with this UnManagedStruct */
     ATTR INTVAL  size;  /* the size of the struct */
@@ -663,39 +662,6 @@ pmclass UnManagedStruct need_ext no_ro {
 =head2 Methods
 
 =over 4
-
-=item C<void init()>
-
-Initializes the C<struct> with a default value of C<NULL>.
-
-=cut
-
-*/
-
-    VTABLE void init() {
-        Parrot_UnManagedStruct_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_UnManagedStruct_attributes);
-        PMC_data(SELF) = attrs;
-        PObj_active_destroy_SET(SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-Destroys the subroutine.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
-    }
-
-
-/*
 
 =item C<void init_pmc(PMC *value)>
 
@@ -724,9 +690,6 @@ The offset.
 */
 
     VTABLE void init_pmc(PMC *value) {
-        Parrot_UnManagedStruct_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_UnManagedStruct_attributes);
-        PMC_data(SELF) = attrs;
         SELF.set_pmc(value);
     }
 
@@ -776,8 +739,8 @@ Marks the C<struct> as live.
 */
 
     VTABLE void mark() {
-        if (PARROT_UNMANAGEDSTRUCT(SELF)->init)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *)PARROT_UNMANAGEDSTRUCT(SELF)->init);
+        PMC *init = PARROT_UNMANAGEDSTRUCT(SELF)->init;
+        Parrot_gc_mark_PMC_alive(INTERP, init);
     }
 
 /*

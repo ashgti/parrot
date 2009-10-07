@@ -132,7 +132,7 @@ hole.
 A List can hold various datatypes. See F<src/datatypes.h> for the
 enumeration of types.
 
-Not all are yet implemented in C<list_set>/C<list_item>, see the
+Not all are yet implemented in C<Parrot_pmc_array_set>/C<Parrot_pmc_array_item>, see the
 C<switch()>.
 
 Arbitrary length data:
@@ -149,10 +149,10 @@ Construct initializer with:
 
 =back
 
-In C<list_assign> the values are copied into the array, C<list_get>
+In C<Parrot_pmc_array_assign> the values are copied into the array, C<Parrot_pmc_array_get>
 returns a pointer as for all other data types.
 
-See F<src/list_2.t> and C<list_new_init()>.
+See F<src/list_2.t> and C<Parrot_pmc_array_new_init()>.
 
 =head2 Return value
 
@@ -237,7 +237,7 @@ static List_chunk * get_chunk(PARROT_INTERP,
         FUNC_MODIFIES(*list)
         FUNC_MODIFIES(*idx);
 
-static void list_append(PARROT_INTERP,
+static void Parrot_pmc_array_append(PARROT_INTERP,
     ARGMOD(List *list),
     ARGIN_NULLOK(void *item),
     int type,
@@ -248,7 +248,7 @@ static void list_append(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static void * list_item(PARROT_INTERP,
+static void * Parrot_pmc_array_item(PARROT_INTERP,
     ARGMOD(List *list),
     int type,
     INTVAL idx)
@@ -256,7 +256,7 @@ static void * list_item(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*list);
 
-static void list_set(PARROT_INTERP,
+static void Parrot_pmc_array_set(PARROT_INTERP,
     ARGMOD(List *list),
     ARGIN_NULLOK(void *item),
     INTVAL type,
@@ -297,56 +297,56 @@ static void split_chunk(PARROT_INTERP,
         FUNC_MODIFIES(*list)
         FUNC_MODIFIES(*chunk);
 
-#define ASSERT_ARGS_add_chunk_at_end __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_add_chunk_at_end __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_add_chunk_at_start __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_add_chunk_at_start __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_alloc_next_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_alloc_next_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_allocate_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_allocate_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_get_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_get_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list) \
-    || PARROT_ASSERT_ARG(idx)
-#define ASSERT_ARGS_list_append __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list) \
+    , PARROT_ASSERT_ARG(idx))
+#define ASSERT_ARGS_Parrot_pmc_array_append __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_list_item __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_Parrot_pmc_array_item __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_list_set __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_Parrot_pmc_array_set __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_rebuild_chunk_list __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_rebuild_chunk_list __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_rebuild_chunk_ptrs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_rebuild_fix_ends __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_rebuild_other __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_rebuild_chunk_ptrs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_rebuild_fix_ends __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_rebuild_other __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_rebuild_sparse __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(list)
-#define ASSERT_ARGS_split_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_rebuild_sparse __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(list))
+#define ASSERT_ARGS_split_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(list) \
-    || PARROT_ASSERT_ARG(chunk)
+    , PARROT_ASSERT_ARG(list) \
+    , PARROT_ASSERT_ARG(chunk))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
 #define chunk_list_size(list) \
-                (PObj_buflen(&(list)->chunk_list) / sizeof (List_chunk *))
+                (Buffer_buflen(&(list)->chunk_list) / sizeof (List_chunk *))
 
 /* hide the ugly cast somehow: */
 #define chunk_list_ptr(list, idx) \
-        ((List_chunk**) PObj_bufstart(&(list)->chunk_list))[(idx)]
+        ((List_chunk**) Buffer_bufstart(&(list)->chunk_list))[(idx)]
 
 /*
 
@@ -381,11 +381,7 @@ allocate_chunk(PARROT_INTERP, ARGIN(List *list), UINTVAL items, UINTVAL size)
     chunk->next     = NULL;
     chunk->prev     = NULL;
     Parrot_gc_allocate_buffer_storage_aligned(interp, (Buffer *)chunk, size);
-    memset(PObj_bufstart((Buffer*)chunk), 0, size);
-
-    /* see also src/hash.c */
-    if (list->container)
-        GC_WRITE_BARRIER(interp, list->container, 0, chunk);
+    memset(Buffer_bufstart((Buffer*)chunk), 0, size);
 
     Parrot_unblock_GC_mark(interp);
 
@@ -515,18 +511,14 @@ rebuild_other(PARROT_INTERP, ARGMOD(List *list))
                 Parrot_gc_reallocate_buffer_storage(interp, (Buffer *)prev,
                         MAX_ITEMS * list->item_size);
 
-                if (list->container) {
-                    GC_WRITE_BARRIER(interp, list->container, 0, prev);
-                }
-
                 mem_sys_memmove(
-                        (char *) PObj_bufstart(&prev->data) +
+                        (char *) Buffer_bufstart(&prev->data) +
                         prev->items * list->item_size,
-                        (const char *) PObj_bufstart(&chunk->data),
+                        (const char *) Buffer_bufstart(&chunk->data),
                         (MAX_ITEMS - prev->items) * list->item_size);
                 mem_sys_memmove(
-                        (char *) PObj_bufstart(&chunk->data),
-                        (const char *) PObj_bufstart(&chunk->data) +
+                        (char *) Buffer_bufstart(&chunk->data),
+                        (const char *) Buffer_bufstart(&chunk->data) +
                         (MAX_ITEMS - prev->items) * list->item_size,
                         (chunk->items - (MAX_ITEMS - prev->items))
                                                         * list->item_size);
@@ -536,13 +528,11 @@ rebuild_other(PARROT_INTERP, ARGMOD(List *list))
             else {
                 Parrot_gc_reallocate_buffer_storage(interp, (Buffer *)prev,
                         (prev->items + chunk->items) * list->item_size);
-                if (list->container) {
-                    GC_WRITE_BARRIER(interp, list->container, 0, prev);
-                }
+
                 mem_sys_memmove(
-                        (char *) PObj_bufstart(&prev->data) +
+                        (char *) Buffer_bufstart(&prev->data) +
                         prev->items * list->item_size,
-                        (const char *) PObj_bufstart(&chunk->data),
+                        (const char *) Buffer_bufstart(&chunk->data),
                         chunk->items * list->item_size);
                 prev->items += chunk->items;
                 chunk->items = 0;
@@ -583,8 +573,8 @@ rebuild_fix_ends(ARGMOD(List *list))
 
         chunk->flags      = 0;
         list->grow_policy = enum_grow_unknown;
-        list->cap        += PObj_buflen(&chunk->data) / list->item_size - chunk->items;
-        chunk->items      = PObj_buflen(&chunk->data) / list->item_size;
+        list->cap        += Buffer_buflen(&chunk->data) / list->item_size - chunk->items;
+        chunk->items      = Buffer_buflen(&chunk->data) / list->item_size;
     }
 
     /* XXX - still needed? - if last is empty and last->prev not full then
@@ -635,10 +625,6 @@ rebuild_chunk_list(PARROT_INTERP, ARGMOD(List *list))
 
         Parrot_gc_reallocate_buffer_storage(interp, (Buffer *)list,
                 len * sizeof (List_chunk *));
-
-        if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, list);
-        }
 
         list->collect_runs = Parrot_gc_count_collect_runs(interp);
     }
@@ -975,7 +961,7 @@ One chunk_block consists of chunks of the same type: fixed, growing or
 other. So the time to look up a chunk doesn't depend on the array
 length, but on the complexity of the array. C<rebuild_chunk_list> tries
 to reduce the complexity, but may fail, if you e.g. do a prime sieve by
-actually C<list_delet>ing the none prime numbers.
+actually C<Parrot_pmc_array_delet>ing the none prime numbers.
 
 The complexity of the array is how many different C<chunk_blocks> are
 there. They come from:
@@ -1009,10 +995,8 @@ get_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(UINTVAL *idx))
     List_chunk *chunk;
     UINTVAL i;
 
-#ifndef GC_IS_MALLOC
     if (list->collect_runs != Parrot_gc_count_collect_runs(interp))
         rebuild_chunk_list(interp, list);
-#endif
 #ifdef SLOW_AND_BORING
     /* in SLOW_AND_BORING mode, we loop through each chunk, and determine if
        idx is in the chunk using basic bounds checking. If the loop completes
@@ -1135,10 +1119,6 @@ split_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(List_chunk *chunk), UINTVA
         Parrot_gc_reallocate_buffer_storage(interp, (Buffer *)chunk,
                 chunk->items * list->item_size);
 
-        if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, chunk);
-        }
-
         chunk->flags |= no_power_2;
         chunk->flags &= ~sparse;
     }
@@ -1154,10 +1134,6 @@ split_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(List_chunk *chunk), UINTVA
 
         Parrot_gc_reallocate_buffer_storage(interp, (Buffer *)chunk,
                 chunk->items * list->item_size);
-
-        if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container, 0, chunk);
-        }
 
         chunk->flags &= ~sparse;
 
@@ -1194,8 +1170,8 @@ split_chunk(PARROT_INTERP, ARGMOD(List *list), ARGMOD(List_chunk *chunk), UINTVA
 
 /*
 
-=item C<static void list_set(PARROT_INTERP, List *list, void *item, INTVAL type,
-INTVAL idx)>
+=item C<static void Parrot_pmc_array_set(PARROT_INTERP, List *list, void *item,
+INTVAL type, INTVAL idx)>
 
 Sets C<item> of type C<type> in chunk at C<idx>.
 
@@ -1204,10 +1180,10 @@ Sets C<item> of type C<type> in chunk at C<idx>.
 */
 
 static void
-list_set(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item),
+Parrot_pmc_array_set(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item),
         INTVAL type, INTVAL idx)
 {
-    ASSERT_ARGS(list_set)
+    ASSERT_ARGS(Parrot_pmc_array_set)
     List_chunk  *chunk = get_chunk(interp, list, (UINTVAL *)&idx);
     const INTVAL oidx  = idx;
 
@@ -1227,34 +1203,29 @@ list_set(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item),
     switch (type) {
     case enum_type_sized:
         /* copy data into list */
-        memcpy(&((char *) PObj_bufstart(&chunk->data))[idx * list->item_size],
+        memcpy(&((char *) Buffer_bufstart(&chunk->data))[idx * list->item_size],
                 item, list->item_size);
         break;
     case enum_type_char:
-        ((char *) PObj_bufstart(&chunk->data))[idx] = (char)PTR2INTVAL(item);
+        ((char *) Buffer_bufstart(&chunk->data))[idx] = (char)PTR2INTVAL(item);
         break;
     case enum_type_short:
-        ((short *) PObj_bufstart(&chunk->data))[idx] = (short)PTR2INTVAL(item);
+        ((short *) Buffer_bufstart(&chunk->data))[idx] = (short)PTR2INTVAL(item);
         break;
     case enum_type_int:
-        ((int *) PObj_bufstart(&chunk->data))[idx] = (int)PTR2INTVAL(item);
+        ((int *) Buffer_bufstart(&chunk->data))[idx] = (int)PTR2INTVAL(item);
         break;
     case enum_type_INTVAL:
-        ((INTVAL *) PObj_bufstart(&chunk->data))[idx] = PTR2INTVAL(item);
+        ((INTVAL *) Buffer_bufstart(&chunk->data))[idx] = PTR2INTVAL(item);
         break;
     case enum_type_FLOATVAL:
-        ((FLOATVAL *) PObj_bufstart(&chunk->data))[idx] = *(FLOATVAL *)item;
+        ((FLOATVAL *) Buffer_bufstart(&chunk->data))[idx] = *(FLOATVAL *)item;
         break;
     case enum_type_PMC:
-        if (list->container) {
-            GC_WRITE_BARRIER(interp, list->container,
-                    ((PMC **) PObj_bufstart(&chunk->data))[idx],
-                    (PMC *)item);
-        }
-        ((PMC **) PObj_bufstart(&chunk->data))[idx] = (PMC *)item;
+        ((PMC **) Buffer_bufstart(&chunk->data))[idx] = (PMC *)item;
         break;
     case enum_type_STRING:
-        ((STRING **) PObj_bufstart(&chunk->data))[idx] = (STRING *)item;
+        ((STRING **) Buffer_bufstart(&chunk->data))[idx] = (STRING *)item;
         break;
     default:
         Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown list entry type\n");
@@ -1265,8 +1236,8 @@ list_set(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item),
 
 /*
 
-=item C<static void * list_item(PARROT_INTERP, List *list, int type, INTVAL
-idx)>
+=item C<static void * Parrot_pmc_array_item(PARROT_INTERP, List *list, int type,
+INTVAL idx)>
 
 Get the pointer to the item of type C<type> in the chunk at C<idx>.
 
@@ -1277,9 +1248,9 @@ Get the pointer to the item of type C<type> in the chunk at C<idx>.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static void *
-list_item(PARROT_INTERP, ARGMOD(List *list), int type, INTVAL idx)
+Parrot_pmc_array_item(PARROT_INTERP, ARGMOD(List *list), int type, INTVAL idx)
 {
-    ASSERT_ARGS(list_item)
+    ASSERT_ARGS(Parrot_pmc_array_item)
     List_chunk * const chunk = get_chunk(interp, list, (UINTVAL *)&idx);
     /* if this is a sparse chunk return -1, the caller may decide to return 0
      * or undef or whatever */
@@ -1296,21 +1267,21 @@ list_item(PARROT_INTERP, ARGMOD(List *list), int type, INTVAL idx)
     switch (type) {
         case enum_type_sized:
             return (void *)&((char *)
-                PObj_bufstart(&chunk->data))[idx * list->item_size];
+                Buffer_bufstart(&chunk->data))[idx * list->item_size];
         case enum_type_char:
-            return (void *)&((char *) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((char *) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_short:
-            return (void *)&((short *) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((short *) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_int:
-            return (void *)&((int *) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((int *) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_INTVAL:
-            return (void *)&((INTVAL *) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((INTVAL *) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_FLOATVAL:
-            return (void *)&((FLOATVAL *) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((FLOATVAL *) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_PMC:
-            return (void *)&((PMC **) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((PMC **) Buffer_bufstart(&chunk->data))[idx];
         case enum_type_STRING:
-            return (void *)&((STRING **) PObj_bufstart(&chunk->data))[idx];
+            return (void *)&((STRING **) Buffer_bufstart(&chunk->data))[idx];
         default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown list entry type\n");
     }
@@ -1319,8 +1290,8 @@ list_item(PARROT_INTERP, ARGMOD(List *list), int type, INTVAL idx)
 
 /*
 
-=item C<static void list_append(PARROT_INTERP, List *list, void *item, int type,
-UINTVAL idx)>
+=item C<static void Parrot_pmc_array_append(PARROT_INTERP, List *list, void
+*item, int type, UINTVAL idx)>
 
 Adds one or more chunks to end of list.
 
@@ -1329,14 +1300,15 @@ Adds one or more chunks to end of list.
 */
 
 static void
-list_append(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item), int type, UINTVAL idx)
+Parrot_pmc_array_append(PARROT_INTERP, ARGMOD(List *list),
+    ARGIN_NULLOK(void *item), int type, UINTVAL idx)
 {
-    ASSERT_ARGS(list_append)
+    ASSERT_ARGS(Parrot_pmc_array_append)
     /* initially, list may be empty, also used by assign */
-    while (idx >= list->cap)
+    while (idx >= list->cap){
         add_chunk_at_end(interp, list, idx);
-
-    list_set(interp, list, item, type, idx);
+    }
+    Parrot_pmc_array_set(interp, list, item, type, idx);
 
     /* invariant: prepare for next push */
     if (idx >= list->cap - 1)
@@ -1352,7 +1324,7 @@ list_append(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item), int typ
 
 =over 4
 
-=item C<List * list_new(PARROT_INTERP, PARROT_DATA_TYPE type)>
+=item C<List * Parrot_pmc_array_new(PARROT_INTERP, PARROT_DATA_TYPE type)>
 
 Returns a new list of type C<type>.
 
@@ -1364,9 +1336,9 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 List *
-list_new(PARROT_INTERP, PARROT_DATA_TYPE type)
+Parrot_pmc_array_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 {
-    ASSERT_ARGS(list_new)
+    ASSERT_ARGS(Parrot_pmc_array_new)
     List * const list = (List *)Parrot_gc_new_bufferlike_header(interp,
                              sizeof (*list));
 
@@ -1405,7 +1377,7 @@ list_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 
 /*
 
-=item C<void list_pmc_new(PARROT_INTERP, PMC *container)>
+=item C<void Parrot_pmc_array_pmc_new(PARROT_INTERP, PMC *container)>
 
 Creates a new list containing PMC* values in C<PMC_data(container)>.
 
@@ -1415,11 +1387,11 @@ Creates a new list containing PMC* values in C<PMC_data(container)>.
 
 PARROT_EXPORT
 void
-list_pmc_new(PARROT_INTERP, ARGMOD(PMC *container))
+Parrot_pmc_array_pmc_new(PARROT_INTERP, ARGMOD(PMC *container))
 {
-    ASSERT_ARGS(list_pmc_new)
+    ASSERT_ARGS(Parrot_pmc_array_pmc_new)
 
-    List * const l      = list_new(interp, enum_type_PMC);
+    List * const l      = Parrot_pmc_array_new(interp, enum_type_PMC);
     l->container        = container;
     PMC_data(container) = l;
 }
@@ -1427,9 +1399,10 @@ list_pmc_new(PARROT_INTERP, ARGMOD(PMC *container))
 
 /*
 
-=item C<List * list_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, PMC *init)>
+=item C<List * Parrot_pmc_array_new_init(PARROT_INTERP, PARROT_DATA_TYPE type,
+PMC *init)>
 
-C<list_new_init()> uses these initializers:
+C<Parrot_pmc_array_new_init()> uses these initializers:
 
     0 ... size (set initial size of list)
     1 ... array dimensions (multiarray)
@@ -1445,9 +1418,9 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 List *
-list_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, ARGIN(PMC *init))
+Parrot_pmc_array_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, ARGIN(PMC *init))
 {
-    ASSERT_ARGS(list_new_init)
+    ASSERT_ARGS(Parrot_pmc_array_new_init)
     List  *list;
     PMC   *multi_key       = NULL;
     INTVAL size            = 0;
@@ -1496,7 +1469,7 @@ list_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, ARGIN(PMC *init))
         }
     }
 
-    list = list_new(interp, type);
+    list = Parrot_pmc_array_new(interp, type);
 
     if (list->item_type == enum_type_sized) { /* override item_size */
 
@@ -1512,7 +1485,7 @@ list_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, ARGIN(PMC *init))
     }
 
     if (size)
-        list_set_length(interp, list, size);
+        Parrot_pmc_array_set_length(interp, list, size);
 
     return list;
 }
@@ -1520,7 +1493,8 @@ list_new_init(PARROT_INTERP, PARROT_DATA_TYPE type, ARGIN(PMC *init))
 
 /*
 
-=item C<void list_pmc_new_init(PARROT_INTERP, PMC *container, PMC *init)>
+=item C<void Parrot_pmc_array_pmc_new_init(PARROT_INTERP, PMC *container, PMC
+*init)>
 
 Creates a new list of PMC* values in C<PMC_data(container)>.
 
@@ -1530,11 +1504,11 @@ Creates a new list of PMC* values in C<PMC_data(container)>.
 
 PARROT_EXPORT
 void
-list_pmc_new_init(PARROT_INTERP, ARGMOD(PMC *container), ARGIN(PMC *init))
+Parrot_pmc_array_pmc_new_init(PARROT_INTERP, ARGMOD(PMC *container), ARGIN(PMC *init))
 {
-    ASSERT_ARGS(list_pmc_new_init)
+    ASSERT_ARGS(Parrot_pmc_array_pmc_new_init)
 
-    List * const l      = list_new_init(interp, enum_type_PMC, init);
+    List * const l      = Parrot_pmc_array_new_init(interp, enum_type_PMC, init);
     l->container        = container;
     PMC_data(container) = l;
 }
@@ -1542,7 +1516,7 @@ list_pmc_new_init(PARROT_INTERP, ARGMOD(PMC *container), ARGIN(PMC *init))
 
 /*
 
-=item C<List * list_clone(PARROT_INTERP, const List *other)>
+=item C<List * Parrot_pmc_array_clone(PARROT_INTERP, const List *other)>
 
 Returns a clone of the C<other> list.
 
@@ -1556,9 +1530,9 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 List *
-list_clone(PARROT_INTERP, ARGIN(const List *other))
+Parrot_pmc_array_clone(PARROT_INTERP, ARGIN(const List *other))
 {
-    ASSERT_ARGS(list_clone)
+    ASSERT_ARGS(Parrot_pmc_array_clone)
     List       *l;
     List_chunk *chunk, *prev;
     UINTVAL     i;
@@ -1566,15 +1540,15 @@ list_clone(PARROT_INTERP, ARGIN(const List *other))
     Parrot_block_GC_mark(interp);
     Parrot_block_GC_sweep(interp);
 
-    l = list_new(interp, other->item_type);
+    l = Parrot_pmc_array_new(interp, other->item_type);
 
     STRUCT_COPY(l, other);
-    PObj_buflen(&l->chunk_list)   = 0;
-    PObj_bufstart(&l->chunk_list) = NULL;
+    Buffer_buflen(&l->chunk_list)   = 0;
+    Buffer_bufstart(&l->chunk_list) = NULL;
 
     for (chunk = other->first, prev = NULL; chunk; chunk = chunk->next) {
         List_chunk * const new_chunk = allocate_chunk(interp, l,
-                chunk->items, PObj_buflen(&chunk->data));
+                chunk->items, Buffer_buflen(&chunk->data));
 
         new_chunk->flags = chunk->flags;
 
@@ -1589,24 +1563,24 @@ list_clone(PARROT_INTERP, ARGIN(const List *other))
             switch (l->item_type) {
             case enum_type_PMC:
                 for (i = 0; i < chunk->items; i++) {
-                    PMC * const op = ((PMC **) PObj_bufstart(&chunk->data))[i];
+                    PMC * const op = ((PMC **) Buffer_bufstart(&chunk->data))[i];
 
                     if (op)
-                        ((PMC **) PObj_bufstart(&new_chunk->data))[i] =
+                        ((PMC **) Buffer_bufstart(&new_chunk->data))[i] =
                             VTABLE_clone(interp, op);
                 }
                 break;
             case enum_type_STRING:
                 for (i = 0; i < chunk->items; i++) {
-                    STRING *s = ((STRING **) PObj_bufstart(&chunk->data))[i];
+                    STRING *s = ((STRING **) Buffer_bufstart(&chunk->data))[i];
                     if (s)
-                        ((STRING **) PObj_bufstart(&new_chunk->data))[i] =
+                        ((STRING **) Buffer_bufstart(&new_chunk->data))[i] =
                                 Parrot_str_copy(interp, s);
                 }
                 break;
             default:
-                mem_sys_memcopy(PObj_bufstart(&new_chunk->data),
-                        PObj_bufstart(&chunk->data), PObj_buflen(&chunk->data));
+                mem_sys_memcopy(Buffer_bufstart(&new_chunk->data),
+                        Buffer_bufstart(&chunk->data), Buffer_buflen(&chunk->data));
                 break;
             }
         }
@@ -1622,7 +1596,7 @@ list_clone(PARROT_INTERP, ARGIN(const List *other))
 
 /*
 
-=item C<void list_mark(PARROT_INTERP, List *list)>
+=item C<void Parrot_pmc_array_mark(PARROT_INTERP, List *list)>
 
 Marks the list and its contents as live for the memory management system.
 
@@ -1632,9 +1606,9 @@ Marks the list and its contents as live for the memory management system.
 
 PARROT_EXPORT
 void
-list_mark(PARROT_INTERP, ARGMOD(List *list))
+Parrot_pmc_array_mark(PARROT_INTERP, ARGMOD(List *list))
 {
-    ASSERT_ARGS(list_mark)
+    ASSERT_ARGS(Parrot_pmc_array_mark)
     List_chunk *chunk;
 
     for (chunk = list->first; chunk; chunk = chunk->next) {
@@ -1643,7 +1617,7 @@ list_mark(PARROT_INTERP, ARGMOD(List *list))
         if (list->item_type == enum_type_PMC
         ||  list->item_type == enum_type_STRING) {
             if (!(chunk->flags & sparse)) {
-                PObj **p = ((PObj **) PObj_bufstart(&chunk->data));
+                PObj **p = ((PObj **) Buffer_bufstart(&chunk->data));
                 UINTVAL i;
 
                 for (i = 0; i < chunk->items; i++, ++p) {
@@ -1661,7 +1635,7 @@ list_mark(PARROT_INTERP, ARGMOD(List *list))
 
 /*
 
-=item C<void list_visit(PARROT_INTERP, List *list, void *pinfo)>
+=item C<void Parrot_pmc_array_visit(PARROT_INTERP, List *list, void *pinfo)>
 
 This is used by freeze/thaw to visit the contents of the list.
 
@@ -1673,14 +1647,14 @@ C<pinfo> is the visit info, (see include/parrot/pmc_freeze.h>).
 
 PARROT_EXPORT
 void
-list_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(void *pinfo))
+Parrot_pmc_array_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(void *pinfo))
 {
-    ASSERT_ARGS(list_visit)
+    ASSERT_ARGS(Parrot_pmc_array_visit)
     List_chunk        *chunk;
     visit_info * const info = (visit_info*) pinfo;
     UINTVAL            idx;
 
-    const UINTVAL n = list_length(interp, list);
+    const UINTVAL n = Parrot_pmc_array_length(interp, list);
     PARROT_ASSERT(list->item_type == enum_type_PMC);
 
     for (idx = 0, chunk = list->first; chunk; chunk = chunk->next) {
@@ -1688,7 +1662,7 @@ list_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(void *pinfo))
         if (!(chunk->flags & sparse)) {
             UINTVAL i;
             for (i = 0; i < chunk->items && idx < n; i++, idx++) {
-                PMC ** const pos = ((PMC **) PObj_bufstart(&chunk->data)) + i;
+                PMC ** const pos = ((PMC **) Buffer_bufstart(&chunk->data)) + i;
                 info->thaw_ptr   = pos;
                 (info->visit_pmc_now)(interp, *pos, info);
             }
@@ -1702,7 +1676,7 @@ list_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(void *pinfo))
 
 /*
 
-=item C<INTVAL list_length(PARROT_INTERP, const List *list)>
+=item C<INTVAL Parrot_pmc_array_length(PARROT_INTERP, const List *list)>
 
 Returns the length of the list.
 
@@ -1713,16 +1687,16 @@ Returns the length of the list.
 PARROT_WARN_UNUSED_RESULT
 PARROT_PURE_FUNCTION
 INTVAL
-list_length(SHIM_INTERP, ARGIN(const List *list))
+Parrot_pmc_array_length(SHIM_INTERP, ARGIN(const List *list))
 {
-    ASSERT_ARGS(list_length)
+    ASSERT_ARGS(Parrot_pmc_array_length)
     return list->length;
 }
 
 
 /*
 
-=item C<void list_set_length(PARROT_INTERP, List *list, INTVAL len)>
+=item C<void Parrot_pmc_array_set_length(PARROT_INTERP, List *list, INTVAL len)>
 
 Sets the length of the list to C<len>.
 
@@ -1732,9 +1706,9 @@ Sets the length of the list to C<len>.
 
 PARROT_EXPORT
 void
-list_set_length(PARROT_INTERP, ARGMOD(List *list), INTVAL len)
+Parrot_pmc_array_set_length(PARROT_INTERP, ARGMOD(List *list), INTVAL len)
 {
-    ASSERT_ARGS(list_set_length)
+    ASSERT_ARGS(Parrot_pmc_array_set_length)
 
     if (len < 0)
         len += list->length;
@@ -1751,7 +1725,7 @@ list_set_length(PARROT_INTERP, ARGMOD(List *list), INTVAL len)
                 }
             }
 
-            list_append(interp, list, NULL, list->item_type, idx);
+            Parrot_pmc_array_append(interp, list, NULL, list->item_type, idx);
         }
         else
             rebuild_chunk_ptrs(list, 1);
@@ -1763,7 +1737,8 @@ list_set_length(PARROT_INTERP, ARGMOD(List *list), INTVAL len)
 
 /*
 
-=item C<void list_insert(PARROT_INTERP, List *list, INTVAL idx, INTVAL n_items)>
+=item C<void Parrot_pmc_array_insert(PARROT_INTERP, List *list, INTVAL idx,
+INTVAL n_items)>
 
 Makes room for C<n_items> at C<idx>.
 
@@ -1773,9 +1748,9 @@ Makes room for C<n_items> at C<idx>.
 
 PARROT_EXPORT
 void
-list_insert(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
+Parrot_pmc_array_insert(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
 {
-    ASSERT_ARGS(list_insert)
+    ASSERT_ARGS(Parrot_pmc_array_insert)
     List_chunk *chunk;
 
     PARROT_ASSERT(idx >= 0);
@@ -1830,8 +1805,8 @@ list_insert(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
 
             /* copy data over */
             mem_sys_memmove(
-                    (char *)PObj_bufstart(&rest->data),
-                    (char *)PObj_bufstart(&chunk->data) + idx * list->item_size,
+                    (char *)Buffer_bufstart(&rest->data),
+                    (char *)Buffer_bufstart(&chunk->data) + idx * list->item_size,
                     items * list->item_size);
         }
         else {
@@ -1848,7 +1823,8 @@ list_insert(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
 
 /*
 
-=item C<void list_delete(PARROT_INTERP, List *list, INTVAL idx, INTVAL n_items)>
+=item C<void Parrot_pmc_array_delete(PARROT_INTERP, List *list, INTVAL idx,
+INTVAL n_items)>
 
 Deletes C<n_items> at C<idx>.
 
@@ -1858,9 +1834,9 @@ Deletes C<n_items> at C<idx>.
 
 PARROT_EXPORT
 void
-list_delete(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
+Parrot_pmc_array_delete(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
 {
-    ASSERT_ARGS(list_delete)
+    ASSERT_ARGS(Parrot_pmc_array_delete)
     List_chunk *chunk;
 
     PARROT_ASSERT(idx >= 0);
@@ -1895,15 +1871,15 @@ list_delete(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
                             list->item_size;
 
                     mem_sys_memmove(
-                            (char *) PObj_bufstart(&chunk->data) +
+                            (char *) Buffer_bufstart(&chunk->data) +
                             idx * list->item_size,
-                            (char *) PObj_bufstart(&chunk->data) +
+                            (char *) Buffer_bufstart(&chunk->data) +
                             (idx + n_items) * list->item_size, tmp_size);
 #else
                     mem_sys_memmove(
-                            (char *) PObj_bufstart(&chunk->data) +
+                            (char *) Buffer_bufstart(&chunk->data) +
                             idx * list->item_size,
-                            (char *) PObj_bufstart(&chunk->data) +
+                            (char *) Buffer_bufstart(&chunk->data) +
                             (idx + n_items) * list->item_size,
                             (chunk->items - idx - n_items) * list->item_size);
 #endif
@@ -1943,7 +1919,8 @@ list_delete(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, INTVAL n_items)
 
 /*
 
-=item C<void list_push(PARROT_INTERP, List *list, void *item, int type)>
+=item C<void Parrot_pmc_array_push(PARROT_INTERP, List *list, void *item, int
+type)>
 
 Pushes C<item> of type C<type> on to the end of the list.
 
@@ -1953,18 +1930,19 @@ Pushes C<item> of type C<type> on to the end of the list.
 
 PARROT_EXPORT
 void
-list_push(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item), int type)
+Parrot_pmc_array_push(PARROT_INTERP, ARGMOD(List *list), ARGIN_NULLOK(void *item), int type)
 {
-    ASSERT_ARGS(list_push)
+    ASSERT_ARGS(Parrot_pmc_array_push)
     const INTVAL idx = list->start + list->length++;
 
-    list_append(interp, list, item, type, idx);
+    Parrot_pmc_array_append(interp, list, item, type, idx);
 }
 
 
 /*
 
-=item C<void list_unshift(PARROT_INTERP, List *list, void *item, int type)>
+=item C<void Parrot_pmc_array_unshift(PARROT_INTERP, List *list, void *item, int
+type)>
 
 Pushes C<item> of type C<type> on to the start of the list.
 
@@ -1974,9 +1952,9 @@ Pushes C<item> of type C<type> on to the start of the list.
 
 PARROT_EXPORT
 void
-list_unshift(PARROT_INTERP, ARGMOD(List *list), ARGIN(void *item), int type)
+Parrot_pmc_array_unshift(PARROT_INTERP, ARGMOD(List *list), ARGIN(void *item), int type)
 {
-    ASSERT_ARGS(list_unshift)
+    ASSERT_ARGS(Parrot_pmc_array_unshift)
     List_chunk *chunk;
 
     if (list->start == 0) {
@@ -1988,14 +1966,14 @@ list_unshift(PARROT_INTERP, ARGMOD(List *list), ARGIN(void *item), int type)
     else
         chunk = list->first;
 
-    list_set(interp, list, item, type, --list->start);
+    Parrot_pmc_array_set(interp, list, item, type, --list->start);
     list->length++;
 }
 
 
 /*
 
-=item C<void * list_pop(PARROT_INTERP, List *list, int type)>
+=item C<void * Parrot_pmc_array_pop(PARROT_INTERP, List *list, int type)>
 
 Removes and returns the last item of type C<type> from the end of the list.
 
@@ -2006,9 +1984,9 @@ Removes and returns the last item of type C<type> from the end of the list.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void *
-list_pop(PARROT_INTERP, ARGMOD(List *list), int type)
+Parrot_pmc_array_pop(PARROT_INTERP, ARGMOD(List *list), int type)
 {
-    ASSERT_ARGS(list_pop)
+    ASSERT_ARGS(Parrot_pmc_array_pop)
     List_chunk *chunk = list->last;
     UINTVAL     idx;
 
@@ -2032,13 +2010,13 @@ list_pop(PARROT_INTERP, ARGMOD(List *list), int type)
         rebuild_chunk_list(interp, list);
     }
 
-    return list_item(interp, list, type, idx);
+    return Parrot_pmc_array_item(interp, list, type, idx);
 }
 
 
 /*
 
-=item C<void * list_shift(PARROT_INTERP, List *list, int type)>
+=item C<void * Parrot_pmc_array_shift(PARROT_INTERP, List *list, int type)>
 
 Removes and returns the first item of type C<type> from the start of the list.
 
@@ -2049,9 +2027,9 @@ Removes and returns the first item of type C<type> from the start of the list.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 void *
-list_shift(PARROT_INTERP, ARGMOD(List *list), int type)
+Parrot_pmc_array_shift(PARROT_INTERP, ARGMOD(List *list), int type)
 {
-    ASSERT_ARGS(list_shift)
+    ASSERT_ARGS(Parrot_pmc_array_shift)
     void       *ret;
     List_chunk *chunk = list->first;
     UINTVAL     idx;
@@ -2067,7 +2045,7 @@ list_shift(PARROT_INTERP, ARGMOD(List *list), int type)
     else
         list->start++;
 
-    ret = list_item(interp, list, type, idx);
+    ret = Parrot_pmc_array_item(interp, list, type, idx);
 
     if (list->start >= chunk->items) {
         list->cap  -= chunk->items;
@@ -2086,8 +2064,8 @@ list_shift(PARROT_INTERP, ARGMOD(List *list), int type)
 
 /*
 
-=item C<void list_assign(PARROT_INTERP, List *list, INTVAL idx, void *item, int
-type)>
+=item C<void Parrot_pmc_array_assign(PARROT_INTERP, List *list, INTVAL idx, void
+*item, int type)>
 
 Assigns C<item> of type C<type> to index C<idx>.
 
@@ -2097,9 +2075,10 @@ Assigns C<item> of type C<type> to index C<idx>.
 
 PARROT_EXPORT
 void
-list_assign(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, ARGIN_NULLOK(void *item), int type)
+Parrot_pmc_array_assign(PARROT_INTERP, ARGMOD(List *list), INTVAL idx,
+    ARGIN_NULLOK(void *item), int type)
 {
-    ASSERT_ARGS(list_assign)
+    ASSERT_ARGS(Parrot_pmc_array_assign)
     const INTVAL length = list->length;
 
     if (idx < -length)
@@ -2107,17 +2086,18 @@ list_assign(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, ARGIN_NULLOK(void *it
     else if (idx < 0)
         idx += length;
     if (idx >= length) {
-        list_append(interp, list, item, type, list->start + idx);
+        Parrot_pmc_array_append(interp, list, item, type, list->start + idx);
         list->length = idx + 1;
     }
     else
-        list_set(interp, list, item, type, list->start + idx);
+        Parrot_pmc_array_set(interp, list, item, type, list->start + idx);
 }
 
 
 /*
 
-=item C<void * list_get(PARROT_INTERP, List *list, INTVAL idx, int type)>
+=item C<void * Parrot_pmc_array_get(PARROT_INTERP, List *list, INTVAL idx, int
+type)>
 
 Returns the item of type C<type> at index C<idx>.
 
@@ -2129,9 +2109,9 @@ PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 void *
-list_get(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, int type)
+Parrot_pmc_array_get(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, int type)
 {
-    ASSERT_ARGS(list_get)
+    ASSERT_ARGS(Parrot_pmc_array_get)
     const INTVAL length = list->length;
 
     if (idx >= length || -idx > length)
@@ -2142,14 +2122,14 @@ list_get(PARROT_INTERP, ARGMOD(List *list), INTVAL idx, int type)
 
     idx += list->start;
 
-    return list_item(interp, list, type, idx);
+    return Parrot_pmc_array_item(interp, list, type, idx);
 }
 
 
 /*
 
-=item C<void list_splice(PARROT_INTERP, List *list, List *value_list, INTVAL
-offset, INTVAL count)>
+=item C<void Parrot_pmc_array_splice(PARROT_INTERP, List *list, List
+*value_list, INTVAL offset, INTVAL count)>
 
 Replaces C<count> items starting at C<offset> with the items in C<value>.
 
@@ -2161,10 +2141,10 @@ If C<count> is 0 then the items in C<value> will be inserted after C<offset>.
 
 PARROT_EXPORT
 void
-list_splice(PARROT_INTERP, ARGMOD(List *list), ARGMOD_NULLOK(List *value_list),
+Parrot_pmc_array_splice(PARROT_INTERP, ARGMOD(List *list), ARGMOD_NULLOK(List *value_list),
         INTVAL offset, INTVAL count)
 {
-    ASSERT_ARGS(list_splice)
+    ASSERT_ARGS(Parrot_pmc_array_splice)
     const INTVAL value_length = value_list ? value_list->length : 0;
     const INTVAL length       = list->length;
     const int    type         = list->item_type;
@@ -2191,42 +2171,42 @@ list_splice(PARROT_INTERP, ARGMOD(List *list), ARGMOD_NULLOK(List *value_list),
 
     /* replace count items at offset with values */
     for (i = j = 0; i < count && j < value_length; i++, j++) {
-        void *val = list_get(interp, value_list, j, type);
+        void *val = Parrot_pmc_array_get(interp, value_list, j, type);
 
         /* no clone here, if the HL wants to reuse the values, the HL has to */
         /* clone the values */
 
-        /* XXX We don't know that val is non-NULL coming back from list_get. */
+        /* XXX We don't know that val is non-NULL coming back from Parrot_pmc_array_get. */
         /* We need to check that we're not dereferencing NULL. */
         if (type == enum_type_PMC)
             val = *(PMC **)val;
         else if (type == enum_type_STRING)
             val = *(STRING **)val;
 
-        list_assign(interp, list, offset + i, val, type);
+        Parrot_pmc_array_assign(interp, list, offset + i, val, type);
     }
 
     /* if we still have values in value_list, insert them */
     if (j < value_length) {
         /* make room for the remaining values */
-        list_insert(interp, list, offset + i, value_length - j);
+        Parrot_pmc_array_insert(interp, list, offset + i, value_length - j);
 
         for (; j < value_length; i++, j++) {
-            void *val = list_get(interp, value_list, j, type);
+            void *val = Parrot_pmc_array_get(interp, value_list, j, type);
 
             /* XXX We don't know that val is non-NULL coming back from
-             * list_get; check that we're not dereferencing NULL. */
+             * Parrot_pmc_array_get; check that we're not dereferencing NULL. */
             if (type == enum_type_PMC)
                 val = *(PMC **)val;
             else if (type == enum_type_STRING)
                 val = *(STRING **)val;
 
-            list_assign(interp, list, offset + i, val, type);
+            Parrot_pmc_array_assign(interp, list, offset + i, val, type);
         }
     }
     /* else delete the rest */
     else
-        list_delete(interp, list, offset + i, count - i);
+        Parrot_pmc_array_delete(interp, list, offset + i, count - i);
 }
 
 

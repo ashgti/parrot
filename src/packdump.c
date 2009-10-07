@@ -40,12 +40,12 @@ static void PackFile_Constant_dump(PARROT_INTERP,
 static void pobj_flag_dump(PARROT_INTERP, long flags)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_PackFile_Constant_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_PackFile_Constant_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ct) \
-    || PARROT_ASSERT_ARG(self)
-#define ASSERT_ARGS_pobj_flag_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(ct) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_pobj_flag_dump __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -100,7 +100,6 @@ PARROT_OBSERVER static const char * const flag_bit_names[] =
     "private7",
     "is_string",
     "is_PMC",
-    "is_PMC_EXT",
     "is_shared",
     "constant",
     "external",
@@ -112,11 +111,10 @@ PARROT_OBSERVER static const char * const flag_bit_names[] =
     "on_free_list",
     "custom_mark",
     "custom_GC",
-    "active_destroy",
+    "custom_destroy",
     "report",
     "data_is_PMC_array",
     "need_finalize",
-    "is_special_PMC",
     "high_priority_gc",
     "needs_early_gc",
     "is_class",
@@ -226,9 +224,8 @@ PackFile_Constant_dump(PARROT_INTERP, ARGIN(const PackFile_ConstTable *ct),
                     ct_index = PackFile_find_in_const(interp, ct, key, PFC_STRING);
                     Parrot_io_printf(interp, "        PFC_OFFSET  => %ld\n", ct_index);
                     detail = ct->constants[ct_index];
-                    Parrot_io_printf(interp, "        DATA        => '%.*s'\n",
-                              (int)detail->u.string->bufused,
-                              (char *)detail->u.string->strstart);
+                    Parrot_io_printf(interp, "        DATA        => '%Ss'\n",
+                              detail->u.string);
                     Parrot_io_printf(interp, "       },\n");
                     }
                     break;
@@ -269,7 +266,7 @@ PackFile_Constant_dump(PARROT_INTERP, ARGIN(const PackFile_ConstTable *ct),
         Parrot_io_printf(interp, "    [ 'PFC_PMC', {\n");
         {
             PMC * const pmc = self->u.key;
-            Parrot_sub *sub;
+            Parrot_Sub_attributes *sub;
             STRING * const null = Parrot_str_new_constant(interp, "(null)");
             STRING *namespace_description;
 

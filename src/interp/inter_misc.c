@@ -22,6 +22,7 @@ NCI function setup, compiler registration, C<interpinfo>, and C<sysinfo> opcodes
 #include "parrot/parrot.h"
 #include "inter_misc.str"
 #include "../compilers/imcc/imc.h"
+#include "parrot/runcore_api.h"
 
 #include "parrot/has_header.h"
 
@@ -172,31 +173,11 @@ Parrot_compile_file(PARROT_INTERP, ARGIN(const char *fullname), ARGOUT(STRING **
     return IMCC_compile_file_s(interp, fullname, error);
 }
 
-#ifdef GC_IS_MALLOC
-#  if 0
-struct mallinfo {
-    int arena;                  /* non-mmapped space allocated from system */
-    int ordblks;                /* number of free chunks */
-    int smblks;                 /* number of fastbin blocks */
-    int hblks;                  /* number of mmapped regions */
-    int hblkhd;                 /* space in mmapped regions */
-    int usmblks;                /* maximum total allocated space */
-    int fsmblks;                /* space available in freed fastbin blocks */
-    int uordblks;               /* total allocated space */
-    int fordblks;               /* total free space */
-    int keepcost;               /* top-most, releasable (via malloc_trim)
-                                 * space */
-};
-#  endif
-extern struct mallinfo mallinfo(void);
-#endif /* GC_IS_MALLOC */
-
 /*
 
 =item C<INTVAL interpinfo(PARROT_INTERP, INTVAL what)>
 
-C<what> specifies the type of information you want about the
-interpreter.
+C<what> specifies the type of information you want about the interpreter.
 
 =cut
 
@@ -212,11 +193,6 @@ interpinfo(PARROT_INTERP, INTVAL what)
 
     switch (what) {
         case TOTAL_MEM_ALLOC:
-#ifdef GC_IS_MALLOC
-#  if 0
-            interp->memory_allocated = mallinfo().uordblks;
-#  endif
-#endif
             ret = Parrot_gc_total_memory_allocated(interp);
             break;
         case GC_MARK_RUNS:
@@ -252,13 +228,31 @@ interpinfo(PARROT_INTERP, INTVAL what)
         case IMPATIENT_PMCS:
             ret = Parrot_gc_impatient_pmcs(interp);
             break;
-        case EXTENDED_PMCS:
-            ret = Parrot_gc_extended_pmcs(interp);
-            break;
         case CURRENT_RUNCORE:
-            ret = interp->run_core;
-            break;
+        {
+            STRING *name = interp->run_core->name;
+
+            if (Parrot_str_equal(interp, name, CONST_STRING(interp, "slow")))
+                return PARROT_SLOW_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "fast")))
+                return PARROT_FAST_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "switch")))
+                return PARROT_SWITCH_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "cgp")))
+                return PARROT_CGP_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "cgoto")))
+                return PARROT_CGOTO_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "exec")))
+                return PARROT_EXEC_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "gc_debug")))
+                return PARROT_GC_DEBUG_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "debugger")))
+                return PARROT_DEBUGGER_CORE;
+            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "profiling")))
+                return PARROT_PROFILING_CORE;
+        }
         default:        /* or a warning only? */
+            ret = -1;
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");
     }
@@ -285,19 +279,19 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
     ASSERT_ARGS(interpinfo_p)
     switch (what) {
         case CURRENT_SUB:
-            return CONTEXT(interp)->current_sub;
+            return Parrot_pcc_get_sub(interp, CURRENT_CONTEXT(interp));
         case CURRENT_CONT:
             {
-            PMC * const cont = CONTEXT(interp)->current_cont;
+            PMC * const cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
             if (!PMC_IS_NULL(cont) && cont->vtable->base_type ==
                     enum_class_RetContinuation)
                 return VTABLE_clone(interp, cont);
             return cont;
             }
         case CURRENT_OBJECT:
-            return CONTEXT(interp)->current_object;
+            return Parrot_pcc_get_object(interp, CURRENT_CONTEXT(interp));
         case CURRENT_LEXPAD:
-            return CONTEXT(interp)->lex_pad;
+            return Parrot_pcc_get_lex_pad(interp, CURRENT_CONTEXT(interp));
         default:        /* or a warning only? */
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");
