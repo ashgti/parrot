@@ -1392,8 +1392,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* the call obj doesn't have the returns as positionals, so instead we loop
      * over raw_sig and count the number of non-named
-     *
-     * XXX Do we need to check for :flat?
      */
     for (i = 0; i < return_count; i++) {
         INTVAL flags = VTABLE_get_integer_keyed_int(interp, raw_sig, i);
