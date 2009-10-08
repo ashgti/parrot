@@ -360,7 +360,7 @@ pbc_merge_bytecode(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
     /* Stash produced bytecode. */
     bc_seg->base.data = bc;
     bc_seg->base.size = cursor;
-    bc_seg->base.name = mem_sys_strdup("MERGED");
+    bc_seg->base.name = Parrot_str_new_constant(interp, "MERGED");
     return bc_seg;
 }
 
@@ -547,8 +547,6 @@ pbc_merge_fixups(PARROT_INTERP, ARGIN(pbc_merge_input **inputs),
                     Parrot_io_eprintf(interp, "PBC Merge: Unknown fixup type");
                     Parrot_exit(interp, 1);
             }
-
-            copy->seg = bc;
 
             /* Slot it into the list. */
             fixups[cursor] = copy;
