@@ -624,28 +624,38 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
         /* Returns store a pointer to the register, so they can pass
          * the result back to the caller. */
         PMC * const val_pointer = pmc_new(interp, enum_class_CPointer);
-        VTABLE_push_pmc(interp, returns, val_pointer);
 
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
             case PARROT_ARG_INTVAL:
                 string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "I"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_INT(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "I"));
+                VTABLE_push_pmc(interp, returns, val_pointer);
                 break;
             case PARROT_ARG_FLOATVAL:
                 string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "N"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_NUM(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "N"));
+                VTABLE_push_pmc(interp, returns, val_pointer);
                 break;
             case PARROT_ARG_STRING:
-                string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "S"));
-                VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_STR(ctx, raw_index)));
-                VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "S"));
+                if (arg_flags & PARROT_ARG_NAME) {
+                    PMC *name_string = pmc_new(interp, enum_class_String);
+                    VTABLE_set_string_native(interp, name_string, (CTX_REG_STR(ctx, raw_index)));
+                    VTABLE_push_pmc(interp, returns, name_string);
+                }
+                else {
+                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "S"));
+                    VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_STR(ctx, raw_index)));
+                    VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "S"));
+                    VTABLE_push_pmc(interp, returns, val_pointer);
+                }
                 break;
             case PARROT_ARG_PMC:
                 string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_PMC(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "P"));
+                VTABLE_push_pmc(interp, returns, val_pointer);
                 break;
             default:
                 break;
