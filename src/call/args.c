@@ -1370,7 +1370,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* Check if we should be throwing errors. This is configured separately
      * for parameters and return values. */
-    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_PARAM_COUNT_FLAG))
+    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_RESULT_COUNT_FLAG))
             err_check = 1;
 
     /* A null call object is fine if there are no returns and no results. */
