@@ -1355,6 +1355,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     ASSERT_ARGS(fill_results)
     PMC    *ctx = CURRENT_CONTEXT(interp);
     PMC    *named_used_list = PMCNULL;
+    PMC    *named_return_list = PMCNULL;
     INTVAL  return_count    = VTABLE_elements(interp, raw_sig);
     INTVAL  result_count;
     INTVAL  positional_returns = 0; /* initialized by a loop later */
@@ -1391,12 +1392,14 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
 
     /* the call obj doesn't have the returns as positionals, so instead we loop
-     * over raw_sig and count the number of non-named
+     * over raw_sig and count the number of returns before the first named return.
      */
     for (i = 0; i < return_count; i++) {
         INTVAL flags = VTABLE_get_integer_keyed_int(interp, raw_sig, i);
-        if (!(flags & PARROT_ARG_NAME))
-            positional_returns++;
+        if (flags & PARROT_ARG_NAME)
+            break;
+
+        positional_returns++;
     }
 
     /*
@@ -1410,14 +1413,13 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         INTVAL result_flags;
         INTVAL return_flags;
         PMC *result_item;
-        INTVAL constant;
 
         /* Check if we've used up all the returns. */
-        if (return_index >= return_count) {
-            if (result_index >= result_count) {
-                /* We've used up all the positional returns and results, we're
-                 * done with this loop. */
-                break;
+        if (result_index >= result_count) {
+            if (return_index >= return_count) {
+                /* We've used up all returns and results, we're
+                 * done with the whole process. */
+                return;
             }
             else if (err_check) {
                 /* We've used up all the results, but have extra positional
@@ -1442,7 +1444,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
         return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
         result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
-        constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
 
         /* If the result is slurpy, collect all remaining positional
          * returns into an array.*/
@@ -1462,6 +1463,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
             /* Iterate over all positional arguments in the returns list. */
             while (!(return_flags & PARROT_ARG_NAME)) {
+                INTVAL constant;
                 return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
                 constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
                 switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
@@ -1498,7 +1500,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         }
 
         /* We have a positional return, fill the result with it. */
-        if (result_index < result_count) {
+        if (return_index < positional_returns) {
 
             /* Fill a named result with a positional return. */
             if (result_flags & PARROT_ARG_NAME) {
@@ -1506,19 +1508,18 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 if (!(result_flags & PARROT_ARG_STRING))
                     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                             "named results must have a name specified");
-                result_name = PARROT_ARG_CONSTANT_ISSET(result_flags)
-                                   ? accessor->string_constant(interp, return_info, result_index)
-                                   : *accessor->string(interp, return_info, result_index);
+                result_name = VTABLE_get_string(interp, result_item);
                 named_count++;
                 result_index++;
                 if (result_index >= result_count)
                     continue;
-                result_flags = VTABLE_get_integer_keyed_int(interp,
-                            raw_sig, result_index);
+                result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
+                result_item  = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
 
                 /* Mark the name as used, cannot be filled again. */
                 if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
-                    named_used_list = pmc_new(interp, enum_class_Hash);
+                    named_used_list = pmc_new(interp,
+                            Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
                 VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
             }
             else if (named_count > 0) {
@@ -1530,6 +1531,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             /* Go ahead and fill the result with a positional return. */
             switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
+                INTVAL constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
                 case PARROT_ARG_INTVAL:
                     if (constant)
                         VTABLE_set_integer_native(interp, result_item,
@@ -1577,6 +1579,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             raw_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
+                        result_item = VTABLE_get_pmc_keyed_int(interp, result_list,
+                                result_index);
                         VTABLE_set_integer_native(interp, result_item, 1);
                     }
                 }
@@ -1598,9 +1602,11 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
              * with a default value. */
             if (result_index + 1 < result_count) {
                 next_result_flags = VTABLE_get_integer_keyed_int(interp,
-                        raw_sig, result_index + 1);
+                        result_sig, result_index + 1);
                 if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                     result_index++;
+                    result_item = VTABLE_get_pmc_keyed_int(interp, result_list,
+                            result_index);
                     VTABLE_set_integer_native(interp, result_item, 0);
                 }
             }
@@ -1623,7 +1629,43 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         result_index++;
     }
 
-    /* Now iterate over the named returns and results. */
+    for (; return_index < return_count; return_index++) {
+        STRING *return_name;
+        INTVAL  return_flags;
+
+        /* All remaining returns must be named. */
+        if (!(return_flags & PARROT_ARG_NAME))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named returns must follow all positional returns");
+
+        if (VTABLE_exists_keyed_str(interp, named_used_list, return_name))
+            continue;
+
+        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+
+        if (!(return_flags & PARROT_ARG_STRING))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named results must have a name specified");
+
+        return_name = PARROT_ARG_CONSTANT_ISSET(return_flags)
+                           ? accessor->string_constant(interp, return_info, return_index)
+                           : *accessor->string(interp, return_info, return_index);
+        named_count++;
+        return_index++;
+        if (result_index >= result_count)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "named returns must have a value");
+
+        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+
+        if (PMC_IS_NULL(named_return_list)) /* Only created if needed. */
+            named_return_list = pmc_new(interp,
+                    Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
+        VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
+    }
+
+    /* Now iterate over the named results, filling them from the
+     * temporary hash of named returns. */
     while (1) {
         STRING *result_name    = NULL;
         PMC *result_item;
@@ -1634,99 +1676,66 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (result_index >= result_count)
             break;
 
-        result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
-        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+        result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
+        result_item  = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
 
         /* All remaining results must be named. */
-        if (!(result_flags & PARROT_ARG_NAME)) {
+        if (!(result_flags & PARROT_ARG_NAME))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named results must follow all positional results");
-        }
 
         /* Collected ("slurpy") named result */
         if (result_flags & PARROT_ARG_SLURPY_ARRAY) {
-            PMC * const collect_named = pmc_new(interp,
-                    Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
-            PMC *named_return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
-            if (!PMC_IS_NULL(named_return_list)) {
-                INTVAL named_return_count = VTABLE_elements(interp, named_return_list);
-                INTVAL named_return_index;
-                PMC *named_key = pmc_new(interp, enum_class_Key);
-                VTABLE_set_integer_native(interp, named_key, 0);
-                SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
+            if (PMC_IS_NULL(named_return_list))
+                named_return_list = pmc_new(interp,
+                        Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
 
-                /* Low-level hash iteration. */
-                for (named_return_index = 0;
-                     named_return_index < named_return_count;
-                     named_return_index++) {
-                    if (!PMC_IS_NULL(named_key)) {
-                        STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                  (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
-                        PARROT_ASSERT(name);
-                        if ((PMC_IS_NULL(named_used_list)) ||
-                                !VTABLE_exists_keyed_str(interp, named_used_list, name)) {
-                            VTABLE_set_pmc_keyed_str(interp, collect_named, name,
-                                    VTABLE_get_pmc_keyed_str(interp, call_object, name));
-                            /* Mark the name as used, cannot be filled again. */
-                            if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
-                                named_used_list = pmc_new(interp, enum_class_Hash);
-                            VTABLE_set_integer_keyed_str(interp, named_used_list, name, 1);
-                            named_count++;
-                        }
-                    }
-                }
-            }
-
-            VTABLE_set_pmc(interp, result_item, collect_named);
+            VTABLE_set_pmc(interp, result_item, named_return_list);
             break; /* End of named results. */
         }
 
         /* Store the name. */
-       if (!(result_flags & PARROT_ARG_STRING))
+        if (!(result_flags & PARROT_ARG_STRING))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named results must have a name specified");
-        result_name = PARROT_ARG_CONSTANT_ISSET(result_flags)
-                               ? accessor->string_constant(interp, return_info, result_index)
-                               : *accessor->string(interp, return_info, result_index);
+        result_name = VTABLE_get_string(interp, result_item);
 
         if (!STRING_IS_NULL(result_name)) {
             /* The next result is the actual value. */
             result_index++;
             if (result_index >= result_count)
                 continue;
-            result_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, result_index);
+            result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
+            result_item  = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
 
-            if (VTABLE_exists_keyed_str(interp, call_object, result_name)) {
+            if (VTABLE_exists_keyed_str(interp, named_return_list, result_name)) {
 
-                /* Mark the name as used, cannot be filled again. */
-                if (PMC_IS_NULL(named_used_list)) /* Only created if needed. */
-                    named_used_list = pmc_new(interp, enum_class_Hash);
-                VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
                 named_count++;
 
                 /* Fill the named result. */
                 switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
                     case PARROT_ARG_INTVAL:
                         VTABLE_set_integer_native(interp, result_item,
-                            *accessor->intval(interp, return_info, result_index));
+                            VTABLE_get_integer_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_FLOATVAL:
                         VTABLE_set_number_native(interp, result_item,
-                            *accessor->numval(interp, return_info, result_index));
+                            VTABLE_get_number_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_STRING:
                         VTABLE_set_string_native(interp, result_item,
-                            *accessor->string(interp, return_info, result_index));
+                            VTABLE_get_string_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_PMC:
                         VTABLE_set_pmc(interp, result_item,
-                            *accessor->pmc(interp, return_info, result_index));
+                            VTABLE_get_pmc_keyed_str(interp, named_return_list, result_name));
                         break;
                     default:
                         Parrot_ex_throw_from_c_args(interp, NULL,
                                 EXCEPTION_INVALID_OPERATION, "invalid result type");
                         break;
                 }
+                VTABLE_delete_keyed_str(interp, named_return_list, result_name);
 
                 /* Mark the option flag for the filled result. */
                 if (result_flags & PARROT_ARG_OPTIONAL) {
@@ -1737,6 +1746,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 raw_sig, result_index + 1);
                         if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                             result_index++;
+                            result_item = VTABLE_get_pmc_keyed_int(interp,
+                                    result_list, result_index);
                             VTABLE_set_integer_native(interp, result_item, 1);
                         }
                     }
@@ -1751,7 +1762,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                  * with a default value. */
                 if (result_index + 1 < result_count) {
                     next_result_flags = VTABLE_get_integer_keyed_int(interp,
-                            raw_sig, result_index + 1);
+                            result_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
                         result_item = VTABLE_get_pmc_keyed_int(interp,
@@ -1760,7 +1771,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     }
                 }
             }
-            /* We don't have an return for the result, and it's not optional,
+            /* We don't have a return for the result, and it's not optional,
              * so it's an error. */
             else {
                 if (err_check)
@@ -1775,40 +1786,12 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* Double check that all named returns were assigned to results. */
     if (err_check) {
-        PMC *named_return_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
         if (!PMC_IS_NULL(named_return_list)) {
             INTVAL named_return_count = VTABLE_elements(interp, named_return_list);
-            if (PMC_IS_NULL(named_used_list))
+            if (named_return_count > 0)
                     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                            "too many named returns: %d passed, 0 used",
-                            named_return_count);
-            if (named_return_count > named_count) {
-                /* At this point we know we have named returns that weren't
-                 * assigned to results. We're going to throw an exception
-                 * anyway, so spend a little extra effort to tell the user *which*
-                 * named return is extra. */
-                INTVAL named_return_index;
-                PMC *named_key = pmc_new(interp, enum_class_Key);
-                VTABLE_set_integer_native(interp, named_key, 0);
-                SETATTR_Key_next_key(interp, named_key, (PMC *)INITBucketIndex);
-
-                /* Low-level hash iteration. */
-                for (named_return_index = 0;
-                     named_return_index < named_return_count;
-                     named_return_index++) {
-                    if (!PMC_IS_NULL(named_key)) {
-                        STRING *name = (STRING *)parrot_hash_get_idx(interp,
-                                  (Hash *)VTABLE_get_pointer(interp, named_return_list), named_key);
-                        PARROT_ASSERT(name);
-                        if (!VTABLE_exists_keyed_str(interp, named_used_list, name)) {
-                            Parrot_ex_throw_from_c_args(interp, NULL,
-                                    EXCEPTION_INVALID_OPERATION,
-                                    "too many named returns: '%S' not used",
-                                    name);
-                        }
-                    }
-                }
-            }
+                            "too many named returns: %d passed, %d used",
+                            named_return_count + named_count, named_count);
         }
     }
 
