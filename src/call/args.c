@@ -1388,7 +1388,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     result_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
-    result_count = VTABLE_elements(interp, result_list);
+    result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
 
     /* the call obj doesn't have the returns as positionals, so instead we loop
      * over raw_sig and count the number of non-named
@@ -1420,6 +1420,16 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 break;
             }
             else if (err_check) {
+                /* We've used up all the results, but have extra positional
+                 * returns left over. */
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too many positional returns: %d passed, %d expected",
+                        return_index, result_count);
+            }
+            return;
+        }
+        else if (result_index >= result_count) {
+            if (err_check) {
                 /* We've used up all the results, but have extra positional
                  * returns left over. */
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
