@@ -817,6 +817,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 {
     ASSERT_ARGS(fill_params)
     PMC    *named_used_list = PMCNULL;
+    PMC    *arg_sig;
     INTVAL  param_count     = VTABLE_elements(interp, raw_sig);
     INTVAL  positional_args;
     INTVAL  param_index     = 0;
@@ -841,6 +842,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     }
 
     positional_args = VTABLE_elements(interp, call_object);
+    arg_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"));
 
     /* First iterate over positional args and positional parameters. */
     arg_index = 0;
@@ -1018,6 +1020,18 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (!(param_flags & PARROT_ARG_NAME)) {
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named parameters must follow all positional parameters");
+        }
+
+        if (arg_index < positional_args) {
+            /* We've used up all the positional parameters, but have extra
+             * positional args left over. */
+            if (VTABLE_get_integer_keyed_int(interp, arg_sig, arg_index) & PARROT_ARG_NAME) {
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "named arguments must follow all positional arguments");
+            }
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                    "too many positional arguments: %d passed, %d expected",
+                    positional_args, param_index);
         }
 
         /* Collected ("slurpy") named parameter */

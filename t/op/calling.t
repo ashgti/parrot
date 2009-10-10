@@ -2287,7 +2287,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
     .param pmc args :slurpy :named
 .end
 CODE
-/positional inside named args at position 2/
+/too many positional arguments/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
@@ -2300,7 +2300,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
     .param pmc args :slurpy :named
 .end
 CODE
-/positional inside named args at position 3/
+/named arguments must follow all positional arguments/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "RT #40490 - flat/slurpy named arguments" );
