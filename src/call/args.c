@@ -1161,6 +1161,8 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         param_index++;
     }
 
+    return; /* NO ERROR CHECKING for extra named parameters */
+#if 0
     /* Double check that all named arguments were assigned to parameters. */
     if (err_check) {
         PMC *named_arg_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
@@ -1197,6 +1199,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             }
         }
     }
+#endif
 }
 
 /*
