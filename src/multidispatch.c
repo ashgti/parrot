@@ -684,9 +684,16 @@ Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
                         i, enum_type_FLOATVAL);
                 break;
             case 'S':
-                VTABLE_set_integer_keyed_int(interp, type_tuple,
-                        i, enum_type_STRING);
-                break;
+                {
+                    INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
+                    if (type_lookahead == 'n') {
+                        args_ended = 1;
+                        break;
+                    }
+                    VTABLE_set_integer_keyed_int(interp, type_tuple,
+                            i, enum_type_STRING);
+                    break;
+                }
             case 'P':
             {
                 INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
@@ -696,6 +703,10 @@ Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
                             EXCEPTION_INVALID_OPERATION,
                             "Multiple Dispatch: only the first argument can be an invocant");
                     seen_invocant = 1;
+                }
+                else if (type_lookahead == 'f') {
+                    args_ended = 1;
+                    break;
                 }
                 else {
                     PMC *pmc_arg = VTABLE_get_pmc_keyed_int(interp, sig_obj, i);
