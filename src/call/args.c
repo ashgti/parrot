@@ -1094,7 +1094,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                         break;
                     case PARROT_ARG_PMC:
                         *accessor->pmc(interp, arg_info, param_index) = clone_key_arg(interp,
-                                VTABLE_get_pmc_keyed_int(interp, call_object, arg_index));
+                                VTABLE_get_pmc_keyed_str(interp, call_object, param_name));
                         break;
                     default:
                         Parrot_ex_throw_from_c_args(interp, NULL,
