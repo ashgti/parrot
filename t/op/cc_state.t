@@ -71,13 +71,13 @@ pcc_ok( { params => ".param pmc abc :optional :slurpy" },
 
 pcc_error_like(
     { params => ".param pmc abc :named('x')" },
-    '/too few arguments passed - missing required named arg \'x\'/',
+    '/too few named arguments: no argument for required parameter \'x\'/',
     'G5: argument underflow: named required param',
 );
 
 pcc_error_like(
     { params => ".param pmc abc :named('x') :slurpy" },
-    '/too few arguments passed - missing required named arg \'x\'/',
+    '/too few named arguments: no argument for required parameter \'x\'/',
     'G6: argument underflow: named required slurpy param',
 );
 
