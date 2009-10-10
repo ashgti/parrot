@@ -667,7 +667,7 @@ run_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 {
     ASSERT_ARGS(run_sub)
     Parrot_runcore_t *old_core = interp->run_core;
-    PMC              *retval;
+    PMC              *retval   = PMCNULL;
 
     /* turn off JIT and prederef - both would act on the whole
      * PackFile which probably isn't worth the effort */
