@@ -1473,7 +1473,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             collect_positional = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
             /* Iterate over all positional arguments in the returns list. */
-            while (!(return_flags & PARROT_ARG_NAME)) {
+            while (!(return_flags & PARROT_ARG_NAME) && return_index < return_count) {
                 INTVAL constant;
                 return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
                 constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
