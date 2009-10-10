@@ -1372,6 +1372,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     INTVAL  i = 0;                  /* used by the initialization loop */
     STRING *result_name     = NULL;
     INTVAL  return_index    = 0;
+    INTVAL  return_subindex = 0;
     INTVAL  result_index    = 0;
     INTVAL  positional_index = 0;
     INTVAL  named_count    = 0;
@@ -1413,11 +1414,11 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     }
 
     /*
-     * Parrot_io_eprintf(interp,
- *  "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
-     *     return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig),
-     *     VTABLE_get_repr(interp, result_sig));
-     */
+    Parrot_io_eprintf(interp,
+         "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
+         return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig),
+         VTABLE_get_repr(interp, result_sig));
+    */
 
     while (1) {
         INTVAL result_flags;
@@ -1493,6 +1494,10 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 :*accessor->string(interp, return_info, return_index));
                         break;
                     case PARROT_ARG_PMC:
+                        if (return_flags & PARROT_ARG_FLATTEN) {
+                            Parrot_ex_throw_from_c_args(interp, NULL,
+                                    EXCEPTION_INVALID_OPERATION, "We don't handle :flat returns into a :slurpy result yet\n");
+                        }
                         VTABLE_push_pmc(interp, collect_positional, constant?
                                 accessor->pmc_constant(interp, return_info, return_index)
                                 :*accessor->pmc(interp, return_info, return_index));
@@ -1567,13 +1572,31 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             *accessor->string(interp, return_info, return_index));
                     break;
                 case PARROT_ARG_PMC:
-                    if (constant)
-                        VTABLE_set_pmc(interp, result_item,
-                            accessor->pmc_constant(interp, return_info, return_index));
-                    else
-                        VTABLE_set_pmc(interp, result_item,
-                            *accessor->pmc(interp, return_info, return_index));
-                    break;
+                    {
+                        PMC *return_item = (constant) ? accessor->pmc_constant(interp, return_info, return_index)
+                                                    : *accessor->pmc(interp, return_info, return_index);
+                        if (return_flags & PARROT_ARG_FLATTEN) {
+                            INTVAL flat_elems;
+                            if (!VTABLE_does(interp, return_item, CONST_STRING(interp, "array"))) {
+                                Parrot_ex_throw_from_c_args(interp, NULL,
+                                        EXCEPTION_INVALID_OPERATION, "flattened return on a non-array");
+                            }
+                            flat_elems = VTABLE_elements(interp, return_item);
+                            if (return_subindex < flat_elems) {
+                                /* fetch an item out of the aggregate */
+                                return_item = VTABLE_get_pmc_keyed_int(interp, return_item, return_subindex);
+                                return_subindex++;
+                            }
+                            if (return_subindex >= flat_elems) {
+                                return_subindex = 0; /* reset */
+                            }
+                            else {
+                                return_index--; /* we want to stay on the same item */
+                            }
+                        }
+                        VTABLE_set_pmc(interp, result_item, return_item);
+                        break;
+                    }
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
                             EXCEPTION_INVALID_OPERATION, "invalid return type");
