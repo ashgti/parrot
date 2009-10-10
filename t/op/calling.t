@@ -1984,7 +1984,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "named => pos passing" );
         .param int b
 .end
 CODE
-/many named arguments/
+/too few positional/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "named optional - set" );
@@ -2118,7 +2118,7 @@ CODE
 1120
 OUTPUT
 
-pir_error_output_like( <<'CODE', qr/named parameters must follow all positional parameters/, "argc mismatch - missing named" );
+pir_error_output_like( <<'CODE', qr/too few named arguments/, "argc mismatch - missing named" );
 .sub main :main
     .include "errors.pasm"
     errorson .PARROT_ERRORS_PARAM_COUNT_FLAG
@@ -2136,7 +2136,7 @@ pir_error_output_like( <<'CODE', qr/named parameters must follow all positional 
 .end
 CODE
 
-pir_error_output_like( <<'CODE', qr/too few positional arguments/, "argc mismatch - missing named" );
+pir_error_output_like( <<'CODE', qr/too few named arguments/, "argc mismatch - missing named" );
 .sub main :main
     .include "errors.pasm"
     errorson .PARROT_ERRORS_PARAM_COUNT_FLAG
