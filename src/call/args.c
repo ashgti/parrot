@@ -1369,7 +1369,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     INTVAL  result_count;
     INTVAL  positional_returns = 0; /* initialized by a loop later */
     INTVAL  i = 0;                  /* used by the initialization loop */
-    STRING *result_name     = NULL;
     INTVAL  return_index    = 0;
     INTVAL  return_subindex = 0;
     INTVAL  result_index    = 0;
@@ -1697,7 +1696,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (PMC_IS_NULL(named_return_list)) /* Only created if needed. */
             named_return_list = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
-        VTABLE_set_integer_keyed_str(interp, named_used_list, result_name, 1);
+        VTABLE_set_integer_keyed_str(interp, named_return_list, return_name, 1);
     }
 
     /* Now iterate over the named results, filling them from the
