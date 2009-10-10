@@ -1440,9 +1440,9 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             }
             return;
         }
-        else if (result_index >= result_count) {
+        else if (return_index >= return_count) {
             if (err_check) {
-                /* We've used up all the results, but have extra positional
+                /* We've used up all the returns, but have extra positional
                  * returns left over. */
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many positional returns: %d passed, %d expected",
