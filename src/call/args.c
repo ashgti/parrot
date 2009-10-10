@@ -1511,6 +1511,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         /* We have a positional return, fill the result with it. */
         if (return_index < positional_returns) {
+            INTVAL constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
 
             /* Fill a named result with a positional return. */
             if (result_flags & PARROT_ARG_NAME) {
@@ -1541,7 +1542,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             /* Go ahead and fill the result with a positional return. */
             switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
-                INTVAL constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
                 case PARROT_ARG_INTVAL:
                     if (constant)
                         VTABLE_set_integer_native(interp, result_item,
@@ -2024,9 +2024,10 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_objec
     if (PMC_IS_NULL(call_object)) {
         if (raw_return_count > 0)
             if (err_check)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                        "too many return values: %d passed, 0 expected",
-                        raw_return_count);
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_OPERATION,
+                    "too many return values: %d passed, 0 expected",
+                    raw_return_count);
         return;
     }
 
@@ -2036,7 +2037,7 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_objec
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too many return values: %d passed, 0 expected",
-                        raw_return_count, return_list_elements);
+                        raw_return_count);
         return;
     }
     else
