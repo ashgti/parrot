@@ -644,7 +644,8 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
                 }
                 else {
                     string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "S"));
-                    VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_STR(ctx, raw_index)));
+                    VTABLE_set_pointer(interp, val_pointer,
+                                       (void *) &(CTX_REG_STR(ctx, raw_index)));
                     VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "S"));
                     VTABLE_push_pmc(interp, returns, val_pointer);
                 }
@@ -1413,7 +1414,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /*
     Parrot_io_eprintf(interp,
-         "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
+     "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
          return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig),
          VTABLE_get_repr(interp, result_sig));
     */
@@ -1494,7 +1495,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     case PARROT_ARG_PMC:
                         if (return_flags & PARROT_ARG_FLATTEN) {
                             Parrot_ex_throw_from_c_args(interp, NULL,
-                                    EXCEPTION_INVALID_OPERATION, "We don't handle :flat returns into a :slurpy result yet\n");
+                                    EXCEPTION_INVALID_OPERATION,
+                                    "We don't handle :flat returns into a :slurpy result yet\n");
                         }
                         VTABLE_push_pmc(interp, collect_positional, constant?
                                 accessor->pmc_constant(interp, return_info, return_index)
@@ -1571,18 +1573,21 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     break;
                 case PARROT_ARG_PMC:
                     {
-                        PMC *return_item = (constant) ? accessor->pmc_constant(interp, return_info, return_index)
-                                                    : *accessor->pmc(interp, return_info, return_index);
+                        PMC *return_item = (constant)
+                                         ? accessor->pmc_constant(interp, return_info, return_index)
+                                         : *accessor->pmc(interp, return_info, return_index);
                         if (return_flags & PARROT_ARG_FLATTEN) {
                             INTVAL flat_elems;
                             if (!VTABLE_does(interp, return_item, CONST_STRING(interp, "array"))) {
                                 Parrot_ex_throw_from_c_args(interp, NULL,
-                                        EXCEPTION_INVALID_OPERATION, "flattened return on a non-array");
+                                                            EXCEPTION_INVALID_OPERATION,
+                                                            "flattened return on a non-array");
                             }
                             flat_elems = VTABLE_elements(interp, return_item);
                             if (return_subindex < flat_elems) {
                                 /* fetch an item out of the aggregate */
-                                return_item = VTABLE_get_pmc_keyed_int(interp, return_item, return_subindex);
+                                return_item = VTABLE_get_pmc_keyed_int(interp, return_item,
+                                                                       return_subindex);
                                 return_subindex++;
                             }
                             if (return_subindex >= flat_elems) {
