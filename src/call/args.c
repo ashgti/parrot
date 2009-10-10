@@ -1414,7 +1414,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /*
     Parrot_io_eprintf(interp,
-     "return_count: %d\nresult_count: %d\npositional_returns: %d\nreturn_sig: %S\nresult_sig: %S\n",
+     "return_count: %d\nresult_count: %d\npositional_returns: %d\nraw_sig: %S\nresult_sig: %S\n",
          return_count, result_count, positional_returns, VTABLE_get_repr(interp, raw_sig),
          VTABLE_get_repr(interp, result_sig));
     */
@@ -1612,7 +1612,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
                 if (result_index + 1 < result_count) {
                     next_result_flags = VTABLE_get_integer_keyed_int(interp,
-                            raw_sig, result_index + 1);
+                            result_sig, result_index + 1);
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
                         result_item = VTABLE_get_pmc_keyed_int(interp, result_list,
