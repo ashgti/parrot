@@ -1153,8 +1153,6 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
      * hackish, added for backward compatibility in deprecated API function,
      * see TT #XXX). */
     append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
-    PMC_get_sub(interp, sub_pmc, sub);
-    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp), sub->seg->const_table->constants);
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
     return result;

@@ -387,6 +387,7 @@ Invokes the subroutine.
         context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
         Parrot_pcc_set_sub(interp, context, SELF);
         Parrot_pcc_set_continuation(interp, context, ccont);
+        Parrot_pcc_set_constants(interp, context, sub->seg->const_table->constants);
 
         /* check recursion/call depth */
         if (Parrot_pcc_inc_recursion_depth(INTERP, context) > INTERP->recursion_limit)

@@ -688,7 +688,7 @@ main(int argc, char* argv[])
     Parrot_pbc_load( interp, pf );
 
     sub      = Parrot_find_global_cur( interp, Parrot_str_new_constant( interp, "add" ) );
-    result   = Parrot_call_sub( interp, sub, "III", 100, 200 );
+    result   = Parrot_call_sub_ret_int( interp, sub, "III", 100, 200 );
     printf( "Result is %d.\\n", result );
 
     Parrot_exit(interp, 0);
