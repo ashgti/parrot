@@ -1544,10 +1544,9 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     while (1) {
         INTVAL result_flags;
-        INTVAL return_flags;
         PMC *result_item;
 
-        /* Check if we've used up all the returns. */
+        /* Check if we've used up all the results. */
         if (result_index >= result_count) {
             if (return_index >= return_count) {
                 /* We've used up all returns and results, we're
@@ -1563,20 +1562,9 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             }
             return;
         }
-        else if (return_index >= return_count) {
-            if (err_check) {
-                /* We've used up all the returns, but have extra positional
-                 * returns left over. */
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                        "too many positional returns: %d passed, %d expected",
-                        return_index, result_count);
-            }
-            return;
-        }
 
         result_flags = VTABLE_get_integer_keyed_int(interp, result_sig, result_index);
-        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
-        result_item = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
+        result_item  = VTABLE_get_pmc_keyed_int(interp, result_list, result_index);
 
         /* If the result is slurpy, collect all remaining positional
          * returns into an array.*/
@@ -1594,10 +1582,19 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
             collect_positional = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_ResizablePMCArray));
-            /* Iterate over all positional arguments in the returns list. */
-            while (!(return_flags & PARROT_ARG_NAME) && return_index < return_count) {
+
+            /* Iterate over all positional returns in the list. */
+            while (1) {
                 INTVAL constant;
+                INTVAL return_flags;
+                if (return_index >= return_count)
+                    break; /* no more returns */
+
                 return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+
+                if (return_flags & PARROT_ARG_NAME)
+                    break; /* stop at named returns */
+
                 constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
                 switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
                     case PARROT_ARG_INTVAL:
@@ -1639,7 +1636,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
         /* We have a positional return, fill the result with it. */
         if (return_index < positional_returns) {
-            INTVAL constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
+            INTVAL return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
+            INTVAL constant     = PARROT_ARG_CONSTANT_ISSET(return_flags);
 
             /* Fill a named result with a positional return. */
             if (result_flags & PARROT_ARG_NAME) {
