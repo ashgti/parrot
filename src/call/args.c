@@ -1523,6 +1523,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     result_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
     result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
     result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
+    PARROT_ASSERT(PMC_IS_NULL(result_list) || !PMC_IS_NULL(result_sig));
 
     /* the call obj doesn't have the returns as positionals, so instead we loop
      * over raw_sig and count the number of returns before the first named return.

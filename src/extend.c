@@ -1028,9 +1028,11 @@ append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(Parrot_String type), 
     Parrot_String full_sig;
     Parrot_PMC    returns;
     Parrot_PMC    return_pointer;
+    Parrot_PMC    return_flags;
 
-    Parrot_String return_name = Parrot_str_new_constant(interp, "returns");
-    Parrot_String sig_name    = Parrot_str_new_constant(interp, "signature");
+    Parrot_String return_name       = Parrot_str_new_constant(interp, "returns");
+    Parrot_String return_flags_name = Parrot_str_new_constant(interp, "return_flags");
+    Parrot_String sig_name          = Parrot_str_new_constant(interp, "signature");
 
     full_sig = VTABLE_get_string(interp, sig_object);
     /* Append ->[T] */
@@ -1047,6 +1049,24 @@ append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(Parrot_String type), 
     VTABLE_set_pointer(interp, return_pointer, result);
     VTABLE_set_string_keyed_str(interp, return_pointer, sig_name, type);
     VTABLE_push_pmc(interp, returns, return_pointer);
+
+    /* Update returns_flag */
+    return_flags = VTABLE_get_attr_str(interp, sig_object, return_flags_name);
+    if (PMC_IS_NULL(return_flags)) {
+        return_flags = pmc_new(interp, enum_class_ResizablePMCArray);
+        VTABLE_set_attr_str(interp, sig_object, return_flags_name, return_flags);
+    }
+    switch(Parrot_str_indexed(interp, type, 0)) {
+        case 'I': VTABLE_push_integer(interp, return_flags, PARROT_ARG_INTVAL); break;
+        case 'N': VTABLE_push_integer(interp, return_flags, PARROT_ARG_FLOATVAL); break;
+        case 'S': VTABLE_push_integer(interp, return_flags, PARROT_ARG_STRING); break;
+        case 'P': VTABLE_push_integer(interp, return_flags, PARROT_ARG_PMC); break;
+        default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_INVALID_OPERATION,
+                "invalid signature string element!");
+    }
+
 }
 
 /*
