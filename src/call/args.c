@@ -1787,16 +1787,14 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     for (; return_index < return_count; return_index++) {
         STRING *return_name;
         INTVAL  return_flags;
+        INTVAL  constant;
+
+        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
 
         /* All remaining returns must be named. */
         if (!(return_flags & PARROT_ARG_NAME))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named returns must follow all positional returns");
-
-        if (VTABLE_exists_keyed_str(interp, named_used_list, return_name))
-            continue;
-
-        return_flags = VTABLE_get_integer_keyed_int(interp, raw_sig, return_index);
 
         if (!(return_flags & PARROT_ARG_STRING))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
@@ -1816,7 +1814,50 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (PMC_IS_NULL(named_return_list)) /* Only created if needed. */
             named_return_list = pmc_new(interp,
                     Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
-        VTABLE_set_integer_keyed_str(interp, named_return_list, return_name, 1);
+
+        if (VTABLE_exists_keyed_str(interp, named_return_list, return_name))
+            continue;
+
+        constant = PARROT_ARG_CONSTANT_ISSET(return_flags);
+        switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
+            case PARROT_ARG_INTVAL:
+                VTABLE_set_integer_keyed_str(interp, named_return_list, return_name,
+                        constant?
+                          accessor->intval_constant(interp, return_info, return_index)
+                        : accessor->intval(interp, return_info, return_index)
+                        );
+                break;
+            case PARROT_ARG_FLOATVAL:
+                VTABLE_set_number_keyed_str(interp, named_return_list, return_name,
+                        constant?
+                          accessor->numval_constant(interp, return_info, return_index)
+                        : accessor->numval(interp, return_info, return_index)
+                        );
+                break;
+            case PARROT_ARG_STRING:
+                VTABLE_set_string_keyed_str(interp, named_return_list, return_name,
+                        constant?
+                          accessor->string_constant(interp, return_info, return_index)
+                        : accessor->string(interp, return_info, return_index)
+                        );
+                break;
+            case PARROT_ARG_PMC:
+                if (0) {
+                    PMC *return_item = (constant)
+                                     ? accessor->pmc_constant(interp, return_info, return_index)
+                                     : accessor->pmc(interp, return_info, return_index);
+                    if (return_flags & PARROT_ARG_FLATTEN) {
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION, "named flattened returns not yet implemented");
+                    }
+                    VTABLE_set_pmc_keyed_str(interp, named_return_list, return_name, return_item);
+                    break;
+                }
+            default:
+                Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION, "invalid return type");
+                break;
+        }
     }
 
     /* Now iterate over the named results, filling them from the
