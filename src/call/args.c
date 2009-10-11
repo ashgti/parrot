@@ -734,7 +734,10 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
             case PARROT_ARG_STRING:
                 if (arg_flags & PARROT_ARG_NAME) {
                     PMC *name_string = pmc_new(interp, enum_class_String);
-                    VTABLE_set_string_native(interp, name_string, (CTX_REG_STR(ctx, raw_index)));
+                    STRING * string_val = arg_flags & PARROT_ARG_CONSTANT
+                                          ? Parrot_pcc_get_string_constant(interp, ctx, raw_index)
+                                          : CTX_REG_STR(ctx, raw_index);
+                    VTABLE_set_string_native(interp, name_string, string_val);
                     VTABLE_push_pmc(interp, returns, name_string);
                 }
                 else {
