@@ -1503,7 +1503,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             if (err_check)
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                         "too few returns: 0 passed, %d expected",
-                        result_count);
+                        return_count);
         }
         return;
     }
