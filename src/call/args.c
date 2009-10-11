@@ -1265,17 +1265,21 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         param_index++;
     }
 
-    return; /* NO ERROR CHECKING for extra named parameters */
-#if 0
     /* Double check that all named arguments were assigned to parameters. */
     if (err_check) {
         PMC *named_arg_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
         if (!PMC_IS_NULL(named_arg_list)) {
             INTVAL named_arg_count = VTABLE_elements(interp, named_arg_list);
             if (PMC_IS_NULL(named_used_list))
-                    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                            "too many named arguments: %d passed, 0 used",
-                            named_arg_count);
+                return;
+                /* The 'return' above is a temporary hack to duplicate an old bug,
+                 * and will be replaced by the exception below at the next
+                 * deprecation point, see TT #1103
+
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                        "too many named arguments: %d passed, 0 used",
+                        named_arg_count);
+                 */
             if (named_arg_count > named_count) {
                 /* At this point we know we have named arguments that weren't
                  * assigned to parameters. We're going to throw an exception
@@ -1303,7 +1307,6 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             }
         }
     }
-#endif
 }
 
 /*
