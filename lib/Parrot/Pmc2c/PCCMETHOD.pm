@@ -252,6 +252,7 @@ END
         my ( $returns_signature, $returns_varargs ) =
             process_pccmethod_args( parse_p_args_string($returns), 'return' );
 
+        if ($returns_signature) {
         $e->emit( <<"END", __FILE__, __LINE__ + 1 );
     {
     /*BEGIN RETURN $returns */
@@ -263,6 +264,15 @@ END
     /*END RETURN $returns */
     }
 END
+        }
+        else { # if ($returns_signature)
+            $e->emit( <<"END", __FILE__, __LINE__ + 1 );
+    /*BEGIN RETURN $returns */
+    return;
+    /*END RETURN $returns */
+END
+        }
+
         $matched->replace( $match, $e );
     }
 
