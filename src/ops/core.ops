@@ -600,17 +600,10 @@ specified in F<docs/pdds/pdd03_calling_conventions.pod>.
 =cut
 
 inline op result_info(out PMC) {
-    /* Get context of callee from return continuation. */
-    PMC * const cc = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
-    PMC *sig = NULL;
-    if (cc && PARROT_CONTINUATION(cc)->to_ctx) {
-        /* caller context has results */
-        opcode_t * const results = Parrot_pcc_get_results(interp, PMC_cont(cc)->to_ctx);
-        if (results) {
-            /* get results PMC index and get PMC. */
-            sig = PF_CONST(PARROT_CONTINUATION(cc)->seg, results[1])->u.key;
-        }
-    }
+    PMC *caller_ctx  = Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp));
+    PMC *call_object = Parrot_pcc_get_signature(interp, caller_ctx);
+    PMC *sig = VTABLE_get_attr_str(interp, call_object,
+            Parrot_str_new_constant(interp, "return_flags"));
 
     /* If no elements, hand back empty array; otherwise PMC. */
     if (!sig)
