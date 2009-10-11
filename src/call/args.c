@@ -492,7 +492,8 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 if (arg_flags & PARROT_ARG_NAME) {
                     string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "n"));
                     arg_index++;
-                    if (!PMC_IS_NULL(call_object) && VTABLE_exists_keyed_str(interp, call_object, string_value)) {
+                    if (!PMC_IS_NULL(call_object)
+                         && VTABLE_exists_keyed_str(interp, call_object, string_value)) {
                         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                                 "duplicate named argument in call");
 
@@ -1822,24 +1823,21 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
             case PARROT_ARG_INTVAL:
                 VTABLE_set_integer_keyed_str(interp, named_return_list, return_name,
-                        constant?
-                          accessor->intval_constant(interp, return_info, return_index)
-                        : accessor->intval(interp, return_info, return_index)
-                        );
+                        constant
+                        ? accessor->intval_constant(interp, return_info, return_index)
+                        : accessor->intval(interp, return_info, return_index));
                 break;
             case PARROT_ARG_FLOATVAL:
                 VTABLE_set_number_keyed_str(interp, named_return_list, return_name,
-                        constant?
-                          accessor->numval_constant(interp, return_info, return_index)
-                        : accessor->numval(interp, return_info, return_index)
-                        );
+                        constant
+                        ? accessor->numval_constant(interp, return_info, return_index)
+                        : accessor->numval(interp, return_info, return_index));
                 break;
             case PARROT_ARG_STRING:
                 VTABLE_set_string_keyed_str(interp, named_return_list, return_name,
-                        constant?
-                          accessor->string_constant(interp, return_info, return_index)
-                        : accessor->string(interp, return_info, return_index)
-                        );
+                        constant
+                        ? accessor->string_constant(interp, return_info, return_index)
+                        : accessor->string(interp, return_info, return_index));
                 break;
             case PARROT_ARG_PMC:
                 if (0) {
@@ -1847,8 +1845,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                      ? accessor->pmc_constant(interp, return_info, return_index)
                                      : accessor->pmc(interp, return_info, return_index);
                     if (return_flags & PARROT_ARG_FLATTEN) {
-                        Parrot_ex_throw_from_c_args(interp, NULL,
-                                EXCEPTION_INVALID_OPERATION, "named flattened returns not yet implemented");
+                        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                                                    "named flattened returns not yet implemented");
                     }
                     VTABLE_set_pmc_keyed_str(interp, named_return_list, return_name, return_item);
                     break;
@@ -2404,7 +2402,7 @@ PARROT_CANNOT_RETURN_NULL
 static INTVAL
 intval_arg_from_c_args(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
-    ASSERT_ARGS(intval_param_from_c_args)
+    ASSERT_ARGS(intval_arg_from_c_args)
     return va_arg(*args, INTVAL);
 }
 
@@ -2412,7 +2410,7 @@ PARROT_CANNOT_RETURN_NULL
 static FLOATVAL
 numval_arg_from_c_args(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
-    ASSERT_ARGS(numval_param_from_c_args)
+    ASSERT_ARGS(numval_arg_from_c_args)
     return va_arg(*args, FLOATVAL);
 }
 
@@ -2420,7 +2418,7 @@ PARROT_CANNOT_RETURN_NULL
 static STRING*
 string_arg_from_c_args(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
-    ASSERT_ARGS(string_param_from_c_args)
+    ASSERT_ARGS(string_arg_from_c_args)
     return va_arg(*args, STRING*);
 }
 
@@ -2428,7 +2426,7 @@ PARROT_CANNOT_RETURN_NULL
 static PMC*
 pmc_arg_from_c_args(PARROT_INTERP, ARGIN(va_list *args), SHIM(INTVAL param_index))
 {
-    ASSERT_ARGS(pmc_param_from_c_args)
+    ASSERT_ARGS(pmc_arg_from_c_args)
     return va_arg(*args, PMC*);
 }
 
