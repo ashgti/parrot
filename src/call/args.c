@@ -515,7 +515,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 }
                 else {
                     string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
-                    VTABLE_push_pmc(interp, call_object, CTX_REG_PMC(ctx, raw_index));
+                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_value));
                 }
 
                 break;
@@ -856,7 +856,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                 {
                     INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
                     PMC * const pmc_arg = va_arg(args, PMC *);
-                    VTABLE_push_pmc(interp, call_object, pmc_arg);
+                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
                     if (type_lookahead == 'i') {
                         if (i != 0)
                             Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1034,8 +1034,8 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                             VTABLE_get_string_keyed_int(interp, call_object, arg_index);
                     break;
                 case PARROT_ARG_PMC:
-                    *accessor->pmc(interp, arg_info, param_index) = clone_key_arg(interp,
-                            VTABLE_get_pmc_keyed_int(interp, call_object, arg_index));
+                    *accessor->pmc(interp, arg_info, param_index) =
+                            VTABLE_get_pmc_keyed_int(interp, call_object, arg_index);
                     break;
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1203,8 +1203,8 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 VTABLE_get_string_keyed_str(interp, call_object, param_name);
                         break;
                     case PARROT_ARG_PMC:
-                        *accessor->pmc(interp, arg_info, param_index) = clone_key_arg(interp,
-                                VTABLE_get_pmc_keyed_str(interp, call_object, param_name));
+                        *accessor->pmc(interp, arg_info, param_index) =
+                                VTABLE_get_pmc_keyed_str(interp, call_object, param_name);
                         break;
                     default:
                         Parrot_ex_throw_from_c_args(interp, NULL,
@@ -2466,12 +2466,7 @@ static PMC*
 clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
 {
     ASSERT_ARGS(clone_key_arg)
-
-    /*
-     * This function is sligtly broken. We need correct way to calculate caller_ctx to clone Keys
-     */
-
-    return key;
+    PMC *t;
 
     if (PMC_IS_NULL(key))
         return key;
@@ -2479,40 +2474,10 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
     if (key->vtable->base_type != enum_class_Key)
         return key;
 
-    for (; key; key=key_next(interp, key)) {
+    for (t = key; t; t=key_next(interp, t)) {
         /* register keys have to be cloned */
         if (PObj_get_FLAGS(key) & KEY_register_FLAG) {
-            INTVAL  n_regs_used[4];
-            Regs_ni bp;
-            Regs_ps bp_ps;
-            PMC *res;
-            /*
-             * XXX We are 2 levels below original Key Context. Why?
-             */
-            PMC *caller_ctx = Parrot_pcc_get_caller_ctx(
-                              interp, Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp)));
-
-            PARROT_ASSERT(!PMC_IS_NULL(caller_ctx) || !"Need caller_ctx to clone Key");
-
-            /* clone sets key values according to refered register items */
-            bp    = *Parrot_pcc_get_regs_ni(interp, CURRENT_CONTEXT(interp));
-            bp_ps = *Parrot_pcc_get_regs_ps(interp, CURRENT_CONTEXT(interp));
-            memcpy(n_regs_used, CONTEXT(interp)->n_regs_used, 4 * sizeof (INTVAL));
-
-            Parrot_pcc_set_regs_ni(interp, CURRENT_CONTEXT(interp),
-                    Parrot_pcc_get_regs_ni(interp, caller_ctx));
-            Parrot_pcc_set_regs_ps(interp, CURRENT_CONTEXT(interp),
-                    Parrot_pcc_get_regs_ps(interp, caller_ctx));
-            memcpy(CONTEXT(interp)->n_regs_used,
-                    Parrot_pcc_get_context_struct(interp, caller_ctx),
-                    4 * sizeof (INTVAL));
-
-            res = VTABLE_clone(interp, key);
-
-            Parrot_pcc_set_regs_ni(interp, CURRENT_CONTEXT(interp), &bp);
-            Parrot_pcc_set_regs_ps(interp, CURRENT_CONTEXT(interp), &bp_ps);
-            memcpy(CONTEXT(interp)->n_regs_used, n_regs_used, 4 * sizeof (INTVAL));
-            return res;
+            return VTABLE_clone(interp, key);
         }
     }
 
