@@ -492,6 +492,11 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                 if (arg_flags & PARROT_ARG_NAME) {
                     string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "n"));
                     arg_index++;
+                    if (VTABLE_exists_keyed_str(interp, call_object, string_value)) {
+                        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                                "duplicate named argument in call");
+
+                    }
                     extract_named_arg_from_op(interp, call_object, string_value,
                             raw_sig, raw_args, arg_index);
                 }
