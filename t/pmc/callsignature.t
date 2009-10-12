@@ -45,13 +45,13 @@ Tests the CallSignature PMC.
     setattribute $P0, 'return_flags', $P5
     ok(1, 'set return_flags attribute')
     getattribute $P1, $P0, 'return_flags'
-    is($P5,'moonbomb', 'got return_flags attribute')
+    is($P1,'moonbomb', 'got return_flags attribute')
 
     $P5 = 'cheese'
     setattribute $P0, 'arg_flags', $P5
     ok(1, 'set arg_flags attribute')
     getattribute $P1, $P0, 'arg_flags'
-    is($P5,'cheese', 'got arg_flags attribute')
+    is($P1,'cheese', 'got arg_flags attribute')
 .end
 
 
