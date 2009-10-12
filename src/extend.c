@@ -1056,7 +1056,7 @@ append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(Parrot_String type), 
         return_flags = pmc_new(interp, enum_class_ResizablePMCArray);
         VTABLE_set_attr_str(interp, sig_object, return_flags_name, return_flags);
     }
-    switch(Parrot_str_indexed(interp, type, 0)) {
+    switch (Parrot_str_indexed(interp, type, 0)) {
         case 'I': VTABLE_push_integer(interp, return_flags, PARROT_ARG_INTVAL); break;
         case 'N': VTABLE_push_integer(interp, return_flags, PARROT_ARG_FLOATVAL); break;
         case 'S': VTABLE_push_integer(interp, return_flags, PARROT_ARG_STRING); break;
