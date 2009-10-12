@@ -243,13 +243,15 @@ destination to continue execution.
         opcode_t *pc       = cc->address;
         PMC      *call_obj = Parrot_pcc_get_signature(interp, to_ctx);
         PMC      *from_obj = Parrot_pcc_get_signature(interp, from_ctx);
-        PMC      *raw_sig  = VTABLE_get_attr_str(interp, from_obj, CONST_STRING(interp, "arg_flags"));
         UNUSED(next)
 
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
 
-        Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
+        if (!PMC_IS_NULL(from_obj)) {
+            PMC *raw_sig  = VTABLE_get_attr_str(interp, from_obj, CONST_STRING(interp, "arg_flags"));
+            Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
+        }
 
         /* switch segment */
         INTERP->current_args = NULL;
