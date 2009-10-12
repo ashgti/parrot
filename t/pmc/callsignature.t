@@ -19,16 +19,30 @@ Tests the CallSignature PMC.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(7)
+    plan(8)
 
     test_instantiate()
+    test_get_pmc()
     test_get_set_attrs()
 .end
 
 
 .sub test_instantiate
     $P0 = new ['CallSignature']
-    ok(1, 'Instantiated CallSignature')
+    isa_ok($P0,'CallSignature', 'Instantiated CallSignature')
+.end
+
+.sub test_get_pmc
+    $P0 = new ['CallSignature']
+    $P5 = new 'String'
+
+    $P5 = 'foobar'
+    setattribute $P0, 'returns', $P5
+    $P5 = 'cheese'
+    setattribute $P0, 'arg_flags', $P5
+
+    $P2 = $P0
+    isa_ok( $P2, 'CallSignature')
 .end
 
 .sub test_get_set_attrs
