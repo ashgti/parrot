@@ -241,35 +241,16 @@ destination to continue execution.
         PMC      *from_ctx = CURRENT_CONTEXT(interp);
         PMC      *to_ctx   = cc->to_ctx;
         opcode_t *pc       = cc->address;
+        PMC      *call_obj = Parrot_pcc_get_signature(interp, to_ctx);
+        PMC      *from_obj = Parrot_pcc_get_signature(interp, from_ctx);
+        PMC      *raw_sig  = VTABLE_get_attr_str(interp, from_obj, CONST_STRING(interp, "arg_flags"));
         UNUSED(next)
 
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
-#if 0
-        FIXME FIXME FIXME Continuation results passing should be updated. Or maybe fully removed?
 
-        /* pass args to where caller wants result */
-        if (cc->current_results)
-            Parrot_pcc_set_results(interp, to_ctx, cc->current_results);
+        Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
 
-        if (Parrot_pcc_get_results(interp, to_ctx) && INTERP->current_args) {
-            /*
-             * the register pointer is already switched back
-             * to the caller, therefore the registers of the
-             * sub we are returning from aren't marked, if
-             * inside argument passing a GC run is triggered
-             * therefore we have to block GC
-             */
-            opcode_t *src_indexes  = interp->current_args;
-            opcode_t *dest_indexes = Parrot_pcc_get_results(interp, to_ctx);
-            interp->current_args   = NULL;
-
-            Parrot_block_GC_mark(INTERP);
-            parrot_pass_args(INTERP, from_ctx, to_ctx,
-                             src_indexes, dest_indexes, PARROT_PASS_PARAMS);
-            Parrot_unblock_GC_mark(INTERP);
-        }
-#endif
         /* switch segment */
         INTERP->current_args = NULL;
 
