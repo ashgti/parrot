@@ -666,7 +666,7 @@ CODE
 Hello from foo!
 OUTPUT
 
-c_output_is( <<"CODE", <<'OUTPUT', 'call multi sub from C - #41511', todo => 'RT #41511' );
+c_output_is( <<"CODE", <<'OUTPUT', 'call multi sub from C - #41511' );
 #include <parrot/parrot.h>
 #include <parrot/embed.h>
 #include <parrot/extend.h>
