@@ -254,8 +254,6 @@ destination to continue execution.
         }
 
         /* switch segment */
-        INTERP->current_args = NULL;
-
         if (INTERP->code != cc->seg)
             Parrot_switch_to_cs(INTERP, cc->seg, 1);
 
