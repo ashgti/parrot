@@ -2425,7 +2425,7 @@ static STRING*
 string_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
 {
     ASSERT_ARGS(string_arg_from_continuation)
-    const STRING *ret      = VTABLE_get_string_keyed_int(interp, cs, arg_index);
+    STRING *ret      = VTABLE_get_string_keyed_int(interp, cs, arg_index);
     return ret;
 }
 
@@ -2434,7 +2434,7 @@ static PMC*
 pmc_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
 {
     ASSERT_ARGS(pmc_arg_from_continuation)
-    const PMC *ret      = VTABLE_get_pmc_keyed_int(interp, cs, arg_index);
+    PMC *ret      = VTABLE_get_pmc_keyed_int(interp, cs, arg_index);
     return ret;
 }
 
