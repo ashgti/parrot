@@ -1,5 +1,5 @@
 #! parrot
-# Copyright (C) 2006-2008, Parrot Foundation.
+# Copyright (C) 2006-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -16,22 +16,23 @@ Tests the CallSignature PMC.
 
 =cut
 
-.sub main :main
+.sub 'main' :main
     .include 'test_more.pir'
 
-    plan(7)
+    plan(15)
 
     test_instantiate()
     test_get_set_attrs()
+    test_push_pop_indexed_access()
 .end
 
 
-.sub test_instantiate
+.sub 'test_instantiate'
     $P0 = new ['CallSignature']
     ok(1, 'Instantiated CallSignature')
 .end
 
-.sub test_get_set_attrs
+.sub 'test_get_set_attrs'
     $P0 = new ['CallSignature']
     $P5 = new 'String'
 
@@ -54,6 +55,35 @@ Tests the CallSignature PMC.
     is($P5,'cheese', 'got arg_flags attribute')
 .end
 
+.sub 'test_push_pop_indexed_access'
+    $P0 = new [ 'CallSignature' ]
+    $P1 = new [ 'Integer' ]
+    $P1 = 100
+
+    push $P0, $P1
+    $P2 = $P0[0]
+    is( $P2, 100, 'push_pmc/get_pmc_keyed_int pair' )
+    $P2 = pop $P0
+    is( $P2, 100, 'push_pmc/pop_pmc pair' )
+
+    push $P0, 200
+    $I0 = $P0[0]
+    is( $I0, 200, 'push_integer/get_integer_keyed_int pair' )
+    $I0 = pop $P0
+    is( $I0, 200, 'push_integer/pop_integer pair' )
+
+    push $P0, 3.03
+    $N0 = $P0[0]
+    is( $N0, 3.03, 'push_number/get_number_keyed_int pair' )
+    $N0 = pop $P0
+    is( $N0, 3.03, 'push_number/pop_number pair' )
+
+    push $P0, 'hello'
+    $S0 = $P0[0]
+    is( $S0, 'hello', 'push_string/get_string_keyed_int pair' )
+    $S0 = pop $P0
+    is( $S0, 'hello', 'push_string/pop_string pair' )
+.end
 
 # Local Variables:
 #   mode: pir
