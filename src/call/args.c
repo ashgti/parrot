@@ -2296,6 +2296,21 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
 
 /*
 
+Get the appropriate argument value from the continuation
+
+=item C<static INTVAL intval_arg_from_continuation(PARROT_INTERP, PMC *cs,
+INTVAL arg_index)>
+
+=item C<static FLOATVAL numval_arg_from_continuation(PARROT_INTERP, PMC *cs,
+INTVAL arg_index)>
+
+=item C<static STRING* string_arg_from_continuation(PARROT_INTERP, PMC *cs,
+INTVAL arg_index)>
+
+=item C<static PMC* pmc_arg_from_continuation(PARROT_INTERP, PMC *cs, INTVAL
+arg_index)>
+
+
 Get the appropriate argument value from the op.
 
 =item C<static INTVAL intval_arg_from_op(PARROT_INTERP, opcode_t *raw_args,
