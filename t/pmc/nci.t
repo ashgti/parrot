@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 70;
+use Parrot::Test tests => 71;
 use Parrot::Config qw(%PConfig);
 
 =head1 NAME
@@ -2752,6 +2752,76 @@ Hello bright new world!
 It is a beautiful day!
 Go suck a lemon.
 OUTPUT
+
+my $test_code = <<'CODE';
+.sub test :main
+    .local pmc libnci_test
+    $S0 = 'libnci_test'
+    libnci_test = loadlib $S0
+
+    .local pmc nci_i20
+    nci_i20 = dlfunc libnci_test, "nci_i20", "iiiiiiiiiiiiiiiiiiii"
+
+    .local pmc args
+    args = new ['FixedIntegerArray']
+    args = 18
+
+    $I0 = 2
+    args[0] = 1
+    args[1] = 1
+
+LOOP1:
+    $I1 = $I0 - 1
+    $I1 = args[$I1]
+
+    $I2 = $I0 - 2
+    $I2 = args[$I2]
+
+    $I3 = $I1 + $I2
+    args[$I0] = $I3
+    inc $I0
+    if $I0 < 18 goto LOOP1
+
+    $I0 = args
+    dec $I0
+
+    $I1 = args[0]
+    $I2 = args[1]
+    $I3 = args[2]
+    $I4 = args[3]
+    $I5 = args[4]
+    $I6 = args[5]
+    $I7 = args[6]
+    $I8 = args[7]
+    $I9 = args[8]
+    $I10 = args[9]
+    $I11 = args[10]
+    $I12 = args[11]
+    $I13 = args[12]
+    $I14 = args[13]
+    $I15 = args[14]
+    $I16 = args[15]
+    $I17 = args[16]
+    $I18 = args[17]
+
+LOOP2:
+    nci_i20($I0, $I1, $I2, $I3, $I4, $I5, $I6, $I7, $I8, $I9, $I10, $I11, $I12, $I13, $I14, $I15, $I16, $I17, $I18)
+    $I0 = $I0 / 2
+    if $I0 > 0 goto LOOP2
+.end
+CODE
+if ($PConfig{cc_build_call_frames}) {
+    pir_output_is($test_code, <<DYNAMIC_FRAMEBUILDER_OUTPUT, 'dynamic frame builder builds ridiculous call frames');
+2584
+34
+5
+2
+1
+DYNAMIC_FRAMEBUILDER_OUTPUT
+} else {
+    my $output_re = qr/^Parrot VM: PANIC: iiiiiiiiiiiiiiiiiiii is an unknown signature type./;
+    pir_error_output_like($test_code, $output_re, "static frame builder can't build ridiculous signatures");
+}
 
 # Local Variables:
 #   mode: cperl

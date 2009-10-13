@@ -217,6 +217,8 @@ CONFIGURE_GENERATED_FILES := \
     myconfig  \
     $(GEN_PASM_INCLUDES) \
     $(SRC_DIR)/call_list.txt \
+    $(SRC_DIR)/frame_builder_libjit.h \
+    $(SRC_DIR)/frame_builder_libjit.c \
     MANIFEST.configure.generated \
     .configure_trace.sto \
     .parrot_current_rev
@@ -440,6 +442,7 @@ INTERP_O_FILES := \
     $(SRC_DIR)/misc$(O) \
     $(SRC_DIR)/multidispatch$(O) \
     $(SRC_DIR)/frame_builder$(O) \
+    $(SRC_DIR)/frame_builder_libjit$(O) \
     $(SRC_DIR)/nci$(O) \
     $(SRC_DIR)/oo$(O) \
     $(SRC_DIR)/packfile$(O) \
@@ -622,6 +625,7 @@ STR_FILES := \
     $(SRC_DIR)/library.str \
     $(SRC_DIR)/multidispatch.str \
     $(SRC_DIR)/frame_builder.str \
+    $(SRC_DIR)/frame_builder_libjit.str \
     $(SRC_DIR)/nci.str \
     $(SRC_DIR)/packfile.str \
     $(SRC_DIR)/pmc.str \
@@ -1191,11 +1195,26 @@ $(SRC_DIR)/exit$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/exit.c
 
 $(SRC_DIR)/nci$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/nci.c $(SRC_DIR)/nci.str \
         $(SRC_DIR)/frame_builder$(O) \
+        $(SRC_DIR)/frame_builder_libjit$(O) \
         $(SRC_DIR)/pmc/pmc_managedstruct.h \
         $(SRC_DIR)/pmc/pmc_nci.h \
         $(SRC_DIR)/pmc/pmc_pointer.h
 
-$(SRC_DIR)/frame_builder$(O) : $(SRC_DIR)/frame_builder.h $(GENERAL_H_FILES) $(SRC_DIR)/frame_builder.c $(SRC_DIR)/frame_builder.str
+$(SRC_DIR)/frame_builder$(O) : \
+    $(SRC_DIR)/frame_builder.h \
+    $(SRC_DIR)/frame_builder.c \
+    $(SRC_DIR)/frame_builder.str \
+    $(INC_DIR)/parrot.h
+
+$(SRC_DIR)/frame_builder_libjit$(O) : \
+    $(SRC_DIR)/frame_builder_libjit.h \
+    $(SRC_DIR)/frame_builder_libjit.c \
+    $(SRC_DIR)/frame_builder_libjit.str \
+    $(SRC_DIR)/frame_builder.h \
+    $(SRC_DIR)/pmc/pmc_integer.h \
+    $(SRC_DIR)/pmc/pmc_unmanagedstruct.h \
+    $(SRC_DIR)/pmc/pmc_managedstruct.h \
+    $(INC_DIR)/parrot.h
 
 $(SRC_DIR)/vtables$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/vtables.c
 

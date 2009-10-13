@@ -1,0 +1,91 @@
+/* frame_builder_libjit.h
+ * $Id$
+ * Copyright (C) 2009, Parrot Foundation.
+ */
+
+#ifndef PARROT_FRAME_BUILDER_LIBJIT_H_GUARD
+#define PARROT_FRAME_BUILDER_LIBJIT_H_GUARD
+
+
+#if defined(__cplusplus)
+#  define EXTERN extern "C"
+#else
+#  define EXTERN
+#endif
+
+#include <assert.h>
+#include "parrot/parrot.h"
+#include "frame_builder.h"
+
+#if PARROT_HAS_LIBJIT
+
+#include <jit/jit.h>
+
+/*
+ * JITted function state data
+ */
+struct jit_buffer_private_data {
+    jit_context_t ctx;
+    char *sig;
+};
+
+/*
+ * JIT types
+ */
+
+#define JIT_TYPE_UINTVAL  @libjit_uv@ // jit_type_sys_ulong
+#define JIT_TYPE_INTVAL   @libjit_iv@ // jit_type_sys_long
+#define JIT_TYPE_FLOATVAL @libjit_nv@ // jit_type_sys_double
+
+/*
+ * JIT functions
+ */
+
+void *
+Parrot_jit_create_thunk(Interp *, char *, void *);
+
+int
+Parrot_jit_parse_sig_args_pre(Interp *, char *, jit_function_t, jit_value_t, jit_value_t,
+                              jit_type_t **, jit_value_t **, jit_value_t **);
+
+int
+Parrot_jit_init_pcc(char *, int, jit_function_t, jit_value_t, jit_value_t);
+
+jit_type_t
+Parrot_jit_parse_sig_ret_pre(Interp *, char *);
+
+void
+Parrot_jit_parse_sig_ret_post(Interp *, char *, jit_function_t, jit_value_t, jit_value_t, jit_value_t);
+
+void
+Parrot_jit_parse_sig_args_post(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t *, jit_value_t *);
+
+jit_value_t
+jit_value_create_intval_constant(jit_function_t, INTVAL);
+
+jit_value_t
+jit_value_create_string_constant(jit_function_t, char *, int);
+
+/*
+ * JIT wrappers
+ */
+
+/* custom wrappers */
+jit_value_t
+jit__Buffer_bufstart(jit_function_t, jit_value_t);
+
+/* vtable wrappers */
+@TEMP_vtable_wrap_decls@
+
+/* function wrappers */
+@TEMP_func_wrap_decls@
+
+#endif /* PARROT_HAS_LIBJIT */
+#endif /* PARROT_FRAME_BUILDER_LIBJIT_H_GUARD */
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

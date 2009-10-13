@@ -1,0 +1,22 @@
+/* 
+ * Copyright (C) 2009, Parrot Foundation.
+ * $Id$
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <jit/jit.h>
+
+int
+main(int argc, char *argv[]) {
+    jit_init();
+    printf("USES INTERPRETER: %i\n", jit_uses_interpreter());
+    return EXIT_SUCCESS;
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

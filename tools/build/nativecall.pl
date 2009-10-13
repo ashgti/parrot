@@ -467,17 +467,13 @@ SHIM(PMC *pmc_nci), NOTNULL(STRING *signature), SHIM(int *jitted))
         return F2DPTR(VTABLE_get_pointer(interp, b));
     }
     else {
-        int jit_size;
-        void * const result = Parrot_jit_build_call_func(interp, pmc_nci, signature, &jit_size);
+        void *priv;
+        void * const result = Parrot_jit_build_call_func(interp, pmc_nci, signature, &priv);
         if (result) {
-            struct jit_buffer_private_data *priv;
             *jitted = 1;
             temp_pmc = pmc_new(interp, enum_class_ManagedStruct);
             VTABLE_set_pointer(interp, temp_pmc, (void *)result);
 #ifdef PARROT_HAS_EXEC_PROTECT
-            priv = (struct jit_buffer_private_data *)
-                mem_sys_allocate(sizeof(struct jit_buffer_private_data));
-            priv->size = jit_size;
             SETATTR_ManagedStruct_custom_free_func(interp, temp_pmc, Parrot_jit_free_buffer);
             SETATTR_ManagedStruct_custom_free_priv(interp, temp_pmc, priv);
             SETATTR_ManagedStruct_custom_clone_func(interp, temp_pmc, Parrot_jit_clone_buffer);

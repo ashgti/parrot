@@ -64,16 +64,22 @@ my @steps = qw(
     auto::ctags
     auto::revision
     auto::icu
+    auto::libjit
     gen::config_h
     gen::core_pmcs
     gen::crypto
     gen::parrot_include
     gen::opengl
     gen::call_list
+    gen::libjit
     gen::makefiles
     gen::platform
     gen::config_pm
 );
+
+=pod
+
+=cut
 
 sub get_steps_list { return @steps; }
 
