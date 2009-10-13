@@ -19,13 +19,14 @@ Tests the CallSignature PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(34)
+    plan(46)
 
     test_instantiate()
     test_get_set_attrs()
     test_push_pop_indexed_access()
     test_shift_unshift_indexed_access()
     test_indexed_access()
+    test_indexed_boxing()
 .end
 
 .sub 'test_instantiate'
@@ -160,6 +161,47 @@ Tests the CallSignature PMC.
 
     $P1 = shift $P0
     is( $P1, 3.33, 'set_pmc_indexed_int/shift_pmc pair' )
+.end
+
+.sub 'test_indexed_boxing'
+    $P0    = new [ 'CallSignature' ]
+    $P0[0] = 100
+    $P0[1] = 1.11
+
+    $S0    = '2.22'
+    $P0[2] = $S0
+
+    $P1    = new [ 'Float' ]
+    $P1    = 3.33
+    $P0[3] = $P1
+
+    $I0    = $P0[1]
+    is( $I0, 1, 'indexed float converted to int on get_integer_keyed_int' )
+    $I0    = $P0[2]
+    is( $I0, 2, 'indexed string converted to int on get_integer_keyed_int' )
+    $I0    = $P0[3]
+    is( $I0, 3, 'indexed PMC converted to int on get_integer_keyed_int' )
+
+    $N0    = $P0[0]
+    is( $N0, 100.0, 'indexed integer converted to num on get_number_keyed_int' )
+    $N0    = $P0[2]
+    is( $N0, 2.22,  'indexed string converted to num on get_number_keyed_int' )
+    $N0    = $P0[3]
+    is( $N0, 3.33,  'indexed PMC converted to int num get_number_keyed_int' )
+
+    $S0    = $P0[0]
+    is( $S0, '100',  'indexed int converted to string on get_string_keyed_int' )
+    $S0    = $P0[1]
+    is( $S0, '1.11', 'indexed num converted to string on get_string_keyed_int' )
+    $S0    = $P0[3]
+    is( $S0, '3.33', 'indexed PMC converted to string get_string_keyed_int' )
+
+    $P1    = $P0[0]
+    is( $P1, 100,  'indexed int converted to PMC on get_pmc_keyed_int' )
+    $P1    = $P0[1]
+    is( $P1, 1.11, 'indexed float converted to PMC on get_pmc_keyed_int' )
+    $P1    = $P0[2]
+    is( $P1, 2.22, 'indexed string converted to PMC on get_pmc_keyed_int' )
 .end
 
 # Local Variables:
