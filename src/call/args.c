@@ -22,6 +22,7 @@ subroutines following the Parrot Calling Conventions.
 #include "parrot/runcore_api.h"
 #include "args.str"
 #include "../pmc/pmc_key.h"
+#include "../pmc/pmc_callsignature.h"
 
 /* HEADERIZER HFILE: include/parrot/call.h */
 
@@ -750,8 +751,10 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
         return NULL;
     }
 
-    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"), raw_sig);
-    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "returns"), returns);
+    /* a little encapsulation violation for great speed */
+    SETATTR_CallSignature_return_flags(interp, call_object, raw_sig);
+    SETATTR_CallSignature_results(interp, call_object, returns);
+
     string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "->"));
 
     for (arg_index = 0; arg_index < arg_count; arg_index++) {
