@@ -755,8 +755,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     SETATTR_CallSignature_return_flags(interp, call_object, raw_sig);
     SETATTR_CallSignature_results(interp, call_object, returns);
 
-    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "->"));
-
     for (arg_index = 0; arg_index < arg_count; arg_index++) {
         STRING * const signature = CONST_STRING(interp, "signature");
         INTVAL arg_flags = VTABLE_get_integer_keyed_int(interp,
@@ -769,13 +767,11 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
 
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
             case PARROT_ARG_INTVAL:
-                string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "I"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_INT(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "I"));
                 VTABLE_push_pmc(interp, returns, val_pointer);
                 break;
             case PARROT_ARG_FLOATVAL:
-                string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "N"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_NUM(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "N"));
                 VTABLE_push_pmc(interp, returns, val_pointer);
@@ -790,7 +786,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
                     VTABLE_push_pmc(interp, returns, name_string);
                 }
                 else {
-                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "S"));
                     VTABLE_set_pointer(interp, val_pointer,
                                        (void *) &(CTX_REG_STR(ctx, raw_index)));
                     VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "S"));
@@ -798,7 +793,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
                 }
                 break;
             case PARROT_ARG_PMC:
-                string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
                 VTABLE_set_pointer(interp, val_pointer, (void *) &(CTX_REG_PMC(ctx, raw_index)));
                 VTABLE_set_string_keyed_str(interp, val_pointer, signature, CONST_STRING(interp, "P"));
                 VTABLE_push_pmc(interp, returns, val_pointer);
@@ -809,7 +803,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
 
     }
 
-    VTABLE_set_string_native(interp, call_object, string_sig);
     return call_object;
 }
 
