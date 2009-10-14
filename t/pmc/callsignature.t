@@ -19,7 +19,7 @@ Tests the CallSignature PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(61)
+    plan(63)
 
     test_instantiate()
     test_get_set_attrs()
@@ -28,6 +28,7 @@ Tests the CallSignature PMC.
     test_indexed_access()
     test_indexed_boxing()
     test_keyed_access()
+    test_exists()
 .end
 
 .sub 'test_instantiate'
@@ -263,6 +264,20 @@ Tests the CallSignature PMC.
     $P1 = getattribute $P0, 'named'
     $I0 = elements $P1
     is( $I0, 4, 'elements after set_*_keyed' )
+.end
+
+.sub 'test_exists'
+    $P0        = new [ 'CallSignature' ]
+
+    $P0[0]     = 111
+    $P0['foo'] = 100
+
+    $I0 = exists $P0[0]
+    is( $I0, 100, 'exists_keyed_int' )
+
+    $I0 = exists $P0['foo']
+    is( $I0, 100, 'exists_keyed_str' )
+
 .end
 
 # Local Variables:
