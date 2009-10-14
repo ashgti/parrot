@@ -130,37 +130,37 @@ Tests the CallSignature PMC.
     $P0[3] = $P1
 
     $I1    = $P0[0]
-    is( $I1, 100, 'set_integer_indexed_int/get_integer_indexed_int pair' )
+    is( $I1, 100, 'set_integer_keyed_int/get_integer_keyed_int pair' )
 
     $N1    = $P0[1]
-    is( $N1, 1.11, 'set_number_indexed_int/get_number_indexed_int pair' )
+    is( $N1, 1.11, 'set_number_keyed_int/get_number_keyed_int pair' )
 
     $S1    = $P0[2]
-    is( $S1, '2.22', 'set_string_indexed_int/get_string_indexed_int pair' )
+    is( $S1, '2.22', 'set_string_keyed_int/get_string_keyed_int pair' )
 
     $P1    = $P0[3]
-    is( $P1, 3.33, 'set_pmc_indexed_int/get_pmc_indexed_int pair' )
+    is( $P1, 3.33, 'set_pmc_keyed_int/get_pmc_keyed_int pair' )
 
     $I1 = shift $P0
-    is( $I1, 100, 'set_integer_indexed_int/shift_integer pair' )
+    is( $I1, 100, 'set_integer_keyed_int/shift_integer pair' )
 
     $N1 = $P0[0]
     is( $N1, 1.11, 'shift_* should remove elements from array' )
 
     $N1 = shift $P0
-    is( $N1, 1.11, 'set_number_indexed_int/shift_number pair' )
+    is( $N1, 1.11, 'set_number_keyed_int/shift_number pair' )
 
     $S1 = $P0[0]
     is( $S1, '2.22', 'shift_* should remove elements from array' )
 
     $S1 = shift $P0
-    is( $S1, '2.22', 'set_string_indexed_int/shift_string pair' )
+    is( $S1, '2.22', 'set_string_keyed_int/shift_string pair' )
 
     $P1 = $P0[0]
     is( $P1, 3.33, 'shift_* should remove elements from array' )
 
     $P1 = shift $P0
-    is( $P1, 3.33, 'set_pmc_indexed_int/shift_pmc pair' )
+    is( $P1, 3.33, 'set_pmc_keyed_int/shift_pmc pair' )
 .end
 
 .sub 'test_indexed_boxing'
