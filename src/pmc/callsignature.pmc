@@ -979,11 +979,11 @@ Mark any referenced strings and PMCs.
         CELL_PMC(cell) = value;
     }
 
-    VTABLE INTVAL get_integer_keyed(PMC *key) {
+    VTABLE INTVAL get_integer_keyed_str(STRING *key) {
         Hash *hash = get_hash(interp, SELF);
 
         if (hash) {
-            void     *k    = hash_key_from_pmc(interp, hash, key);
+            void     *k    = hash_key_from_string(interp, hash, key);
             Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
 
             if (cell)
@@ -993,11 +993,54 @@ Mark any referenced strings and PMCs.
         return 0;
     }
 
-    VTABLE INTVAL get_integer_keyed_str(STRING *key) {
+    VTABLE FLOATVAL get_number_keyed_str(STRING *key) {
         Hash *hash = get_hash(interp, SELF);
 
         if (hash) {
             void     *k    = hash_key_from_string(interp, hash, key);
+            Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
+
+            if (cell)
+                return autobox_floatval(interp, cell);
+        }
+
+        return 0.0;
+    }
+
+
+    VTABLE STRING * get_string_keyed_str(STRING *key) {
+        Hash *hash = get_hash(interp, SELF);
+
+        if (hash) {
+            void     *k    = hash_key_from_string(interp, hash, key);
+            Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
+
+            if (cell)
+                return autobox_string(interp, cell);
+        }
+
+        return NULL;
+    }
+
+    VTABLE PMC * get_pmc_keyed_str(STRING *key) {
+        Hash *hash = get_hash(interp, SELF);
+
+        if (hash) {
+            void     *k    = hash_key_from_string(interp, hash, key);
+            Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
+
+            if (cell)
+                return autobox_pmc(interp, cell);
+        }
+
+        return PMCNULL;
+    }
+
+    VTABLE INTVAL get_integer_keyed(PMC *key) {
+        Hash *hash = get_hash(interp, SELF);
+
+        if (hash) {
+            void     *k    = hash_key_from_pmc(interp, hash, key);
             Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
 
             if (cell)
@@ -1035,39 +1078,11 @@ Mark any referenced strings and PMCs.
         return NULL;
     }
 
-    VTABLE STRING * get_string_keyed_str(STRING *key) {
-        Hash *hash = get_hash(interp, SELF);
-
-        if (hash) {
-            void     *k    = hash_key_from_string(interp, hash, key);
-            Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
-
-            if (cell)
-                return autobox_string(interp, cell);
-        }
-
-        return NULL;
-    }
-
     VTABLE PMC * get_pmc_keyed(PMC *key) {
         Hash *hash = get_hash(interp, SELF);
 
         if (hash) {
             void     *k    = hash_key_from_pmc(interp, hash, key);
-            Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
-
-            if (cell)
-                return autobox_pmc(interp, cell);
-        }
-
-        return PMCNULL;
-    }
-
-    VTABLE PMC * get_pmc_keyed_str(STRING *key) {
-        Hash *hash = get_hash(interp, SELF);
-
-        if (hash) {
-            void     *k    = hash_key_from_string(interp, hash, key);
             Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(interp, hash, k);
 
             if (cell)
