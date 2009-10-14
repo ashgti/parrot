@@ -19,7 +19,7 @@ Tests the CallSignature PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(46)
+    plan(56)
 
     test_instantiate()
     test_get_set_attrs()
@@ -63,10 +63,16 @@ Tests the CallSignature PMC.
     $P1 = 100
 
     push $P0, $P1
+    $I0 = elements $P0
+    is( $I0, 1, 'elements after push' )
+
     $P2 = $P0[0]
     is( $P2, 100, 'push_pmc/get_pmc_keyed_int pair' )
     $P2 = pop $P0
     is( $P2, 100, 'push_pmc/pop_pmc pair' )
+
+    $I0 = elements $P0
+    is( $I0, 0, 'elements after pop' )
 
     push $P0, 200
     $I0 = $P0[0]
@@ -85,6 +91,9 @@ Tests the CallSignature PMC.
     is( $S0, 'hello', 'push_string/get_string_keyed_int pair' )
     $S0 = pop $P0
     is( $S0, 'hello', 'push_string/pop_string pair' )
+
+    $I0 = elements $P0
+    is( $I0, 0, 'elements after push/pop' )
 .end
 
 .sub 'test_shift_unshift_indexed_access'
@@ -93,10 +102,17 @@ Tests the CallSignature PMC.
     $P1 = 100
 
     unshift $P0, $P1
+
+    $I0 = elements $P0
+    is( $I0, 1, 'elements after unshift' )
+
     $P2 = $P0[0]
     is( $P2, 100, 'unshift_pmc/get_pmc_keyed_int pair' )
     $P2 = shift $P0
     is( $P2, 100, 'unshift_pmc/shift_pmc pair' )
+
+    $I0 = elements $P0
+    is( $I0, 0, 'elements after unshift/shift' )
 
     unshift $P0, 200
     $I0 = $P0[0]
@@ -115,19 +131,35 @@ Tests the CallSignature PMC.
     is( $S0, 'hello', 'unshift_string/get_string_keyed_int pair' )
     $S0 = shift $P0
     is( $S0, 'hello', 'unshift_string/shift_string pair' )
+
+    $I0 = elements $P0
+    is( $I0, 0, 'elements after unshift/shift' )
 .end
 
 .sub 'test_indexed_access'
     $P0    = new [ 'CallSignature' ]
     $P0[0] = 100
+
+    $I0 = elements $P0
+    is( $I0, 1, 'elements after set_*_indexed' )
+
     $P0[1] = 1.11
+
+    $I0 = elements $P0
+    is( $I0, 2, 'elements after set_*_indexed' )
 
     $S0    = '2.22'
     $P0[2] = $S0
 
+    $I0 = elements $P0
+    is( $I0, 3, 'elements after set_*_indexed' )
+
     $P1    = new [ 'Float' ]
     $P1    = 3.33
     $P0[3] = $P1
+
+    $I0 = elements $P0
+    is( $I0, 4, 'elements after set_*_indexed' )
 
     $I1    = $P0[0]
     is( $I1, 100, 'set_integer_keyed_int/get_integer_keyed_int pair' )
