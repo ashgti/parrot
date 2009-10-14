@@ -19,7 +19,7 @@ Tests the CallSignature PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(63)
+    plan(65)
 
     test_instantiate()
     test_get_set_attrs()
@@ -273,11 +273,16 @@ Tests the CallSignature PMC.
     $P0['foo'] = 100
 
     $I0 = exists $P0[0]
-    is( $I0, 100, 'exists_keyed_int' )
+    ok( $I0, 'exists_keyed_int' )
 
     $I0 = exists $P0['foo']
-    is( $I0, 100, 'exists_keyed_str' )
+    ok( $I0, 'exists_keyed_str' )
 
+    $I0 = exists $P0[100]
+    nok( $I0, 'exists_keyed_int -- non-existant' )
+
+    $I0 = exists $P0['bar']
+    nok( $I0, 'exists_keyed_str -- non-existant' )
 .end
 
 # Local Variables:
