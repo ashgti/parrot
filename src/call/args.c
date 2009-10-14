@@ -490,7 +490,8 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     else
         call_object = signature;
 
-    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), raw_sig);
+    /* this macro is much, much faster than the VTABLE STRING comparisons */
+    SETATTR_CallSignature_arg_flags(interp, call_object, raw_sig);
 
     for (arg_index = 0; arg_index < arg_count; arg_index++) {
         INTVAL arg_flags = VTABLE_get_integer_keyed_int(interp,
