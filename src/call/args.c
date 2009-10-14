@@ -735,21 +735,20 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
         call_object = pmc_new(interp, enum_class_CallSignature);
         gc_register_pmc(interp, call_object);
     }
-    else
-        call_object = signature;
-
-    string_sig = VTABLE_get_string(interp, call_object);
-
     /* A hack to support 'get_results' as the way of fetching the
      * exception object inside an exception handler. The first argument
      * in the call object is the exception, stick it directly into the
      * destination register. */
-    if (CALLSIGNATURE_is_exception_TEST(call_object)) {
+    else if (CALLSIGNATURE_is_exception_TEST(signature)) {
         const INTVAL raw_index = raw_args[2];
         CTX_REG_PMC(ctx, raw_index) =
-                VTABLE_get_pmc_keyed_int(interp, call_object, 0);
+                VTABLE_get_pmc_keyed_int(interp, signature, 0);
         return NULL;
     }
+    else
+        call_object = signature;
+
+    string_sig = VTABLE_get_string(interp, call_object);
 
     /* a little encapsulation violation for great speed */
     SETATTR_CallSignature_return_flags(interp, call_object, raw_sig);
