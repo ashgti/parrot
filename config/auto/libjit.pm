@@ -44,22 +44,36 @@ sub runstep {
         return 1;
     }
 
-    my $extra_libs = $self->_select_lib({
+    my $extra_libs = $self->_select_lib( {
         conf         => $conf,
         osname       => $conf->data->get_p5('OSNAME'),
         cc           => $conf->data->get('cc'),
         win32_nongcc => 'libjit.lib',
         default      => '-ljit',
-    });
+    } );
+    my $has_libjit = 0;
 
     $conf->cc_gen('config/auto/libjit/libjit_c.in');
-    eval {$conf->cc_build('', $extra_libs)};
-    my $has_libjit = 0;
-    if (!$@) {
-        my $test = $conf->cc_run();
-        $has_libjit = $self->_evaluate_cc_run($conf, $test, $has_libjit, $verbose);
-    } else {
-        die $@;
+    eval { $conf->cc_build('', $extra_libs) };
+    if ($@) {
+        print "cc_build() failed: $@\n" if $verbose;
+        $conf->data->set( HAS_LIBJIT => 0 );
+        $self->set_result('no');
+        return 1;
+    }
+    else {
+        my $test;
+        eval { $test = $conf->cc_run(); };
+        if ($@) {
+            print "cc_run() failed: $@\n" if $verbose;
+            $conf->data->set( HAS_LIBJIT => 0 );
+            $self->set_result('no');
+            return 1;
+        }
+        else {
+            $has_libjit =
+                $self->_evaluate_cc_run($conf, $test, $has_libjit, $verbose);
+        }
     }
 
     $conf->data->set( HAS_LIBJIT => $has_libjit );

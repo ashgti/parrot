@@ -39,6 +39,7 @@ my @steps = qw(
     auto::format
     auto::isreg
     auto::arch
+    auto::libjit
     auto::jit
     auto::frames
     auto::cpu
@@ -64,7 +65,6 @@ my @steps = qw(
     auto::ctags
     auto::revision
     auto::icu
-    auto::libjit
     gen::config_h
     gen::core_pmcs
     gen::crypto
