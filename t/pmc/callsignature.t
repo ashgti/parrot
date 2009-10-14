@@ -19,7 +19,7 @@ Tests the CallSignature PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(56)
+    plan(61)
 
     test_instantiate()
     test_get_set_attrs()
@@ -27,6 +27,7 @@ Tests the CallSignature PMC.
     test_shift_unshift_indexed_access()
     test_indexed_access()
     test_indexed_boxing()
+    test_keyed_access()
 .end
 
 .sub 'test_instantiate'
@@ -234,6 +235,34 @@ Tests the CallSignature PMC.
     is( $P1, 1.11, 'indexed float converted to PMC on get_pmc_keyed_int' )
     $P1    = $P0[2]
     is( $P1, 2.22, 'indexed string converted to PMC on get_pmc_keyed_int' )
+.end
+
+.sub 'test_keyed_access'
+    $P0        = new [ 'CallSignature' ]
+
+    $P0['foo'] = 100
+    $P0['bar'] = 1.11
+    $P0['baz'] = '2.22'
+    $P1        = new [ 'Float' ]
+    $P1        = 3.33
+
+    $P0['qux'] = $P1
+
+    $I0 = $P0['foo']
+    is( $I0, 100, 'set/get_intval_keyed_str' )
+
+    $N0 = $P0['bar']
+    is( $N0, 1.11, 'set/get_number_keyed_str' )
+
+    $S0 = $P0['baz']
+    is( $S0, '2.22', 'set/get_string_keyed_str' )
+
+    $P2 = $P0['qux']
+    is( $P2, 3.33, 'set/get_pmc_keyed_str' )
+
+    $P1 = getattribute $P0, 'named'
+    $I0 = elements $P1
+    is( $I0, 4, 'elements after set_*_keyed' )
 .end
 
 # Local Variables:
