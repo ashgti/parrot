@@ -926,10 +926,6 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
         VTABLE_unshift_pmc(interp, call_object, obj);
     }
 
-    /* Build a type_tuple for multiple dispatch */
-    type_tuple = Parrot_mmd_build_type_tuple_from_sig_obj(interp, call_object);
-    VTABLE_set_pmc(interp, call_object, type_tuple);
-
     return call_object;
 }
 
