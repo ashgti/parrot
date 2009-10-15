@@ -481,7 +481,11 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     INTVAL          arg_index;
     INTVAL          arg_count  = VTABLE_elements(interp, raw_sig);
     PMC            *ctx        = CURRENT_CONTEXT(interp);
-    STRING         *string_sig = Parrot_str_new(interp, "", 0);
+    /*
+     * Preallocate some buffer for string signature.
+     * Parrot_str_new will allocate proper size
+     */
+    STRING         *string_sig = Parrot_str_new(interp, NULL, arg_count);
 
     if (PMC_IS_NULL(signature))
         call_object = pmc_new(interp, enum_class_CallSignature);
