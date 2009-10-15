@@ -675,8 +675,8 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
         for (index = 0; index < elements; index++) {
             VTABLE_push_pmc(interp, call_object,
                     VTABLE_get_pmc_keyed_int(interp, aggregate, index));
-            sub_string = Parrot_str_append(interp, sub_string, CONST_STRING(interp, "P"));
         }
+        sub_string = Parrot_str_append(interp, sub_string, Parrot_str_repeat(interp, CONST_STRING(interp, "P"), index));
     }
     else if (VTABLE_does(interp, aggregate, CONST_STRING(interp, "hash"))) {
         INTVAL elements = VTABLE_elements(interp, aggregate);
@@ -693,8 +693,8 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
                 PARROT_ASSERT(name);
                 VTABLE_set_pmc_keyed_str(interp, call_object, name,
                     VTABLE_get_pmc_keyed_str(interp, aggregate, name));
-                sub_string = Parrot_str_append(interp, sub_string, CONST_STRING(interp, "SnP"));
             }
+            sub_string = Parrot_str_append(interp, sub_string, Parrot_str_repeat(interp, CONST_STRING(interp, "SnP"), index));
         }
     }
     else {
