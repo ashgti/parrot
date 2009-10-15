@@ -982,7 +982,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     }
 
     positional_args = VTABLE_elements(interp, call_object);
-    arg_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"));
+    GETATTR_CallSignature_arg_flags(interp, call_object, arg_sig);
 
     /* First iterate over positional args and positional parameters. */
     arg_index = 0;
@@ -1546,8 +1546,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         return;
     }
 
-    result_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "returns"));
-    result_sig   = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"));
+    GETATTR_CallSignature_results(interp, call_object, result_list);
+    GETATTR_CallSignature_return_flags(interp, call_object, result_sig);
     result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
     PARROT_ASSERT(PMC_IS_NULL(result_list) || !PMC_IS_NULL(result_sig));
 
