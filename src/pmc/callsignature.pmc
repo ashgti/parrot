@@ -76,10 +76,10 @@ typedef struct Pcc_cell
             while (NEXT_CELL(c)) { \
                 c = NEXT_CELL(c); \
             } \
-            NEXT_CELL(c) = cell; \
+            NEXT_CELL(c) = (cell); \
         } \
         else \
-            (a)->positionals = cell; \
+            (a)->positionals = (cell); \
     } while (0)
 
 #define PREPEND_CELL(SELF, cell) \
@@ -87,7 +87,7 @@ typedef struct Pcc_cell
         Parrot_CallSignature_attributes * const a = PARROT_CALLSIGNATURE(SELF);\
         a->num_positionals++; \
         NEXT_CELL(cell) = a->positionals; \
-        a->positionals  = cell; \
+        a->positionals  = (cell); \
     } while (0)
 
 /* TODO: could use get_cell_at */
@@ -610,7 +610,7 @@ Mark any referenced strings and PMCs.
         }
     }
 
-    VTABLE INTVAL elements () {
+    VTABLE INTVAL elements() {
         Parrot_CallSignature_attributes * const attrs = PARROT_CALLSIGNATURE(SELF);
         if (!attrs)
             return 0;
