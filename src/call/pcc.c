@@ -147,7 +147,6 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
     /* Invoke the subroutine object with the given CallSignature object */
     interp->current_object = pmc;
     Parrot_pcc_invoke_from_sig_object(interp, sub_obj, sig_obj);
-    gc_unregister_pmc(interp, sig_obj);
 }
 
 /*
@@ -192,8 +191,6 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
     /* Invoke the subroutine object with the given CallSignature object */
     interp->current_object = pmc;
     Parrot_pcc_invoke_from_sig_object(interp, sub_obj, sig_obj);
-    gc_unregister_pmc(interp, sig_obj);
-
 }
 
 
@@ -246,7 +243,6 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         Interp_core_SET(interp, old_core);
     }
-    gc_unregister_pmc(interp, call_object);
     Parrot_pcc_set_signature(interp, ctx, NULL);
     Parrot_pop_context(interp);
 }

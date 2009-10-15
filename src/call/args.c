@@ -483,10 +483,8 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     PMC            *ctx        = CURRENT_CONTEXT(interp);
     STRING         *string_sig = Parrot_str_new(interp, "", 0);
 
-    if (PMC_IS_NULL(signature)) {
+    if (PMC_IS_NULL(signature))
         call_object = pmc_new(interp, enum_class_CallSignature);
-        gc_register_pmc(interp, call_object);
-    }
     else
         call_object = signature;
 
@@ -732,10 +730,8 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     PMC            *ctx       = CURRENT_CONTEXT(interp);
     PMC            *returns   = pmc_new(interp, enum_class_ResizablePMCArray);
 
-    if (PMC_IS_NULL(signature)) {
+    if (PMC_IS_NULL(signature))
         call_object = pmc_new(interp, enum_class_CallSignature);
-        gc_register_pmc(interp, call_object);
-    }
     /* A hack to support 'get_results' as the way of fetching the
      * exception object inside an exception handler. The first argument
      * in the call object is the exception, stick it directly into the
