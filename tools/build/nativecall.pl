@@ -79,7 +79,7 @@ my %sig_table = (
     L => { as_proto => "long *", as_return => "" },
     T => { as_proto => "char **", as_return => "" },
     V => { as_proto => "void **", as_return => "", sig_char => "P" },
-    '@' => { as_proto => "PMC *", as_return => "", cname => "xAT_", sig_char => '@' },
+    '@' => { as_proto => "PMC *", as_return => "", cname => "xAT_", sig_char => 'Ps' },
 );
 
 for (values %sig_table) {
