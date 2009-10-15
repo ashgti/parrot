@@ -528,7 +528,10 @@ Retrieves the hash of named arguments.
     VTABLE PMC *get_attr_str(STRING *key) {
         PMC *value = PMCNULL;
 
-        if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "results"))) {
+        if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "named"))) {
+            value = get_named_names(INTERP, SELF);
+        }
+        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "results"))) {
             GET_ATTR_results(interp, SELF, value);
         }
         else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "returns"))) {
@@ -539,9 +542,6 @@ Retrieves the hash of named arguments.
         }
         else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "return_flags"))) {
             GET_ATTR_return_flags(interp, SELF, value);
-        }
-        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "named"))) {
-            value = get_named_names(INTERP, SELF);
         }
         else {
             /* If unknown attribute name, throw an exception. */
