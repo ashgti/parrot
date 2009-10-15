@@ -30,8 +30,9 @@ typedef struct Pcc_cell
     struct Pcc_cell *next;
 } Pcc_cell;
 
-/* mask off lower three bits for pointer tag */
-#define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~3)
+/* mask off lower two bits (1 + 2 = 3) for pointer tags */
+#define TAG_BITS 3
+#define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~TAG_BITS)
 
 #define CELL_INT(c)     UNTAG_CELL(c)->u.i
 #define CELL_FLOAT(c)   UNTAG_CELL(c)->u.n
