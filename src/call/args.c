@@ -1185,7 +1185,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
                 /* Named argument iteration. */
                 for (named_arg_index = 0; named_arg_index < named_arg_count; named_arg_index++) {
-                    STRING *name = VTABLE_get_string_keyed_int( interp,
+                    STRING *name = VTABLE_get_string_keyed_int(interp,
                             named_arg_list, named_arg_index);
 
                     if ((PMC_IS_NULL(named_used_list)) ||
