@@ -62,7 +62,7 @@ my %sig_table = (
            func_call_assign => ""
          },
     P => { as_proto => "PMC *", sig_char => "P" },
-    O => { as_proto => "PMC *", returns => "", sig_char => "P" },
+    O => { as_proto => "PMC *", returns => "", sig_char => "Pi" },
     J => { as_proto => "PARROT_INTERP", returns => "", sig_char => "" },
     S => { as_proto => "STRING *", sig_char => "S" },
     I => { as_proto => "INTVAL", sig_char => "I" },
