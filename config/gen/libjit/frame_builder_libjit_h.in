@@ -17,7 +17,7 @@
 #include "parrot/parrot.h"
 #include "frame_builder.h"
 
-#if PARROT_HAS_LIBJIT
+#ifdef PARROT_HAS_LIBJIT
 
 #include <jit/jit.h>
 

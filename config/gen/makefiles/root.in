@@ -1204,17 +1204,14 @@ $(SRC_DIR)/frame_builder$(O) : \
     $(SRC_DIR)/frame_builder.h \
     $(SRC_DIR)/frame_builder.c \
     $(SRC_DIR)/frame_builder.str \
-    $(INC_DIR)/parrot.h
+    $(GENERAL_H_FILES)
 
 $(SRC_DIR)/frame_builder_libjit$(O) : \
     $(SRC_DIR)/frame_builder_libjit.h \
     $(SRC_DIR)/frame_builder_libjit.c \
     $(SRC_DIR)/frame_builder_libjit.str \
     $(SRC_DIR)/frame_builder.h \
-    $(SRC_DIR)/pmc/pmc_integer.h \
-    $(SRC_DIR)/pmc/pmc_unmanagedstruct.h \
-    $(SRC_DIR)/pmc/pmc_managedstruct.h \
-    $(INC_DIR)/parrot.h
+    $(GENERAL_H_FILES)
 
 $(SRC_DIR)/vtables$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/vtables.c
 
