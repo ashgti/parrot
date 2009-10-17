@@ -168,8 +168,9 @@ pir_output_is( <<'CODE', <<'OUTPUT', "thread type 2" );
     .param pmc passed
     inc $I5
     $S5 = " thread\n"
-    passed = 'hello from'
-    print passed
+    .local pmc salutation
+    salutation = box 'hello from'
+    print salutation
     # print I5 # not done because register initialization is not guaranteed
     print $S5
     $P0 = getinterp
