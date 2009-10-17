@@ -906,7 +906,7 @@ static INTVAL
 COMPARE(PARROT_INTERP, ARGIN(void *a), ARGIN(void *b), ARGIN(PMC *cmp))
 {
     ASSERT_ARGS(COMPARE)
-    INTVAL result;
+    INTVAL result = 0;
     if (PMC_IS_NULL(cmp))
         return VTABLE_cmp(interp, (PMC *)a, (PMC *)b);
 
