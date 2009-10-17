@@ -250,6 +250,12 @@ destination to continue execution.
 
         if (!PMC_IS_NULL(from_obj)) {
             PMC *raw_sig  = VTABLE_get_attr_str(interp, from_obj, CONST_STRING(interp, "arg_flags"));
+
+            /* Build results signature for continuation */
+            if (*pc == PARROT_OP_get_results_pc)
+                call_obj = Parrot_pcc_build_sig_object_returns_from_op(INTERP, call_obj,
+                    Parrot_pcc_get_pmc_constant(INTERP, to_ctx, pc[1]), pc);
+
             Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
         }
 
