@@ -2278,10 +2278,33 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
 
 /*
 
-Get the appropriate argument value from the continuation
+=item C<void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, PMC *
+parent, PMC * tailcall)>
 
-=item C<static INTVAL intval_arg_from_continuation(PARROT_INTERP, PMC *cs,
-INTVAL arg_index)>
+=cut
+
+*/
+
+void
+Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, ARGMOD(PMC * parent), ARGMOD(PMC * tailcall))
+{
+    ASSERT_ARGS(Parrot_pcc_merge_signature_for_tailcall)
+    if (PMC_IS_NULL(parent) || PMC_IS_NULL(tailcall))
+        return;
+    else {
+        const STRING * const results_s = CONST_STRING(interp, "results");
+        const STRING * const return_flag_s = CONST_STRING(interp, "return_flags");
+        PMC * const results = VTABLE_get_attr_str(interp, parent, results_s);
+        PMC * const return_flags = VTABLE_get_attr_str(interp, parent, return_flag_s);
+        VTABLE_set_attr_str(interp, tailcall, results_s, results);
+        VTABLE_set_attr_str(interp, tailcall, return_flag_s, return_flags);
+    }
+}
+
+/*
+
+=item C<void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, PMC *parent,
+PMC *tailcall)>
 
 =item C<static FLOATVAL numval_arg_from_continuation(PARROT_INTERP, PMC *cs,
 INTVAL arg_index)>
@@ -2291,7 +2314,6 @@ INTVAL arg_index)>
 
 =item C<static PMC* pmc_arg_from_continuation(PARROT_INTERP, PMC *cs, INTVAL
 arg_index)>
-
 
 Get the appropriate argument value from the op.
 
