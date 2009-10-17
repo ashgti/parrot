@@ -352,7 +352,7 @@ Queries this object's class to find the method with the given name.
                     find_method);
 
             if (!PMC_IS_NULL(method)) {
-                PMC *result;
+                PMC *result = PMCNULL;
                 Parrot_pcc_invoke_sub_from_c_args(interp, method,
                         "PiS->P", SELF, name, &result);
                 return result;
