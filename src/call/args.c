@@ -2239,6 +2239,14 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
         if (*x == '-') {
             /* skip '>' */
             x++;
+
+            /* Starting a new argument, so store the previous argument,
+             * if there was one. */
+            if (set) {
+                VTABLE_push_integer(interp, current_array, flags);
+                set = 0;
+            }
+
             /* Switch to the return argument flags. */
             if (PMC_IS_NULL(*return_flags))
                 *return_flags = pmc_new(interp, enum_class_ResizableIntegerArray);
