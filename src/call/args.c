@@ -832,22 +832,21 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     PMC         *arg_flags     = PMCNULL;
     PMC         *return_flags  = PMCNULL;
     PMC         * const call_object = pmc_new(interp, enum_class_CallSignature);
-    STRING      *string_sig         = Parrot_str_new_constant(interp, sig);
-    const INTVAL sig_len            = Parrot_str_byte_length(interp, string_sig);
+    STRING      *string_sig         = Parrot_str_new(interp, NULL, 0);
+    const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
     INTVAL       i;
 
     if (!sig_len)
         return call_object;
 
-    VTABLE_set_string_native(interp, call_object, string_sig);
     parse_signature_string(interp, sig, &arg_flags, &return_flags);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"), return_flags);
 
     /* Process the varargs list */
     for (i = 0; i < sig_len; ++i) {
-        const INTVAL type = Parrot_str_indexed(interp, string_sig, i);
+        const INTVAL type = sig[i];
 
         /* Only create the returns array if it's needed */
         if (in_return_sig && PMC_IS_NULL(returns)) {
@@ -890,24 +889,36 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
             switch (type) {
                 case 'I':
                     VTABLE_push_integer(interp, call_object, va_arg(args, INTVAL));
+                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "I"));
                     break;
                 case 'N':
                     VTABLE_push_float(interp, call_object, va_arg(args, FLOATVAL));
+                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "N"));
                     break;
                 case 'S':
                     VTABLE_push_string(interp, call_object, va_arg(args, STRING *));
+                    string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "S"));
                     break;
                 case 'P':
                 {
-                    INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
+                    INTVAL type_lookahead = sig[i+1];
                     PMC * const pmc_arg = va_arg(args, PMC *);
-                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
-                    if (type_lookahead == 'i') {
-                        if (i != 0)
-                            Parrot_ex_throw_from_c_args(interp, NULL,
-                                EXCEPTION_INVALID_OPERATION,
-                                "Dispatch: only the first argument can be an invocant");
-                        i++; /* skip 'i' */
+                    if (type_lookahead == 'f') {
+                        STRING * const flat_list = dissect_aggregate_arg(
+                                                       interp, call_object, pmc_arg);
+                        string_sig = Parrot_str_append(interp, string_sig, flat_list);
+                        i++; /* skip 'f' */
+                    }
+                    else {
+                        VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
+                        string_sig = Parrot_str_append(interp, string_sig, CONST_STRING(interp, "P"));
+                        if (type_lookahead == 'i') {
+                            if (i != 0)
+                                Parrot_ex_throw_from_c_args(interp, NULL,
+                                    EXCEPTION_INVALID_OPERATION,
+                                    "Dispatch: only the first argument can be an invocant");
+                            i++; /* skip 'i' */
+                        }
                     }
                     break;
                 }
@@ -929,6 +940,8 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
         VTABLE_set_string_native(interp, call_object, string_sig);
         VTABLE_unshift_pmc(interp, call_object, obj);
     }
+
+    VTABLE_set_string_native(interp, call_object, string_sig);
 
     return call_object;
 }
