@@ -29,10 +29,10 @@ sub _init {
     my %data = (
 	description => 'Generate LibJIT specific code',
 	result => '',
-        targets => {
-            frame_builder_h => 'src/frame_builder_libjit.h',
-            frame_builder_c => 'src/frame_builder_libjit.c',
-        },
+    targets => {
+        frame_builder_h => 'src/frame_builder_libjit.h',
+        frame_builder_c => 'src/frame_builder_libjit.c',
+    },
 	templates => {
 	    frame_builder_h => 'config/gen/libjit/frame_builder_libjit_h.in',
 	    frame_builder_c => 'config/gen/libjit/frame_builder_libjit_c.in',
@@ -102,8 +102,9 @@ sub runstep {
                       TEMP_func_wrap_decls   => (join "\n", map {$_->{decl}} @function_wrappers),
                       TEMP_func_wrap_defns   => (join "\n", map {$_->{defn}} @function_wrappers) );
 
-    foreach (keys %{$self->{targets}}) {
-        $conf->genfile($self->{templates}{$_}, $self->{targets}{$_});
+    foreach my $t (keys %{$self->{targets}}) {
+        $conf->genfile($self->{templates}{$t}, $self->{targets}{$t});
+        $conf->append_configure_log($t);
     }
 
     return 1;
