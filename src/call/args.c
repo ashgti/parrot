@@ -2292,8 +2292,8 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, ARGMOD(PMC * parent), ARG
     if (PMC_IS_NULL(parent) || PMC_IS_NULL(tailcall))
         return;
     else {
-        const STRING * const results_s = CONST_STRING(interp, "results");
-        const STRING * const return_flag_s = CONST_STRING(interp, "return_flags");
+        STRING * const results_s = CONST_STRING(interp, "results");
+        STRING * const return_flag_s = CONST_STRING(interp, "return_flags");
         PMC * const results = VTABLE_get_attr_str(interp, parent, results_s);
         PMC * const return_flags = VTABLE_get_attr_str(interp, parent, return_flag_s);
         VTABLE_set_attr_str(interp, tailcall, results_s, results);
