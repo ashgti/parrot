@@ -172,7 +172,7 @@ Returns the fully qualified name of the object's class.
         PMC * const method = Parrot_oo_find_vtable_override(interp, _class, name);
 
         if (!PMC_IS_NULL(method)) {
-            STRING *result;
+            STRING *result = NULL;
             Parrot_pcc_invoke_sub_from_c_args(interp, method, "Pi->S",
                     SELF, &result);
             return result;
@@ -219,7 +219,7 @@ of the given name walking up the inheritance tree.
                 VTABLE_get_class(interp, SELF), get_attr);
 
         if (!PMC_IS_NULL(method)) {
-            PMC *result;
+            PMC *result = PMCNULL;
             Parrot_pcc_invoke_sub_from_c_args(interp, method, "PiS->P",
                     SELF, name, &result);
             return result;
