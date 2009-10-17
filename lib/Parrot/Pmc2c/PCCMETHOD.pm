@@ -359,7 +359,8 @@ sub process_pccmethod_args {
             push @vararg_list, "&$name"
         }
         elsif ( $arg_type eq 'return' ) {
-            push @vararg_list, "$name";
+            my $typenamestr = $reg_type_info->{$type}{s};
+            push @vararg_list, "($typenamestr)$name";
         }
     }
 
