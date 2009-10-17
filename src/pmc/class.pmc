@@ -348,7 +348,6 @@ initialize_parents(PARROT_INTERP, PMC *object, PMC *all_parents)
             /* add the invocant */
             VTABLE_unshift_pmc(interp, sig_obj, object);
             Parrot_pcc_invoke_from_sig_object(interp, meth, sig_obj);
-            gc_unregister_pmc(interp, sig_obj);
         }
     }
 }
