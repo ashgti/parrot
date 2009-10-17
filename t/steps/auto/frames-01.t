@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 24;
 use lib qw( lib t/configure/testlib );
 use_ok('config::init::defaults');
 use_ok('config::auto::frames');
@@ -33,18 +33,24 @@ $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
 my $step = test_step_constructor_and_description($conf);
 
-# To avoid a warning about an unitialized value, we will set nvsize to 8,
-# cpuarch to i386 and osname to linux.
+# To avoid a warning about an uninitialized value, we will set osname to linux.
 # This is normally done during earlier configuration steps.
-$conf->data->set( nvsize => 8 );
-$conf->data->set( cpuarch => 'i386' );
 $conf->data->set( osname => 'linux' );
 
+$conf->data->set( HAS_LIBJIT => 1 );
 my $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
 ok( defined ( $step->result() ),
     "Got defined result" );
 is( $step->result(), 'yes', "Result is 'yes', as expected" );
+
+$conf->data->set( HAS_LIBJIT => undef );
+$ret = $step->runstep($conf);
+ok( $ret, "runstep() returned true value" );
+ok( defined ( $step->result() ),
+    "Got defined result" );
+is( $step->result(), 'no', "Result is 'no', as expected" );
+
 $conf->cc_clean();
 $step->set_result( undef );
 
@@ -64,39 +70,22 @@ $can_build_call_frames = auto::frames::_call_frames_buildable($conf);
 ok( ! $can_build_call_frames,
     "_call_frames_buildable() returned false value, as expected" );
 
+$conf->data->set( HAS_LIBJIT => 1 );
 $conf->options->set( buildframes => undef );
-$conf->data->set( osname =>  'linux' );
-$conf->data->set( cpuarch =>  'i386' );
-$conf->data->set( nvsize =>  8 );
 $can_build_call_frames = auto::frames::_call_frames_buildable($conf);
 ok( $can_build_call_frames,
-    "_call_frames_buildable() returned true value, as expected (i386/non darwin/8)" );
+    "_call_frames_buildable() returned true value, as expected" );
 
-$conf->data->set( osname =>  'darwin' );
-$conf->data->set( cpuarch =>  'i386' );
-$conf->data->set( nvsize =>  8 );
+$conf->data->set( HAS_LIBJIT => undef );
+$conf->options->set( buildframes => 0 );
 $can_build_call_frames = auto::frames::_call_frames_buildable($conf);
 ok( ! $can_build_call_frames,
-    "_call_frames_buildable() returned false value, as expected (i386/darwin/8)" );
-
-$conf->data->set( osname =>  'linux' );
-$conf->data->set( cpuarch =>  'ppc' );
-$conf->data->set( nvsize =>  8 );
-$can_build_call_frames = auto::frames::_call_frames_buildable($conf);
-ok( ! $can_build_call_frames,
-    "_call_frames_buildable() returned false value, as expected (ppc/linux/8)" );
-
-$conf->data->set( osname =>  'linux' );
-$conf->data->set( cpuarch =>  'i386' );
-$conf->data->set( nvsize =>  4 );
-$can_build_call_frames = auto::frames::_call_frames_buildable($conf);
-ok( ! $can_build_call_frames,
-    "_call_frames_buildable() returned false value, as expected (i386/linux/4)" );
+    "_call_frames_buildable() returned false value, as expected" );
 
 ##### _handle_call_frames_buildable() #####
 
-$conf->data->set( nvsize => 8 );
-$conf->data->set( cpuarch => 'i386' );
+#$conf->data->set( nvsize => 8 );
+#$conf->data->set( cpuarch => 'i386' );
 $conf->data->set( osname => 'linux' );
 
 my $rv;

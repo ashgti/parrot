@@ -40,9 +40,6 @@ sub runstep {
 
 sub _call_frames_buildable {
     my $conf = shift;
-    my $osname  = $conf->data->get('osname');
-    my $cpuarch = $conf->data->get('cpuarch');
-    my $nvsize  = $conf->data->get('nvsize');
     my $can_build_call_frames;
 
     if (defined $conf->options->get('buildframes')) {
