@@ -49,8 +49,7 @@ sub _call_frames_buildable {
         $can_build_call_frames = $conf->options->get('buildframes');
     }
     else {
-        $can_build_call_frames = ($nvsize == 8 && $cpuarch eq 'i386'
-            && $osname ne 'darwin');
+        $can_build_call_frames = $conf->data->get('HAS_LIBJIT');
     }
     return $can_build_call_frames;
 }
