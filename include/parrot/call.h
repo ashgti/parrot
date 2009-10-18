@@ -335,6 +335,18 @@ void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         FUNC_MODIFIES(* parent)
         FUNC_MODIFIES(* tailcall);
 
+PARROT_CAN_RETURN_NULL
+void Parrot_pcc_parse_signature_string(PARROT_INTERP,
+    ARGIN(STRING *signature),
+    ARGMOD(PMC **arg_flags),
+    ARGMOD(PMC **return_flags))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
+        FUNC_MODIFIES(*arg_flags)
+        FUNC_MODIFIES(*return_flags);
+
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -378,6 +390,12 @@ void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(parent) \
     , PARROT_ASSERT_ARG(tailcall))
+#define ASSERT_ARGS_Parrot_pcc_parse_signature_string \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(signature) \
+    , PARROT_ASSERT_ARG(arg_flags) \
+    , PARROT_ASSERT_ARG(return_flags))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/call/args.c */
 

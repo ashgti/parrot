@@ -2299,6 +2299,30 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
 
 /*
 
+=item C<void Parrot_pcc_parse_signature_string(PARROT_INTERP, STRING *signature,
+PMC **arg_flags, PMC **return_flags)>
+
+Parses a signature string and creates call and return signature integer
+arrays. The two integer arrays should be passed in as references to a
+PMC.
+
+=cut
+
+*/
+
+PARROT_CAN_RETURN_NULL
+void
+Parrot_pcc_parse_signature_string(PARROT_INTERP, ARGIN(STRING *signature),
+        ARGMOD(PMC **arg_flags), ARGMOD(PMC **return_flags))
+{
+    const char *s = Parrot_string_cstring(interp, signature);
+    *arg_flags    = PMCNULL;
+    *return_flags = PMCNULL;
+    parse_signature_string(interp, s, arg_flags, return_flags);
+}
+
+/*
+
 =item C<void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, PMC *
 parent, PMC * tailcall)>
 
