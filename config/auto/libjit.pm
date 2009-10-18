@@ -90,8 +90,7 @@ sub runstep {
 }
 
 sub _evaluate_cc_run {
-    my $self = shift;
-    my ($test, $has_libjit, $verbose) = @_;
+    my ($self, $test, $has_libjit, $verbose) = @_;
     if ($test =~ m/^USES INTERPRETER: \d+/ ) {
         $has_libjit = 1;
         print " (yes) " if $verbose;
