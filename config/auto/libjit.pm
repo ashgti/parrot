@@ -38,54 +38,43 @@ sub runstep {
                                     without-libjit
     });
 
+    my ($has_libjit, $extra_libs);
     if ($without) {
-        $conf->data->set( HAS_LIBJIT => 0 );
-        $self->set_result('no');
-        return 1;
-    }
-
-    my $extra_libs = $self->_select_lib( {
-        conf         => $conf,
-        osname       => $conf->data->get_p5('OSNAME'),
-        cc           => $conf->data->get('cc'),
-        win32_nongcc => 'libjit.lib',
-        default      => '-ljit',
-    } );
-    my $has_libjit = 0;
-
-    $conf->cc_gen('config/auto/libjit/libjit_c.in');
-    eval { $conf->cc_build('', $extra_libs) };
-    if ($@) {
-        print "cc_build() failed: $@\n" if $verbose;
-        $conf->data->set( HAS_LIBJIT => 0 );
-        $self->set_result('no');
-        return 1;
+        $has_libjit = 0;
     }
     else {
-        my $test;
-        eval { $test = $conf->cc_run(); };
+        $extra_libs = $self->_select_lib( {
+            conf         => $conf,
+            osname       => $conf->data->get_p5('OSNAME'),
+            cc           => $conf->data->get('cc'),
+            win32_nongcc => 'libjit.lib',
+            default      => '-ljit',
+        } );
+    
+        $conf->cc_gen('config/auto/libjit/libjit_c.in');
+        eval { $conf->cc_build('', $extra_libs) };
         if ($@) {
-            print "cc_run() failed: $@\n" if $verbose;
-            $conf->data->set( HAS_LIBJIT => 0 );
-            $self->set_result('no');
-            return 1;
+            print "cc_build() failed: $@\n" if $verbose;
+            $has_libjit = 0;
         }
         else {
-            $has_libjit = $self->_evaluate_cc_run($test, $has_libjit, $verbose);
+            my $test;
+            eval { $test = $conf->cc_run(); };
+            if ($@) {
+                print "cc_run() failed: $@\n" if $verbose;
+                $has_libjit = 0;
+            }
+            else {
+                $has_libjit =
+                    $self->_evaluate_cc_run($test, $has_libjit, $verbose);
+            }
         }
+        $conf->cc_clean();
     }
 
     $conf->data->set( HAS_LIBJIT => $has_libjit );
+    _handle_has_libjit($conf, $has_libjit, $extra_libs);
     $self->set_result( $has_libjit ? 'yes' : 'no' );
-    $conf->cc_clean();
-
-    if ($has_libjit) {
-        $conf->data->set(
-            cc_build_call_frames => '-DCAN_BUILD_CALL_FRAMES',
-            has_exec_protect => 1,
-        );
-        $conf->data->add( ' ', libs => $extra_libs );
-    }
 
     return 1;
 }
@@ -98,6 +87,17 @@ sub _evaluate_cc_run {
         $self->set_result("yes");
     }
     return $has_libjit;
+}
+
+sub _handle_has_libjit {
+    my ($conf, $has_libjit, $extra_libs) = @_;
+    if ($has_libjit) {
+        $conf->data->set(
+            cc_build_call_frames => '-DCAN_BUILD_CALL_FRAMES',
+            has_exec_protect => 1,
+        );
+        $conf->data->add( ' ', libs => $extra_libs );
+    }
 }
 
 1;

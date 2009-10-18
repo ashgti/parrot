@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 28;
+use Test::More tests => 34;
 use lib qw( lib t/configure/testlib );
 use Parrot::Configure;
 use Parrot::Configure::Options 'process_options';
@@ -19,8 +19,6 @@ use IO::CaptureOutput qw( capture );
 
 use_ok('config::init::defaults');
 use_ok('config::auto::libjit');
-
-########## _select_lib() ##########
 
 my ($args, $step_list_ref) = process_options( {
         argv => [ q{--without-libjit} ],
@@ -102,6 +100,35 @@ $verbose = 1;
     is( $step->result(), 'yes', "result is yes, as expected" );
     like( $stdout, qr/\(yes\)/, "Got expected verbose output" );
 }
+
+########## _handle_has_libjit() ##########
+
+my $extra_libs;
+
+$conf->data->set( 'cc_build_call_frames' => undef );
+$conf->data->set( 'has_exec_protect' => undef );
+$conf->data->set( 'libs' => '' );
+$has_libjit = 1;
+$extra_libs = 'mylibs';
+auto::libjit::_handle_has_libjit($conf, $has_libjit, $extra_libs);
+is( $conf->data->get( 'cc_build_call_frames' ), '-DCAN_BUILD_CALL_FRAMES',
+    "Got expected value for cc_build_call_frames" );
+ok( $conf->data->get( 'has_exec_protect' ), "has_exec_protect' set" );
+is( $conf->data->get( 'libs' ), " $extra_libs",
+    "Got expected value for libs" );
+
+$conf->data->set( 'cc_build_call_frames' => undef );
+$conf->data->set( 'has_exec_protect' => undef );
+$conf->data->set( 'libs' => '' );
+$has_libjit = 0;
+$extra_libs = 'mylibs';
+auto::libjit::_handle_has_libjit($conf, $has_libjit, $extra_libs);
+ok( ! defined($conf->data->get( 'cc_build_call_frames' )), 
+    "cc_build_call_frames undefined as expected" );
+ok( ! defined($conf->data->get( 'has_exec_protect' )),
+    "has_exec_protect' undefined" );
+is( $conf->data->get( 'libs' ), "",
+    "Got expected value for libs" );
 
 ################### DOCUMENTATION ###################
 
