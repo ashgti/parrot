@@ -71,7 +71,7 @@ foreach my $path (@files) {
             $missing = 'missing';
         }
         if ($missing) {
-            if ($missing == 'boilerplate only') {
+            if ($missing eq 'boilerplate only') {
                 push @missing_docs, "$path ($missing)\nIn:\n$escaped_decl\n";
             }
             else {
