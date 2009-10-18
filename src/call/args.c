@@ -2328,6 +2328,8 @@ Parrot_pcc_parse_signature_string(PARROT_INTERP, ARGIN(STRING *signature),
 =item C<void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, PMC *
 parent, PMC * tailcall)>
 
+merge in signatures for tailcall
+
 =cut
 
 */
