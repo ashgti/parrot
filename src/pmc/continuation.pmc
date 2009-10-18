@@ -50,8 +50,6 @@ pmclass Continuation auto_attrs {
     ATTR PMC               *to_ctx;          /* pointer to dest context */
     /* a Continuation keeps the from_ctx alive */
     ATTR PMC               *from_ctx;        /* sub, this cont is returning from */
-    ATTR opcode_t          *current_results; /* ptr into code with get_results opcode
-                                                full continuation only */
     ATTR int                runloop_id;      /* id of the creating runloop. */
     ATTR int                invoked;         /* flag when a handler has been invoked. */
 /*
@@ -72,7 +70,6 @@ Initializes the continuation.
         attrs->runloop_id = 0;
         attrs->seg        = interp->code;
         attrs->address    = NULL;
-        attrs->current_results = Parrot_pcc_get_results(interp, attrs->to_ctx);
 
         PObj_custom_mark_SET(SELF);
 
@@ -96,7 +93,6 @@ Initializes the continuation.
         attrs->runloop_id = 0;
         attrs->seg        = theirs->seg;
         attrs->address    = theirs->address;
-        attrs->current_results = Parrot_pcc_get_results(interp, attrs->to_ctx);
 
         PObj_custom_mark_SET(SELF);
 
@@ -182,13 +178,6 @@ address for any returned values.
 
         cc->address    = pos;
         cc->runloop_id = INTERP->current_runloop_id;
-
-        cc->current_results = (cc->seg
-            && (pos >= cc->seg->base.data)
-            && (pos < (cc->seg->base.data + cc->seg->base.size)
-            && (*pos == PARROT_OP_get_results_pc))) ?
-                pos :
-                (opcode_t *)NULL;
     }
 
 /*
