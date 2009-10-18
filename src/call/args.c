@@ -2315,6 +2315,7 @@ void
 Parrot_pcc_parse_signature_string(PARROT_INTERP, ARGIN(STRING *signature),
         ARGMOD(PMC **arg_flags), ARGMOD(PMC **return_flags))
 {
+    ASSERT_ARGS(Parrot_pcc_parse_signature_string)
     char *s        = Parrot_str_to_cstring(interp, signature);
     *arg_flags    = PMCNULL;
     *return_flags = PMCNULL;
@@ -2349,8 +2350,10 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, ARGMOD(PMC * parent), ARG
 
 /*
 
-=item C<void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP, PMC *parent,
-PMC *tailcall)>
+Get the appropriate argument value from the continuation
+
+=item C<static INTVAL intval_arg_from_continuation(PARROT_INTERP, PMC *cs,
+INTVAL arg_index)>
 
 =item C<static FLOATVAL numval_arg_from_continuation(PARROT_INTERP, PMC *cs,
 INTVAL arg_index)>
