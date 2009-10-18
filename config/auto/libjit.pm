@@ -71,8 +71,7 @@ sub runstep {
             return 1;
         }
         else {
-            $has_libjit =
-                $self->_evaluate_cc_run($conf, $test, $has_libjit, $verbose);
+            $has_libjit = $self->_evaluate_cc_run($test, $has_libjit, $verbose);
         }
     }
 
@@ -92,7 +91,7 @@ sub runstep {
 
 sub _evaluate_cc_run {
     my $self = shift;
-    my ($conf, $test, $has_libjit, $verbose) = @_;
+    my ($test, $has_libjit, $verbose) = @_;
     if ($test =~ m/^USES INTERPRETER: \d+/ ) {
         $has_libjit = 1;
         print " (yes) " if $verbose;
