@@ -2315,10 +2315,11 @@ void
 Parrot_pcc_parse_signature_string(PARROT_INTERP, ARGIN(STRING *signature),
         ARGMOD(PMC **arg_flags), ARGMOD(PMC **return_flags))
 {
-    const char *s = Parrot_string_cstring(interp, signature);
+    char *s        = Parrot_str_to_cstring(interp, signature);
     *arg_flags    = PMCNULL;
     *return_flags = PMCNULL;
     parse_signature_string(interp, s, arg_flags, return_flags);
+    Parrot_str_free_cstring(s);
 }
 
 /*
