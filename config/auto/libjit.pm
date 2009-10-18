@@ -77,6 +77,7 @@ sub runstep {
 
     $conf->data->set( HAS_LIBJIT => $has_libjit );
     $self->set_result( $has_libjit ? 'yes' : 'no' );
+    $conf->cc_clean();
 
     if ($has_libjit) {
         $conf->data->set(
