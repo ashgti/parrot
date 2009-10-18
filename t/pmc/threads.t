@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -705,6 +705,7 @@ pir_output_unlike( <<'CODE', qr/not/, "globals + constant table subs issue", @to
     print "\nnot ok "
     print number
     print "\n"
+    inc number
     $P0 = interpinfo .INTERPINFO_CURRENT_CONT
 loop:
     $I0 = defined $P0
