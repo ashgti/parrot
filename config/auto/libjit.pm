@@ -50,7 +50,7 @@ sub runstep {
             win32_nongcc => 'libjit.lib',
             default      => '-ljit',
         } );
-    
+
         $conf->cc_gen('config/auto/libjit/libjit_c.in');
         eval { $conf->cc_build('', $extra_libs) };
         if ($@) {

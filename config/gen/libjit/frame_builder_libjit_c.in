@@ -236,7 +236,7 @@ Parrot_jit_parse_sig_args_pre(PARROT_INTERP, char *sig, int nargs,
           case 'N':
             t1 = JIT_TYPE_FLOATVAL;
           read_float_reg:
-            arg_types[i]  = t1;        
+            arg_types[i]  = t1;
             v1            = jit_value_create_nint_constant(f, jit_type_sys_int, j);
             v2            = jit__get_nci_N(f, jinterp, st, v1);
             arg_regs[j++] = arg_vals[i] = v2;
