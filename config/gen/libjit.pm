@@ -201,7 +201,8 @@ sub jit_prefix_type {
     my $type = shift;
     if ($type !~ /[A-Z]/) {
         return "jit_type_$_";
-    } else {
+    }
+    else {
         return "JIT_TYPE_$_";
     }
 }
