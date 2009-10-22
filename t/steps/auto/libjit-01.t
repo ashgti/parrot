@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 34;
+use Test::More tests => 40;
 use lib qw( lib t/configure/testlib );
 use Parrot::Configure;
 use Parrot::Configure::Options 'process_options';
@@ -107,26 +107,55 @@ my $extra_libs;
 
 $conf->data->set( 'cc_build_call_frames' => undef );
 $conf->data->set( 'has_exec_protect' => undef );
+$conf->data->set( 'libjit_has_alloca' => undef );
 $conf->data->set( 'libs' => '' );
+
 $has_libjit = 1;
 $extra_libs = 'mylibs';
+$conf->data->set( 'cpuarch' => 'i386' );
+
 auto::libjit::_handle_has_libjit($conf, $has_libjit, $extra_libs);
 is( $conf->data->get( 'cc_build_call_frames' ), '-DCAN_BUILD_CALL_FRAMES',
     "Got expected value for cc_build_call_frames" );
 ok( $conf->data->get( 'has_exec_protect' ), "has_exec_protect' set" );
+ok( $conf->data->get( 'libjit_has_alloca'),
+    "on i386 with libJIT, 'libjit_has_alloca' has true value" );
 is( $conf->data->get( 'libs' ), " $extra_libs",
     "Got expected value for libs" );
 
 $conf->data->set( 'cc_build_call_frames' => undef );
 $conf->data->set( 'has_exec_protect' => undef );
+$conf->data->set( 'libjit_has_alloca' => undef );
 $conf->data->set( 'libs' => '' );
+
+$has_libjit = 1;
+$extra_libs = 'mylibs';
+$conf->data->set( 'cpuarch' => 'ppc' );
+
+auto::libjit::_handle_has_libjit($conf, $has_libjit, $extra_libs);
+is( $conf->data->get( 'cc_build_call_frames' ), '-DCAN_BUILD_CALL_FRAMES',
+    "Got expected value for cc_build_call_frames" );
+ok( $conf->data->get( 'has_exec_protect' ), "has_exec_protect' set" );
+ok( ! $conf->data->get( 'libjit_has_alloca'),
+    "on non-i386 with libJIT, 'libjit_has_alloca' has false value" );
+is( $conf->data->get( 'libs' ), " $extra_libs",
+    "Got expected value for libs" );
+
+$conf->data->set( 'cc_build_call_frames' => undef );
+$conf->data->set( 'has_exec_protect' => undef );
+$conf->data->set( 'libjit_has_alloca' => undef );
+$conf->data->set( 'libs' => '' );
+
 $has_libjit = 0;
 $extra_libs = 'mylibs';
+
 auto::libjit::_handle_has_libjit($conf, $has_libjit, $extra_libs);
 ok( ! defined($conf->data->get( 'cc_build_call_frames' )), 
     "cc_build_call_frames undefined as expected" );
 ok( ! defined($conf->data->get( 'has_exec_protect' )),
     "has_exec_protect' undefined" );
+ok( ! $conf->data->get( 'libjit_has_alloca'),
+    "without libJIT, 'libjit_has_alloca' has false value" );
 is( $conf->data->get( 'libs' ), "",
     "Got expected value for libs" );
 

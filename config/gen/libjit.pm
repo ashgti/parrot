@@ -61,6 +61,9 @@ sub _init {
 
             Parrot_init_arg_nci => [ qw(void_ptr void_ptr void_ptr) => 'void_ptr' ],
             pmc_new_noinit      => [ qw(void_ptr INTVAL)            => 'void_ptr' ],
+
+            mem_sys_allocate => [ ('long')     => 'void_ptr' ],
+            mem_sys_free     => [ ('void_ptr') => 'void' ],
         },
     );
     return \%data;

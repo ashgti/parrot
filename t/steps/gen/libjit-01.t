@@ -6,8 +6,9 @@
 use strict;
 use warnings;
 
-use constant num_generated_files => 2;
-use Test::More tests => 8 + 2*num_generated_files;
+use constant NUM_GENERATED_FILES => 2;
+# use Test::More tests => 8 + 2*NUM_GENERATED_FILES;
+use Test::More qw( no_plan );
 
 use File::Copy 'move';
 use File::Temp 'tempfile';
@@ -39,8 +40,10 @@ $conf->add_steps($pkg);
 $conf->options->set( %$args );
 my $step = test_step_constructor_and_description($conf);
 
-is( scalar keys %{$step->{targets}}, num_generated_files, "Expected number of generated files");
-is_deeply([keys %{$step->{targets}}], [keys %{$step->{templates}}], "Templates match targets");
+is( scalar keys %{$step->{targets}}, NUM_GENERATED_FILES,
+    "Expected number of generated files");
+is_deeply([keys %{$step->{targets}}], [keys %{$step->{templates}}],
+    "Templates match targets");
 
 foreach (keys %{$step->{templates}}) {
     ok(-f $step->{templates}{$_}, "Able to locate $_ template")
@@ -56,6 +59,8 @@ foreach (keys %{$step->{targets}}) {
 
 my %orig_conf = map { $_ => $conf->data->get($_) } qw[ iv nv ];
 $conf->data->set( iv => 'int', nv => 'float' );
+# Set a value for 'libjit_has_alloca' to avoid uninitialized value warning.
+$conf->data->set( 'libjit_has_alloca' => 1 );
 my $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
 foreach (keys %{$step->{targets}}) {
