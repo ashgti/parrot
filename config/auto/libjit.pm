@@ -24,8 +24,8 @@ use Parrot::Configure::Utils ':auto';
 sub _init {
     my $self = shift;
     my %data = (
-	description => 'Is LibJIT installed',
-	result	    => '',
+        description => 'Is LibJIT installed',
+        result        => '',
     );
     return \%data;
 }
