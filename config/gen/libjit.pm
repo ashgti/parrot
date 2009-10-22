@@ -27,16 +27,16 @@ use Parrot::Configure::Utils ':gen';
 sub _init {
     my $self = shift;
     my %data = (
-	description => 'Generate LibJIT specific code',
-	result => '',
-    targets => {
-        frame_builder_h => 'src/frame_builder_libjit.h',
-        frame_builder_c => 'src/frame_builder_libjit.c',
-    },
-	templates => {
-	    frame_builder_h => 'config/gen/libjit/frame_builder_libjit_h.in',
-	    frame_builder_c => 'config/gen/libjit/frame_builder_libjit_c.in',
-	},
+        description => 'Generate LibJIT specific code',
+        result => '',
+        targets => {
+            frame_builder_h => 'src/frame_builder_libjit.h',
+            frame_builder_c => 'src/frame_builder_libjit.c',
+        },
+        templates => {
+            frame_builder_h => 'config/gen/libjit/frame_builder_libjit_h.in',
+            frame_builder_c => 'config/gen/libjit/frame_builder_libjit_c.in',
+        },
         wrapped_vtables => {
             get_integer        => [ ()           => 'INTVAL' ],
             set_integer_native => [ ('INTVAL')   => 'void' ],
@@ -55,12 +55,17 @@ sub _init {
             set_nci_S => [ qw(void_ptr void_ptr void_ptr) => 'void' ],
             set_nci_P => [ qw(void_ptr void_ptr void_ptr) => 'void' ],
 
-            Parrot_str_new          => [ qw(void_ptr void_ptr UINTVAL) => 'void_ptr' ],
-            Parrot_str_to_cstring   => [ qw(void_ptr void_ptr)         => 'void_ptr' ],
-            Parrot_str_free_cstring => [ ('void_ptr')                  => 'void' ],
+            Parrot_str_new          =>
+                [ qw(void_ptr void_ptr UINTVAL) => 'void_ptr' ],
+            Parrot_str_to_cstring   =>
+                [ qw(void_ptr void_ptr)         => 'void_ptr' ],
+            Parrot_str_free_cstring =>
+                [ ('void_ptr')                  => 'void' ],
 
-            Parrot_init_arg_nci => [ qw(void_ptr void_ptr void_ptr) => 'void_ptr' ],
-            pmc_new_noinit      => [ qw(void_ptr INTVAL)            => 'void_ptr' ],
+            Parrot_init_arg_nci =>
+                [ qw(void_ptr void_ptr void_ptr) => 'void_ptr' ],
+            pmc_new_noinit      =>
+                [ qw(void_ptr INTVAL)            => 'void_ptr' ],
 
             mem_sys_allocate => [ ('long')     => 'void_ptr' ],
             mem_sys_free     => [ ('void_ptr') => 'void' ],
@@ -94,16 +99,24 @@ sub runstep {
     };
 
     $conf->data->set( libjit_iv => $libjit_iv,
-		      libjit_uv => $libjit_uv,
-		      libjit_nv => $libjit_nv, );
+              libjit_uv => $libjit_uv,
+              libjit_nv => $libjit_nv, );
 
-    my @vtable_wrappers   = map {gen_vtable_wrapper($self, $_)}   keys %{$self->{wrapped_vtables}};
-    my @function_wrappers = map {gen_function_wrapper($self, $_)} keys %{$self->{wrapped_funcs}};
+    my @vtable_wrappers   =
+        map {gen_vtable_wrapper($self, $_)}   keys %{$self->{wrapped_vtables}};
+    my @function_wrappers =
+        map {gen_function_wrapper($self, $_)} keys %{$self->{wrapped_funcs}};
 
-    $conf->data->set( TEMP_vtable_wrap_decls => (join "\n", map {$_->{decl}} @vtable_wrappers),
-                      TEMP_vtable_wrap_defns => (join "\n", map {$_->{defn}} @vtable_wrappers),
-                      TEMP_func_wrap_decls   => (join "\n", map {$_->{decl}} @function_wrappers),
-                      TEMP_func_wrap_defns   => (join "\n", map {$_->{defn}} @function_wrappers) );
+    $conf->data->set(
+        TEMP_vtable_wrap_decls =>
+            (join "\n", map {$_->{decl}} @vtable_wrappers),
+        TEMP_vtable_wrap_defns =>
+            (join "\n", map {$_->{defn}} @vtable_wrappers),
+        TEMP_func_wrap_decls   =>
+            (join "\n", map {$_->{decl}} @function_wrappers),
+        TEMP_func_wrap_defns   =>
+            (join "\n", map {$_->{defn}} @function_wrappers)
+    );
 
     foreach my $t (keys %{$self->{targets}}) {
         $conf->genfile($self->{templates}{$t}, $self->{targets}{$t});
