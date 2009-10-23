@@ -55,36 +55,13 @@ sub _handle_can_build_call_frames {
     my ($self, $conf, $can_build_call_frames) = @_;
     if ( $can_build_call_frames ) {
         $conf->data->set(
-            cc_build_call_frames  => '-DCAN_BUILD_CALL_FRAMES',
+            cc_build_call_frames => '-DCAN_BUILD_CALL_FRAMES',
+            has_exec_protect     => 1,
         );
-        # test for executable malloced memory
-        my $osname = $conf->data->get( 'osname' );
-        if ( -e "config/auto/frames/test_exec_${osname}_c.in" ) {
-            $conf->cc_gen("config/auto/frames/test_exec_${osname}_c.in");
-            eval { $conf->cc_build(); };
-            if ($@) {
-                $conf->data->set( has_exec_protect => 0 );
-            }
-            else {
-                my $exec_protect_test = (
-                    $conf->cc_run(0) !~ /ok/ && $conf->cc_run(1) =~ /ok/
-                );
-                if ($exec_protect_test) {
-                    $conf->data->set( has_exec_protect => 1 );
-                }
-                else {
-                    $conf->data->set( has_exec_protect => 0 );
-                }
-            }
-            $conf->cc_clean();
-        }
-        else {
-            $conf->data->set( has_exec_protect => 0 );
-        }
         $self->set_result( 'yes' );
     }
     else {
-        $conf->data->set( cc_build_call_frames  => '');
+        $conf->data->set(cc_build_call_frames  => '');
         $self->set_result( 'no' );
     }
     return 1;

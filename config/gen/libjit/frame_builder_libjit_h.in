@@ -19,7 +19,7 @@
 
 #ifdef PARROT_HAS_LIBJIT
 
-#include <jit/jit.h>
+#  include <jit/jit.h>
 
 /*
  * JITted function state data
@@ -33,9 +33,9 @@ struct jit_buffer_private_data {
  * JIT types
  */
 
-#define JIT_TYPE_UINTVAL  @libjit_uv@
-#define JIT_TYPE_INTVAL   @libjit_iv@
-#define JIT_TYPE_FLOATVAL @libjit_nv@
+#  define JIT_TYPE_UINTVAL  @libjit_uv@
+#  define JIT_TYPE_INTVAL   @libjit_iv@
+#  define JIT_TYPE_FLOATVAL @libjit_nv@
 
 /*
  * JIT functions
@@ -63,13 +63,13 @@ jit_value_create_intval_constant(jit_function_t, INTVAL);
 /*
  * workaround for platforms that lack libjit alloca support
  */
-#if @libjit_has_alloca@
-#  define JIT_ALLOCA(f, n)      jit_insn_alloca(f, n)
-#  define JIT_ALLOCA_FREE(f, p)
-#else
-#  define JIT_ALLOCA(f, n)      jit__mem_sys_allocate(f, n)
-#  define JIT_ALLOCA_FREE(f, p) jit__mem_sys_free(f, p)
-#endif
+#  if @libjit_has_alloca@
+#    define JIT_ALLOCA(f, n)      jit_insn_alloca((f), (n))
+#    define JIT_ALLOCA_FREE(f, p)
+#  else
+#    define JIT_ALLOCA(f, n)      jit__mem_sys_allocate((f), (n))
+#    define JIT_ALLOCA_FREE(f, p) jit__mem_sys_free((f), (p))
+#  endif
 
 /*
  * JIT wrappers

@@ -84,10 +84,6 @@ ok( ! $can_build_call_frames,
 
 ##### _handle_call_frames_buildable() #####
 
-#$conf->data->set( nvsize => 8 );
-#$conf->data->set( cpuarch => 'i386' );
-$conf->data->set( osname => 'linux' );
-
 my $rv;
 
 $can_build_call_frames = 0;
@@ -103,19 +99,16 @@ $conf->data->set( 'cc_build_call_frames' => undef );
 $conf->data->set( 'has_exec_protect' => undef );
 
 $can_build_call_frames = 1;
-my $realos = $conf->data->get( 'osname' );
-$conf->data->set( 'osname' => 'foobar' );
 $rv = $step->_handle_can_build_call_frames( $conf, $can_build_call_frames );
 ok( $rv, "_handle_can_build_call_frames() returned true value" );
 is( $conf->data->get( 'cc_build_call_frames'), '-DCAN_BUILD_CALL_FRAMES',
     "cc_build_call_frames set to expected value" );
-is( $conf->data->get( 'has_exec_protect' ), 0,
-    "has_exec_protect is 0, as expected" );
+is( $conf->data->get( 'has_exec_protect' ), 1,
+    "has_exec_protect is 1, as expected" );
 is( $step->result(), 'yes', "Result is 'yes', as expected" );
 
 $conf->data->set( 'cc_build_call_frames' => undef );
 $conf->data->set( 'has_exec_protect' => undef );
-$conf->data->set( 'osname' => $realos );
 
 pass("Completed all tests in $0");
 

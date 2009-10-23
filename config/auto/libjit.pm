@@ -101,8 +101,6 @@ sub _handle_has_libjit {
     my ($conf, $has_libjit, $extra_libs) = @_;
     if ($has_libjit) {
         $conf->data->set(
-            cc_build_call_frames => '-DCAN_BUILD_CALL_FRAMES',
-            has_exec_protect     => 1,
             libjit_has_alloca    => ($conf->data->get('cpuarch') eq 'i386' ? '1' : '0'),
         );
         $conf->data->add( ' ', libs => $extra_libs );
