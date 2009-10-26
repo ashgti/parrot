@@ -43,7 +43,7 @@ my %sig_table = (
         as_proto => "void *",
         other_decl => "PMC * const final_destination = pmc_new(interp, enum_class_UnManagedStruct);",
         sig_char => "P",
-        ret_assign => "VTABLE_set_pointer(interp, final_destination, return_data);\n    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"P\", final_destination);",
+        ret_assign => "VTABLE_set_pointer(interp, final_destination, return_data);\n    Parrot_pcc_fill_returns_from_c_args(interp, ctx, \"P\", final_destination);",
     },
     i => { as_proto => "int",    sig_char => "I" },
     l => { as_proto => "long",   sig_char => "I" },
@@ -53,7 +53,7 @@ my %sig_table = (
     d => { as_proto => "double", sig_char => "N" },
     t => { as_proto => "char *",
            other_decl => "STRING *final_destination;",
-           ret_assign => "final_destination = Parrot_str_new(interp, return_data, 0);\n    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"S\", final_destination);",
+           ret_assign => "final_destination = Parrot_str_new(interp, return_data, 0);\n    Parrot_pcc_fill_returns_from_c_args(interp, ctx, \"S\", final_destination);",
            sig_char => "S" },
     v => { as_proto => "void",
            return_type => "void *",
@@ -71,11 +71,11 @@ my %sig_table = (
     B => { as_proto => "char **", as_return => "", sig_char => "S" },
     # These should be replaced by modifiers in the future
     2 => { as_proto => "short *",  sig_char => "P", return_type => "short",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
+           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, ctx, "I", return_data);' },
     3 => { as_proto => "int *",  sig_char => "P", return_type => "int",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
+           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, ctx, "I", return_data);' },
     4 => { as_proto => "long *",  sig_char => "P", return_type => "long",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
+           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, ctx, "I", return_data);' },
     L => { as_proto => "long *", as_return => "" },
     T => { as_proto => "char **", as_return => "" },
     V => { as_proto => "void **", as_return => "", sig_char => "P" },
@@ -87,7 +87,7 @@ for (values %sig_table) {
     if (not exists $_->{return_type}) { $_->{return_type} = $_->{as_proto} }
     if (not exists $_->{return_type_decl}) { $_->{return_type_decl} = $_->{return_type} }
     if (not exists $_->{ret_assign} and exists $_->{sig_char}) {
-        $_->{ret_assign} = 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "'
+        $_->{ret_assign} = 'Parrot_pcc_fill_returns_from_c_args(interp, ctx, "'
                            . $_->{sig_char} . '", return_data);';
     }
     if (not exists $_->{func_call_assign}) {
@@ -347,7 +347,6 @@ sub create_function {
     $other_decl .= join( "\n    ", @{$temps_ref} );
     my $call_object_decl = <<"CALLOBJECT";
     PMC *ctx         = CURRENT_CONTEXT(interp);
-    PMC *call_object = Parrot_pcc_get_signature(interp, ctx);
 CALLOBJECT
     my $extra_preamble   = join( "\n    ", @{$extra_preamble_ref} );
     my $extra_postamble  = join( "\n    ", @{$extra_postamble_ref} );
@@ -374,7 +373,7 @@ pcf_${return}_$fix_params(PARROT_INTERP, PMC *self)
     $call_object_decl
     $return_data_decl
     $other_decl
-    Parrot_pcc_fill_params_from_c_args(interp, call_object, \"$sig\"$fill_params);
+    Parrot_pcc_fill_params_from_c_args(interp, ctx, \"$sig\"$fill_params);
     $extra_preamble
 
     GETATTR_NCI_orig_func(interp, self, orig_func);
