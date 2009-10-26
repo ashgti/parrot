@@ -48,7 +48,6 @@ pmclass Continuation auto_attrs {
     ATTR PackFile_ByteCode *seg;             /* bytecode segment */
     ATTR opcode_t          *address;         /* start of bytecode, addr to continue */
     ATTR PMC               *to_ctx;          /* pointer to dest context */
-    ATTR PMC               *to_call_object;  /* pointer to CallSignature */
     /* a Continuation keeps the from_ctx alive */
     ATTR PMC               *from_ctx;        /* sub, this cont is returning from */
     ATTR int                runloop_id;      /* id of the creating runloop. */
@@ -67,7 +66,6 @@ Initializes the continuation.
         Parrot_Continuation_attributes * const attrs = PARROT_CONTINUATION(SELF);
 
         attrs->to_ctx           = CURRENT_CONTEXT(interp);
-        attrs->to_call_object   = Parrot_pcc_get_signature(INTERP, attrs->to_ctx);
         attrs->from_ctx         = CURRENT_CONTEXT(interp);
         attrs->runloop_id       = 0;
         attrs->seg              = interp->code;
@@ -91,7 +89,6 @@ Initializes the continuation.
         Parrot_Continuation_attributes * const theirs = PARROT_CONTINUATION(values);
 
         attrs->to_ctx           = theirs->to_ctx;
-        attrs->to_call_object   = Parrot_pcc_get_signature(INTERP, attrs->to_ctx);
         attrs->from_ctx         = CURRENT_CONTEXT(interp);
         attrs->runloop_id       = 0;
         attrs->seg              = theirs->seg;
@@ -129,7 +126,6 @@ Marks the continuation as live.
             return;
 
         Parrot_gc_mark_PMC_alive(INTERP, cc->to_ctx);
-        Parrot_gc_mark_PMC_alive(INTERP, cc->to_call_object);
         Parrot_gc_mark_PMC_alive(INTERP, cc->from_ctx);
     }
 
@@ -234,15 +230,13 @@ destination to continue execution.
         PMC      *from_ctx = CURRENT_CONTEXT(interp);
         PMC      *to_ctx   = cc->to_ctx;
         opcode_t *pc       = cc->address;
-        PMC      *call_obj = cc->to_call_object;
-        PMC      *from_obj = Parrot_pcc_get_signature(interp, from_ctx);
         UNUSED(next)
 
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
 
-        if (!PMC_IS_NULL(from_obj)) {
-            STRING *string_sig = VTABLE_get_string(INTERP, from_obj);
+        if (1 /* !PMC_IS_NULL(from_obj) */) {
+            STRING *string_sig = VTABLE_get_string(INTERP, from_ctx);
             /* If there is no string - there is no args */
             if (string_sig) {
                 PMC *raw_sig, *invalid_sig;
@@ -250,10 +244,10 @@ destination to continue execution.
 
                 /* Build results signature for continuation */
                 if (*pc == PARROT_OP_get_results_pc)
-                    call_obj = Parrot_pcc_build_sig_object_returns_from_op(INTERP, call_obj,
+                    Parrot_pcc_build_sig_object_returns_from_op(INTERP, to_ctx,
                         Parrot_pcc_get_pmc_constant(INTERP, to_ctx, pc[1]), pc);
 
-                Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
+                Parrot_pcc_fill_returns_from_continuation(interp, to_ctx, raw_sig, from_ctx);
             }
         }
 
