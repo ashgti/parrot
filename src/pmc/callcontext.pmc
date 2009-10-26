@@ -4,7 +4,7 @@ $Id$
 
 =head1 NAME
 
-src/pmc/context.pmc - Interpreter Context.
+src/pmc/callcontext.pmc - Interpreter Context.
 
 =head1 DESCRIPTION
 
@@ -23,7 +23,7 @@ structure in PMC_data.
 #include "parrot/packfile.h"
 #include "pmc_sub.h"
 
-pmclass Context {
+pmclass CallContext {
 
 /*
 

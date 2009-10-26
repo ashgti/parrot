@@ -19,17 +19,6 @@ information for a multiple dispatch call.
 
 */
 
-typedef struct Pcc_cell
-{
-    union u {
-        PMC     *p;
-        STRING  *s;
-        INTVAL   i;
-        FLOATVAL n;
-    } u;
-    struct Pcc_cell *next;
-} Pcc_cell;
-
 /* mask off lower two bits (1 + 2 = 3) for pointer tags */
 #define TAG_BITS 3
 #define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~TAG_BITS)

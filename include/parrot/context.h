@@ -24,6 +24,21 @@ typedef union {
     INTVAL       *regs_i;
 } Regs_ni;
 
+/*
+Storage for arguments. Linkind list of typed pointers.
+We use lower 2 bits for setting type.
+*/
+typedef struct Pcc_cell
+{
+    union u {
+        PMC     *p;
+        STRING  *s;
+        INTVAL   i;
+        FLOATVAL n;
+    } u;
+    struct Pcc_cell *next;
+} Pcc_cell;
+
 struct Parrot_Context {
     PMC     *caller_ctx;      /* caller context */
     Regs_ni  bp;              /* pointers to FLOATVAL & INTVAL */
@@ -61,6 +76,16 @@ struct Parrot_Context {
     /* code->prederefed.code - code->base.data in opcodes
      * to simplify conversion between code ptrs in e.g. invoke */
     size_t pred_offset;
+
+    struct Pcc_cell *positionals;          /* linked list of positionals */
+    PMC             *results;              /* Storage for return arguments */
+    PMC             *type_tuple;           /* Cached argument types for MDD */
+    STRING          *short_sig;            /* Simple string sig args & returns */
+    PMC             *arg_flags;            /* Integer array of argument flags */
+    PMC             *return_flags;         /* Integer array of return flags */
+    Hash            *hash;                 /* Hash of named arguments */
+    INTVAL           num_positionals;      /* count of positionals */
+
 };
 
 typedef struct Parrot_Context Parrot_Context;
