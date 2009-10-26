@@ -461,8 +461,8 @@ static STRING** string_param_from_op(PARROT_INTERP,
 
 /*
 
-=item C<PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, PMC *signature,
-PMC * const raw_sig, opcode_t * const raw_args)>
+=item C<PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, PMC
+*call_object, PMC * const raw_sig, opcode_t * const raw_args)>
 
 Take a raw signature and argument list from a set_args opcode and
 convert it to a CallSignature PMC.
@@ -475,20 +475,16 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC*
-Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
+Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN(PMC *call_object),
         ARGIN(PMC * const raw_sig), ARGIN(opcode_t * const raw_args))
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_op)
-    PMC            *call_object;
     PMC            *ctx        = CURRENT_CONTEXT(interp);
     INTVAL         *int_array;
     INTVAL          arg_count;
     INTVAL          arg_index;
 
-    if (PMC_IS_NULL(signature))
-        call_object = pmc_new(interp, enum_class_CallSignature);
-    else
-        call_object = signature;
+    Parrot_pcc_clear_context(interp, call_object);
 
     /* this macro is much, much faster than the VTABLE STRING comparisons */
     SETATTR_CallSignature_arg_flags(interp, call_object, raw_sig);
@@ -703,7 +699,7 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
-Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
+Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN(PMC *signature),
         ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_args))
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_returns_from_op)
@@ -715,13 +711,11 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     INTVAL          arg_index;
     INTVAL          arg_count;
 
-    if (PMC_IS_NULL(signature))
-        call_object = pmc_new(interp, enum_class_CallSignature);
     /* A hack to support 'get_results' as the way of fetching the
      * exception object inside an exception handler. The first argument
      * in the call object is the exception, stick it directly into the
      * destination register. */
-    else if (CALLSIGNATURE_is_exception_TEST(signature)) {
+    if (CALLSIGNATURE_is_exception_TEST(signature)) {
         const INTVAL raw_index = raw_args[2];
         CTX_REG_PMC(ctx, raw_index) =
                 VTABLE_get_pmc_keyed_int(interp, signature, 0);
@@ -808,12 +802,14 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     PMC         *returns            = PMCNULL;
     PMC         *arg_flags     = PMCNULL;
     PMC         *return_flags  = PMCNULL;
-    PMC         * const call_object = pmc_new(interp, enum_class_CallSignature);
+    PMC         * const call_object = CURRENT_CONTEXT(interp);
     const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
     INTVAL       i;
     int          append_pi          = 1;
     INTVAL       returns_pos        = 0;
+
+    Parrot_pcc_clear_context(interp, call_object);
 
     if (!sig_len)
         return call_object;
@@ -2345,6 +2341,65 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         SETATTR_CallSignature_results(interp, tailcall, results);
         SETATTR_CallSignature_return_flags(interp, tailcall, return_flags);
     }
+}
+
+/* Some macros to access CallContext guts */
+#define TAG_BITS 3
+#define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~TAG_BITS)
+#define NEXT_CELL(c) UNTAG_CELL(c)->next
+#define FREE_CELL(i, c) \
+    Parrot_gc_free_fixed_size_storage((i), sizeof (Pcc_cell), (UNTAG_CELL(c)))
+
+
+/*
+
+=item C<void Parrot_pcc_clear_context(PARROT_INTERP, PMC *context)>
+
+Clear CallContext from previous call.
+
+Free positional and named params.
+
+=cut
+
+*/
+void
+Parrot_pcc_clear_context(PARROT_INTERP, ARGIN(PMC *context))
+{
+    Parrot_Context * const ctx = PMC_data_typed(context, Parrot_Context*);
+
+    if (!ctx)
+        return;
+
+    if (ctx->num_positionals) {
+        Pcc_cell *c = ctx->positionals;
+
+        while (c) {
+            Pcc_cell *to_free = c;
+            c = NEXT_CELL(c);
+            FREE_CELL(interp, to_free);
+        }
+    }
+
+    if (ctx->hash) {
+        UINTVAL i;
+
+        for (i = 0; i <= ctx->hash->mask; i++) {
+            HashBucket *b = ctx->hash->bi[i];
+
+            while (b) {
+                FREE_CELL(interp, (Pcc_cell *)b->value);
+                b = b->next;
+            }
+        }
+
+        parrot_hash_destroy(interp, ctx->hash);
+    }
+
+    ctx->num_positionals = 0;
+    ctx->positionals     = NULL;
+    ctx->hash            = NULL;
+    ctx->type_tuple      = PMCNULL;
+    ctx->results         = PMCNULL;
 }
 
 /*
