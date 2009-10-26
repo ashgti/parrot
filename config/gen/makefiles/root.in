@@ -1135,7 +1135,7 @@ $(SRC_DIR)/runcore/profiling$(O) : $(SRC_DIR)/runcore/profiling.str $(GENERAL_H_
 
 $(SRC_DIR)/call/args$(O) : $(SRC_DIR)/call/args.c $(GENERAL_H_FILES) \
 	$(SRC_DIR)/call/args.str \
-	$(SRC_DIR)/pmc/pmc_key.h $(SRC_DIR)/pmc/pmc_callsignature.h
+	$(SRC_DIR)/pmc/pmc_key.h $(SRC_DIR)/pmc/pmc_callcontext.h
 
 $(SRC_DIR)/call/context_accessors$(O): $(GENERAL_H_FILES)
 
