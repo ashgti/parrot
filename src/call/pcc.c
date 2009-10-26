@@ -256,10 +256,9 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
 
     opcode_t    *dest;
     INTVAL       n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    PMC         *ctx  = Parrot_push_context(interp, n_regs_used);
+    PMC         *ctx  = CURRENT_CONTEXT(interp);
     PMC * const  ret_cont = new_ret_continuation_pmc(interp, NULL);
 
-    Parrot_pcc_set_signature(interp, ctx, call_object);
     Parrot_pcc_set_continuation(interp, ctx, ret_cont);
     interp->current_cont         = NEED_CONTINUATION;
     PARROT_CONTINUATION(ret_cont)->from_ctx = ctx;
@@ -280,8 +279,6 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         Interp_core_SET(interp, old_core);
     }
-    Parrot_pcc_set_signature(interp, ctx, NULL);
-    Parrot_pop_context(interp);
 }
 
 /*
