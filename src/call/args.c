@@ -22,7 +22,6 @@ subroutines following the Parrot Calling Conventions.
 #include "parrot/runcore_api.h"
 #include "args.str"
 #include "../pmc/pmc_key.h"
-#include "../pmc/pmc_callsignature.h"
 #include "../pmc/pmc_fixedintegerarray.h"
 
 /* HEADERIZER HFILE: include/parrot/call.h */
@@ -486,8 +485,7 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN(PMC *call_object),
 
     Parrot_pcc_clear_context(interp, call_object);
 
-    /* this macro is much, much faster than the VTABLE STRING comparisons */
-    SETATTR_CallSignature_arg_flags(interp, call_object, raw_sig);
+    Parrot_pcc_set_arg_flags(interp, call_object, raw_sig);
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
 
@@ -724,9 +722,8 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN(PMC *signature)
     else
         call_object = signature;
 
-    /* a little encapsulation violation for great speed */
-    SETATTR_CallSignature_return_flags(interp, call_object, raw_sig);
-    SETATTR_CallSignature_results(interp, call_object, returns);
+    Parrot_pcc_set_return_flags(interp, call_object, raw_sig);
+    Parrot_pcc_set_results(interp, call_object, returns);
 
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
@@ -956,7 +953,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     }
 
     positional_args = VTABLE_elements(interp, call_object);
-    GETATTR_CallSignature_arg_flags(interp, call_object, arg_sig);
+    arg_sig = Parrot_pcc_get_arg_flags(interp, call_object);
 
     /* EXPERIMENTAL! This block adds provisional :call_sig param support on the
        callee side only. Does not add :call_sig arg support on the caller side.
@@ -1287,10 +1284,11 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         PMC  *named_arg_list;
         Hash *h;
         /* Early exit to avoid vtable call */
+        /* FIXME
         GETATTR_CallSignature_hash(interp, call_object, h);
         if (!h || !h->entries)
             return;
-
+        */
         named_arg_list = VTABLE_get_attr_str(interp, call_object, CONST_STRING(interp, "named"));
         if (!PMC_IS_NULL(named_arg_list)) {
             INTVAL named_arg_count = VTABLE_elements(interp, named_arg_list);
@@ -1542,8 +1540,8 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         return;
     }
 
-    GETATTR_CallSignature_results(interp, call_object, result_list);
-    GETATTR_CallSignature_return_flags(interp, call_object, result_sig);
+    result_list = Parrot_pcc_get_results(interp, call_object);
+    result_sig  = Parrot_pcc_get_return_flags(interp, call_object);
 
     result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
     PARROT_ASSERT(PMC_IS_NULL(result_list) || !PMC_IS_NULL(result_sig));
@@ -2334,12 +2332,10 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         return;
     else {
         /* Broke encapuslation. Direct poking into CallSignature is much faster */
-        PMC * results;
-        PMC * return_flags;
-        GETATTR_CallSignature_results(interp, parent, results);
-        GETATTR_CallSignature_return_flags(interp, parent, return_flags);
-        SETATTR_CallSignature_results(interp, tailcall, results);
-        SETATTR_CallSignature_return_flags(interp, tailcall, return_flags);
+        PMC * results      = Parrot_pcc_get_results(interp, parent);
+        PMC * return_flags = Parrot_pcc_get_return_flags(interp, parent);
+        Parrot_pcc_set_results(interp, tailcall, results);
+        Parrot_pcc_set_return_flags(interp, tailcall, return_flags);
     }
 }
 
