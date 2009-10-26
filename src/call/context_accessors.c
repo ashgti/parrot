@@ -467,37 +467,6 @@ Parrot_pcc_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
 
 /*
 
-=item C<PMC* Parrot_pcc_get_results(PARROT_INTERP, PMC *ctx)>
-
-=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, PMC *value)>
-
-Get/set ptr into code with get_results opcode.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
-opcode_t*
-Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
-{
-    ASSERT_ARGS(Parrot_pcc_get_results)
-    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
-    return c->current_results;
-}
-
-PARROT_EXPORT
-void
-Parrot_pcc_set_results(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
-{
-    ASSERT_ARGS(Parrot_pcc_set_results)
-    Parrot_Context *c = get_context_struct_fast(interp, ctx);
-    c->current_results = pc;
-}
-
-/*
-
 =item C<PMC* Parrot_pcc_get_results_signature(PARROT_INTERP, PMC *ctx)>
 
 =item C<void Parrot_pcc_set_results_signature(PARROT_INTERP, PMC *ctx, PMC
@@ -533,8 +502,7 @@ Parrot_pcc_set_results_signature(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PM
 
 =item C<PMC* Parrot_pcc_get_results(PARROT_INTERP, PMC *ctx)>
 
-=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, PMC
-*value)>
+=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, PMC *value)>
 
 TODO
 

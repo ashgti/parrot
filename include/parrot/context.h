@@ -59,7 +59,7 @@ struct Parrot_Context {
     PMC      *current_namespace;     /* The namespace we're currently in */
     PMC      *results_signature;     /* non-const results signature PMC */
     opcode_t *current_pc;            /* program counter of Sub invocation */
-    opcode_t *current_results;       /* ptr into code with get_results opcode */
+
     PMC      *current_sig;           /* temporary CallSignature PMC for active call */
 
     /* deref the constants - we need it all the time */
@@ -290,12 +290,6 @@ UINTVAL Parrot_pcc_get_recursion_depth(PARROT_INTERP, ARGIN(PMC *ctx))
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
-opcode_t* Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
 PMC* Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -427,13 +421,6 @@ PARROT_EXPORT
 void Parrot_pcc_set_pred_offset(PARROT_INTERP,
     ARGIN(PMC *ctx),
     size_t pred_offset)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
-void Parrot_pcc_set_results(PARROT_INTERP,
-    ARGIN(PMC *ctx),
-    ARGIN_NULLOK(opcode_t *pc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -586,9 +573,6 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_get_results __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
-#define ASSERT_ARGS_Parrot_pcc_get_results __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_get_results_signature \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -651,9 +635,6 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_set_pred_offset __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ctx))
-#define ASSERT_ARGS_Parrot_pcc_set_results __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_set_results __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
