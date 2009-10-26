@@ -460,8 +460,8 @@ static STRING** string_param_from_op(PARROT_INTERP,
 
 /*
 
-=item C<PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, PMC
-*call_object, PMC * const raw_sig, opcode_t * const raw_args)>
+=item C<PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, PMC * const
+raw_sig, opcode_t * const raw_args)>
 
 Take a raw signature and argument list from a set_args opcode and
 convert it to a CallSignature PMC.
@@ -474,11 +474,12 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC*
-Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN(PMC *call_object),
-        ARGIN(PMC * const raw_sig), ARGIN(opcode_t * const raw_args))
+Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN(PMC * const raw_sig),
+        ARGIN(opcode_t * const raw_args))
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_op)
-    PMC            *ctx        = CURRENT_CONTEXT(interp);
+    PMC            *ctx         = CURRENT_CONTEXT(interp);
+    PMC            *call_object = ctx;
     INTVAL         *int_array;
     INTVAL          arg_count;
     INTVAL          arg_index;

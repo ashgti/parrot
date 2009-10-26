@@ -267,8 +267,6 @@ setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
     va_end(args);
 
     CALLSIGNATURE_is_exception_SET(sig_obj);
-
-    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), sig_obj);
 }
 
 /*

@@ -60,8 +60,6 @@ struct Parrot_Context {
     PMC      *results_signature;     /* non-const results signature PMC */
     opcode_t *current_pc;            /* program counter of Sub invocation */
 
-    PMC      *current_sig;           /* temporary CallSignature PMC for active call */
-
     /* deref the constants - we need it all the time */
     struct PackFile_Constant **constants;
 
@@ -314,12 +312,6 @@ STRING* Parrot_pcc_get_short_sig(PARROT_INTERP, ARGIN(PMC *ctx))
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
-PMC* Parrot_pcc_get_signature(PARROT_INTERP, ARGIN(PMC *ctx))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
 STRING* Parrot_pcc_get_string_constant(PARROT_INTERP,
     ARGIN(PMC *ctx),
     INTVAL idx)
@@ -453,13 +445,6 @@ void Parrot_pcc_set_short_sig(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-void Parrot_pcc_set_signature(PARROT_INTERP,
-    ARGIN(PMC *ctx),
-    ARGIN_NULLOK(PMC *sig_object))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_EXPORT
 void Parrot_pcc_set_type_tuple(PARROT_INTERP,
     ARGIN(PMC *ctx),
     ARGIN_NULLOK(PMC *value))
@@ -583,9 +568,6 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_get_short_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
-#define ASSERT_ARGS_Parrot_pcc_get_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_get_string_constant \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -648,9 +630,6 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_set_short_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ctx))
-#define ASSERT_ARGS_Parrot_pcc_set_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_pcc_set_type_tuple __attribute__unused__ int _ASSERT_ARGS_CHECK = (\

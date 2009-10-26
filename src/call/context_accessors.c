@@ -374,37 +374,6 @@ Parrot_pcc_set_continuation(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *_c
 
 /*
 
-=item C<PMC* Parrot_pcc_get_signature(PARROT_INTERP, PMC *ctx)>
-
-=item C<void Parrot_pcc_set_signature(PARROT_INTERP, PMC *ctx, PMC *sig_object)>
-
-Get/set call signature object of Context (in sub/method call).
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
-PMC*
-Parrot_pcc_get_signature(PARROT_INTERP, ARGIN(PMC *ctx))
-{
-    ASSERT_ARGS(Parrot_pcc_get_signature)
-    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
-    return c->current_sig;
-}
-
-PARROT_EXPORT
-void
-Parrot_pcc_set_signature(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *sig_object))
-{
-    ASSERT_ARGS(Parrot_pcc_set_signature)
-    Parrot_Context *c = get_context_struct_fast(interp, ctx);
-    c->current_sig = sig_object;
-}
-
-/*
-
 =item C<PMC* Parrot_pcc_get_object(PARROT_INTERP, PMC *ctx)>
 
 =item C<void Parrot_pcc_set_object(PARROT_INTERP, PMC *ctx, PMC *object)>
