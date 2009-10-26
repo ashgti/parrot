@@ -467,9 +467,9 @@ Parrot_pcc_set_pc(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(opcode_t *pc))
 
 /*
 
-=item C<opcode_t* Parrot_pcc_get_results(PARROT_INTERP, PMC *ctx)>
+=item C<PMC* Parrot_pcc_get_results(PARROT_INTERP, PMC *ctx)>
 
-=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, opcode_t *pc)>
+=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, PMC *value)>
 
 Get/set ptr into code with get_results opcode.
 
@@ -529,6 +529,164 @@ Parrot_pcc_set_results_signature(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PM
     c->results_signature = sig;
 }
 
+/*
+
+=item C<PMC* Parrot_pcc_get_results(PARROT_INTERP, PMC *ctx)>
+
+=item C<void Parrot_pcc_set_results(PARROT_INTERP, PMC *ctx, PMC
+*value)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_results(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_results)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->results;
+}
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_results(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *value))
+{
+    ASSERT_ARGS(Parrot_pcc_set_results)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->results = value;
+}
+
+
+/*
+
+=item C<PMC* Parrot_pcc_get_type_tuple(PARROT_INTERP, PMC *ctx)>
+
+=item C<void Parrot_pcc_set_type_tuple(PARROT_INTERP, PMC *ctx, PMC *value)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_type_tuple(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_type_tuple)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->type_tuple;
+}
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_type_tuple(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *value))
+{
+    ASSERT_ARGS(Parrot_pcc_set_type_tuple)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->type_tuple = value;
+}
+
+
+/*
+
+=item C<STRING* Parrot_pcc_get_short_sig(PARROT_INTERP, PMC *ctx)>
+
+=item C<void Parrot_pcc_set_short_sig(PARROT_INTERP, PMC *ctx, STRING *sig)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+STRING*
+Parrot_pcc_get_short_sig(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_short_sig)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->short_sig;
+}
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_short_sig(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(STRING *sig))
+{
+    ASSERT_ARGS(Parrot_pcc_set_short_sig)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->short_sig = sig;
+}
+
+/*
+
+=item C<PMC* Parrot_pcc_get_arg_flags(PARROT_INTERP, PMC *ctx)>
+
+=item C<void Parrot_pcc_set_arg_flags(PARROT_INTERP, PMC *ctx, PMC *value)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_arg_flags(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_arg_flags)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->arg_flags;
+}
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_arg_flags(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *value))
+{
+    ASSERT_ARGS(Parrot_pcc_set_arg_flags)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->arg_flags = value;
+}
+
+
+/*
+
+=item C<PMC* Parrot_pcc_get_return_flags(PARROT_INTERP, PMC *ctx)>
+
+=item C<void Parrot_pcc_set_return_flags(PARROT_INTERP, PMC *ctx, PMC *value)>
+
+TODO
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_return_flags(PARROT_INTERP, ARGIN(PMC *ctx))
+{
+    ASSERT_ARGS(Parrot_pcc_get_return_flags)
+    Parrot_Context const *c = get_context_struct_fast(interp, ctx);
+    return c->return_flags;
+}
+
+PARROT_EXPORT
+void
+Parrot_pcc_set_return_flags(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *value))
+{
+    ASSERT_ARGS(Parrot_pcc_set_return_flags)
+    Parrot_Context *c = get_context_struct_fast(interp, ctx);
+    c->return_flags = value;
+}
 
 /*
 
