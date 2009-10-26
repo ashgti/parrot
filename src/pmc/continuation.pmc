@@ -235,10 +235,10 @@ destination to continue execution.
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
 
-        if (1 /* !PMC_IS_NULL(from_obj) */) {
+        if (!PMC_IS_NULL(VTABLE_get_attr_str(INTERP, from_ctx, CONST_STRING(INTERP, "return_flags")))) {
             STRING *string_sig = VTABLE_get_string(INTERP, from_ctx);
             /* If there is no string - there is no args */
-            if (string_sig) {
+            if (pc && string_sig) {
                 PMC *raw_sig, *invalid_sig;
                 Parrot_pcc_parse_signature_string(INTERP, string_sig, &raw_sig, &invalid_sig);
 
