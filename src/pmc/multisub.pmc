@@ -57,7 +57,7 @@ pmclass MultiSub extends ResizablePMCArray auto_attrs provides array {
     }
 
     VTABLE opcode_t *invoke(void *next) {
-        PMC * const sig_obj = CONTEXT(interp)->current_sig;
+        PMC * const sig_obj = CURRENT_CONTEXT(interp);
         PMC * const func    = Parrot_mmd_sort_manhattan_by_sig_pmc(interp,
                 SELF, sig_obj);
 
@@ -68,7 +68,7 @@ pmclass MultiSub extends ResizablePMCArray auto_attrs provides array {
     }
 
     VTABLE PMC *get_iter() {
-        PMC * const sig_obj = CONTEXT(interp)->current_sig;
+        PMC * const sig_obj = CURRENT_CONTEXT(interp);
         PMC * const sub     = Parrot_mmd_sort_manhattan_by_sig_pmc(interp,
                 SELF, sig_obj);
 
@@ -83,7 +83,7 @@ pmclass MultiSub extends ResizablePMCArray auto_attrs provides array {
        ResizablePMCArray's VTABLE methods of the same names. Hopefully we
        don't need anything beyond that. */
     VTABLE PMC *get_pmc_keyed(PMC *key) {
-        PMC * const sig_obj = CONTEXT(interp)->current_sig;
+        PMC * const sig_obj = CURRENT_CONTEXT(interp);
         PMC * const sub     = Parrot_mmd_sort_manhattan_by_sig_pmc(interp,
                 SELF, sig_obj);
 
@@ -93,7 +93,7 @@ pmclass MultiSub extends ResizablePMCArray auto_attrs provides array {
     }
 
     VTABLE PMC *get_pmc_keyed_str(STRING *s) {
-        PMC * const sig_obj = CONTEXT(interp)->current_sig;
+        PMC * const sig_obj = CURRENT_CONTEXT(interp);
         PMC * const sub     = Parrot_mmd_sort_manhattan_by_sig_pmc(interp,
                 SELF, sig_obj);
 
