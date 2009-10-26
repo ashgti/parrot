@@ -23,6 +23,304 @@ structure in PMC_data.
 #include "parrot/packfile.h"
 #include "pmc_sub.h"
 
+/* mask off lower two bits (1 + 2 = 3) for pointer tags */
+#define TAG_BITS 3
+#define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~TAG_BITS)
+
+#define CELL_INT(c)     UNTAG_CELL(c)->u.i
+#define CELL_FLOAT(c)   UNTAG_CELL(c)->u.n
+#define CELL_STRING(c)  UNTAG_CELL(c)->u.s
+#define CELL_PMC(c)     UNTAG_CELL(c)->u.p
+
+#define NEXT_CELL(c) UNTAG_CELL(c)->next
+#define FREE_CELL(i, c) \
+    Parrot_gc_free_fixed_size_storage((i), sizeof (Pcc_cell), (UNTAG_CELL(c)))
+
+#define CELL_TYPE_MASK(c) (PTR2INTVAL(c)) & 3
+#define INTCELL    0
+#define FLOATCELL  1
+#define STRINGCELL 2
+#define PMCCELL    3
+
+#define SET_CELL_INT(c) \
+        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | INTCELL)
+
+#define SET_CELL_FLOAT(c) \
+        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | FLOATCELL)
+
+#define SET_CELL_STRING(c) \
+        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | STRINGCELL)
+
+#define SET_CELL_PMC(c) \
+        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | PMCCELL)
+
+#define ALLOC_CELL(i) \
+    (Pcc_cell *)Parrot_gc_allocate_fixed_size_storage((i), sizeof (Pcc_cell))
+
+#define INIT_CELL_INT(c)    INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | INTCELL)
+#define INIT_CELL_FLOAT(c)  INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | FLOATCELL)
+#define INIT_CELL_STRING(c) INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | STRINGCELL)
+#define INIT_CELL_PMC(c)    INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | PMCCELL)
+
+#define CREATE_INTVAL_CELL(i)   INIT_CELL_INT(ALLOC_CELL(i))
+
+#define CREATE_FLOATVAL_CELL(i) INIT_CELL_FLOAT(ALLOC_CELL(i))
+
+#define CREATE_STRING_CELL(i)   INIT_CELL_STRING(ALLOC_CELL(i))
+
+#define CREATE_PMC_CELL(i)      INIT_CELL_PMC(ALLOC_CELL(i))
+
+#define APPEND_CELL(SELF, cell) \
+    do { \
+        Parrot_CallContext_attributes * const a = PARROT_CALLSIGNATURE(SELF);\
+        NEXT_CELL(cell) = NULL; \
+        (a)->num_positionals++; \
+        if ((a)->positionals) { \
+            Pcc_cell *c = (a)->positionals; \
+            while (NEXT_CELL(c)) { \
+                c = NEXT_CELL(c); \
+            } \
+            NEXT_CELL(c) = (cell); \
+        } \
+        else \
+            (a)->positionals = (cell); \
+    } while (0)
+
+#define PREPEND_CELL(SELF, cell) \
+    do { \
+        Parrot_CallContext_attributes * const a = PARROT_CALLSIGNATURE(SELF);\
+        a->num_positionals++; \
+        NEXT_CELL(cell) = a->positionals; \
+        a->positionals  = (cell); \
+    } while (0)
+
+/* TODO: could use get_cell_at */
+static Pcc_cell *
+pop_cell(PARROT_INTERP, ARGIN(PMC *SELF))
+{
+    Parrot_Context * const attrs = PMC_data_typed(SELF, Parrot_Context*);
+    Pcc_cell *cell = attrs->positionals;
+    Pcc_cell *prev = NULL;
+
+    /* no cells */
+    if (!cell)
+        return NULL;
+
+    attrs->num_positionals--;
+
+    /* one cell */
+    if (!NEXT_CELL(cell)) {
+        attrs->positionals = NULL;
+        return cell;
+    }
+
+    while (cell) {
+        if (!NEXT_CELL(cell)) {
+            NEXT_CELL(prev) = NULL;
+            return cell;
+        }
+
+        prev = cell;
+        cell = NEXT_CELL(cell);
+    }
+
+    /* should abort here */
+    attrs->num_positionals++;
+    return NULL;
+}
+
+static Pcc_cell *
+shift_cell(PARROT_INTERP, ARGIN(PMC *SELF))
+{
+    Parrot_Context * const attrs = PMC_data_typed(SELF, Parrot_Context*);
+    Pcc_cell *cell = attrs->positionals;
+
+    /* no cells */
+    if (!cell)
+        return NULL;
+
+    attrs->num_positionals--;
+
+    /* one cell */
+    if (!NEXT_CELL(cell))
+        attrs->positionals = NULL;
+    else
+        attrs->positionals = NEXT_CELL(cell);
+
+    return cell;
+}
+
+static Pcc_cell *
+get_cell_at(PARROT_INTERP, ARGIN(PMC *SELF), INTVAL key)
+{
+    Parrot_Context * const attrs = PMC_data_typed(SELF, Parrot_Context*);
+    Pcc_cell *cell = attrs->positionals;
+    INTVAL    i;
+
+    if (key > attrs->num_positionals)
+        return NULL;
+
+    while (key) {
+        /* XXX: shouldn't happen */
+        if (!NEXT_CELL(cell))
+            return NULL;
+
+        cell = NEXT_CELL(cell);
+        key--;
+    }
+
+    return cell;
+
+}
+
+static INTVAL
+autobox_intval(PARROT_INTERP, Pcc_cell *cell)
+{
+    switch (CELL_TYPE_MASK(cell)) {
+        case INTCELL:
+            return CELL_INT(cell);
+        case FLOATCELL:
+            return (INTVAL)CELL_FLOAT(cell);
+        case STRINGCELL:
+            return CELL_STRING(cell) ? Parrot_str_to_int(interp, CELL_STRING(cell)) : 0;
+        case PMCCELL:
+            return PMC_IS_NULL(CELL_PMC(cell))
+                    ? 0
+                    : VTABLE_get_integer(interp, CELL_PMC(cell));
+        default:
+            break;
+    }
+
+    /* exception */
+    return 0;
+}
+
+static FLOATVAL
+autobox_floatval(PARROT_INTERP, Pcc_cell *cell)
+{
+    switch (CELL_TYPE_MASK(cell)) {
+        case INTCELL:
+            return (FLOATVAL)CELL_INT(cell);
+        case FLOATCELL:
+            return CELL_FLOAT(cell);
+        case STRINGCELL:
+            return CELL_STRING(cell) ? Parrot_str_to_num(interp, CELL_STRING(cell)) : 0.0;
+        case PMCCELL:
+            return PMC_IS_NULL(CELL_PMC(cell))
+                    ? 0.0
+                    : VTABLE_get_number(interp, CELL_PMC(cell));
+        default:
+            break;
+    }
+
+    /* exception */
+    return 0.0;
+}
+
+static STRING *
+autobox_string(PARROT_INTERP, Pcc_cell *cell)
+{
+    switch (CELL_TYPE_MASK(cell)) {
+        case INTCELL:
+            return Parrot_str_from_int(interp, CELL_INT(cell));
+        case FLOATCELL:
+            return Parrot_str_from_num(interp, CELL_FLOAT(cell));
+        case STRINGCELL:
+            return CELL_STRING(cell);
+        case PMCCELL:
+            return PMC_IS_NULL(CELL_PMC(cell))
+                    ? NULL
+                    : VTABLE_get_string(interp, CELL_PMC(cell));
+        default:
+            break;
+    }
+
+    /* exception */
+    return NULL;
+}
+
+static PMC *
+autobox_pmc(PARROT_INTERP, Pcc_cell *cell)
+{
+    PMC *result = PMCNULL;
+
+    /* TODO: respect HLL types? */
+    switch (CELL_TYPE_MASK(cell)) {
+        case INTCELL:
+            result = pmc_new(interp, enum_class_Integer);
+            VTABLE_set_integer_native(interp, result, CELL_INT(cell));
+            break;
+        case FLOATCELL:
+            result = pmc_new(interp, enum_class_Float);
+            VTABLE_set_number_native(interp, result, CELL_FLOAT(cell));
+            break;
+        case STRINGCELL:
+            result = pmc_new(interp, enum_class_String);
+            VTABLE_set_string_native(interp, result, CELL_STRING(cell));
+            break;
+        case PMCCELL:
+            return CELL_PMC(cell);
+        default:
+            /* exception */
+            break;
+    }
+
+    return result;
+}
+
+static Hash *
+get_hash(PARROT_INTERP, ARGIN(PMC *SELF))
+{
+    Parrot_Context * const attrs = PMC_data_typed(SELF, Parrot_Context*);
+
+    if (!attrs->hash)
+        attrs->hash = parrot_new_hash(interp);
+
+    return attrs->hash;
+}
+
+static void
+mark_positionals(PARROT_INTERP, ARGIN(Pcc_cell *c))
+{
+    while (c) {
+        switch (CELL_TYPE_MASK(c)) {
+            case STRINGCELL:
+                if (CELL_STRING(c))
+                    Parrot_gc_mark_STRING_alive(interp, CELL_STRING(c));
+                break;
+            case PMCCELL:
+                if (!PMC_IS_NULL(CELL_PMC(c)))
+                    Parrot_gc_mark_PMC_alive(interp, CELL_PMC(c));
+                break;
+            case INTCELL:
+            case FLOATCELL:
+            default:
+                break;
+        }
+
+        c = NEXT_CELL(c);
+    }
+}
+
+/* don't look now, but here goes encapsulation.... */
+static void
+mark_hash(PARROT_INTERP, ARGIN(Hash *h))
+{
+    UINTVAL entries = h->entries;
+    INTVAL  i;
+
+    for (i = h->mask; i >= 0; --i) {
+        HashBucket *b = h->bi[i];
+
+        while (b) {
+            Parrot_gc_mark_STRING_alive(interp, (STRING *)b->key);
+            mark_positionals(interp, (Pcc_cell *)b->value);
+            b = b->next;
+        }
+
+    }
+}
+
 pmclass CallContext {
 
 /*
@@ -70,6 +368,17 @@ Mark Context as alive.
         Parrot_gc_mark_PMC_alive(INTERP, ctx->current_namespace);
         Parrot_gc_mark_PMC_alive(INTERP, ctx->results_signature);
         Parrot_gc_mark_PMC_alive(INTERP, ctx->current_sig);
+
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->results);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->type_tuple);
+        Parrot_gc_mark_STRING_alive(INTERP, ctx->short_sig);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->arg_flags);
+        Parrot_gc_mark_PMC_alive(INTERP, ctx->return_flags);
+        if (ctx->hash)
+            mark_hash(INTERP, ctx->hash);
+
+        if (ctx->positionals)
+            mark_positionals(INTERP, ctx->positionals);
 
         if (!ctx->n_regs_used)
             return;
