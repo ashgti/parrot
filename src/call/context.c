@@ -444,7 +444,7 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     /* ctx.bp_ps points to S0, which has Px on the left */
     ctx->bp_ps.regs_s = (STRING **)((char *)p + size_nip);
 
-    pmcctx = pmc_new(interp, enum_class_Context);
+    pmcctx = pmc_new(interp, enum_class_CallContext);
     VTABLE_set_pointer(interp, pmcctx, ctx);
 
     init_context(interp, pmcctx, old);
