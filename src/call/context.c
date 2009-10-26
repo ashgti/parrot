@@ -277,7 +277,6 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
                            ? NULL
                            : get_context_struct_fast(interp, pmcold);
 
-    ctx->current_results   = NULL;
     ctx->results_signature = NULL;
     ctx->lex_pad           = PMCNULL;
     ctx->outer_ctx         = NULL;
@@ -288,6 +287,14 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
     ctx->pred_offset       = 0;
     ctx->current_sig       = PMCNULL;
     ctx->current_sub       = PMCNULL;
+    ctx->positionals       = NULL;
+    ctx->results           = PMCNULL;
+    ctx->type_tuple        = PMCNULL;
+    ctx->short_sig         = NULL;
+    ctx->arg_flags         = PMCNULL;
+    ctx->return_flags      = PMCNULL;
+    ctx->hash              = NULL;
+    ctx->num_positionals   = 0;
 
     if (old) {
         /* some items should better be COW copied */
