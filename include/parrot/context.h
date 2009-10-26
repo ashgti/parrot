@@ -667,8 +667,8 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
 #  define Parrot_pcc_get_continuation(i, c) (__C(c)->current_cont)
 #  define Parrot_pcc_set_continuation(i, c, value) (__C(c)->current_cont = (value))
 
-#  define Parrot_pcc_get_results(i, c) (__C(c)->current_results)
-#  define Parrot_pcc_set_results(i, c, value) (__C(c)->current_results = (value))
+#  define Parrot_pcc_get_results(i, c) (__C(c)->results)
+#  define Parrot_pcc_set_results(i, c, value) (__C(c)->results = (value))
 
 #  define Parrot_pcc_get_caller_ctx(i, c) (__C(c)->caller_ctx)
 #  define Parrot_pcc_set_caller_ctx(i, c, value) (__C(c)->caller_ctx = (value))
@@ -700,8 +700,17 @@ UINTVAL Parrot_pcc_warnings_test(PARROT_INTERP,
 #  define Parrot_pcc_get_outer_ctx(i, c) (__C(c)->outer_ctx)
 #  define Parrot_pcc_set_outer_ctx(i, c, value) (__C(c)->outer_ctx = (value))
 
-#  define Parrot_pcc_get_signature(i, c) (__C(c)->current_sig)
-#  define Parrot_pcc_set_signature(i, c, value) (__C(c)->current_sig = (value))
+#  define Parrot_pcc_get_type_tuple(i, c) (__C(c)->type_tuple)
+#  define Parrot_pcc_set_type_tuple(i, c, value) (__C(c)->type_tuple = (value))
+
+#  define Parrot_pcc_get_short_sig(i, c) (__C(c)->short_sig)
+#  define Parrot_pcc_set_short_sig(i, c, value) (__C(c)->short_sig = (value))
+
+#  define Parrot_pcc_get_arg_flags(i, c) (__C(c)->arg_flags)
+#  define Parrot_pcc_set_arg_flags(i, c, value) (__C(c)->arg_flags = (value))
+
+#  define Parrot_pcc_get_return_flags(i, c) (__C(c)->return_flags)
+#  define Parrot_pcc_set_return_flags(i, c, value) (__C(c)->return_flags = (value))
 
 #  define Parrot_pcc_get_int_constant(i, c, idx) (__C(c)->constants[(idx)]->u.integer)
 #  define Parrot_pcc_get_num_constant(i, c, idx) (__C(c)->constants[(idx)]->u.number)
