@@ -66,24 +66,48 @@ any value type.
     piropsig['bxor']       = 'PPP'
     piropsig['bnot']       = 'PP'
     piropsig['bor']        = 'PPP'
+    piropsig['chr']        = 'Si'
+    piropsig['clone']      = 'PP'
     piropsig['concat']     = 'PP~'
+    piropsig['die']        = 'v~'
     piropsig['div']        = 'PP+'
+    piropsig['downcase']   = 'Ss'
+    piropsig['elements']   = 'IP'
+    piropsig['exit']       = 'vi'
     piropsig['fdiv']       = 'PP+'
-    piropsig['find_name']  = 'P~'
+    piropsig['find_name']  = 'Ps'
     piropsig['getprop']    = 'P~P'
+    piropsig['index']      = 'Issi'
+    piropsig['join']       = 'SsP'
+    piropsig['length']     = 'Is'
+    piropsig['load_bytecode'] = 'vs'
+    piropsig['load_language'] = 'vs'
     piropsig['mod']        = 'PP+'
     piropsig['mul']        = 'PP+'
     piropsig['neg']        = 'PP'
     piropsig['newclosure'] = 'PP'
     piropsig['not']        = 'PP'
+    piropsig['ord']        = 'Isi'
+    piropsig['pop']        = 'PP'
+    piropsig['push']       = '0P*'
+    piropsig['repeat']     = 'Ssi'
+    piropsig['shift']      = 'PP'
     piropsig['shl']        = 'PP+'
     piropsig['shr']        = 'PP+'
+    piropsig['splice']     = 'PPii'
+    piropsig['split']      = 'Pss'
     piropsig['sub']        = 'PP+'
+    piropsig['substr']     = 'Ssiis'
     piropsig['pow']        = 'NN+'
     piropsig['print']      = 'v*'
+    piropsig['say']        = 'v*'
     piropsig['set']        = 'PP'
     piropsig['setprop']    = '0P~P'
     piropsig['setattribute'] = '0P~P'
+    piropsig['sleep']      = 'v+'
+    piropsig['trace']      = 'vi'
+    piropsig['unshift']    = '0P*'
+    piropsig['upcase']     = 'Ss'
     set_global '%piropsig', piropsig
 
     ##  %valflags specifies when PAST::Val nodes are allowed to
@@ -749,18 +773,33 @@ Return the POST representation of a C<PAST::Block>.
     unshift blockpast, node
 
     .local string name, pirflags, blocktype
-    .local pmc subid, ns, hll
+    .local pmc nsentry, subid, ns, hll
     name = node.'name'()
     pirflags = node.'pirflags'()
     blocktype = node.'blocktype'()
+    nsentry = node.'nsentry'()
     subid = node.'subid'()
     ns = node.'namespace'()
     hll = node.'hll'()
+
+    ##  handle nsentry attribute
+    $I0 = defined nsentry
+    unless $I0 goto nsentry_done
+    unless nsentry goto nsentry_anon
+    $S0 = self.'escape'(nsentry)
+    pirflags = concat pirflags, ' :nsentry('
+    pirflags = concat pirflags, $S0
+    pirflags = concat pirflags, ')'
+    goto nsentry_done
+  nsentry_anon:
+    pirflags = concat pirflags, ' :anon'
+  nsentry_done:
 
     ##  handle anonymous blocks
     if name goto have_name
     name = self.'unique'('_block')
     if ns goto have_name
+    if nsentry goto have_name
     pirflags = concat pirflags, ' :anon'
   have_name:
 
@@ -2007,7 +2046,12 @@ attribute.
     .local pmc viviself, vivipost, vivilabel
     viviself = node.'viviself'()
     vivipost = self.'as_vivipost'(viviself, 'rtype'=>'P')
-    ops.'result'(vivipost)
+    .local string result
+    result = vivipost.'result'()
+    unless result == '' goto have_result
+    result = self.'uniquereg'('P')
+  have_result:
+    ops.'result'(result)
     ops.'push'(fetchop)
     unless viviself goto vivipost_done
     $P0 = get_hll_global ['POST'], 'Label'
@@ -2059,9 +2103,10 @@ attribute.
     goto param_done
 
   param_required:
-    .local int slurpy
+    .local int call_sig, slurpy
+    call_sig = node.'call_sig'()
     slurpy = node.'slurpy'()
-    subpost.'add_param'(pname, 'named'=>named, 'slurpy'=>slurpy)
+    subpost.'add_param'(pname, 'named'=>named, 'slurpy'=>slurpy, 'call_sig'=>call_sig)
 
   param_done:
     name = self.'escape'(name)
@@ -2154,6 +2199,52 @@ attribute.
     .tailcall $P0.'new'(name, bindpost, 'pirop'=>'store_lex', 'result'=>bindpost)
   lexical_bind_decl:
     .tailcall $P0.'new'(name, bindpost, 'pirop'=>'.lex', 'result'=>bindpost)
+.end
+
+
+.sub 'contextual' :method :multi(_, ['PAST';'Var'])
+    .param pmc node
+    .param pmc bindpost
+    # If we've requested a contextual in a block that
+    # explicitly declares the variable as a different type,
+    # treat it as that type.
+    .local string name
+    name = node.'name'()
+    $P0 = get_global '@?BLOCK'
+    $P0 = $P0[0]
+    $P0 = $P0.'symtable'()
+    unless $P0 goto contextual
+    $P0 = $P0[name]
+    if null $P0 goto contextual
+    $S0 = $P0['scope']
+    unless $S0 goto contextual
+    if $S0 == 'contextual' goto contextual
+    .tailcall self.$S0(node, bindpost)
+
+  contextual:
+    # If this is a declaration, treat it like a normal lexical
+    .local int isdecl
+    isdecl = node.'isdecl'()
+    if isdecl goto contextual_lex
+
+    name = self.'escape'(name)
+    if bindpost goto contextual_bind
+
+  contextual_post:
+    .local pmc ops, fetchop, storeop
+    $P0 = get_hll_global ['POST'], 'Ops'
+    ops = $P0.'new'('node'=>node)
+    $P0 = get_hll_global ['POST'], 'Op'
+    fetchop = $P0.'new'(ops, name, 'pirop'=>'find_dynamic_lex')
+    storeop = $P0.'new'(name, ops, 'pirop'=>'store_dynamic_lex')
+    .tailcall self.'vivify'(node, ops, fetchop, storeop)
+
+  contextual_bind:
+    $P0 = get_hll_global ['POST'], 'Op'
+    .tailcall $P0.'new'(name, bindpost, 'pirop'=>'store_dynamic_lex', 'result'=>bindpost)
+
+  contextual_lex:
+    .tailcall self.'lexical'(node, bindpost)
 .end
 
 

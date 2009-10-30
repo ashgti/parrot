@@ -71,13 +71,11 @@ some of the architecture of Parrot.
 This file implements logic for tracing processor registers and the system stack.
 Here there be dragons.
 
-=item F<src/gc/res_lea.c>
-
 =item F<src/gc/malloc.c>
 
 =item F<src/gc/malloc_trace.c>
 
-These three files implement various unused features, including a custom malloc
+These two files implement various unused features, including a custom malloc
 implementation, and malloc wrappers for various purposes. These are unused.
 
 =back
@@ -118,6 +116,15 @@ static void * get_free_buffer(PARROT_INTERP, ARGIN(Fixed_Size_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+    ARGMOD(PMC_Attribute_Pool *pool),
+    ARGMOD(void *data))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*pool)
+        FUNC_MODIFIES(*data);
+
 static void Parrot_gc_merge_buffer_pools(PARROT_INTERP,
     ARGMOD(Fixed_Size_Pool *dest),
     ARGMOD(Fixed_Size_Pool *source))
@@ -152,6 +159,11 @@ static int sweep_cb_pmc(PARROT_INTERP,
 #define ASSERT_ARGS_get_free_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_Parrot_gc_free_attributes_from_pool \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pool) \
+    , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_Parrot_gc_merge_buffer_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(dest) \
@@ -255,9 +267,19 @@ Parrot_gc_mark_PMC_alive_fun(PARROT_INTERP, ARGMOD_NULLOK(PMC *obj))
 
         /* if object is a PMC and contains buffers or PMCs, then attach the PMC
          * to the chained mark list. */
-        if (PObj_is_special_PMC_TEST(obj))
-            mark_special(interp, obj);
-        else if (PMC_metadata(obj))
+        if (PObj_is_special_PMC_TEST(obj)) {
+            if (PObj_is_PMC_shared_TEST(obj)) {
+                Parrot_Interp i = PMC_sync(obj)->owner;
+
+                if (!i->mem_pools->gc_mark_ptr)
+                    i->mem_pools->gc_mark_ptr = obj;
+            }
+
+            if (PObj_custom_mark_TEST(obj))
+                VTABLE_mark(interp, obj);
+        }
+
+        if (PMC_metadata(obj))
             Parrot_gc_mark_PMC_alive(interp, PMC_metadata(obj));
     }
 }
@@ -306,14 +328,15 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     ASSERT_ARGS(Parrot_gc_initialize)
 
     interp->mem_pools = mem_allocate_zeroed_typed(Memory_Pools);
-    interp->mem_pools->num_sized = 0;
-    interp->mem_pools->num_attribs = 0;
-    interp->mem_pools->attrib_pools = NULL;
+    interp->gc_sys    = mem_allocate_zeroed_typed(GC_Subsystem);
+
+    interp->mem_pools->num_sized          = 0;
+    interp->mem_pools->num_attribs        = 0;
+    interp->mem_pools->attrib_pools       = NULL;
     interp->mem_pools->sized_header_pools = NULL;
 
-    interp->lo_var_ptr                     = stacktop;
+    interp->lo_var_ptr                    = stacktop;
 
-    interp->gc_sys = mem_allocate_zeroed_typed(GC_Subsystem);
 
     /*TODO: add ability to specify GC core at command line w/ --gc= */
     if (0) /*If they chose sys_type with the --gc command line switch,*/
@@ -336,6 +359,7 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 
     initialize_var_size_pools(interp);
     initialize_fixed_size_pools(interp);
+    Parrot_gc_initialize_fixed_size_pools(interp, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
@@ -384,8 +408,6 @@ Parrot_gc_new_pmc_header(PARROT_INTERP, UINTVAL flags)
     if (!pmc)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: PMC allocation failed!\n");
-
-    flags |= PObj_is_special_PMC_FLAG;
 
     if (flags & PObj_is_PMC_shared_FLAG)
         Parrot_gc_add_pmc_sync(interp, pmc);
@@ -1612,8 +1634,8 @@ void *
 Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_allocate_pmc_attributes)
-#if GC_USE_FIXED_SIZE_ALLOCATOR
     const size_t attr_size = pmc->vtable->attr_size;
+#if GC_USE_FIXED_SIZE_ALLOCATOR
     PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
         attr_size);
     void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
@@ -1621,7 +1643,7 @@ Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
     PMC_data(pmc) = attrs;
     return attrs;
 #else
-    void * const data =  mem_sys_allocate_zeroed(new_vtable->attr_size);
+    void * const data =  mem_sys_allocate_zeroed(attr_size);
     PMC_data(pmc) = data;
     return data;
 #endif
@@ -1672,8 +1694,17 @@ void *
 Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(Parrot_gc_allocate_fixed_size_storage)
-    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
-        size);
+    PMC_Attribute_Pool *pool = NULL;
+    const size_t idx = (size < sizeof (void *)) ? 0 : (size - sizeof (void *));
+
+    /* get the pool directly, if possible, for great speed */
+    if (interp->mem_pools->num_attribs > idx)
+        pool = interp->mem_pools->attrib_pools[idx];
+
+    /* otherwise create it */
+    if (!pool)
+        pool = Parrot_gc_get_attribute_pool(interp, size);
+
     return Parrot_gc_get_attributes_from_pool(interp, pool);
 }
 
@@ -1696,7 +1727,29 @@ Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data)
     const size_t idx   = size - sizeof (void *);
     PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
     Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
+}
 
+
+/*
+
+=item C<static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+PMC_Attribute_Pool *pool, void *data)>
+
+Frees a fixed-size data item back to the pool for later reallocation.  Private
+to this file.
+
+*/
+
+static void
+Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+    ARGMOD(PMC_Attribute_Pool *pool),
+    ARGMOD(void *data))
+{
+    ASSERT_ARGS(Parrot_gc_free_attributes_from_pool)
+    PMC_Attribute_Free_List * const item = (PMC_Attribute_Free_List *)data;
+    item->next = pool->free_list;
+    pool->free_list = item;
+    pool->num_free_objects++;
 }
 
 /*

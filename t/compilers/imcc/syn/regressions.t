@@ -102,7 +102,7 @@ pir_error_output_like( <<'CODE', <<'OUT', 'off by one error message (TT #1016)',
 no:
 .end
 CODE
-/(?s:Null PMC access in get_bool.*current instr.*:(4|-1|3)\))/
+/(?s:Null PMC access in get_bool.*current instr.*:(4|-1)\))/
 OUT
 
 pir_error_output_like( <<'CODE', <<'OUT', 'bare method names not allowed (RT #45859)');
@@ -200,9 +200,7 @@ CODE
 /syntax error.+unexpected/
 OUT
 
-SKIP: {
-    skip( 'Hang on Linux i386 and amd64', 1 );
-pir_output_like( <<'CODE', <<'OUT', 'Segfault, TT #1027', todo=>'segfaulting');
+pir_output_like( <<'CODE', <<'OUT', 'Segfault, TT #1027');
 .sub main :main
 push_eh handler
 test()
@@ -228,7 +226,6 @@ throw $P0
 CODE
 /.*/
 OUT
-}
 
 # We shouldn't crash (and valgrind shoudn't report invalid reads)
 pir_output_is( <<'CODE', <<'OUT', 'exit is last op in sub (TT#1009)');

@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -168,8 +168,9 @@ pir_output_is( <<'CODE', <<'OUTPUT', "thread type 2" );
     .param pmc passed
     inc $I5
     $S5 = " thread\n"
-    passed = 'hello from'
-    print passed
+    .local pmc salutation
+    salutation = box 'hello from'
+    print salutation
     # print I5 # not done because register initialization is not guaranteed
     print $S5
     $P0 = getinterp
@@ -679,38 +680,38 @@ ok 1
 ok 2
 OUTPUT
 
-my @todo;
-
-if ( $ENV{TEST_PROG_ARGS} ) {
-    push @todo, ( todo => 'Broken with CGP' ) if $ENV{TEST_PROG_ARGS} =~ /--runcore=cgp/;
-    push @todo, ( todo => 'Broken with JIT' ) if $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/;
-    push @todo, ( todo => 'Broken with switch core' )  if $ENV{TEST_PROG_ARGS} =~ /--runcore=switch/;
-}
-pir_output_unlike( <<'CODE', qr/not/, "globals + constant table subs issue", @todo );
+# Direct constant access to sub objects commented out, see TT #1120.
+pir_output_unlike( <<'CODE', qr/not/, "globals + constant table subs issue");
 .namespace [ 'Foo' ]
 
 .include 'interpinfo.pasm'
 .sub 'is'
-    .param pmc what
-    .param pmc expect
+    .param pmc    what
+    .param pmc    expect
+    .param string desc      :optional
+    .param int    have_desc :opt_flag
+
+    unless have_desc goto diagnose
+    desc = ' - ' . desc
+
+  diagnose:
     .local pmc number
     number = get_global 'test_num'
     if what == expect goto okay
     print "# got:      "
-    print what
-    print "\n"
+    say what
     print "# expected: "
-    print expect
-    print "\nnot ok "
+    say expect
+    print "not ok "
     print number
-    print "\n"
+    say desc
+    inc number
     $P0 = interpinfo .INTERPINFO_CURRENT_CONT
 loop:
     $I0 = defined $P0
     if $I0 == 0 goto done
     print "    "
-    print $P0
-    print "\n"
+    say $P0
     $P0 = $P0.'continuation'()
     branch loop
 done:
@@ -719,7 +720,7 @@ okay:
     print "ok "
     print number
     inc number
-    print "\n"
+    say desc
 .end
 
 .sub setup
@@ -729,9 +730,10 @@ okay:
 .end
 
 .sub _check_sanity
+    .param string desc
     $P0 = get_global 'foo'
     $P1 = get_hll_global [ 'Foo' ], 'foo'
-    is($P0, $P1)
+    is($P0, $P1, desc)
 .end
 
 .sub mutate
@@ -741,11 +743,11 @@ okay:
 .end
 
 .sub check_sanity
-    _check_sanity()
+#    _check_sanity( 'direct call' )
     $P0 = get_global '_check_sanity'
-    $P0()
+    $P0( 'call from get_global' )
     $P0 = get_hll_global [ 'Foo' ], '_check_sanity'
-    $P0()
+    $P0( 'call from get_hll_global' )
 .end
 
 .sub _check_value
@@ -756,7 +758,7 @@ okay:
 
 .sub check_value
     .param int value
-    _check_value(value)
+#    _check_value(value)
     $P0 = get_global '_check_value'
     $P0(value)
     $P0 = get_hll_global [ 'Foo' ], '_check_value'
@@ -764,10 +766,19 @@ okay:
 .end
 
 .sub full_check
-    .const 'Sub' c_setup = 'setup'
-    .const 'Sub' c_sanity = 'check_sanity'
-    .const 'Sub' c_mutate = 'mutate'
-    .const 'Sub' c_value = 'check_value'
+#    .const 'Sub' c_setup = 'setup'
+#    .const 'Sub' c_sanity = 'check_sanity'
+#    .const 'Sub' c_mutate = 'mutate'
+#    .const 'Sub' c_value = 'check_value'
+
+    .local pmc c_setup
+    c_setup = get_global  'setup'
+    .local pmc c_sanity
+    c_sanity = get_global 'check_sanity'
+    .local pmc c_mutate
+    c_mutate = get_global 'mutate'
+    .local pmc c_value
+    c_value = get_global  'check_value'
 
     .local pmc g_setup
     g_setup = get_hll_global [ 'Foo' ], 'setup'
@@ -818,25 +829,25 @@ okay:
 CODE
 
 pir_output_is(
-    <<'CODE', <<'OUTPUT', "CLONE_CODE|CLONE_GLOBALS|CLONE_HLL|CLONE_LIBRARIES", todo => 'RT #41373' );
+    <<'CODE', <<'OUTPUT', 'CLONE_CODE|CLONE_GLOBALS|CLONE_HLL|CLONE_LIBRARIES - RT #41373' );
 .HLL 'Perl'
-.loadlib 'perl_group'
 
 .include 'interpinfo.pasm'
 
+.loadlib 'foo_group'
 .loadlib 'myops_ops'
 
 .sub test
     .param pmc passed_value
     .local pmc the_value
-    the_value = new ['PerlInt']
+    the_value = new ['Integer']
     the_value = 42
     set_hll_global ['Foo'], 'x', the_value
     $S0 = typeof passed_value
     $S1 = typeof the_value
     $I0 = iseq $S0, $S1
-    print $I0
-    print "\n"
+    say $I0
+
     .local pmc ns
     ns = get_namespace ['Foo']
     $P0 = interpinfo .INTERPINFO_CURRENT_SUB
@@ -846,11 +857,10 @@ pir_output_is(
     if $P0 == the_value goto okay
     print "not "
 okay:
-    print "ok (equal)\n"
+    say "ok (equal)"
 
     $I0 = the_value
-    print $I0
-    print "\n"
+    say $I0
 .end
 
 .include 'cloneflags.pasm'
@@ -865,15 +875,15 @@ okay:
     bor flags, flags, .PARROT_CLONE_LIBRARIES
 
     .local pmc passed
-    passed = new ['PerlInt']
+    passed = new ['Foo']
     passed = 15
 
     .local pmc thread_func
     thread_func = get_global 'test'
-    print "in thread:\n"
+    say "in thread:"
     thread.'run'(flags, thread_func, passed)
     thread.'join'()
-    print "in main:\n"
+    say "in main:"
     thread_func(passed)
 .end
 CODE

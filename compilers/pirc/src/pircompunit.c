@@ -137,15 +137,15 @@ set_sub_multi_types(lexer_state * const lexer, expression * const multitype) {
 
         switch (multitype->type) {
             case EXPR_CONSTANT:
-                mtype->entry.ident    = multitype->expr.c->val.sval;
-                mtype->entry_type = MULTI_TYPE_IDENT;
+                mtype->entry.ident = multitype->expr.c->val.sval;
+                mtype->entry_type  = MULTI_TYPE_IDENT;
                 break;
             case EXPR_IDENT:
-                mtype->entry.ident    = multitype->expr.id;
-                mtype->entry_type = MULTI_TYPE_IDENT;
+                mtype->entry.ident = multitype->expr.id;
+                mtype->entry_type  = MULTI_TYPE_IDENT;
                 break;
             case EXPR_KEY:
-                /* mtype->u.key      = XXX todo */
+                mtype->entry.key  = multitype->expr.k; 
                 mtype->entry_type = MULTI_TYPE_KEYED;
                 break;
             default:
@@ -328,14 +328,16 @@ their thing.
 
 */
 void
-new_subr(lexer_state * const lexer, char const * const subname) {
+new_subr(lexer_state * const lexer, STRING *subname) {
     subroutine *newsub       = pir_mem_allocate_zeroed_typed(lexer, subroutine);
     int         index;
 
     /* set the sub fields */
-    newsub->info.subname     = subname;
+    newsub->info.subname1    = subname;
+    newsub->info.subname     = Parrot_str_to_cstring(lexer->interp, subname);
     /* set default lexid */
-    newsub->info.subid       = subname;
+    newsub->info.subid1      = subname;
+    newsub->info.subid       = Parrot_str_to_cstring(lexer->interp, subname);
     /* take namespace of this sub of the lexer, which keeps track of that */
     newsub->name_space       = lexer->current_ns;
 
@@ -368,7 +370,7 @@ new_subr(lexer_state * const lexer, char const * const subname) {
     CURRENT_SUB(lexer) = newsub;
 
     /* store the subroutine identifier as a global label */
-    store_global_label(lexer, subname);
+    store_global_label(lexer, Parrot_str_to_cstring(lexer->interp, subname));
 
     /* vanilla register allocator is reset for each sub */
     reset_register_allocator(lexer);
@@ -701,7 +703,15 @@ PARROT_CANNOT_RETURN_NULL
 target *
 set_param_alias(lexer_state * const lexer, char const * const alias) {
     PARROT_ASSERT(lexer->curtarget != NULL);
-    lexer->curtarget->alias = alias;
+    
+    /* if no alias was specified, default to the target's name, if it's not a register. */
+    if (alias == NULL) {
+        if (!TEST_FLAG(lexer->curtarget->flags, TARGET_FLAG_IS_REG))
+            lexer->curtarget->alias = lexer->curtarget->info->id.name;
+    }
+    else
+        lexer->curtarget->alias = alias;
+        
     SET_FLAG(lexer->curtarget->flags, TARGET_FLAG_NAMED);
     return lexer->curtarget;
 }
@@ -1970,16 +1980,28 @@ the allocated register.
 */
 void
 set_lex_flag(lexer_state * const lexer, target * const t, char const * const name) {
-    lexical *lex = (lexical *)pir_mem_allocate(lexer, sizeof (lexical));
-    lex->name    = name;
+    lexical *lex = CURRENT_SUB(lexer)->info.lexicals;
+    
+    /* check whether there is already a target marked as .lex with the specified name */
+    while (lex != NULL) {
+        if (STREQ(lex->name, name)) {
+            yypirerror(lexer->yyscanner, lexer, "lexical '%s' was already declared", name);   
+            /* abort immediately */
+            return;
+        }
+        lex = lex->next;   
+    }
+    
+    lex        = (lexical *)pir_mem_allocate(lexer, sizeof (lexical));    
+    lex->name  = name;
 
     /* get a pointer to the "color" field, so that the lexical struct knows
      * the assigned PASM register.
      */
-    lex->color   = &t->info->color;
-
+    lex->color = &t->info->color;
+    
     /* link this lex node in the list of lexicals at the front; order doesn't matter. */
-    lex->next = CURRENT_SUB(lexer)->info.lexicals;
+    lex->next  = CURRENT_SUB(lexer)->info.lexicals;
     CURRENT_SUB(lexer)->info.lexicals = lex;
 }
 
@@ -2088,6 +2110,17 @@ expr_from_key(NOTNULL(lexer_state * const lexer), NOTNULL(key * const k)) {
 }
 
 
+/*
+
+=item C<static key_entry * new_key_entry>
+
+Constructor for a key_entry node. Memory is allocated for the node,
+and the C<expr> field is initialized to the passed in C<expr> value.
+The newly constructed node is returned.
+
+=cut
+
+*/
 static key_entry *
 new_key_entry(lexer_state * const lexer, expression * const expr) {
     key_entry *entry = pir_mem_allocate_zeroed_typed(lexer, key_entry);

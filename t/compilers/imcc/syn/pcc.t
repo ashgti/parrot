@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
 use Parrot::Config;
-use Parrot::Test tests => 24;
+use Parrot::Test tests => 26;
 
 ##############################
 # Parrot Calling Conventions
@@ -592,6 +592,49 @@ CODE
 1
 2
 1
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', 'escape sequences in sub names, TT #1125' );
+.sub 'main'
+    say "xyz:<\" \">"
+    .const 'Sub' $P0 = 'foo'
+    say $P0
+
+    say ""
+
+    say "xyz:<\\>"
+    .const 'Sub' $P1 = 'bar'
+    say $P1
+.end
+
+.sub "xyz:<\" \">" :subid('foo')
+    say "xyz-quote"
+.end
+
+.sub "xyz:<\\>" :subid('bar')
+    say "xyz-backslash"
+.end
+CODE
+xyz:<" ">
+xyz:<" ">
+
+xyz:<\>
+xyz:<\>
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', ':named should default to param name', todo=>'TT#1152');
+.sub main
+  $I0 = 'incr'('value'=>3)
+  say $I0
+.end
+
+.sub 'incr'
+  .param int value :named
+  inc value
+  .return(value)
+.end
+CODE
+4
 OUT
 
 # Local Variables:

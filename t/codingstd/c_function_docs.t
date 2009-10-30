@@ -71,7 +71,12 @@ foreach my $path (@files) {
             $missing = 'missing';
         }
         if ($missing) {
-            push @missing_docs, "$path ($missing)\n$function_decl\nWant:\n$escaped_decl\n";
+            if ($missing eq 'boilerplate only') {
+                push @missing_docs, "$path ($missing)\nIn:\n$escaped_decl\n";
+            }
+            else {
+                push @missing_docs, "$path ($missing)\n$function_decl\nWant:\n$escaped_decl\n";
+            }
         }
     }
 
@@ -124,7 +129,6 @@ examples/compilers/japhc.c
 src/atomic/gcc_x86.c
 src/debug.c
 src/gc/generational_ms.c
-src/gc/res_lea.c
 src/io/io_string.c
 src/nci_test.c
 src/pbc_dump.c

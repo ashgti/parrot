@@ -39,12 +39,10 @@ Initializes the continuation.
         Parrot_RetContinuation_attributes * const attrs = PARROT_RETCONTINUATION(SELF);
 
         attrs->to_ctx          = CURRENT_CONTEXT(interp);
-        attrs->from_ctx        = CURRENT_CONTEXT(interp);    /* filled in during a call */
+        attrs->from_ctx        = PMCNULL;    /* filled in during a call */
         attrs->runloop_id      = 0;
         attrs->seg             = interp->code;
-        attrs->current_results = NULL;
         attrs->address         = NULL;
-
     }
 
 
@@ -84,11 +82,10 @@ Transfers control to the calling context and frees the current context.
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
 
-        /* the continuation is dead - delete and destroy it */
-        /* This line causes a failure in t/pmc/packfiledirectory.t. No idea
-           what the relationship is between this line of code and that test
-           failure. */
-        /* Parrot_gc_free_pmc_header(interp, SELF); */
+        /* recycle this PMC and make sure it doesn't get marked */
+        if (!PMC_IS_NULL(from_ctx))
+            Parrot_pcc_set_continuation(interp, from_ctx, NULL);
+        Parrot_gc_free_pmc_header(interp, SELF);
 
         if (INTERP->code != seg)
             Parrot_switch_to_cs(INTERP, seg, 1);

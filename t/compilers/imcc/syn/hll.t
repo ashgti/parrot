@@ -40,10 +40,13 @@ ResizableStringArray
 OUT
 
 $ENV{TEST_PROG_ARGS} ||= '';
-my @todo = $ENV{TEST_PROG_ARGS} =~ /--run-pbc/
-    ? ( todo => 'classes and HLL maps not thawed from PBC, RT #60648' )
-    : ();
-pir_output_is( <<'CODE', <<'OUT', ".param :slurpy (using object)", @todo );
+
+SKIP: {
+
+skip('use of :immediate for this test does not work with --run-pbc', 1)
+  if $ENV{TEST_PROG_ARGS} =~ /--run-pbc/;
+
+pir_output_is( <<'CODE', <<'OUT', ".param :slurpy (using object)" );
 
 .sub setup :anon :immediate
  $P0 = subclass 'ResizablePMCArray', 'Stack'
@@ -77,3 +80,4 @@ CODE
 3
 Stack
 OUT
+}

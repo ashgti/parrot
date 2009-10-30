@@ -1010,7 +1010,7 @@ parrot_create_hash(PARROT_INTERP, PARROT_DATA_TYPE val_type, Hash_key_type hkey_
 =item C<void parrot_hash_destroy(PARROT_INTERP, Hash *hash)>
 
 Frees the memory allocated to the specified hash and its bucket store.  Used by
-Parrot_chash_destroy.
+parrot_chash_destroy.
 
 =cut
 
@@ -1302,18 +1302,19 @@ parrot_hash_put(PARROT_INTERP, ARGMOD(Hash *hash),
     const UINTVAL hashval = (hash->hash_val)(interp, key, hash->seed);
     HashBucket   *bucket  = hash->bi[hashval & hash->mask];
 
-    /* Very complex assert that we'll not put non-constant stuff into constant hash */
-    PARROT_ASSERT(
-        PMC_IS_NULL(hash->container)
-        || !(PObj_constant_TEST(hash->container))
-        || (
-            (
-                !(hash->key_type == Hash_key_type_STRING)
-                || PObj_constant_TEST((PObj *)key))
-            && (
-                !((hash->entry_type == enum_type_PMC) || (hash->entry_type == enum_type_STRING))
-                || PObj_constant_TEST((PObj *)value)))
-        || !"Use non-constant key or value in constant hash");
+    /* When the hash is constant, check that the key and value are also
+     * constant. */
+    if (!PMC_IS_NULL(hash->container)
+            && PObj_constant_TEST(hash->container)) {
+        if (hash->key_type == Hash_key_type_STRING
+                && !PObj_constant_TEST((PObj *)key))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "Used non-constant key in constant hash.");
+        if (((hash->entry_type == enum_type_PMC) || (hash->entry_type == enum_type_STRING))
+                && !PObj_constant_TEST((PObj *)value))
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+                "Used non-constant value in constant hash.");
+    }
 
     while (bucket) {
         /* store hash_val or not */
@@ -1453,7 +1454,7 @@ PMC*
 get_integer_pmc(PARROT_INTERP, INTVAL value)
 {
     ASSERT_ARGS(get_integer_pmc)
-    PMC *ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
     VTABLE_set_integer_native(interp, ret, value);
     return ret;
 }
@@ -1474,7 +1475,7 @@ PMC*
 get_number_pmc(PARROT_INTERP, FLOATVAL value)
 {
     ASSERT_ARGS(get_number_pmc)
-    PMC *ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float));
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float));
     VTABLE_set_number_native(interp, ret, value);
     return ret;
 }
@@ -1494,7 +1495,7 @@ PMC *
 get_string_pmc(PARROT_INTERP, ARGIN(STRING *value))
 {
     ASSERT_ARGS(get_string_pmc)
-    PMC *ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String));
+    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String));
     VTABLE_set_string_native(interp, ret, value);
     return ret;
 }
@@ -1746,10 +1747,8 @@ hash_key_to_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(void *key))
     PMC *ret;
     switch (hash->key_type) {
         case Hash_key_type_int:
-        {
             ret = get_integer_pmc(interp, (INTVAL)key);
             break;
-        }
         case Hash_key_type_PMC:
             ret = (PMC*)key;
             break;
@@ -1943,6 +1942,7 @@ hash_value_to_int(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(vo
     ASSERT_ARGS(hash_value_to_int)
     INTVAL ret;
     switch (hash->entry_type) {
+        case enum_type_ptr:
         case enum_type_INTVAL:
             ret = (INTVAL)value;
             break;
