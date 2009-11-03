@@ -74,6 +74,13 @@ so this usage will not be allowed.
 
 L<https://trac.parrot.org/parrot/ticket/918>
 
+=item Use of 'v' in NCI parameter lists [eligible in 2.1]
+
+An empty parameter list suffices to indicate no parameters to an NCI call.
+This has been marked as deprecated in PDD16 for 2 years.
+
+F<pdds/draft/pdd16_native_call.pod>
+
 =back
 
 =head1 Opcodes
