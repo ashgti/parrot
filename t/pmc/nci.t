@@ -5,8 +5,19 @@
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
+use Parrot::BuildUtil;
+use Parrot::NativeCall 'signature_nci_to_pcc';
+
+my @nci_sigs;
+BEGIN {
+    @nci_sigs =
+        grep {$_}
+        map {chomp; s/^\s*//; s/\s*$//; s/#.*$//; $_}
+        split /\n/, Parrot::BuildUtil::slurp_file('src/call_list.txt');
+}
+
 use Test::More;
-use Parrot::Test tests => 70;
+use Parrot::Test tests => (70 + @nci_sigs);
 use Parrot::Config qw(%PConfig);
 
 =head1 NAME
@@ -31,6 +42,27 @@ Most tests are skipped when the F<libnci_test.so> shared library is not found.
 =cut
 
 $ENV{TEST_PROG_ARGS} ||= '';
+
+foreach my $nci_sig (@nci_sigs) {
+    my ($nci_ret, $nci_params) = $nci_sig =~ /\S+/g;
+    $nci_params ||= '';
+    my $pcc_sig = signature_nci_to_pcc($nci_sig);
+    pir_output_is( << "CODE", "$pcc_sig\n", "NCI PMC signatures equivalent to nativecall.pl ('$nci_sig')" );
+.include "nci.pasm"
+.sub test :main
+    .local pmc nci
+    nci = new ['NCI']
+    nci = "${nci_ret}${nci_params}"
+    .local string s
+    s = nci[ .PARROT_NCI_PCC_SIGNATURE_PARAMS ]
+    print s
+    print "->"
+    s = nci[ .PARROT_NCI_PCC_SIGNATURE_RET ]
+    print s
+    print "\\n"
+.end
+CODE
+}
 
 SKIP: {
     unless ( -e "runtime/parrot/dynext/libnci_test$PConfig{load_ext}" ) {
