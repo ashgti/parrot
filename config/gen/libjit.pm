@@ -213,7 +213,8 @@ jit__$func_name(jit_function_t f, $arg_decls_v, jit_type_t *va_t, jit_value_t *v
     return jit_insn_call_native(f, "$func_name", (void *)&$func_name, sig, arg_v, n_args, 0);
 }
 DEFN
-    } else {
+    }
+    else {
         $decl = <<DECL;
 jit_value_t
 jit__$func_name(jit_function_t, $arg_decls_t);

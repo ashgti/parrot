@@ -12,7 +12,7 @@ It is OK when it doesn't exist.
 
 The libjit library implements just-in-time compilation functionality. Unlike
 other JITs, this one is designed to be independent of any particular virtual
-machine bytecode format or language. 
+machine bytecode format or language.
 
 libjit can be obtained from L<http://freshmeat.net/projects/libjit/> or through
 your distribution's package manager. Developer documentation is available from

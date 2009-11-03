@@ -110,8 +110,8 @@ PARROT_DYNEXT_EXPORT char * nci_ttt(char *, char *);
 PARROT_DYNEXT_EXPORT void   nci_vfff(float, float, float);
 PARROT_DYNEXT_EXPORT void   nci_vV(const char **);
 PARROT_DYNEXT_EXPORT void   nci_vVVV(const char **, const char **, const char **);
-PARROT_DYNEXT_EXPORT int    nci_i20(int, int, int, int, int, int, int, int, int, int, int, int, int, int,
-                             int, int, int, int, int);
+PARROT_DYNEXT_EXPORT int    nci_i20(int, int, int, int, int, int, int, int, int, int, int, int,
+                                    int, int, int, int, int, int, int);
 
 /* Declarations for callback tests */
 
