@@ -15,6 +15,17 @@
 
 #include "parrot/parrot.h"
 
+/* NCI PMC interface constants */
+/* &gen_from_enum(nci.pasm) */
+typedef enum {
+    PARROT_NCI_ARITY,
+    PARROT_NCI_PCC_SIGNATURE_PARAMS,
+    PARROT_NCI_PCC_SIGNATURE_RET,
+    PARROT_NCI_LONG_SIGNATURE,
+    PARROT_NCI_MULTI_SIG,
+} parrot_nci_enum_t;
+/* &end_gen */
+
 void *build_call_func(PARROT_INTERP, SHIM(PMC *pmc_nci), NOTNULL(STRING *signature), NOTNULL(int *jitted));
 
 #endif /* PARROT_NCI_H_GUARD */
