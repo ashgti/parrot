@@ -58,11 +58,11 @@ void
 Parrot_jit_parse_sig_args_post(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t *, jit_value_t *);
 
 int
-Parrot_jit_create_arg_regs(Interp *, char *, int, jit_function_t, jit_type_t *, jit_value_t *);
+Parrot_jit_create_arg_regs(Interp *, char *, int, jit_function_t, jit_value_t *);
 
 void
 Parrot_jit_fill_args(Interp *, char *, int, int, jit_function_t, jit_value_t, jit_value_t, jit_value_t,
-                    jit_type_t *, jit_value_t *, jit_type_t *, jit_value_t *);
+                    jit_value_t *, jit_type_t *, jit_value_t *);
 
 jit_value_t
 jit_value_create_intval_constant(jit_function_t, INTVAL);

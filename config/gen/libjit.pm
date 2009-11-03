@@ -50,7 +50,7 @@ sub _init {
             Parrot_pcc_fill_params_from_c_args =>
                 [ qw(void_ptr void_ptr void_ptr ...) => 'void' ],
             Parrot_pcc_fill_returns_from_c_args =>
-                [ qw(void_ptr void_ptr void_ptr void_ptr) => 'void' ],
+                [ qw(void_ptr void_ptr void_ptr ...) => 'void' ],
 
             Parrot_str_new          =>
                 [ qw(void_ptr void_ptr UINTVAL) => 'void_ptr' ],

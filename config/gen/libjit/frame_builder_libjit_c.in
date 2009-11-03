@@ -140,12 +140,18 @@ Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
 
     /* get information out of the NCI object */
     jit_func         = jit__vtable_get_pointer(f, jit_interp, jit_nci_pmc);
-    jit_pcc_sig_args = jit__vtable_get_string_keyed_int(f, jit_interp, jit_nci_pmc,
-                        jit_value_create_nint_constant(f, JIT_TYPE_INTVAL, PARROT_NCI_PCC_SIGNATURE_PARAMS));
-    jit_pcc_sig_ret  = jit__vtable_get_string_keyed_int(f, jit_interp, jit_nci_pmc,
-                        jit_value_create_nint_constant(f, JIT_TYPE_INTVAL, PARROT_NCI_PCC_SIGNATURE_RET));
+    {
+        jit_value_t temp = jit__vtable_get_string_keyed_int(f, jit_interp, jit_nci_pmc,
+                            jit_value_create_nint_constant(f, JIT_TYPE_INTVAL, PARROT_NCI_PCC_SIGNATURE_PARAMS));
+        jit_pcc_sig_args = jit__Parrot_str_to_cstring(f, jit_interp, temp);
+    }
+    {
+        jit_value_t temp = jit__vtable_get_string_keyed_int(f, jit_interp, jit_nci_pmc,
+                            jit_value_create_nint_constant(f, JIT_TYPE_INTVAL, PARROT_NCI_PCC_SIGNATURE_RET));
+        jit_pcc_sig_ret  = jit__Parrot_str_to_cstring(f, jit_interp, temp);
+    }
 
-    /* allocate call_state */
+    /* get call_object */
     {
         jit_value_t ctx = jit__CURRENT_CONTEXT(f, jit_interp);
         jit_call_object = jit__Parrot_pcc_get_signature(f, jit_interp, ctx);
@@ -184,6 +190,10 @@ Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
         Parrot_jit_parse_sig_args_post(interp, sig, nargs, f, jit_interp, jit_args_v, jit_regs);
     }
 
+    /* TODO: free PCC signature bits (currently segfaults at jit-time) */
+    /* jit__Parrot_str_free_cstring(jit_interp, jit_pcc_sig_args);
+    jit__Parrot_str_free_cstring(jit_interp, jit_pcc_sig_ret); */
+
     /* end JIT function */
     jit_insn_return(f, NULL);
 
@@ -196,56 +206,31 @@ Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
 
 int
 Parrot_jit_create_arg_regs(PARROT_INTERP, char *sig, int nargs,
-                            jit_function_t f, jit_type_t *reg_t, jit_value_t *reg_v) {
+                            jit_function_t f, jit_value_t *reg_v) {
     int i, j;
     for (i = 0, j = 0; i < nargs; i++) {
         char c;
-        jit_type_t t1;
         switch (c = sig[i]) {
           case 'I':
-            t1 = JIT_TYPE_INTVAL;
-          read_int_reg:
-            reg_t[j] = t1;
-            reg_v[j] = jit_value_create(f, t1);
-            j++;
-            break;
           case 'c':
-            t1 = jit_type_sys_char;
-            goto read_int_reg;
           case 's':
-            t1 = jit_type_sys_short;
-            goto read_int_reg;
           case 'i':
-            t1 = jit_type_sys_int;
-            goto read_int_reg;
           case 'l':
-            t1 = jit_type_sys_long;
-            goto read_int_reg;
+            reg_v[j++] = jit_value_create(f, JIT_TYPE_INTVAL);
+            break;
 
           case 'N':
-            t1 = JIT_TYPE_FLOATVAL;
-          read_float_reg:
-            reg_t[j] = t1;
-            reg_v[j] = jit_value_create(f, t1);
-            j++;
-            break;
-          case 'f':
-            t1 = jit_type_sys_float;
-            goto read_float_reg;
           case 'd':
-            t1 = jit_type_sys_double;
-            goto read_float_reg;
+          case 'f':
+            reg_v[j++] = jit_value_create(f, JIT_TYPE_FLOATVAL);
+            break;
 
+          case 'S':
           case 'B':
           case 'b':
           case 't':
-          case 'S':
-            t1 = jit_type_void_ptr;
-            reg_t[j] = t1;
-            reg_v[j] = jit_value_create(f, t1);
-            j++;
+            reg_v[j++] = jit_value_create(f, jit_type_void_ptr);
             break;
-
 
           case 'p':
           case 'P':
@@ -255,16 +240,12 @@ Parrot_jit_create_arg_regs(PARROT_INTERP, char *sig, int nargs,
           case '3':
           case '4':
           case 'V':
-            t1 = jit_type_void_ptr;
-            reg_t[j] = t1;
-            reg_v[j] = jit_value_create(f, t1);
-            j++;
+            reg_v[j++] = jit_value_create(f, jit_type_void_ptr);
             break;
 
           default:
-            /* don't catch errors here; fails elsewhere */
+            /* don't catch errors here; fail elsewhere */
             break;
-
         }
     }
 
@@ -274,7 +255,7 @@ Parrot_jit_create_arg_regs(PARROT_INTERP, char *sig, int nargs,
 void
 Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
                     jit_function_t f, jit_value_t jit_interp, jit_value_t call_object, jit_value_t jit_pcc_sig_args,
-                    jit_type_t *reg_t, jit_value_t *reg_v, jit_type_t *arg_t, jit_value_t *arg_v) {
+                    jit_value_t *reg_v, jit_type_t *arg_t, jit_value_t *arg_v) {
     int i, j;
 
     /* fill argument registers */
@@ -290,34 +271,60 @@ Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
                                                 jit_reg_addr_t, jit_reg_addr_v, nregs);
     }
 
-    sig += 1; /* ignore return character */
-
     for (i = 0, j = 0; i < nargs; i++) {
         char c;
         jit_type_t t1;
+        jit_label_t l1;
         jit_value_t v1, v2, v3, v4;
         switch (c = sig[i]) {
           case 'I':
+            t1 = JIT_TYPE_INTVAL;
+            goto pop_reg;
           case 'c':
+            t1 = jit_type_sys_char;
+            goto pop_reg;
           case 's':
+            t1 = jit_type_sys_short;
+            goto pop_reg;
           case 'i':
+            t1 = jit_type_sys_int;
+            goto pop_reg;
           case 'l':
+            t1 = jit_type_sys_long;
+            goto pop_reg;
           case 'N':
+            t1 = JIT_TYPE_FLOATVAL;
+            goto pop_reg;
           case 'f':
+            t1 = jit_type_sys_float;
+            goto pop_reg;
           case 'd':
+            t1 = jit_type_sys_double;
+            goto pop_reg;
           case 'S':
           case 'P':
           case 'O':
           case '@':
-            arg_t[i] = reg_t[j];
-            arg_v[i] = reg_v[j];
+            t1 = jit_type_void_ptr;
+          pop_reg:
+            arg_t[i] = t1;
+            arg_v[i] = jit_value_create(f, t1);
+            jit_insn_store(f, arg_v[i], reg_v[j]);
             j++;
             break;
 
           case 't':
             arg_t[i] = jit_type_void_ptr;
-            /* TODO: null check */
-            arg_v[i] = jit__Parrot_str_to_cstring(f, jit_interp, reg_v[j]);
+            arg_v[i] = jit_value_create(f, jit_type_void_ptr);
+            jit_insn_store(f, arg_v[i],
+                            jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL));
+            v1       = jit_insn_eq(f, reg_v[j],
+                            jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL));
+            l1       = jit_label_undefined;
+            jit_insn_branch_if(f, v1, &l1);
+            jit_insn_store(f, arg_v[i], jit__Parrot_str_to_cstring(f, jit_interp, reg_v[j]));
+            jit_insn_label(f, &l1);
+
             j++;
             break;
 
@@ -329,19 +336,27 @@ Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
 
           case 'B':
             arg_t[i] = jit_type_void_ptr;
-            /* TODO: null check */
-            v1       = jit__Parrot_str_to_cstring(f, jit_interp, reg_v[j]);
-            v2       = jit_value_create(f, jit_type_void_ptr);
-            jit_value_set_addressable(v2);
-            jit_insn_store(f, v2, v1);
-            arg_v[i] = jit_insn_address_of(f, v2);
+            arg_v[i] = jit_value_create(f, jit_type_void_ptr);
+            jit_insn_store(f, arg_v[i],
+                            jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL));
+            v1       = jit_insn_eq(f, reg_v[j],
+                            jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL));
+            l1       = jit_label_undefined;
+            jit_insn_branch_if(f, v1, &l1);
+            v2       = jit__Parrot_str_to_cstring(f, jit_interp, reg_v[j]);
+            v3       = jit_value_create(f, jit_type_void_ptr);
+            jit_value_set_addressable(v3);
+            jit_insn_store(f, v3, v2);
+            jit_insn_store(f, arg_v[i], jit_insn_address_of(f, v3));
+            jit_insn_label(f, &l1);
             j++;
             break;
 
           case 'p':
             arg_t[i] = jit_type_void_ptr;
             /* TODO: generate JIT branching */
-            v1 = jit(PMC_IS_NULL(reg_v[j]) ? NULL : jit__vtable_get_pointer(f, jit_interp, reg_v[j]));
+            /* v1 = jit(PMC_IS_NULL(reg_v[j]) ? NULL : jit__vtable_get_pointer(f, jit_interp, reg_v[j])); */
+            v1 = jit__vtable_get_pointer(f, jit_interp, reg_v[j]);
             arg_v[i] = v1;
             j++;
             break;
@@ -398,11 +413,12 @@ Parrot_jit_parse_sig_args_pre(PARROT_INTERP, char *sig, int nargs,
                               jit_type_t  *jit_args_t,
                               jit_value_t *jit_args_v, jit_value_t *jit_regs_v) {
     int nregs;
-    jit_type_t jit_regs_t[nargs];
 
-    nregs = Parrot_jit_create_arg_regs(interp, sig, nargs, f, jit_regs_t, jit_regs_v);
+    sig += 1; /* ignore return character */
+
+    nregs = Parrot_jit_create_arg_regs(interp, sig, nargs, f, jit_regs_v);
     Parrot_jit_fill_args(interp, sig, nargs, nregs, f, jit_interp, call_object, jit_pcc_sig_args,
-                             jit_regs_t, jit_regs_v, jit_args_t, jit_args_v);
+                             jit_regs_v, jit_args_t, jit_args_v);
 }
 
 jit_type_t
@@ -450,6 +466,9 @@ void
 Parrot_jit_parse_sig_ret_post(PARROT_INTERP, char *sig,
                               jit_function_t f, jit_value_t jit_interp, jit_value_t call_object,
                               jit_value_t pcc_sig, jit_value_t retval) {
+    jit_type_t  ret_t[1];
+    jit_value_t ret_v[1];
+
     jit_type_t t1;
     jit_value_t v1, v2, v3;
     switch (sig[0]) {
@@ -461,28 +480,29 @@ Parrot_jit_parse_sig_ret_post(PARROT_INTERP, char *sig,
       case 's':
       case 'i':
       case 'l':
+        ret_t[0] = JIT_TYPE_INTVAL;
+        goto fill_ret;
       case 'N':
       case 'f':
       case 'd':
+        ret_t[0] = JIT_TYPE_FLOATVAL;
+        goto fill_ret;
       case 'S':
       case 'P':
-        jit__Parrot_pcc_fill_returns_from_c_args(f, jit_interp, call_object, pcc_sig, retval);
-        break;
-
-        
+        ret_t[0] = jit_type_void_ptr;
+        goto fill_ret;
       case 't':
-        v1 = jit__Parrot_str_new(f, jit_interp, retval,
-                jit_value_create_nint_constant(f, jit_type_sys_int, 0));
-        jit__Parrot_pcc_fill_returns_from_c_args(f, jit_interp, call_object, pcc_sig, v1);
-        break;
-
-     case 'p':
+        ret_t[0] = jit_type_void_ptr;
+        retval = jit__Parrot_str_new(f, jit_interp, retval,
+                    jit_value_create_nint_constant(f, jit_type_sys_int, 0));
+        goto fill_ret;
+      case 'p':
+        ret_t[0] = jit_type_void_ptr;
         v1 = jit__pmc_new_noinit(f, jit_interp,
                 jit_value_create_intval_constant(f, enum_class_UnManagedStruct));
         jit__vtable_set_pointer(f, jit_interp, v1, retval);
-        jit__Parrot_pcc_fill_returns_from_c_args(f, jit_interp, call_object, pcc_sig, v1);
-        break;
-
+        retval = v1;
+        goto fill_ret;
       case '2':
         t1 = jit_type_sys_short;
         goto create_int_pmc;
@@ -492,11 +512,16 @@ Parrot_jit_parse_sig_ret_post(PARROT_INTERP, char *sig,
       case '4':
         t1 = jit_type_sys_long;
       create_int_pmc:
+        ret_t[0] = jit_type_void_ptr;
         v1 = jit_insn_load_relative(f, retval, 0, t1);
         v2 = jit__pmc_new_noinit(f, jit_interp,
                 jit_value_create_intval_constant(f, enum_class_Integer));
         jit__vtable_set_integer_native(f, jit_interp, v2, v1);
-        jit__Parrot_pcc_fill_returns_from_c_args(f, jit_interp, call_object, pcc_sig, v2);
+        retval = v2;
+      fill_ret:
+        ret_v[0] = jit_value_create(f, ret_t[0]);
+        jit_insn_store(f, ret_v[0], retval);
+        jit__Parrot_pcc_fill_returns_from_c_args(f, jit_interp, call_object, pcc_sig, ret_t, ret_v, 1);
         break;
 
       default:
