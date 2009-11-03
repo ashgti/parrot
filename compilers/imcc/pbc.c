@@ -7,6 +7,7 @@
 #include "pbc.h"
 #include "parrot/packfile.h"
 #include "../src/pmc/pmc_sub.h"
+#include "../src/pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: compilers/imcc/pbc.h */
 
@@ -1125,9 +1126,8 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
                             "add lexical '%s' to sub name '%Ss'\n",
                             n->name, sub->name);
 
-                    Parrot_PCCINVOKE(interp, lex_info,
-                            string_from_literal(interp, "declare_lex_preg"),
-                            "SI->", lex_name, r->color);
+                    VTABLE_set_integer_keyed_str(interp, lex_info,
+                            lex_name, r->color);
 
                     /* next possible name */
                     n = n->reg;

@@ -241,6 +241,22 @@ passed in).
 .end
 
 
+=item call_sig([flag])
+
+Get/set the node's C<call_sig> attribute (for parameter variables) to C<flag>.
+A true value of C<call_sig> indicates that the parameter variable given by this
+node is to be created as a C<:call_sig> parameter. If you use this, it should be
+the only parameter.
+
+=cut
+
+.sub 'call_sig' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('call_sig', value, has_value)
+.end
+
+
 =item viviself([type])
 
 If the variable needs to be instantiated, then C<type> indicates
@@ -553,6 +569,19 @@ Get/set the C<hll> for this block.
 .end
 
 
+=item nsentry([nsentry])
+
+Get/set the C<nsentry> for this block.
+
+=cut
+
+.sub 'nsentry' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('nsentry', value, has_value)
+.end
+
+
 =item symbol(name [, attr1 => val1, attr2 => val2, ...])
 
 If called with named arguments, sets the symbol hash corresponding
@@ -690,8 +719,8 @@ subid for the block if one does not already exist.
     .local pmc suffix
     suffix = get_global '$!subid_suffix'
     unless null suffix goto have_suffix
-    $I0 = time
-    $S0 = $I0
+    $N0 = time
+    $S0 = $N0
     $S0 = concat '_', $S0
     suffix = box $S0
     set_global '$!subid_suffix', suffix

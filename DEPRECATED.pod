@@ -74,6 +74,13 @@ so this usage will not be allowed.
 
 L<https://trac.parrot.org/parrot/ticket/918>
 
+=item Use of 'v' in NCI parameter lists [eligible in 2.1]
+
+An empty parameter list suffices to indicate no parameters to an NCI call.
+This has been marked as deprecated in PDD16 for 2 years.
+
+F<pdds/draft/pdd16_native_call.pod>
+
 =back
 
 =head1 Opcodes
@@ -187,6 +194,13 @@ functions in an extending/embedding interface or C-level custom PMCs,
 check in 1.4 or 2.0 for the new names.
 
 L<https://trac.parrot.org/parrot/ticket/443>
+
+=item Sub/method invocation functions [eligible in 2.1]
+
+The old 'Parrot_call_*' functions for invoking a sub/method object from C are
+deprecated, replaced by 'Parrot_ext_call'.
+
+L<https://trac.parrot.org/parrot/ticket/1145>
 
 =item PMC Attributes Allocation Functions [experimental]
 

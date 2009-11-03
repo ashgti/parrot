@@ -24,6 +24,7 @@ Handles class and object manipulation.
 #include "parrot/oo_private.h"
 #include "pmc/pmc_class.h"
 #include "pmc/pmc_object.h"
+#include "pmc/pmc_context.h"
 
 #include "oo.str"
 
@@ -117,7 +118,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
        return;
 
     /* Import any methods. */
-    Parrot_PCCINVOKE(interp, ns, CONST_STRING(interp, "get_associated_methods"), "->P", &methods);
+    Parrot_pcc_invoke_method_from_c_args(interp, ns, CONST_STRING(interp, "get_associated_methods"), "->P", &methods);
 
     if (!PMC_IS_NULL(methods)) {
         PMC * const iter = VTABLE_get_iter(interp, methods);
@@ -131,7 +132,7 @@ Parrot_oo_extract_methods_from_namespace(PARROT_INTERP, ARGIN(PMC *self), ARGIN(
     }
 
     /* Import any vtable methods. */
-    Parrot_PCCINVOKE(interp, ns, CONST_STRING(interp, "get_associated_vtable_methods"), "->P", &vtable_overrides);
+    Parrot_pcc_invoke_method_from_c_args(interp, ns, CONST_STRING(interp, "get_associated_vtable_methods"), "->P", &vtable_overrides);
 
     if (!PMC_IS_NULL(vtable_overrides)) {
         PMC * const iter = VTABLE_get_iter(interp, vtable_overrides);
@@ -374,7 +375,7 @@ get_pmc_proxy(PARROT_INTERP, INTVAL type)
             PMC * const type_num = pmc_new(interp, enum_class_Integer);
             VTABLE_set_integer_native(interp, type_num, type);
             proxy = pmc_new_init(interp, enum_class_PMCProxy, type_num);
-            Parrot_PCCINVOKE(interp, pmc_ns, CONST_STRING(interp, "set_class"), "P->", proxy);
+            Parrot_pcc_invoke_method_from_c_args(interp, pmc_ns, CONST_STRING(interp, "set_class"), "P->", proxy);
         }
         return proxy;
     }
@@ -877,14 +878,6 @@ Parrot_invalidate_method_cache(PARROT_INTERP, ARGIN_NULLOK(STRING *_class))
         invalidate_type_caches(interp, (UINTVAL)type);
 }
 
-
-/*
- * quick'n'dirty method cache
- * RT #45987: use a hash if method_name is not constant
- *       i.e. from obj.$Sreg(args)
- *       If this hash is implemented mark it during GC
- */
-
 /*
 
 =item C<PMC * Parrot_find_method_direct(PARROT_INTERP, PMC *_class, STRING
@@ -1316,7 +1309,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
             return;
 
     /* Get the methods from the role. */
-    Parrot_PCCINVOKE(interp, role, CONST_STRING(interp, "methods"), "->P", &methods);
+    Parrot_pcc_invoke_method_from_c_args(interp, role, CONST_STRING(interp, "methods"), "->P", &methods);
 
     if (PMC_IS_NULL(methods))
         return;
@@ -1461,7 +1454,7 @@ Parrot_ComposeRole(PARROT_INTERP, ARGIN(PMC *role),
      * that it did itself. Note that we already have the correct methods
      * as roles "flatten" the methods they get from other roles into their
      * own method list. */
-    Parrot_PCCINVOKE(interp, role, CONST_STRING(interp, "roles"), "->P", &roles_of_role);
+    Parrot_pcc_invoke_method_from_c_args(interp, role, CONST_STRING(interp, "roles"), "->P", &roles_of_role);
     roles_of_role_count = VTABLE_elements(interp, roles_of_role);
 
     for (i = 0; i < roles_of_role_count; i++) {

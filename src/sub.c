@@ -23,6 +23,7 @@ Subroutines, continuations, co-routines and other fun stuff...
 #include "sub.str"
 #include "pmc/pmc_sub.h"
 #include "pmc/pmc_continuation.h"
+#include "pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: include/parrot/sub.h */
 
@@ -138,12 +139,6 @@ Parrot_full_sub_name(PARROT_INTERP, ARGIN_NULLOK(PMC* sub_pmc))
              * the running program.
              */
             PMC      * const saved_ccont       = interp->current_cont;
-            opcode_t * const current_args      = interp->current_args;
-            opcode_t * const current_params    = interp->current_params;
-            opcode_t * const current_returns   = interp->current_returns;
-            PMC      * const args_signature    = interp->args_signature;
-            PMC      * const params_signature  = interp->params_signature;
-            PMC      * const returns_signature = interp->returns_signature;
 
             Parrot_block_GC_mark(interp);
 
@@ -151,12 +146,6 @@ Parrot_full_sub_name(PARROT_INTERP, ARGIN_NULLOK(PMC* sub_pmc))
 
             /* Restore stuff that might have got overwritten */
             interp->current_cont      = saved_ccont;
-            interp->current_args      = current_args;
-            interp->current_params    = current_params;
-            interp->current_returns   = current_returns;
-            interp->args_signature    = args_signature;
-            interp->params_signature  = params_signature;
-            interp->returns_signature = returns_signature;
 
             if (sub->name)
                 VTABLE_push_string(interp, ns_array, sub->name);
@@ -286,31 +275,31 @@ Parrot_Sub_get_line_from_pc(PARROT_INTERP, ARGIN_NULLOK(PMC *subpmc), ARGIN_NULL
 {
     ASSERT_ARGS(Parrot_Sub_get_line_from_pc)
     Parrot_Sub_attributes *sub;
-    PackFile_Debug        *debug;
-    opcode_t              *base_pc;
-    size_t                 i, n, offs;
+    opcode_t              *base_pc, *debug_ops;
+    size_t                 i, op, current_annotation, debug_size;
 
     if (!subpmc || !pc)
         return -1;
 
     PMC_get_sub(interp, subpmc, sub);
 
-    offs    = pc - sub->seg->base.data;
-    debug   = sub->seg->debugs;
-    base_pc = sub->seg->base.data;
+    debug_ops          = sub->seg->debugs->base.data;
+    debug_size         = sub->seg->debugs->base.size;
+    base_pc            = sub->seg->base.data;
+    current_annotation = pc - base_pc;
 
-    for (i = n = 0; n < sub->seg->base.size; i++) {
+    for (i = op = 0; op < debug_size; i++) {
         op_info_t * const op_info  = &interp->op_info_table[*base_pc];
         opcode_t          var_args = 0;
 
-        if (i >= debug->base.size)
+        if (i >= debug_size)
             return -1;
 
-        if (n >= offs)
-            return debug->base.data[i];
+        if (op >= current_annotation)
+            return debug_ops[i];
 
         ADD_OP_VAR_PART(interp, sub->seg, base_pc, var_args);
-        n       += op_info->op_count + var_args;
+        op      += op_info->op_count + var_args;
         base_pc += op_info->op_count + var_args;
     }
 
@@ -462,6 +451,7 @@ Capture the current lexical environment of a sub.
 
 */
 
+PARROT_EXPORT
 void
 Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
 {

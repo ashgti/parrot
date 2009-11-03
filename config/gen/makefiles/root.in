@@ -430,11 +430,13 @@ INTERP_O_FILES := \
     $(SRC_DIR)/hash$(O) \
     $(SRC_DIR)/hll$(O) \
     $(SRC_DIR)/call/pcc$(O)  \
+    $(SRC_DIR)/call/args$(O)  \
     $(SRC_DIR)/interp/inter_cb$(O)  \
     $(SRC_DIR)/interp/inter_create$(O)  \
     $(SRC_DIR)/interp/inter_misc$(O)  \
     $(SRC_DIR)/call/ops$(O)  \
     $(SRC_DIR)/call/context$(O) \
+    $(SRC_DIR)/call/context_accessors$(O) \
     $(SRC_DIR)/key$(O) \
     $(SRC_DIR)/library$(O) \
     $(SRC_DIR)/list$(O) \
@@ -617,6 +619,7 @@ STR_FILES := \
     $(SRC_DIR)/global_setup.str \
     $(SRC_DIR)/hll.str \
     $(SRC_DIR)/call/pcc.str \
+    $(SRC_DIR)/call/args.str \
     $(SRC_DIR)/interp/inter_cb.str \
     $(SRC_DIR)/interp/inter_create.str \
     $(SRC_DIR)/interp/inter_misc.str \
@@ -690,8 +693,10 @@ help :
 	@echo "                     Provide Parrot configuration information"
 	@echo ""
 	@echo "Installation:"
-	@echo "  install:           Install under '$(PREFIX)' on Unix systems"
-	@echo "  install-dev:       Same as 'install' but also install support for development."
+	@echo "  install:           Install under '$(PREFIX)' on Unix systems."
+	@echo "  install-dev:       Same as 'install'."
+	@echo "  install-bin:       Install only files needed for Parrot runtime."
+	@echo "  install-dev-only:  Install only files needed for Parrot development."
 	@echo ""
 	@echo "Documentation:"
 	@echo "  help:              Print this help message."
@@ -865,11 +870,12 @@ $(SRC_DIR)/install_config$(O) : $(SRC_DIR)/install_config.c
 
 $(SRC_DIR)/null_config$(O) : $(INC_DIR)/parrot.h $(SRC_DIR)/null_config.c
 
-$(SRC_DIR)/oo$(O) : $(INC_DIR)/parrot.h $(SRC_DIR)/pmc/class.c $(INC_DIR)/pbcversion.h
+$(SRC_DIR)/oo$(O) : $(INC_DIR)/parrot.h $(SRC_DIR)/pmc/pmc_class.h $(SRC_DIR)/pmc/pmc_object.h $(SRC_DIR)/pmc/pmc_context.h $(INC_DIR)/pbcversion.h $(SRC_DIR)/oo.str
 
 $(SRC_DIR)/scheduler$(O) : $(INC_DIR)/parrot.h \
                            $(SRC_DIR)/scheduler.str   \
                            $(SRC_DIR)/pmc/scheduler.c \
+                           $(SRC_DIR)/pmc/pmc_context.h \
                            $(SRC_DIR)/pmc/task.c      \
                            $(SRC_DIR)/pmc/timer.c     \
                            $(INC_DIR)/pbcversion.h
@@ -1089,8 +1095,6 @@ $(SRC_DIR)/gc/api$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/gc/gc_private.h
 
 $(SRC_DIR)/gc/alloc_resources$(O) : $(GENERAL_H_FILES)
 
-$(SRC_DIR)/gc/res_lea$(O) : $(GENERAL_H_FILES)
-
 $(SRC_DIR)/hll$(O) : $(GENERAL_H_FILES) $(SRC_DIR)/hll.str
 
 $(SRC_DIR)/platform$(O) : $(GENERAL_H_FILES)
@@ -1133,6 +1137,12 @@ $(SRC_DIR)/runcore/main$(O) : $(SRC_DIR)/runcore/main.c \
 
 $(SRC_DIR)/runcore/profiling$(O) : $(SRC_DIR)/runcore/profiling.str $(GENERAL_H_FILES) \
 	$(SRC_DIR)/pmc/pmc_sub.h
+
+$(SRC_DIR)/call/args$(O) : $(SRC_DIR)/call/args.c $(GENERAL_H_FILES) \
+	$(SRC_DIR)/call/args.str \
+	$(SRC_DIR)/pmc/pmc_key.h $(SRC_DIR)/pmc/pmc_callsignature.h
+
+$(SRC_DIR)/call/context_accessors$(O): $(GENERAL_H_FILES)
 
 $(SRC_DIR)/call/pcc$(O) : $(SRC_DIR)/call/pcc.c $(GENERAL_H_FILES) \
 	$(SRC_DIR)/call/pcc.str $(SRC_DIR)/pmc/pmc_fixedintegerarray.h \
@@ -1439,15 +1449,7 @@ SRC_TEST_FILES := \
     t/src/*.t
 TOOLS_TEST_FILES := \
     t/tools/*.t
-EXTRA_TEST_FILES := \
-    t/compilers/json/*.t \
-    t/compilers/pct/*.t \
-    t/compilers/pge/*.t \
-    t/compilers/pge/p5regex/*.t \
-    t/compilers/pge/perl6regex/*.t \
-    t/compilers/tge/*.t \
-    t/library/*.t \
-    t/tools/*.t
+LIBRARY_TEST_FILES := @library_tests@
 PMC2CUTILS_DIR := t/tools/pmc2cutils
 OPS2PMUTILS_DIR := t/tools/ops2pm
 OPS2CUTILS_DIR := t/tools/ops2cutils
@@ -1474,10 +1476,6 @@ CONFIGURE_TEST_FILES := \
 # We probably need a complete build before running the tests.
 test_prep : all
 
-# We always want to test annotations are persisted in PBC during make test.
-test_pbc_annotation_persistence : test_prep
-	$(PERL) t/harness $(EXTRA_TEST_ARGS) -r t/op/annotate.t
-
 # Run test cases with a single call of t/harness. Users have to look at only
 # one report. The default set of tests to run is contained in t/harness,
 # make any edits there. Some tests are run in a separate harness only because
@@ -1487,7 +1485,7 @@ test_pbc_annotation_persistence : test_prep
 test : test_core nqp_test
 
 # Test Parrot core.
-test_core: test_prep test_pbc_annotation_persistence
+test_core: test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS)
 
 # Test the NQP compiler
@@ -1498,7 +1496,7 @@ nqp_test : test_prep
 smolder_test : test_prep
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) --archive --send-to-smolder
 
-smolder_coretest : test_prep
+smolder_coretest : corevm
 	$(PERL) t/harness $(EXTRA_TEST_ARGS) --core-tests --archive --send-to-smolder
 
 smoke : smolder_test
@@ -1523,7 +1521,7 @@ fulltest :
 	src_tests \
 	run_tests \
 	perl_tests \
-	extra_tests \
+	library_tests \
 	nqp_test \
 	codetest \
 	benchmark_tests \
@@ -1619,9 +1617,9 @@ distro_tests : test_prep
 configure_tests :
 	$(PERL) t/harness $(CONFIGURE_TEST_FILES)
 
-# extra tests - tests needed by make fulltest and make cover for completion
-extra_tests : test_prep
-	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(EXTRA_TEST_FILES)
+# library tests - tests run by make test but not by make fulltest or make cover
+library_tests : test_prep
+	$(PERL) t/harness $(EXTRA_TEST_ARGS) $(LIBRARY_TEST_FILES)
 
 ###############################################################################
 #
@@ -2140,7 +2138,7 @@ cover-perl: cover.dummy
 	-@make@ perl_tests
 
 cover-extra: cover.dummy
-	-@make@ extra_tests
+	-@make@ library_tests
 
 cover-nqp: cover.dummy
 	-@make@ nqp_test
@@ -2169,7 +2167,10 @@ cover-clean:
 #
 ###############################################################################
 
-install: installable
+install: install-bin install-dev-only
+install-dev: install
+
+install-bin: installable
 	$(PERL) tools/dev/install_files.pl \
     --buildprefix=$(BUILDPREFIX) \
     --prefix=$(PREFIX) \
@@ -2182,7 +2183,7 @@ install: installable
     --versiondir=$(VERSION_DIR) \
     MANIFEST MANIFEST.generated
 
-install-dev: install
+install-dev-only: installable
 	$(PERL) tools/dev/install_dev_files.pl \
     --buildprefix=$(BUILDPREFIX) \
     --prefix=$(PREFIX) \
@@ -2229,9 +2230,11 @@ exec : $(SRC_DIR)/parrot_config$(O) $(LIBPARROT)
 ###### OS depend targets ##########
 
 # for use by t/pmc/nci.t
-$(LIBNCI_TEST_SO): $(SRC_DIR)/nci_test$(O)
+$(SRC_DIR)/nci_test$(O): $(GENERAL_H_FILES)
+
+$(LIBNCI_TEST_SO): $(SRC_DIR)/nci_test$(O) $(LIBPARROT)
 	$(LD) $(LD_LOAD_FLAGS) @ncilib_link_extra@ $(LDFLAGS) \
-    @ld_out@$@ $(SRC_DIR)/nci_test$(O) $(C_LIBS)
+    @ld_out@$@ $(SRC_DIR)/nci_test$(O) $(ALL_PARROT_LIBS) $(C_LIBS)
 
 # for use by runtime/parrot/library/OpenGL.pir
 $(LIBGLUTCB_SO): $(LIBPARROT) $(SRC_DIR)/glut_callbacks$(O)
@@ -2247,7 +2250,6 @@ tags-emacs: tags.emacs.dummy
 	@ctags@ -e \
         --links=no --totals \
         -R --exclude=blib --exclude=.svn  \
-        --exclude=res_lea.c \
         --languages=c,perl --langmap=c:+.h,c:+.pmc,c:+.ops \
         -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK \
         $(CUR_DIR)
@@ -2268,7 +2270,6 @@ tags-vi: tags.vi.dummy
 	@ctags@ \
     --links=no --totals \
     -R --exclude=blib --exclude=.svn  \
-    --exclude=res_lea.c \
     --languages=c,perl --langmap=c:+.h,c:+.pmc,c:+.ops \
     -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK \
     $(CUR_DIR)

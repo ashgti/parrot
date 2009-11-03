@@ -160,7 +160,7 @@ many of these opcodes require the result to be a number.
 X<logical opcodes>
 The logical opcodes evaluate the truth of their arguments.  They are most
 useful to make decisions for control flow.  Integers and numeric PMCs
-support logical are false if they're 0 and true otherwise. Strings are
+are false if they're 0 and true otherwise. Strings are
 false if they're the empty string or a single character "0", and true
 otherwise. PMCs are true when their C<get_bool>X<get_bool vtable
 function> vtable function returns a nonzero value.
@@ -403,7 +403,7 @@ immediately follows. All text until the terminator is part of the string. The
 terminator must appear on its own line, must appear at the beginning of the
 line, and may not have any trailing whitespace.
 
-  $S2 = << "End_Token"
+  $S2 = <<"End_Token"
   This is a multi-line string literal. Notice that
   it doesn't use quotation marks.
   End_Token
@@ -828,7 +828,7 @@ the PMC in the final string result.
 
 =begin PIR_FRAGMENT
 
-  $P0 = new "Array"
+  $P0 = new "ResizablePMCArray"
   push $P0, "hi"
   push $P0, 0
   push $P0, 1
@@ -1030,7 +1030,7 @@ X<scalar PMCs>
 X<PMCs (Polymorphic Containers);scalar>
 In most of the examples shown so far, PMCs duplicate the behavior of integers,
 numbers, and strings. Parrot provides a set of PMCs for this exact purpose.
-C<Integer>, C<Number>, and C<String> are thin overlays on Parrot's low-level
+C<Integer>, C<Float>, and C<String> are thin overlays on Parrot's low-level
 integers, numbers, and strings.
 
 A previous example showed a string literal assigned to a PMC variable of type
@@ -1045,7 +1045,7 @@ types and their PMC equivalents:
   $P1 = new 'String'
   $P1 = "5 birds"
 
-  $P2 = new 'Number'
+  $P2 = new 'Float'
   $P2 = 3.14
 
 =end PIR_FRAGMENT
@@ -1068,7 +1068,7 @@ type is "boxing".>
   $P1 = $S1
 
   $N2 = 3.14
-  $P2 = new 'Number'
+  $P2 = new 'Float'
   $P2 = $N2
 
 =end PIR_FRAGMENT
@@ -1082,7 +1082,7 @@ object from an integer, number, or string literal or variable.
 
   $P1 = box $S1  # $P1 is a "String"
 
-  $P2 = box 3.14 # $P2 is a "Number"
+  $P2 = box 3.14 # $P2 is a "Float"
 
 =end PIR_FRAGMENT
 
@@ -1110,7 +1110,7 @@ the low-level type.N<The reverse of "boxing" is "unboxing".>
 
 =end PIR_FRAGMENT
 
-This example creates C<Integer>X<Integer PMC>, C<Number>X<Number PMC>,
+This example creates C<Integer>X<Integer PMC>, C<Float>X<Float PMC>,
 and C<String>X<String PMC> PMCs, and shows the effect of assigning each
 one back to a low-level type.
 
@@ -1278,16 +1278,6 @@ argument, the PMC over which to iterate:
 =begin PIR_FRAGMENT
 
   $P1 = iter $P2
-
-=end PIR_FRAGMENT
-
-Alternatively, you can also create an iterator by creating a new
-C<Iterator>X<Iterator PMC> PMC, passing the aggregate PMC as an
-initialization parameter to C<new>:
-
-=begin PIR_FRAGMENT
-
-  $P1 = new "Iterator", $P2
 
 =end PIR_FRAGMENT
 

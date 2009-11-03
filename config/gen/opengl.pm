@@ -162,6 +162,7 @@ my %C_TYPE = (
     LPPIXELFORMATDESCRIPTOR => 'void*',
     LPVOID                  => 'void*',
     PGPU_DEVICE             => 'void*',
+    GLsync                  => 'void*',
 
     GLchar                  => 'char',
     GLcharARB               => 'char',
@@ -225,7 +226,9 @@ my %C_TYPE = (
 
     int64_t                 => 'long long',
     INT64                   => 'long long',
+    GLint64                 => 'signed long long',
     GLint64EXT              => 'signed long long',
+    GLuint64                => 'unsigned long long',
     GLuint64EXT             => 'unsigned long long',
 
     FLOAT                   => 'float',
@@ -326,10 +329,12 @@ my @IGNORE = (
 
     # Can't handle longlong until RT 53406 is done
     'glBufferAddressRangeNV',
+    'glClientWaitSync',
     'glUniformui64NV',
     'glProgramUniformui64NV',
     'glPresentFrameKeyedNV',
     'glPresentFrameDualFillNV',
+    'glWaitSync',
     'glXSwapBuffersMscOML',
     'glXWaitForMscOML',
     'glXWaitForSbcOML',
@@ -1064,7 +1069,7 @@ glut_timer_func(int data)
     PMC           *sub   = callback_data[GLUT_CB_TIMER].sub;
 
     if (is_safe(interp, sub))
-        Parrot_runops_fromc_args_event(interp, sub, "vi", data);
+        Parrot_pcc_invoke_sub_from_c_args(interp, sub, "vi", data);
 }
 
 PARROT_DYNEXT_EXPORT
@@ -1099,7 +1104,7 @@ glut_joystick_func(unsigned int buttons, int xaxis, int yaxis, int zaxis)
     PMC           *sub   = callback_data[GLUT_CB_JOYSTICK].sub;
 
     if (is_safe(interp, sub))
-        Parrot_runops_fromc_args_event(interp, sub, "viiii", buttons, xaxis, yaxis, zaxis);
+        Parrot_pcc_invoke_sub_from_c_args(interp, sub, "viiii", buttons, xaxis, yaxis, zaxis);
 }
 
 PARROT_DYNEXT_EXPORT
@@ -1139,7 +1144,7 @@ $_->{thunk}($_->{params})
     PMC           *sub   = callback_data[$_->{enum}].sub;
 
     if (is_safe(interp, sub))
-        Parrot_runops_fromc_args_event(interp, sub, "$_->{sig}"$_->{args});
+        Parrot_pcc_invoke_sub_from_c_args(interp, sub, "$_->{sig}"$_->{args});
 }
 
 PARROT_DYNEXT_EXPORT

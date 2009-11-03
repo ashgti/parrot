@@ -2,9 +2,11 @@
 # Please re-sort this file after *EVERY* modification
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
-blib/lib/libparrot.1.6.0.dylib                    [main]lib
+# Please re-sort this file after *EVERY* modification
+blib/lib/libparrot.1.7.0.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
+blib/lib/libparrot.so.1.7.0                       [main]lib
 blib/lib/libparrot.so                             [main]lib
 blib/lib/libparrot.so.1.6.0                       [main]lib
 compilers/data_json/data_json.pbc                 [data_json]
@@ -232,7 +234,9 @@ src/pmc/multisub.dump                             [devel]src
 src/pmc/object.dump                               [devel]src
 src/pmc/pmc_boolean.h                             [devel]include
 src/pmc/pmc_class.h                               [devel]include
+src/pmc/pmc_callsignature.h                       [devel]include
 src/pmc/pmc_continuation.h                        [devel]include
+src/pmc/pmc_context.h                             [devel]include
 src/pmc/pmc_default.h                             [devel]include
 src/pmc/pmc_fixedintegerarray.h                   [devel]include
 src/pmc/pmc_fixedpmcarray.h                       [devel]include

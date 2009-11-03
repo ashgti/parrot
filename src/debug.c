@@ -32,6 +32,7 @@ the Parrot debugger, and the C<debug> ops.
 #include "parrot/runcore_trace.h"
 #include "debug.str"
 #include "pmc/pmc_continuation.h"
+#include "pmc/pmc_context.h"
 
 /* Hand switched debugger tracing
  * Set to 1 to enable tracing to stderr
@@ -1272,7 +1273,7 @@ PDB_get_command(PARROT_INTERP)
         STRING *s= Parrot_str_new(interpdeb, NULL, 0);
         PMC *tmp_stdin = Parrot_io_stdhandle(interpdeb, 0, NULL);
 
-        Parrot_PCCINVOKE(interpdeb,
+        Parrot_pcc_invoke_method_from_c_args(interpdeb,
             tmp_stdin, readline,
             "S->S", prompt, & s);
         {
@@ -3507,6 +3508,7 @@ PDB_backtrace(PARROT_INTERP)
     STRING           *str;
     PMC              *old       = PMCNULL;
     int               rec_level = 0;
+    int               limit_count = 0;
 
     /* information about the current sub */
     PMC *sub = interpinfo_p(interp, CURRENT_SUB);
@@ -3538,23 +3540,35 @@ PDB_backtrace(PARROT_INTERP)
     /* backtrace: follow the continuation chain */
     while (1) {
         Parrot_Continuation_attributes *sub_cont;
+
+        /* Limit the levels dumped, no segfault on infinite recursion */
+        if (++limit_count > RECURSION_LIMIT)
+            break;
+
         sub = Parrot_pcc_get_continuation(interp, ctx);
 
         if (PMC_IS_NULL(sub))
             break;
+
 
         sub_cont = PARROT_CONTINUATION(sub);
 
         if (!sub_cont)
             break;
 
-        str = Parrot_Context_infostr(interp, sub_cont->to_ctx);
+
+        str = Parrot_Context_infostr(interp, Parrot_pcc_get_caller_ctx(interp, ctx));
+
 
         if (!str)
             break;
 
+
         /* recursion detection */
-        if (!PMC_IS_NULL(old) && PMC_cont(old) &&
+        if (ctx == sub_cont->to_ctx) {
+            ++rec_level;
+        }
+        else if (!PMC_IS_NULL(old) && PMC_cont(old) &&
             Parrot_pcc_get_pc(interp, PMC_cont(old)->to_ctx) ==
             Parrot_pcc_get_pc(interp, PMC_cont(sub)->to_ctx) &&
             Parrot_pcc_get_sub(interp, PMC_cont(old)->to_ctx) ==
@@ -3568,10 +3582,11 @@ PDB_backtrace(PARROT_INTERP)
 
         /* print the context description */
         if (rec_level == 0) {
+            PackFile_ByteCode *seg = sub_cont->seg;
             Parrot_io_eprintf(interp, "%Ss", str);
-            if (interp->code->annotations) {
-                PMC *annot = PackFile_Annotations_lookup(interp, interp->code->annotations,
-                        Parrot_pcc_get_pc(interp, sub_cont->to_ctx) - interp->code->base.data + 1,
+            if (seg->annotations) {
+                PMC *annot = PackFile_Annotations_lookup(interp, seg->annotations,
+                        Parrot_pcc_get_pc(interp, sub_cont->to_ctx) - seg->base.data,
                         NULL);
 
                 if (!PMC_IS_NULL(annot)) {
@@ -3590,7 +3605,7 @@ PDB_backtrace(PARROT_INTERP)
         }
 
         /* get the next Continuation */
-        ctx = PARROT_CONTINUATION(sub)->to_ctx;
+        ctx = Parrot_pcc_get_caller_ctx(interp, ctx);
         old = sub;
 
         if (!ctx)

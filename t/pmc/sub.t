@@ -648,7 +648,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "implicit :main with wrong # args."
   .param int op2
 .end
 CODE
-/too few arguments passed \(1\) - 2 params expected/
+/too few positional arguments: 1 passed, 2 \(or more\) expected/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "explicit :main with wrong # args." );
@@ -657,7 +657,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "explicit :main with wrong # args."
   .param int op2
 .end
 CODE
-/too few arguments passed \(1\) - 2 params expected/
+/too few positional arguments: 1 passed, 2 \(or more\) expected/
 OUTPUT
 
 ($TEMP, $temp_pasm) = create_tempfile(UNLINK => 1);
@@ -1439,7 +1439,7 @@ OUTPUT
 
 $ENV{TEST_PROG_ARGS} ||= '';
 @todo = $ENV{TEST_PROG_ARGS} =~ /--run-pbc/
-    ? ( todo => 'lexicals not thawed properly from PBC, RT #60652' )
+    ? ( todo => 'lexicals not thawed properly from PBC, TT #1171' )
     : ();
 pir_output_is( <<'CODE', <<'OUTPUT', ':outer with identical sub names', @todo );
 .sub 'main' :main

@@ -898,11 +898,11 @@ Returns the number of characters in the specified Parrot string.
 PARROT_EXPORT
 PARROT_PURE_FUNCTION
 UINTVAL
-Parrot_str_byte_length(SHIM_INTERP, ARGIN(const STRING *s))
+Parrot_str_byte_length(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
 {
     ASSERT_ARGS(Parrot_str_byte_length)
 
-    return s->strlen;
+    return s ? s->strlen : 0;
 }
 
 
@@ -2321,12 +2321,12 @@ Parrot_str_to_num(PARROT_INTERP, ARGIN(const STRING *s))
             return 0.0;
     }
 
-/* local macro to call proper pow version depending on FLOATVAL */
-#if NUMVAL_SIZE == DOUBLE_SIZE
+/* powl() could be used here, but it is an optional POSIX extension that
+   needs to be checked for at Configure-time.
+
+   See https://trac.parrot.org/parrot/ticket/1176 for more details. */
+
 #  define POW pow
-#else
-#  define POW powl
-#endif
 
      if (d && d_is_safe) {
         f = mantissa + (1.0 * d / POW(10.0, d_length));
@@ -2778,27 +2778,26 @@ Parrot_str_unescape(PARROT_INTERP,
     ARGIN(const char *cstring), char delimiter, ARGIN_NULLOK(const char *enc_char))
 {
     ASSERT_ARGS(Parrot_str_unescape)
-    size_t          clength = strlen(cstring);
-    Parrot_UInt4    r;
-    String_iter     iter;
+
     STRING         *result;
     const ENCODING *encoding;
     const CHARSET  *charset;
-    char           *p;
+
+    /* the default encoding is ascii */
+    const char     *enc_name = enc_char ? enc_char : "ascii";
+
+    /* does the encoding have a character set? */
+    char           *p        = enc_char ? strchr(enc_char, ':') : NULL;
+    size_t          clength  = strlen(cstring);
+    String_iter     iter;
     UINTVAL         offs, d;
+    Parrot_UInt4    r;
 
     /* we are constructing const table strings here */
     const UINTVAL   flags = PObj_constant_FLAG;
 
     if (delimiter && clength)
         --clength;
-
-    /* default is ascii */
-    if (!enc_char)
-        enc_char = "ascii";
-
-    /* check for encoding: */
-    p = strchr(enc_char, ':');
 
     if (p) {
         *p       = '\0';

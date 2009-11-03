@@ -353,6 +353,7 @@ SP              [ ]
 ":named"        return ADV_NAMED;
 "=>"            return ADV_ARROW;
 ":invocant"     return ADV_INVOCANT;
+":call_sig"     return ADV_CALL_SIG;
 
 <emit,INITIAL>".namespace"    return NAMESPACE;
 <emit,INITIAL>".HLL"          return HLL;
@@ -490,7 +491,6 @@ SP              [ ]
             size_t len;
             YYCHOP();
 
-            /* RT #32421   if$I0 is parsed as if$ I0 */
             if (!IMCC_INFO(interp)->frames || !IMCC_INFO(interp)->frames->label)
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "missing space?");
 

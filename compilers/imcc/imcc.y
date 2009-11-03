@@ -21,6 +21,7 @@
 #define PARSER_MAIN
 #include "imc.h"
 #include "parrot/dynext.h"
+#include "../src/pmc/pmc_context.h"
 #include "pbc.h"
 #include "parser.h"
 #include "optimizer.h"
@@ -771,10 +772,19 @@ mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
     ASSERT_ARGS(mk_sub_address_fromc)
     /* name is a quoted sub name */
     SymReg *r;
-    char *name_copy                  = mem_sys_strdup(name + 1);
-    name_copy[strlen(name_copy) - 1] = 0;
+    char   *name_copy;
 
-    r = mk_sub_address(interp, name_copy);
+    /* interpolate only if the first character is a double-quote */
+    if (*name == '"') {
+        STRING *unescaped = Parrot_str_unescape(interp, name, '"', NULL);
+        name_copy         = Parrot_str_to_cstring(interp, unescaped);
+    }
+    else {
+        name_copy = mem_sys_strdup(name);
+        name_copy[ strlen(name) - 1 ] = 0;
+    }
+
+    r = mk_sub_address(interp, name_copy + 1);
     mem_sys_free(name_copy);
 
     return r;
@@ -1062,7 +1072,7 @@ do_loadlib(PARROT_INTERP, ARGIN(const char *lib))
 %token <t> HLL TK_LINE TK_FILE
 %token <t> GOTO ARG IF UNLESS PNULL SET_RETURN SET_YIELD
 %token <t> ADV_FLAT ADV_SLURPY ADV_OPTIONAL ADV_OPT_FLAG ADV_NAMED ADV_ARROW
-%token <t> NEW ADV_INVOCANT
+%token <t> NEW ADV_INVOCANT ADV_CALL_SIG
 %token <t> NAMESPACE DOT_METHOD
 %token <t> SUB SYM LOCAL LEXICAL CONST ANNOTATE
 %token <t> INC DEC GLOBAL_CONST
@@ -1697,6 +1707,7 @@ paramtype:
    | ADV_NAMED '(' STRINGC ')'  { adv_named_set(interp, $3);   $$ = 0; mem_sys_free($3); }
    | ADV_NAMED '(' USTRINGC ')' { adv_named_set_u(interp, $3); $$ = 0; mem_sys_free($3); }
    | UNIQUE_REG                 { $$ = VT_UNIQUE_REG; }
+   | ADV_CALL_SIG               { $$ = VT_CALL_SIG; }
    ;
 
 
@@ -2219,8 +2230,9 @@ argtype_list:
    ;
 
 argtype:
-     ADV_FLAT                  { $$ = VT_FLAT; }
-   | ADV_NAMED                 { $$ = VT_NAMED; }
+     ADV_FLAT                  { $$ = VT_FLAT;     }
+   | ADV_NAMED                 { $$ = VT_NAMED;    }
+   | ADV_CALL_SIG              { $$ = VT_CALL_SIG; }
 
    /* don't free $3 here; adv_named_set uses the pointer directly */
    | ADV_NAMED '(' USTRINGC ')' { adv_named_set_u(interp, $3); $$ = 0; }
