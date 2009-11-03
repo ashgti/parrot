@@ -190,9 +190,9 @@ Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
         Parrot_jit_parse_sig_args_post(interp, sig, nargs, f, jit_interp, jit_args_v, jit_regs);
     }
 
-    /* TODO: free PCC signature bits (currently segfaults at jit-time) */
-    /* jit__Parrot_str_free_cstring(jit_interp, jit_pcc_sig_args);
-    jit__Parrot_str_free_cstring(jit_interp, jit_pcc_sig_ret); */
+    /* free PCC signature bits */
+    jit__Parrot_str_free_cstring(f, jit_pcc_sig_args);
+    jit__Parrot_str_free_cstring(f, jit_pcc_sig_ret);
 
     /* end JIT function */
     jit_insn_return(f, NULL);
@@ -354,10 +354,15 @@ Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
 
           case 'p':
             arg_t[i] = jit_type_void_ptr;
-            /* TODO: generate JIT branching */
-            /* v1 = jit(PMC_IS_NULL(reg_v[j]) ? NULL : jit__vtable_get_pointer(f, jit_interp, reg_v[j])); */
-            v1 = jit__vtable_get_pointer(f, jit_interp, reg_v[j]);
-            arg_v[i] = v1;
+            arg_v[i] = jit_value_create(f, jit_type_void_ptr);
+            jit_insn_store(f, arg_v[i],
+                            jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL));
+            v1       = jit__PMC_IS_NULL(f, reg_v[j]);
+            l1       = jit_label_undefined;
+            jit_insn_branch_if(f, v1, &l1);
+            v2       = jit__vtable_get_pointer(f, jit_interp, reg_v[j]);
+            jit_insn_store(f, arg_v[i], v2);
+            jit_insn_label(f, &l1);
             j++;
             break;
 
@@ -614,6 +619,15 @@ jit__Buffer_bufstart(jit_function_t f, jit_value_t buf) {
 jit_value_t
 jit__CURRENT_CONTEXT(jit_function_t f, jit_value_t interp) {
     return jit_insn_load_relative(f, interp, offsetof(struct parrot_interp_t, ctx), jit_type_void_ptr);
+}
+
+jit_value_t
+jit__PMC_IS_NULL(jit_function_t f, jit_value_t pmc) {
+    return jit_insn_or(f,
+            jit_insn_eq(f, pmc,
+                jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL)),
+            jit_insn_eq(f, pmc,
+                jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)PMCNULL)));
 }
 
 /* vtable wrappers */
