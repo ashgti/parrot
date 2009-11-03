@@ -38,22 +38,19 @@ sub _init {
             frame_builder_c => 'config/gen/libjit/frame_builder_libjit_c.in',
         },
         wrapped_vtables => {
-            get_integer        => [ ()           => 'INTVAL' ],
-            set_integer_native => [ ('INTVAL')   => 'void' ],
-            get_pointer        => [ ()           => 'void_ptr' ],
-            set_pointer        => [ ('void_ptr') => 'void' ],
+            get_integer          => [ ()           => 'INTVAL' ],
+            set_integer_native   => [ ('INTVAL')   => 'void' ],
+            get_pointer          => [ ()           => 'void_ptr' ],
+            set_pointer          => [ ('void_ptr') => 'void' ],
+            get_string_keyed_int => [ ('INTVAL')   => 'void_ptr' ],
         },
         wrapped_funcs => {
-            get_nci_I => [ qw(void_ptr void_ptr sys_int) => 'INTVAL' ],
-            get_nci_N => [ qw(void_ptr void_ptr sys_int) => 'FLOATVAL' ],
-            get_nci_S => [ qw(void_ptr void_ptr sys_int) => 'void_ptr' ],
-            get_nci_P => [ qw(void_ptr void_ptr sys_int) => 'void_ptr' ],
-            get_nci_p => [ qw(void_ptr void_ptr sys_int) => 'void_ptr' ],
-
-            set_nci_I => [ qw(void_ptr void_ptr INTVAL)   => 'void' ],
-            set_nci_N => [ qw(void_ptr void_ptr FLOATVAL) => 'void' ],
-            set_nci_S => [ qw(void_ptr void_ptr void_ptr) => 'void' ],
-            set_nci_P => [ qw(void_ptr void_ptr void_ptr) => 'void' ],
+            Parrot_pcc_get_signature =>
+                [ qw(void_ptr void_ptr) => 'void_ptr' ],
+            Parrot_pcc_fill_params_from_c_args =>
+                [ qw(void_ptr void_ptr void_ptr ...) => 'void' ],
+            Parrot_pcc_fill_returns_from_c_args =>
+                [ qw(void_ptr void_ptr void_ptr void_ptr) => 'void' ],
 
             Parrot_str_new          =>
                 [ qw(void_ptr void_ptr UINTVAL) => 'void_ptr' ],
@@ -62,8 +59,6 @@ sub _init {
             Parrot_str_free_cstring =>
                 [ ('void_ptr')                  => 'void' ],
 
-            Parrot_init_arg_nci =>
-                [ qw(void_ptr void_ptr void_ptr) => 'void_ptr' ],
             pmc_new_noinit      =>
                 [ qw(void_ptr INTVAL)            => 'void_ptr' ],
 
@@ -173,37 +168,84 @@ sub gen_function_wrapper {
     $_ = jit_prefix_type($_) for @$func_sig;
 
     my $ret_t = pop @$func_sig;
+
+    my $vararg = 0;
+    if ($func_sig->[-1] eq '...') {
+        $vararg = 1;
+        pop @$func_sig;
+    }
+
     my $arg_t = join ", ", @$func_sig;
 
     my $n_args      = scalar @$func_sig;
-    my $arg_decls_t = join ", ",  map {'jit_value_t'}     1..$n_args;
-    my $arg_decls_v = join ", ",  map {"jit_value_t v$_"} 1..$n_args;
+    my $arg_decls_t = join ", ", map {'jit_value_t'}     1..$n_args;
+    my $arg_decls_v = join ", ", map {"jit_value_t v$_"} 1..$n_args;
     my $arg_v       = join ", ", map {"v$_"}             1..$n_args;
 
-    return { decl => <<DECL, defn => <<DEFN };
+    my ($decl, $defn);
+    if ($vararg) {
+        $decl = <<DECL;
+jit_value_t
+jit__$func_name(jit_function_t, $arg_decls_t, jit_type_t *, jit_value_t *, int);
+DECL
+        $defn = <<DEFN;
+jit_value_t
+jit__$func_name(jit_function_t f, $arg_decls_v, jit_type_t *va_t, jit_value_t *va_v, int va_n) {
+    int i;
+    int n_args           = $n_args + va_n;
+    jit_type_t sig;
+    jit_type_t  arg_t[n_args];
+    jit_value_t arg_v[n_args];
+    jit_type_t  carg_t[] = { $arg_t };
+    jit_value_t carg_v[] = { $arg_v };
+
+    for (i = 0; i < $n_args; i++) {
+        arg_t[i] = carg_t[i];
+        arg_v[i] = carg_v[i];
+    }
+    for (i = $n_args; i < n_args; i++) {
+        arg_t[i] = va_t[i - $n_args];
+        arg_v[i] = va_v[i - $n_args];
+    }
+
+    sig = jit_type_create_signature(jit_abi_cdecl, $ret_t, arg_t, n_args, 1);
+
+    return jit_insn_call_native(f, "$func_name", (void *)&$func_name, sig, arg_v, n_args, 0);
+}
+DEFN
+    } else {
+        $decl = <<DECL;
 jit_value_t
 jit__$func_name(jit_function_t, $arg_decls_t);
 DECL
+        $defn = <<DEFN;
 jit_value_t
 jit__$func_name(jit_function_t f, $arg_decls_v) {
-    jit_type_t sig;
+    int n_args          = $n_args;
+    jit_type_t  sig;
     jit_type_t  arg_t[] = { $arg_t };
     jit_value_t arg_v[] = { $arg_v };
 
-    sig = jit_type_create_signature(jit_abi_cdecl, $ret_t, arg_t, $n_args, 1);
+    sig = jit_type_create_signature(jit_abi_cdecl, $ret_t, arg_t, n_args, 1);
 
-    return jit_insn_call_native(f, "$func_name", (void *)&$func_name, sig, arg_v, $n_args, 0);
+    return jit_insn_call_native(f, "$func_name", (void *)&$func_name, sig, arg_v, n_args, 0);
 }
 DEFN
+    }
+
+    return { decl => $decl, defn => $defn };
 }
 
 sub jit_prefix_type {
     my $type = shift;
-    if ($type !~ /[A-Z]/) {
-        return "jit_type_$_";
+    if ($type =~ /^[_a-z]+$/) {
+        return "jit_type_$type";
+    }
+    elsif ($type =~ /^[_A-Z]+$/) {
+        return "JIT_TYPE_$type";
     }
     else {
-        return "JIT_TYPE_$_";
+        return $type;
     }
 }
 
