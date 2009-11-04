@@ -34,7 +34,7 @@ For example, you could select a name from
 L<http://en.wikipedia.org/wiki/List_of_parrots>.
 
 Set up your account on L<http://www.parrot.org/> and ask an existing release
-manager to provide you with admin privileges if you don't already have them.
+manager to provide you with editor privileges if you don't already have them.
 
 =item 1.
 
@@ -235,7 +235,7 @@ features, just be sure to say the same thing in both text and HTML versions.
 
 =item 10.
 
-Update the website. You will need an account with administrative rights
+Update the website. You will need an account with editor rights
 on L<http://www.parrot.org>.
 
 =over 4
@@ -383,7 +383,9 @@ L<http://www.google.com/calendar/render?cid=ldhctdamsgfg5a1cord52po9h8@group.cal
 
  - Nov 17, 2009      - 1.8  - bernhard
  - Dec 15, 2009      - 1.9  - gerd
- - Jan 19, 2010      - 2.0* -
+ - Jan 19, 2010      - 2.0* - chromatic
+ - Feb 16, 2010      - 2.1  - darbelo
+ - Mar 16, 2010      - 2.2  - cotto
 
 =cut
 
