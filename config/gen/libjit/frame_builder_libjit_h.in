@@ -92,6 +92,9 @@ jit__CURRENT_CONTEXT(jit_function_t, jit_value_t);
 static jit_value_t
 jit__PMC_IS_NULL(jit_function_t, jit_value_t);
 
+static jit_value_t
+jit__Parrot_pcc_get_signature(jit_function_t, jit_value_t, jit_value_t);
+
 /* vtable wrappers */
 @TEMP_vtable_wrap_decls@
 

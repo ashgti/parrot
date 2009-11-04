@@ -7,9 +7,10 @@ $Id$
 /* HEADERIZER STOP */
 
 #include "parrot/parrot.h"
+#include "pmc/pmc_context.h"
 #include "pmc/pmc_integer.h"
-#include "pmc/pmc_unmanagedstruct.h"
 #include "pmc/pmc_managedstruct.h"
+#include "pmc/pmc_unmanagedstruct.h"
 #include "frame_builder.h"
 #include "frame_builder_libjit.h"
 
@@ -628,6 +629,14 @@ jit__PMC_IS_NULL(jit_function_t f, jit_value_t pmc) {
                 jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)NULL)),
             jit_insn_eq(f, pmc,
                 jit_value_create_nint_constant(f, jit_type_void_ptr, (jit_nint)PMCNULL)));
+}
+
+static jit_value_t
+jit__Parrot_pcc_get_signature(jit_function_t f, jit_value_t interp, jit_value_t ctx) {
+    return jit_insn_load_relative(f,
+                jit_insn_load_relative(f, ctx, offsetof(struct PMC, data), jit_type_void_ptr),
+                offsetof(struct Parrot_Context_attributes, current_sig),
+                jit_type_void_ptr);
 }
 
 /* vtable wrappers */

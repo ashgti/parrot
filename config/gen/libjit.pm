@@ -45,8 +45,6 @@ sub _init {
             get_string_keyed_int => [ ('INTVAL')   => 'void_ptr' ],
         },
         wrapped_funcs => {
-            Parrot_pcc_get_signature =>
-                [ qw(void_ptr void_ptr) => 'void_ptr' ],
             Parrot_pcc_fill_params_from_c_args =>
                 [ qw(void_ptr void_ptr void_ptr ...) => 'void' ],
             Parrot_pcc_fill_returns_from_c_args =>
