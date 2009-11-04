@@ -108,7 +108,7 @@ Parrot_jit_clone_buffer(PARROT_INTERP, PMC *pmc, void *priv)
  * JIT functions
  */
 
-void *
+static void *
 Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
     struct jit_buffer_private_data *p;
     jit_function_t f;
@@ -204,7 +204,7 @@ Parrot_jit_create_thunk(PARROT_INTERP, char *sig, void *priv) {
     return jit_function_to_closure(f);
 }
 
-int
+static int
 Parrot_jit_create_arg_regs(PARROT_INTERP, char *sig, int nargs,
                             jit_function_t f, jit_value_t *reg_v) {
     int i, j;
@@ -252,7 +252,7 @@ Parrot_jit_create_arg_regs(PARROT_INTERP, char *sig, int nargs,
     return j;
 }
 
-void
+static void
 Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
                     jit_function_t f, jit_value_t jit_interp, jit_value_t call_object, jit_value_t jit_pcc_sig_args,
                     jit_value_t *reg_v, jit_type_t *arg_t, jit_value_t *arg_v) {
@@ -412,7 +412,7 @@ Parrot_jit_fill_args(PARROT_INTERP, char *sig, int nargs, int nregs,
     }
 }
 
-void
+static void
 Parrot_jit_parse_sig_args_pre(PARROT_INTERP, char *sig, int nargs,
                               jit_function_t f, jit_value_t jit_interp, jit_value_t call_object, jit_value_t jit_pcc_sig_args,
                               jit_type_t  *jit_args_t,
@@ -426,7 +426,7 @@ Parrot_jit_parse_sig_args_pre(PARROT_INTERP, char *sig, int nargs,
                              jit_regs_v, jit_args_t, jit_args_v);
 }
 
-jit_type_t
+static jit_type_t
 Parrot_jit_parse_sig_ret_pre(PARROT_INTERP, char *sig) {
     char c;
     switch (c = sig[0]) {
@@ -467,7 +467,7 @@ Parrot_jit_parse_sig_ret_pre(PARROT_INTERP, char *sig) {
     }
 }
 
-void
+static void
 Parrot_jit_parse_sig_ret_post(PARROT_INTERP, char *sig,
                               jit_function_t f, jit_value_t jit_interp, jit_value_t call_object,
                               jit_value_t pcc_sig, jit_value_t retval) {
@@ -535,7 +535,7 @@ Parrot_jit_parse_sig_ret_post(PARROT_INTERP, char *sig,
     }
 }
 
-void
+static void
 Parrot_jit_parse_sig_args_post(PARROT_INTERP, char *sig, int nargs,
                                jit_function_t f, jit_value_t jit_interp,
                                jit_value_t *args, jit_value_t *regs) {
@@ -601,7 +601,7 @@ Parrot_jit_parse_sig_args_post(PARROT_INTERP, char *sig, int nargs,
     }
 }
 
-jit_value_t
+static jit_value_t
 jit_value_create_intval_constant(jit_function_t f, INTVAL i) {
     return jit_value_create_nint_constant(f, JIT_TYPE_INTVAL, i);
 }
@@ -611,17 +611,17 @@ jit_value_create_intval_constant(jit_function_t f, INTVAL i) {
  */
 
 /* custom wrappers */
-jit_value_t
+static jit_value_t
 jit__Buffer_bufstart(jit_function_t f, jit_value_t buf) {
     return jit_insn_load_relative(f, buf, offsetof(Buffer, _bufstart), jit_type_void_ptr);
 }
 
-jit_value_t
+static jit_value_t
 jit__CURRENT_CONTEXT(jit_function_t f, jit_value_t interp) {
     return jit_insn_load_relative(f, interp, offsetof(struct parrot_interp_t, ctx), jit_type_void_ptr);
 }
 
-jit_value_t
+static jit_value_t
 jit__PMC_IS_NULL(jit_function_t f, jit_value_t pmc) {
     return jit_insn_or(f,
             jit_insn_eq(f, pmc,

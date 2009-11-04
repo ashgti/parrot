@@ -141,10 +141,10 @@ sub gen_vtable_wrapper {
     my $_arg_v = $n_args ? ", $arg_v" : "";
 
     return { decl => <<DECL, defn => <<DEFN };
-jit_value_t
+static jit_value_t
 jit__vtable_$entry_name(jit_function_t, jit_value_t, jit_value_t $_arg_decls_t);
 DECL
-jit_value_t
+static jit_value_t
 jit__vtable_$entry_name(jit_function_t f, jit_value_t interp, jit_value_t self $_arg_decls_v) {
     jit_type_t sig;
     jit_value_t vtable, method;
@@ -185,11 +185,11 @@ sub gen_function_wrapper {
     my ($decl, $defn);
     if ($vararg) {
         $decl = <<DECL;
-jit_value_t
+static jit_value_t
 jit__$func_name(jit_function_t, $arg_decls_t, jit_type_t *, jit_value_t *, int);
 DECL
         $defn = <<DEFN;
-jit_value_t
+static jit_value_t
 jit__$func_name(jit_function_t f, $arg_decls_v, jit_type_t *va_t, jit_value_t *va_v, int va_n) {
     int i;
     int n_args           = $n_args + va_n;
@@ -216,11 +216,11 @@ DEFN
     }
     else {
         $decl = <<DECL;
-jit_value_t
+static jit_value_t
 jit__$func_name(jit_function_t, $arg_decls_t);
 DECL
         $defn = <<DEFN;
-jit_value_t
+static jit_value_t
 jit__$func_name(jit_function_t f, $arg_decls_v) {
     int n_args          = $n_args;
     jit_type_t  sig;

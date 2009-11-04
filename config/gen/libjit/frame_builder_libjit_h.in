@@ -41,30 +41,30 @@ struct jit_buffer_private_data {
  * JIT functions
  */
 
-void *
+static void *
 Parrot_jit_create_thunk(Interp *, char *, void *);
 
-void
+static void
 Parrot_jit_parse_sig_args_pre(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t, jit_value_t,
                               jit_type_t *, jit_value_t *, jit_value_t *);
 
-jit_type_t
+static jit_type_t
 Parrot_jit_parse_sig_ret_pre(Interp *, char *);
 
-void
+static void
 Parrot_jit_parse_sig_ret_post(Interp *, char *, jit_function_t, jit_value_t, jit_value_t, jit_value_t, jit_value_t);
 
-void
+static void
 Parrot_jit_parse_sig_args_post(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t *, jit_value_t *);
 
-int
+static int
 Parrot_jit_create_arg_regs(Interp *, char *, int, jit_function_t, jit_value_t *);
 
-void
+static void
 Parrot_jit_fill_args(Interp *, char *, int, int, jit_function_t, jit_value_t, jit_value_t, jit_value_t,
                     jit_value_t *, jit_type_t *, jit_value_t *);
 
-jit_value_t
+static jit_value_t
 jit_value_create_intval_constant(jit_function_t, INTVAL);
 
 /*
@@ -83,13 +83,13 @@ jit_value_create_intval_constant(jit_function_t, INTVAL);
  */
 
 /* custom wrappers */
-jit_value_t
+static jit_value_t
 jit__Buffer_bufstart(jit_function_t, jit_value_t);
 
-jit_value_t
+static jit_value_t
 jit__CURRENT_CONTEXT(jit_function_t, jit_value_t);
 
-jit_value_t
+static jit_value_t
 jit__PMC_IS_NULL(jit_function_t, jit_value_t);
 
 /* vtable wrappers */
