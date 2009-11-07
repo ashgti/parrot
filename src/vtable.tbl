@@ -10,7 +10,6 @@ void init()
 # init must be first for JITed vtable meths
 void init_pmc(PMC* initializer)
 PMC* instantiate(PMC* sig)
-PMC* instantiate_str(STRING* rep, INTVAL flags)
 void morph(PMC* type) :write
 void mark()
 void destroy()
@@ -23,7 +22,6 @@ void delprop(STRING* key)
 PMC* getprops()
 
 INTVAL type()
-INTVAL type_keyed(PMC* key)
 
 STRING* name()
 

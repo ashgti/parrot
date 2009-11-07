@@ -13,7 +13,11 @@ Supply C<genfile> function, which handles
 
 =item variable substitution
 
-=item slash/backslash substitution (for Windows).
+=item slash/backslash substitution (for Windows)
+
+=item conditioned line #IF/UNLESS/ELSIF/ELSE
+
+=item with expression evaluation || OR && AND ! NOT (expr) != ==
 
 =back
 
@@ -44,9 +48,10 @@ L<http://github.com/fperrad/markdown/blob/master/Configure.pir>
     .param string outfile
     .param pmc config
     $S0 = slurp(tmpl)
-    $S0 = subst_config($S0, config)
+    $S0 = conditioned_line($S0, config)
+    $S0 = interpolate_var($S0, config)
     $S1 = sysinfo .SYSINFO_PARROT_OS
-    $S0 = subst_slash($S0, $S1)
+    $S0 = replace_slash($S0, $S1)
     output(outfile, $S0)
     printerr "\n\tGenerating '"
     printerr outfile
@@ -96,7 +101,259 @@ L<http://github.com/fperrad/markdown/blob/master/Configure.pir>
     rethrow e
 .end
 
-.sub 'subst_config'
+.sub 'conditioned_line'
+    .param string content
+    .param pmc config
+    $P0 = split "\n", content
+    .local string result, line
+    .local int truth, former_truth
+    former_truth = 0
+    result = ''
+  L1:
+    unless $P0 goto L2
+    line = shift $P0
+    $I0 = index line, "#IF("
+    unless $I0 == 0 goto L10
+    $I0 = index line, "):"
+    if $I0 < 0 goto L3
+    $I1 = $I0 - 4
+    $S0 = substr line, 4, $I1
+    truth = cond_eval($S0, config)
+    former_truth = truth
+    unless truth goto L1
+    $I0 += 2
+    $S0 = substr line, $I0
+    goto L4
+  L10:
+    $I0 = index line, "#UNLESS("
+    unless $I0 == 0 goto L20
+    $I0 = index line, "):"
+    if $I0 < 0 goto L3
+    $I1 = $I0 - 8
+    $S0 = substr line, 8, $I1
+    truth = cond_eval($S0, config)
+    former_truth = not truth
+    if truth goto L1
+    $I0 += 2
+    $S0 = substr line, $I0
+    goto L4
+  L20:
+    $I0 = index line, "#ELSIF("
+    unless $I0 == 0 goto L30
+    $I0 = index line, "):"
+    if $I0 < 0 goto L3
+    if former_truth goto L1
+    $I1 = $I0 - 7
+    $S0 = substr line, 7, $I1
+    truth = cond_eval($S0, config)
+    former_truth = truth
+    unless truth goto L1
+    $I0 += 2
+    $S0 = substr line, $I0
+    goto L4
+  L30:
+    $I0 = index line, "#ELSE:"
+    unless $I0 == 0 goto L40
+    if former_truth goto L1
+    $S0 = substr line, 6
+    goto L4
+  L40:
+  L3:
+    $S0 = line
+  L4:
+    result .= $S0
+    result .= "\n"
+    goto L1
+  L2:
+    .return (result)
+.end
+
+.sub 'cond_eval'
+    .param string expr
+    .param pmc config
+    .local int pos, end
+    end = length expr
+    pos = ws(expr, 0, end)
+    .tailcall or_expr(expr, pos, end, config)
+.end
+
+.sub 'or_expr' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    .local int val1, val2
+    (val1, pos) = and_expr(str, pos, end, config)
+    pos = ws(str, pos, end)
+    $I0 = index str, "||", pos
+    if $I0 == pos goto L1
+    $I0 = index str, "OR", pos
+    if $I0 == pos goto L1
+    # or_expr -> and_expr
+    .return (val1, pos)
+  L1:
+    pos = pos + 2
+    pos = ws(str, pos, end)
+    (val2, pos) = or_expr(str, pos, end, config)
+    $I0 = val1 || val2
+    # or_expr -> and_expr ( '||' | 'OR' or_expr )
+    .return ($I0, pos)
+.end
+
+.sub 'and_expr' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    .local int val1, val2
+    (val1, pos) = rel_expr(str, pos, end, config)
+    pos = ws(str, pos, end)
+    $I0 = index str, "&&", pos
+    if $I0 == pos goto L1
+    $I0 = index str, "AND", pos
+    if $I0 == pos goto L2
+    # and_expr -> rel_expr
+    .return (val1, pos)
+  L1:
+    pos = pos + 2
+    goto L3
+  L2:
+    pos = pos + 3
+  L3:
+    pos = ws(str, pos, end)
+    (val2, pos) = and_expr(str, pos, end, config)
+    $I0 = val1 && val2
+    # and_expr -> rel_expr ( '&&' | 'AND' and_expr )
+    .return ($I0, pos)
+.end
+
+.sub 'rel_expr' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    .local int val1, val2
+    (val1, pos) = not_expr(str, pos, end, config)
+    pos = ws(str, pos, end)
+    $I0 = index str, "==", pos
+    if $I0 == pos goto L1
+    $I0 = index str, "!=", pos
+    if $I0 == pos goto L1
+    # rel_expr -> not_expr
+    .return (val1, pos)
+  L1:
+    $S0 = substr str, pos, 2
+    pos = pos + 2
+    pos = ws(str, pos, end)
+    (val2, pos) = not_expr(str, pos, end, config)
+    unless $S0 == '==' goto L2
+    $I0 = val1 == val2
+    # rel_expr -> not_expr '==' not_expr
+    .return ($I0, pos)
+  L2:
+    $I0 = val1 != val2
+    # rel_expr -> not_expr '!=' not_expr
+    .return ($I0, pos)
+.end
+
+.sub 'not_expr' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    $I0 = index str, '!', pos
+    if $I0 == pos goto L1
+    $I0 = index str, 'NOT', pos
+    if $I0 == pos goto L2
+    # not_expr -> prim_expr
+    .tailcall prim_expr(str, pos, end, config)
+  L1:
+    pos = pos + 1
+    goto L3
+  L2:
+    pos = pos + 3
+  L3:
+    pos = ws(str, pos, end)
+    .local int val
+    (val, pos) = not_expr(str, pos, end, config)
+    $I0 = not val
+    # not_expr -> ( '!' | 'NOT' ) not_expr
+    .return ($I0, pos)
+.end
+
+.sub 'prim_expr' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    .local int val
+    $S0 = substr str, pos, 1
+    unless $S0 == '(' goto L1
+    inc pos
+    pos = ws(str, pos, end)
+    (val, pos) = or_expr(str, pos, end, config)
+    pos = ws(str, pos, end)
+    $S0 = substr str, pos, 1
+    if $S0 == ')' goto L2
+    error(str, pos, "')' expected")
+  L2:
+    inc pos
+    # prim_expr -> '(' or_expr ')'
+    .return (val, pos)
+  L1:
+    # prim_expr -> idf
+    .tailcall idf(str, pos, end, config)
+.end
+
+.include 'cclass.pasm'
+
+.sub 'idf' :anon
+    .param string str
+    .param int pos
+    .param int end
+    .param pmc config
+    $I1 = pos
+  L1:
+    $I0 = is_cclass .CCLASS_WORD, str, pos
+    unless $I0 goto L2
+    inc pos
+    if pos >= end goto L2
+    goto L1
+  L2:
+    $I2 = pos - $I1
+    $S0 = substr str, $I1, $I2
+    $I0 = config[$S0]
+    .return ($I0, pos)
+.end
+
+.sub 'ws' :anon
+    .param string str
+    .param int pos
+    .param int end
+  L1:
+    $I0 = is_cclass .CCLASS_WHITESPACE, str, pos
+    unless $I0 goto L2
+    inc pos
+    if pos >= end goto L2
+    goto L1
+  L2:
+    .return (pos)
+.end
+
+.sub 'error' :anon
+    .param string str
+    .param int pos
+    .param string msg
+    printerr "in '"
+    printerr str
+    printerr "' at "
+    printerr pos
+    printerr " : "
+    printerr msg
+    printerr "\n"
+.end
+
+.sub 'interpolate_var'
     .param string content
     .param pmc config
     $P0 = split "\n", content
@@ -140,7 +397,7 @@ L<http://github.com/fperrad/markdown/blob/master/Configure.pir>
     .return (result)
 .end
 
-.sub 'subst_slash'
+.sub 'replace_slash'
     .param string str
     .param string OS
     unless OS == 'MSWin32' goto L1
