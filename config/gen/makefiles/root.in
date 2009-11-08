@@ -843,6 +843,9 @@ $(INC_DIR)/parrot.h : $(INC_DIR)/pbcversion.h $(INC_DIR)/vtable.h
 
 $(INC_DIR)/extend.h : $(INC_DIR)/extend_vtable.h
 
+$(INC_DIR)/parrot.h  : $(INC_DIR)/context.h
+$(INC_DIR)/context.h : $(PMC_INC_DIR)/pmc/pmc_context.h
+
 $(INC_DIR)/pbcversion.h :
 	$(PERL) $(BUILD_TOOLS_DIR)/pbcversion_h.pl > $(INC_DIR)/pbcversion.h
 
