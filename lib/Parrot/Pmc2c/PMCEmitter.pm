@@ -91,7 +91,7 @@ sub generate_c_file {
         $ro->gen_methods;
     }
 
-    $c->emit("#include \"pmc_default.h\"\n");
+    $c->emit("#include \"pmc/pmc_default.h\"\n");
 
     $c->emit( $self->update_vtable_func );
     $c->emit( $self->get_vtable_func );
