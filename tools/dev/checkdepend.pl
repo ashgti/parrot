@@ -23,7 +23,7 @@ required C files first.
 =cut
 
 # TODO Unskip pmc generated files.
-my $files = `ack -fa . | grep '\\.c\$' | grep -v 'src/pmc/'`;
+my $files = `ack -fa . | grep '\\.c\$'`;
 
 my %deps;
 
@@ -77,9 +77,12 @@ foreach my $file (keys %deps) {
             $make_dep = collapse_path(File::Spec->catfile('include', $inc));
             next if defined($make_dep) && ($declared =~ /\b\Q$make_dep\E\b/);
 
+            # Try to costruct "pmc" include
+            $make_dep = collapse_path(File::Spec->catfile('include', 'pmc', $inc));
+            next if defined($make_dep) && ($declared =~ /\b\Q$make_dep\E\b/);
+
             # this isn't the actual comparison, just to give nice output
             # on failure.
-            diag "make_dep $make_dep\n";
             is($inc, $declared, $file);
             $failed = 1;
         }
