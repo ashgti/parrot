@@ -57,7 +57,7 @@ ok 1
 ok 2
 OUTPUT
 
-# RT #46807 rework tests since we don't really have thread types?
+# TT #1249:  rework tests since we don't really have thread types?
 
 SKIP: {
     skip 'busted on win32' => 2 if $^O eq 'MSWin32';
@@ -290,7 +290,7 @@ okay:
     .local pmc thread_main
     thread_main = get_global 'thread_main'
     $P0.'run_clone'(thread_main)
-    $P0.'join'() # RT #46813
+    $P0.'join'()
 .end
 
 .sub thread_main
@@ -449,7 +449,7 @@ ok beta3
 OUTPUT
 
 TODO: {
-    local $TODO = "vtable overrides aren't properly cloned RT # 46511";
+    local $TODO = "vtable overrides aren't properly cloned TT # 1248";
 
     pir_output_is( <<'CODE', <<'OUTPUT', "CLONE_CODE | CLONE_CLASSES; superclass not built-in" );
 .namespace [ 'Foo' ]
@@ -536,7 +536,7 @@ Bar? 1
 OUTPUT
 }
 
-pir_output_is( <<'CODE', <<'OUTPUT', "CLONE_CODE | CLONE_CLASSES; superclass built-in", todo => 'likely incorrect test');
+pir_output_is( <<'CODE', <<'OUTPUT', "CLONE_CODE | CLONE_CLASSES; superclass built-in", todo => 'likely incorrect test TT 1248');
 .namespace [ 'Foo' ]
 
 .sub foometh :method
@@ -829,7 +829,7 @@ okay:
 CODE
 
 pir_output_is(
-    <<'CODE', <<'OUTPUT', 'CLONE_CODE|CLONE_GLOBALS|CLONE_HLL|CLONE_LIBRARIES - RT #41373' );
+    <<'CODE', <<'OUTPUT', 'CLONE_CODE|CLONE_GLOBALS|CLONE_HLL|CLONE_LIBRARIES - TT # 1250' );
 .HLL 'Perl'
 
 .include 'interpinfo.pasm'

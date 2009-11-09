@@ -693,6 +693,8 @@ nci_pi(int test)
                 static int i = 55555;
                 return &i;
             }
+        case 10:
+            return NULL;
         default:
             fprintf(stderr, "unknown test number\n");
     }
@@ -748,9 +750,12 @@ Prints "ok" if C<PMC> is not null, prints "got null" otherwise.
 PARROT_DYNEXT_EXPORT void
 nci_vP(void *pmc)
 {
+/* Disable this test until someone figures a way to check for
+ * PMCNULL without using libparrot.
     if (!PMC_IS_NULL(pmc))
         puts("ok");
     else
+*/
         puts("got null");
 }
 
@@ -1103,7 +1108,7 @@ nci_vp(Opaque *inOpaque)
     if (inOpaque)
         printf("got %d\n", inOpaque->x);
     else
-        printf("got null");
+        printf("got null\n");
 }
 
 /*

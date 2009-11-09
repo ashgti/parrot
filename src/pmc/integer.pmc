@@ -1008,7 +1008,7 @@ Returns SELF to the C<value>th power in C<dest>.
 
 Raises SELF to the C<value>th power.
 
-RT #46631 Complex and BigInt rhs.
+TODO:  TT #1228: Implement Complex and BigInt RHS values for the pow() functions
 
 =cut
 
@@ -1260,7 +1260,7 @@ Sets C<dest> to the absolute value of SELF.
     VTABLE PMC *absolute(PMC *dest) {
         const INTVAL a = abs(SELF.get_integer());
 
-        /* RT #46635 overflow for -maxint */
+        /* TT # 1245 overflow for -maxint */
         dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         VTABLE_set_integer_native(INTERP, dest, a);
