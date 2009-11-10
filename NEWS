@@ -2,29 +2,54 @@
 
 New in 1.8.0 (to be released on 2009-11-19)
 - Functionality
+  + Revamping of the parrot calling conventions.
+  + The new API-function  'Parrot_ext_call' was added for calling into C-land.
+  + Improvements to the fixed-size allocator were made.
+  + The files installed by 'make install-dev' are now covered by 'make install' as well.
+  + Added experimental 'fetch' op.
+  + Added experimental 'vivify' op.
+  + The -I option now prepends items to the search path.
+  + Merged branch context_auto_attrs back to trunk.
+  + Merge convert_OSNAME into trunk.
+  + MultiSub PMCs now stringify to the name
+    of their first candidate instead of the number of candidates.
+- Platforms
+  + Started port of RTEMS.
+  + Use shared libs on NetBSD.
 - Performance
-- Maintenance and cleanup
+  + Use the the fixed-sized allocator in the Context and the CallSignature PMC.
+  + Speed penalty from the reworked parrot calling conventions.
+  + Many small speed improvments.
 - Deprecations
-- Bugfix
+  + The last traces of the 'malloc' garbage collector were removed.
+  + The 'Parrot_call_*' functions for invoking a sub/method object from C are
+    deprecated. They are replaced by 'Parrot_ext_call'. (eligible in 2.1)
+  + Renamed Parrot_pcc_constants() to Parrot_pcc_get_constants().
+  + Deprecated functions from the Embedding/Extension interface were removed.
+  + The library YAML/Parser/Syck.pir has been removed.
+  + Removed the deprecated VTABLE function instantiate_str().
 - Tests
+  + New tests using the new test functions lives_ok() and dies_ok().
+  + Added test script t/op/annotate-old.t.
+  + Many test scripst were converted from Perl5 to PIR.
 
 New in 1.7.0
 - Functionality
- + Parrot_capture_lex has been added to the PARROT_EXPORT API
- + PARROT_MAX_ARGS has been increased from 8 to 16 to allow for ops that take more than 8 args
+  + Parrot_capture_lex has been added to the PARROT_EXPORT API
+  + PARROT_MAX_ARGS has been increased from 8 to 16 to allow for ops that take more than 8 args
 - Performance
- + The profiling runcore now caches metadata for improved performance
+  + The profiling runcore now caches metadata for improved performance
 - Maintenance and cleanup
   + Expanded the Parrot debugger documentation
   + Parrot debugger now uses the new Parrot STRING API
   + Continue to port rest of internals to use the STRING API
 - Deprecations
- + The JIT subsystem has been removed and is being written from the ground up. More
-   information can be found at https://trac.parrot.org/parrot/wiki/JITRewrite
- + Implicit optional named parameters (eligible in 2.1)
- + Continuation-based ExceptionHandlers (eligible in 2.1)
- + Use of undocumented variables in class_init (eligible in 2.1)
- + Parrot_oo_get_namespace (eligible in 2.1)
+  + The JIT subsystem has been removed and is being written from the ground up. More
+    information can be found at https://trac.parrot.org/parrot/wiki/JITRewrite
+  + Implicit optional named parameters (eligible in 2.1)
+  + Continuation-based ExceptionHandlers (eligible in 2.1)
+  + Use of undocumented variables in class_init (eligible in 2.1)
+  + Parrot_oo_get_namespace (eligible in 2.1)
 - Bugfix
   + Improved line number tracking in IMCC
 - Tests
