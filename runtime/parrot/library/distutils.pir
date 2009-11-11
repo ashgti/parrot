@@ -51,6 +51,8 @@ L<http://github.com/fperrad/wmlscript/blob/master/setup.pir>
     register_step_after('build', _build_pir_tge)
     .const 'Sub' _build_pir_nqp = '_build_pir_nqp'
     register_step_after('build', _build_pir_nqp)
+    .const 'Sub' _build_pir_nqp_rx = '_build_pir_nqp_rx'
+    register_step_after('build', _build_pir_nqp_rx)
     .const 'Sub' _build_pbc_pir = '_build_pbc_pir'
     register_step_after('build', _build_pbc_pir)
     .const 'Sub' _build_exe_pbc = '_build_exe_pbc'
@@ -68,6 +70,8 @@ L<http://github.com/fperrad/wmlscript/blob/master/setup.pir>
     register_step_after('clean', _clean_pir_tge)
     .const 'Sub' _clean_pir_nqp = '_clean_pir_nqp'
     register_step_after('clean', _clean_pir_nqp)
+    .const 'Sub' _clean_pir_nqp_rx = '_clean_pir_nqp_rx'
+    register_step_after('clean', _clean_pir_nqp_rx)
     .const 'Sub' _clean_pbc_pir = '_clean_pbc_pir'
     register_step_after('clean', _clean_pbc_pir)
     .const 'Sub' _clean_exe_pbc = '_clean_exe_pbc'
@@ -423,6 +427,49 @@ the value is the NQP pathname
     $S0 = get_libdir()
     cmd .= $S0
     cmd .= "/languages/nqp/nqp.pbc --target=pir --output="
+    cmd .= pir
+    cmd .= " "
+    cmd .= nqp
+    system(cmd)
+    goto L1
+  L2:
+.end
+
+=item pir_nqp-rx
+
+hash
+
+the key is the PIR pathname
+
+the value is the NQP pathname
+
+=cut
+
+.sub '_build_pir_nqp_rx' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pir_nqp-rx']
+    unless $I0 goto L1
+    $P0 = kv['pir_nqp-rx']
+    build_pir_nqp_rx($P0)
+  L1:
+.end
+
+.sub 'build_pir_nqp_rx'
+    .param pmc hash
+    $P0 = iter hash
+  L1:
+    unless $P0 goto L2
+    .local string pir, nqp
+    pir = shift $P0
+    nqp = $P0[pir]
+    $I0 = newer(pir, nqp)
+    if $I0 goto L1
+    .local string cmd
+    cmd = get_bindir()
+    cmd .= "/nqp"
+    $S0 = get_exe()
+    cmd .= $S0
+    cmd .= " --target=pir --output="
     cmd .= pir
     cmd .= " "
     cmd .= nqp
@@ -1005,6 +1052,19 @@ the value is the POD pathname
   L1:
 .end
 
+=item pir_nqp-rx
+
+=cut
+
+.sub '_clean_pir_nqp_rx' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pir_nqp-rx']
+    unless $I0 goto L1
+    $P0 = kv['pir_nqp-rx']
+    clean_key($P0)
+  L1:
+.end
+
 =item exe_pbc
 
 =cut
@@ -1159,11 +1219,56 @@ the value is the POD pathname
 
 =head3 Step test
 
-If t/harness exists, run : perl t/harness
+If t/harness exists, run : t/harness
 
 Else run : prove t/*.t
 
+=cut
+
+.sub '_test' :anon
+    .param pmc kv :slurpy :named
+    run_step('build', kv :flat :named)
+    $I0 = file_exists('t/harness')
+    unless $I0 goto L1
+    .tailcall _test_harness(kv :flat :named)
+  L1:
+    .tailcall _test_prove(kv :flat :named)
+.end
+
 =over 4
+
+=item harness_exec
+
+the default value is with perl
+
+=item harness_files
+
+the default value is "t/*.t"
+
+=cut
+
+.sub '_test_harness' :anon
+    .param pmc kv :slurpy :named
+    .local string cmd
+    $I0 = exists kv['harness_exec']
+    unless $I0 goto L1
+    cmd = kv['harness_exec']
+    goto L2
+  L1:
+    cmd = "perl -I"
+    $S0 = get_libdir()
+    cmd .= $S0
+    cmd .= "/tools/lib"
+  L2:
+    cmd .= " t/harness "
+    $S0 = "t/*.t" # default
+    $I0 = exists kv['harness_files']
+    unless $I0 goto L3
+    $S0 = kv['harness_files']
+  L3:
+    cmd .= $S0
+    system(cmd)
+.end
 
 =item prove_exec
 
@@ -1177,33 +1282,23 @@ the default value is "t/*.t"
 
 =cut
 
-.sub '_test' :anon
+.sub '_test_prove' :anon
     .param pmc kv :slurpy :named
-    run_step('build', kv :flat :named)
     .local string cmd
-    $I0 = file_exists('t/harness')
-    unless $I0 goto L1
-    cmd = "perl -I"
-    $S0 = get_libdir()
-    cmd .= $S0
-    cmd .= "/tools/lib t/harness"
-    goto L2
-  L1:
     cmd = "prove"
     $I0 = exists kv['prove_exec']
-    unless $I0 goto L3
+    unless $I0 goto L1
     cmd .= " --exec="
     $S0 = kv['prove_exec']
     cmd .= $S0
-  L3:
+  L1:
     cmd .= " "
     $S0 = "t/*.t" # default
     $I0 = exists kv['prove_files']
-    unless $I0 goto L4
+    unless $I0 goto L2
     $S0 = kv['prove_files']
-  L4:
-    cmd .= $S0
   L2:
+    cmd .= $S0
     system(cmd)
 .end
 
