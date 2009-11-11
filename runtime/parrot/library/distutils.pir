@@ -414,11 +414,11 @@ the value is the NQP pathname
     $I0 = newer(pir, nqp)
     if $I0 goto L1
     .local string cmd
-    cmd = get_bindir()
-    cmd .= "/parrot_nqp"
-    $S0 = get_exe()
+    cmd = get_parrot()
+    cmd .= " "
+    $S0 = get_libdir()
     cmd .= $S0
-    cmd .= " --target=pir --output="
+    cmd .= "/languages/nqp/nqp.pbc --target=pir --output="
     cmd .= pir
     cmd .= " "
     cmd .= nqp
@@ -1866,16 +1866,14 @@ Return the whole config
 .sub 'unlink'
     .param string filename
     $I0 = stat filename, .STAT_EXISTS
-    if $I0 goto L1
-    .return ()
-  L1:
+    unless $I0 goto L1
+    $I0 = stat filename, .STAT_ISREG
+    unless $I0 goto L1
     print "unlink "
     say filename
     new $P0, 'OS'
-    push_eh _handler
     $P0.'rm'(filename)
-    pop_eh
-  _handler:
+  L1:
     .return ()
 .end
 
