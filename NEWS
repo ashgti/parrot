@@ -1,6 +1,6 @@
 # $Id$
 
-New in 1.8.0 (to be released on 2009-11-17)
+New in 1.8.0
 - Functionality
   + The FileHandle PMC now exposes the exit code of child process that was run as pipe.
   + Experimental support for overriding VTABLE invoke in PIR objects was added.
@@ -12,22 +12,36 @@ New in 1.8.0 (to be released on 2009-11-17)
   + The files installed by 'make install-dev' are now covered by 'make install' as well.
   + The experimental ops 'fetch' and 'vivify' were added.
   + The -I option to the command 'parrot' now prepends items to the search path.
-  + The development branch context_auto_attrs was merged.
-  + The development branch convert_OSNAME was merged.
-  + The development branch auto_format_no_Config was merged.
+  + The Context struct was substituted with auto attributes (context_auto_attrs branch).
+  + Use the osname determined in auto::arch in subsequent configuration steps (convert_OSNAME branch).
+  + Eliminated dependence on Perl 5 '%Config' in auto::format (auto_format_no_Config branch).
   + MultiSub PMCs now stringify to the name of their first candidate,
     instead of the number of candidates.
   + The platform detection at the start of the configuration process was improved.
+  + The 'lineof' method on CodeString objects now precomputes line number information
+    to be more efficient on variable-width encoded strings.
+  + P6object now supports .WHO and .WHERE methods on protoobjects.
 - Compilers
   + A shiny new self-hosting implementation of NQP has been added in ext/nqp-rx.
-    It is available as the executable parrot-nqp.
+    - New NQP available as nqp-rx.pbc or parrot-nqp fakecutable.
+    - NQP includes direct support for grammars and regexes, including protoregexes.
+    - NQP has a new PAST-based regex engine (intended to replace PGE).
+    - Regexes may contain code assertions, parameters, lexical declarations, and more.
+    - Double-quoted strings now interpolate scalar variables and closures.
+    - Subroutine declarations are now lexical by default.
+  + PCT
+    - PAST::Block now supports an 'nsentry' attribute.
+    - PAST::Var allows 'contextual' scope.
+    - Attribute bindings now return the bound value.
 - Platforms
-  + Fixes for the port or Parrot to RTEMS were applied. Yay, first port to a real time OS!
+  + Fixes for the port of Parrot to RTEMS were applied. Yay, first port to a real time OS!
   + On NetBSD, shared libs are now used.
 - Performance
   + Use the the fixed-sized allocator in the Context and the CallSignature PMC.
   + Many small speed improvements.
 - New deprecations
+  + MT19937, the Mersenne twisted pseudorandom number generator, is now hosted on github and 
+    will be removed from the Parrot core. (eligible in 2.1)
   + The 'Parrot_call_*' functions for invoking a sub/method object from C are
     deprecated. They are replaced by 'Parrot_ext_call'. (eligible in 2.1)
   + All bitwise VTABLE functions are deprecated. (eligible in 2.1)
@@ -43,22 +57,21 @@ New in 1.8.0 (to be released on 2009-11-17)
 - Tests
   + The test coverage of the time-related ops was much improved.
   + New testing functions in Test::More: lives_ok() and dies_ok().
-  + The Perl 5 based test scripts t/op/bitwist.t, t/op/comp.t, t/op/inf_nan.t, 
+  + The Perl 5 based test scripts t/op/bitwist.t, t/op/comp.t, t/op/inf_nan.t,
     t/op/literal.t, t/op/number.t, t/op/sprintf2.t, and t/op/00ff-dos.t were converted to PIR.
   + The test scripts t/op/annotate.t and t/op/time.t have begun
     to be translated from Perl 5 to PIR.
   + In some tests the dependency on %Config from Perl 5 was eliminated.
 - Documentation
   + The meaning of 'p' means in NCI function call signatures was clarified.
-- Libraries
-  + Math/Random/mt19937ar.pir
-    - left the nest and is now at http://github.com/fperrad/parrot-MT19937
 - Tools
   + The stub for a new language, as created by mk_language_shell.pl,
     now relies on the PIR-based tools, which are replacing the Perl 5-based tools.
   + The library Configure.pir was added.
   + The library distutils.pir was added.
 - Miscellaneous
+  + The mailing list parrot-users and a corresponding google group was created,
+    http://groups.google.com/group/parrot-users.
   + Many bugfixes, code cleanups, and coding standard fixes.
 
 New in 1.7.0
