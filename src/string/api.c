@@ -29,6 +29,9 @@ members, beside setting C<bufstart>/C<buflen> for external strings.
 #include "private_cstring.h"
 #include "api.str"
 
+/* for parrot/interpreter.h */
+STRING *STRINGNULL;
+
 #define nonnull_encoding_name(s) (s) ? (s)->encoding->name : "null string"
 #define saneify_string(s) \
     PARROT_ASSERT((s)->encoding); \
@@ -69,6 +72,24 @@ static const CHARSET * string_rep_compatible(SHIM_INTERP,
     , PARROT_ASSERT_ARG(e))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
+
+/*
+
+=item C<INTVAL STRING_is_null(PARROT_INTERP, const STRING *s)>
+
+Tests if the given STRING is STRINGNULL.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+INTVAL
+STRING_is_null(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
+{
+    ASSERT_ARGS(STRING_is_null)
+    return !s || s == STRINGNULL;
+}
 
 
 /*
@@ -274,7 +295,6 @@ Parrot_str_init(PARROT_INTERP)
         Parrot_srand(Parrot_intval_time());
         interp->hash_seed = Parrot_uint_rand(0);
     }
-
     /* initialize the constant string table */
     if (interp->parent_interpreter) {
         interp->const_cstring_table =
@@ -288,6 +308,11 @@ Parrot_str_init(PARROT_INTERP)
     const_cstring_hash          = parrot_new_cstring_hash(interp);
     interp->const_cstring_hash  = const_cstring_hash;
     Parrot_charsets_encodings_init(interp);
+
+    /* initialize STRINGNULL, but not in the constant table */
+    STRINGNULL = Parrot_str_new_init(interp, NULL, 0,
+                       PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
+                       PObj_constant_FLAG);
 
     interp->const_cstring_table =
         mem_allocate_n_zeroed_typed(n_parrot_cstrings, STRING *);
