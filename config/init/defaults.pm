@@ -46,7 +46,11 @@ sub runstep {
     # the corresponding values in the Parrot::Configure object.  In
     # order to provide access to the original values from Perl 5
     # %Config, we grab those settings we need now and store them in
-    # special keys within the Parrot::Configure object.
+    # special keys within the Parrot::Configure object.  We label these keys
+    # '_provisional' to alert users that these should only be used during
+    # configuration and testing of configuration steps.  They should not be
+    # used during Parrot's build, nor should they be used in 'make test'.
+    #
     # This is a multi-stage process.
 
     # Stage 1:
@@ -54,14 +58,13 @@ sub runstep {
         archname
         ccflags
         d_socklen_t
-        longsize
         optimize
-        sig_name
         scriptdirexp
-        use64bitint
+        sig_name
+        sPRIgldbl
         sPRIgldbl
     | ) {
-        $conf->data->set_p5( $orig => $Config{$orig} );
+        $conf->data->set( qq|${orig}_provisional| => $Config{$orig} );
     }
 
     # Stage 2 (anticipating needs of config/auto/headers.pm):
@@ -72,7 +75,7 @@ sub runstep {
     # Stage 3 (Along similar lines, look up values from Perl 5 special
     # variables and stash them for later lookups.  Name them according
     # to their 'use English' names as documented in 'perlvar'.)
-    $conf->data->set_p5( OSNAME => $^O );
+    $conf->data->set( OSNAME_provisional => $^O );
 
     my $ccdlflags = $Config{ccdlflags};
     $ccdlflags =~ s/\s*-Wl,-rpath,\S*//g if $conf->options->get('disable-rpath');
