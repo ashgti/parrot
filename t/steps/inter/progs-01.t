@@ -19,9 +19,8 @@ use Tie::Filehandle::Preempt::Stdin;
 use IO::CaptureOutput qw| capture |;
 
 =for hints_for_testing Testing and refactoring of inter::progs should
-entail understanding of issues discussed in the following RT tickets:
-http://rt.perl.org/rt3/Ticket/Display.html?id=43174; and
-http://rt.perl.org/rt3/Ticket/Display.html?id=41168.
+entail understanding of issues discussed in
+https://trac.parrot.org/parrot/ticket/854
 
 =cut
 
@@ -70,10 +69,9 @@ can_ok( 'Tie::Filehandle::Preempt::Stdin', ('READLINE') );
 isa_ok( $object, 'Tie::Filehandle::Preempt::Stdin' );
 
 capture( sub {
-    my $verbose = inter::progs::_get_verbose($conf);
     my $ask = inter::progs::_prepare_for_interactivity($conf);
     my $cc;
-    ($conf, $cc) = inter::progs::_get_programs($conf, $verbose, $ask);
+    ($conf, $cc) = inter::progs::_get_programs($conf, $ask);
     $debug = inter::progs::_get_debug($conf, $ask);
     $debug_validity = inter::progs::_is_debug_setting_valid($debug);
 }, \$stdout);
