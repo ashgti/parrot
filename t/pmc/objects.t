@@ -1036,7 +1036,6 @@ l1:
 
 .namespace []       # Reset to root namespace for next test
 
-#RT #33103
 .sub multiple_anon_classes
      newclass $P0, "City3"
      subclass $P1, $P0
@@ -1313,7 +1312,6 @@ l1:
     is( $S0, 'Perl6a;PAST;Node', 'typeof returns objects created from get_class' )
 .end
 
-#RT #39045
 .sub isa_bug
     .local pmc base, o1, o2
     base = subclass 'Hash', ['Perl6b'; 'PAST'; 'Node']
@@ -1351,7 +1349,6 @@ l1:
 
 .namespace []   # revert to root for next test
 
-#RT #39056
 .sub vtable_override_once_removed
     .local pmc base
     $P0 = get_class 'Integer'
@@ -1374,7 +1371,6 @@ l1:
 
 .namespace []   # revert to root for next test
 
-#RT #40626
 .sub vtable_fails_for_subclasses_of_core_classes
     $P0 = subclass 'Hash', 'Foo41'
     $P0 = subclass 'Hash', 'Bar41'
@@ -1402,7 +1398,6 @@ l1:
 
 .namespace []   # revert to root for next test
 
-#RT #3901
 .sub super___init_called_twice
     $P0 = newclass 'Foo42'
     $P1 = subclass $P0, 'Bar42'
@@ -1484,7 +1479,6 @@ handler:
 end:
 .end
 
-# RT #46845
 .sub getting_null_attribute
     newclass $P1, "Foo51"
     addattribute $P1, "i"
