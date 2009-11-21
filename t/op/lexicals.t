@@ -1109,7 +1109,7 @@ CODE
 42
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', 'Example for RT #44395' );
+pir_output_is( <<'CODE', <<'OUTPUT', 'nested scopes' );
 
 =for never
 
@@ -1249,7 +1249,7 @@ Sub 2 was called 4 times. Any sub was called 11 times.
 Sub 3 was called 4 times. Any sub was called 12 times.
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure (RT #56184)' );
+pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure' );
 .sub 'main' :main
     .local pmc x
     x = 'foo'()
@@ -1290,7 +1290,7 @@ hello world
 hello world
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398:  Patrick's request" );
+pir_output_is( <<'CODE', <<'OUTPUT', "Patrick's request" );
 .sub 'main' :main
     foo('try 1')
     foo('try 2')
@@ -1323,7 +1323,7 @@ outer foo try 3
 inner foo try 3
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Bob's recursion bug");
+pir_output_is( <<'CODE', <<'OUTPUT', "Bob's recursion bug");
 .sub main :main
     rpwi(0)
 .end
@@ -1360,7 +1360,7 @@ rpwi:  recursive case
 [got 99]
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Jonathan's recursive case" );
+pir_output_is( <<'CODE', <<'OUTPUT', "Jonathan's recursive case" );
 .sub 'main' :main
     $P0 = new 'ResizablePMCArray'
     push $P0, 'a'

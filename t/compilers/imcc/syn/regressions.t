@@ -105,7 +105,7 @@ CODE
 /(?s:Null PMC access in get_bool.*current instr.*:(4|-1)\))/
 OUT
 
-pir_error_output_like( <<'CODE', <<'OUT', 'bare method names not allowed (RT #45859)');
+pir_error_output_like( <<'CODE', <<'OUT', 'bare method names not allowed');
 .sub foo :main
   $P0 = new 'String'
   $P0 = 'HI'
@@ -116,7 +116,7 @@ CODE
 /Bareword method name 'lower' not allowed/
 OUT
 
-pir_error_output_like( <<'CODE', <<'OUT', ':: not allowed in identifiers (RT #48735)');
+pir_error_output_like( <<'CODE', <<'OUT', ':: not allowed in identifiers');
 .sub foo :main
   .local string a::b
   a::b = 'HI' 
@@ -192,7 +192,7 @@ OUT
 
 }
 
-pir_error_output_like( <<'CODE', <<'OUT', 'No segfault from syntax error, RT #60172');
+pir_error_output_like( <<'CODE', <<'OUT', 'No segfault from syntax error');
 .sub 'main'
     ($S0) = 'blah'(:pir_only=>1)
 .end
