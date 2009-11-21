@@ -863,7 +863,6 @@ loop_end:
 .end
 
 
-#RT #40958 - can't iterate subclass of ResizablePMCArray
 .sub iterate_subclass_of_rpa
     .local pmc arr, it
     $P0 = subclass 'ResizablePMCArray', 'MyArray'
@@ -902,7 +901,6 @@ end:
 .end
 
 
-#RT #56636 - segfault from sort if comparison is always 1
 .sub sort_with_broken_cmp
     .local pmc array
     array = new ['ResizablePMCArray']
