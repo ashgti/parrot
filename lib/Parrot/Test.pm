@@ -264,7 +264,6 @@ Writes C<$code> into the file C<$code_f>.
 
 Generate functions that are only used by a couple of
 Parrot::Test::<lang> modules.
-See RT #43266.
 This implementation is experimental and currently only works
 for languages/pipp.
 
@@ -1124,7 +1123,7 @@ sub _handle_test_options {
 
     my $out = $options->{'STDOUT'} || '';
     my $err = $options->{'STDERR'} || '';
-    ##  File::Temp overloads 'eq' here, so we need the quotes. RT #58840
+    ##  File::Temp overloads 'eq' here, so we need the quotes.
     if ( $out and $err and "$out" eq "$err" ) {
         $err = '&STDOUT';
     }

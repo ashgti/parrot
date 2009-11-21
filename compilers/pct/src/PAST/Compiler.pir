@@ -199,7 +199,7 @@ Compile the abstract syntax tree given by C<past> into POST.
     set_global '@?BLOCK', blockpast
   have_blockpast:
     null $P0
-    set_global '$?SUB', $P0                                # see RT #49758
+    set_global '$?SUB', $P0
     .tailcall self.'as_post'(past, 'rtype'=>'v')
 .end
 
@@ -1875,8 +1875,7 @@ node with a 'pasttype' of bind.
 
 =item copy(PAST::Op node)
 
-Implement a 'copy' assignment (at least until we get the 'copy'
-opcode -- see RT #47828).
+Implement a 'copy' assignment (at least until we get the 'copy' opcode).
 
 =cut
 

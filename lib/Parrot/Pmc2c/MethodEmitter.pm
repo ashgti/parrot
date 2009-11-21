@@ -149,9 +149,6 @@ my %calltype = (
     'void *'   => 'b',
     'void**'   => 'B',
     'void **'  => 'B',
-
-    #"BIGNUM*" => "???" # RT #43731
-    #"BIGNUM *"=> "???" # RT #43731
 );
 
 sub proto {
@@ -166,9 +163,6 @@ sub proto {
     $ret .= "JO" . join( '',
         map { $calltype{$_} or die "Unknown signature type '$_'" }
         split( /,/, $parameters ) );
-
-    # RT #43733
-    # scan src/call_list.txt if the generated signature is available
 
     return $ret;
 }

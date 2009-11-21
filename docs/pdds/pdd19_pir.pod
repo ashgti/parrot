@@ -59,7 +59,7 @@ identifiers.
     A42
 
 Opcode names are not reserved words in PIR, and may be used as variable names.
-For example, you can define a local variable named C<print>.  [See RT #24251]
+For example, you can define a local variable named C<print>.  
 Note that currently, by using an opcode name as a local variable name, the
 variable will I<hide> the opcode name, effectively making the opcode unusable.
 In the future this will be resolved.
@@ -844,7 +844,7 @@ becomes:
 =end PIR_FRAGMENT
 
 Note that this only works for opcodes that have have a leading C<OUT>
-parameter. [this restriction unimplemented: RT #36283]
+parameter. [this restriction unimplemented: TT #906]
 
 =item ([<var1> [:<mod1> ...], ...]) = <var2>([<arg1> [:<mod2> ...], ...])
 

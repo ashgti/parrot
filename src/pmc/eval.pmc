@@ -191,7 +191,7 @@ Invokes the first subroutine in the eval code.
             return;
         }
 
-        /* RT #46685 create PF API, move it there */
+        /* TT #1315 create PF API, move it there */
         seg = (PackFile_Segment *)cur_cs->const_table;
         if (seg) {
             PackFile_Segment_destroy(INTERP, seg);
@@ -289,7 +289,8 @@ for writing to disc and later loading via C<load_bytecode>.
 
         /* We block GC while doing the packing, since GC run during a pack
            has been observed to cause problems. There may be a Better Fix.
-           See RT #40410 for example of the problem (note on line that
+           See http://rt.perl.org/rt3/Ticket/Display.html?id=40410 
+           for example of the problem (note on line that
            segfaults, it is *cursor that is pointing to dealloced memory). */
         Parrot_block_GC_mark(INTERP);
         PackFile_pack(INTERP, pf, (opcode_t *)res->strstart);
@@ -370,7 +371,7 @@ Unarchives the code.
         pf->directory.num_segments = 0;
 
         /*
-         * RT #46687 this isn't ok - it seems that the packfile
+         * TT #1292 this isn't ok - it seems that the packfile
          *     gets attached to interp->code and is
          *     destroyed again during interpreter destruction
          */
