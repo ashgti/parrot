@@ -93,6 +93,34 @@ static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
+static void ** csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static INTVAL csr_elements(PARROT_INTERP, ARGIN(PMC *self))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_CANNOT_RETURN_NULL
+static void* csr_get_pointer_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_set_pointer_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    ARGIN(void *value))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4);
+
+PARROT_CANNOT_RETURN_NULL
 static void dissect_aggregate_arg(PARROT_INTERP,
     ARGMOD(PMC *call_object),
     ARGIN(PMC *aggregate))
@@ -350,6 +378,22 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_clone_key_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(key))
+#define ASSERT_ARGS_csr_allocate_initial_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_elements __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_get_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_push_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_set_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(value))
 #define ASSERT_ARGS_dissect_aggregate_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(call_object) \
@@ -2744,6 +2788,332 @@ clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
     }
 
     return key;
+}
+
+/*
+
+VTABLE functions from CallSignatureReturns. TODO Rename them appropriately.
+
+*/
+
+/* mask off lower two bits (1 + 2 = 3) for pointer tags */
+#define TAG_BITS 3
+#define UNTAG_CELL(c) INTVAL2PTR(void *, (PTR2INTVAL(c)) & ~TAG_BITS)
+#define CELL_TYPE_MASK(c) (PTR2INTVAL(c)) & TAG_BITS
+
+/*
+
+=item C<static void ** csr_allocate_initial_values(PARROT_INTERP, PMC *self)>
+
+Allocate initial storage for returns in CallSignature.
+
+=cut
+*/
+
+PARROT_CANNOT_RETURN_NULL
+static void **
+csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
+{
+    void **values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
+                                 8 * sizeof (void *));
+
+    SETATTR_CallSignature_returns_resize_threshold(interp, self, 8);
+    return values;
+}
+
+/*
+
+=item C<void csr_set_integer_native(INTVAL size)>
+
+Resizes the array to C<size> elements.
+
+=cut
+
+*/
+
+static void
+csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size) {
+    void    **values = NULL;
+    INTVAL    resize_threshold;
+
+    GETATTR_CallSignature_returns_values(interp, self, values);
+    GETATTR_CallSignature_returns_resize_threshold(interp, self, resize_threshold);
+
+    /* Empty. Allocate 8 elements (arbitary number) */
+    if (!values) {
+        values = csr_allocate_initial_values(interp, self);
+        SETATTR_CallSignature_returns_values(interp, self, values);
+        SETATTR_CallSignature_returns_size(interp, self, size);
+    }
+    else if (size <= resize_threshold) {
+        SETATTR_CallSignature_returns_size(interp, self, size);
+        return;
+    }
+    else {
+        void   *old_values;
+        INTVAL  cur = resize_threshold;
+
+        /* Switch to system allocator */
+        if (cur == 8) {
+            old_values = values;
+            values     = mem_allocate_n_typed(8, void *);
+            memcpy(values, old_values, 8 * sizeof (void *));
+            Parrot_gc_free_fixed_size_storage(interp,
+                8 * sizeof (void *), old_values);
+        }
+
+        if (cur < 8192)
+            cur = size < 2 * cur ? 2 * cur : size;
+        else {
+            INTVAL needed = size - cur;
+            cur          += needed + 4096;
+            cur          &= ~0xfff;
+        }
+
+        mem_realloc_n_typed(values, cur, void *);
+
+        SETATTR_CallSignature_returns_values(interp, self, values);
+        SETATTR_CallSignature_returns_size(interp, self, size);
+        SETATTR_CallSignature_returns_resize_threshold(interp, self, cur);
+    }
+}
+
+/*
+
+=item C<static INTVAL csr_elements(PARROT_INTERP, PMC *self)>
+
+Returns the number of returns values.
+
+=cut
+
+*/
+
+static INTVAL
+csr_elements(PARROT_INTERP, ARGIN(PMC *self)) {
+    INTVAL size;
+    GETATTR_CallSignature_returns_size(interp, self, size);
+    return size;
+}
+
+/*
+
+=item C<static void csr_set_pointer_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key, void *value)>
+
+Sets the pointer at position key.  The pointer should point to a storage
+location for a return value -- it must be a pointer to an INTVAL, FLOATVAL,
+PMC, or STRING storage location.
+
+=cut
+
+*/
+
+static void
+csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(void *value)) {
+    void   **values;
+    INTVAL   size;
+
+    GETATTR_CallSignature_returns_values(interp, self, values);
+    GETATTR_CallSignature_returns_size(interp,   self, size);
+
+    if (!values) {
+        if (key < 8) {
+            values = csr_allocate_initial_values(interp, self);
+            SETATTR_CallSignature_returns_values(interp, self, values);
+            SETATTR_CallSignature_returns_size(interp, self, key + 1);
+        }
+        else {
+            csr_set_integer_native(interp, self, key + 1);
+            GETATTR_CallSignature_returns_values(interp, self, values);
+        }
+    }
+    else if (key >= size)
+        csr_set_integer_native(interp, self, key + 1);
+
+    values[key] = value;
+}
+
+/*
+
+=item C<static void csr_push_integer(PARROT_INTERP, PMC *self, INTVAL type)>
+
+Set type of last pushed pointer.
+
+=cut
+
+*/
+
+static void
+csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type) {
+    void  **values;
+    INTVAL  idx;
+
+    GETATTR_CallSignature_returns_size(interp, self, idx);
+
+    /* last index is size - 1, of course */
+    idx--;
+
+    PARROT_ASSERT((type >= 0 && type < 4) || !"Wrong pointer type");
+
+    GETATTR_CallSignature_returns_values(interp, self, values);
+
+    values[idx] = INTVAL2PTR(void *,
+        PTR2INTVAL(UNTAG_CELL(values[idx])) | type);
+}
+
+
+/*
+
+=item C<void csr_set_integer_keyed_int(INTVAL key, INTVAL value)>
+
+=item C<void csr_set_number_keyed_int(INTVAL key, FLOATVAL value)>
+
+=item C<void csr_set_string_keyed_int(INTVAL key, STRING *value)>
+
+=item C<void csr_set_pmc_keyed_int(INTVAL key, PMC *value)>
+
+Sets the value of the element at index C<key> to C<value>, casting if
+necessary.
+
+=cut
+
+*/
+
+static void
+csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL value) {
+    void *cell = csr_get_pointer_keyed_int(interp, self, key);
+    void *ptr  = UNTAG_CELL(cell);
+
+    switch ((Call_bits_enum_t)CELL_TYPE_MASK(cell)) {
+        case PARROT_ARG_INTVAL:
+            *(INTVAL *)ptr = value;
+            break;
+        case PARROT_ARG_FLOATVAL:
+            *(FLOATVAL *)ptr = value;
+            break;
+        case PARROT_ARG_STRING:
+            *(STRING **)ptr = Parrot_str_from_int(interp, value);
+            break;
+        case PARROT_ARG_PMC:
+            *(PMC **)ptr = get_integer_pmc(interp, value);
+            break;
+        default:
+            PARROT_ASSERT(!"Impossible type");
+    }
+}
+
+static void
+csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL value) {
+    void *cell = csr_get_pointer_keyed_int(interp, self, key);
+    void *ptr  = UNTAG_CELL(cell);
+
+    switch ((Call_bits_enum_t)CELL_TYPE_MASK(cell)) {
+        case PARROT_ARG_INTVAL:
+            *(INTVAL *)ptr = value;
+            break;
+        case PARROT_ARG_FLOATVAL:
+            *(FLOATVAL *)ptr = value;
+            break;
+        case PARROT_ARG_STRING:
+            *(STRING **)ptr = Parrot_str_from_num(interp, value);
+            break;
+        case PARROT_ARG_PMC:
+            *(PMC **)ptr = get_number_pmc(interp, value);
+            break;
+        default:
+            PARROT_ASSERT(!"Impossible type");
+    }
+}
+
+static void
+csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, STRING *value) {
+    void *cell = csr_get_pointer_keyed_int(interp, self, key);
+    void *ptr  = UNTAG_CELL(cell);
+
+    switch ((Call_bits_enum_t)CELL_TYPE_MASK(cell)) {
+        case PARROT_ARG_INTVAL:
+            *(INTVAL *)ptr = Parrot_str_to_int(interp, value);
+            break;
+        case PARROT_ARG_FLOATVAL:
+            *(FLOATVAL *)ptr = Parrot_str_to_num(interp, value);
+            break;
+        case PARROT_ARG_STRING:
+            *(STRING **)ptr = value;
+            break;
+        case PARROT_ARG_PMC:
+            *(PMC **)ptr = STRING_IS_NULL(value) ?
+                PMCNULL :
+                get_string_pmc(interp, value);
+            break;
+        default:
+            PARROT_ASSERT(!"Impossible type");
+    }
+}
+
+static void
+csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, PMC *value) {
+    void *cell = csr_get_pointer_keyed_int(interp, self, key);
+    void *ptr  = UNTAG_CELL(cell);
+
+    switch ((Call_bits_enum_t)CELL_TYPE_MASK(cell)) {
+        case PARROT_ARG_INTVAL:
+            *(INTVAL *)ptr = VTABLE_get_integer(interp, value);
+            break;
+        case PARROT_ARG_FLOATVAL:
+            *(FLOATVAL *)ptr = VTABLE_get_number(interp, value);
+            break;
+        case PARROT_ARG_STRING:
+            *(STRING **)ptr = VTABLE_get_string(interp, value);
+            break;
+        case PARROT_ARG_PMC:
+            *(PMC **)ptr = value;
+            break;
+        default:
+            PARROT_ASSERT(!"Impossible type");
+    }
+}
+
+/*
+
+=item C<void *csr_get_string_keyed_int(INTVAL key)>
+
+Gets raw pointer for result.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+csr_get_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key) {
+    void *cell  = csr_get_pointer_keyed_int(interp, self, key);
+    void *ptr   = UNTAG_CELL(cell);
+    return (STRING *)ptr;
+}
+
+
+/*
+
+=item C<static void* csr_get_pointer_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key)>
+
+Gets raw pointer for result.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+static void*
+csr_get_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key) {
+    void   **values;
+    INTVAL   size;
+
+    GETATTR_CallSignature_returns_size(interp, self, size);
+    PARROT_ASSERT((key < size) || !"Wrong index");
+
+    GETATTR_CallSignature_returns_values(interp, self, values);
+    return values[key];
 }
 
 /*
