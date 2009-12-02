@@ -449,6 +449,15 @@ Mark any referenced strings and PMCs.
 
             parrot_hash_destroy(interp, attrs->hash);
         }
+
+        /* Destroy returns storage */
+        if (attrs->returns_values) {
+            if (attrs->returns_resize_threshold == 8)
+                Parrot_gc_free_fixed_size_storage(INTERP,
+                    8 * sizeof (void *), attrs->returns_values);
+            else
+                mem_sys_free(attrs->returns_values);
+        }
     }
 
 /*
