@@ -368,6 +368,10 @@ pmclass CallSignature auto_attrs provides array provides hash {
     ATTR Hash   *hash;                 /* Hash of named arguments */
     ATTR INTVAL  num_positionals;      /* count of positionals */
 
+    /* Storage for returns */
+    ATTR void     **returns_values;             /* stored pointers */
+    ATTR INTVAL     returns_size;               /* number of stored elements */
+    ATTR INTVAL     returns_resize_threshold;   /* max size before resizing array */
 /*
 
 =item C<void init()>
