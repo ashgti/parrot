@@ -1231,6 +1231,8 @@ Creates and returns a clone of the signature.
                 cloned_cell = CREATE_PMC_CELL(INTERP);
                 CELL_PMC(cloned_cell) = CELL_PMC(cell);
                 break;
+              default:
+                break;
             }
             APPEND_CELL(dest, cloned_cell);
         }
