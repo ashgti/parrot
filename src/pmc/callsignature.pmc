@@ -395,6 +395,64 @@ Initializes a newly created CallSignature object.
 
 /*
 
+=item C<void mark()>
+
+Mark any referenced strings and PMCs.
+
+=cut
+
+*/
+    VTABLE void mark() {
+        Parrot_CallSignature_attributes * const attrs = PARROT_CALLSIGNATURE(SELF);
+        if (!attrs)
+            return;
+
+        Parrot_gc_mark_PMC_alive(interp, attrs->results);
+        Parrot_gc_mark_PMC_alive(interp, attrs->type_tuple);
+        Parrot_gc_mark_STRING_alive(interp, attrs->short_sig);
+        Parrot_gc_mark_PMC_alive(interp, attrs->arg_flags);
+        Parrot_gc_mark_PMC_alive(interp, attrs->return_flags);
+
+        if (attrs->num_positionals)
+            mark_positionals(interp, attrs->positionals);
+
+        if (attrs->hash)
+            mark_hash(interp, attrs->hash);
+    }
+
+    VTABLE void destroy() {
+        Parrot_CallSignature_attributes * const attrs = PARROT_CALLSIGNATURE(SELF);
+        if (!attrs)
+            return;
+
+        if (attrs->num_positionals) {
+            Pcc_cell *c = attrs->positionals;
+
+            while (c) {
+                Pcc_cell *to_free = c;
+                c = NEXT_CELL(c);
+                FREE_CELL(interp, to_free);
+            }
+        }
+
+        if (attrs->hash) {
+            UINTVAL i;
+
+            for (i = 0; i <= attrs->hash->mask; i++) {
+                HashBucket *b = attrs->hash->bi[i];
+
+                while (b) {
+                    FREE_CELL(interp, (Pcc_cell *)b->value);
+                    b = b->next;
+                }
+            }
+
+            parrot_hash_destroy(interp, attrs->hash);
+        }
+    }
+
+/*
+
 =item C<void set_string_native(STRING *value)>
 
 Sets the short signature for the CallSignature.
@@ -602,64 +660,6 @@ Retrieves the hash of named arguments.
         }
 
         return value;
-    }
-
-/*
-
-=item C<void mark()>
-
-Mark any referenced strings and PMCs.
-
-=cut
-
-*/
-    VTABLE void mark() {
-        Parrot_CallSignature_attributes * const attrs = PARROT_CALLSIGNATURE(SELF);
-        if (!attrs)
-            return;
-
-        Parrot_gc_mark_PMC_alive(interp, attrs->results);
-        Parrot_gc_mark_PMC_alive(interp, attrs->type_tuple);
-        Parrot_gc_mark_STRING_alive(interp, attrs->short_sig);
-        Parrot_gc_mark_PMC_alive(interp, attrs->arg_flags);
-        Parrot_gc_mark_PMC_alive(interp, attrs->return_flags);
-
-        if (attrs->num_positionals)
-            mark_positionals(interp, attrs->positionals);
-
-        if (attrs->hash)
-            mark_hash(interp, attrs->hash);
-    }
-
-    VTABLE void destroy() {
-        Parrot_CallSignature_attributes * const attrs = PARROT_CALLSIGNATURE(SELF);
-        if (!attrs)
-            return;
-
-        if (attrs->num_positionals) {
-            Pcc_cell *c = attrs->positionals;
-
-            while (c) {
-                Pcc_cell *to_free = c;
-                c = NEXT_CELL(c);
-                FREE_CELL(interp, to_free);
-            }
-        }
-
-        if (attrs->hash) {
-            UINTVAL i;
-
-            for (i = 0; i <= attrs->hash->mask; i++) {
-                HashBucket *b = attrs->hash->bi[i];
-
-                while (b) {
-                    FREE_CELL(interp, (Pcc_cell *)b->value);
-                    b = b->next;
-                }
-            }
-
-            parrot_hash_destroy(interp, attrs->hash);
-        }
     }
 
     VTABLE INTVAL elements() {
