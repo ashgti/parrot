@@ -158,10 +158,9 @@ static void csr_set_pointer_keyed_int(PARROT_INTERP,
 static void csr_set_string_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
-    ARGIN(STRING *value))
+    ARGIN_NULLOK(STRING *value))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(4);
+        __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
 static void dissect_aggregate_arg(PARROT_INTERP,
@@ -3100,7 +3099,7 @@ csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL v
 }
 
 static void
-csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(STRING *value))
+csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULLOK(STRING *value))
 {
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
