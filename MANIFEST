@@ -1407,7 +1407,6 @@ src/pmc/bigint.pmc                                          [devel]src
 src/pmc/bignum.pmc                                          [devel]src
 src/pmc/boolean.pmc                                         [devel]src
 src/pmc/callsignature.pmc                                   [devel]src
-src/pmc/callsignaturereturns.pmc                            [devel]src
 src/pmc/capture.pmc                                         [devel]src
 src/pmc/class.pmc                                           [devel]src
 src/pmc/codestring.pmc                                      [devel]src
