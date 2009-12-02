@@ -108,14 +108,57 @@ static void* csr_get_pointer_keyed_int(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+PARROT_CANNOT_RETURN_NULL
+static STRING* csr_get_string_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 static void csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+static void csr_set_integer_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    INTVAL value)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_set_integer_native(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL size)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_set_number_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    FLOATVAL value)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_set_pmc_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    ARGIN(PMC *value))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4);
 
 static void csr_set_pointer_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
     ARGIN(void *value))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4);
+
+static void csr_set_string_keyed_int(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    ARGIN(STRING *value))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(4);
@@ -387,10 +430,30 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_csr_get_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_get_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_push_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_set_integer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_set_integer_native __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_set_number_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_set_pmc_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(value))
 #define ASSERT_ARGS_csr_set_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(value))
+#define ASSERT_ARGS_csr_set_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self) \
     , PARROT_ASSERT_ARG(value))
@@ -2823,7 +2886,8 @@ csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
 
 /*
 
-=item C<void csr_set_integer_native(INTVAL size)>
+=item C<static void csr_set_integer_native(PARROT_INTERP, PMC *self, INTVAL
+size)>
 
 Resizes the array to C<size> elements.
 
@@ -2832,7 +2896,8 @@ Resizes the array to C<size> elements.
 */
 
 static void
-csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size) {
+csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
+{
     void    **values = NULL;
     INTVAL    resize_threshold;
 
@@ -2889,7 +2954,8 @@ Returns the number of returns values.
 */
 
 static INTVAL
-csr_elements(PARROT_INTERP, ARGIN(PMC *self)) {
+csr_elements(PARROT_INTERP, ARGIN(PMC *self))
+{
     INTVAL size;
     GETATTR_CallSignature_returns_size(interp, self, size);
     return size;
@@ -2909,7 +2975,8 @@ PMC, or STRING storage location.
 */
 
 static void
-csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(void *value)) {
+csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(void *value))
+{
     void   **values;
     INTVAL   size;
 
@@ -2944,7 +3011,8 @@ Set type of last pushed pointer.
 */
 
 static void
-csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type) {
+csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type)
+{
     void  **values;
     INTVAL  idx;
 
@@ -2964,13 +3032,17 @@ csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type) {
 
 /*
 
-=item C<void csr_set_integer_keyed_int(INTVAL key, INTVAL value)>
+=item C<static void csr_set_integer_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key, INTVAL value)>
 
-=item C<void csr_set_number_keyed_int(INTVAL key, FLOATVAL value)>
+=item C<static void csr_set_number_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key, FLOATVAL value)>
 
-=item C<void csr_set_string_keyed_int(INTVAL key, STRING *value)>
+=item C<static void csr_set_string_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key, STRING *value)>
 
-=item C<void csr_set_pmc_keyed_int(INTVAL key, PMC *value)>
+=item C<static void csr_set_pmc_keyed_int(PARROT_INTERP, PMC *self, INTVAL key,
+PMC *value)>
 
 Sets the value of the element at index C<key> to C<value>, casting if
 necessary.
@@ -2980,7 +3052,8 @@ necessary.
 */
 
 static void
-csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL value) {
+csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL value)
+{
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3003,7 +3076,8 @@ csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL va
 }
 
 static void
-csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL value) {
+csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL value)
+{
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3026,7 +3100,8 @@ csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL v
 }
 
 static void
-csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, STRING *value) {
+csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(STRING *value))
+{
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3051,7 +3126,8 @@ csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, STRING *va
 }
 
 static void
-csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, PMC *value) {
+csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(PMC *value))
+{
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3075,7 +3151,8 @@ csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, PMC *value) {
 
 /*
 
-=item C<void *csr_get_string_keyed_int(INTVAL key)>
+=item C<static STRING* csr_get_string_keyed_int(PARROT_INTERP, PMC *self, INTVAL
+key)>
 
 Gets raw pointer for result.
 
@@ -3085,7 +3162,8 @@ Gets raw pointer for result.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-csr_get_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key) {
+csr_get_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key)
+{
     void *cell  = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr   = UNTAG_CELL(cell);
     return (STRING *)ptr;
@@ -3105,7 +3183,8 @@ Gets raw pointer for result.
 
 PARROT_CANNOT_RETURN_NULL
 static void*
-csr_get_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key) {
+csr_get_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key)
+{
     void   **values;
     INTVAL   size;
 
