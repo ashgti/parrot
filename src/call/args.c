@@ -454,8 +454,7 @@ static STRING** string_param_from_op(PARROT_INTERP,
     , PARROT_ASSERT_ARG(value))
 #define ASSERT_ARGS_csr_set_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self) \
-    , PARROT_ASSERT_ARG(value))
+    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_dissect_aggregate_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(call_object) \
@@ -819,7 +818,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
     PMC            *call_object;
     INTVAL         *int_array;
     PMC            *ctx         = CURRENT_CONTEXT(interp);
-    PMC            *returns     = pmc_new(interp, enum_class_CallSignatureReturns);
     INTVAL          returns_pos = 0;
     INTVAL          arg_index;
     INTVAL          arg_count;
@@ -841,7 +839,6 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
 
     /* a little encapsulation violation for great speed */
     SETATTR_CallSignature_return_flags(interp, call_object, raw_sig);
-    SETATTR_CallSignature_results(interp, call_object, returns);
 
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
@@ -855,33 +852,33 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
          * the result back to the caller. */
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
             case PARROT_ARG_INTVAL:
-                VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                         &(CTX_REG_INT(ctx, raw_index)));
-                VTABLE_push_integer(interp, returns, PARROT_ARG_INTVAL);
+                csr_push_integer(interp, call_object, PARROT_ARG_INTVAL);
                 break;
             case PARROT_ARG_FLOATVAL:
-                VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                         &(CTX_REG_NUM(ctx, raw_index)));
-                VTABLE_push_integer(interp, returns, PARROT_ARG_FLOATVAL);
+                csr_push_integer(interp, call_object, PARROT_ARG_FLOATVAL);
                 break;
             case PARROT_ARG_STRING:
                 if (arg_flags & PARROT_ARG_NAME) {
                     STRING * string_val = arg_flags & PARROT_ARG_CONSTANT
                                           ? Parrot_pcc_get_string_constant(interp, ctx, raw_index)
                                           : CTX_REG_STR(ctx, raw_index);
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             string_val);
                 }
                 else {
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             &(CTX_REG_STR(ctx, raw_index)));
-                    VTABLE_push_integer(interp, returns, PARROT_ARG_STRING);
+                    csr_push_integer(interp, call_object, PARROT_ARG_STRING);
                 }
                 break;
             case PARROT_ARG_PMC:
-                VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                         &(CTX_REG_PMC(ctx, raw_index)));
-                VTABLE_push_integer(interp, returns, PARROT_ARG_PMC);
+                csr_push_integer(interp, call_object, PARROT_ARG_PMC);
                 break;
             default:
                 break;
@@ -914,7 +911,6 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
     PMC         *type_tuple         = PMCNULL;
-    PMC         *returns            = PMCNULL;
     PMC         *arg_flags     = PMCNULL;
     PMC         *return_flags  = PMCNULL;
     PMC         * const call_object = pmc_new(interp, enum_class_CallSignature);
@@ -935,36 +931,30 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     for (i = 0; i < sig_len; ++i) {
         const INTVAL type = sig[i];
 
-        /* Only create the returns array if it's needed */
-        if (in_return_sig && PMC_IS_NULL(returns)) {
-            returns = pmc_new(interp, enum_class_CallSignatureReturns);
-            VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "returns"), returns);
-        }
-
         if (in_return_sig) {
             STRING * const signature = CONST_STRING(interp, "signature");
             /* Returns store the original passed-in pointer so they can pass
              * the result back to the caller. */
             switch (type) {
                 case 'I':
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             (void *)va_arg(args, INTVAL *));
-                    VTABLE_push_integer(interp, returns, PARROT_ARG_INTVAL);
+                    csr_push_integer(interp, call_object, PARROT_ARG_INTVAL);
                     break;
                 case 'N':
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             (void *)va_arg(args, FLOATVAL *));
-                    VTABLE_push_integer(interp, returns, PARROT_ARG_FLOATVAL);
+                    csr_push_integer(interp, call_object, PARROT_ARG_FLOATVAL);
                     break;
                 case 'S':
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             (void *)va_arg(args, STRING **));
-                    VTABLE_push_integer(interp, returns, PARROT_ARG_STRING);
+                    csr_push_integer(interp, call_object, PARROT_ARG_STRING);
                     break;
                 case 'P':
-                    VTABLE_set_pointer_keyed_int(interp, returns, returns_pos++,
+                    csr_set_pointer_keyed_int(interp, call_object, returns_pos++,
                             (void *)va_arg(args, PMC **));
-                    VTABLE_push_integer(interp, returns, PARROT_ARG_PMC);
+                    csr_push_integer(interp, call_object, PARROT_ARG_PMC);
                     break;
                 default:
                     Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1509,16 +1499,16 @@ assign_default_result_value(PARROT_INTERP, ARGMOD(PMC *results), INTVAL index, I
     ASSERT_ARGS(assign_default_result_value)
     switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
         case PARROT_ARG_INTVAL:
-            VTABLE_set_integer_keyed_int(interp, results, index, 0);
+            csr_set_integer_keyed_int(interp, results, index, 0);
             break;
         case PARROT_ARG_FLOATVAL:
-            VTABLE_set_number_keyed_int(interp, results, index, 0.0);
+            csr_set_number_keyed_int(interp, results, index, 0.0);
             break;
         case PARROT_ARG_STRING:
-            VTABLE_set_string_keyed_int(interp, results, index, NULL);
+            csr_set_string_keyed_int(interp, results, index, NULL);
             break;
         case PARROT_ARG_PMC:
-            VTABLE_set_pmc_keyed_int(interp, results, index, PMCNULL);
+            csr_set_pmc_keyed_int(interp, results, index, PMCNULL);
             break;
         default:
             Parrot_ex_throw_from_c_args(interp, NULL,
@@ -1634,7 +1624,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     ASSERT_ARGS(fill_results)
     INTVAL *return_array;
     INTVAL *result_array;
-    PMC    *result_list;
     PMC    *result_sig         = NULL;
     PMC    *ctx                = CURRENT_CONTEXT(interp);
     PMC    *named_used_list    = PMCNULL;
@@ -1669,11 +1658,10 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         return;
     }
 
-    GETATTR_CallSignature_results(interp, call_object, result_list);
     GETATTR_CallSignature_return_flags(interp, call_object, result_sig);
 
-    result_count = PMC_IS_NULL(result_list) ? 0 : VTABLE_elements(interp, result_list);
-    PARROT_ASSERT(PMC_IS_NULL(result_list) || !PMC_IS_NULL(result_sig));
+    result_count = csr_elements(interp, call_object);
+    PARROT_ASSERT((result_count == 0) || !PMC_IS_NULL(result_sig));
 
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, return_array);
     if (!PMC_IS_NULL(result_sig))
@@ -1795,7 +1783,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 }
                 return_index++;
             }
-            VTABLE_set_pmc_keyed_int(interp, result_list, result_index, collect_positional);
+            csr_set_pmc_keyed_int(interp, call_object, result_index, collect_positional);
             result_index++;
             break; /* Terminate the positional return loop. */
         }
@@ -1811,7 +1799,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 if (!(result_flags & PARROT_ARG_STRING))
                     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                             "named results must have a name specified 1683");
-                result_name = VTABLE_get_string_keyed_int(interp, result_list, result_index);
+                result_name = csr_get_string_keyed_int(interp, call_object, result_index);
                 named_count++;
                 result_index++;
                 if (result_index >= result_count)
@@ -1835,26 +1823,26 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             switch (PARROT_ARG_TYPE_MASK_MASK(return_flags)) {
                 case PARROT_ARG_INTVAL:
                     if (constant)
-                        VTABLE_set_integer_keyed_int(interp, result_list, result_index,
+                        csr_set_integer_keyed_int(interp, call_object, result_index,
                             accessor->intval_constant(interp, return_info, return_index));
                     else
-                        VTABLE_set_integer_keyed_int(interp, result_list, result_index,
+                        csr_set_integer_keyed_int(interp, call_object, result_index,
                             accessor->intval(interp, return_info, return_index));
                     break;
                 case PARROT_ARG_FLOATVAL:
                     if (constant)
-                        VTABLE_set_number_keyed_int(interp, result_list, result_index,
+                        csr_set_number_keyed_int(interp, call_object, result_index,
                             accessor->numval_constant(interp, return_info, return_index));
                     else
-                        VTABLE_set_number_keyed_int(interp, result_list, result_index,
+                        csr_set_number_keyed_int(interp, call_object, result_index,
                             accessor->numval(interp, return_info, return_index));
                     break;
                 case PARROT_ARG_STRING:
                     if (constant)
-                        VTABLE_set_string_keyed_int(interp, result_list, result_index,
+                        csr_set_string_keyed_int(interp, call_object, result_index,
                             accessor->string_constant(interp, return_info, return_index));
                     else
-                        VTABLE_set_string_keyed_int(interp, result_list, result_index,
+                        csr_set_string_keyed_int(interp, call_object, result_index,
                             accessor->string(interp, return_info, return_index));
                     break;
                 case PARROT_ARG_PMC:
@@ -1887,7 +1875,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                                 return_index--; /* we want to stay on the same item */
                             }
                         }
-                        VTABLE_set_pmc_keyed_int(interp, result_list, result_index, return_item);
+                        csr_set_pmc_keyed_int(interp, call_object, result_index, return_item);
                         break;
                     }
                 default:
@@ -1904,7 +1892,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     next_result_flags = result_array[result_index + 1];
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
-                        VTABLE_set_integer_keyed_int(interp, result_list, result_index, 1);
+                        csr_set_integer_keyed_int(interp, call_object, result_index, 1);
                     }
                 }
             }
@@ -1919,7 +1907,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             if (result_flags & PARROT_ARG_NAME)
                 break;
 
-            assign_default_result_value(interp, result_list, result_index, result_flags);
+            assign_default_result_value(interp, call_object, result_index, result_flags);
 
             /* Mark the option flag for the result to FALSE, it was filled
              * with a default value. */
@@ -1927,7 +1915,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 next_result_flags = result_array[result_index + 1];
                 if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                     result_index++;
-                    VTABLE_set_integer_keyed_int(interp, result_list, result_index, 0);
+                    csr_set_integer_keyed_int(interp, call_object, result_index, 0);
                 }
             }
         }
@@ -2046,7 +2034,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 named_return_list = pmc_new(interp,
                         Parrot_get_ctx_HLL_type(interp, enum_class_Hash));
 
-            VTABLE_set_pmc_keyed_int(interp, result_list, result_index, named_return_list);
+            csr_set_pmc_keyed_int(interp, call_object, result_index, named_return_list);
             break; /* End of named results. */
         }
 
@@ -2054,7 +2042,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         if (!(result_flags & PARROT_ARG_STRING))
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
                     "named results must have a name specified 1926");
-        result_name = VTABLE_get_string_keyed_int(interp, result_list, result_index);
+        result_name = csr_get_string_keyed_int(interp, call_object, result_index);
 
         if (!STRING_IS_NULL(result_name)) {
             /* The next result is the actual value. */
@@ -2070,19 +2058,19 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                 /* Fill the named result. */
                 switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
                     case PARROT_ARG_INTVAL:
-                        VTABLE_set_integer_keyed_int(interp, result_list, result_index,
+                        csr_set_integer_keyed_int(interp, call_object, result_index,
                             VTABLE_get_integer_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_FLOATVAL:
-                        VTABLE_set_number_keyed_int(interp, result_list, result_index,
+                        csr_set_number_keyed_int(interp, call_object, result_index,
                             VTABLE_get_number_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_STRING:
-                        VTABLE_set_string_keyed_int(interp, result_list, result_index,
+                        csr_set_string_keyed_int(interp, call_object, result_index,
                             VTABLE_get_string_keyed_str(interp, named_return_list, result_name));
                         break;
                     case PARROT_ARG_PMC:
-                        VTABLE_set_pmc_keyed_int(interp, result_list, result_index,
+                        csr_set_pmc_keyed_int(interp, call_object, result_index,
                             VTABLE_get_pmc_keyed_str(interp, named_return_list, result_name));
                         break;
                     default:
@@ -2100,7 +2088,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                         next_result_flags = return_array[result_index + 1];
                         if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                             result_index++;
-                            VTABLE_set_integer_keyed_int(interp, result_list, result_index, 1);
+                            csr_set_integer_keyed_int(interp, call_object, result_index, 1);
                         }
                     }
                 }
@@ -2108,7 +2096,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
             else if (result_flags & PARROT_ARG_OPTIONAL) {
                 INTVAL next_result_flags;
 
-                assign_default_result_value(interp, result_list, result_index, result_flags);
+                assign_default_result_value(interp, call_object, result_index, result_flags);
 
                 /* Mark the option flag for the result to FALSE, it was filled
                  * with a default value. */
@@ -2116,7 +2104,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
                     next_result_flags = result_array[result_index + 1];
                     if (next_result_flags & PARROT_ARG_OPT_FLAG) {
                         result_index++;
-                        VTABLE_set_integer_keyed_int(interp, result_list, result_index, 1);
+                        csr_set_integer_keyed_int(interp, call_object, result_index, 1);
                     }
                 }
             }
@@ -2461,11 +2449,20 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         return;
     else {
         /* Broke encapuslation. Direct poking into CallSignature is much faster */
-        PMC * results;
+        /* FIXME We are leaking like sieve!!! We have do destroy old returns_values */
+        void ** returns_values;
+        INTVAL  returns_size;
+        INTVAL  returns_resize_threshold;
+
         PMC * return_flags;
-        GETATTR_CallSignature_results(interp, parent, results);
+        GETATTR_CallSignature_returns_values(interp, parent, returns_values);
+        GETATTR_CallSignature_returns_size(interp, parent, returns_size);
+        GETATTR_CallSignature_returns_resize_threshold(interp, parent, returns_resize_threshold);
         GETATTR_CallSignature_return_flags(interp, parent, return_flags);
-        SETATTR_CallSignature_results(interp, tailcall, results);
+
+        SETATTR_CallSignature_returns_values(interp, tailcall, returns_values);
+        SETATTR_CallSignature_returns_size(interp, tailcall, returns_size);
+        SETATTR_CallSignature_returns_resize_threshold(interp, tailcall, returns_resize_threshold);
         SETATTR_CallSignature_return_flags(interp, tailcall, return_flags);
     }
 }
