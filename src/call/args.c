@@ -142,18 +142,16 @@ static void csr_set_number_keyed_int(PARROT_INTERP,
 static void csr_set_pmc_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
-    ARGIN(PMC *value))
+    ARGIN_NULLOK(PMC *value))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(4);
+        __attribute__nonnull__(2);
 
 static void csr_set_pointer_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
-    ARGIN(void *value))
+    ARGIN_NULLOK(void *value))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(4);
+        __attribute__nonnull__(2);
 
 static void csr_set_string_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
@@ -446,12 +444,10 @@ static STRING** string_param_from_op(PARROT_INTERP,
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_set_pmc_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self) \
-    , PARROT_ASSERT_ARG(value))
+    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_set_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self) \
-    , PARROT_ASSERT_ARG(value))
+    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_set_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
@@ -2978,7 +2974,7 @@ PMC, or STRING storage location.
 */
 
 static void
-csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(void *value))
+csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(csr_set_pointer_keyed_int)
     void   **values;
@@ -3134,7 +3130,7 @@ csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULL
 }
 
 static void
-csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(PMC *value))
+csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULLOK(PMC *value))
 {
     ASSERT_ARGS(csr_set_pmc_keyed_int)
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
