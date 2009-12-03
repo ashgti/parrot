@@ -95,21 +95,59 @@ Typical invocations are:
     $ parrot setup.pir test
     $ sudo parrot setup.pir install
 
-=head2 EXTERNAL DEPENDENCIES
+=head2 PERL DEPENDENCIES
 
 =over 4
 
-=item prove
+=item prove (in step 'test')
 
-Perl5 and core module Test-Harness
+core module Test-Harness
+
+=item prove --archive (in step 'smoke')
+
+module TAP-Harness-Archive
 
 =item pod2html
 
-Perl5 and core module Pod-Html
+core module Pod-Html
 
 =item chmod (in step 'install')
 
-Perl5 and core module ExtUtils::Command
+core module ExtUtils::Command
+
+=back
+
+=head2 PARROT DEPENDENCIES
+
+=over 4
+
+=item glob (in step 'manifest' & 'sdist')
+
+PGE::Glob
+
+Limitation: currently, OS.'readdir' is dummy with MSVC.
+
+=back
+
+=head2 SYSTEM DEPENDENCIES
+
+=over 4
+
+=item smoke
+
+curl
+
+=item sdist_gztar
+
+Some coreutils : tar, gzip
+
+=item sdist_zip
+
+zip
+
+=item bdist_wininst
+
+Inno Setup
 
 =back
 
@@ -472,7 +510,7 @@ the others items of the array are just the dependencies
     cmd .= pbc
     cmd .= " "
     cmd .= src
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -536,7 +574,7 @@ the value is an array of PGE pathname or a single PGE pathname
     cmd .= flags
     cmd .= " "
     cmd .= src
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -579,7 +617,7 @@ the value is the TGE pathname
     cmd .= pir
     cmd .= " "
     cmd .= tge
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -633,7 +671,7 @@ the value is the NQP pathname
     cmd .= flags
     cmd .= " "
     cmd .= nqp
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -673,7 +711,7 @@ the value is the NQP pathname
     cmd .= pir
     cmd .= " "
     cmd .= nqp
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -719,7 +757,7 @@ the value is the PBC pathname
     cmd .= exe
     cmd .= " "
     cmd .= pbc
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -769,10 +807,10 @@ the value is the PBC pathname
     cmd .= " "
     cmd .= pbc
     cmd .= " --install"
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     unless has_strip goto L1
     cmd = "strip " . $S1
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -811,7 +849,7 @@ the value is the OPS pathname
     .param pmc kv :slurpy :named
     $I0 = exists kv['dynops']
     unless $I0 goto L1
-    mkpath('dynext')
+    mkpath('dynext', 1 :named('verbose'))
     .local string cflags, ldflags
     cflags = ''
     $I0 = exists kv['dynops_cflags']
@@ -876,7 +914,7 @@ the value is the OPS pathname
     cmd .= core
     cmd .= " --dynamic "
     cmd .= src
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     $S0 = config['o']
     $S1 = _mk_path_gen_dynops(src, ops, suffix, $S0)
@@ -909,12 +947,12 @@ the value is the OPS pathname
     cmd .= " "
   L1:
     cmd .= ldflags
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     $I0 = _has_strip(cflags)
     unless $I0 goto L2
     cmd = "strip " . dynext
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
   L2:
 .end
 
@@ -946,7 +984,7 @@ the value is the OPS pathname
     cmd .= cflags
     cmd .= " "
     cmd .= src
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 .end
 
 .sub '_mk_path_dynops' :anon
@@ -999,7 +1037,7 @@ the value is an array of PMC pathname
     .param pmc kv :slurpy :named
     $I0 = exists kv['dynpmc']
     unless $I0 goto L1
-    mkpath('dynext')
+    mkpath('dynext', 1 :named('verbose'))
     .local string cflags, ldflags
     cflags = ''
     $I0 = exists kv['dynpmc_cflags']
@@ -1081,7 +1119,7 @@ the value is an array of PMC pathname
 #    cmd .= src
     $S0 = basename(src)
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     cmd = clone pmc2c
     cmd .= " --c "
@@ -1090,7 +1128,7 @@ the value is an array of PMC pathname
 #    cmd .= src
     $S0 = basename(src)
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     chdir(current_dir)
 
@@ -1137,7 +1175,7 @@ the value is an array of PMC pathname
     cmd .= " "
     goto L1
   L2:
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     chdir(current_dir)
 
@@ -1179,12 +1217,12 @@ the value is an array of PMC pathname
     cmd .= " "
   L5:
     cmd .= ldflags
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     $I0 = _has_strip(cflags)
     unless $I0 goto L6
     cmd = "strip " . dynext
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
   L6:
 .end
 
@@ -1257,7 +1295,7 @@ the value is the POD pathname
     cmd .= pod
     cmd .= " --outfile "
     cmd .= html
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
     unlink("pod2htmd.tmp")
     unlink("pod2htmi.tmp")
     goto L1
@@ -1289,7 +1327,7 @@ the value is the POD pathname
   L1:
      unless $P0 goto L2
      $S0 = shift $P0
-     unlink($S0)
+     unlink($S0, 1 :named('verbose'))
      goto L1
   L2:
 .end
@@ -1373,11 +1411,11 @@ the value is the POD pathname
     $I0 -= 4
     $S0 = substr pbc, 0, $I0
     $S1 = $S0 . exe
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     $S1 = $S0 . '.c'
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     $S1 = $S0 . obj
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1410,11 +1448,11 @@ the value is the POD pathname
     $S0 = substr pbc, 0, $I0
     $S1 = 'installable_' . $S0
     $S1 .= exe
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     $S1 = $S0 . '.c'
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     $S1 = $S0 . obj
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1452,13 +1490,13 @@ the value is the POD pathname
     core = shift $P1
     suffix = cores[core]
     $S0 = _mk_path_dynops(ops, suffix, load_ext)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynops(src, ops, suffix, '.c')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynops(src, ops, suffix, '.h')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynops(src, ops, suffix, obj)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     goto L3
   L4:
     goto L1
@@ -1491,29 +1529,29 @@ the value is the POD pathname
     .local pmc srcs
     srcs = hash[group]
     $S0 = _mk_path_dynpmc(group, load_ext)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $P1 = iter srcs
   L3:
     unless $P1 goto L4
     .local string src
     src = shift $P1
     $S0 = _mk_path_gen_dynpmc(src, '.c')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynpmc(src, '.h')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynpmc(src, '.dump')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynpmc(src, obj)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     goto L3
   L4:
     src = srcs[0]
     $S0 = _mk_path_gen_dynpmc_group(src, group, '.c')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynpmc_group(src, group, '.h')
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     $S0 = _mk_path_gen_dynpmc_group(src, group, obj)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1565,7 +1603,7 @@ The following Version Control System are handled :
 
 .sub '_update_cvs' :anon
     .param pmc kv :slurpy :named
-    system('cvs update')
+    system('cvs update', 1 :named('verbose'))
 .end
 
 =item Git
@@ -1574,7 +1612,7 @@ The following Version Control System are handled :
 
 .sub '_update_git' :anon
     .param pmc kv :slurpy :named
-    system('git pull')
+    system('git pull', 1 :named('verbose'))
 .end
 
 =item Mercurial
@@ -1583,7 +1621,7 @@ The following Version Control System are handled :
 
 .sub '_update_hg' :anon
     .param pmc kv :slurpy :named
-    system('hg pull')
+    system('hg pull', 1 :named('verbose'))
 .end
 
 =item SVN
@@ -1592,7 +1630,7 @@ The following Version Control System are handled :
 
 .sub '_update_svn' :anon
     .param pmc kv :slurpy :named
-    system('svn update')
+    system('svn update', 1 :named('verbose'))
 .end
 
 =back
@@ -1647,7 +1685,7 @@ the default value is "t/*.t"
     $S0 = kv['harness_files']
   L3:
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 .end
 
 =item prove_exec
@@ -1685,7 +1723,7 @@ the default value is "t/*.t"
     $S0 = kv['prove_files']
   L3:
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 .end
 
 =head3 Step smoke
@@ -1707,7 +1745,7 @@ Unless t/harness exists, run : prove --archive t/*.t
 .sub '_clean_smoke' :anon
     .param pmc kv :slurpy :named
     $S0 = get_prove_archive(kv :flat :named)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
 .end
 
 =over 4
@@ -1763,7 +1801,7 @@ the default value is test.tar.gz
     .local string archive
     archive = get_prove_archive(kv :flat :named)
     cmd .= archive
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     $I0 = exists kv['smolder_url']
     unless $I0 goto L5
@@ -1797,7 +1835,7 @@ the default value is test.tar.gz
     cmd .= " "
     $S0 = kv['smolder_url']
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
   L5:
 .end
 
@@ -1864,7 +1902,7 @@ array of pathname or a single pathname
     if $I0 goto L0
     $S0 = array
     $S2 = $S1 . $S0
-    install($S0, $S2, 0)
+    install($S0, $S2, 1 :named('verbose'))
     goto L2
   L0:
     $P0 = iter array
@@ -1872,7 +1910,7 @@ array of pathname or a single pathname
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    install($S0, $S2, 0)
+    install($S0, $S2, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1888,7 +1926,7 @@ array of pathname or a single pathname
     if $I0 goto L0
     $S0 = array
     $S2 = $S1 . $S0
-    install($S0, $S2, 0)
+    install($S0, $S2, 1 :named('verbose'))
     goto L2
   L0:
     $P0 = iter array
@@ -1896,7 +1934,7 @@ array of pathname or a single pathname
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    install($S0, $S2, 0)
+    install($S0, $S2, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1932,7 +1970,7 @@ array of pathname or a single pathname
     $S2 = bindir . '/'
     $S2 .= bin
     $S2 .= exe
-    install($S1, $S2, 1)
+    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -1969,7 +2007,7 @@ array of pathname or a single pathname
     $S1 = _mk_path_dynops(ops, suffix, load_ext)
     $S2 = libdir . "/"
     $S2 .= $S1
-    install($S1, $S2, 1)
+    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
     goto L3
   L4:
     goto L1
@@ -2001,7 +2039,7 @@ array of pathname or a single pathname
     $S1 = _mk_path_dynpmc($S0, load_ext)
     $S2 = libdir . "/"
     $S2 .= $S1
-    install($S1, $S2, 1)
+    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -2051,7 +2089,7 @@ Same options as install.
     if $I0 goto L0
     $S0 = array
     $S2 = $S1 . $S0
-    unlink($S2)
+    unlink($S2, 1 :named('verbose'))
     goto L2
   L0:
     $P0 = iter array
@@ -2059,7 +2097,7 @@ Same options as install.
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    unlink($S2)
+    unlink($S2, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -2075,7 +2113,7 @@ Same options as install.
     if $I0 goto L0
     $S0 = array
     $S2 = $S1 . $S0
-    unlink($S2)
+    unlink($S2, 1 :named('verbose'))
     goto L2
   L0:
     $P0 = iter array
@@ -2083,7 +2121,7 @@ Same options as install.
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    unlink($S2)
+    unlink($S2, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -2109,7 +2147,7 @@ Same options as install.
     $S1 = bindir . '/'
     $S1 .=  bin
     $S1 .= exe
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -2142,7 +2180,7 @@ Same options as install.
     $S0 = _mk_path_dynops(ops, suffix, load_ext)
     $S1 = libdir . "/"
     $S1 .= $S0
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     goto L3
   L4:
     goto L1
@@ -2170,7 +2208,7 @@ Same options as install.
     $S0 = _mk_path_dynpmc($S0, load_ext)
     $S1 = libdir . "/"
     $S1 .= $S0
-    unlink($S1)
+    unlink($S1, 1 :named('verbose'))
     goto L1
   L2:
 .end
@@ -2586,18 +2624,18 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     .local string cmd
     cmd = 'tar -cvf ' . $S0
     cmd .= ' -T MANIFEST'
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 
     cmd = 'gzip --best ' . $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 .end
 
 .sub '_clean_gztar' :anon
     .param pmc kv :slurpy :named
 
     $S0 = get_tarname('.tar.gz', kv :flat :named)
-    unlink($S0)
-    unlink('MANIFEST')
+    unlink($S0, 1 :named('verbose'))
+    unlink('MANIFEST', 1 :named('verbose'))
 .end
 
 .sub 'get_tarname' :anon
@@ -2633,15 +2671,15 @@ On Windows calls sdist_zip, otherwise sdist_gztar
   L1:
     cmd .= ' MANIFEST | zip -9 -@ '
     cmd .= $S0
-    system(cmd)
+    system(cmd, 1 :named('verbose'))
 .end
 
 .sub '_clean_zip' :anon
     .param pmc kv :slurpy :named
 
     $S0 = get_tarname('.zip', kv :flat :named)
-    unlink($S0)
-    unlink('MANIFEST')
+    unlink($S0, 1 :named('verbose'))
+    unlink('MANIFEST', 1 :named('verbose'))
 .end
 
 =head3 Step bdist
@@ -2704,14 +2742,14 @@ Build an installer with Inno Setup.
     $S2 = bin . exe
     $I0 = newer($S2, $S1)
     if $I0 goto L2
-    cp($S1, $S2)
+    cp($S1, $S2, 1 :named('verbose'))
     goto L2
   L1:
 
     $S0 = mk_inno_script(kv :flat :named)
     spew('inno.iss', $S0)
 
-    system("iscc inno.iss")
+    system("iscc inno.iss", 1 :named('verbose'))
 .end
 
 .include 'tm.pasm'
@@ -2908,13 +2946,13 @@ TEMPLATE
     unless $P1 goto L1
     bin = shift $P1
     $S0 = bin . exe
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
     goto L2
   L1:
 
-    unlink('inno.iss')
+    unlink('inno.iss', 1 :named('verbose'))
     $S0 = get_setupname('.exe', kv :flat :named)
-    unlink($S0)
+    unlink($S0, 1 :named('verbose'))
 .end
 
 =head3 Configuration Helpers
@@ -3220,7 +3258,12 @@ Return the whole config
 
 .sub 'system'
     .param string cmd
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
     say cmd
+  L1:
     $I0 = spawnw cmd
 .end
 
@@ -3275,6 +3318,7 @@ Return the whole config
 
 .sub 'mkpath'
     .param string pathname
+    .param int verbose          :named('verbose') :optional
     $I1 = 1
   L1:
     $I1 = index pathname, '/', $I1
@@ -3283,12 +3327,12 @@ Return the whole config
     inc $I1
     $I0 = stat $S0, .STAT_EXISTS
     if $I0 goto L1
-    mkdir($S0)
+    mkdir($S0, verbose :named('verbose'))
     goto L1
   L2:
     $I0 = stat pathname, .STAT_EXISTS
     if $I0 goto L3
-    mkdir(pathname)
+    mkdir(pathname, verbose :named('verbose'))
   L3:
 .end
 
@@ -3298,8 +3342,13 @@ Return the whole config
 
 .sub 'mkdir'
     .param string dirname
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
     print "mkdir "
     say dirname
+  L1:
     $P0 = new 'OS'
     $I1 = 0o775
     $P0.'mkdir'(dirname, $I1)
@@ -3312,8 +3361,9 @@ Return the whole config
 .sub 'install'
     .param string src
     .param string dst
-    .param int exe      :optional
-    .param int has_exe  :opt_flag
+    .param int exe              :named('exe') :optional
+    .param int has_exe          :opt_flag
+    .param int verbose          :named('verbose') :optional
     # mkpath
     $I1 = 1
   L1:
@@ -3323,15 +3373,15 @@ Return the whole config
     inc $I1
     $I0 = stat $S0, .STAT_EXISTS
     if $I0 goto L1
-    mkdir($S0)
+    mkdir($S0, verbose :named('verbose'))
     goto L1
   L2:
     $I0 = newer(dst, src)
     if $I0 goto L3
-    cp(src, dst)
+    cp(src, dst, verbose :named('verbose'))
     unless has_exe goto L3
     unless exe goto L3
-    chmod(dst, 0o755)
+    chmod(dst, 0o755, verbose :named('verbose'))
   L3:
 .end
 
@@ -3342,10 +3392,15 @@ Return the whole config
 .sub 'cp'
     .param string src
     .param string dst
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
     print "cp "
     print src
     print " "
     say dst
+  L1:
     $P0 = new 'FileHandle'
     $S0 = $P0.'readall'(src)
     $P0.'open'(dst, 'w')
@@ -3360,6 +3415,7 @@ Return the whole config
 .sub 'chmod'
     .param string filename
     .param int mode
+    .param int verbose          :named('verbose') :optional
     $P0 = get_config()
     .local string cmd
     cmd = $P0['perl']
@@ -3371,7 +3427,7 @@ Return the whole config
     cmd .= $S0
     cmd .= " "
     cmd .= filename
-    system(cmd)
+    system(cmd, verbose :named('verbose'))
 .end
 
 =item unlink
@@ -3380,12 +3436,17 @@ Return the whole config
 
 .sub 'unlink'
     .param string filename
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
     $I0 = stat filename, .STAT_EXISTS
     unless $I0 goto L1
     $I0 = stat filename, .STAT_ISREG
     unless $I0 goto L1
+    unless has_verbose goto L2
+    unless verbose goto L2
     print "unlink "
     say filename
+  L2:
     new $P0, 'OS'
     $P0.'rm'(filename)
   L1:
@@ -3415,6 +3476,7 @@ Return the whole config
 
 .sub 'dirname'
     .param string path
+    unless path goto L3
     $I0 = 0
   L1:
     $I1 = index path, '/', $I0
@@ -3423,8 +3485,11 @@ Return the whole config
     goto L1
   L2:
     dec $I0
+    unless $I0 > 0 goto L3
     $S0 = substr path, 0, $I0
     .return ($S0)
+  L3:
+    .return ('.')
 .end
 
 =item cwd
@@ -3445,6 +3510,13 @@ Return the whole config
 
 .sub 'chdir'
     .param string dirname
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
+    print "cd "
+    say dirname
+  L1:
     new $P0, 'OS'
     $P0.'chdir'(dirname)
 .end
@@ -3473,20 +3545,46 @@ Return the whole config
 =cut
 
 .sub 'glob'
-    .param string pattern
+    .param string patterns
     $P0 = new 'ResizableStringArray'
-    .local string cmd                   #
-    cmd = 'perl -e "for (<' . pattern   # refactoring needed
-    cmd .= '>) { print; print qq{\n};}"'# without perl
-    $P1 = open cmd, 'rp'                #
+    $P1 = split ' ', patterns
   L1:
-    $S0 = $P1.'readline'()
-    if $S0 == '' goto L2
-    $S0 = chomp($S0)
-    push $P0, $S0
+    unless $P1 goto L2
+    .local string pattern
+    pattern = shift $P1
+    $I0 = index pattern, '*'
+    unless $I0 < 0 goto L3
+    $I0 = index pattern, '?'
+    unless $I0 < 0 goto L3
+    $I0 = index pattern, '['
+    unless $I0 < 0 goto L3
+    $I0 = stat pattern, .STAT_EXISTS
+    unless $I0 goto L1
+    push $P0, pattern
     goto L1
+  L3:
+    .local pmc matcher
+    load_bytecode 'PGE/Glob.pbc'
+    $P4 = compreg 'PGE::Glob'
+    matcher = $P4.'compile'(pattern)
+    .local string dir
+    dir = dirname(pattern)
+    $P2 = new 'OS'
+    $P3 = $P2.'readdir'(dir)
+  L4:
+    unless $P3 goto L1
+    $S0 = shift $P3
+    if dir == '.' goto L5
+    $S1 = dir . '/'
+    $S0 = $S1 . $S0
+  L5:
+    $I0 = stat $S0, .STAT_ISDIR
+    if $I0 goto L4
+    $P5 = matcher($S0)
+    unless $P5 goto L4
+    push $P0, $S0
+    goto L4
   L2:
-    $P1.'close'()
     .return ($P0)
 .end
 
