@@ -2877,6 +2877,7 @@ PARROT_CANNOT_RETURN_NULL
 static void **
 csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
 {
+    ASSERT_ARGS(csr_allocate_initial_values)
     void **values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
                                  8 * sizeof (void *));
 
@@ -2898,6 +2899,7 @@ Resizes the array to C<size> elements.
 static void
 csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 {
+    ASSERT_ARGS(csr_set_integer_native)
     void    **values = NULL;
     INTVAL    resize_threshold;
 
@@ -2956,6 +2958,7 @@ Returns the number of returns values.
 static INTVAL
 csr_elements(PARROT_INTERP, ARGIN(PMC *self))
 {
+    ASSERT_ARGS(csr_elements)
     INTVAL size;
     GETATTR_CallSignature_returns_size(interp, self, size);
     return size;
@@ -2977,6 +2980,7 @@ PMC, or STRING storage location.
 static void
 csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(void *value))
 {
+    ASSERT_ARGS(csr_set_pointer_keyed_int)
     void   **values;
     INTVAL   size;
 
@@ -3013,6 +3017,7 @@ Set type of last pushed pointer.
 static void
 csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type)
 {
+    ASSERT_ARGS(csr_push_integer)
     void  **values;
     INTVAL  idx;
 
@@ -3054,6 +3059,7 @@ necessary.
 static void
 csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL value)
 {
+    ASSERT_ARGS(csr_set_integer_keyed_int)
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3078,6 +3084,7 @@ csr_set_integer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, INTVAL va
 static void
 csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL value)
 {
+    ASSERT_ARGS(csr_set_number_keyed_int)
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3102,6 +3109,7 @@ csr_set_number_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, FLOATVAL v
 static void
 csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULLOK(STRING *value))
 {
+    ASSERT_ARGS(csr_set_string_keyed_int)
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3128,6 +3136,7 @@ csr_set_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NULL
 static void
 csr_set_pmc_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN(PMC *value))
 {
+    ASSERT_ARGS(csr_set_pmc_keyed_int)
     void *cell = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr  = UNTAG_CELL(cell);
 
@@ -3164,6 +3173,7 @@ PARROT_CANNOT_RETURN_NULL
 static STRING*
 csr_get_string_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key)
 {
+    ASSERT_ARGS(csr_get_string_keyed_int)
     void *cell  = csr_get_pointer_keyed_int(interp, self, key);
     void *ptr   = UNTAG_CELL(cell);
     return (STRING *)ptr;
@@ -3185,6 +3195,7 @@ PARROT_CANNOT_RETURN_NULL
 static void*
 csr_get_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key)
 {
+    ASSERT_ARGS(csr_get_pointer_keyed_int)
     void   **values;
     INTVAL   size;
 
