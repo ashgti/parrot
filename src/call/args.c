@@ -3217,7 +3217,8 @@ To be removed with deprecated functions.
 
 PARROT_EXPORT
 void
-Parrot_pcc_append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(STRING *type), ARGIN(void *result))
+Parrot_pcc_append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(STRING *type),
+        ARGIN(void *result))
 {
     ASSERT_ARGS(Parrot_pcc_append_result)
     STRING *full_sig;

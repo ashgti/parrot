@@ -1113,7 +1113,8 @@ Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
         case 'V':
         case 'P':
         {
-            Parrot_pcc_append_result(interp, sig_object, Parrot_str_new_constant(interp, "P"), &result);
+            Parrot_pcc_append_result(interp, sig_object, Parrot_str_new_constant(interp, "P"),
+                    &result);
             break;
         }
         default:
