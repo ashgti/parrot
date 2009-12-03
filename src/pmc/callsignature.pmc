@@ -388,6 +388,9 @@ Initializes a newly created CallSignature object.
         attrs->type_tuple      = PMCNULL;
         attrs->positionals     = NULL;
         attrs->num_positionals = 0;
+        attrs->returns_values  = NULL;
+        attrs->returns_size    = 0;
+        attrs->returns_resize_threshold = 0;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
