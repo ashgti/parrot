@@ -2445,25 +2445,29 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         ARGMOD_NULLOK(PMC * parent), ARGMOD_NULLOK(PMC * tailcall))
 {
     ASSERT_ARGS(Parrot_pcc_merge_signature_for_tailcall)
-    if (PMC_IS_NULL(parent) || PMC_IS_NULL(tailcall))
+    if (PMC_IS_NULL(parent) || PMC_IS_NULL(tailcall) || (parent == tailcall))
         return;
     else {
         /* Broke encapuslation. Direct poking into CallSignature is much faster */
-        /* FIXME We are leaking like sieve!!! We have do destroy old returns_values */
         void ** returns_values;
+        void ** tailcall_returns_values;
         INTVAL  returns_size;
-        INTVAL  returns_resize_threshold;
-
         PMC * return_flags;
-        GETATTR_CallSignature_returns_values(interp, parent, returns_values);
-        GETATTR_CallSignature_returns_size(interp, parent, returns_size);
-        GETATTR_CallSignature_returns_resize_threshold(interp, parent, returns_resize_threshold);
-        GETATTR_CallSignature_return_flags(interp, parent, return_flags);
 
-        SETATTR_CallSignature_returns_values(interp, tailcall, returns_values);
-        SETATTR_CallSignature_returns_size(interp, tailcall, returns_size);
-        SETATTR_CallSignature_returns_resize_threshold(interp, tailcall, returns_resize_threshold);
+        GETATTR_CallSignature_returns_size(interp, parent, returns_size);
+        GETATTR_CallSignature_returns_values(interp, parent, returns_values);
+
+        /* Resize tailcall.returns_values to new size */
+        csr_set_integer_native(interp, tailcall, returns_size);
+
+        /* And copy values over it */
+        GETATTR_CallSignature_returns_values(interp, tailcall, tailcall_returns_values);
+        mem_copy_n_typed(tailcall_returns_values, returns_values, returns_size, void**);
+
+        /* Store raw signature */
+        GETATTR_CallSignature_return_flags(interp, parent, return_flags);
         SETATTR_CallSignature_return_flags(interp, tailcall, return_flags);
+
     }
 }
 
