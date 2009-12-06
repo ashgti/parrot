@@ -2863,7 +2863,6 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
          * when initial size is greater than 8. But it's never happen. So, put
          * assert here to be sure */
         PARROT_ASSERT(size < 8);
-        values = csr_allocate_initial_values(interp, self);
         values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
                                  8 * sizeof (void *));
 
