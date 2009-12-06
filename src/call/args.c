@@ -92,11 +92,6 @@ static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_CANNOT_RETURN_NULL
-static void ** csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 static void csr_fill_integer(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
@@ -415,9 +410,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_clone_key_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(key))
-#define ASSERT_ARGS_csr_allocate_initial_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_fill_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
@@ -2845,28 +2837,6 @@ VTABLE functions from CallSignatureReturns. TODO Rename them appropriately.
 
 /*
 
-=item C<static void ** csr_allocate_initial_values(PARROT_INTERP, PMC *self)>
-
-Allocate initial storage for returns in CallSignature.
-
-=cut
-*/
-
-PARROT_CANNOT_RETURN_NULL
-static void **
-csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
-{
-    ASSERT_ARGS(csr_allocate_initial_values)
-    void **values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
-                                 8 * sizeof (void *));
-
-    SETATTR_CallSignature_returns_values(interp, self, values);
-    SETATTR_CallSignature_returns_resize_threshold(interp, self, 8);
-    return values;
-}
-
-/*
-
 =item C<static void** csr_reallocate_return_values(PARROT_INTERP, PMC *self,
 INTVAL size)>
 
@@ -2889,9 +2859,17 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 
     /* Empty. Allocate 8 elements (arbitary number) */
     if (!values) {
+        /* It's slightly wrong. We have to allocate directly from system allocator
+         * when initial size is greater than 8. But it's never happen. So, put
+         * assert here to be sure */
+        PARROT_ASSERT(size < 8);
         values = csr_allocate_initial_values(interp, self);
+        values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
+                                 8 * sizeof (void *));
+
         SETATTR_CallSignature_returns_values(interp, self, values);
         SETATTR_CallSignature_returns_size(interp, self, size);
+        SETATTR_CallSignature_returns_resize_threshold(interp, self, 8);
     }
     else if (size <= resize_threshold) {
         SETATTR_CallSignature_returns_size(interp, self, size);
