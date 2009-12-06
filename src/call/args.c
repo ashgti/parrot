@@ -139,6 +139,13 @@ static STRING* csr_get_string_keyed_int(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static void csr_push_pointer(PARROT_INTERP,
+    ARGIN(PMC *self),
+    ARGIN_NULLOK(void *value),
+    INTVAL type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 static void** csr_reallocate_return_values(PARROT_INTERP,
     ARGIN(PMC *self),
@@ -147,14 +154,6 @@ static void** csr_reallocate_return_values(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 static INTVAL csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void csr_set_pointer(PARROT_INTERP,
-    ARGIN(PMC *self),
-    INTVAL key,
-    ARGIN_NULLOK(void *value),
-    INTVAL type)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -437,13 +436,13 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_csr_get_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_push_pointer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_reallocate_return_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_returns_count __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_pointer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_dissect_aggregate_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -843,29 +842,28 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
          * the result back to the caller. */
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
             case PARROT_ARG_INTVAL:
-                csr_set_pointer(interp, call_object, returns_pos++,
-                        &(CTX_REG_INT(ctx, raw_index)), PARROT_ARG_INTVAL);
+                csr_push_pointer(interp, call_object, &(CTX_REG_INT(ctx, raw_index)),
+                        PARROT_ARG_INTVAL);
                 break;
             case PARROT_ARG_FLOATVAL:
-                csr_set_pointer(interp, call_object, returns_pos++,
-                        &(CTX_REG_NUM(ctx, raw_index)), PARROT_ARG_FLOATVAL);
+                csr_push_pointer(interp, call_object, &(CTX_REG_NUM(ctx, raw_index)),
+                        PARROT_ARG_FLOATVAL);
                 break;
             case PARROT_ARG_STRING:
                 if (arg_flags & PARROT_ARG_NAME) {
                     STRING * string_val = arg_flags & PARROT_ARG_CONSTANT
                                           ? Parrot_pcc_get_string_constant(interp, ctx, raw_index)
                                           : CTX_REG_STR(ctx, raw_index);
-                    csr_set_pointer(interp, call_object, returns_pos++,
-                            string_val, PARROT_ARG_STRING);
+                    csr_push_pointer(interp, call_object, string_val, PARROT_ARG_STRING);
                 }
                 else {
-                    csr_set_pointer(interp, call_object, returns_pos++,
+                    csr_push_pointer(interp, call_object,
                             &(CTX_REG_STR(ctx, raw_index)), PARROT_ARG_STRING);
                 }
                 break;
             case PARROT_ARG_PMC:
-                csr_set_pointer(interp, call_object, returns_pos++,
-                        &(CTX_REG_PMC(ctx, raw_index)), PARROT_ARG_PMC);
+                csr_push_pointer(interp, call_object, &(CTX_REG_PMC(ctx, raw_index)),
+                        PARROT_ARG_PMC);
                 break;
             default:
                 break;
@@ -905,7 +903,6 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     INTVAL       in_return_sig      = 0;
     INTVAL       i;
     int          append_pi          = 1;
-    INTVAL       returns_pos        = 0;
 
     if (!sig_len)
         return call_object;
@@ -924,19 +921,19 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
              * the result back to the caller. */
             switch (type) {
                 case 'I':
-                    csr_set_pointer(interp, call_object, returns_pos++,
+                    csr_push_pointer(interp, call_object,
                             (void *)va_arg(args, INTVAL *), PARROT_ARG_INTVAL);
                     break;
                 case 'N':
-                    csr_set_pointer(interp, call_object, returns_pos++,
+                    csr_push_pointer(interp, call_object,
                             (void *)va_arg(args, FLOATVAL *), PARROT_ARG_FLOATVAL);
                     break;
                 case 'S':
-                    csr_set_pointer(interp, call_object, returns_pos++,
+                    csr_push_pointer(interp, call_object,
                             (void *)va_arg(args, STRING **), PARROT_ARG_STRING);
                     break;
                 case 'P':
-                    csr_set_pointer(interp, call_object, returns_pos++,
+                    csr_push_pointer(interp, call_object,
                             (void *)va_arg(args, PMC **), PARROT_ARG_PMC);
                     break;
                 default:
@@ -2863,6 +2860,7 @@ csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
     void **values = (void **)Parrot_gc_allocate_fixed_size_storage(interp,
                                  8 * sizeof (void *));
 
+    SETATTR_CallSignature_returns_values(interp, self, values);
     SETATTR_CallSignature_returns_resize_threshold(interp, self, 8);
     return values;
 }
@@ -2950,46 +2948,33 @@ csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
 
 /*
 
-=item C<static void csr_set_pointer(PARROT_INTERP, PMC *self, INTVAL key, void
-*value, INTVAL type)>
+=item C<static void csr_push_pointer(PARROT_INTERP, PMC *self, void *value,
+INTVAL type)>
 
-Sets the pointer at position key.  The pointer should point to a storage
+Push pointer to results.  The pointer should point to a storage
 location for a return value -- it must be a pointer to an INTVAL, FLOATVAL,
 PMC, or STRING storage location. C<type> is type of pointer.
+
+TODO Rephrase doc. It's weird.
 
 =cut
 
 */
 
 static void
-csr_set_pointer(PARROT_INTERP, ARGIN(PMC *self), INTVAL key,
-        ARGIN_NULLOK(void *value), INTVAL type)
+csr_push_pointer(PARROT_INTERP, ARGIN(PMC *self), ARGIN_NULLOK(void *value), INTVAL type)
 {
-    ASSERT_ARGS(csr_set_pointer)
+    ASSERT_ARGS(csr_push_pointer)
     void   **values;
     INTVAL   size;
 
     PARROT_ASSERT((type >= 0 && type < 4) || !"Wrong pointer type");
 
-    GETATTR_CallSignature_returns_values(interp, self, values);
-    GETATTR_CallSignature_returns_size(interp,   self, size);
-
-    if (!values) {
-        if (key < 8) {
-            values = csr_allocate_initial_values(interp, self);
-            SETATTR_CallSignature_returns_values(interp, self, values);
-            SETATTR_CallSignature_returns_size(interp, self, key + 1);
-        }
-        else {
-            csr_reallocate_return_values(interp, self, key + 1);
-            GETATTR_CallSignature_returns_values(interp, self, values);
-        }
-    }
-    else if (key >= size)
-        csr_reallocate_return_values(interp, self, key + 1);
+    GETATTR_CallSignature_returns_size(interp, self, size);
+    values = csr_reallocate_return_values(interp, self, size + 1);
 
     /* Tag pointer */
-    values[key] = INTVAL2PTR(void *, PTR2INTVAL(value) | type);
+    values[size] = INTVAL2PTR(void *, PTR2INTVAL(value) | type);
 }
 
 
@@ -3237,7 +3222,7 @@ Parrot_pcc_append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(STRING *ty
                 "invalid signature string element!");
     }
 
-    csr_set_pointer(interp, sig_object, csr_returns_count(interp, sig_object), result, int_type);
+    csr_push_pointer(interp, sig_object, result, int_type);
 }
 
 /*
