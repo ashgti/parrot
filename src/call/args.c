@@ -139,7 +139,8 @@ static STRING* csr_get_string_keyed_int(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void csr_reallocate_return_values(PARROT_INTERP,
+PARROT_CANNOT_RETURN_NULL
+static void** csr_reallocate_return_values(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL size)
         __attribute__nonnull__(1)
@@ -2440,10 +2441,9 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         GETATTR_CallSignature_returns_values(interp, parent, returns_values);
 
         /* Resize tailcall.returns_values to new size */
-        csr_reallocate_return_values(interp, tailcall, returns_size);
+        tailcall_returns_values = csr_reallocate_return_values(interp, tailcall, returns_size);
 
         /* And copy values over it */
-        GETATTR_CallSignature_returns_values(interp, tailcall, tailcall_returns_values);
         mem_copy_n_typed(tailcall_returns_values, returns_values, returns_size, void**);
 
         /* Store raw signature */
@@ -2869,7 +2869,7 @@ csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
 
 /*
 
-=item C<static void csr_reallocate_return_values(PARROT_INTERP, PMC *self,
+=item C<static void** csr_reallocate_return_values(PARROT_INTERP, PMC *self,
 INTVAL size)>
 
 Resizes the array to C<size> elements.
@@ -2878,7 +2878,8 @@ Resizes the array to C<size> elements.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static void**
 csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 {
     ASSERT_ARGS(csr_reallocate_return_values)
@@ -2896,7 +2897,6 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
     }
     else if (size <= resize_threshold) {
         SETATTR_CallSignature_returns_size(interp, self, size);
-        return;
     }
     else {
         void   *old_values;
@@ -2925,6 +2925,8 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
         SETATTR_CallSignature_returns_size(interp, self, size);
         SETATTR_CallSignature_returns_resize_threshold(interp, self, cur);
     }
+
+    return values;
 }
 
 /*
