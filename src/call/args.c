@@ -97,7 +97,31 @@ static void ** csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static INTVAL csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
+static void csr_fill_integer(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    INTVAL value)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_fill_number(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    FLOATVAL value)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_fill_pmc(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    ARGIN_NULLOK(PMC *value))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void csr_fill_string(PARROT_INTERP,
+    ARGIN(PMC *self),
+    INTVAL key,
+    ARGIN_NULLOK(STRING *value))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -119,30 +143,13 @@ static void csr_push_integer(PARROT_INTERP, ARGIN(PMC *self), INTVAL type)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void csr_set_integer_keyed_int(PARROT_INTERP,
-    ARGIN(PMC *self),
-    INTVAL key,
-    INTVAL value)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 static void csr_reallocate_return_values(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL size)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void csr_set_number_keyed_int(PARROT_INTERP,
-    ARGIN(PMC *self),
-    INTVAL key,
-    FLOATVAL value)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void csr_set_pmc_keyed_int(PARROT_INTERP,
-    ARGIN(PMC *self),
-    INTVAL key,
-    ARGIN_NULLOK(PMC *value))
+static INTVAL csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -150,13 +157,6 @@ static void csr_set_pointer_keyed_int(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL key,
     ARGIN_NULLOK(void *value))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void csr_set_string_keyed_int(PARROT_INTERP,
-    ARGIN(PMC *self),
-    INTVAL key,
-    ARGIN_NULLOK(STRING *value))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -421,7 +421,16 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_csr_allocate_initial_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_elements __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_csr_fill_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_fill_number __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_fill_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+#define ASSERT_ARGS_csr_fill_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_get_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -433,22 +442,13 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_csr_push_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_integer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_csr_reallocate_return_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_integer_native __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_number_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_pmc_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_csr_returns_count __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_csr_set_pointer_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(self))
-#define ASSERT_ARGS_csr_set_string_keyed_int __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_dissect_aggregate_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -2883,8 +2883,8 @@ csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
 
 /*
 
-=item C<static void csr_reallocate_return_values(PARROT_INTERP, PMC *self, INTVAL
-size)>
+=item C<static void csr_reallocate_return_values(PARROT_INTERP, PMC *self,
+INTVAL size)>
 
 Resizes the array to C<size> elements.
 
