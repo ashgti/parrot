@@ -97,7 +97,7 @@ static void ** csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static INTVAL csr_elements(PARROT_INTERP, ARGIN(PMC *self))
+static INTVAL csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -126,7 +126,7 @@ static void csr_set_integer_keyed_int(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void csr_set_integer_native(PARROT_INTERP,
+static void csr_reallocate_return_values(PARROT_INTERP,
     ARGIN(PMC *self),
     INTVAL size)
         __attribute__nonnull__(1)
@@ -1656,7 +1656,7 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     GETATTR_CallSignature_return_flags(interp, call_object, result_sig);
 
-    result_count = csr_elements(interp, call_object);
+    result_count = csr_returns_count(interp, call_object);
     PARROT_ASSERT((result_count == 0) || !PMC_IS_NULL(result_sig));
 
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, return_array);
@@ -2454,7 +2454,7 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         GETATTR_CallSignature_returns_values(interp, parent, returns_values);
 
         /* Resize tailcall.returns_values to new size */
-        csr_set_integer_native(interp, tailcall, returns_size);
+        csr_reallocate_return_values(interp, tailcall, returns_size);
 
         /* And copy values over it */
         GETATTR_CallSignature_returns_values(interp, tailcall, tailcall_returns_values);
@@ -2883,7 +2883,7 @@ csr_allocate_initial_values(PARROT_INTERP, ARGIN(PMC *self))
 
 /*
 
-=item C<static void csr_set_integer_native(PARROT_INTERP, PMC *self, INTVAL
+=item C<static void csr_reallocate_return_values(PARROT_INTERP, PMC *self, INTVAL
 size)>
 
 Resizes the array to C<size> elements.
@@ -2893,9 +2893,9 @@ Resizes the array to C<size> elements.
 */
 
 static void
-csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
+csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 {
-    ASSERT_ARGS(csr_set_integer_native)
+    ASSERT_ARGS(csr_reallocate_return_values)
     void    **values = NULL;
     INTVAL    resize_threshold;
 
@@ -2943,7 +2943,7 @@ csr_set_integer_native(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 
 /*
 
-=item C<static INTVAL csr_elements(PARROT_INTERP, PMC *self)>
+=item C<static INTVAL csr_returns_count(PARROT_INTERP, PMC *self)>
 
 Returns the number of returns values.
 
@@ -2952,9 +2952,9 @@ Returns the number of returns values.
 */
 
 static INTVAL
-csr_elements(PARROT_INTERP, ARGIN(PMC *self))
+csr_returns_count(PARROT_INTERP, ARGIN(PMC *self))
 {
-    ASSERT_ARGS(csr_elements)
+    ASSERT_ARGS(csr_returns_count)
     INTVAL size;
     GETATTR_CallSignature_returns_size(interp, self, size);
     return size;
@@ -2990,12 +2990,12 @@ csr_set_pointer_keyed_int(PARROT_INTERP, ARGIN(PMC *self), INTVAL key, ARGIN_NUL
             SETATTR_CallSignature_returns_size(interp, self, key + 1);
         }
         else {
-            csr_set_integer_native(interp, self, key + 1);
+            csr_reallocate_return_values(interp, self, key + 1);
             GETATTR_CallSignature_returns_values(interp, self, values);
         }
     }
     else if (key >= size)
-        csr_set_integer_native(interp, self, key + 1);
+        csr_reallocate_return_values(interp, self, key + 1);
 
     values[key] = value;
 }
@@ -3233,7 +3233,7 @@ Parrot_pcc_append_result(PARROT_INTERP, ARGIN(PMC *sig_object), ARGIN(STRING *ty
     Parrot_str_concat(interp, full_sig, Parrot_str_new_constant(interp, "->"), 0);
     Parrot_str_concat(interp, full_sig, type, 0);
 
-    csr_set_pointer_keyed_int(interp, sig_object, csr_elements(interp, sig_object), result);
+    csr_set_pointer_keyed_int(interp, sig_object, csr_returns_count(interp, sig_object), result);
 
     /* Update returns_flag */
     return_flags = VTABLE_get_attr_str(interp, sig_object, return_flags_name);
