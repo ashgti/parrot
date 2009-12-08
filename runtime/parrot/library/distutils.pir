@@ -3424,6 +3424,11 @@ Return the whole config
 .sub 'newer' :multi(string, pmc)
     .param string target
     .param pmc depends
+    $I0 = does depends, 'array'
+    if $I0 goto L0
+    $S0 = depends
+    .tailcall newer(target, $S0)
+  L0:
     $I0 = stat target, .STAT_EXISTS
     if $I0 goto L1
     .return (0)
@@ -3493,7 +3498,21 @@ Return the whole config
   L1:
     $P0 = new 'OS'
     $I1 = 0o775
+    push_eh _handler
     $P0.'mkdir'(dirname, $I1)
+    pop_eh
+    .return ()
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't mkdir '"
+    $S0 .= dirname
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 =item install
@@ -3544,10 +3563,37 @@ Return the whole config
     say dst
   L1:
     $P0 = new 'FileHandle'
+    push_eh _handler1
     $S0 = $P0.'readall'(src)
+    pop_eh
+    push_eh _handler2
     $P0.'open'(dst, 'w')
+    pop_eh
     $P0.'puts'($S0)
     $P0.'close'()
+    .return ()
+  _handler1:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't open '"
+    $S0 .= src
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
+  _handler2:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't open '"
+    $S0 .= dst
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 =item chmod
@@ -3577,7 +3623,7 @@ Return the whole config
 
 =cut
 
-.sub 'unlink'
+.sub 'unlink' :multi(string)
     .param string filename
     .param int verbose          :named('verbose') :optional
     .param int has_verbose      :opt_flag
@@ -3591,9 +3637,40 @@ Return the whole config
     say filename
   L2:
     new $P0, 'OS'
+    push_eh _handler
     $P0.'rm'(filename)
+    pop_eh
   L1:
     .return ()
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't remove '"
+    $S0 .= filename
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
+.end
+
+.sub 'unlink' :multi(pmc)
+    .param pmc list
+    .param int verbose          :named('verbose') :optional
+    $I0 = does list, 'array'
+    if $I0 goto L1
+    $S0 = list
+    unlink($S0, verbose :named('verbose'))
+    goto L2
+  L1:
+    $P0 = iter list
+  L3:
+    unless $P0 goto L2
+    $S0 = shift $P0
+    unlink($S0, verbose :named('verbose'))
+    goto L3
+  L2:
 .end
 
 =item basename
@@ -3661,7 +3738,21 @@ Return the whole config
     say dirname
   L1:
     new $P0, 'OS'
+    push_eh _handler
     $P0.'chdir'(dirname)
+    pop_eh
+    .return ()
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't chdir '"
+    $S0 .= dirname
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 =item chomp
