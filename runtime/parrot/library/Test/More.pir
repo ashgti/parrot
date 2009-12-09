@@ -141,12 +141,17 @@ comparison.
 If there is a mismatch, the current implementation takes the type of C<left> as
 the proper type for the comparison, converting any numeric arguments to floats.
 Note that there is a hard-coded precision check to avoid certain rounding
-errors.  It's not entirely robust, but it's not completely awful either.
+errors.
 
-Patches very welcome.  Multi-dispatch is a bit tricky here.
+=item C<is( left, right, description, precision )>
 
-This probably doesn't handle all of the comparisons you want, but it's easy to
-add more.
+For C<Float> only, an optional 4th parameter is allowed, a numeric precision.
+If specified, then the floats are only compared within the tolerance of the
+precision: e.g.:
+
+ is(123.456, 123.457, 'close enough?', 1e-2)
+
+will pass.
 
 =cut
 
@@ -179,31 +184,28 @@ add more.
   done:
 .end
 
-.sub is :multi(PMC, Float)
-    .param pmc left
-    .param pmc right
-    .param pmc description :optional
-    .param int have_desc   :opt_flag
-    .param pmc precision   :optional
-    .param int have_prec   :opt_flag
+.sub is :multi(_, Float)
+    .param num    left
+    .param num    right
+    .param string description :optional
+    .param int    have_desc   :opt_flag
+    .param num    precision   :optional
+    .param int    have_prec   :opt_flag
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
-    .local num l, r
+    if have_prec goto check_precision
+
     .local int pass
-    l    = left
-    r    = right
-    pass = iseq l, r
+    pass = iseq left, right
+    goto report
 
-    if     pass      goto report
-    unless have_prec goto report
-
-    .local num diff, prec_num
-    prec_num = precision
-    diff     = l - r
-    diff     = abs diff
-    pass     = isle diff, prec_num
+  check_precision:
+    .local num diff
+    diff = left - right
+    diff = abs diff
+    pass = isle diff, precision
 
   report:
     test.'ok'( pass, description )
@@ -216,7 +218,7 @@ add more.
     l_string    = left
     r_string    = right
 
-    diagnostic = _make_diagnostic( l_string, r_string )
+    diagnostic = _make_diagnostic( left, right )
     test.'diag'( diagnostic )
   done:
 .end
