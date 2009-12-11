@@ -4,11 +4,11 @@ $Id$
 
 =head1 NAME
 
-src/pmc/callsignature.pmc - CallSignature PMC
+src/pmc/callcontext.pmc - CallContext PMC
 
 =head1 DESCRIPTION
 
-The CallSignature PMC is used to store the argument list and argument meta
+The CallContext PMC is used to store the argument list and argument meta
 information for a multiple dispatch call.
 
 =head2 Functions
@@ -380,7 +380,8 @@ get_named_names(PARROT_INTERP, ARGIN(PMC *SELF))
     return result;
 }
 
-pmclass CallSignature provides array provides hash auto_attrs {
+pmclass CallContext provides array provides hash auto_attrs {
+    /* Storage for arguments */
     ATTR struct Pcc_cell *positionals; /* linked list of positionals */
     ATTR PMC    *type_tuple;           /* Cached argument types for MDD */
     ATTR STRING *short_sig;            /* Simple string sig args & returns */
