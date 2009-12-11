@@ -454,7 +454,7 @@ static void
 allocate_registers(PARROT_INTERP, ARGIN(PMC *pmcctx), ARGIN(const INTVAL *number_regs_used))
 {
     ASSERT_ARGS(allocate_registers)
-    Parrot_Context_attributes *ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_CallContext_attributes *ctx = PARROT_CALLCONTEXT(pmcctx);
 
     const size_t size_i = sizeof (INTVAL)   * number_regs_used[REGNO_INT];
     const size_t size_n = sizeof (FLOATVAL) * number_regs_used[REGNO_NUM];
@@ -517,7 +517,7 @@ void
 Parrot_pcc_free_registers(PARROT_INTERP, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(Parrot_pcc_free_registers)
-    Parrot_Context_attributes * const ctx = PARROT_CONTEXT(pmcctx);
+    Parrot_CallContext_attributes * const ctx = PARROT_CALLCONTEXT(pmcctx);
     size_t reg_size;
 
     if (!ctx)
@@ -543,6 +543,8 @@ current context. Note that the register usage C<n_regs_used> is copied.  Use
 the init flag to indicate whether you want to initialize the new context
 (setting its default values and clearing its registers).
 
+TODO: Remove this function!
+
 =cut
 
 */
@@ -554,7 +556,7 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
     ARGIN_NULLOK(PMC *old))
 {
     ASSERT_ARGS(Parrot_alloc_context)
-    PMC            *pmcctx = pmc_new(interp, enum_class_Context);
+    PMC            *pmcctx = pmc_new(interp, enum_class_CallContext);
 
     allocate_registers(interp, pmcctx, number_regs_used);
     init_context(interp, pmcctx, old);
