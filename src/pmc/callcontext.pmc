@@ -81,9 +81,9 @@ typedef struct Pcc_cell
     do { \
         INTVAL num_positionals; \
         Pcc_cell *positionals; \
-        GETATTR_CallSignature_num_positionals((i), (obj), num_positionals); \
-        GETATTR_CallSignature_positionals((i), (obj), positionals); \
-        SETATTR_CallSignature_num_positionals((i), (obj), num_positionals+1); \
+        GETATTR_CallContext_num_positionals((i), (obj), num_positionals); \
+        GETATTR_CallContext_positionals((i), (obj), positionals); \
+        SETATTR_CallContext_num_positionals((i), (obj), num_positionals+1); \
         NEXT_CELL(cell) = NULL; \
         if (positionals) { \
             while (NEXT_CELL(positionals)) { \
@@ -92,18 +92,18 @@ typedef struct Pcc_cell
             NEXT_CELL(positionals) = (cell); \
         } \
         else \
-            SETATTR_CallSignature_positionals((i), (obj), (cell)); \
+            SETATTR_CallContext_positionals((i), (obj), (cell)); \
     } while (0)
 
 #define PREPEND_CELL(i, obj, cell) \
     do { \
         INTVAL num_positionals; \
         Pcc_cell *positionals; \
-        GETATTR_CallSignature_num_positionals((i), (obj), num_positionals); \
-        GETATTR_CallSignature_positionals((i), (obj), positionals); \
-        SETATTR_CallSignature_num_positionals((i), (obj), num_positionals+1); \
+        GETATTR_CallContext_num_positionals((i), (obj), num_positionals); \
+        GETATTR_CallContext_positionals((i), (obj), positionals); \
+        SETATTR_CallContext_num_positionals((i), (obj), num_positionals+1); \
         NEXT_CELL(cell) = positionals; \
-        SETATTR_CallSignature_positionals((i), (obj), (cell)); \
+        SETATTR_CallContext_positionals((i), (obj), (cell)); \
     } while (0)
 
 #define HLL_TYPE(i) Parrot_get_ctx_HLL_type(interp, (i))
@@ -116,18 +116,18 @@ pop_cell(PARROT_INTERP, ARGIN(PMC *SELF))
     Pcc_cell *cell;
     Pcc_cell *prev = NULL;
 
-    GETATTR_CallSignature_positionals(interp, SELF, cell);
+    GETATTR_CallContext_positionals(interp, SELF, cell);
 
     /* no cells */
     if (!cell)
         return NULL;
 
-    GETATTR_CallSignature_num_positionals(interp, SELF, num_positionals);
-    SETATTR_CallSignature_num_positionals(interp, SELF, num_positionals-1);
+    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
+    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals-1);
 
     /* one cell */
     if (!NEXT_CELL(cell)) {
-        SETATTR_CallSignature_positionals(interp, SELF, NULL);
+        SETATTR_CallContext_positionals(interp, SELF, NULL);
         return cell;
     }
 
@@ -142,7 +142,7 @@ pop_cell(PARROT_INTERP, ARGIN(PMC *SELF))
     }
 
     /* should abort here */
-    SETATTR_CallSignature_num_positionals(interp, SELF, num_positionals+1);
+    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals+1);
     return NULL;
 }
 
@@ -152,20 +152,20 @@ shift_cell(PARROT_INTERP, ARGIN(PMC *SELF))
     INTVAL num_positionals;
     Pcc_cell *cell;
 
-    GETATTR_CallSignature_positionals(interp, SELF, cell);
+    GETATTR_CallContext_positionals(interp, SELF, cell);
 
     /* no cells */
     if (!cell)
         return NULL;
 
-    GETATTR_CallSignature_num_positionals(interp, SELF, num_positionals);
-    SETATTR_CallSignature_num_positionals(interp, SELF, num_positionals-1);
+    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
+    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals-1);
 
     /* one cell */
     if (!NEXT_CELL(cell))
-        SETATTR_CallSignature_positionals(interp, SELF, NULL);
+        SETATTR_CallContext_positionals(interp, SELF, NULL);
     else
-        SETATTR_CallSignature_positionals(interp, SELF, NEXT_CELL(cell));
+        SETATTR_CallContext_positionals(interp, SELF, NEXT_CELL(cell));
 
     return cell;
 }
@@ -176,12 +176,12 @@ get_cell_at(PARROT_INTERP, ARGIN(PMC *SELF), INTVAL key)
     INTVAL    i, num_positionals;
     Pcc_cell *cell;
 
-    GETATTR_CallSignature_num_positionals(interp, SELF, num_positionals);
+    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
 
     if (key > num_positionals)
         return NULL;
 
-    GETATTR_CallSignature_positionals(interp, SELF, cell);
+    GETATTR_CallContext_positionals(interp, SELF, cell);
 
     while (key) {
         /* XXX: shouldn't happen */
@@ -295,7 +295,7 @@ get_hash(PARROT_INTERP, ARGIN(PMC *SELF))
 {
     Hash   *hash;
 
-    GETATTR_CallSignature_hash(interp, SELF, hash);
+    GETATTR_CallContext_hash(interp, SELF, hash);
 
     if (!hash) {
         hash = parrot_create_hash(interp,
@@ -304,7 +304,7 @@ get_hash(PARROT_INTERP, ARGIN(PMC *SELF))
             STRING_compare,
             (hash_hash_key_fn)key_hash_STRING);
 
-        SETATTR_CallSignature_hash(interp, SELF, hash);
+        SETATTR_CallContext_hash(interp, SELF, hash);
     }
 
     return hash;
@@ -358,7 +358,7 @@ get_named_names(PARROT_INTERP, ARGIN(PMC *SELF))
     Hash *hash;
     PMC  *result = PMCNULL;
 
-    GETATTR_CallSignature_hash(interp, SELF, hash);
+    GETATTR_CallContext_hash(interp, SELF, hash);
 
     /* yes, this *looks* risky, but it's a Parrot STRING hash internally */
     if (hash && hash->entries) {
@@ -398,7 +398,7 @@ pmclass CallContext provides array provides hash auto_attrs {
 
 =item C<void init()>
 
-Initializes a newly created CallSignature object.
+Initializes a newly created CallContext object.
 
 =cut
 
@@ -510,7 +510,7 @@ Mark any referenced strings and PMCs.
 
 =item C<void set_string_native(STRING *value)>
 
-Sets the short signature for the CallSignature.
+Sets the short signature for the CallContext.
 
 =cut
 
@@ -524,7 +524,7 @@ Sets the short signature for the CallSignature.
 
 =item C<STRING *get_string()>
 
-Returns the short signature for the CallSignature.
+Returns the short signature for the CallContext.
 
 =cut
 
@@ -577,7 +577,7 @@ Returns the short signature for the CallSignature.
 
 =item C<void set_pmc(PMC *value)>
 
-Sets a fixed-size array of integer types (a type tuple) for the CallSignature.
+Sets a fixed-size array of integer types (a type tuple) for the CallContext.
 
 =cut
 
@@ -592,7 +592,7 @@ Sets a fixed-size array of integer types (a type tuple) for the CallSignature.
 =item C<PMC *get_pmc()>
 
 Returns a fixed-size array of integer types (a type tuple) for the
-CallSignature.
+CallContext.
 
 =cut
 
