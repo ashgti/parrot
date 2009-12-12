@@ -600,7 +600,6 @@ Initialise new context from old.
 */
 
 PARROT_CANNOT_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
 PMC *
 Parrot_pcc_init_context(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *old))
 {
