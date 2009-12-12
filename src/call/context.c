@@ -567,6 +567,30 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const INTVAL *number_regs_used),
 
 /*
 
+=item C<PMC * Parrot_pcc_allocate_empty_context(PARROT_INTERP, PMC *old)>
+
+Allocates and returns a new context.  Does not set this new context as the
+current context. 
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC *
+Parrot_pcc_allocate_empty_context(PARROT_INTERP, ARGIN_NULLOK(PMC *old))
+{
+    ASSERT_ARGS(Parrot_pcc_allocate_empty_context)
+    PMC            *pmcctx = pmc_new(interp, enum_class_CallContext);
+
+    init_context(interp, pmcctx, old);
+
+    return pmcctx;
+}
+
+/*
+
 =item C<PMC * Parrot_set_new_context(PARROT_INTERP, const INTVAL
 *number_regs_used)>
 
