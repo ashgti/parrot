@@ -483,6 +483,14 @@ void Parrot_pcc_free_registers(PARROT_INTERP, ARGIN(PMC *pmcctx))
 
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
+PMC * Parrot_pcc_init_context(PARROT_INTERP,
+    ARGIN(PMC *ctx),
+    ARGIN_NULLOK(PMC *old))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_set_new_context(PARROT_INTERP,
     ARGIN(const INTVAL *number_regs_used))
         __attribute__nonnull__(1)
@@ -554,6 +562,9 @@ PMC * Parrot_set_new_context(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_free_registers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmcctx))
+#define ASSERT_ARGS_Parrot_pcc_init_context __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_set_new_context __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(number_regs_used))

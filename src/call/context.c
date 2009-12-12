@@ -591,6 +591,28 @@ Parrot_pcc_allocate_empty_context(PARROT_INTERP, ARGIN_NULLOK(PMC *old))
 
 /*
 
+=item C<PMC * Parrot_pcc_init_context(PARROT_INTERP, PMC *ctx, PMC *old)>
+
+Initialise new context from old.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC *
+Parrot_pcc_init_context(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN_NULLOK(PMC *old))
+{
+    ASSERT_ARGS(Parrot_pcc_init_context)
+
+    init_context(interp, ctx, old);
+
+    return ctx;
+}
+
+/*
+
 =item C<PMC * Parrot_set_new_context(PARROT_INTERP, const INTVAL
 *number_regs_used)>
 
