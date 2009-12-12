@@ -386,7 +386,8 @@ Invokes the subroutine.
 
         /* plain subroutine call
          * create new context, place it in interpreter */
-        context = CURRENT_CONTEXT(INTERP);
+        context = Parrot_pcc_get_signature(INTERP, CURRENT_CONTEXT(INTERP));
+        CURRENT_CONTEXT(INTERP) = context;
         Parrot_pcc_allocate_registers(INTERP, context, sub->n_regs_used);
         Parrot_pcc_set_sub(interp, context, SELF);
         Parrot_pcc_set_continuation(interp, context, ccont);

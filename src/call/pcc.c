@@ -282,7 +282,6 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     Parrot_pcc_set_continuation(interp, ctx, ret_cont);
     interp->current_cont         = NEED_CONTINUATION;
     PARROT_CONTINUATION(ret_cont)->from_ctx = ctx;
-    CURRENT_CONTEXT(interp) = ctx;
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
