@@ -88,9 +88,8 @@ static void assign_default_result_value(PARROT_INTERP,
         FUNC_MODIFIES(*results);
 
 PARROT_CAN_RETURN_NULL
-static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+static PMC* clone_key_arg(PARROT_INTERP, ARGIN_NULLOK(PMC *key))
+        __attribute__nonnull__(1);
 
 static void csr_fill_integer(PARROT_INTERP,
     ARGIN(PMC *self),
@@ -408,8 +407,7 @@ static STRING** string_param_from_op(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(results))
 #define ASSERT_ARGS_clone_key_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(key))
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_csr_fill_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
@@ -2805,7 +2803,7 @@ tailcalled function or method.
 
 PARROT_CAN_RETURN_NULL
 static PMC*
-clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
+clone_key_arg(PARROT_INTERP, ARGIN_NULLOK(PMC *key))
 {
     ASSERT_ARGS(clone_key_arg)
     PMC *t;
