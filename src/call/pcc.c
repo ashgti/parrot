@@ -273,15 +273,14 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     ASSERT_ARGS(Parrot_pcc_invoke_from_sig_object)
 
     opcode_t    *dest;
-    PMC         *ctx      = call_object;
     PMC * const  ret_cont = new_ret_continuation_pmc(interp, NULL);
 
-    Parrot_pcc_init_context(interp, call_object, CURRENT_CONTEXT(interp));
     Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_object);
-    Parrot_pcc_set_caller_ctx(interp, ctx, CURRENT_CONTEXT(interp));
-    Parrot_pcc_set_continuation(interp, ctx, ret_cont);
-    interp->current_cont         = NEED_CONTINUATION;
-    PARROT_CONTINUATION(ret_cont)->from_ctx = ctx;
+    Parrot_pcc_init_context(interp, call_object, CURRENT_CONTEXT(interp));
+    Parrot_pcc_set_caller_ctx(interp, call_object, CURRENT_CONTEXT(interp));
+    Parrot_pcc_set_continuation(interp, call_object, ret_cont);
+    interp->current_cont = ret_cont;
+    CURRENT_CONTEXT(interp) = call_object;
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
@@ -298,7 +297,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         Interp_core_SET(interp, old_core);
     }
-    Parrot_pcc_set_signature(interp, ctx, NULL);
+    //Parrot_pcc_set_signature(interp, ctx, NULL);
     Parrot_pop_context(interp);
 }
 
