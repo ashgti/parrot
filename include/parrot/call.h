@@ -82,6 +82,15 @@ void Parrot_pcc_invoke_sub_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
+void Parrot_pcc_prepare_call(PARROT_INTERP,
+    ARGIN(PMC *call_object),
+    ARGIN(PMC *ret_cont),
+    ARGIN_NULLOK(PMC *current_object))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
 void Parrot_PCCINVOKE(PARROT_INTERP,
     ARGIN(PMC* pmc),
     ARGMOD(STRING *method_name),
@@ -109,6 +118,10 @@ void Parrot_PCCINVOKE(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(sub_obj) \
     , PARROT_ASSERT_ARG(sig))
+#define ASSERT_ARGS_Parrot_pcc_prepare_call __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(call_object) \
+    , PARROT_ASSERT_ARG(ret_cont))
 #define ASSERT_ARGS_Parrot_PCCINVOKE __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc) \

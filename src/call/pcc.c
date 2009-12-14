@@ -253,6 +253,34 @@ do_run_ops(PARROT_INTERP, ARGIN(PMC *sub_obj))
 }
 
 /*
+ 
+=item C<void Parrot_pcc_prepare_call(PARROT_INTERP, PMC *call_object, PMC
+*ret_cont, PMC *current_object)>
+
+Prepare and push CallContext for invoke Sub.
+
+TODO Invent better name for it.
+
+=cut
+
+*/
+PARROT_EXPORT
+void
+Parrot_pcc_prepare_call(PARROT_INTERP, ARGIN(PMC *call_object),
+        ARGIN(PMC *ret_cont), ARGIN_NULLOK(PMC *current_object))
+{
+    ASSERT_ARGS(Parrot_pcc_prepare_call)
+
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_object);
+    Parrot_pcc_init_context(interp, call_object, CURRENT_CONTEXT(interp));
+    Parrot_pcc_set_caller_ctx(interp, call_object, CURRENT_CONTEXT(interp));
+    Parrot_pcc_set_continuation(interp, call_object, ret_cont);
+    interp->current_cont    = ret_cont;
+    interp->current_object  = current_object;
+    CURRENT_CONTEXT(interp) = call_object;
+}
+
+/*
 
 =item C<void Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, PMC *sub_obj, PMC
 *call_object)>
@@ -275,12 +303,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     opcode_t    *dest;
     PMC * const  ret_cont = new_ret_continuation_pmc(interp, NULL);
 
-    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_object);
-    Parrot_pcc_init_context(interp, call_object, CURRENT_CONTEXT(interp));
-    Parrot_pcc_set_caller_ctx(interp, call_object, CURRENT_CONTEXT(interp));
-    Parrot_pcc_set_continuation(interp, call_object, ret_cont);
-    interp->current_cont = ret_cont;
-    CURRENT_CONTEXT(interp) = call_object;
+    Parrot_pcc_prepare_call(interp, call_object, ret_cont, NULL);
 
     /* Invoke the function */
     dest = VTABLE_invoke(interp, sub_obj, NULL);
