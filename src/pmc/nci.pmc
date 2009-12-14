@@ -351,6 +351,10 @@ class, the PMC arguments are shifted down.
             cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
             next = VTABLE_invoke(INTERP, cont, next);
         }
+        else {
+            /* otherwise pop used context */
+            Parrot_pop_context(INTERP);
+        }
 
         return (opcode_t *)next;
     }

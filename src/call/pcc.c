@@ -297,8 +297,6 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         Interp_core_SET(interp, old_core);
     }
-    //Parrot_pcc_set_signature(interp, ctx, NULL);
-    Parrot_pop_context(interp);
 }
 
 /*
