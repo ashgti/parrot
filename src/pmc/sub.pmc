@@ -478,8 +478,10 @@ Invokes the subroutine.
                 Parrot_pcc_dec_recursion_depth(INTERP, context);
 
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-                //Parrot_pcc_set_caller_ctx(interp, context,
-                //        Parrot_pcc_get_caller_ctx(interp, caller_ctx));
+                /* Weird code to set parent to grand-parent */
+                Parrot_pcc_set_caller_ctx(interp, context,
+                        Parrot_pcc_get_caller_ctx(interp,
+                                Parrot_pcc_get_caller_ctx(interp, context)));
             }
         }
 
