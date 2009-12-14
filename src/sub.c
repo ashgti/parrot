@@ -396,7 +396,8 @@ Parrot_find_pad(PARROT_INTERP, ARGIN(STRING *lex_name), ARGIN(PMC *ctx))
         PMC * const lex_pad = Parrot_pcc_get_lex_pad(interp, ctx);
         PMC * outer         = Parrot_pcc_get_outer_ctx(interp, ctx);
 
-        if (!outer)
+        /* Second check is temporary workaround for cyclic contexts */
+        if (!outer || (outer == ctx))
             return lex_pad;
 
         if (!PMC_IS_NULL(lex_pad))
