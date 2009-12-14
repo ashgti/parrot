@@ -50,6 +50,7 @@ op callmethodcc(invar PMC, in STR) :object_base :flow {
     PMC      * const object     = $1;
     STRING   * const meth       = $2;
     opcode_t * const next       = expr NEXT();
+    PMC      * call_object      = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
 
     PMC      * const method_pmc = VTABLE_find_method(interp, object, meth);
     opcode_t *dest              = NULL;
@@ -69,8 +70,7 @@ op callmethodcc(invar PMC, in STR) :object_base :flow {
         }
     }
     else {
-        interp->current_object = object;
-        interp->current_cont   = NEED_CONTINUATION;
+        Parrot_pcc_prepare_call(interp, call_object, new_ret_continuation_pmc(interp, next), object);
         dest                   = VTABLE_invoke(interp, method_pmc, next);
     }
     goto ADDRESS(dest);
@@ -79,9 +79,9 @@ op callmethodcc(invar PMC, in STR) :object_base :flow {
 op callmethodcc(invar PMC, invar PMC) :object_base :flow {
     opcode_t        *dest;
     opcode_t * const next  = expr NEXT();
+    PMC      * call_object      = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
 
-    interp->current_object = $1;
-    interp->current_cont   = NEED_CONTINUATION;
+    Parrot_pcc_prepare_call(interp, call_object, new_ret_continuation_pmc(interp, next), $1);
     dest                   = VTABLE_invoke(interp, $2, next);
 
     goto ADDRESS(dest);
@@ -91,6 +91,7 @@ op callmethod(invar PMC, in STR, invar PMC) :object_base :flow {
     PMC      * const object     = $1;
     STRING   * const meth       = $2;
     opcode_t * const next       = expr NEXT();
+    PMC      * call_object      = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
 
     PMC      * const method_pmc = VTABLE_find_method(interp, object, meth);
     opcode_t *dest              = NULL;
@@ -102,8 +103,7 @@ op callmethod(invar PMC, in STR, invar PMC) :object_base :flow {
             VTABLE_get_string(interp, VTABLE_get_class(interp, object)));
     }
     else {
-        interp->current_object = object;
-        interp->current_cont = $3;
+        Parrot_pcc_prepare_call(interp, call_object, $3, object);
         dest = (opcode_t *)VTABLE_invoke(interp, method_pmc, next);
     }
     goto ADDRESS(dest);
@@ -113,11 +113,11 @@ op callmethod(invar PMC, invar PMC, invar PMC) :object_base :flow {
     PMC      * const object     = $1;
     PMC      * const method_pmc = $2;
     opcode_t * const next       = expr NEXT();
+    PMC      * call_object      = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
 
     opcode_t *dest;
 
-    interp->current_object = object;
-    interp->current_cont = $3;
+    Parrot_pcc_prepare_call(interp, call_object, $3, object);
     dest = (opcode_t *)VTABLE_invoke(interp, method_pmc, next);
     goto ADDRESS(dest);
 }
