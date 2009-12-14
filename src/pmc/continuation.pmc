@@ -235,14 +235,13 @@ destination to continue execution.
         PMC      *to_ctx   = cc->to_ctx;
         opcode_t *pc       = cc->address;
         PMC      *call_obj = cc->to_call_object;
-        PMC      *from_obj = Parrot_pcc_get_signature(interp, from_ctx);
         UNUSED(next)
 
         Parrot_continuation_check(interp, SELF);
         Parrot_continuation_rewind_environment(interp, SELF);
 
-        if (!PMC_IS_NULL(from_obj)) {
-            STRING *string_sig = VTABLE_get_string(INTERP, from_obj);
+        if (!PMC_IS_NULL(from_ctx)) {
+            STRING *string_sig = VTABLE_get_string(INTERP, from_ctx);
             /* If there is no string - there is no args */
             if (string_sig) {
                 PMC *raw_sig, *invalid_sig;
@@ -253,7 +252,7 @@ destination to continue execution.
                     call_obj = Parrot_pcc_build_sig_object_returns_from_op(INTERP, call_obj,
                         Parrot_pcc_get_pmc_constant(INTERP, to_ctx, pc[1]), pc);
 
-                Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_obj);
+                Parrot_pcc_fill_returns_from_continuation(interp, call_obj, raw_sig, from_ctx);
             }
         }
 
