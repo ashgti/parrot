@@ -2421,23 +2421,53 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         return;
     else {
         /* Broke encapuslation. Direct poking into CallContext is much faster */
-        void ** returns_values;
-        void ** tailcall_returns_values;
-        INTVAL  returns_size;
-        PMC * return_flags;
+        /* In tailcall we don't push freshly created CallContext. Instead we
+         * are copying parameters into current one and destroy new.
+         * Ok-ok. Not actually copying, but swapping to avoid memory
+         * management hassle */
+        struct Pcc_cell *pos1, *pos2;
+        PMC      *pmc1, *pmc2;
+        STRING   *string1, *string2;
+        INTVAL    int1, int2;
+        Hash     *hash1, *hash2;
 
-        GETATTR_CallContext_returns_size(interp, parent, returns_size);
-        GETATTR_CallContext_returns_values(interp, parent, returns_values);
+        GETATTR_CallContext_positionals(interp, parent, pos1);
+        GETATTR_CallContext_positionals(interp, tailcall, pos2);
+        SETATTR_CallContext_positionals(interp, parent, pos2);
+        SETATTR_CallContext_positionals(interp, tailcall, pos1);
 
-        /* Resize tailcall.returns_values to new size */
-        tailcall_returns_values = csr_reallocate_return_values(interp, tailcall, returns_size);
+        GETATTR_CallContext_type_tuple(interp, parent, pmc1);
+        GETATTR_CallContext_type_tuple(interp, tailcall, pmc2);
+        SETATTR_CallContext_type_tuple(interp, parent, pmc2);
+        SETATTR_CallContext_type_tuple(interp, tailcall, pmc1);
 
-        /* And copy values over it */
-        mem_copy_n_typed(tailcall_returns_values, returns_values, returns_size, void**);
+        GETATTR_CallContext_short_sig(interp, parent, string1);
+        GETATTR_CallContext_short_sig(interp, tailcall, string2);
+        SETATTR_CallContext_short_sig(interp, parent, string2);
+        SETATTR_CallContext_short_sig(interp, tailcall, string1);
 
-        /* Store raw signature */
-        GETATTR_CallContext_return_flags(interp, parent, return_flags);
-        SETATTR_CallContext_return_flags(interp, tailcall, return_flags);
+        GETATTR_CallContext_arg_flags(interp, parent, pmc1);
+        GETATTR_CallContext_arg_flags(interp, tailcall, pmc2);
+        SETATTR_CallContext_arg_flags(interp, parent, pmc2);
+        SETATTR_CallContext_arg_flags(interp, tailcall, pmc1);
+
+        /* XXX Do we need it? */
+        /*
+        GETATTR_CallContext_return_flags(interp, parent, pmc1);
+        GETATTR_CallContext_return_flags(interp, tailcall, pmc2);
+        SETATTR_CallContext_return_flags(interp, parent, pmc2);
+        SETATTR_CallContext_return_flags(interp, tailcall, pmc1);
+        */
+
+        GETATTR_CallContext_hash(interp, parent, hash1);
+        GETATTR_CallContext_hash(interp, tailcall, hash2);
+        SETATTR_CallContext_hash(interp, parent, hash2);
+        SETATTR_CallContext_hash(interp, tailcall, hash1);
+
+        GETATTR_CallContext_num_positionals(interp, parent, int1);
+        GETATTR_CallContext_num_positionals(interp, tailcall, int2);
+        SETATTR_CallContext_num_positionals(interp, parent, int2);
+        SETATTR_CallContext_num_positionals(interp, tailcall, int1);
 
     }
 }
