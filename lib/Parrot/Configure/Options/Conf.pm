@@ -86,6 +86,7 @@ Compile Options:
 
 Parrot Options:
 
+   --pirc=(imcc|pirc)   Select compiler to use for PIR (defaults to imcc)
    --intval=(type)      Use the given type for INTVAL
    --floatval=(type)    Use the given type for FLOATVAL
    --opcode=(type)      Use the given type for opcodes

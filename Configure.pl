@@ -327,6 +327,10 @@ ops. Useful when debugging internals.
 
 =over 4
 
+=item C<--pirc=(imcc|pirc)>
+
+Select the compiler to use for compiling PIR and PASM (Defaults to imcc).
+
 =item C<--intval=(type)>
 
 Use the given type for C<INTVAL>.

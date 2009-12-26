@@ -60,6 +60,7 @@ our @shared_valid_options = qw{
     ops
     optimize
     parrot_is_shared
+    pirc
     prefix
     profile
     sbindir

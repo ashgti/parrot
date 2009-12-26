@@ -33,6 +33,17 @@ specifically by including this C<PIR> code:
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
 
+=head1 Configuration
+
+=over 4
+
+=item C<--pirc> option [experimental]
+
+This option allows the developer to switch between using IMCC and PIRC.
+PIRC is considered experimental and is not supported.
+
+=back 
+
 =head1 PMCS
 
 =over 4

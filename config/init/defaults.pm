@@ -264,6 +264,8 @@ sub runstep {
 
     $conf->data->set( 'archname', $Config{archname});
 
+    $conf->data->set( 'pirc', 'imcc'); 
+
     # adjust archname, cc and libs for e.g. --m=32
     # remember corrected archname - jit.pm was using $Config('archname')
     _64_bit_adjustments($conf);

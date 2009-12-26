@@ -468,7 +468,8 @@ O_FILES := \
     $(IO_O_FILES) \
     $(CLASS_O_FILES) \
     $(ENCODING_O_FILES) \
-    $(IMCC_O_FILES)
+    $(IMCC_O_FILES) \
+    $(PIRC_O_FILES)
 
 OPS_FILES := @ops@ $(GEN_OPSFILES)
 
@@ -487,8 +488,9 @@ PBCMERGE            := $(CUR_DIR)/pbc_merge$(EXE)
 PDB                 := $(CUR_DIR)/parrot_debugger$(EXE)
 PBC_TO_EXE          := $(CUR_DIR)/pbc_to_exe$(EXE)
 PARROT_CONFIG       := $(CUR_DIR)/parrot_config$(EXE)
-PIRC                := $(CUR_DIR)/pirc$(EXE)
 NQP                 := $(CUR_DIR)/parrot-nqp$(EXE)
+# XXX Eventually eliminate this, as it should be bundled in PARROT
+PIRC                := $(CUR_DIR)/pirc$(EXE)
 
 # Installable executables
 INSTALLABLEPARROT   := $(CUR_DIR)/installable_parrot$(EXE)

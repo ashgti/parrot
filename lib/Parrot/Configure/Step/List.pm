@@ -13,6 +13,7 @@ my @steps = qw(
     init::install
     init::hints
     init::headers
+    init::pirc
     inter::progs
     inter::make
     inter::lex
