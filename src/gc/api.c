@@ -337,6 +337,9 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
       case INF:
         Parrot_gc_inf_init(interp);
         break;
+      case BOEHM_GC:
+        Parrot_gc_boehm_init(interp);
+        break;
       default:
         /*die horribly because of invalid GC core specified*/
         break;
@@ -366,6 +369,43 @@ Parrot_gc_finalize(PARROT_INTERP)
         interp->gc_sys->finalize_gc_system(interp);
 }
 
+/*
+
+=item C<void Parrot_gc_switch(PARROT_INTERP, INTVAL gc)>
+
+Switch GC to different implementations.
+
+Ugly hack because command-line args parsed after initializing GC.
+
+=cut
+
+*/
+PARROT_EXPORT
+void
+Parrot_gc_switch(PARROT_INTERP, INTVAL gc)
+{
+    ASSERT_ARGS(Parrot_gc_switch)
+
+    /* Finalize old GC */
+    Parrot_gc_finalize(interp);
+
+    /*Call appropriate initialization function for GC subsystem*/
+    switch (gc) {
+      case MS:
+        Parrot_gc_ms_init(interp);
+        break;
+      case INF:
+        Parrot_gc_inf_init(interp);
+        break;
+      case BOEHM_GC:
+        Parrot_gc_boehm_init(interp);
+        break;
+      default:
+        /*die horribly because of invalid GC core specified*/
+        break;
+    }
+
+}
 
 /*
 
