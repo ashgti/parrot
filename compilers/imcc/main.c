@@ -38,6 +38,9 @@ IMCC helpers.
 #include "pbc.h"
 #include "parser.h"
 
+/* This is really bad include. But we need enum with GC cores */
+#include "../../src/gc/gc_private.h"
+
 extern int yydebug;
 
 /* HEADERIZER HFILE: none */
@@ -230,6 +233,7 @@ help(void)
     printf(
     "    -w --warnings\n"
     "    -G --no-gc\n"
+    "    -g --gc ms|inf|boehm\n"
     "       --gc-debug\n"
     "       --leak-test|--destroy-at-end\n"
     "    -. --wait    Read a keystroke before starting\n"
@@ -292,6 +296,7 @@ static struct longopt_opt_decl options[] = {
     { 'D', 'D', OPTION_optional_FLAG, { "--parrot-debug" } },
     { 'E', 'E', (OPTION_flags)0, { "--pre-process-only" } },
     { 'G', 'G', (OPTION_flags)0, { "--no-gc" } },
+    { 'g', 'g', OPTION_required_FLAG, { "--gc" } },
     { 'I', 'I', OPTION_required_FLAG, { "--include" } },
     { 'L', 'L', OPTION_required_FLAG, { "--library" } },
     { 'O', 'O', OPTION_optional_FLAG, { "--optimize" } },
@@ -357,6 +362,7 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
 {
     struct longopt_opt_info opt  = LONGOPT_OPT_INFO_INIT;
     INTVAL                  core = 0;
+    INTVAL                  gc   = MS;
     int                     status;
 
     if (*argc == 1) {
@@ -399,6 +405,20 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
                         "main: Unrecognized runcore '%s' specified."
                         "\n\nhelp: parrot -h\n", opt.opt_arg);
             break;
+
+          case 'g':
+            if (STREQ(opt.opt_arg, "ms"))
+                gc = MS;
+            else if (STREQ(opt.opt_arg, "inf"))
+                gc = INF;
+            else if (STREQ(opt.opt_arg, "boehm"))
+                gc = BOEHM_GC;
+            else
+                Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                        "main: Unrecognized GC '%s' specified."
+                        "\n\nhelp: parrot -h\n", opt.opt_arg);
+            break;
+
           case 't':
             if (opt.opt_arg && is_all_hex_digits(opt.opt_arg))
                 SET_TRACE(strtoul(opt.opt_arg, NULL, 16));
@@ -558,6 +578,7 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
     *argv += opt.opt_index;
 
     Parrot_set_run_core(interp, (Parrot_Run_core_t) core);
+    Parrot_gc_switch(interp, gc);
     return (*argv)[0];
 }
 
