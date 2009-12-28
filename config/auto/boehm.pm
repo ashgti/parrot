@@ -81,6 +81,7 @@ sub runstep {
         $conf->data->add( ' ', ccflags => '-I/usr/include/gc' );
     }
     $self->set_result($has_boehm ? 'yes' : 'no');
+    $conf->data->set( HAS_BOEHM_GC => $has_boehm);
 
     return 1;
 }
