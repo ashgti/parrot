@@ -386,6 +386,10 @@ Parrot_gc_switch(PARROT_INTERP, INTVAL gc)
 {
     ASSERT_ARGS(Parrot_gc_switch)
 
+    /* Don't switch into default */
+    if (gc == PARROT_GC_DEFAULT_TYPE)
+        return;
+
     /* Finalize old GC */
     Parrot_gc_finalize(interp);
 
@@ -405,6 +409,9 @@ Parrot_gc_switch(PARROT_INTERP, INTVAL gc)
         break;
     }
 
+    initialize_var_size_pools(interp);
+    initialize_fixed_size_pools(interp);
+    Parrot_gc_initialize_fixed_size_pools(interp, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
