@@ -123,7 +123,7 @@ gc_boehm_add_free_object(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool),
 {
     ASSERT_ARGS(gc_boehm_add_free_object)
     if (to_add)
-        free(to_add);
+        GC_FREE(to_add);
 }
 
 /*
