@@ -17,7 +17,7 @@ This code plugs Boehm GC into Parrot.
 #include "parrot/parrot.h"
 #include "gc_private.h"
 
-#if HAS_BOEHM_GC
+#ifdef PARROT_HAS_BOEHM_GC
 
 #include <gc.h>
 
@@ -33,7 +33,8 @@ static void gc_boehm_add_free_object(SHIM_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
 
-static void gc_boehm_alloc_objects(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
+static void gc_boehm_alloc_objects(SHIM_INTERP,
+    ARGMOD(Fixed_Size_Pool *pool))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
@@ -61,7 +62,8 @@ static void gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 #define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#define ASSERT_ARGS_gc_boehm_more_traceable_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_gc_boehm_more_traceable_objects \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_gc_boehm_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
@@ -100,8 +102,8 @@ gc_boehm_mark_and_sweep(SHIM_INTERP, UINTVAL flags)
 
 /*
 
-=item C<static void gc_boehm_add_free_object(PARROT_INTERP, Fixed_Size_Pool *pool,
-void *to_add)>
+=item C<static void gc_boehm_add_free_object(PARROT_INTERP, Fixed_Size_Pool
+*pool, void *to_add)>
 
 Manually frees a chunk of memory. Normally this would return the memory
 to the free list of the pool, but in this case we just return it to the
@@ -152,12 +154,13 @@ static void *
 gc_boehm_get_free_object(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 {
     ASSERT_ARGS(gc_boehm_get_free_object)
-    return GC_MALLOC(pool->object_size, 1);
+    return GC_MALLOC(pool->object_size);
 }
 
 /*
 
-=item C<static void gc_boehm_alloc_objects(PARROT_INTERP, Fixed_Size_Pool *pool)>
+=item C<static void gc_boehm_alloc_objects(PARROT_INTERP, Fixed_Size_Pool
+*pool)>
 
 Allocates a new arena of objects from the system. This function is only
 really used internally by the core, the API functions don't need to call
@@ -179,8 +182,8 @@ gc_boehm_alloc_objects(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 
 /*
 
-=item C<static void gc_boehm_more_traceable_objects(PARROT_INTERP, Fixed_Size_Pool
-*pool)>
+=item C<static void gc_boehm_more_traceable_objects(PARROT_INTERP,
+Fixed_Size_Pool *pool)>
 
 Would normally try to find new traceable objects by first running a GC sweep
 and then allocating a new arena from the system. Neither of these are
