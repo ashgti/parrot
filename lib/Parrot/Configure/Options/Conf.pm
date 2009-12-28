@@ -105,6 +105,7 @@ External Library Options:
    --without-gmp        Build parrot without GMP support
    --without-opengl     Build parrot without OpenGL support (GL/GLU/GLUT)
    --without-pcre       Build parrot without pcre support
+   --without-boehm-gc   Build parrot without Boehm GC support
 
 ICU Options:
 

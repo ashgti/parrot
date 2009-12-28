@@ -45,6 +45,7 @@ my @steps = qw(
     auto::cgoto
     auto::inline
     auto::gc
+    auto::boehm
     auto::memalign
     auto::signal
     auto::socklen_t
