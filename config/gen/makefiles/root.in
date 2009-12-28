@@ -473,6 +473,7 @@ INTERP_O_FILES := \
     $(SRC_DIR)/gc/api$(O) \
     $(SRC_DIR)/gc/gc_ms$(O) \
     $(SRC_DIR)/gc/gc_inf$(O) \
+    $(SRC_DIR)/gc/gc_boehm$(O) \
     $(SRC_DIR)/gc/mark_sweep$(O) \
     $(SRC_DIR)/gc/system$(O) \
     $(SRC_DIR)/global$(O) \
@@ -1148,6 +1149,8 @@ $(SRC_DIR)/gc/mark_sweep$(O) : $(PARROT_H_HEADERS) $(SRC_DIR)/gc/gc_private.h
 $(SRC_DIR)/gc/gc_ms$(O) : $(PARROT_H_HEADERS) $(SRC_DIR)/gc/gc_private.h
 
 $(SRC_DIR)/gc/gc_inf$(O) : $(PARROT_H_HEADERS) $(SRC_DIR)/gc/gc_private.h
+
+$(SRC_DIR)/gc/gc_boehm$(O) : $(PARROT_H_HEADERS) $(SRC_DIR)/gc/gc_private.h
 
 $(SRC_DIR)/gc/api$(O) : $(PARROT_H_HEADERS) $(SRC_DIR)/gc/gc_private.h
 
