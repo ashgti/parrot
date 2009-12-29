@@ -71,6 +71,7 @@ sub get_test_prog_args {
 
     $args =~ s/-O/-O$opts{O}/ if exists $opts{O};
     $args =~ s/-D/-D$opts{D}/;
+    $args =~ s/-G/--gc=$opts{G}/ if exists $opts{G};
     $args .= ' --gc-debug'    if $gc_debug;
     ## no critic qw(Bangs::ProhibitFlagComments)
     # XXX find better way
