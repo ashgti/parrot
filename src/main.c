@@ -24,6 +24,10 @@ Start Parrot
 #include "parrot/embed.h"
 #include "parrot/imcc.h"
 
+#ifdef PARROR_HAS_BOEHM_GC
+  #include <gc.h>
+#endif
+
 /*
 
 =item C<int main(int argc, char * argv[])>
@@ -40,6 +44,11 @@ main(int argc, char * argv[])
     const char *sourcefile;
     Interp     *interp;
     int         status;
+
+#ifdef PARROR_HAS_BOEHM_GC
+    GC_init();
+    GC_enable_incremental();
+#endif
 
     /* internationalization setup */
     /* setlocale(LC_ALL, ""); */

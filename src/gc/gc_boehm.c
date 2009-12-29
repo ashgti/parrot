@@ -250,7 +250,8 @@ Parrot_gc_boehm_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_boehm_init)
 
-    GC_enable_incremental();
+    //GC_init();
+    //GC_enable_incremental();
 
     interp->gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
     interp->gc_sys->finalize_gc_system = NULL;
