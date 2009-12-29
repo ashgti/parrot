@@ -5305,7 +5305,7 @@ read_braced(YYSTYPE *valp, PARROT_INTERP, const char *macro_name,
                         macro_name);
 
         len     += strlen(val.s);
-        current  = (char *)realloc(current, len + 1);
+        current  = (char *)mem_sys_realloc(current, len + 1);
         strcat(current,val.s);
 
         mem_sys_free(val.s);
@@ -5373,7 +5373,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
         else {
             if (!need_id || c != ' ') {
                 len     += strlen(val.s);
-                current  = (char *)realloc(current, len + 1);
+                current  = (char *)mem_sys_realloc(current, len + 1);
                 strcat(current, val.s);
             }
 
