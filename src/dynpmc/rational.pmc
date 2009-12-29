@@ -57,7 +57,7 @@ static STRING *rat_get_string_to_base(PARROT_INTERP, PMC *self, int base) {
   #ifdef PARROT_HAS_GMP
     char * const cstr   = mpq_get_str(NULL, (int) base, RT(self));
     STRING * const pstr = Parrot_str_new(interp, cstr, 0);
-    Parrot_str_free_cstring(cstr);
+    free(cstr);
     return pstr;
   #else
     RAISE_EXCEPTION
@@ -267,7 +267,7 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
         Parrot_Rational_attributes *attrs =
             mem_allocate_zeroed_typed(Parrot_Rational_attributes);
         PMC_data(SELF)     = attrs;
-        PMC_rational(SELF) = (RATIONAL *)malloc(sizeof (RATIONAL));
+        PMC_rational(SELF) = (RATIONAL *)mem_sys_allocate(sizeof (RATIONAL));
         mpq_init(RT(SELF));
         PObj_custom_destroy_SET(SELF);
       #endif
