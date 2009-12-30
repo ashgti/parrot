@@ -160,7 +160,7 @@ gc_boehm_get_free_object(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 {
     ASSERT_ARGS(gc_boehm_get_free_object)
     void *ret = GC_MALLOC(pool->object_size);
-    if (pool->object_size == sizeof(PMC))
+    if (pool->object_size == sizeof (PMC))
         GC_REGISTER_FINALIZER(ret, gc_boehm_finalize_cb, interp, NULL, NULL);
     return ret;
 }
