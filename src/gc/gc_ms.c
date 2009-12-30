@@ -476,7 +476,7 @@ gc_ms_alloc_objects(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool))
     Parrot_add_to_free_list(interp, pool, new_arena);
 
     /* Allocate more next time */
-    if (GC_DEBUG(interp)) {
+    if (Interp_flags_TEST((interp), PARROT_GC_DEBUG_FLAG)) {
         pool->objects_per_alloc *= GC_DEBUG_UNITS_PER_ALLOC_GROWTH_FACTOR;
         pool->replenish_level =
                 (size_t)(pool->total_objects *

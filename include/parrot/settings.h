@@ -25,14 +25,6 @@
 #  define DISABLE_GC_DEBUG 0
 #endif /* DISABLE_GC_DEBUG */
 
-/* Helpful internal macro for testing whether we are currently
- * debugging garbage collection and memory management. */
-#if DISABLE_GC_DEBUG
-#  define GC_DEBUG(interp) 0
-#else
-#  define GC_DEBUG(interp) Interp_flags_TEST((interp), PARROT_GC_DEBUG_FLAG)
-#endif /* DISABLE_GC_DEBUG */
-
 /*
  * GC_DEFAULT_TYPE selection
  * MS  -- stop-the-world mark & sweep
