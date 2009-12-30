@@ -254,9 +254,7 @@ gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
     PMC           *pmc    = (PMC*)obj;
     Parrot_Interp  interp = (Parrot_Interp)user_data;
 
-    if (PObj_custom_destroy_TEST(pmc))
-        VTABLE_destroy(interp, pmc);
-
+    Parrot_pmc_destroy(interp, pmc);
 }
 
 /*
