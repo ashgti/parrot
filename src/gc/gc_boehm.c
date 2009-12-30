@@ -38,9 +38,11 @@ static void gc_boehm_alloc_objects(SHIM_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
+static void gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data);
 PARROT_CANNOT_RETURN_NULL
-static void * gc_boehm_get_free_object(SHIM_INTERP,
+static void * gc_boehm_get_free_object(PARROT_INTERP,
     ARGMOD(Fixed_Size_Pool *pool))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
@@ -59,8 +61,10 @@ static void gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
     , PARROT_ASSERT_ARG(to_add))
 #define ASSERT_ARGS_gc_boehm_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(pool))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_gc_boehm_more_traceable_objects \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -98,6 +102,7 @@ gc_boehm_mark_and_sweep(SHIM_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(gc_boehm_mark_and_sweep)
     UNUSED(flags);
+    GC_gcollect();
 }
 
 /*
@@ -151,10 +156,13 @@ C<Parrot_Gc_get_new_pmc_header>
 
 PARROT_CANNOT_RETURN_NULL
 static void *
-gc_boehm_get_free_object(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
+gc_boehm_get_free_object(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 {
     ASSERT_ARGS(gc_boehm_get_free_object)
-    return GC_MALLOC(pool->object_size);
+    void *ret = GC_MALLOC(pool->object_size);
+    if (pool->object_size == sizeof(PMC))
+        GC_REGISTER_FINALIZER(ret, gc_boehm_finalize_cb, interp, NULL, NULL);
+    return ret;
 }
 
 /*
@@ -228,6 +236,18 @@ gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
     pool->get_free_object = gc_boehm_get_free_object;
     pool->alloc_objects   = gc_boehm_alloc_objects;
     pool->more_objects    = gc_boehm_more_traceable_objects;
+}
+
+static void
+gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
+{
+    //fprintf(stderr, "Finalize %p (%p)\n", obj, interp);
+    PMC           *pmc    = (PMC*)obj;
+    Parrot_Interp  interp = (Parrot_Interp)user_data;
+
+    if (PObj_custom_destroy_TEST(pmc))
+        VTABLE_destroy(interp, pmc);
+
 }
 
 /*
