@@ -19,7 +19,7 @@ This code plugs Boehm GC into Parrot.
 
 #ifdef PARROT_HAS_BOEHM_GC
 
-#include <gc.h>
+#  include <gc.h>
 
 /* HEADERIZER HFILE: src/gc/gc_private.h */
 
@@ -56,20 +56,20 @@ static void gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-#define ASSERT_ARGS_gc_boehm_add_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#  define ASSERT_ARGS_gc_boehm_add_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool) \
-    , PARROT_ASSERT_ARG(to_add))
-#define ASSERT_ARGS_gc_boehm_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+     , PARROT_ASSERT_ARG(to_add))
+#  define ASSERT_ARGS_gc_boehm_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
-#define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#  define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#  define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(pool))
-#define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#define ASSERT_ARGS_gc_boehm_more_traceable_objects \
+     , PARROT_ASSERT_ARG(pool))
+#  define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#  define ASSERT_ARGS_gc_boehm_more_traceable_objects \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
-#define ASSERT_ARGS_gc_boehm_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#  define ASSERT_ARGS_gc_boehm_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */

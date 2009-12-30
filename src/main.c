@@ -25,7 +25,7 @@ Start Parrot
 #include "parrot/imcc.h"
 
 #ifdef PARROR_HAS_BOEHM_GC
-  #include <gc.h>
+#  include <gc.h>
 #endif
 
 /*
