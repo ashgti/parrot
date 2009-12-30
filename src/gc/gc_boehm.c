@@ -238,6 +238,15 @@ gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
     pool->more_objects    = gc_boehm_more_traceable_objects;
 }
 
+/*
+
+=item C<static void gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)>
+
+this function is passed to the finalizer
+
+=cut
+
+*/
 static void
 gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
 {
