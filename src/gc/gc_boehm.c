@@ -241,7 +241,7 @@ gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 static void
 gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
 {
-    //fprintf(stderr, "Finalize %p (%p)\n", obj, interp);
+    /*** fprintf(stderr, "Finalize %p (%p)\n", obj, interp); */
     PMC           *pmc    = (PMC*)obj;
     Parrot_Interp  interp = (Parrot_Interp)user_data;
 
@@ -270,8 +270,8 @@ Parrot_gc_boehm_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_boehm_init)
 
-    //GC_init();
-    //GC_enable_incremental();
+    /*** GC_init(); */
+    /*** GC_enable_incremental(); */
 
     interp->gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
     interp->gc_sys->finalize_gc_system = NULL;
