@@ -127,8 +127,12 @@ gc_boehm_add_free_object(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool),
     ARGIN(void *to_add))
 {
     ASSERT_ARGS(gc_boehm_add_free_object)
-    if (to_add)
-        GC_FREE(to_add);
+    /*
+     * Do nothing here. Otherwise we'll try call finalizer_cb on already
+     * destroyed object.
+     */
+    UNUSED(pool);
+    UNUSED(to_add);
 }
 
 /*
@@ -161,7 +165,7 @@ gc_boehm_get_free_object(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool))
     ASSERT_ARGS(gc_boehm_get_free_object)
     void *ret = GC_MALLOC(pool->object_size);
     if (pool->object_size == sizeof (PMC))
-        GC_REGISTER_FINALIZER(ret, gc_boehm_finalize_cb, interp, NULL, NULL);
+        GC_REGISTER_FINALIZER_NO_ORDER(ret, gc_boehm_finalize_cb, interp, NULL, NULL);
     return ret;
 }
 
@@ -250,11 +254,12 @@ this function is passed to the finalizer
 static void
 gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
 {
-    /*** fprintf(stderr, "Finalize %p (%p)\n", obj, interp); */
     PMC           *pmc    = (PMC*)obj;
     Parrot_Interp  interp = (Parrot_Interp)user_data;
 
-    Parrot_pmc_destroy(interp, pmc);
+    /* If PMC was destroyed manually - do nothing */
+    if (!PObj_on_free_list_TEST(pmc))
+        Parrot_pmc_destroy(interp, pmc);
 }
 
 /*
@@ -283,6 +288,10 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     interp->gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
     interp->gc_sys->finalize_gc_system = NULL;
     interp->gc_sys->init_pool          = gc_boehm_pool_init;
+
+    /* Disable default Parrot's GC. Boehm GC will take care of it */
+    Parrot_block_GC_mark(interp);
+    Parrot_block_GC_sweep(interp);
 }
 
 #endif /* HAS_BOEHM_GC */
