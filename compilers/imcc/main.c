@@ -362,7 +362,7 @@ parseflags(PARROT_INTERP, int *argc, char **argv[])
 {
     struct longopt_opt_info opt  = LONGOPT_OPT_INFO_INIT;
     INTVAL                  core = 0;
-    INTVAL                  gc   = MS;
+    INTVAL                  gc   = PARROT_GC_DEFAULT_TYPE;
     int                     status;
 
     if (*argc == 1) {
