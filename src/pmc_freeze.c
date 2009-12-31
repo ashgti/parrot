@@ -1145,6 +1145,11 @@ run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
     PackFile_destroy(interp, info.image_io->pf);
     mem_sys_free(info.image_io);
     info.image_io = NULL;
+
+    /* Drop used pointers so GC can collect it */
+    info.todo = NULL;
+    info.seen = NULL;
+
     return info.thaw_result;
 }
 
