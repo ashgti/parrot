@@ -46,8 +46,9 @@ main(int argc, char * argv[])
     int         status;
 
 #ifdef PARROR_HAS_BOEHM_GC
-    GC_init();
-    GC_enable_incremental();
+    GC_INIT();
+    /*** We have to provide command-line arg to enable it. */
+    /*** GC_enable_incremental(); */
 #endif
 
     /* internationalization setup */
