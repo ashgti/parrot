@@ -26,10 +26,11 @@ setup function to initialize the memory pools.
 
 #ifdef PARROT_HAS_BOEHM_GC
 #  include <gc.h>
-#  define malloc GC_MALLOC_UNCOLLECTABLE
-#  define free   GC_FREE
+#  include <gc_local_alloc.h>
+#  define malloc GC_MALLOC
+#  define free(x) {}
 #  define realloc GC_REALLOC
-#  define calloc(s, n) memset(GC_MALLOC_UNCOLLECTABLE((s)*(n)), 0, (s)*(n))
+#  define calloc(s,n) GC_MALLOC(s*n)
 #endif
 
 PARROT_DOES_NOT_RETURN
