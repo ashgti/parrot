@@ -49,6 +49,7 @@ main(int argc, char * argv[])
     GC_INIT();
     /*** We have to provide command-line arg to enable it. */
     /*** GC_enable_incremental(); */
+    GC_enable_incremental();
 #endif
 
     /* internationalization setup */
