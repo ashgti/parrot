@@ -29,7 +29,7 @@ setup function to initialize the memory pools.
 #  define malloc GC_MALLOC_UNCOLLECTABLE
 #  define free   GC_FREE
 #  define realloc GC_REALLOC
-#  define calloc(s,n) memset(GC_MALLOC_UNCOLLECTABLE(s*n), 0, s*n)
+#  define calloc(s, n) memset(GC_MALLOC_UNCOLLECTABLE((s)*(n)), 0, (s)*(n))
 #endif
 
 PARROT_DOES_NOT_RETURN
