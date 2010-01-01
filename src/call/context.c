@@ -475,9 +475,14 @@ allocate_registers(PARROT_INTERP, ARGIN(PMC *pmcctx), ARGIN(const INTVAL *number
     const size_t reg_alloc     = ROUND_ALLOC_SIZE(all_regs_size);
 
     /* don't allocate any storage if there are no registers */
-    ctx->registers = reg_alloc
-        ? (Parrot_Context *)Parrot_gc_allocate_fixed_size_storage(interp, reg_alloc)
-        : NULL;
+    if (reg_alloc)
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        ctx->registers = (Parrot_Context *)Parrot_gc_allocate_fixed_size_storage(interp, reg_alloc);
+#else
+        ctx->registers = (Parrot_Context *)mem_sys_allocate_zeroed(reg_alloc);
+#endif
+    else
+        ctx->registers = NULL;
 
     ctx->n_regs_used[REGNO_INT] = number_regs_used[REGNO_INT];
     ctx->n_regs_used[REGNO_NUM] = number_regs_used[REGNO_NUM];
@@ -539,8 +544,11 @@ Parrot_pcc_free_registers(PARROT_INTERP, ARGIN(PMC *pmcctx))
         return;
 
     /* Free registers */
+#if GC_USE_FIXED_SIZE_ALLOCATOR
     Parrot_gc_free_fixed_size_storage(interp, reg_size, ctx->registers);
-
+#else
+    mem_sys_free(ctx->registers);
+#endif
 }
 
 
