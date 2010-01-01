@@ -30,7 +30,12 @@
  * MS  -- stop-the-world mark & sweep
  * INF -- infinite memory "collector"
  */
-#define PARROT_GC_DEFAULT_TYPE MS
+#define PARROT_GC_DEFAULT_TYPE BOEHM_GC
+
+
+/* Set to 1 if we want to use the fixed-size allocator. Set to 0 if we want
+   to allocate these things using mem_sys_allocate instead */
+#define PARROT_GC_USE_FIXED_SIZE_ALLOCATOR 1
 
 /*
  * JIT/i386 can use the CGP run core for external functions instead
