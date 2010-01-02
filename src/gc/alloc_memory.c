@@ -30,7 +30,7 @@ setup function to initialize the memory pools.
 #  define malloc GC_MALLOC
 #  define free(x) {}
 #  define realloc GC_REALLOC
-#  define calloc(s,n) GC_MALLOC(s*n)
+#  define calloc(s, n) GC_MALLOC((s)*(n))
 #endif
 
 PARROT_DOES_NOT_RETURN
