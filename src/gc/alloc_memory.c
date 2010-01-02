@@ -26,7 +26,6 @@ setup function to initialize the memory pools.
 
 #ifdef PARROT_HAS_BOEHM_GC
 #  include <gc.h>
-#  include <gc_local_alloc.h>
 #  define malloc GC_MALLOC
 #  define free(x) {}
 #  define realloc GC_REALLOC
