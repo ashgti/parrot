@@ -98,11 +98,13 @@ Flags can be a combination of these values:
 */
 
 static void
-gc_boehm_mark_and_sweep(SHIM_INTERP, UINTVAL flags)
+gc_boehm_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(gc_boehm_mark_and_sweep)
     UNUSED(flags);
     GC_gcollect();
+    interp->mem_pools->gc_mark_runs++;
+    interp->mem_pools->gc_collect_runs++;
 }
 
 /*
