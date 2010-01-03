@@ -38,7 +38,10 @@ static void gc_boehm_alloc_objects(SHIM_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-static void gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data);
+static void gc_boehm_finalize_cb(ARGIN(void *obj), ARGIN(void *user_data))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 static void * gc_boehm_get_free_object(PARROT_INTERP,
     ARGMOD(Fixed_Size_Pool *pool))
@@ -46,7 +49,9 @@ static void * gc_boehm_get_free_object(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-static void gc_boehm_mark_and_sweep(SHIM_INTERP, UINTVAL flags);
+static void gc_boehm_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
+        __attribute__nonnull__(1);
+
 static void gc_boehm_more_traceable_objects(SHIM_INTERP,
     ARGMOD(Fixed_Size_Pool *pool))
         __attribute__nonnull__(2)
@@ -56,20 +61,23 @@ static void gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
-#  define ASSERT_ARGS_gc_boehm_add_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_gc_boehm_add_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool) \
-     , PARROT_ASSERT_ARG(to_add))
-#  define ASSERT_ARGS_gc_boehm_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+    , PARROT_ASSERT_ARG(to_add))
+#define ASSERT_ARGS_gc_boehm_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
-#  define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#  define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(obj) \
+    , PARROT_ASSERT_ARG(user_data))
+#define ASSERT_ARGS_gc_boehm_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-     , PARROT_ASSERT_ARG(pool))
-#  define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#  define ASSERT_ARGS_gc_boehm_more_traceable_objects \
+    , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_boehm_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_more_traceable_objects \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
-#  define ASSERT_ARGS_gc_boehm_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+#define ASSERT_ARGS_gc_boehm_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -246,7 +254,7 @@ gc_boehm_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
 
 /*
 
-=item C<static void gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)>
+=item C<static void gc_boehm_finalize_cb(void *obj, void *user_data)>
 
 this function is passed to the finalizer
 
@@ -254,8 +262,9 @@ this function is passed to the finalizer
 
 */
 static void
-gc_boehm_finalize_cb(GC_PTR obj, GC_PTR user_data)
+gc_boehm_finalize_cb(ARGIN(void *obj), ARGIN(void *user_data))
 {
+    ASSERT_ARGS(gc_boehm_finalize_cb)
     PMC           *pmc    = (PMC*)obj;
     Parrot_Interp  interp = (Parrot_Interp)user_data;
 
