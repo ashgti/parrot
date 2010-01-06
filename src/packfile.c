@@ -33,7 +33,7 @@ about the structure of the frozen bytecode.
 #include "packfile.str"
 #include "pmc/pmc_sub.h"
 #include "pmc/pmc_key.h"
-#include "pmc/pmc_context.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: include/parrot/packfile.h */
 
@@ -1438,7 +1438,6 @@ PackFile_funcs_register(SHIM_INTERP, ARGOUT(PackFile *pf), UINTVAL type,
                         const PackFile_funcs funcs)
 {
     ASSERT_ARGS(PackFile_funcs_register)
-    /* TODO dynamic registering */
     pf->PackFuncs[type] = funcs;
 }
 
@@ -2575,8 +2574,7 @@ byte_code_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
 =item C<static PackFile_Segment * byte_code_new(PARROT_INTERP, PackFile *pf,
 STRING *name, int add)>
 
-Creates a new C<PackFile_ByteCode> segment.  Ignores C<pf>, C<name>, and C<add>
-are ignored.
+Creates a new C<PackFile_ByteCode> segment.  Ignores C<pf>, C<name>, and C<add>.
 
 =cut
 
@@ -2806,23 +2804,6 @@ pf_debug_dump(PARROT_INTERP, ARGIN(const PackFile_Segment *self))
     }
 
     Parrot_io_printf(interp, "  ]\n");
-
-    j = self->data ? 0: self->file_offset + 4;
-
-    if (j % 8)
-        Parrot_io_printf(interp, "\n %04x:  ", (int) j);
-
-    for (; j < (self->data ? self->size :
-            self->file_offset + self->op_count); j++) {
-
-        if (j % 8 == 0)
-            Parrot_io_printf(interp, "\n %04x:  ", (int) j);
-
-        Parrot_io_printf(interp, "%08lx ", (unsigned long)
-                self->data ? self->data[j] : self->pf->src[j]);
-    }
-
-    Parrot_io_printf(interp, "\n]\n");
 }
 
 
@@ -2896,6 +2877,19 @@ Parrot_debug_add_mapping(PARROT_INTERP, ARGMOD(PackFile_Debug *debug),
     ASSERT_ARGS(Parrot_debug_add_mapping)
     PackFile_ConstTable * const    ct         = debug->code->const_table;
     int                            insert_pos = 0;
+    opcode_t                       prev_filename_n;
+    STRING                        *filename_pstr;
+
+    /* If the previous mapping has the same filename, don't record it. */
+    if (debug->num_mappings) {
+        prev_filename_n = debug->mappings[debug->num_mappings-1]->filename;
+        filename_pstr = Parrot_str_new(interp, filename, 0);
+        if (ct->constants[prev_filename_n]->type == PFC_STRING &&
+                Parrot_str_equal(interp, filename_pstr,
+                    ct->constants[prev_filename_n]->u.string)) {
+            return;
+        }
+    }
 
     /* Allocate space for the extra entry. */
     mem_realloc_n_typed(debug->mappings, debug->num_mappings + 1,
@@ -4044,10 +4038,7 @@ PackFile_Constant_unpack_key(PARROT_INTERP, ARGIN(PackFile_ConstTable *constt),
 
     while (components-- > 0) {
         opcode_t       type       = PF_fetch_opcode(pf, &cursor);
-        const opcode_t slice_bits = type & PF_VT_SLICE_BITS;
         opcode_t        op;
-
-        type &= ~PF_VT_SLICE_BITS;
 
         if (tail) {
             SETATTR_Key_next_key(interp, tail, constant_pmc_new(interp, pmc_enum));
@@ -4601,10 +4592,6 @@ PackFile_Annotations_lookup(PARROT_INTERP, ARGIN(PackFile_Annotations *self),
     for (i = 0; i < self->num_groups; i++)
         if (offset < self->groups[i]->bytecode_offset)
             break;
-
-
-    /* Check if the found file was actually bytecode (.pbc extension), or a
-     * source file (.pir or .pasm extension). */
         else
             start_entry = self->groups[i]->entries_offset;
 
@@ -4682,7 +4669,7 @@ compile_or_load_file(PARROT_INTERP, ARGIN(STRING *path),
     ASSERT_ARGS(compile_or_load_file)
     char * const filename = Parrot_str_to_cstring(interp, path);
 
-    INTVAL regs_used[] = { 2, 2, 2, 2 }; /* Arbitrary values */
+    UINTVAL regs_used[]     = { 2, 2, 2, 2 }; /* Arbitrary values */
     const int parrot_hll_id = 0;
     PMC * context = Parrot_push_context(interp, regs_used);
     Parrot_pcc_set_HLL(interp, context, parrot_hll_id);

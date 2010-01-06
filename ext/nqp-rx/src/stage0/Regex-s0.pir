@@ -1014,8 +1014,8 @@ Perform a match for protoregex C<name>.
     if $I0 goto rx_array
     .local int rxaddr
     rxaddr = get_addr rx
-    result = mcalled[rxaddr]
-    unless null result goto token_next
+    $P0 = mcalled[rxaddr]
+    unless null $P0 goto token_next
     result = self.rx()
     mcalled[rxaddr] = mcalled
     if result goto done
@@ -1027,8 +1027,8 @@ Perform a match for protoregex C<name>.
     unless rx_it goto cand_done
     rx = shift rx_it
     rxaddr = get_addr rx
-    result = mcalled[rxaddr]
-    unless null result goto token_next
+    $P0 = mcalled[rxaddr]
+    unless null $P0 goto token_next
     result = self.rx()
     mcalled[rxaddr] = mcalled
     if result goto done
@@ -1046,7 +1046,11 @@ Perform a match for protoregex C<name>.
 
   fail:
     self.'!cursor_debug'('FAIL  ', name)
-    .return (0)
+    unless null result goto fail_1
+    result = self.'!cursor_start'()
+    result.'!cursor_fail'()
+  fail_1:
+    .return (result)
 .end
 
 
@@ -1333,13 +1337,13 @@ tokrx hash.
     context = $P0['context';1]
   caller_loop:
     if null context goto caller_done
-    $P0 = context['current_sub']
+    $P0 = getattribute context, 'current_sub'
     $S0 = $P0
     # stop if we find a name that doesn't begin with ! (33)
     $I0 = ord $S0
     if $I0 != 33 goto caller_done
     if $S0 == peekname goto subrule_none
-    context = context['caller_ctx']
+    context = getattribute context, 'caller_ctx'
     goto caller_loop
   caller_done:
 
@@ -2870,7 +2874,7 @@ second child of this node.
 
     .local pmc cur, pos, eos, tgt, fail, off
     (cur, pos, eos, tgt, fail, off) = self.'!rxregs'('cur pos eos tgt fail off')
-    .local pmc ops, cpast, cpost, lpast, lpost
+    .local pmc ops, lpast, lpost
     ops = self.'post_new'('Ops', 'node'=>node, 'result'=>cur)
 
     .local string subtype
@@ -2900,6 +2904,7 @@ second child of this node.
     $S0 = downcase $S0
     lpast = box $S0
   lpast_const:
+    unless lpast > '' goto done
     lpost = self.'as_post'(lpast, 'rtype'=>'~')
   lpast_done:
 
@@ -2916,8 +2921,6 @@ second child of this node.
     $S0 = lpast
     $I0 = length $S0
     litlen = $I0
-    if $I0 > 0 goto have_litlen
-    .return (cpost)
   have_litlen:
 
     # fail if there aren't enough characters left in string
@@ -2934,6 +2937,7 @@ second child of this node.
 
     # increase position by literal length and move on
     ops.'push_pirop'('add', pos, litlen)
+  done:
     .return (ops)
 .end
 

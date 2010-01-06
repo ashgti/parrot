@@ -22,7 +22,7 @@ Functions for loading and initializing dynamic link libraries.
 #include "parrot/dynext.h"
 #include "dynext.str"
 #include "pmc/pmc_parrotlibrary.h"
-#include "pmc/pmc_context.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: include/parrot/dynext.h */
 
@@ -233,8 +233,8 @@ dlopen_string(PARROT_INTERP, ARGIN(STRING *path))
 {
     ASSERT_ARGS(dlopen_string)
 
-    char *pathstr = Parrot_str_to_cstring(interp, path);
-    void *handle = Parrot_dlopen(pathstr);
+    char * const pathstr = Parrot_str_to_cstring(interp, path);
+    void *       handle  = Parrot_dlopen(pathstr);
     Parrot_str_free_cstring(pathstr);
     return handle;
 }
@@ -429,7 +429,7 @@ run_init_lib(PARROT_INTERP, ARGIN(void *handle),
     void (*init_func)(PARROT_INTERP, PMC *);
     PMC *lib_pmc;
 
-    INTVAL regs_used[] = { 2, 2, 2, 2 }; /* Arbitrary values */
+    UINTVAL regs_used[]     = { 2, 2, 2, 2 }; /* Arbitrary values */
     const int parrot_hll_id = 0;
     PMC * context = Parrot_push_context(interp, regs_used);
     Parrot_pcc_set_HLL(interp, context, parrot_hll_id);

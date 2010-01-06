@@ -18,18 +18,15 @@ A module author just must write a script C<setup.pir> (or C<setup.nqp> in future
 
 A setup script can be as simple as this:
 
-=begin perl
-
     pir::load_bytecode('distutils.pir');
-    setup( @ARGS,
+    setup( @steps,
         ... many key/values here ...
     );
 
-=end perl
-
 Distutils could work with Plumage (L<https://trac.parrot.org/parrot/wiki/ModuleEcosystem>).
 Plumage handles setup.pir commands.
-Distutils could generate a skeleton of Pluamge metadata.
+
+Distutils could generate a skeleton of Plumage metadata.
 
 =head3 Commands / Steps / Targets
 
@@ -65,17 +62,17 @@ Update from the repository.
 
 Output a skeleton for Plumage
 
-=item sdist, sdist_gztar, sdist_zip, manifest
+=item sdist, sdist_gztar, sdist_bztar, sdist_zip, sdist_rpm, manifest
 
-Create a source distribution
+Create a source distribution or a source RPM package
 
-=item bdist, bdist_wininst
+=item bdist, bdist_rpm, bdist_wininst, spec, control, ebuild
 
-Create a binary package or Windows Installer.
+Create a binary RPM package or Windows Installer.
 
 =item help
 
-Print this help message.
+Print a help message.
 
 =back
 
@@ -141,9 +138,17 @@ curl
 
 Some coreutils : tar, gzip
 
+=item sdist_bztar
+
+bzip2
+
 =item sdist_zip
 
 zip
+
+=item spec, sdist_rpm, bdist_rpm
+
+rpmbuild
 
 =item bdist_wininst
 
@@ -166,6 +171,8 @@ L<http://github.com/fperrad/lua-batteries/blob/master/setup.pir>
 L<https://trac.parrot.org/languages/browser/bf/trunk/setup.pir>
 
 L<https://trac.parrot.org/languages/browser/chitchat/trunk/setup.pir>
+
+L<https://trac.parrot.org/languages/browser/forth/trunk/setup.pir>
 
 L<https://trac.parrot.org/languages/browser/lolcode/trunk/setup.pir>
 
@@ -207,6 +214,8 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step_after('build', _build_pir_nqp_rx)
     .const 'Sub' _build_pbc_pir = '_build_pbc_pir'
     register_step_after('build', _build_pbc_pir)
+    .const 'Sub' _build_pbc_pbc = '_build_pbc_pbc'
+    register_step_after('build', _build_pbc_pbc)
     .const 'Sub' _build_exe_pbc = '_build_exe_pbc'
     register_step_after('build', _build_exe_pbc)
     .const 'Sub' _build_installable_pbc = '_build_installable_pbc'
@@ -228,6 +237,8 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step_after('clean', _clean_pir_nqp_rx)
     .const 'Sub' _clean_pbc_pir = '_clean_pbc_pir'
     register_step_after('clean', _clean_pbc_pir)
+    .const 'Sub' _clean_pbc_pbc = '_clean_pbc_pbc'
+    register_step_after('clean', _clean_pbc_pbc)
     .const 'Sub' _clean_exe_pbc = '_clean_exe_pbc'
     register_step_after('clean', _clean_exe_pbc)
     .const 'Sub' _clean_installable_pbc = '_clean_installable_pbc'
@@ -236,6 +247,8 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step_after('clean', _clean_html_pod)
     .const 'Sub' _clean_gztar = '_clean_gztar'
     register_step_after('clean', _clean_gztar)
+    .const 'Sub' _clean_bztar = '_clean_bztar'
+    register_step_after('clean', _clean_bztar)
     .const 'Sub' _clean_zip = '_clean_zip'
     register_step_after('clean', _clean_zip)
     .const 'Sub' _clean_smoke = '_clean_smoke'
@@ -248,12 +261,6 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
 
     .const 'Sub' _install = '_install'
     register_step('install', _install)
-    .const 'Sub' _install_dynpmc = '_install_dynpmc'
-    register_step_after('install', _install_dynpmc)
-    .const 'Sub' _install_dynops = '_install_dynops'
-    register_step_after('install', _install_dynops)
-    .const 'Sub' _install_installable_pbc = '_install_installable_pbc'
-    register_step_after('install', _install_installable_pbc)
 
     .const 'Sub' _test = '_test'
     register_step('test', _test)
@@ -263,12 +270,6 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
 
     .const 'Sub' _uninstall = '_uninstall'
     register_step('uninstall', _uninstall)
-    .const 'Sub' _uninstall_dynpmc = '_uninstall_dynpmc'
-    register_step_after('uninstall', _uninstall_dynpmc)
-    .const 'Sub' _uninstall_dynops = '_uninstall_dynops'
-    register_step_after('uninstall', _uninstall_dynops)
-    .const 'Sub' _uninstall_installable_pbc = '_uninstall_installable_pbc'
-    register_step_after('uninstall', _uninstall_installable_pbc)
 
     .const 'Sub' _usage = '_usage'
     register_step('usage', _usage)
@@ -281,13 +282,25 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step('sdist', _sdist)
     .const 'Sub' _sdist_gztar = '_sdist_gztar'
     register_step('sdist_gztar', _sdist_gztar)
+    .const 'Sub' _sdist_bztar = '_sdist_bztar'
+    register_step('sdist_bztar', _sdist_bztar)
     .const 'Sub' _sdist_zip = '_sdist_zip'
     register_step('sdist_zip', _sdist_zip)
     .const 'Sub' _manifest = '_manifest'
     register_step('manifest', _manifest)
+    .const 'Sub' _sdist_rpm = '_sdist_rpm'
+    register_step('sdist_rpm', _sdist_rpm)
+    .const 'Sub' _spec_rpm = '_spec_rpm'
+    register_step('spec', _spec_rpm)
+    .const 'Sub' _control_deb = '_control_deb'
+    register_step('control', _control_deb)
+    .const 'Sub' _ebuild_gentoo = '_ebuild_gentoo'
+    register_step('ebuild', _ebuild_gentoo)
 
     .const 'Sub' _bdist = '_bdist'
     register_step('bdist', _bdist)
+    .const 'Sub' _bdist_rpm = '_bdist_rpm'
+    register_step('bdist_rpm', _bdist_rpm)
 
     $P0 = get_config()
     $S0 = $P0['osname']
@@ -299,7 +312,7 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
   L1:
 .end
 
-=head3 Functions
+=head2 Functions
 
 =over 4
 
@@ -336,12 +349,12 @@ Entry point.
     $P0 = iter steps
     if $P0 goto L11
     # default step
-    run_step('build', kv :flat :named)
+    run_step('build', 'build' :named('__target__'), kv :flat :named)
     goto L12
   L11:
     unless $P0 goto L12
     $S0 = shift $P0
-    $I0 = run_step($S0, kv :flat :named)
+    $I0 = run_step($S0, $S0 :named('__target__'), kv :flat :named)
     if $I0 goto L11
     print "unknown target : "
     say $S0
@@ -425,6 +438,8 @@ Insert a step
 
 =back
 
+=head2 Steps
+
 =head3 Step usage
 
 Display a helpful message
@@ -467,11 +482,8 @@ usage: parrot setup.pir [target|--key value]*
 
         help:           Print this help message.
 USAGE
-    $I0 = exists kv['usage']
-    unless $I0 goto L1
-    msg = kv['usage']
-  L1:
-    say msg
+    $S0 = get_value('usage', msg :named('default'), kv :flat :named)
+    say $S0
 .end
 
 =head3 Step build
@@ -509,7 +521,7 @@ the others items of the array are just the dependencies
     .local string pbc, src
     pbc = shift $P0
     .local pmc depends
-    depends = $P0[pbc]
+    depends = hash[pbc]
     $I0 = does depends, 'array'
     unless $I0 goto L3
     $I0 = newer(pbc, depends)
@@ -548,14 +560,9 @@ the value is an array of PGE pathname or a single PGE pathname
     .param pmc kv :slurpy :named
     $I0 = exists kv['pir_pge']
     unless $I0 goto L1
-    .local string flags
-    flags = ''
-    $I0 = exists kv['pir_pge_flags']
-    unless $I0 goto L2
-    flags = kv['pir_pge_flags']
-  L2:
     $P0 = kv['pir_pge']
-    build_pir_pge($P0, flags)
+    $S0 = get_value('pir_pge_flags', '' :named('default'), kv :flat :named)
+    build_pir_pge($P0, $S0)
   L1:
 .end
 
@@ -568,7 +575,7 @@ the value is an array of PGE pathname or a single PGE pathname
     .local string pir, src
     pir = shift $P0
     .local pmc srcs
-    srcs = $P0[pir]
+    srcs = hash[pir]
     $I0 = does srcs, 'array'
     unless $I0 goto L3
     $I0 = newer(pir, srcs)
@@ -583,9 +590,9 @@ the value is an array of PGE pathname or a single PGE pathname
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
-    $S0 = get_libdir()
+    $S0 = get_library('PGE/Perl6Grammar.pbc')
     cmd .= $S0
-    cmd .= "/library/PGE/Perl6Grammar.pbc --output="
+    cmd .= " --output="
     cmd .= pir
     cmd .= " "
     cmd .= flags
@@ -622,15 +629,15 @@ the value is the TGE pathname
     unless $P0 goto L2
     .local string pir, tge
     pir = shift $P0
-    tge = $P0[pir]
+    tge = hash[pir]
     $I0 = newer(pir, tge)
     if $I0 goto L1
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
-    $S0 = get_libdir()
+    $S0 = get_compiler('tge/tgc.pir')
     cmd .= $S0
-    cmd .= "/languages/tge/tgc.pir --output="
+    cmd .= " --output="
     cmd .= pir
     cmd .= " "
     cmd .= tge
@@ -655,14 +662,9 @@ the value is the NQP pathname
     .param pmc kv :slurpy :named
     $I0 = exists kv['pir_nqp']
     unless $I0 goto L1
-    .local string flags
-    flags = ''
-    $I0 = exists kv['pir_nqp_flags']
-    unless $I0 goto L2
-    flags = kv['pir_nqp_flags']
-  L2:
     $P0 = kv['pir_nqp']
-    build_pir_nqp($P0, flags)
+    $S0 = get_value('pir_nqp_flags', '' :named('default'), kv :flat :named)
+    build_pir_nqp($P0, $S0)
   L1:
 .end
 
@@ -674,15 +676,15 @@ the value is the NQP pathname
     unless $P0 goto L2
     .local string pir, nqp
     pir = shift $P0
-    nqp = $P0[pir]
+    nqp = hash[pir]
     $I0 = newer(pir, nqp)
     if $I0 goto L1
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
-    $S0 = get_libdir()
+    $S0 = get_compiler('nqp/nqp.pbc')
     cmd .= $S0
-    cmd .= "/languages/nqp/nqp.pbc --target=pir --output="
+    cmd .= " --target=pir --output="
     cmd .= pir
     cmd .= " "
     cmd .= flags
@@ -719,7 +721,7 @@ the value is the NQP pathname
     unless $P0 goto L2
     .local string pir, nqp
     pir = shift $P0
-    nqp = $P0[pir]
+    nqp = hash[pir]
     $I0 = newer(pir, nqp)
     if $I0 goto L1
     .local string cmd
@@ -728,6 +730,48 @@ the value is the NQP pathname
     cmd .= pir
     cmd .= " "
     cmd .= nqp
+    system(cmd, 1 :named('verbose'))
+    goto L1
+  L2:
+.end
+
+=item pbc_pbc
+
+hash
+
+the key is the PBC pathname
+
+the value is an array of PBC pathname
+
+=cut
+
+.sub '_build_pbc_pbc' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pbc_pbc']
+    unless $I0 goto L1
+    $P0 = kv['pbc_pbc']
+    build_pbc_pbc($P0)
+  L1:
+.end
+
+.sub 'build_pbc_pbc'
+    .param pmc hash
+    $P0 = iter hash
+  L1:
+    unless $P0 goto L2
+    .local string pbc, src
+    pbc = shift $P0
+    .local pmc srcs
+    srcs = hash[pbc]
+    $I0 = newer(pbc, srcs)
+    if $I0 goto L1
+    src = join ' ', srcs
+    .local string cmd
+    cmd = get_executable('pbc_merge')
+    cmd .= " -o "
+    cmd .= pbc
+    cmd .= " "
+    cmd .= src
     system(cmd, 1 :named('verbose'))
     goto L1
   L2:
@@ -761,7 +805,7 @@ the value is the PBC pathname
     unless $P0 goto L2
     .local string bin, pbc
     bin = shift $P0
-    pbc = $P0[bin]
+    pbc = hash[bin]
     $I0 = length pbc
     $I0 -= 4
     $S0 = substr pbc, 0, $I0
@@ -769,9 +813,7 @@ the value is the PBC pathname
     $I0 = newer($S1, pbc)
     if $I0 goto L1
     .local string cmd
-    cmd = get_bindir()
-    cmd .= "/pbc_to_exe"
-    cmd .= exe
+    cmd = get_executable('pbc_to_exe')
     cmd .= " "
     cmd .= pbc
     system(cmd, 1 :named('verbose'))
@@ -803,13 +845,13 @@ the value is the PBC pathname
     .local string exe
     exe = get_exe()
     .local int has_strip
-    has_strip = _has_strip('')
+    has_strip = _has_strip()
     $P0 = iter hash
   L1:
     unless $P0 goto L2
     .local string bin, pbc
     bin = shift $P0
-    pbc = $P0[bin]
+    pbc = hash[bin]
     $I0 = length pbc
     $I0 -= 4
     $S0 = substr pbc, 0, $I0
@@ -818,9 +860,7 @@ the value is the PBC pathname
     $I0 = newer($S1, pbc)
     if $I0 goto L1
     .local string cmd
-    cmd = get_bindir()
-    cmd .= "/pbc_to_exe"
-    cmd .= exe
+    cmd = get_executable('pbc_to_exe')
     cmd .= " "
     cmd .= pbc
     cmd .= " --install"
@@ -833,13 +873,16 @@ the value is the PBC pathname
 .end
 
 .sub '_has_strip' :anon
-    .param string cflags
+    .param string cflags        :optional
+    .param int has_cflags       :opt_flag
     .local pmc config
     config = get_config()
     $S0 = config['gccversion']
     unless $S0 goto L1
+    unless has_cflags goto L2
     $I0 = index cflags, '-g '
     unless $I0 < 0 goto L1
+  L2:
     $S0 = config['cflags']
     $I0 = index $S0, '-g '
     unless $I0 < 0 goto L1
@@ -867,16 +910,8 @@ the value is the OPS pathname
     $I0 = exists kv['dynops']
     unless $I0 goto L1
     .local string cflags, ldflags
-    cflags = ''
-    $I0 = exists kv['dynops_cflags']
-    unless $I0 goto L2
-    cflags = kv['dynops_cflags']
-  L2:
-    ldflags = ''
-    $I0 = exists kv['dynops_ldflags']
-    unless $I0 goto L3
-    ldflags = kv['dynops_ldflags']
-  L3:
+    cflags = get_value('dynops_cflags', '' :named('default'), kv :flat :named)
+    ldflags = get_value('dynops_ldflags', '' :named('default'), kv :flat :named)
     $P0 = kv['dynops']
     build_dynops($P0, cflags, ldflags)
   L1:
@@ -925,9 +960,9 @@ the value is the OPS pathname
     .local string cmd
     cmd = config['perl']
     cmd .= " "
-    $S0 = get_libdir()
+    $S0 = get_tool('build/ops2c.pl')
     cmd .= $S0
-    cmd .= "/tools/build/ops2c.pl "
+    cmd .= " "
     cmd .= core
     cmd .= " --dynamic "
     cmd .= src
@@ -1055,16 +1090,8 @@ the value is an array of PMC pathname
     $I0 = exists kv['dynpmc']
     unless $I0 goto L1
     .local string cflags, ldflags
-    cflags = ''
-    $I0 = exists kv['dynpmc_cflags']
-    unless $I0 goto L2
-    cflags = kv['dynpmc_cflags']
-  L2:
-    ldflags = ''
-    $I0 = exists kv['dynpmc_ldflags']
-    unless $I0 goto L3
-    ldflags = kv['dynpmc_ldflags']
-  L3:
+    cflags = get_value('dynpmc_cflags', '' :named('default'), kv :flat :named)
+    ldflags = get_value('dynpmc_ldflags', '' :named('default'), kv :flat :named)
     $P0 = kv['dynpmc']
     build_dynpmc($P0, cflags, ldflags)
   L1:
@@ -1113,9 +1140,8 @@ the value is an array of PMC pathname
     .local string pmc2c
     pmc2c = config['perl']
     pmc2c .= " "
-    $S0 = get_libdir()
+    $S0 = get_tool('build/pmc2c.pl')
     pmc2c .= $S0
-    pmc2c .= "/tools/build/pmc2c.pl"
     .local string pmc2c_includes
     pmc2c_includes = "--include "
     $S0 = get_srcdir()
@@ -1173,9 +1199,9 @@ the value is an array of PMC pathname
     .local string cmd
     cmd = config['perl']
     cmd .= " "
-    $S0 = get_libdir()
+    $S0 = get_tool('build/pmc2c.pl')
     cmd .= $S0
-    cmd .= "/tools/build/pmc2c.pl --library "
+    cmd .= " --library "
 #    $S0 = dirname(src)
 #    cmd .= $S0
 #    cmd .= "/"
@@ -1304,7 +1330,7 @@ the value is the POD pathname
     unless $P0 goto L2
     .local string html, pod
     html = shift $P0
-    pod = $P0[html]
+    pod = hash[html]
     $I0 = newer(html, pod)
     if $I0 goto L1
     .local string cmd
@@ -1397,6 +1423,19 @@ the value is the POD pathname
     $I0 = exists kv['pir_nqp-rx']
     unless $I0 goto L1
     $P0 = kv['pir_nqp-rx']
+    clean_key($P0)
+  L1:
+.end
+
+=item pbc_pbc
+
+=cut
+
+.sub '_clean_pbc_pbc' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pbc_pbc']
+    unless $I0 goto L1
+    $P0 = kv['pbc_pbc']
     clean_key($P0)
   L1:
 .end
@@ -1760,11 +1799,7 @@ the default value is "t/*.t"
     cmd .= "/tools/lib"
   L2:
     cmd .= " t/harness "
-    $S0 = "t/*.t" # default
-    $I0 = exists kv['harness_files']
-    unless $I0 goto L3
-    $S0 = kv['harness_files']
-  L3:
+    $S0 = get_value('harness_files', "t/*.t" :named('default'), kv :flat :named)
     cmd .= $S0
     system(cmd, 1 :named('verbose'))
 .end
@@ -1785,6 +1820,11 @@ the default value is "t/*.t"
     .param pmc kv :slurpy :named
     .local string cmd
     cmd = "prove"
+    $S0 = get_executable('parrot-tapir')
+    $I0 = file_exists($S0)
+    unless $I0 goto L0
+    cmd = $S0
+  L0:
     $I0 = exists kv['prove_exec']
     unless $I0 goto L1
     cmd .= " --exec="
@@ -1798,11 +1838,7 @@ the default value is "t/*.t"
     cmd .= "\""
   L1:
     cmd .= " "
-    $S0 = "t/*.t" # default
-    $I0 = exists kv['prove_files']
-    unless $I0 goto L3
-    $S0 = kv['prove_files']
-  L3:
+    $S0 = get_value('prove_files', "t/*.t" :named('default'), kv :flat :named)
     cmd .= $S0
     system(cmd, 1 :named('verbose'))
 .end
@@ -1820,12 +1856,12 @@ Unless t/harness exists, run : prove --archive t/*.t
     if $I0 goto L1
     .tailcall _smoke_prove(kv :flat :named)
   L1:
-    die "Don't known how to smoke."
+    die "Don't known how to smoke with t/harness."
 .end
 
 .sub '_clean_smoke' :anon
     .param pmc kv :slurpy :named
-    $S0 = get_prove_archive(kv :flat :named)
+    $S0 = get_value('prove_archive', "report.tar.gz" :named('default'), kv :flat :named)
     unlink($S0, 1 :named('verbose'))
     unlink('meta.yml', 1 :named('verbose'))
 .end
@@ -1883,15 +1919,11 @@ a hash
     cmd .= "\""
   L1:
     cmd .= " "
-    $S0 = "t/*.t" # default
-    $I0 = exists kv['prove_files']
-    unless $I0 goto L3
-    $S0 = kv['prove_files']
-  L3:
+    $S0 = get_value('prove_files', "t/*.t" :named('default'), kv :flat :named)
     cmd .= $S0
     cmd .= " --archive="
     .local string archive
-    archive = get_prove_archive(kv :flat :named)
+    archive = get_value('prove_archive', "report.tar.gz" :named('default'), kv :flat :named)
     cmd .= archive
     system(cmd, 1 :named('verbose'), 1 :named('ignore_error'))
 
@@ -1975,11 +2007,11 @@ a hash
 
 =over 4
 
-=item inst_bin
+=item inst_bin ???
 
 array of pathname or a single pathname
 
-=item inst_dynext
+=item inst_dynext ???
 
 array of pathname or a single pathname
 
@@ -1995,59 +2027,100 @@ array of pathname or a single pathname
 
 array of pathname or a single pathname
 
+=item installable_pbc
+
+=item dynops
+
+=item dynpmc
+
+=item root
+
 =cut
 
 .sub '_install' :anon
     .param pmc kv :slurpy :named
+    .local string root
+    root = get_value('root', '' :named('default'), kv :flat :named)
+
+    $P0 = get_install_files(kv :flat :named)
+    $P1 = iter $P0
+  L1:
+    unless $P1 goto L2
+    $S0 = shift $P1
+    $S1 = $P0[$S0]
+    $S2 = root . $S0
+    install($S1, $S2, 1 :named('verbose'))
+    goto L1
+  L2:
+
+    $P0 = get_install_xfiles(kv :flat :named)
+    $P1 = iter $P0
+  L3:
+    unless $P1 goto L4
+    $S0 = shift $P1
+    $S1 = $P0[$S0]
+    $S2 = root . $S0
+    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
+    goto L3
+  L4:
+.end
+
+.sub 'get_install_files' :anon
+    .param pmc kv :slurpy :named
+    .local pmc files
+    files = new 'Hash'
     $I0 = exists kv['inst_bin']
     unless $I0 goto L1
     $P0 = kv['inst_bin']
-    install_bin($P0)
+    get_install_bin(files, $P0)
   L1:
     $I0 = exists kv['inst_dynext']
     unless $I0 goto L2
     $P0 = kv['inst_dynext']
-    install_lib("dynext", $P0)
+    get_install_lib(files, "dynext", $P0)
   L2:
     $I0 = exists kv['inst_inc']
     unless $I0 goto L3
     $P0 = kv['inst_inc']
-    install_lib("include", $P0)
+    get_install_lib(files, "include", $P0)
   L3:
     $I0 = exists kv['inst_lang']
     unless $I0 goto L4
     $P0 = kv['inst_lang']
-    install_lib("languages", $P0)
+    get_install_lib(files, "languages", $P0)
   L4:
     $I0 = exists kv['inst_lib']
     unless $I0 goto L5
     $P0 = kv['inst_lib']
-    install_lib("library", $P0)
+    get_install_lib(files, "library", $P0)
   L5:
+    .return (files)
 .end
 
-.sub 'install_bin'
+.sub 'get_install_bin' :anon
+    .param pmc files
     .param pmc array
     $S1 = get_bindir()
     $S1 .= "/"
     $I0 = does array, 'array'
-    if $I0 goto L0
+    if $I0 goto L1
     $S0 = array
     $S2 = $S1 . $S0
-    install($S0, $S2, 1 :named('verbose'))
+    files[$S2] = $S0
     goto L2
-  L0:
-    $P0 = iter array
   L1:
+    $P0 = iter array
+  L3:
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    install($S0, $S2, 1 :named('verbose'))
-    goto L1
+    files[$S2] = $S0
+    goto L3
   L2:
 .end
 
-.sub 'install_lib'
+.sub 'get_install_lib' :anon
+    .param pmc files
     .param string dirname
     .param pmc array
     $S1 = get_libdir()
@@ -2055,36 +2128,46 @@ array of pathname or a single pathname
     $S1 .= dirname
     $S1 .= "/"
     $I0 = does array, 'array'
-    if $I0 goto L0
+    if $I0 goto L1
     $S0 = array
     $S2 = $S1 . $S0
-    install($S0, $S2, 1 :named('verbose'))
+    files[$S2] = $S0
     goto L2
-  L0:
-    $P0 = iter array
   L1:
+    $P0 = iter array
+  L3:
     unless $P0 goto L2
     $S0 = shift $P0
     $S2 = $S1 . $S0
-    install($S0, $S2, 1 :named('verbose'))
-    goto L1
+    files[$S2] = $S0
+    goto L3
   L2:
 .end
 
-=item installable_pbc
-
-=cut
-
-.sub '_install_installable_pbc' :anon
+.sub 'get_install_xfiles' :anon
     .param pmc kv :slurpy :named
+    .local pmc files
+    files = new 'Hash'
     $I0 = exists kv['installable_pbc']
     unless $I0 goto L1
     $P0 = kv['installable_pbc']
-    install_installable_pbc($P0)
+    get_install_installable_pbc(files, $P0)
   L1:
+    $I0 = exists kv['dynops']
+    unless $I0 goto L2
+    $P0 = kv['dynops']
+    get_install_dynops(files, $P0)
+  L2:
+    $I0 = exists kv['dynpmc']
+    unless $I0 goto L3
+    $P0 = kv['dynpmc']
+    get_install_dynpmc(files, $P0)
+  L3:
+    .return (files)
 .end
 
-.sub 'install_installable_pbc'
+.sub 'get_install_installable_pbc' :anon
+    .param pmc files
     .param pmc hash
     .local string bin, bindir, pbc, exe
     bindir = get_bindir()
@@ -2102,25 +2185,13 @@ array of pathname or a single pathname
     $S2 = bindir . '/'
     $S2 .= bin
     $S2 .= exe
-    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
+    files[$S2] = $S1
     goto L1
   L2:
 .end
 
-=item dynops
-
-=cut
-
-.sub '_install_dynops' :anon
-    .param pmc kv :slurpy :named
-    $I0 = exists kv['dynops']
-    unless $I0 goto L1
-    $P0 = kv['dynops']
-    install_dynops($P0)
-  L1:
-.end
-
-.sub 'install_dynops'
+.sub 'get_install_dynops' :anon
+    .param pmc files
     .param pmc hash
     .local string libdir, load_ext, ops, suffix
     libdir = get_libdir()
@@ -2139,27 +2210,15 @@ array of pathname or a single pathname
     $S1 = _mk_path_dynops(ops, suffix, load_ext)
     $S2 = libdir . "/"
     $S2 .= $S1
-    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
+    files[$S2] = $S1
     goto L3
   L4:
     goto L1
   L2:
 .end
 
-=item dynpmc
-
-=cut
-
-.sub '_install_dynpmc' :anon
-    .param pmc kv :slurpy :named
-    $I0 = exists kv['dynpmc']
-    unless $I0 goto L1
-    $P0 = kv['dynpmc']
-    install_dynpmc($P0)
-  L1:
-.end
-
-.sub 'install_dynpmc'
+.sub 'get_install_dynpmc' :anon
+    .param pmc files
     .param pmc hash
     .local string libdir, load_ext
     libdir = get_libdir()
@@ -2171,7 +2230,7 @@ array of pathname or a single pathname
     $S1 = _mk_path_dynpmc($S0, load_ext)
     $S2 = libdir . "/"
     $S2 .= $S1
-    install($S1, $S2, 1 :named('exe'), 1 :named('verbose'))
+    files[$S2] = $S1
     goto L1
   L2:
 .end
@@ -2186,163 +2245,28 @@ Same options as install.
 
 .sub '_uninstall' :anon
     .param pmc kv :slurpy :named
-    $I0 = exists kv['inst_bin']
-    unless $I0 goto L1
-    $P0 = kv['inst_bin']
-    uninstall_bin($P0)
-  L1:
-    $I0 = exists kv['inst_dynext']
-    unless $I0 goto L2
-    $P0 = kv['inst_dynext']
-    uninstall_lib("dynext", $P0)
-  L2:
-    $I0 = exists kv['inst_inc']
-    unless $I0 goto L3
-    $P0 = kv['inst_inc']
-    uninstall_lib("include", $P0)
-  L3:
-    $I0 = exists kv['inst_lang']
-    unless $I0 goto L4
-    $P0 = kv['inst_lang']
-    uninstall_lib("languages", $P0)
-  L4:
-    $I0 = exists kv['inst_lib']
-    unless $I0 goto L5
-    $P0 = kv['inst_lib']
-    uninstall_lib("library", $P0)
-  L5:
-.end
+    .local string root
+    root = get_value('root', '' :named('default'), kv :flat :named)
 
-.sub 'uninstall_bin'
-    .param pmc array
-    $S1 = get_bindir()
-    $S1 .= "/"
-    $I0 = does array, 'array'
-    if $I0 goto L0
-    $S0 = array
-    $S2 = $S1 . $S0
-    unlink($S2, 1 :named('verbose'))
-    goto L2
-  L0:
-    $P0 = iter array
+    $P0 = get_install_files(kv :flat :named)
+    $P1 = iter $P0
   L1:
-    unless $P0 goto L2
-    $S0 = shift $P0
-    $S2 = $S1 . $S0
-    unlink($S2, 1 :named('verbose'))
+    unless $P1 goto L2
+    $S0 = shift $P1
+    $S0 = root . $S0
+    unlink($S0, 1 :named('verbose'))
     goto L1
   L2:
-.end
 
-.sub 'uninstall_lib'
-    .param string dirname
-    .param pmc array
-    $S1 = get_libdir()
-    $S1 .= "/"
-    $S1 .= dirname
-    $S1 .= "/"
-    $I0 = does array, 'array'
-    if $I0 goto L0
-    $S0 = array
-    $S2 = $S1 . $S0
-    unlink($S2, 1 :named('verbose'))
-    goto L2
-  L0:
-    $P0 = iter array
-  L1:
-    unless $P0 goto L2
-    $S0 = shift $P0
-    $S2 = $S1 . $S0
-    unlink($S2, 1 :named('verbose'))
-    goto L1
-  L2:
-.end
-
-.sub '_uninstall_installable_pbc' :anon
-    .param pmc kv :slurpy :named
-    $I0 = exists kv['installable_pbc']
-    unless $I0 goto L1
-    $P0 = kv['installable_pbc']
-    uninstall_installable_pbc($P0)
-  L1:
-.end
-
-.sub 'uninstall_installable_pbc'
-    .param pmc hash
-    .local string bin, bindir, exe
-    bindir = get_bindir()
-    exe = get_exe()
-    $P0 = iter hash
-  L1:
-    unless $P0 goto L2
-    bin = shift $P0
-    $S1 = bindir . '/'
-    $S1 .=  bin
-    $S1 .= exe
-    unlink($S1, 1 :named('verbose'))
-    goto L1
-  L2:
-.end
-
-.sub '_uninstall_dynops' :anon
-    .param pmc kv :slurpy :named
-    $I0 = exists kv['dynops']
-    unless $I0 goto L1
-    $P0 = kv['dynops']
-    uninstall_dynops($P0)
-  L1:
-.end
-
-.sub 'uninstall_dynops'
-    .param pmc hash
-    .local string libdir, load_ext, ops, suffix
-    libdir = get_libdir()
-    load_ext = get_load_ext()
-    .local pmc cores
-    cores = get_cores()
-    $P0 = iter hash
-  L1:
-    unless $P0 goto L2
-    ops = shift $P0
-    $P1 = iter cores
+    $P0 = get_install_xfiles(kv :flat :named)
+    $P1 = iter $P0
   L3:
     unless $P1 goto L4
     $S0 = shift $P1
-    suffix = cores[$S0]
-    $S0 = _mk_path_dynops(ops, suffix, load_ext)
-    $S1 = libdir . "/"
-    $S1 .= $S0
-    unlink($S1, 1 :named('verbose'))
+    $S0 = root . $S0
+    unlink($S0, 1 :named('verbose'))
     goto L3
   L4:
-    goto L1
-  L2:
-.end
-
-.sub '_uninstall_dynpmc' :anon
-    .param pmc kv :slurpy :named
-    $I0 = exists kv['dynpmc']
-    unless $I0 goto L1
-    $P0 = kv['dynpmc']
-    uninstall_dynpmc($P0)
-  L1:
-.end
-
-.sub 'uninstall_dynpmc'
-    .param pmc hash
-    .local string libdir, load_ext
-    libdir = get_libdir()
-    load_ext = get_load_ext()
-    $P0 = iter hash
-  L1:
-    unless $P0 goto L2
-    $S0 = shift $P0
-    $S0 = _mk_path_dynpmc($S0, load_ext)
-    $S1 = libdir . "/"
-    $S1 .= $S0
-    unlink($S1, 1 :named('verbose'))
-    goto L1
-  L2:
 .end
 
 =head3 Step plumage
@@ -2363,7 +2287,7 @@ Same options as install.
 
 =item copyright_holder
 
-=item generated_by
+=item packager
 
 =item description
 
@@ -2381,12 +2305,38 @@ Same options as install.
 
 .sub '_plumage' :anon
     .param pmc kv :slurpy :named
+    $S0 = get_plumage(kv :flat :named)
+    $S1 = mk_plumage(kv :flat :named)
+    $I0 = file_exists($S0)
+    unless $I0 goto L1
+    $S0 = kv['__target__']
+    unless $S0 == 'plumage' goto L2
+    print $S1
+    goto L2
+  L1:
+    $S2 = dirname($S0)
+    mkpath($S2, 1 :named('verbose'))
+    spew($S0, $S1, 1 :named('verbose'))
+  L2:
+.end
+
+.sub 'get_plumage' :anon
+    .param pmc kv :slurpy :named
+    $S0 = get_name(kv :flat :named)
+    $S0 .= '.json'
+    $S0 = 'ports/plumage/' . $S0
+    .return ($S0)
+.end
+
+.sub 'mk_plumage' :anon
+    .param pmc kv :slurpy :named
 
     .local string name
     name = get_name(kv :flat :named)
 
     .local string abstract
-    abstract = get_value('abstract', kv :flat :named)
+    $S0 = get_value('abstract', kv :flat :named)
+    abstract = _json_escape($S0)
 
     .local string authority
     authority = get_value('authority', kv :flat :named)
@@ -2401,10 +2351,16 @@ Same options as install.
     license_uri = get_value('license_uri', kv :flat :named)
 
     .local string copyright_holder
-    copyright_holder = get_value('copyright_holder', kv :flat :named)
+    $S0 = get_value('copyright_holder', kv :flat :named)
+    copyright_holder = _json_escape($S0)
+
+    .local string packager
+    $S0 = get_value('packager', "distutils" :named('default'), kv :flat :named)
+    packager = _json_escape($S0)
 
     .local string description
-    description = get_value('description', kv :flat :named)
+    $S0 = get_value('description', kv :flat :named)
+    description = _json_escape($S0)
 
     .local string keywords
     keywords = ''
@@ -2429,7 +2385,7 @@ Same options as install.
     project_uri =get_value('project_uri', kv :flat :named)
 
     $P0 = new 'FixedStringArray'
-    set $P0, 15
+    set $P0, 16
     $P0[0] = name
     $P0[1] = abstract
     $P0[2] = authority
@@ -2437,14 +2393,15 @@ Same options as install.
     $P0[4] = license_type
     $P0[5] = license_uri
     $P0[6] = copyright_holder
-    $P0[7] = keywords
-    $P0[8] = description
-    $P0[9] = name
-    $P0[10] = vcs
+    $P0[7] = packager
+    $P0[8] = keywords
+    $P0[9] = description
+    $P0[10] = name
     $P0[11] = vcs
-    $P0[12] = checkout_uri
-    $P0[13] = browser_uri
-    $P0[14] = project_uri
+    $P0[12] = vcs
+    $P0[13] = checkout_uri
+    $P0[14] = browser_uri
+    $P0[15] = project_uri
 
     $S0 = <<'TEMPLATE'
 {
@@ -2462,7 +2419,7 @@ Same options as install.
             "uri"  : "%s"
         },
         "copyright_holder" : "%s",
-        "generated_by"     : "distutils",
+        "generated_by"     : "%s",
         "keywords"         : [%s],
         "description"      : "%s"
     },
@@ -2513,7 +2470,16 @@ Same options as install.
 }
 TEMPLATE
     $S0 = sprintf $S0, $P0
-    print $S0
+    .return ($S0)
+.end
+
+.sub '_json_escape' :anon
+    .param string str
+    $P0 = split '"', str
+    str = join '\"', $P0
+    $P0 = split "\n", str
+    str = join "\\n", $P0
+    .return (str)
 .end
 
 =head3 Step manifest
@@ -2528,39 +2494,16 @@ array of pathname or a single pathname
 
 array of pathname or a single pathname
 
-=item pbc_pir
+=item doc_files
 
-=item pir_pge
+array of pathname or a single pathname
 
-=item pir_tge
+=item pbc_pir, pir_pge, pir_tge, pir_nqp, pir_nqp-rx, pbc_pbc, exe_pbc,
+installable_pbc, dynops, dynpmc, html_pod
 
-=item pir_nqp
+=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
 
-=item pir_nqp-rx
-
-=item exe_pbc
-
-=item installable_pbc
-
-=item dynops
-
-=item dynpmc
-
-=item html_pod
-
-=item inst_bin
-
-=item inst_dynext
-
-=item inst_inc
-
-=item inst_lang
-
-=item inst_lib
-
-=item harness_files
-
-=item prove_files
+=item harness_files, prove_files
 
 =back
 
@@ -2568,11 +2511,26 @@ array of pathname or a single pathname
 
 .sub '_manifest' :anon
     .param pmc kv :slurpy :named
+
+    $S0 = ''
+    $I0 = file_exists('MANIFEST')
+    unless $I0 goto L1
+    $S0 = slurp('MANIFEST')
+  L1:
+
+    $S1 = mk_manifest(kv :flat :named)
+    unless $S0 != $S1 goto L2
+    spew('MANIFEST', $S1, 1 :named('verbose'))
+  L2:
+.end
+
+.sub 'mk_manifest' :anon
+    .param pmc kv :slurpy :named
     .local pmc needed, generated
     needed = new 'Hash'
     generated = new 'Hash'
 
-    $P0 = split ' ', 'pbc_pir pir_pge pir_tge pir_nqp pir_nqp-rx exe_pbc installable_pbc dynops dynpmc html_pod'
+    $P0 = split ' ', 'pbc_pir pir_pge pir_tge pir_nqp pir_nqp-rx pbc_pbc exe_pbc installable_pbc dynops dynpmc html_pod'
   L1:
     unless $P0 goto L2
     $S0 = shift $P0
@@ -2583,7 +2541,7 @@ array of pathname or a single pathname
     goto L1
   L2:
 
-    $P0 = split ' ', 'inst_bin inst_dynext inst_inc inst_lang inst_lib'
+    $P0 = split ' ', 'inst_bin inst_dynext inst_inc inst_lang inst_lib doc_files'
   L3:
     unless $P0 goto L4
     $S0 = shift $P0
@@ -2610,7 +2568,7 @@ array of pathname or a single pathname
     _manifest_add_glob(needed, 't/*.t')
   L7:
 
-    $P0 = split ' ', 'CREDITS Changes MAINTAINER NEWS README TODO setup.pir setup.nqp t/harness'
+    $P0 = split ' ', 'setup.pir setup.nqp t/harness'
   L8:
     unless $P0 goto L9
     $S0 = shift $P0
@@ -2664,7 +2622,8 @@ array of pathname or a single pathname
 
     $P0.'sort'()
     $S0 = join "\n", $P0
-    spew('MANIFEST', $S0)
+    $S0 .= "\n"
+    .return ($S0)
 .end
 
 .sub '_manifest_add_hash' :anon
@@ -2765,15 +2724,27 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     .param pmc kv :slurpy :named
     run_step('manifest', kv :flat :named)
 
-    $S0 = get_tarname('.tar', kv :flat :named)
+    $S0 = slurp('MANIFEST')
+    $P0 = split "\n", $S0
+    $S0 = pop $P0
+    $S0 = get_tarname('.tar.gz', kv :flat :named)
+    $I0 = newer($S0, $P0)
+    if $I0 goto L1
+    $S0 = get_tarname('', kv :flat :named)
+    copy_sdist($S0, $P0)
 
     .local string cmd
     cmd = 'tar -cvf ' . $S0
-    cmd .= ' -T MANIFEST'
+    cmd .= '.tar '
+    cmd .= $S0
     system(cmd, 1 :named('verbose'))
 
+    rmtree($S0)
+
     cmd = 'gzip --best ' . $S0
+    cmd .= '.tar'
     system(cmd, 1 :named('verbose'))
+  L1:
 .end
 
 .sub '_clean_gztar' :anon
@@ -2782,6 +2753,21 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     $S0 = get_tarname('.tar.gz', kv :flat :named)
     unlink($S0, 1 :named('verbose'))
     unlink('MANIFEST', 1 :named('verbose'))
+.end
+
+.sub 'copy_sdist' :anon
+    .param string dirname
+    .param pmc files
+    mkdir(dirname)
+    $S1 = dirname . "/"
+    $P0 = iter files
+  L1:
+    unless $P0 goto L2
+    $S0 = shift $P0
+    $S2 = $S1 . $S0
+    install($S0, $S2)
+    goto L1
+  L2:
 .end
 
 .sub 'get_tarname' :anon
@@ -2798,6 +2784,45 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     .return ($S0)
 .end
 
+=head3 Step sdist_bztar
+
+=cut
+
+.sub '_sdist_bztar' :anon
+    .param pmc kv :slurpy :named
+    run_step('manifest', kv :flat :named)
+
+    $S0 = slurp('MANIFEST')
+    $P0 = split "\n", $S0
+    $S0 = pop $P0
+    $S0 = get_tarname('.tar.bz2', kv :flat :named)
+    $I0 = newer($S0, $P0)
+    if $I0 goto L1
+    $S0 = get_tarname('', kv :flat :named)
+    copy_sdist($S0, $P0)
+
+    .local string cmd
+    cmd = 'tar -cvf ' . $S0
+    cmd .= '.tar '
+    cmd .= $S0
+    system(cmd, 1 :named('verbose'))
+
+    rmtree($S0)
+
+    cmd = 'bzip2 ' . $S0
+    cmd .= '.tar'
+    system(cmd, 1 :named('verbose'))
+  L1:
+.end
+
+.sub '_clean_bztar' :anon
+    .param pmc kv :slurpy :named
+
+    $S0 = get_tarname('.tar.bz2', kv :flat :named)
+    unlink($S0, 1 :named('verbose'))
+    unlink('MANIFEST', 1 :named('verbose'))
+.end
+
 =head3 Step sdist_zip
 
 =cut
@@ -2806,18 +2831,24 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     .param pmc kv :slurpy :named
     run_step('manifest', kv :flat :named)
 
+    $S0 = slurp('MANIFEST')
+    $P0 = split "\n", $S0
+    $S0 = pop $P0
     $S0 = get_tarname('.zip', kv :flat :named)
-
+    $I0 = newer($S0, $P0)
+    if $I0 goto L1
     .local string cmd
-    cmd = 'cat'
-    $P0 = get_config()
-    $S1 = $P0['osname']
-    unless $S1 == 'MSWin32' goto L1
-    cmd = 'type'
-  L1:
-    cmd .= ' MANIFEST | zip -9 -@ '
+    $S0 = get_tarname('', kv :flat :named)
+    copy_sdist($S0, $P0)
+
+    cmd = 'zip -9 -r '
+    cmd .= $S0
+    cmd .= '.zip '
     cmd .= $S0
     system(cmd, 1 :named('verbose'))
+
+    rmtree($S0)
+  L1:
 .end
 
 .sub '_clean_zip' :anon
@@ -2828,9 +2859,39 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     unlink('MANIFEST', 1 :named('verbose'))
 .end
 
+=head3 Step sdist_rpm
+
+=cut
+
+.sub '_sdist_rpm' :anon
+    .param pmc kv :slurpy :named
+    run_step('sdist_gztar', kv :flat :named)
+
+    .local string rpm_base
+    rpm_base = get_value('rpm_base', 'rpm' :named('default'), kv :flat :named)
+
+    $S1 = get_tarname('.tar.gz', kv :flat :named)
+    $S2 = rpm_base . "/SOURCES/"
+    $S2 .= $S1
+    install($S1, $S2, 1 :named('verbose'))
+
+    run_step('spec', kv :flat :named)
+
+    .local string cmd
+    cmd = "rpmbuild --define '_topdir "
+    $S0 = cwd()
+    cmd .= $S0
+    cmd .= "/"
+    cmd .= rpm_base
+    cmd .= "' -bs -v "
+    $S0 = get_spec(kv :flat :named)
+    cmd .= $S0
+    system(cmd, 1 :named('verbose'))
+.end
+
 =head3 Step bdist
 
-On Windows calls bdist_wininst, otherwise ...
+On Windows calls bdist_wininst, otherwise bdist_rpm
 
 =cut
 
@@ -2841,26 +2902,720 @@ On Windows calls bdist_wininst, otherwise ...
     unless $S0 == 'MSWin32' goto L1
     .tailcall run_step('bdist_wininst', kv :flat :named)
   L1:
-    die "no yet bdist"
+    .tailcall run_step('bdist_rpm', kv :flat :named)
+.end
+
+=head3 Step spec
+
+=over 4
+
+=item rpm_base
+
+the default value is ports/rpm
+
+=item name
+
+=item version
+
+=item release
+
+=item abstract
+
+=item license_type
+
+=item project_uri
+
+=item description
+
+=item packager
+
+=item doc_files
+
+=item installable_pbc, dynops, dynpmc
+
+=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+
+=back
+
+=cut
+
+.sub '_spec_rpm' :anon
+    .param pmc kv :slurpy :named
+    $S0 = get_spec(kv :flat :named)
+    $S1 = mk_spec(kv :flat :named)
+    $I0 = file_exists($S0)
+    unless $I0 goto L1
+    $S0 = kv['__target__']
+    unless $S0 == 'spec' goto L2
+    print $S1
+    goto L2
+  L1:
+    $S2 = dirname($S0)
+    mkpath($S2, 1 :named('verbose'))
+    spew($S0, $S1, 1 :named('verbose'))
+    .local string cmd
+    $S2 = dirname($S2)
+    cmd = "rpmbuild --define '_topdir " . $S2
+    cmd .= "' --nobuild "
+    cmd .= $S0
+    system(cmd, 1 :named('verbose'), 1 :named('ignore_error'))
+  L2:
+.end
+
+.sub 'get_spec' :anon
+    .param pmc kv :slurpy :named
+    $S0 = get_value('rpm_base', 'rpm' :named('default'), kv :flat :named)
+    $S0 .= "/SPECS/parrot-"
+    $S1 = get_name(kv :flat :named)
+    $S0 .= $S1
+    $S0 .= '.spec'
+    .return ($S0)
+.end
+
+.sub 'mk_spec' :anon
+    .param pmc kv :slurpy :named
+
+    .local pmc config
+    config = get_config()
+
+    .local string parrot_version
+    $S1 = config['VERSION']
+    $S2 = config['DEVEL']
+    parrot_version = $S1 . $S2
+
+    .local string name
+    name = get_name(kv :flat :named)
+
+    .local string version
+    version = get_version(kv :flat :named)
+
+    .local string release
+    release = get_value('release', '1' :named('default'), kv :flat :named)
+
+    .local string abstract
+    abstract = get_value('abstract', kv :flat :named)
+
+    .local string license_type
+    license_type = get_value('license_type', kv :flat :named)
+
+    .local string project_uri
+    project_uri =get_value('project_uri', kv :flat :named)
+
+    .local string tarball
+    tarball = get_tarname('.tar.gz', kv :flat :named)
+
+    .local string description
+    description = get_value('description', kv :flat :named)
+
+    .local string packager
+    packager = get_value('packager', "you <you@you.org>" :named('default'), kv :flat :named)
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 9
+    $P0[0] = parrot_version
+    $P0[1] = name
+    $P0[2] = version
+    $P0[3] = release
+    $P0[4] = abstract
+    $P0[5] = license_type
+    $P0[6] = project_uri
+    $P0[7] = tarball
+    $P0[8] = description
+
+    $S0 = <<'TEMPLATE'
+%%define parrot_version %s
+
+Name:           parrot-%s
+Version:        %s
+Release:        %s
+Summary:        %s
+License:        %s
+Group:          Development/Libraries
+URL:            %s
+Source0:        %s
+BuildRoot:      %%{_tmppath}/%%{name}-%%{version}-%%{release}
+#BuildRequires:  parrot           = %%parrot_version
+#BuildRequires:  parrot-devel     = %%parrot_version
+
+%%description
+%s
+
+%%prep
+%%setup -n %%{name}-%%{version}
+
+%%build
+parrot setup.pir
+
+%%install
+rm -rf $RPM_BUILD_ROOT
+parrot setup.pir --root $RPM_BUILD_ROOT install
+
+%%check
+parrot setup.pir test
+
+%%clean
+rm -rf $RPM_BUILD_ROOT
+
+%%files
+%%defattr(-,root,root,-)
+TEMPLATE
+    .local string spec
+    spec = sprintf $S0, $P0
+
+    $S0 = mk_deb_docs(kv :flat :named)
+    if $S0 == '' goto L1
+    spec .= "%doc "
+    $P1 = split "\n", $S0
+    $S0 = pop $P1
+    $S0 = join "\n%doc ", $P1
+    spec .= $S0
+    spec .= "\n"
+  L1:
+
+    $S0 = mk_deb_install(kv :flat :named)
+    $P1 = split parrot_version, $S0
+    $S0 = join "%{parrot_version}", $P1
+    spec .= $S0
+
+    spec .= "\n%changelog\n* "
+    $I0 = time
+    $S0 = localtime $I0
+    $I0 = length $S0
+    dec $I0
+    $S0 = substr $S0, 0, $I0
+    $S1 = substr $S0, 0, 11
+    spec .= $S1
+    $S1 = substr $S0, 20
+    spec .= $S1
+    spec .= " "
+    spec .= packager
+    spec .= "\n- created by distutils\n"
+    .return (spec)
+.end
+
+=head3 Step bdist_rpm
+
+=cut
+
+.sub '_bdist_rpm' :anon
+    .param pmc kv :slurpy :named
+    run_step('sdist_gztar', kv :flat :named)
+
+    .local string rpm_base
+    rpm_base = get_value('rpm_base', 'rpm' :named('default'), kv :flat :named)
+
+    $S1 = get_tarname('.tar.gz', kv :flat :named)
+    $S2 = rpm_base . "/SOURCES/"
+    $S2 .= $S1
+    install($S1, $S2, 1 :named('verbose'))
+
+    run_step('spec', kv :flat :named)
+
+    .local string cmd
+    cmd = "rpmbuild --define '_topdir "
+    $S0 = cwd()
+    cmd .= $S0
+    cmd .= "/"
+    cmd .= rpm_base
+    cmd .= "' -bb -v "
+    $S0 = get_spec(kv :flat :named)
+    cmd .= $S0
+    system(cmd, 1 :named('verbose'))
+.end
+
+=head3 Step control
+
+See L<http://www.debian.org/doc/maint-guide/>.
+
+=over 4
+
+=item control_dir
+
+the default value is ports/debian
+
+=item name
+
+=item packager
+
+=item project_uri
+
+=item abstract
+
+=item description
+
+=item release
+
+=item copyright_holder
+
+=item doc_files
+
+=item installable_pbc, dynops, dynpmc
+
+=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+
+=back
+
+=cut
+
+.sub '_control_deb' :anon
+    .param pmc kv :slurpy :named
+
+    $S0 = get_deb('control', kv :flat :named)
+    $S1 = dirname($S0)
+    mkpath($S1, 1 :named('verbose'))
+    $S1 = mk_deb_control(kv :flat :named)
+    $I0 = file_exists($S0)
+    unless $I0 goto L1
+    $S0 = kv['__target__']
+    unless $S0 == 'control' goto L2
+    print $S1
+    goto L3
+  L1:
+    spew($S0, $S1, 1 :named('verbose'))
+  L2:
+
+    $S0 = get_deb('changelog', kv :flat :named)
+    $I0 = file_exists($S0)
+    if $I0 goto L4
+    $S1 = mk_deb_changelog(kv :flat :named)
+    spew($S0, $S1, 1 :named('verbose'))
+  L4:
+
+    $S0 = get_deb('copyright', kv :flat :named)
+    $I0 = file_exists($S0)
+    if $I0 goto L5
+    $S1 = mk_deb_copyright(kv :flat :named)
+    spew($S0, $S1, 1 :named('verbose'))
+  L5:
+
+    $S0 = get_deb('rules', kv :flat :named)
+    $S1 = mk_deb_rules(kv :flat :named)
+    spew($S0, $S1, 1 :named('verbose'))
+
+    $S0 = get_deb_ext('.docs', kv :flat :named)
+    $S1 = mk_deb_docs(kv :flat :named)
+    spew($S0, $S1, 1 :named('verbose'))
+
+    $S0 = get_deb_ext('.install', kv :flat :named)
+    $S1 = mk_deb_install(kv :flat :named)
+    spew($S0, $S1, 1 :named('verbose'))
+  L3:
+.end
+
+.sub 'get_deb' :anon
+    .param string filename
+    .param pmc kv :slurpy :named
+    $S0 = get_value('control_dir', 'ports/debian' :named('default'), kv :flat :named)
+    $S0 .= "/"
+    $S0 .= filename
+    .return ($S0)
+.end
+
+.sub 'get_deb_ext' :anon
+    .param string ext
+    .param pmc kv :slurpy :named
+    $S0 = get_value('control_dir', 'ports/debian' :named('default'), kv :flat :named)
+    $S0 .= "/parrot-"
+    $S1 = get_name(kv :flat :named)
+    $S0 .= $S1
+    $S0 .= ext
+    .return ($S0)
+.end
+
+.sub 'mk_deb_control' :anon
+    .param pmc kv :slurpy :named
+
+    .local pmc config
+    config = get_config()
+
+    .local string parrot_version
+    $S1 = config['VERSION']
+    $S2 = config['DEVEL']
+    parrot_version = $S1 . $S2
+
+    .local string name
+    name = get_name(kv :flat :named)
+
+    .local string packager
+    packager = get_value('packager', "you <you@you.org>" :named('default'), kv :flat :named)
+
+    .local string project_uri
+    project_uri =get_value('project_uri', kv :flat :named)
+
+    .local string abstract
+    abstract = get_value('abstract', kv :flat :named)
+
+    .local string description
+    $S0 = get_value('description', kv :flat :named)
+    $P0 = split "\n", $S0
+    description = join "\n ", $P0
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 8
+    $P0[0] = name
+    $P0[1] = packager
+    $P0[2] = parrot_version
+    $P0[3] = project_uri
+    $P0[4] = name
+    $P0[5] = parrot_version
+    $P0[6] = abstract
+    $P0[7] = description
+
+    $S0 = <<'TEMPLATE'
+Source: parrot-%s
+Section: interpreters
+Priority: optional
+Maintainer: %s
+Build-Depends: debhelper (>= 7), parrot-devel (= %s)
+Standards-Version: 3.8.3
+Homepage: %s
+
+Package: parrot-%s
+Architecture: any
+Depends: parrot-minimal (= %s)
+Description: %s
+ %s
+TEMPLATE
+    $S0 = sprintf $S0, $P0
+    .return ($S0)
+.end
+
+.sub 'mk_deb_changelog' :anon
+    .param pmc kv :slurpy :named
+
+    .local string name
+    name = get_name(kv :flat :named)
+
+    .local string version
+    version = get_version(kv :flat :named)
+
+    .local string release
+    release = get_value('release', '1' :named('default'), kv :flat :named)
+
+    .local string packager
+    packager = get_value('packager', "you <you@you.org>" :named('default'), kv :flat :named)
+
+    .local string timestamp
+    timestamp = get_timestamp()
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 5
+    $P0[0] = name
+    $P0[1] = version
+    $P0[2] = release
+    $P0[3] = packager
+    $P0[4] = timestamp
+
+    $S0 = <<'TEMPLATE'
+parrot-%s (%s-%s) unstable; urgency=low
+
+  * Created by distutils.
+
+ -- %s  %s
+TEMPLATE
+    $S0 = sprintf $S0, $P0
+    .return ($S0)
+.end
+
+.sub 'mk_deb_copyright' :anon
+    .param pmc kv :slurpy :named
+
+    .local string packager
+    packager = get_value('packager', "you <you@you.org>" :named('default'), kv :flat :named)
+
+    .local string timestamp
+    timestamp = get_timestamp()
+
+    .local string project_uri
+    project_uri =get_value('project_uri', kv :flat :named)
+
+    .local string copyright_holder
+    copyright_holder = get_value('copyright_holder', kv :flat :named)
+
+    .local string license
+    license = ''
+    $S0 = get_license_file()
+    if $S0 == '' goto L1
+    $S0 = slurp($S0)
+    $P0 = split "\n", $S0
+    license = join "\n    ", $P0
+  L1:
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 5
+    $P0[0] = packager
+    $P0[1] = timestamp
+    $P0[2] = project_uri
+    $P0[3] = copyright_holder
+    $P0[4] = license
+
+    $S0 = <<'TEMPLATE'
+This package was debianized by %s on
+%s.
+
+It was downloaded from %s
+
+Copyright for the code is held by: %s
+
+License:
+
+    %s
+TEMPLATE
+    $S0 = sprintf $S0, $P0
+    .return ($S0)
+.end
+
+.sub 'mk_deb_rules' :anon
+    .param pmc kv :slurpy :named
+
+    $S0 = <<'TEMPLATE'
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	touch configure-stamp
+
+build: build-stamp
+build-stamp: configure-stamp
+	dh_testdir
+	parrot setup.pir build
+	touch $@
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+	parrot setup.pir clean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	parrot setup.pir --root $(CURDIR)/debian/tmp install
+	dh_install --sourcedir=$(CURDIR)/debian/tmp --list-missing
+
+# Build architecture-independent files here.
+binary-indep: install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs
+	dh_installexamples
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure
+
+TEMPLATE
+    .return ($S0)
+.end
+
+.sub 'mk_deb_docs' :anon
+    .param pmc kv :slurpy :named
+    $S0 = ''
+    $I0 = exists kv['doc_files']
+    unless $I0 goto L1
+    $P0 = kv['doc_files']
+    $I0 = does $P0, 'array'
+    if $I0 goto L2
+    $S0 = $P0
+    goto L1
+  L2:
+    $S0 = join "\n", $P0
+  L1:
+    $S0 .= "\n"
+    .return ($S0)
+.end
+
+.sub 'mk_deb_install' :anon
+    .param pmc kv :slurpy :named
+    $P0 = new 'ResizablePMCArray'
+    # currently, ResizableStringArray hasn't the method sort.
+    # see TT #1356
+    $P1 = get_install_files(kv :flat :named)
+    $P2 = iter $P1
+  L1:
+    unless $P2 goto L2
+    $S0 = shift $P2
+    push $P0, $S0
+    goto L1
+  L2:
+    $P1 = get_install_xfiles(kv :flat :named)
+    $P2 = iter $P1
+  L3:
+    unless $P2 goto L4
+    $S0 = shift $P2
+    push $P0, $S0
+    goto L3
+  L4:
+    $P0.'sort'()
+    $S0 = join "\n", $P0
+    $S0 .= "\n"
+    .return ($S0)
+.end
+
+.sub 'get_timestamp' :anon
+    $P0 = open 'date --rfc-2822', 'rp'
+    $S0 = $P0.'readline'()
+    $P0.'close'()
+    $S0 = chopn $S0, 1
+    .return ($S0)
+.end
+
+=head3 Step ebuild
+
+See L<http://devmanual.gentoo.org/>.
+
+=over 4
+
+=item description
+
+=item project_uri
+
+=item license_type
+
+=item doc_files
+
+=back
+
+=cut
+
+.sub '_ebuild_gentoo' :anon
+    .param pmc kv :slurpy :named
+    $S0 = get_ebuild(kv :flat :named)
+    $S1 = mk_ebuild(kv :flat :named)
+    $I0 = file_exists($S0)
+    unless $I0 goto L1
+    $S0 = kv['__target__']
+    unless $S0 == 'ebuild' goto L2
+    print $S1
+    goto L2
+  L1:
+    $S2 = dirname($S0)
+    mkpath($S2, 1 :named('verbose'))
+    spew($S0, $S1, 1 :named('verbose'))
+  L2:
+.end
+
+.sub 'get_ebuild' :anon
+    .param pmc kv :slurpy :named
+    $S0 = "ports/gentoo/parrot-"
+    $S1 = get_name(kv :flat :named)
+    $S0 .= $S1
+    $S0 .= "-"
+    $S1 = get_version(kv :flat :named)
+    $S0 .= $S1
+    $S0 .= '.ebuild'
+    .return ($S0)
+.end
+
+.sub 'mk_ebuild' :anon
+    .param pmc kv :slurpy :named
+
+    .local string description
+    $S0 = get_value('description', kv :flat :named)
+    description = _json_escape($S0)
+
+    .local string project_uri
+    project_uri =get_value('project_uri', kv :flat :named)
+
+    .local string license_type
+    license_type = get_value('license_type', kv :flat :named)
+
+    .local string doc
+    doc = ''
+    $I0 = exists kv['doc_files']
+    unless $I0 goto L1
+    doc = "    dodoc "
+    $P0 = kv['doc_files']
+    $I0 = does $P0, 'array'
+    if $I0 goto L2
+    $S0 = $P0
+    goto L3
+  L2:
+    $S0 = join " ", $P0
+  L3:
+    doc .= $S0
+    doc .= " || die"
+  L1:
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 4
+    $P0[0] = description
+    $P0[1] = project_uri
+    $P0[2] = license_type
+    $P0[3] = doc
+
+    $S0 = <<'TEMPLATE'
+
+DESCRIPTION="%s"
+HOMEPAGE="%s"
+SRC_URI="./${P}.tar.gz"
+
+LICENSE="%s"
+SLOT="0"
+KEYWORDS="~arch"
+IUSE=""
+
+#DEPEND=""
+#RDEPEND=""
+
+src_compile() {
+    parrot setup.pir build || die "build failed"
+}
+
+src_install() {
+    parrot setup.pir --root ${D} install || die "install failed"
+%s
+}
+
+src_test() {
+    parrot setup.pir test || die "test failed"
+}
+TEMPLATE
+    $S0 = sprintf $S0, $P0
+    .return ($S0)
 .end
 
 =head3 Step bdist_wininst
 
 Build an installer with Inno Setup.
+See L<http://www.jrsoftware.org/>.
 
 =over 4
-
-=item installable_pbc
-
-=item dynops & dynpmc
-
-=item inst_lang
-
-=item inst_lib
 
 =item name
 
 =item version
+
+=item copyright_holder
+
+=item project_uri
+
+=item installable_pbc, dynops, dynpmc
+
+=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+
+=item doc_files
 
 =back
 
@@ -2897,8 +3652,6 @@ Build an installer with Inno Setup.
 
     system("iscc inno.iss", 1 :named('verbose'))
 .end
-
-.include 'tm.pasm'
 
 .sub 'mk_inno_script' :anon
     .param pmc kv :slurpy :named
@@ -2992,40 +3745,33 @@ TEMPLATE
     goto L24
   L23:
 
-    $I0 = exists kv['inst_lang']
-    unless $I0 goto L31
-    $P1 = kv['inst_lang']
-    $I0 = does $P1, 'array'
-    if $I0 goto L32
-    $S1 = $P1
-    $S0 = _mk_inno_line('languages', $S1)
+    $P1 = get_install_files(kv :flat :named)
+    $P2 = iter $P1
+  L31:
+    unless $P2 goto L32
+    $S0 = shift $P2
+    $S1 = $P1[$S0]
+    $S0 = _mk_inno_line($S1, $S0)
     script .= $S0
     goto L31
   L32:
-    $P2 = iter $P1
-  L33:
-    unless $P2 goto L31
-    $S1 = shift $P2
-    $S0 = _mk_inno_line('languages', $S1)
-    script .= $S0
-    goto L33
-  L31:
 
-    $I0 = exists kv['inst_lib']
+    $I0 = exists kv['doc_files']
     unless $I0 goto L41
-    $P1 = kv['inst_lib']
+    name = get_name(kv :flat :named)
+    $P1 = kv['doc_files']
     $I0 = does $P1, 'array'
     if $I0 goto L42
-    $S1 = $P1
-    $S0 = _mk_inno_line('library', $S1)
+    $S0 = $P1
+    $S0 = _mk_inno_line_doc($S0, name)
     script .= $S0
     goto L41
   L42:
     $P2 = iter $P1
   L43:
     unless $P2 goto L41
-    $S1 = shift $P2
-    $S0 = _mk_inno_line('library', $S1)
+    $S0 = shift $P2
+    $S0 = _mk_inno_line_doc($S0, name)
     script .= $S0
     goto L43
   L41:
@@ -3035,17 +3781,32 @@ TEMPLATE
 .end
 
 .sub '_mk_inno_line' :anon
+    .param string src
     .param string dest
-    .param string filename
     .local string line
     line = "Source: \".\\"
-    $S0 = _escape_path_win32(filename)
+    $S0 = _escape_path_win32(src)
     line .= $S0
-    line .= "\"; DestDir: \"{app}\\lib\\parrot\\"
-    line .= dest
-    line .= "\\"
-    $S0 = dirname(filename)
+    line .= "\"; DestDir: \"{app}\\"
+    $S0 = dirname(dest)
+    $I0 = index $S0, '/', 1
+    inc $I0
+    $S0 = substr $S0, $I0
     $S0 = _escape_path_win32($S0)
+    line .= $S0
+    line .= "\"; Flags:\n"
+    .return (line)
+.end
+
+.sub '_mk_inno_line_doc' :anon
+    .param string src
+    .param string dest
+    .local string line
+    line = "Source: \".\\"
+    $S0 = _escape_path_win32(src)
+    line .= $S0
+    line .= "\"; DestDir: \"{app}\\share\\doc\\parrot\\"
+    $S0 = dest
     line .= $S0
     line .= "\"; Flags:\n"
     .return (line)
@@ -3101,7 +3862,7 @@ TEMPLATE
     unlink($S0, 1 :named('verbose'))
 .end
 
-=head3 Configuration Helpers
+=head2 Configuration Helpers
 
 =over 4
 
@@ -3155,6 +3916,28 @@ Return the whole config
     .return (flags)
 .end
 
+=item get_compiler
+
+=cut
+
+.sub 'get_compiler'
+    .param string name
+    $P0 = get_config()
+    $I0 = $P0['installed']
+    unless $I0 goto L1
+    $S0 = $P0['libdir']
+    $S1 = $P0['versiondir']
+    $S0 .= $S1
+    $S0 .= '/languages/'
+    goto L2
+  L1:
+    $S0 = $P0['prefix']
+    $S0 .= '/compilers/'
+  L2:
+    $S0 .= name
+    .return ($S0)
+.end
+
 =item get_exe
 
 =cut
@@ -3162,6 +3945,27 @@ Return the whole config
 .sub 'get_exe'
     $P0 = get_config()
     $S0 = $P0['exe']
+    .return ($S0)
+.end
+
+=item get_executable
+
+=cut
+
+.sub 'get_executable'
+    .param string name
+    $P0 = get_config()
+    $I0 = $P0['installed']
+    unless $I0 goto L1
+    $S0 = $P0['bindir']
+    goto L2
+  L1:
+    $S0 = $P0['prefix']
+  L2:
+    $S0 .= '/'
+    $S0 .= name
+    $S1 = $P0['exe']
+    $S0 .= $S1
     .return ($S0)
 .end
 
@@ -3186,6 +3990,28 @@ Return the whole config
     $S0 = $P0['libdir']
     $S1 = $P0['versiondir']
     $S0 .= $S1
+    .return ($S0)
+.end
+
+=item get_library
+
+=cut
+
+.sub 'get_library'
+    .param string name
+    $P0 = get_config()
+    $I0 = $P0['installed']
+    unless $I0 goto L1
+    $S0 = $P0['libdir']
+    $S1 = $P0['versiondir']
+    $S0 .= $S1
+    $S0 .= '/library/'
+    goto L2
+  L1:
+    $S0 = $P0['prefix']
+    $S0 .= '/runtime/parrot/library/'
+  L2:
+    $S0 .= name
     .return ($S0)
 .end
 
@@ -3234,12 +4060,7 @@ Return the whole config
 =cut
 
 .sub 'get_parrot'
-    $P0 = get_config()
-    $S0 = $P0['bindir']
-    $S0 .= '/parrot'
-    $S1 = $P0['exe']
-    $S0 .= $S1
-    .return ($S0)
+    .tailcall get_executable('parrot')
 .end
 
 =item get_nqp
@@ -3247,12 +4068,7 @@ Return the whole config
 =cut
 
 .sub 'get_nqp'
-    $P0 = get_config()
-    $S0 = $P0['bindir']
-    $S0 .= '/parrot-nqp'
-    $S1 = $P0['exe']
-    $S0 .= $S1
-    .return ($S0)
+    .tailcall get_executable('parrot-nqp')
 .end
 
 =item get_srcdir
@@ -3264,6 +4080,27 @@ Return the whole config
     $S0 = $P0['srcdir']
     $S1 = $P0['versiondir']
     $S0 .= $S1
+    .return ($S0)
+.end
+
+=item get_tool
+
+=cut
+
+.sub 'get_tool'
+    .param string name
+    $P0 = get_config()
+    $I0 = $P0['installed']
+    unless $I0 goto L1
+    $S0 = $P0['libdir']
+    $S1 = $P0['versiondir']
+    $S0 .= $S1
+    goto L2
+  L1:
+    $S0 = $P0['prefix']
+  L2:
+    $S0 .= '/tools/'
+    $S0 .= name
     .return ($S0)
 .end
 
@@ -3348,32 +4185,13 @@ Return the whole config
     .return ($S0)
 .end
 
-=item get_prove_archive
-
-=cut
-
-.sub 'get_prove_archive'
-    .param string archive       :named('prove_archive') :optional
-    .param int has_archive      :opt_flag
-    .param pmc extra            :slurpy :named
-    unless has_archive goto L1
-    .return (archive)
-  L1:
-    .return ('report.tar.gz')
-.end
-
 =item get_version
 
 =cut
 
 .sub 'get_version'
-    .param string version       :named('version') :optional
-    .param int has_version      :opt_flag
-    .param pmc extra            :slurpy :named
-    unless has_version goto L1
-    .return (version)
-  L1:
-    .return ('HEAD')
+    .param pmc kv :slurpy :named
+    .tailcall get_value('version', 'HEAD' :named('default'), kv :flat :named)
 .end
 
 =item get_value
@@ -3382,12 +4200,17 @@ Return the whole config
 
 .sub 'get_value'
     .param string key
+    .param string default       :named('default') :optional
+    .param int has_default      :opt_flag
     .param pmc kv :slurpy :named
     $I0 = exists kv[key]
     unless $I0 goto L1
     $S0 = kv[key]
     .return ($S0)
   L1:
+    unless has_default goto L2
+    .return (default)
+  L2:
     $S0 = upcase key
     .return ($S0)
 .end
@@ -3448,7 +4271,7 @@ SOURCE_C
 
 =back
 
-=head3 OS Utilities
+=head2 OS Utilities
 
 =over 4
 
@@ -3615,6 +4438,14 @@ SOURCE_C
     cp(src, dst, verbose :named('verbose'))
     unless has_exe goto L3
     unless exe goto L3
+    $P0 = getinterp
+    $P0 = $P0[.IGLOBALS_CONFIG_HASH]
+    $I0 = $P0['cygwin']
+    if $I0 goto L4
+    $I0 = $P0['hpux']
+    if $I0 goto L4
+    goto L3
+  L4:
     chmod(dst, 0o755, verbose :named('verbose'))
   L3:
 .end
@@ -3744,6 +4575,60 @@ SOURCE_C
     unlink($S0, verbose :named('verbose'))
     goto L3
   L2:
+.end
+
+=item rmtree
+
+=cut
+
+.sub 'rmtree'
+    .param string path
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    $I0 = stat path, .STAT_EXISTS
+    unless $I0 goto L1
+    $I0 = stat path, .STAT_ISDIR
+    unless $I0 goto L1
+    unless has_verbose goto L2
+    unless verbose goto L2
+    print "rmtree "
+    say path
+  L2:
+    new $P0, 'OS'
+    $P1 = $P0.'readdir'(path)
+    push_eh _handler
+  L3:
+    unless $P1 goto L4
+    $S0 = shift $P1
+    if $S0 == '.' goto L3
+    if $S0 == '..' goto L3
+    $S1 = path . '/'
+    $S1 .= $S0
+    $I0 = stat $S1, .STAT_ISDIR
+    unless $I0 goto L5
+    rmtree($S1)
+    goto L3
+  L5:
+    $P0.'rm'($S1)
+    goto L3
+  L4:
+    push_eh _handler
+    $S1 = path
+    $P0.'rm'($S1)
+    pop_eh
+  L1:
+    .return ()
+  _handler:
+    .local pmc e
+    .get_results (e)
+    $S0 = "Can't remove '"
+    $S0 .= $S1
+    $S0 .= "' ("
+    $S1 = err
+    $S0 .= $S1
+    $S0 .= ")\n"
+    e = $S0
+    rethrow e
 .end
 
 =item basename
@@ -3964,6 +4849,13 @@ SOURCE_C
 .sub 'spew'
     .param string filename
     .param string content
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
+    print "creat "
+    say filename
+  L1:
     $P0 = new 'FileHandle'
     push_eh _handler
     $P0.'open'(filename, 'w')
@@ -3991,6 +4883,13 @@ SOURCE_C
 .sub 'append'
     .param string filename
     .param string content
+    .param int verbose          :named('verbose') :optional
+    .param int has_verbose      :opt_flag
+    unless has_verbose goto L1
+    unless verbose goto L1
+    print "append "
+    say filename
+  L1:
     $P0 = new 'FileHandle'
     push_eh _handler
     $P0.'open'(filename, 'a')

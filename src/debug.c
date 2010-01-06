@@ -32,7 +32,7 @@ the Parrot debugger, and the C<debug> ops.
 #include "parrot/runcore_trace.h"
 #include "debug.str"
 #include "pmc/pmc_continuation.h"
-#include "pmc/pmc_context.h"
+#include "pmc/pmc_callcontext.h"
 
 /* Hand switched debugger tracing
  * Set to 1 to enable tracing to stderr
@@ -1274,7 +1274,7 @@ PDB_get_command(PARROT_INTERP)
             tmp_stdin, readline,
             "S->S", prompt, & s);
         {
-        char * aux = Parrot_str_to_cstring(interpdeb, s);
+        char * const aux = Parrot_str_to_cstring(interpdeb, s);
         strcpy(c, aux);
         Parrot_str_free_cstring(aux);
         }

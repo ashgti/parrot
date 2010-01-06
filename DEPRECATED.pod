@@ -80,8 +80,8 @@ L<https://trac.parrot.org/parrot/ticket/918>
 The current freeze/thaw implementation makes heavy use of the visit_info
 structure and the VTABLE interface attached to it. This structure will
 be replaced with a PMC of equivalent functionality and with a possibly
-similar interface. The freeze and thaw vtables of all PMCs should be
-updated after this change is made.
+similar interface. The freeze, thaw, and visit vtables of all PMCs should be
+updated to the provided interim API before this change is made.
 
 L<https://trac.parrot.org/parrot/ticket/1305>
 
@@ -103,7 +103,7 @@ L<https://trac.parrot.org/parrot/ticket/1260>
 
 =item Array PMC [eligible in 2.1]
 
-This PMC is old, ill-used and is superceded by other array-like PMCs.  Any code
+This PMC is old, ill-used and is superseded by other array-like PMCs.  Any code
 using this PMC should migrate to ResizablePMCArray or something more suitable.
 
 L<https://trac.parrot.org/parrot/ticket/1303>
@@ -187,7 +187,7 @@ if the arg is a Array (of any sort) or Key
   Relative to the current HLL Namespace
 
 if the arg is a Namespace or Class PMC
-  The passed in class or the class attatched to the passed in namespace.
+  The passed in class or the class attached to the passed in namespace.
 
 L<https://trac.parrot.org/parrot/ticket/159>
 
@@ -220,7 +220,7 @@ Subs marked with C<:vtable> or C<:method> flags are no longer given a
 namespace entry by default.  Use the C<:nsentry> flag to cause this
 to happen.
 
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=53302>
+L<https://trac.parrot.org/parrot/ticket/389>
 
 =item C API coding standards cleanup [eligible in 1.1]
 
@@ -250,7 +250,7 @@ for TT #895
 
 The function PDB_compile doesn't work since some time, and his implementation
 was a hack. His functionality may be reimplemented in another way. Until the
-end of deprecation cycle it just throws an excpetion.
+end of deprecation cycle it just throws an exception.
 
 The PDB_eval function, that used in the debugger to support the eval
 command, was using PDB_compile. His functionality must be reimplemented
@@ -402,8 +402,6 @@ L<https://trac.parrot.org/parrot/ticket/852>
 =item 1
 
 L<Trac|http://trac.parrot.org/> is parrot's primary issue tracking system.
-
-Older tickets may be listed at L<RT|https://rt.perl.org/rt3>.
 
 =item 2
 

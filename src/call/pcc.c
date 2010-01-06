@@ -20,12 +20,11 @@ value passing to and from subroutines.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/oplib/ops.h"
 #include "parrot/runcore_api.h"
+#include "parrot/oplib/ops.h"
 #include "pcc.str"
 #include "pmc/pmc_key.h"
 #include "pmc/pmc_continuation.h"
-#include "pmc/pmc_context.h"
 
 /* HEADERIZER HFILE: include/parrot/call.h */
 
@@ -273,7 +272,7 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
     ASSERT_ARGS(Parrot_pcc_invoke_from_sig_object)
 
     opcode_t    *dest;
-    INTVAL       n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    UINTVAL      n_regs_used[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     PMC         *ctx  = Parrot_push_context(interp, n_regs_used);
     PMC * const  ret_cont = new_ret_continuation_pmc(interp, NULL);
 

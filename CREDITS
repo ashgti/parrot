@@ -159,6 +159,11 @@ E: Bernhard.Schmalhofer@gmx.de
 N: Bob Diertens
 D: patch regarding macro argument expansion
 
+N: Bob Kuo
+D: Convert some perl tests to PIR
+E: bobjkuo@gmail.com
+U: bubaflub
+
 N: Bob Rogers
 D: Random small bug fixes, including one for the linguine bug.
 E: rogers-perl6@rgrjr.dyndns.org
@@ -387,6 +392,7 @@ D: Documentation patch for Parrot_PMC_get_pointer_intkey()
 
 N: Gerd Pokorra
 E: pokorra@uni-siegen.de
+D: Release manager for 1.9.0
 
 N: Goplat
 D: Win98 and other fixes.
