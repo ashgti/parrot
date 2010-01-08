@@ -6,15 +6,15 @@
 
 =head1 TITLE
 
-tools/dev/install_dev_files.pl - Copy development files to their correct locations
+tools/dev/install_doc_files.pl - Copy documentation files to their correct locations
 
 =head1 SYNOPSIS
 
-    % perl tools/dev/install_dev_files.pl [options]
+    % perl tools/dev/install_doc_files.pl [options]
 
 =head1 DESCRIPTION
 
-Use a detailed MANIFEST to install a set of development files.
+Use a detailed MANIFEST to install a set of documentation files.
 
 =head2 Options
 
@@ -80,7 +80,7 @@ my %options = (
     srcdir      => '/usr/src/',      # parrot/ subdir added below
     versiondir  => '',
     'dry-run'   => 0,
-    packages    => 'devel|pct|tge|nqp|data_json',
+    packages    => 'doc|examples',
 );
 
 my @manifests;
@@ -96,70 +96,22 @@ foreach (@ARGV) {
 my $parrotdir = $options{versiondir};
 
 # Set up transforms on filenames
-my(@transformorder) = (qw(lib share include src doc), '^(tools|VERSION)', '^compilers');
+my(@transformorder) = (qw(doc examples));
 my(%metatransforms) = (
-    lib => {
-        ismeta => 1,
-        optiondir => 'lib',
-        transform => sub {
-            my($filehash) = @_;
-            $filehash->{DestDirs} = [$parrotdir, "tools"];
-            return($filehash);
-        },
-    },
-    share => {
-        ismeta => 1,
-        optiondir => 'data',
-        transform => sub {
-            my($filehash) = @_;
-            $filehash->{Dest} = basename($filehash->{Dest});
-            $filehash->{DestDirs} = [$parrotdir];
-            return($filehash);
-        },
-    },
-    include => {
-        ismeta => 1,
-        optiondir => 'include',
-        transform => sub {
-            my($filehash) = @_;
-            $filehash->{Dest} =~ s/^src//; # strip off leading src/ dir
-            $filehash->{Dest} =~ s/^include//;
-            $filehash->{DestDirs} = [$parrotdir];
-            return($filehash);
-        },
-    },
-    src => {
-        ismeta => 1,
-        optiondir => 'src',
-        transform => sub {
-            my($filehash) = @_;
-            $filehash->{Dest} =~ s/^src//; # strip off leading src/ dir
-            $filehash->{DestDirs} = [$parrotdir];
-            return($filehash);
-        },
-    },
     doc => {
-        ismeta => 1,
         optiondir => 'doc',
         transform => sub {
             my($filehash) = @_;
+            $filehash->{Dest} =~ s#^docs/resources#resources#; # resources go in the top level of docs
+            $filehash->{Dest} =~ s/^docs/pod/; # other docs are actually raw Pod
             $filehash->{DestDirs} = [$parrotdir];
             return($filehash);
         },
     },
-    '^(tools|VERSION)' => {
-        optiondir => 'lib',
+    examples => {
+        optiondir => 'doc',
         transform => sub {
             my($filehash) = @_;
-            $filehash->{DestDirs} = [$parrotdir];
-            return($filehash);
-        },
-    },
-    '^compilers' => {
-        optiondir => 'lib',
-        transform => sub {
-            my($filehash) = @_;
-            $filehash->{Dest} =~ s/^compilers/languages/;
             $filehash->{DestDirs} = [$parrotdir];
             return($filehash);
         },
@@ -175,7 +127,7 @@ unless ( $options{'dry-run'} ) {
 }
 install_files($options{destdir}, $options{'dry-run'}, $filehashes);
 
-print "Finished install_dev_files.pl\n";
+print "Finished install_doc_files.pl\n";
 
 # Local Variables:
 #   mode: cperl
