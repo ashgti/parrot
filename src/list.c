@@ -373,7 +373,8 @@ allocate_chunk(PARROT_INTERP, ARGIN(List *list), UINTVAL items, UINTVAL size)
     Parrot_block_GC_mark(interp);
     /* Parrot_block_GC_sweep(interp); - why */
 
-    chunk = (List_chunk *)Parrot_gc_new_bufferlike_header(interp, sizeof (*chunk));
+    // XXX allocate_fixed_size_storage is wrong name for it.
+    chunk = (List_chunk *)Parrot_gc_allocate_fixed_size_storage(interp, sizeof (*chunk));
 
     chunk->items    = items;
     chunk->n_chunks = 0;
@@ -1339,8 +1340,7 @@ List *
 Parrot_pmc_array_new(PARROT_INTERP, PARROT_DATA_TYPE type)
 {
     ASSERT_ARGS(Parrot_pmc_array_new)
-    List * const list = (List *)Parrot_gc_new_bufferlike_header(interp,
-                             sizeof (*list));
+    List * const list = (List *)Parrot_gc_allocate_fixed_size_storage(interp, sizeof (*list));
 
     list->item_type = type;
     switch (type) {

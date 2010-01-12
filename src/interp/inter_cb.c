@@ -180,6 +180,8 @@ verify_CD(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
      * pools
      */
     LOCK(interpreter_array_mutex);
+#if 0
+    XXX FIXME It is really strange idea to use this approach.
     for (i = 0; i < n_interpreters; ++i) {
         Parrot_Interp checkinterp = interpreter_array [i];
         if (checkinterp && Parrot_gc_ptr_is_pmc(checkinterp, user_data)) {
@@ -187,6 +189,7 @@ verify_CD(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
             break;
         }
     }
+#endif
     UNLOCK(interpreter_array_mutex);
     if (!interp)
         PANIC(interp, "interpreter not found for callback");

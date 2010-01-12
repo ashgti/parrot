@@ -370,13 +370,14 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     ||    Interp_flags_TEST(interp, PARROT_DESTROY_FLAG)))
         return;
 
+#if 0
     if (interp->parent_interpreter
     &&  interp->thread_data
     && (interp->thread_data->state & THREAD_STATE_JOINED)) {
         Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
         Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
     }
-
+#endif
     Parrot_gc_finalize(interp);
 
     /* MMD cache */
@@ -391,15 +392,17 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     if (interp->initial_pf)
         PackFile_destroy(interp, interp->initial_pf);
 
+#if 0
     /* buffer headers, PMCs */
     Parrot_gc_destroy_header_pools(interp);
 
     /* memory pools in resources */
     Parrot_gc_destroy_memory_pools(interp);
+#endif
 
     /* mem subsystem is dead now */
-    mem_sys_free(interp->mem_pools);
-    interp->mem_pools = NULL;
+    //mem_sys_free(interp->mem_pools);
+    //interp->mem_pools = NULL;
     mem_sys_free(interp->gc_sys);
     interp->gc_sys = NULL;
 
