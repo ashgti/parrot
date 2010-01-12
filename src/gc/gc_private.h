@@ -93,19 +93,37 @@ typedef struct GC_Subsystem {
     gc_sys_type_enum sys_type;
 
     /** Function hooks that each subsystem MUST provide */
+    void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
     void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
     void (*finalize_gc_system) (PARROT_INTERP);
-    void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
+
+    /* Allocation functions with explicit freeing counterparts */
+    PMC*    (*allocate_pmc_header)(PARROT_INTERP, UINTVAL flags);
+    void    (*free_pmc_header)(PARROT_INTERP, PMC *pmc);
+
+    STRING* (*allocate_string_header)(PARROT_INTERP, UINTVAL flags);
+    void    (*free_string_header)(PARROT_INTERP, STRING *s);
+
+    void*   (*allocate_attributes)(PARROT_INTERP, INTVAL type);
+    void    (*free_attributes)(PARROT_INTERP, void *attributes);
+
+    /* Buffer allocation routines */
+    /* Allocate buffer which doesn't contains interior pointers */
+    void* (*allocate_buffer)(PARROT_INTERP, size_t size);
+    /* Allocate buffer which contains interior pointers */
+    void* (*allocate_buffer_with_pointers)(PARROT_INTERP, size_t size);
+    /* We probably can provide Boehm GC like _typed variant. With bitmask
+     * describing positions of pointers inside buffer
+     */
+
+    void  (*free_buffer)(PARROT_INTERP, void *buffer);
 
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/
 
-    /* Holds system-specific data structures
-     * unused right now, but this is where it should go if we need them ...
-      union {
-      } gc_private;
-     */
+    /* Holds system-specific data structures */
+    void * gc_private;
 } GC_Subsystem;
 
 typedef struct Memory_Block {
