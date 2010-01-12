@@ -158,10 +158,11 @@ Parrot_gc_ms_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_ms_init)
 
+    Memory_Pools *mem_pools = mem_allocate_zeroed_typed(Memory_Pools);
     GC_Subsystem *gc = interp->gc_sys;
+
     gc->do_gc_mark         = gc_ms_mark_and_sweep;
     gc->finalize_gc_system = NULL;
-    gc->init_pool          = gc_ms_pool_init;
 
     gc->allocate_pmc_header     = gc_ms_allocate_pmc_header;
     gc->free_pmc_header         = gc_ms_free_pmc_header;
@@ -170,7 +171,16 @@ Parrot_gc_ms_init(PARROT_INTERP)
     gc->allocate_attributes     = gc_ms_allocate_attributes;
     gc->free_attributes         = gc_ms_free_attributes;
 
+    mem_pools->num_sized          = 0;
+    mem_pools->num_attribs        = 0;
+    mem_pools->attrib_pools       = NULL;
+    mem_pools->sized_header_pools = NULL;
 
+    initialize_var_size_pools(interp, mem_pools);
+    initialize_fixed_size_pools(interp, mem_pools);
+    Parrot_gc_initialize_fixed_size_pools(interp, mem_pools, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
+
+    gc->gc_private = mem_pools;
 }
 
 /*
@@ -300,13 +310,24 @@ static PMC*
 gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(gc_ms_allocate_pmc_header)
-    return NULL;
+    Memory_Pools           *mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    Fixed_Size_Pool * const pool      = flags & PObj_constant_FLAG
+            ? mem_pools->constant_pmc_pool
+            : mem_pools->pmc_pool;
+
+    return (PMC *)pool->get_free_object(interp, pool);
 }
 
 static void
 gc_ms_free_pmc_header(PARROT_INTERP, ARGFREE(PMC *pmc))
 {
     ASSERT_ARGS(gc_ms_free_pmc_header)
+    Memory_Pools           *mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    Fixed_Size_Pool * const pool      = flags & PObj_constant_FLAG
+            ? mem_pools->constant_pmc_pool
+            : mem_pools->pmc_pool;
+    pool->add_free_object(interp, pool, (PObj *)pmc);
+    pool->num_free_objects++;
 }
 
 
@@ -315,13 +336,25 @@ static STRING*
 gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(gc_ms_allocate_string_header)
-    return NULL;
+    Memory_Pools           *mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    Fixed_Size_Pool * const pool      = flags & PObj_constant_FLAG
+            ? mem_pools->constant_string_header_pool
+            : mem_pools->string_header_pool;
+    return pool->get_free_object(interp, pool);
 }
 
 static void
 gc_ms_free_string_header(PARROT_INTERP, ARGFREE(STRING *string))
 {
     ASSERT_ARGS(gc_ms_free_string_header)
+    if (!PObj_constant_TEST(s)) {
+        Memory_Pools           *mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+        Fixed_Size_Pool * const pool      = flags & PObj_constant_FLAG
+                ? mem_pools->constant_string_header_pool
+                : mem_pools->string_header_pool;
+        pool->add_free_object(interp, pool, (PObj *)pmc);
+        pool->num_free_objects++;
+    }
 }
 
 
