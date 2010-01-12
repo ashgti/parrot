@@ -312,15 +312,8 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 {
     ASSERT_ARGS(Parrot_gc_initialize)
 
-    interp->mem_pools = mem_allocate_zeroed_typed(Memory_Pools);
-    interp->gc_sys    = mem_allocate_zeroed_typed(GC_Subsystem);
-
-    interp->mem_pools->num_sized          = 0;
-    interp->mem_pools->num_attribs        = 0;
-    interp->mem_pools->attrib_pools       = NULL;
-    interp->mem_pools->sized_header_pools = NULL;
-
-    interp->lo_var_ptr                    = stacktop;
+    interp->gc_sys      = mem_allocate_zeroed_typed(GC_Subsystem);
+    interp->lo_var_ptr  = stacktop;
 
 
     /*TODO: add ability to specify GC core at command line w/ --gc= */
@@ -342,9 +335,6 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
         break;
     }
 
-    initialize_var_size_pools(interp);
-    initialize_fixed_size_pools(interp);
-    Parrot_gc_initialize_fixed_size_pools(interp, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
@@ -385,10 +375,7 @@ PMC *
 Parrot_gc_new_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_gc_new_pmc_header)
-    Fixed_Size_Pool * const pool = flags & PObj_constant_FLAG
-            ? interp->mem_pools->constant_pmc_pool
-            : interp->mem_pools->pmc_pool;
-    PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
+    PMC * const pmc = interp->gc_sys->allocate_pmc_header(interp, flags);
 
     if (!pmc)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
@@ -418,14 +405,11 @@ void
 Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_free_pmc_header)
-    Fixed_Size_Pool * const pool = (PObj_constant_TEST(pmc)) ?
-        interp->mem_pools->constant_pmc_pool : interp->mem_pools->pmc_pool;
 
     Parrot_pmc_destroy(interp, pmc);
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
-    pool->add_free_object(interp, pool, (PObj *)pmc);
-    pool->num_free_objects++;
+    interp->gc_sys->free_pmc_header(interp, pmc);
 }
 
 /*
@@ -501,10 +485,7 @@ Parrot_gc_new_string_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_gc_new_string_header)
 
-    STRING * const string = (STRING *)get_free_buffer(interp,
-        (flags & PObj_constant_FLAG)
-            ? interp->mem_pools->constant_string_header_pool
-            : interp->mem_pools->string_header_pool);
+    STRING * const string = interp->gc_sys->allocate_string_header(interp, flags);
     if (!string)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: STRING allocation failed!\n");
@@ -530,10 +511,7 @@ void
 Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_gc_free_string_header)
-    if (!PObj_constant_TEST(s)) {
-        Fixed_Size_Pool * const pool = interp->mem_pools->string_header_pool;
-        pool->add_free_object(interp, pool, s);
-    }
+    interp->gc_sys->free_string_header(interp, s);
 }
 
 /*
