@@ -35,10 +35,31 @@ static void gc_ms_alloc_objects(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
+PARROT_CAN_RETURN_NULL
+static void* gc_ms_allocate_attributes(PARROT_INTERP, INTVAL type)
+        __attribute__nonnull__(1);
+
+PARROT_CAN_RETURN_NULL
+static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
+        __attribute__nonnull__(1);
+
+PARROT_CAN_RETURN_NULL
+static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
+        __attribute__nonnull__(1);
+
 static void gc_ms_finalize(PARROT_INTERP,
     ARGIN(Memory_Pools * const mem_pools))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+static void gc_ms_free_attributes(PARROT_INTERP, ARGFREE(void *attributes))
+        __attribute__nonnull__(1);
+
+static void gc_ms_free_pmc_header(PARROT_INTERP, ARGFREE(PMC *pmc))
+        __attribute__nonnull__(1);
+
+static void gc_ms_free_string_header(PARROT_INTERP, ARGFREE(STRING *string))
+        __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
@@ -81,9 +102,21 @@ static int gc_ms_trace_active_PMCs(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_alloc_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_ms_allocate_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
+#define ASSERT_ARGS_gc_ms_free_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pool))
@@ -125,9 +158,18 @@ Parrot_gc_ms_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_ms_init)
 
-    interp->gc_sys->do_gc_mark         = gc_ms_mark_and_sweep;
-    interp->gc_sys->finalize_gc_system = NULL;
-    interp->gc_sys->init_pool          = gc_ms_pool_init;
+    GC_Subsystem *gc = interp->gc_sys;
+    gc->do_gc_mark         = gc_ms_mark_and_sweep;
+    gc->finalize_gc_system = NULL;
+    gc->init_pool          = gc_ms_pool_init;
+
+    gc->allocate_pmc_header     = gc_ms_allocate_pmc_header;
+    gc->free_pmc_header         = gc_ms_free_pmc_header;
+    gc->allocate_string_header  = gc_ms_allocate_string_header;
+    gc->free_string_header      = gc_ms_free_string_header;
+    gc->allocate_attributes     = gc_ms_allocate_attributes;
+    gc->free_attributes         = gc_ms_free_attributes;
+
 
 }
 
@@ -232,6 +274,70 @@ gc_ms_finalize(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools))
     Parrot_gc_sweep_pool(interp, interp->mem_pools->constant_pmc_pool);
 }
 
+/*
+
+=item C<static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)>
+
+=item C<static void gc_ms_free_pmc_header(PARROT_INTERP, PMC *pmc)>
+
+=item C<static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL
+flags)>
+
+=item C<static void gc_ms_free_string_header(PARROT_INTERP, STRING *string)>
+
+=item C<static void* gc_ms_allocate_attributes(PARROT_INTERP, INTVAL type)>
+
+=item C<static void gc_ms_free_attributes(PARROT_INTERP, void *attributes)>
+
+Various allocation/deallocation routines.
+
+=cut
+
+*/
+
+PARROT_CAN_RETURN_NULL
+static PMC*
+gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
+{
+    ASSERT_ARGS(gc_ms_allocate_pmc_header)
+    return NULL;
+}
+
+static void
+gc_ms_free_pmc_header(PARROT_INTERP, ARGFREE(PMC *pmc))
+{
+    ASSERT_ARGS(gc_ms_free_pmc_header)
+}
+
+
+PARROT_CAN_RETURN_NULL
+static STRING*
+gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
+{
+    ASSERT_ARGS(gc_ms_allocate_string_header)
+    return NULL;
+}
+
+static void
+gc_ms_free_string_header(PARROT_INTERP, ARGFREE(STRING *string))
+{
+    ASSERT_ARGS(gc_ms_free_string_header)
+}
+
+
+PARROT_CAN_RETURN_NULL
+static void*
+gc_ms_allocate_attributes(PARROT_INTERP, INTVAL type)
+{
+    ASSERT_ARGS(gc_ms_allocate_attributes)
+    return NULL;
+}
+
+static void
+gc_ms_free_attributes(PARROT_INTERP, ARGFREE(void *attributes))
+{
+    ASSERT_ARGS(gc_ms_free_attributes)
+}
 
 /*
 
