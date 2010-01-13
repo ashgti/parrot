@@ -45,6 +45,17 @@ static void* gc_ms_allocate_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
         __attribute__nonnull__(2);
 
 PARROT_CAN_RETURN_NULL
+static void* gc_ms_allocate_buffer(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
+PARROT_CAN_RETURN_NULL
+static void* gc_ms_allocate_buffer_with_pointers(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
+static void* gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
+PARROT_CAN_RETURN_NULL
 static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
@@ -134,6 +145,14 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_allocate_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_gc_ms_allocate_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_buffer_with_pointers \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_fixed_size_buffer \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -213,6 +232,9 @@ Parrot_gc_ms_init(PARROT_INTERP)
     gc->free_string_header      = gc_ms_free_string_header;
     gc->allocate_attributes     = gc_ms_allocate_attributes;
     gc->free_attributes         = gc_ms_free_attributes;
+
+    gc->allocate_buffer               = gc_ms_allocate_buffer;
+    gc->allocate_buffer_with_pointers = gc_ms_allocate_buffer_with_pointers;
 
     mem_pools->init_pool          = gc_ms_pool_init;
     mem_pools->num_sized          = 0;
@@ -458,6 +480,44 @@ gc_ms_free_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
         PMC_data(pmc) = NULL;
 #endif
     }
+}
+
+
+PARROT_CAN_RETURN_NULL
+static void*
+gc_ms_allocate_buffer(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_ms_allocate_buffer)
+    return gc_ms_allocate_fixed_size_buffer(interp, size);
+}
+
+PARROT_CAN_RETURN_NULL
+static void*
+gc_ms_allocate_buffer_with_pointers(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_ms_allocate_buffer_with_pointers)
+    return gc_ms_allocate_fixed_size_buffer(interp, size);
+}
+
+PARROT_CAN_RETURN_NULL
+static void*
+gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_ms_allocate_fixed_size_buffer)
+
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    PMC_Attribute_Pool *pool = NULL;
+    const size_t idx = (size < sizeof (void *)) ? 0 : (size - sizeof (void *));
+
+    /* get the pool directly, if possible, for great speed */
+    if (mem_pools->num_attribs > idx)
+        pool = mem_pools->attrib_pools[idx];
+
+    /* otherwise create it */
+    if (!pool)
+        pool = Parrot_gc_get_attribute_pool(interp, mem_pools, size);
+
+    return Parrot_gc_get_attributes_from_pool(interp, pool);
 }
 
 /*
