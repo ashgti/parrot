@@ -1077,21 +1077,6 @@ void *
 Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_allocate_pmc_attributes)
-#if 0
-    const size_t attr_size = pmc->vtable->attr_size;
-#if GC_USE_FIXED_SIZE_ALLOCATOR
-    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
-        attr_size);
-    void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
-    memset(attrs, 0, attr_size);
-    PMC_data(pmc) = attrs;
-    return attrs;
-#else
-    void * const data =  mem_sys_allocate_zeroed(attr_size);
-    PMC_data(pmc) = data;
-    return data;
-#endif
-#endif
     interp->gc_sys->allocate_attributes(interp, pmc);
     return PMC_data(pmc);
 }
@@ -1109,23 +1094,6 @@ void
 Parrot_gc_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_free_pmc_attributes)
-    void * const data = PMC_data(pmc);
-
-#if 0
-    if (data) {
-
-#if GC_USE_FIXED_SIZE_ALLOCATOR
-        const size_t attr_size = pmc->vtable->attr_size;
-        const size_t item_size = attr_size < sizeof (void *) ? sizeof (void *) : attr_size;
-        PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
-        const size_t idx = item_size - sizeof (void *);
-        Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
-#else
-        mem_sys_free(PMC_data(pmc));
-        PMC_data(pmc) = NULL;
-#endif
-    }
-#endif
     interp->gc_sys->free_attributes(interp, pmc);
 }
 
@@ -1184,30 +1152,6 @@ Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data)
     interp->gc_sys->free_buffer(interp, data);
 }
 
-
-/*
-
-=item C<static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
-PMC_Attribute_Pool *pool, void *data)>
-
-Frees a fixed-size data item back to the pool for later reallocation.  Private
-to this file.
-
-*/
-
-static void
-Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
-    ARGMOD(PMC_Attribute_Pool *pool),
-    ARGMOD(void *data))
-{
-    ASSERT_ARGS(Parrot_gc_free_attributes_from_pool)
-    PMC_Attribute_Free_List * const item = (PMC_Attribute_Free_List *)data;
-
-    item->next      = pool->free_list;
-    pool->free_list = item;
-
-    pool->num_free_objects++;
-}
 
 /*
 
