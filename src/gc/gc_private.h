@@ -156,7 +156,7 @@ typedef struct Memory_Block {
 
 typedef struct Variable_Size_Pool {
     Memory_Block *top_block;
-    void (*compact)(PARROT_INTERP, Memory_Pools *mem_pools, struct Variable_Size_Pool *);
+    void (*compact)(PARROT_INTERP, struct Memory_Pools *mem_pools, struct Variable_Size_Pool *);
     size_t minimum_block_size;
     size_t total_allocated; /* total bytes allocated to this pool */
     size_t guaranteed_reclaimable;     /* bytes that can definitely be reclaimed*/
