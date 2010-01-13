@@ -52,6 +52,7 @@ PARROT_CAN_RETURN_NULL
 static void* gc_ms_allocate_buffer_with_pointers(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
+PARROT_CAN_RETURN_NULL
 static void* gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
@@ -61,6 +62,12 @@ static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 
 PARROT_CAN_RETURN_NULL
 static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
+        __attribute__nonnull__(1);
+
+static void gc_ms_block_gc_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static void gc_ms_block_gc_sweep(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void gc_ms_finalize(PARROT_INTERP,
@@ -125,6 +132,12 @@ static int gc_ms_trace_active_PMCs(PARROT_INTERP,
     Parrot_gc_trace_type trace)
         __attribute__nonnull__(1);
 
+static void gc_ms_unblock_gc_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static void gc_ms_unblock_gc_sweep(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     ARGMOD(PMC_Attribute_Pool *pool),
     ARGMOD(void *data))
@@ -157,6 +170,10 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_block_gc_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_block_gc_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
@@ -188,6 +205,10 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     , PARROT_ASSERT_ARG(pool) \
     , PARROT_ASSERT_ARG(arg))
 #define ASSERT_ARGS_gc_ms_trace_active_PMCs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_unblock_gc_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_unblock_gc_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_free_attributes_from_pool \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -235,6 +256,11 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
     gc->allocate_buffer               = gc_ms_allocate_buffer;
     gc->allocate_buffer_with_pointers = gc_ms_allocate_buffer_with_pointers;
+
+    gc->block_gc_mark           = gc_ms_block_gc_mark;
+    gc->unblock_gc_mark         = gc_ms_unblock_gc_mark;
+    gc->block_gc_sweep          = gc_ms_block_gc_sweep;
+    gc->unblock_gc_sweep        = gc_ms_unblock_gc_sweep;
 
     mem_pools->init_pool          = gc_ms_pool_init;
     mem_pools->num_sized          = 0;
@@ -518,6 +544,41 @@ gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
         pool = Parrot_gc_get_attribute_pool(interp, mem_pools, size);
 
     return Parrot_gc_get_attributes_from_pool(interp, pool);
+}
+
+static void
+gc_ms_block_gc_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_block_gc_sweep)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    mem_pools->gc_mark_block_level++;
+}
+
+static void
+gc_ms_unblock_gc_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_unblock_gc_sweep)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    if (mem_pools->gc_mark_block_level)
+        mem_pools->gc_mark_block_level--;
+}
+
+
+static void
+gc_ms_block_gc_sweep(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_block_gc_sweep)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    mem_pools->gc_sweep_block_level++;
+}
+
+static void
+gc_ms_unblock_gc_sweep(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_unblock_gc_sweep)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    if (mem_pools->gc_sweep_block_level)
+        mem_pools->gc_sweep_block_level--;
 }
 
 /*
