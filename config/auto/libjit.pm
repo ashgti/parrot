@@ -53,7 +53,7 @@ sub runstep {
     else {
         $extra_libs = $self->_select_lib( {
             conf         => $conf,
-            osname       => $conf->data->get_p5('OSNAME'),
+            osname       => $conf->data->get('osname'),
             cc           => $conf->data->get('cc'),
             win32_nongcc => 'libjit.lib',
             default      => '-ljit',
