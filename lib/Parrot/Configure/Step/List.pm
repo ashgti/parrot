@@ -39,6 +39,7 @@ my @steps = qw(
     auto::format
     auto::isreg
     auto::arch
+    auto::libjit
     auto::jit
     auto::frames
     auto::cpu
@@ -70,10 +71,15 @@ my @steps = qw(
     gen::parrot_include
     gen::opengl
     gen::call_list
+    gen::libjit
     gen::makefiles
     gen::platform
     gen::config_pm
 );
+
+=pod
+
+=cut
 
 sub get_steps_list { return @steps; }
 

@@ -30,6 +30,9 @@ F<docs/pdds/pdd16_native_call.pod>.
 use strict;
 use warnings;
 
+use lib 'lib';
+use Parrot::NativeCall;
+
 my $opt_warndups = 0;
 
 # This file will eventually be compiled
@@ -37,68 +40,7 @@ open my $NCI, '>', 'src/nci.c' or die "Can't create nci.c: $!";
 
 print_head( \@ARGV );
 
-
-my %sig_table = (
-    p => {
-        as_proto => "void *",
-        other_decl => "PMC * final_destination = PMCNULL;",
-        sig_char => "P",
-        ret_assign => "if (return_data != NULL) {\n" .
-             "        final_destination = pmc_new(interp, enum_class_UnManagedStruct);\n" .
-             "        VTABLE_set_pointer(interp, final_destination, return_data);\n" .
-             "    }\n" .
-             "    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"P\", final_destination);",
-    },
-    i => { as_proto => "int",    sig_char => "I" },
-    l => { as_proto => "long",   sig_char => "I" },
-    c => { as_proto => "char",   sig_char => "I" },
-    s => { as_proto => "short",  sig_char => "I" },
-    f => { as_proto => "float",  sig_char => "N" },
-    d => { as_proto => "double", sig_char => "N" },
-    t => { as_proto => "char *",
-           other_decl => "STRING *final_destination;",
-           ret_assign => "final_destination = Parrot_str_new(interp, return_data, 0);\n    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"S\", final_destination);",
-           sig_char => "S" },
-    v => { as_proto => "void",
-           return_type => "void *",
-           sig_char => "v",
-           ret_assign => "",
-           func_call_assign => ""
-         },
-    P => { as_proto => "PMC *", sig_char => "P" },
-    O => { as_proto => "PMC *", returns => "", sig_char => "Pi" },
-    J => { as_proto => "PARROT_INTERP", returns => "", sig_char => "" },
-    S => { as_proto => "STRING *", sig_char => "S" },
-    I => { as_proto => "INTVAL", sig_char => "I" },
-    N => { as_proto => "FLOATVAL", sig_char => "N" },
-    b => { as_proto => "void *", as_return => "", sig_char => "S" },
-    B => { as_proto => "char **", as_return => "", sig_char => "S" },
-    # These should be replaced by modifiers in the future
-    2 => { as_proto => "short *",  sig_char => "P", return_type => "short",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
-    3 => { as_proto => "int *",  sig_char => "P", return_type => "int",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
-    4 => { as_proto => "long *",  sig_char => "P", return_type => "long",
-           ret_assign => 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "I", return_data);' },
-    L => { as_proto => "long *", as_return => "" },
-    T => { as_proto => "char **", as_return => "" },
-    V => { as_proto => "void **", as_return => "", sig_char => "P" },
-    '@' => { as_proto => "PMC *", as_return => "", cname => "xAT_", sig_char => 'Ps' },
-);
-
-for (values %sig_table) {
-    if (not exists $_->{as_return}) { $_->{as_return} = $_->{as_proto} }
-    if (not exists $_->{return_type}) { $_->{return_type} = $_->{as_proto} }
-    if (not exists $_->{return_type_decl}) { $_->{return_type_decl} = $_->{return_type} }
-    if (not exists $_->{ret_assign} and exists $_->{sig_char}) {
-        $_->{ret_assign} = 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "'
-                           . $_->{sig_char} . '", return_data);';
-    }
-    if (not exists $_->{func_call_assign}) {
-        $_->{func_call_assign} = "return_data = "
-    }
-}
-
+my %sig_table = %Parrot::NativeCall::signature_table;
 
 my $temp_cnt = 0;
 my (@put_pointer, @put_pointer_nci_too, @nci_defs);
@@ -498,17 +440,13 @@ SHIM(PMC *pmc_nci), NOTNULL(STRING *signature), SHIM(int *jitted))
         return F2DPTR(VTABLE_get_pointer(interp, b));
     }
     else {
-        int jit_size;
-        void * const result = Parrot_jit_build_call_func(interp, pmc_nci, signature, &jit_size);
+        void *priv;
+        void * const result = Parrot_jit_build_call_func(interp, pmc_nci, signature, &priv);
         if (result) {
-            struct jit_buffer_private_data *priv;
             *jitted = 1;
             temp_pmc = pmc_new(interp, enum_class_ManagedStruct);
             VTABLE_set_pointer(interp, temp_pmc, (void *)result);
 #ifdef PARROT_HAS_EXEC_PROTECT
-            priv = (struct jit_buffer_private_data *)
-                mem_sys_allocate(sizeof(struct jit_buffer_private_data));
-            priv->size = jit_size;
             SETATTR_ManagedStruct_custom_free_func(interp, temp_pmc, Parrot_jit_free_buffer);
             SETATTR_ManagedStruct_custom_free_priv(interp, temp_pmc, priv);
             SETATTR_ManagedStruct_custom_clone_func(interp, temp_pmc, Parrot_jit_clone_buffer);

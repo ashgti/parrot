@@ -110,6 +110,8 @@ PARROT_DYNEXT_EXPORT char * nci_ttt(char *, char *);
 PARROT_DYNEXT_EXPORT void   nci_vfff(float, float, float);
 PARROT_DYNEXT_EXPORT void   nci_vV(const char **);
 PARROT_DYNEXT_EXPORT void   nci_vVVV(const char **, const char **, const char **);
+PARROT_DYNEXT_EXPORT int    nci_i20(int, int, int, int, int, int, int, int, int, int, int, int,
+                                    int, int, int, int, int, int, int);
 
 /* Declarations for callback tests */
 
@@ -1194,6 +1196,50 @@ nci_vVVV(const char **ptr1, const char **ptr2, const char **ptr3)
     *ptr1 = "Hello bright new world!\n";
     *ptr2 = "It is a beautiful day!\n";
     *ptr3 = "Go suck a lemon.\n";
+}
+
+/*
+
+=item C<int
+nci_i20(int sel, int v1, int v2, int v3, int v4, int v5, int v6, int v7, int v8, int v9, int v10,
+        int v11, int v12, int v13, int v14, int v15, int v16, int v17, int v18)>
+
+Prints and returns the nth value in a list of integers. First argument is the selector; subsequents,
+the list.
+
+This function is designed to be outside of the range of the static frame builder as an excercise for
+the dynamic frame builder.
+
+=cut
+
+*/
+PARROT_DYNEXT_EXPORT int
+nci_i20(int sel, int v1, int v2, int v3, int v4, int v5, int v6, int v7, int v8, int v9, int v10,
+        int v11, int v12, int v13, int v14, int v15, int v16, int v17, int v18) {
+    int *selected;
+    switch ((sel < 0 ? -sel : sel) % 18) {
+        case 0: selected = &v1; break;
+        case 1: selected = &v2; break;
+        case 2: selected = &v3; break;
+        case 3: selected = &v4; break;
+        case 4: selected = &v5; break;
+        case 5: selected = &v6; break;
+        case 6: selected = &v7; break;
+        case 7: selected = &v8; break;
+        case 8: selected = &v9; break;
+        case 9: selected = &v10; break;
+        case 10: selected = &v11; break;
+        case 11: selected = &v12; break;
+        case 12: selected = &v13; break;
+        case 13: selected = &v14; break;
+        case 14: selected = &v15; break;
+        case 15: selected = &v16; break;
+        case 16: selected = &v17; break;
+        case 17: selected = &v18; break;
+        default: printf("default case reached (should never happen)"); return -1;
+    }
+    printf("%d\n", *selected);
+    return *selected;
 }
 
 #ifdef TEST

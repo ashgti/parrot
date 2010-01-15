@@ -39,13 +39,13 @@ sub _init {
         include/parrot/library.h
         include/parrot/longopt.h
         include/parrot/multidispatch.h
+        include/parrot/nci.h
         include/parrot/packfile.h
         include/parrot/stat.h
         include/parrot/string.h
         include/parrot/pmc.h
         include/parrot/warnings.h
         include/parrot/gc_api.h
-        src/pmc/timer.pmc
         src/utils.c
     ) ];
     $data{generated_files} = [ qw(

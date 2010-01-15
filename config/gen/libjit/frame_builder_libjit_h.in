@@ -1,0 +1,115 @@
+/* frame_builder_libjit.h
+ * $Id$
+ * Copyright (C) 2009, Parrot Foundation.
+ */
+
+#ifndef PARROT_FRAME_BUILDER_LIBJIT_H_GUARD
+#define PARROT_FRAME_BUILDER_LIBJIT_H_GUARD
+
+
+#if defined(__cplusplus)
+#  define EXTERN extern "C"
+#else
+#  define EXTERN
+#endif
+
+#include <assert.h>
+#include "parrot/parrot.h"
+#include "frame_builder.h"
+
+#ifdef PARROT_HAS_LIBJIT
+
+#  include <jit/jit.h>
+
+/*
+ * JITted function state data
+ */
+struct jit_buffer_private_data {
+    jit_context_t ctx;
+    char *sig;
+};
+
+/*
+ * JIT types
+ */
+
+#  define JIT_TYPE_UINTVAL  @libjit_uv@
+#  define JIT_TYPE_INTVAL   @libjit_iv@
+#  define JIT_TYPE_FLOATVAL @libjit_nv@
+
+/*
+ * JIT functions
+ */
+
+static void *
+Parrot_jit_create_thunk(Interp *, char *, void *);
+
+static void
+Parrot_jit_parse_sig_args_pre(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t, jit_value_t,
+                              jit_type_t *, jit_value_t *, jit_value_t *);
+
+static jit_type_t
+Parrot_jit_parse_sig_ret_pre(Interp *, char *);
+
+static void
+Parrot_jit_parse_sig_ret_post(Interp *, char *, jit_function_t, jit_value_t, jit_value_t, jit_value_t, jit_value_t);
+
+static void
+Parrot_jit_parse_sig_args_post(Interp *, char *, int, jit_function_t, jit_value_t, jit_value_t *, jit_value_t *);
+
+static int
+Parrot_jit_create_arg_regs(Interp *, char *, int, jit_function_t, jit_value_t *);
+
+static void
+Parrot_jit_fill_args(Interp *, char *, int, int, jit_function_t, jit_value_t, jit_value_t, jit_value_t,
+                    jit_value_t *, jit_type_t *, jit_value_t *);
+
+static jit_value_t
+jit_value_create_intval_constant(jit_function_t, INTVAL);
+
+/*
+ * workaround for platforms that lack libjit alloca support
+ */
+#  if @libjit_has_alloca@
+#    define JIT_ALLOCA(f, n)      jit_insn_alloca((f), (n))
+#    define JIT_ALLOCA_FREE(f, p)
+#  else
+#    define JIT_ALLOCA(f, n)      jit__mem_sys_allocate((f), (n))
+#    define JIT_ALLOCA_FREE(f, p) jit__mem_sys_free((f), (p))
+#  endif
+
+/*
+ * JIT wrappers
+ */
+
+/* custom wrappers */
+static jit_value_t
+jit__Buffer_bufstart(jit_function_t, jit_value_t);
+
+static jit_value_t
+jit__CURRENT_CONTEXT(jit_function_t, jit_value_t);
+
+static jit_value_t
+jit__PMC_IS_NULL(jit_function_t, jit_value_t);
+
+static jit_value_t
+jit__Parrot_pcc_get_signature(jit_function_t, jit_value_t, jit_value_t);
+
+static void
+null_func();
+
+/* vtable wrappers */
+@TEMP_vtable_wrap_decls@
+
+/* function wrappers */
+@TEMP_func_wrap_decls@
+
+#endif /* PARROT_HAS_LIBJIT */
+#endif /* PARROT_FRAME_BUILDER_LIBJIT_H_GUARD */
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

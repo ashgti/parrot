@@ -431,6 +431,8 @@ This is to exclude automatically generated C-language files Parrot might have.
             include/parrot/config.h
             include/parrot/has_header.h
             src/gc/malloc.c
+            src/frame_builder_libjit.h
+            src/frame_builder_libjit.c
             } unless @exemptions;
 
         my $path = -f $file ? $file : $file->path;
