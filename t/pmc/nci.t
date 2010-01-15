@@ -10,8 +10,9 @@ use Parrot::NativeCall 'signature_nci_to_pcc';
 
 my @nci_sigs;
 BEGIN {
+    my %seen;
     @nci_sigs =
-        grep {$_}
+        grep {$_ and not $seen{$_}++}
         map {chomp; s/^\s*//; s/\s*$//; s/#.*$//; $_}
         split /\n/, Parrot::BuildUtil::slurp_file('src/call_list.txt');
 }
