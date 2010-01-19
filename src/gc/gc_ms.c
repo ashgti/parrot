@@ -119,6 +119,12 @@ static void gc_ms_pool_init(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pool);
 
+PARROT_CAN_RETURN_NULL
+static void* gc_ms_reallocate_buffer(PARROT_INTERP,
+    void *old,
+    size_t newsize)
+        __attribute__nonnull__(1);
+
 static int gc_ms_sweep_cb(PARROT_INTERP,
     ARGIN(Memory_Pools *mem_pools),
     ARGMOD(Fixed_Size_Pool *pool),
@@ -204,6 +210,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_gc_ms_pool_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_ms_reallocate_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_sweep_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools) \
@@ -260,6 +268,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
     gc->free_attributes         = gc_ms_free_attributes;
 
     gc->allocate_buffer               = gc_ms_allocate_buffer;
+    gc->reallocate_buffer             = gc_ms_reallocate_buffer;
     gc->allocate_buffer_with_pointers = gc_ms_allocate_buffer_with_pointers;
 
     gc->block_gc_mark           = gc_ms_block_gc_mark;
@@ -521,7 +530,75 @@ static void*
 gc_ms_allocate_buffer(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_buffer)
-    return gc_ms_allocate_fixed_size_buffer(interp, size);
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    return mem_allocate(interp, mem_pools, size, mem_pools->memory_pool);
+}
+
+PARROT_CAN_RETURN_NULL
+static void*
+gc_ms_reallocate_buffer(PARROT_INTERP, void *old, size_t newsize)
+{
+    ASSERT_ARGS(gc_ms_allocate_buffer)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    size_t copysize;
+    char  *mem;
+    //Variable_Size_Pool * const pool = interp->mem_pools->memory_pool;
+    size_t new_size, needed, old_size;
+
+    Buffer *buffer = (Buffer *)old;
+
+    /*
+     * If there is no old buffer just allocate new one
+     */
+    if (!buffer)
+        return gc_ms_allocate_buffer(interp, newsize);
+
+    /*
+     * we don't shrink buffers
+     */
+    if (newsize <= Buffer_buflen(buffer))
+        return old;
+
+    /*
+     * same as below but barely used and tested - only 3 list related
+     * tests do use true reallocation
+     *
+     * list.c, which does _reallocate, has 2 reallocations
+     * normally, which play ping pong with buffers.
+     * The normal case is therefore always to allocate a new block
+     */
+    new_size = aligned_size(buffer, newsize);
+    old_size = aligned_size(buffer, Buffer_buflen(buffer));
+
+    needed   = new_size - old_size;
+
+#if 0
+    XXX
+    if ((pool->top_block->free >= needed)
+    &&  (pool->top_block->top  == (char *)Buffer_bufstart(buffer) + old_size)) {
+        pool->top_block->free -= needed;
+        pool->top_block->top  += needed;
+        Buffer_buflen(buffer) = newsize;
+        return;
+    }
+
+    copysize = Buffer_buflen(buffer);
+
+    if (!PObj_COW_TEST(buffer))
+        pool->guaranteed_reclaimable += copysize;
+    else
+        pool->possibly_reclaimable   += copysize;
+#endif
+
+    mem = (char *)gc_ms_allocate_buffer(interp, new_size);
+    mem = aligned_mem(buffer, mem);
+
+    /* We shouldn't ever have a 0 from size, but we do. If we can track down
+     * those bugs, this can be removed which would make things cheaper */
+    if (copysize)
+        memcpy(mem, Buffer_bufstart(buffer), copysize);
+
+    return mem;
 }
 
 PARROT_CAN_RETURN_NULL

@@ -117,6 +117,7 @@ typedef struct GC_Subsystem {
 
     /* Allocate buffer which contains interior pointers */
     void* (*allocate_buffer_with_pointers)(PARROT_INTERP, size_t size);
+
     /* We probably can provide Boehm GC like _typed variant. With bitmask
      * describing positions of pointers inside buffer
      */
