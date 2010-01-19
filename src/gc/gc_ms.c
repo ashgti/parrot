@@ -95,6 +95,9 @@ static void * gc_ms_get_free_object(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
 
+static size_t gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
+        __attribute__nonnull__(1);
+
 static void gc_ms_init_child_inter(
     ARGIN(Interp *parent_interp),
     ARGIN(Interp *child_interp))
@@ -188,6 +191,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_ms_get_gc_info __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_init_child_inter __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(parent_interp) \
     , PARROT_ASSERT_ARG(child_interp))
@@ -261,6 +266,8 @@ Parrot_gc_ms_init(PARROT_INTERP)
     gc->unblock_gc_mark         = gc_ms_unblock_gc_mark;
     gc->block_gc_sweep          = gc_ms_block_gc_sweep;
     gc->unblock_gc_sweep        = gc_ms_unblock_gc_sweep;
+
+    gc->get_gc_info             = gc_ms_get_gc_info;
 
     mem_pools->init_pool          = gc_ms_pool_init;
     mem_pools->num_sized          = 0;
@@ -579,6 +586,13 @@ gc_ms_unblock_gc_sweep(PARROT_INTERP)
     Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
     if (mem_pools->gc_sweep_block_level)
         mem_pools->gc_sweep_block_level--;
+}
+
+static size_t
+gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
+{
+    ASSERT_ARGS(gc_ms_get_gc_info)
+    return 0;
 }
 
 /*
