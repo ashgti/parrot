@@ -597,6 +597,7 @@ Parrot_gc_allocate_string_storage(PARROT_INTERP, ARGOUT(STRING *str),
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = new_size - sizeof (void*);
+    str->bufused = 0;
 }
 
 /*
@@ -687,7 +688,7 @@ Parrot_gc_reallocate_string_storage(PARROT_INTERP, ARGMOD(STRING *str),
     /* only copy used memory, not total string buffer */
     copysize = str->bufused;
 
-    mem = (char *)interp->gc_sys->allocate_string_header(interp, new_size);
+    mem = (char *)interp->gc_sys->allocate_buffer(interp, new_size);
     mem += sizeof (void *);
 
     /* copy mem from strstart, *not* bufstart */
