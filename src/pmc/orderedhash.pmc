@@ -691,7 +691,8 @@ Deletes the key C<*key> from the hash.
             return;
 
         list_entry = get_list_item(INTERP, SELF, idx);
-        STATICSELF.delete_keyed(VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_KEY));
+        STATICSELF.delete_keyed(
+            VTABLE_get_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_KEY));
     }
 
 /*
