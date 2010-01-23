@@ -24,7 +24,9 @@ PDD13 for the design spec.
 
 */
 
-pmclass PackfileRawSegment extends PackfileSegment {
+pmclass PackfileRawSegment auto_attrs extends PackfileSegment {
+    /* Type of segment */
+    ATTR INTVAL  type;
     /* ResizableIntegerArray of opcodes */
     ATTR PMC    *opcodes;
 
@@ -40,12 +42,12 @@ Create empty PackfileRawSegment.
 
     VTABLE void init() {
         Parrot_PackfileRawSegment_attributes * attrs =
-                mem_allocate_zeroed_typed(Parrot_PackfileRawSegment_attributes);
+                PMC_data_typed(SELF, Parrot_PackfileRawSegment_attributes*);
 
         attrs->opcodes = pmc_new(interp, enum_class_ResizableIntegerArray);
+        attrs->type    = PF_BYTEC_SEG;
 
-        PObj_custom_mark_destroy_SETALL(SELF);
-        PMC_data(SELF) = attrs;
+        PObj_custom_mark_SET(SELF);
     }
 
 /*
@@ -62,32 +64,10 @@ Marks the object as live.
         Parrot_PackfileRawSegment_attributes * attrs =
                 PARROT_PACKFILERAWSEGMENT(SELF);
 
-        if (attrs->opcodes)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)attrs->opcodes);
+        Parrot_gc_mark_PMC_alive(interp, attrs->opcodes);
 
         SUPER();
     }
-
-/*
-
-=item C<void destroy()>
-
-Destroys the PMC and frees all allocated memory.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        Parrot_PackfileRawSegment_attributes * attrs =
-                PARROT_PACKFILERAWSEGMENT(SELF);
-
-        if (attrs) {
-            mem_sys_free(attrs);
-            PMC_data(SELF) = NULL;
-        }
-    }
-
 
 
 /*
@@ -103,8 +83,13 @@ Initialize PackfileRawSegment from PackFile_Segment
     VTABLE void set_pointer(void * pointer) {
         const PackFile_Segment * const pfseg =
                 (const PackFile_Segment *)pointer;
-        PMC * opcodes = PARROT_PACKFILERAWSEGMENT(SELF)->opcodes;
+        Parrot_PackfileRawSegment_attributes * attrs =
+                PARROT_PACKFILERAWSEGMENT(SELF);
+        PMC * opcodes = attrs->opcodes;
         size_t i;
+
+        /* Preserve type of unpacked segment */
+        attrs->type = pfseg->type;
 
         if (pfseg->size) {
             /* copy data to own array */
@@ -132,7 +117,7 @@ Initialize PackfileRawSegment from PackFile_Segment
         PMC * opcodes = attrs->opcodes;
         size_t i;
 
-        pfseg->type     = PF_BYTEC_SEG;
+        pfseg->type     = attrs->type;
         pfseg->size     = VTABLE_get_integer(interp, opcodes);
         pfseg->data     = mem_allocate_n_typed(pfseg->size, opcode_t);
 
@@ -187,6 +172,44 @@ Set an integer's worth of data in the segment.
             PARROT_PACKFILERAWSEGMENT(SELF)->opcodes, key, value);
     }
 
+/*
+
+=item C<void push_integer(INTVAL value)>
+
+Append opcode to segment
+
+=cut
+
+*/
+    VTABLE void push_integer(INTVAL value)  {
+        VTABLE_push_integer(interp,
+            PARROT_PACKFILERAWSEGMENT(SELF)->opcodes, value);
+    }
+
+/*
+
+=item C<METHOD type()>
+
+Set of get segment type.
+
+=cut
+
+TODO: Don't allow create Directory, Annotations, etc segments.
+
+*/
+
+    METHOD type(INTVAL type :optional, INTVAL got_type :opt_flag) {
+        Parrot_PackfileRawSegment_attributes * attrs =
+                PARROT_PACKFILERAWSEGMENT(SELF);
+        INTVAL res;
+
+        if (got_type) {
+            attrs->type = type;
+        }
+
+        res = attrs->type;
+        RETURN(INTVAL res);
+    }
 
 }
 /*

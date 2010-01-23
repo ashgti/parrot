@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 17;
+use Parrot::Test tests => 18;
 use Parrot::Test::Util 'create_tempfile';
 use Parrot::Test::Util 'create_tempfile';
 
@@ -95,14 +95,12 @@ ok 6 - $P6.open($S1, $S2) # with bad file
 ok 7 - $P7.open($S1, $S2) # new file, write mode succeeds
 OUT
 
-# RT #46827 test open file, close file, delete file, reopen previously opened stream
-
 SKIP: {
     skip 'no asynch calls yet' => 1;
 
     pir_output_is( <<'CODE', <<'OUT', 'open and close - asynchronous' );
 .sub 'test' :main
-    $P1 = # RT #46831 create a callback here
+    $P1 = # TT #1204 create a callback here
     $P0 = new ['FileHandle']
 
     $P0.'open'('README')
@@ -292,11 +290,9 @@ ok 1 - read 10,000 lines
 OUT
 
 
-# RT #46833 test reading/writing code points once supported
+# TT #1204 test reading long chunks, eof, and across newlines
 
-# RT #46835 test reading long chunks, eof, and across newlines
-
-# RT #46837 pir_output_is( <<'CODE', <<'OUT', 'print, read, and readline - asynchronous', todo => 'not yet implemented' );
+# TT #1204 pir_output_is( <<'CODE', <<'OUT', 'print, read, and readline - asynchronous', todo => 'not yet implemented' );
 
 # L<PDD22/I\/O PMC API/=item record_separator>
 pir_output_is( <<'CODE', <<'OUT', 'record_separator', todo => 'not yet implemented' );
@@ -367,9 +363,9 @@ ok 2 - $S0 = $P1.buffer_type() # line-buffered
 ok 3 - $S0 = $P1.buffer_type() # full-buffered
 OUT
 
-# RT #46839 test effects of buffer_type, not just set/get
+# TT #1204 test effects of buffer_type, not just set/get
 
-# RT #46841
+# TT #1177
 # L<PDD22/I\/O PMC API/=item buffer_size>
 # NOTES: try setting positive, zero, negative int
 # perform print and read ops
@@ -585,7 +581,49 @@ CODE
 utf8
 OUTPUT
 
-# RT #46843
+pir_output_is( <<'CODE', <<"OUTPUT", "exit status" );
+.include 'iglobals.pasm'
+.sub 'main'
+    .local pmc pipe, conf, interp
+    .local string cmd
+    pipe = new ['FileHandle']
+
+    interp = getinterp
+    conf = interp[.IGLOBALS_CONFIG_HASH]
+
+    cmd = conf['build_dir']
+
+    .local string aux
+    aux = conf['slash']
+    cmd .= aux
+    aux = conf['test_prog']
+    cmd .= aux
+    aux = conf['exe']
+    cmd .= aux
+
+    pipe = open cmd, "rp"
+    pipe.'readall'()
+    pipe.'close'()
+    print "expect 0 exit status: "
+    $I0 = pipe.'exit_status'()
+    say $I0
+
+    cmd .= ' --this_is_not_a_valid_option'
+    pipe = open cmd, "rp"
+    pipe.'readall'()
+    pipe.'close'()
+    print "expect 1 exit status: "
+    $I0 = pipe.'exit_status'()
+    $I0 = $I0 != 0
+    say $I0
+
+.end
+CODE
+expect 0 exit status: 0
+expect 1 exit status: 1
+OUTPUT
+
+# TT #1178
 # L<PDD22/I\/O PMC API/=item get_fd>
 # NOTES: this is going to be platform dependent
 

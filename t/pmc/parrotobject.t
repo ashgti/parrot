@@ -132,7 +132,6 @@ OUT
 
 # '
 
-# :vtable inheritance; RT #40626
 pir_output_is( <<'CODE', <<'OUT', ':vtable inheritance from core classes' );
 .sub main :main
     $P0 = subclass 'Hash', 'Foo'
@@ -191,7 +190,7 @@ CODE
 1
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', 'RT #41733 - Execution ends after returning from invoke' );
+pir_output_is( <<'CODE', <<'OUT', 'Execution ends after returning from invoke' );
 .namespace ['Foo']
 
 .sub invoke :vtable
@@ -233,7 +232,7 @@ CODE
 3
 OUT
 
-pir_error_output_like( <<'CODE', <<'OUT', 'RT #41732' );
+pir_error_output_like( <<'CODE', <<'OUT', 'handle too few positional arguments' );
 .namespace ['Foo']
 
 .sub invoke :vtable
@@ -247,7 +246,7 @@ pir_error_output_like( <<'CODE', <<'OUT', 'RT #41732' );
     $P1()
 .end
 CODE
-/2 params expected/
+/too few positional arguments/
 OUT
 
 # '

@@ -60,9 +60,6 @@ typedef struct macro_frame_t {
     YY_BUFFER_STATE buffer;
 } macro_frame_t;
 
-/* short ranged globals for lexer state */
-int pesky_global__is_def = 0;
-
 /* static function declarations */
 static void pop_parser_state(PARROT_INTERP, ARGMOD(void *yyscanner));
 
@@ -177,8 +174,7 @@ SP              [ ]
 
 <heredoc2>{EOL} {
         /* heredocs have highest priority
-         * arrange them before all wildcard state matches
-         */
+         * arrange them before all wildcard state matches */
 
         /* Newline in the heredoc. Realloc and cat on. */
         IMCC_INFO(interp)->line++;
@@ -213,7 +209,8 @@ SP              [ ]
             yy_pop_state(yyscanner);
             yy_scan_string(IMCC_INFO(interp)->frames->heredoc_rest, yyscanner);
 
-            /* RT #42382 delete quotes, -> emit, pbc */
+            /* the EOF rule will increment the line number; decrement here */
+            IMCC_INFO(interp)->line--;
             return STRINGC;
         }
         else {
@@ -286,9 +283,8 @@ SP              [ ]
 
 
 <INITIAL,emit,macro>^"=cut"{EOL} {
-    /* this is a stand-alone =cut, but we're
-     * not in POD mode, so just ignore.
-     */
+    /* this is a stand-alone =cut, but we're not in POD mode, so ignore.  */
+    IMCC_INFO(interp)->line++;
 }
 
 <INITIAL,emit,macro>^"=" {
@@ -357,6 +353,7 @@ SP              [ ]
 ":named"        return ADV_NAMED;
 "=>"            return ADV_ARROW;
 ":invocant"     return ADV_INVOCANT;
+":call_sig"     return ADV_CALL_SIG;
 
 <emit,INITIAL>".namespace"    return NAMESPACE;
 <emit,INITIAL>".HLL"          return HLL;
@@ -494,7 +491,6 @@ SP              [ ]
             size_t len;
             YYCHOP();
 
-            /* RT #32421   if$I0 is parsed as if$ I0 */
             if (!IMCC_INFO(interp)->frames || !IMCC_INFO(interp)->frames->label)
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "missing space?");
 
@@ -522,9 +518,10 @@ SP              [ ]
     }
 
 <emit,INITIAL>{DOT}{LETTER}{LETTERDIGIT}* {
-        char   * const macro_name = yytext + 1;
-
-        if (!expand_macro(interp, macro_name, yyscanner)) {
+        char   * const macro_name = mem_sys_strdup(yytext + 1);
+        int failed = expand_macro(interp, macro_name, yyscanner);
+        mem_sys_free(macro_name);
+        if (!failed) {
             yyless(1);
             return DOT;
         }
@@ -551,7 +548,6 @@ SP              [ ]
 <*>{STRINGCONSTANT} {
         valp->s = mem_sys_strdup(yytext);
 
-        /* RT #42382 delete quotes, -> emit, pbc */
         return STRINGC;
     }
 
@@ -640,7 +636,7 @@ SP              [ ]
     }
 
 <emit,INITIAL>{ID} {
-        if (!pesky_global__is_def) {
+        if (!IMCC_INFO(interp)->is_def) {
             SymReg *r = find_sym(interp, yytext);
 
             if (r && (r->type & (VTIDENTIFIER|VT_CONSTP))) {
@@ -664,7 +660,7 @@ SP              [ ]
         }
 
         valp->s = mem_sys_strdup(yytext);
-        return (!pesky_global__is_def && is_op(interp, valp->s) ? PARROT_OP : IDENTIFIER);
+        return (!IMCC_INFO(interp)->is_def && is_op(interp, valp->s) ? PARROT_OP : IDENTIFIER);
     }
 
 
@@ -993,7 +989,7 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
         IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "Macro names must be identifiers");
 
     IMCC_INFO(interp)->cur_macro_name = valp->s;
-    start_line                        = IMCC_INFO(interp)->line++;
+    start_line                        = IMCC_INFO(interp)->line;
 
     memset(&params, 0, sizeof (params_t));
 
@@ -1061,6 +1057,9 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
     mem_sys_free(IMCC_INFO(interp)->macro_buffer);
     IMCC_INFO(interp)->macro_buffer   = NULL;
     IMCC_INFO(interp)->cur_macro_name = NULL;
+
+    /* the ENDM rule doesn't set the line number */
+    IMCC_INFO(interp)->line--;
 
     return MACRO;
 }
@@ -1222,7 +1221,8 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
             }
         }
 
-        IMCC_INFO(interp)->line = m->line;
+        /* let the normal EOF rules match line numbers */
+        IMCC_INFO(interp)->line = m->line - 1;
         scan_string(frame, m->expansion, yyscanner);
 
         return 1;

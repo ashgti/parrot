@@ -29,9 +29,6 @@ them, with default behaviour.
 
 =head2 Remarks
 
-C<< binop_mmd_funcs->x >> and C<< ->y >> are table sizes
-not highest type in table.
-
 =head2 Functions
 
 =over 4
@@ -47,6 +44,7 @@ not highest type in table.
 #include "multidispatch.str"
 #include "pmc/pmc_nci.h"
 #include "pmc/pmc_sub.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: include/parrot/multidispatch.h */
 
@@ -139,11 +137,6 @@ static int mmd_search_local(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static PMC* Parrot_mmd_arg_tuple_func(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static PMC * Parrot_mmd_get_cached_multi_sig(PARROT_INTERP,
     ARGIN(PMC *sub_pmc))
@@ -171,69 +164,67 @@ static PMC * Parrot_mmd_sort_candidates(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_distance_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_mmd_add_multi_global __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_distance_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_mmd_add_multi_global __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_name) \
-    || PARROT_ASSERT_ARG(sub_obj)
-#define ASSERT_ARGS_mmd_add_multi_to_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_name) \
+    , PARROT_ASSERT_ARG(sub_obj))
+#define ASSERT_ARGS_mmd_add_multi_to_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ns_name) \
-    || PARROT_ASSERT_ARG(sub_name) \
-    || PARROT_ASSERT_ARG(sub_obj)
+    , PARROT_ASSERT_ARG(ns_name) \
+    , PARROT_ASSERT_ARG(sub_name) \
+    , PARROT_ASSERT_ARG(sub_obj))
 #define ASSERT_ARGS_mmd_build_type_tuple_from_long_sig \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(long_sig)
+    , PARROT_ASSERT_ARG(long_sig))
 #define ASSERT_ARGS_mmd_build_type_tuple_from_type_list \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(type_list)
-#define ASSERT_ARGS_mmd_cache_key_from_types __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(type_list))
+#define ASSERT_ARGS_mmd_cache_key_from_types __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(types)
-#define ASSERT_ARGS_mmd_cache_key_from_values __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(types))
+#define ASSERT_ARGS_mmd_cache_key_from_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(values)
-#define ASSERT_ARGS_mmd_cvt_to_types __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(values))
+#define ASSERT_ARGS_mmd_cvt_to_types __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(multi_sig)
-#define ASSERT_ARGS_mmd_distance __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(multi_sig))
+#define ASSERT_ARGS_mmd_distance __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(arg_tuple)
-#define ASSERT_ARGS_mmd_search_by_sig_obj __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc) \
+    , PARROT_ASSERT_ARG(arg_tuple))
+#define ASSERT_ARGS_mmd_search_by_sig_obj __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(sig_obj) \
-    || PARROT_ASSERT_ARG(candidates)
-#define ASSERT_ARGS_mmd_search_global __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(sig_obj) \
+    , PARROT_ASSERT_ARG(candidates))
+#define ASSERT_ARGS_mmd_search_global __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(cl)
-#define ASSERT_ARGS_mmd_search_local __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(cl))
+#define ASSERT_ARGS_mmd_search_local __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(candidates)
-#define ASSERT_ARGS_Parrot_mmd_arg_tuple_func __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(candidates))
 #define ASSERT_ARGS_Parrot_mmd_get_cached_multi_sig \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_Parrot_mmd_maybe_candidate __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_Parrot_mmd_maybe_candidate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(cl)
-#define ASSERT_ARGS_Parrot_mmd_search_scopes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc) \
+    , PARROT_ASSERT_ARG(cl))
+#define ASSERT_ARGS_Parrot_mmd_search_scopes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(meth)
-#define ASSERT_ARGS_Parrot_mmd_sort_candidates __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(meth))
+#define ASSERT_ARGS_Parrot_mmd_sort_candidates __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(arg_tuple) \
-    || PARROT_ASSERT_ARG(cl)
+    , PARROT_ASSERT_ARG(arg_tuple) \
+    , PARROT_ASSERT_ARG(cl))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -399,141 +390,6 @@ Parrot_mmd_sort_manhattan_by_sig_pmc(PARROT_INTERP, ARGIN(PMC *candidates),
 }
 
 
-/*
-
-=item C<PMC * Parrot_mmd_sort_manhattan(PARROT_INTERP, PMC *candidates)>
-
-Given an array PMC (usually a MultiSub) sorts the mmd candidates by their
-manhattan distance to the current args and returns the best one.
-
-=cut
-
-*/
-PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
-PMC *
-Parrot_mmd_sort_manhattan(PARROT_INTERP, ARGIN(PMC *candidates))
-{
-    ASSERT_ARGS(Parrot_mmd_sort_manhattan)
-    const INTVAL n = VTABLE_elements(interp, candidates);
-
-    if (n) {
-        PMC * const arg_tuple = Parrot_mmd_arg_tuple_func(interp);
-        return Parrot_mmd_sort_candidates(interp, arg_tuple, candidates);
-    }
-
-    return PMCNULL;
-}
-
-
-/*
-
-=item C<static PMC* Parrot_mmd_arg_tuple_func(PARROT_INTERP)>
-
-Return a list of argument types. PMC arguments are taken from registers
-according to calling conventions.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static PMC*
-Parrot_mmd_arg_tuple_func(PARROT_INTERP)
-{
-    ASSERT_ARGS(Parrot_mmd_arg_tuple_func)
-    PMC                *arg;
-    PMC                *args_array;    /* from recent set_args opcode */
-    PackFile_Constant **constants;
-
-    /*
-     * if there is no signature e.g. because of
-     *      m = getattribute l, "__add"
-     * - we have to return the MultiSub
-     * - create a BoundMulti
-     * - dispatch in invoke - yeah ugly
-     */
-
-    PMC * const arg_tuple = pmc_new(interp, enum_class_ResizableIntegerArray);
-    opcode_t   *args_op   = interp->current_args;
-    INTVAL sig_len, i, type;
-
-    if (!args_op)
-        return arg_tuple;
-
-    PARROT_ASSERT(*args_op == PARROT_OP_set_args_pc);
-    constants  = interp->code->const_table->constants;
-    ++args_op;
-    args_array = constants[*args_op]->u.key;
-
-    ASSERT_SIG_PMC(args_array);
-
-    sig_len = VTABLE_elements(interp, args_array);
-    if (!sig_len)
-        return arg_tuple;
-
-    ++args_op;
-
-    for (i = 0; i < sig_len; ++i, ++args_op) {
-        type = VTABLE_get_integer_keyed_int(interp, args_array, i);
-
-        /* named don't MMD */
-        if (type & PARROT_ARG_NAME)
-            break;
-        switch (type & (PARROT_ARG_TYPE_MASK | PARROT_ARG_FLATTEN)) {
-            case PARROT_ARG_INTVAL:
-                VTABLE_push_integer(interp, arg_tuple, enum_type_INTVAL);
-                break;
-            case PARROT_ARG_FLOATVAL:
-                VTABLE_push_integer(interp, arg_tuple, enum_type_FLOATVAL);
-                break;
-            case PARROT_ARG_STRING:
-                VTABLE_push_integer(interp, arg_tuple, enum_type_STRING);
-                break;
-            case PARROT_ARG_PMC:
-                {
-                const int idx = *args_op;
-                if ((type & PARROT_ARG_CONSTANT))
-                    arg = constants[idx]->u.key;
-                else
-                    arg = REG_PMC(interp, idx);
-
-                if (PMC_IS_NULL(arg))
-                    type = enum_type_PMC;
-                else
-                    type = VTABLE_type(interp, arg);
-
-                VTABLE_push_integer(interp, arg_tuple, type);
-                }
-                break;
-            case PARROT_ARG_FLATTEN | PARROT_ARG_PMC:  {
-                /* expand flattening args */
-                int j, n;
-
-                const int idx = *args_op;
-                arg           = REG_PMC(interp, idx);
-                n             = VTABLE_elements(interp, arg);
-
-                for (j = 0; j < n; ++j)  {
-                    PMC * const elem = VTABLE_get_pmc_keyed_int(interp, arg, j);
-                    type             = VTABLE_type(interp, elem);
-                    VTABLE_push_integer(interp, arg_tuple, type);
-                }
-                break;
-            }
-            default:
-                Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                    "Unknown signature type %d in mmd_arg_tuple", type);
-                break;
-        }
-    }
-
-
-    return arg_tuple;
-}
-
 
 /*
 
@@ -657,25 +513,19 @@ PMC*
 Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
 {
     ASSERT_ARGS(Parrot_mmd_build_type_tuple_from_sig_obj)
-    PMC * const  type_tuple = pmc_new(interp, enum_class_FixedIntegerArray);
+    PMC * const  type_tuple = pmc_new(interp, enum_class_ResizableIntegerArray);
     STRING      *string_sig = VTABLE_get_string(interp, sig_obj);
-    const INTVAL sig_len    = Parrot_str_byte_length(interp, string_sig);
     INTVAL       tuple_size = 0;
     INTVAL       args_ended = 0;
     INTVAL       i, seen_invocant = 0;
+    INTVAL       sig_len;
 
-    /* First calculate the number of arguments participating in MMD */
-    for (i = 0; i < sig_len; ++i) {
-        INTVAL type = Parrot_str_indexed(interp, string_sig, i);
-        if (type == '-')
-            break;
-        if (type == 'i')
-            continue;
-
-        tuple_size++;
+    if (STRING_IS_NULL(string_sig)) {
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                    "Call has no signature, unable to dispatch.\n");
     }
 
-    VTABLE_set_integer_native(interp, type_tuple, tuple_size);
+    sig_len = Parrot_str_byte_length(interp, string_sig);
 
     for (i = 0; i < sig_len; ++i) {
         INTVAL type = Parrot_str_indexed(interp, string_sig, i + seen_invocant);
@@ -684,19 +534,26 @@ Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
 
         /* Regular arguments just set the value */
         switch (type) {
-            case 'I':
-                VTABLE_set_integer_keyed_int(interp, type_tuple,
+          case 'I':
+            VTABLE_set_integer_keyed_int(interp, type_tuple,
                         i, enum_type_INTVAL);
-                break;
-            case 'N':
-                VTABLE_set_integer_keyed_int(interp, type_tuple,
+            break;
+          case 'N':
+            VTABLE_set_integer_keyed_int(interp, type_tuple,
                         i, enum_type_FLOATVAL);
-                break;
-            case 'S':
+            break;
+          case 'S':
+            {
+                INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
+                if (type_lookahead == 'n') {
+                    args_ended = 1;
+                    break;
+                }
                 VTABLE_set_integer_keyed_int(interp, type_tuple,
-                        i, enum_type_STRING);
+                            i, enum_type_STRING);
                 break;
-            case 'P':
+            }
+          case 'P':
             {
                 INTVAL type_lookahead = Parrot_str_indexed(interp, string_sig, (i + 1));
                 if (type_lookahead == 'i') {
@@ -705,6 +562,10 @@ Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
                             EXCEPTION_INVALID_OPERATION,
                             "Multiple Dispatch: only the first argument can be an invocant");
                     seen_invocant = 1;
+                }
+                else if (type_lookahead == 'f') {
+                    args_ended = 1;
+                    break;
                 }
                 else {
                     PMC *pmc_arg = VTABLE_get_pmc_keyed_int(interp, sig_obj, i);
@@ -718,11 +579,11 @@ Parrot_mmd_build_type_tuple_from_sig_obj(PARROT_INTERP, ARGIN(PMC *sig_obj))
 
                 break;
             }
-            case '-':
-                args_ended = 1;
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(interp, NULL,
+          case '-':
+            args_ended = 1;
+            break;
+          default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_INVALID_OPERATION,
                     "Multiple Dispatch: invalid argument type %c!", type);
         }
@@ -816,8 +677,8 @@ Parrot_mmd_get_cached_multi_sig(PARROT_INTERP, ARGIN(PMC *sub_pmc))
 {
     ASSERT_ARGS(Parrot_mmd_get_cached_multi_sig)
     if (VTABLE_isa(interp, sub_pmc, CONST_STRING(interp, "Sub"))) {
-        Parrot_sub *sub;
-        PMC        *multi_sig;
+        Parrot_Sub_attributes *sub;
+        PMC                   *multi_sig;
 
         PMC_get_sub(interp, sub_pmc, sub);
         multi_sig = sub->multi_signature;
@@ -856,7 +717,7 @@ mmd_distance(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *arg_tuple))
 {
     ASSERT_ARGS(mmd_distance)
     PMC        *multi_sig, *mro;
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     INTVAL      args, dist, i, j, n, m;
 
     /* has to be a builtin multi method */
@@ -907,17 +768,17 @@ mmd_distance(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *arg_tuple))
         /* promote primitives to their PMC equivalents, as PCC will autobox
          * the distance penalty makes primitive variants look cheaper */
         switch (type_call) {
-            case enum_type_INTVAL:
-                if (type_sig == enum_class_Integer) { dist++; continue; }
-                break;
-            case enum_type_FLOATVAL:
-                if (type_sig == enum_class_Float)   { dist++; continue; }
-                break;
-            case enum_type_STRING:
-                if (type_sig == enum_class_String)  { dist++; continue; }
-                break;
-            default:
-                break;
+          case enum_type_INTVAL:
+            if (type_sig == enum_class_Integer) { dist++; continue; }
+            break;
+          case enum_type_FLOATVAL:
+            if (type_sig == enum_class_Float)   { dist++; continue; }
+            break;
+          case enum_type_STRING:
+            if (type_sig == enum_class_String)  { dist++; continue; }
+            break;
+          default:
+            break;
         }
 
         /*
@@ -1073,8 +934,6 @@ Parrot_mmd_maybe_candidate(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *cl))
 
     if (VTABLE_isa(interp, pmc, _sub)) {
         /* a plain sub stops outer searches */
-        /* RT #45959 check arity of sub */
-
         VTABLE_push_pmc(interp, cl, pmc);
         return 1;
     }
@@ -1229,7 +1088,8 @@ mmd_add_multi_to_namespace(PARROT_INTERP, ARGIN(STRING *ns_name),
 {
     ASSERT_ARGS(mmd_add_multi_to_namespace)
     PMC * const hll_ns = VTABLE_get_pmc_keyed_int(interp,
-                        interp->HLL_namespace, CONTEXT(interp)->current_HLL);
+                        interp->HLL_namespace,
+                        Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp)));
     PMC * const ns     = Parrot_make_namespace_keyed_str(interp, hll_ns, ns_name);
     PMC        *multi_sub = Parrot_get_global(interp, ns, sub_name);
 
@@ -1261,7 +1121,7 @@ Parrot_mmd_add_multi_from_long_sig(PARROT_INTERP,
         ARGIN(STRING *sub_name), ARGIN(STRING *long_sig), ARGIN(PMC *sub_obj))
 {
     ASSERT_ARGS(Parrot_mmd_add_multi_from_long_sig)
-    Parrot_sub *sub;
+    Parrot_Sub_attributes *sub;
     STRING     *sub_str     = CONST_STRING(interp, "Sub");
     STRING     *closure_str = CONST_STRING(interp, "Closure");
     PMC        *type_list   = Parrot_str_split(interp, CONST_STRING(interp, ","), long_sig);

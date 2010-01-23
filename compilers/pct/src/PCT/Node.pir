@@ -57,20 +57,20 @@ And returns the node.
     .param pmc children        :slurpy
     .param pmc adverbs         :slurpy :named
 
-    .local pmc iter
-    iter = new 'Iterator', children
+    .local pmc it
+    it = iter children
   children_loop:
-    unless iter goto children_end
-    $P0 = shift iter
+    unless it goto children_end
+    $P0 = shift it
     push self, $P0
     goto children_loop
   children_end:
 
-    iter = new 'Iterator', adverbs
+    it = iter adverbs
   adverbs_loop:
-    unless iter goto adverbs_end
-    $S0 = shift iter
-    $P0 = iter[$S0]
+    unless it goto adverbs_end
+    $S0 = shift it
+    $P0 = it[$S0]
     $P1 = find_method self, $S0
     self.$P1($P0)
     goto adverbs_loop
@@ -180,11 +180,10 @@ children.
 =cut
 
 .sub 'iterator' :method
-    .local pmc iter
+    .local pmc it
     $P0 = self.'list'()
-    iter = new 'Iterator', $P0
-    iter = 0
-    .return (iter)
+    it = iter $P0
+    .return (it)
 .end
 
 
@@ -205,11 +204,16 @@ a C<Match> object and obtains source/position information from that.
     if $I0 goto node_match
     $I0 = isa node, ['PCT';'Node']
     if $I0 goto node_pct
-    $S0 = typeof node
-    $S0 = concat "Don't know how to save info from node of type ", $S0
-    die $S0
-  node_match:
+  node_misc:
+    $I0 = can node, 'orig'
+    unless $I0 goto err_unknown
+    $I0 = can node, 'from'
+    unless $I0 goto err_unknown
     .local pmc source, pos
+    source = node.'orig'()
+    pos = node.'from'()
+    goto node_done
+  node_match:
     source = getattribute node, '$.target'
     pos    = node.'from'()
     goto node_done
@@ -220,6 +224,12 @@ a C<Match> object and obtains source/position information from that.
     self['source'] = source
     self['pos']    = pos
   done:
+    .return ()
+
+  err_unknown:
+    $S0 = typeof node
+    $S0 = concat "Don't know how to save info from node of type ", $S0
+    die $S0
 .end
 
 

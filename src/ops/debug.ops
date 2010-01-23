@@ -7,8 +7,6 @@
 ** debug.ops
 */
 
-VERSION = PARROT_VERSION;
-
 =head1 NAME
 
 debug.ops - Debugging Opcodes
@@ -70,9 +68,6 @@ called set a breakpoint.
 When you re run/continue the program begin debugged it will pay
 no attention to the debug ops.
 
-RT #42377: clone the interpreter to allow people to play into the
-debugger and then continue the normal execution of the program.
-
 =cut
 
 op debug_break() :base_debug {
@@ -122,9 +117,9 @@ Get the current line number.
 =cut
 
 inline op getline(out INT) {
-  Parrot_Context_info info;
-  Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-  $1 = info.line;
+    Parrot_Context_info info;
+    Parrot_Context_get_info(interp, CURRENT_CONTEXT(interp), &info);
+    $1 = info.line;
 }
 
 =item B<getfile>(out STR)
@@ -134,9 +129,9 @@ Get the name of the current file.
 =cut
 
 inline op getfile(out STR) {
-  Parrot_Context_info info;
-  Parrot_Context_get_info(interp, CONTEXT(interp), &info);
-  $1 = info.file;
+    Parrot_Context_info info;
+    Parrot_Context_get_info(interp, CURRENT_CONTEXT(interp), &info);
+    $1 = info.file;
 }
 
 =back

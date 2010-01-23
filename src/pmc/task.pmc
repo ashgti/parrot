@@ -20,7 +20,7 @@ Implements the basic task behavior for the concurrency scheduler.
 
 #include "parrot/scheduler_private.h"
 
-pmclass Task need_ext {
+pmclass Task auto_attrs {
     ATTR INTVAL        id;        /* The task ID. */
     ATTR INTVAL        priority;  /* The priority of the task. */
     ATTR FLOATVAL      birthtime; /* The creation time stamp of the task. */
@@ -43,15 +43,12 @@ Initialize a concurrency task object.
 */
 
     VTABLE void init() {
-        Parrot_Task_attributes * const core_struct =
-            mem_allocate_zeroed_typed(Parrot_Task_attributes);
+        Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
 
-        /* Set flags for custom GC mark and destroy. */
+        /* Set flags for custom GC mark. */
         PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
 
         /* Set up the core struct. */
-        PMC_data(SELF)           = core_struct;
         core_struct->id          = 0;
         core_struct->type        = CONST_STRING(interp, "");
         core_struct->subtype     = CONST_STRING(interp, "");
@@ -123,14 +120,12 @@ An interpreter in which to execute this task.
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
                 "Task initializer must be a Hash");
 
-        core_struct = mem_allocate_zeroed_typed(Parrot_Task_attributes);
+        core_struct = (Parrot_Task_attributes *) PMC_data(SELF);
 
-        /* Set flags for custom GC mark and destroy. */
+        /* Set flags for custom GC mark. */
         PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
 
         /* Set up the core struct. */
-        PMC_data(SELF)           = core_struct;
 
         elem = VTABLE_get_pmc_keyed_str(INTERP, data, CONST_STRING(INTERP, "id"));
         if (! PMC_IS_NULL(elem))
@@ -289,7 +284,7 @@ Retrieves the task ID for this task.
 
 */
     VTABLE INTVAL get_integer() {
-        const Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
+        Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
         return core_struct->id;
     }
 
@@ -369,19 +364,6 @@ Set this PMC as shared.
 
 /*
 
-=item C<void destroy()>
-
-Free the task's underlying struct.
-
-=cut
-
-*/
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-    }
-
-/*
-
 =item C<void mark()>
 
 Mark any referenced strings and PMCs.
@@ -393,10 +375,11 @@ Mark any referenced strings and PMCs.
         if (PARROT_TASK(SELF)) {
             Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
 
-            if (core_struct->codeblock)
-                Parrot_gc_mark_PObj_alive(interp, (PObj*)core_struct->codeblock);
-            if (core_struct->data)
-                Parrot_gc_mark_PObj_alive(interp, (PObj*)core_struct->data);
+            Parrot_gc_mark_STRING_alive(interp, core_struct->type);
+            Parrot_gc_mark_STRING_alive(interp, core_struct->subtype);
+            Parrot_gc_mark_STRING_alive(interp, core_struct->status);
+            Parrot_gc_mark_PMC_alive(interp, core_struct->codeblock);
+            Parrot_gc_mark_PMC_alive(interp, core_struct->data);
         }
     }
 
@@ -413,13 +396,8 @@ C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 */
 
     VTABLE void visit(visit_info *info) {
-        Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
-        PMC **pos;
-
         /* 1) visit code block */
-        pos            = &core_struct->codeblock;
-        info->thaw_ptr = pos;
-        (info->visit_pmc_now)(INTERP, *pos, info);
+        VISIT_PMC_ATTR(INTERP, info, SELF, Task, codeblock);
     }
 
 /*
@@ -433,26 +411,25 @@ Used to archive the task.
 */
 
     VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
         const Parrot_Task_attributes * const core_struct = PARROT_TASK(SELF);
 
         /* 1) freeze task id */
-        VTABLE_push_integer(INTERP, io, core_struct->id);
+        VTABLE_push_integer(INTERP, info, core_struct->id);
 
         /* 2) freeze task birthtime */
-        VTABLE_push_float(INTERP, io, core_struct->birthtime);
+        VTABLE_push_float(INTERP, info, core_struct->birthtime);
 
         /* 3) freeze task priority */
-        VTABLE_push_integer(INTERP, io, core_struct->priority);
+        VTABLE_push_integer(INTERP, info, core_struct->priority);
 
         /* 4) freeze task type */
-        VTABLE_push_string(INTERP, io, core_struct->type);
+        VTABLE_push_string(INTERP, info, core_struct->type);
 
         /* 5) freeze task subtype */
-        VTABLE_push_string(INTERP, io, core_struct->subtype);
+        VTABLE_push_string(INTERP, info, core_struct->subtype);
 
         /* 6) freeze task status */
-        VTABLE_push_string(INTERP, io, core_struct->status);
+        VTABLE_push_string(INTERP, info, core_struct->status);
     }
 
 /*
@@ -466,25 +443,23 @@ Used to unarchive the task.
 */
 
     VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
-
         /* 1. thaw task id */
-        const INTVAL id = VTABLE_shift_integer(INTERP, io);
+        const INTVAL id = VTABLE_shift_integer(INTERP, info);
 
         /* 2. thaw task birthtime */
-        const FLOATVAL birthtime = VTABLE_shift_float(INTERP, io);
+        const FLOATVAL birthtime = VTABLE_shift_float(INTERP, info);
 
         /* 3. thaw task priority */
-        const INTVAL priority = VTABLE_shift_integer(INTERP, io);
+        const INTVAL priority = VTABLE_shift_integer(INTERP, info);
 
         /* 4. thaw task type */
-        STRING * const type = VTABLE_shift_string(INTERP, io);
+        STRING * const type = VTABLE_shift_string(INTERP, info);
 
         /* 5. thaw task subtype */
-        STRING * const subtype = VTABLE_shift_string(INTERP, io);
+        STRING * const subtype = VTABLE_shift_string(INTERP, info);
 
         /* 6. thaw task status */
-        STRING * const status = VTABLE_shift_string(INTERP, io);
+        STRING * const status = VTABLE_shift_string(INTERP, info);
 
         /* Allocate the task's core data struct and set custom flags. */
         SELF.init();

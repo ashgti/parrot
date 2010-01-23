@@ -13,7 +13,7 @@ Test::More - Parrot extension for testing modules
     .local pmc exports, curr_namespace, test_namespace
     curr_namespace = get_namespace
     test_namespace = get_namespace [ 'Test'; 'More' ]
-    exports        = split ' ', 'plan diag ok nok is is_deeply like isa_ok skip isnt todo'
+    exports        = split ' ', 'plan diag ok nok is is_deeply like isa_ok skip isnt todo throws_like lives_ok dies_ok'
 
     test_namespace.'export_to'(curr_namespace, exports)
 
@@ -92,19 +92,20 @@ already declared a plan or if you pass an invalid argument.
 
 =item C<ok( passed, description )>
 
-Records a test as pass or fail depending on the truth of the integer C<passed>,
+Records a test as pass or fail depending on the truth of the PMC C<passed>,
 recording it with the optional test description in C<description>.
 
 =cut
 
 .sub ok
-    .param int    passed
+    .param pmc    passed
     .param string description     :optional
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
-    test.'ok'( passed, description )
+    $I0 = istrue passed
+    test.'ok'( $I0, description )
 .end
 
 =item C<nok( passed, description )>
@@ -115,14 +116,14 @@ C<passed>, recording it with the optional test description in C<description>.
 =cut
 
 .sub nok
-    .param int passed
+    .param pmc passed
     .param string description :optional
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
     .local int reverse_passed
-    reverse_passed = not passed
+    reverse_passed = isfalse passed
 
     test.'ok'( reverse_passed, description )
 .end
@@ -140,12 +141,17 @@ comparison.
 If there is a mismatch, the current implementation takes the type of C<left> as
 the proper type for the comparison, converting any numeric arguments to floats.
 Note that there is a hard-coded precision check to avoid certain rounding
-errors.  It's not entirely robust, but it's not completely awful either.
+errors.
 
-Patches very welcome.  Multi-dispatch is a bit tricky here.
+=item C<is( left, right, description, precision )>
 
-This probably doesn't handle all of the comparisons you want, but it's easy to
-add more.
+For C<Float> only, an optional 4th parameter is allowed, a numeric precision.
+If specified, then the floats are only compared within the tolerance of the
+precision: e.g.:
+
+ is(123.456, 123.457, 'close enough?', 1e-2)
+
+will pass.
 
 =cut
 
@@ -178,31 +184,28 @@ add more.
   done:
 .end
 
-.sub is :multi(PMC, Float)
-    .param pmc left
-    .param pmc right
-    .param pmc description :optional
-    .param int have_desc   :opt_flag
-    .param pmc precision   :optional
-    .param int have_prec   :opt_flag
+.sub is :multi(_, Float)
+    .param num    left
+    .param num    right
+    .param string description :optional
+    .param int    have_desc   :opt_flag
+    .param num    precision   :optional
+    .param int    have_prec   :opt_flag
 
     .local pmc test
     get_hll_global test, [ 'Test'; 'More' ], '_test'
 
-    .local num l, r
+    if have_prec goto check_precision
+
     .local int pass
-    l    = left
-    r    = right
-    pass = iseq l, r
+    pass = iseq left, right
+    goto report
 
-    if     pass      goto report
-    unless have_prec goto report
-
-    .local num diff, prec_num
-    prec_num = precision
-    diff     = l - r
-    diff     = abs diff
-    pass     = isle diff, prec_num
+  check_precision:
+    .local num diff
+    diff = left - right
+    diff = abs diff
+    pass = isle diff, precision
 
   report:
     test.'ok'( pass, description )
@@ -215,7 +218,7 @@ add more.
     l_string    = left
     r_string    = right
 
-    diagnostic = _make_diagnostic( l_string, r_string )
+    diagnostic = _make_diagnostic( left, right )
     test.'diag'( diagnostic )
   done:
 .end
@@ -518,9 +521,32 @@ This handles comparisons of array-like and hash-like structures.
 
     .local string left_value
     .local string right_value
-    right_value = pop position
-    left_value  = pop position
+    .local pmc left, right
 
+    right = pop position
+    left  = pop position
+
+ check_right_null:
+    .local int rnull
+    rnull = isnull right
+    unless rnull goto set_right
+    right_value = 'nonexistent'
+    goto check_left_null
+
+ set_right:
+    right_value = right
+
+ check_left_null:
+    .local int lnull
+    lnull = isnull left
+    unless lnull goto set_left
+    left_value = 'undef'
+    goto create_diag
+
+ set_left:
+    left_value = left
+
+ create_diag:
     .local string nested_path
     nested_path = join '][', position
 
@@ -577,8 +603,8 @@ This handles comparisons of array-like and hash-like structures.
     .local pmc r_iter
     .local int count
 
-    l_iter = new 'Iterator', l_array
-    r_iter = new 'Iterator', r_array
+    l_iter = iter l_array
+    r_iter = iter r_array
     l_iter = 0
     r_iter = 0
     count  = 0
@@ -641,7 +667,7 @@ This handles comparisons of array-like and hash-like structures.
     .local pmc l_iter
     .local int count
 
-    l_iter = new 'Iterator', l_hash
+    l_iter = iter l_hash
     l_iter = 0
     count  = 0
 
@@ -814,6 +840,231 @@ This handles comparisons of array-like and hash-like structures.
     .return( equal )
 .end
 
+=item C<dies_ok( codestring, description )>
+
+Takes PIR code in C<codestring> and an optional message in C<description>.
+Passes a test if the PIR code throws any exception, fails a test otherwise.
+
+=cut
+
+.sub dies_ok
+    .param string target
+    .param string description :optional
+
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+
+    .local pmc comp
+    .local pmc compfun
+    .local pmc compiler
+    compiler = compreg 'PIR'
+
+    .local pmc eh
+    eh = new 'ExceptionHandler'
+    set_addr eh, handler            # set handler label for exceptions
+    push_eh eh
+
+    compfun = compiler(target)
+    compfun()                       # eval the target code
+
+    pop_eh
+
+    # if it doesn't throw an exception fail
+    test.'ok'( 0, description )
+    test.'diag'('no error thrown')
+
+    goto done
+
+  handler:
+    .local pmc ex
+    .local string error_msg
+    .local string diagnostic
+
+    .get_results (ex)
+    pop_eh
+    error_msg = ex
+    test.'ok'( 1, description )
+
+  done:
+
+.end
+
+=item C<lives_ok( codestring, description )>
+
+Takes PIR code in C<codestring> and an optional message in C<description>.
+Passes a test if the PIR does not throw any exception, fails a test otherwise.
+
+=cut
+
+.sub lives_ok
+    .param string target
+    .param string description :optional
+
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+
+    .local pmc comp
+    .local pmc compfun
+    .local pmc compiler
+    compiler = compreg 'PIR'
+
+    .local pmc eh
+    eh = new 'ExceptionHandler'
+    set_addr eh, handler            # set handler label for exceptions
+    push_eh eh
+
+    compfun = compiler(target)
+    compfun()                       # eval the target code
+
+    pop_eh
+
+    # if it doesn't throw an exception pass
+    test.'ok'( 1, description )
+
+    goto done
+
+  handler:
+    .local pmc ex
+    .local string error_msg
+    .local string diagnostic
+
+    .get_results (ex)
+    pop_eh
+    error_msg = ex
+    test.'ok'( 0, description )
+    test.'diag'(error_msg)
+
+  done:
+
+.end
+
+=item C<throws_like( codestring, pattern, description )>
+
+Takes PIR code in C<codestring> and a PGE pattern to match in C<pattern>, as
+well as an optional message in C<description>. Passes a test if the PIR throws
+an exception that matches the pattern, fails the test otherwise.
+
+=cut
+
+.sub throws_like
+    .param string target
+    .param string pattern
+    .param string description :optional
+
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+
+    .local pmc comp
+    .local pmc compfun
+    .local pmc compiler
+    compiler = compreg 'PIR'
+
+    .local pmc eh
+    eh = new 'ExceptionHandler'
+    set_addr eh, handler            # set handler label for exceptions
+    push_eh eh
+
+    compfun = compiler(target)
+    compfun()                       # eval the target code
+
+    pop_eh
+
+    # if it doesn't throw an exception, fail
+    test.'ok'( 0, description )
+    test.'diag'( 'no error thrown' )
+
+    goto done
+
+  handler:
+    .local pmc ex
+    .local string error_msg
+    .get_results (ex)
+    pop_eh
+    error_msg = ex
+    like(error_msg, pattern, description)
+
+  done:
+.end
+
+=item C<throws_substring( codestring, text, description )>
+
+Takes PIR code in C<codestring> and a string to match in C<text>, as
+well as an optional message in C<description>. Passes a test if the PIR throws
+an exception that matches the pattern, fails the test otherwise.
+
+=cut
+
+.sub throws_substring
+    .param string target
+    .param string text
+    .param string description :optional
+
+    .local pmc test
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+
+    .local pmc comp
+    .local pmc compfun
+    .local pmc compiler
+    compiler = compreg 'PIR'
+
+    .local pmc eh
+    eh = new 'ExceptionHandler'
+    set_addr eh, handler            # set handler label for exceptions
+    push_eh eh
+
+    compfun = compiler(target)
+    compfun()                       # eval the target code
+
+    pop_eh
+
+    # if it doesn't throw an exception, fail
+    test.'ok'( 0, description )
+    test.'diag'( 'no error thrown' )
+
+    goto done
+
+  handler:
+    .local pmc ex
+    .local string error_msg
+    .get_results (ex)
+    pop_eh
+    error_msg = ex
+    substring(error_msg, text, description)
+
+  done:
+.end
+
+=item C<substring( target, text, description )>
+
+Similar to is, but using the index opcode to compare the string passed as
+C<text> to the string passed as C<target>.  It passes if C<text> is a substring
+of C<target> and fails otherwise.  This will report the results with the
+optional test description in C<description>.
+
+=cut
+
+.sub substring
+    .param string target
+    .param string text
+    .param string description :optional
+
+    .local pmc test
+    .local string diagnostic
+    get_hll_global test, [ 'Test'; 'More' ], '_test'
+    $I0 = index target, text
+    $I0 = isne $I0, -1
+    test.'ok'( $I0, description )
+    if $I0 goto done
+    diagnostic = "substring failed: '"
+    diagnostic .= target
+    diagnostic .= "' does not contain '"
+    diagnostic .= text
+    diagnostic .= "'"
+    test.'diag'(diagnostic)
+  done:
+.end
+
+
 =item C<like( target, pattern, description )>
 
 Similar to is, but using the Parrot Grammar Engine to compare the string
@@ -854,7 +1105,11 @@ optional test description in C<description>.
   match_success:
     goto pass_it
   match_fail:
-    diagnostic = "match failed"
+    diagnostic = "match failed: target '"
+    diagnostic .= target
+    diagnostic .= "' does not match pattern '"
+    diagnostic .= pattern
+    diagnostic .= "'"
     goto report
   rule_fail:
     diagnostic = "rule error"
@@ -995,7 +1250,7 @@ to the Perl 6 internals mailing list.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2008, Parrot Foundation.
+Copyright (C) 2005-2009, Parrot Foundation.
 
 =cut
 

@@ -3,8 +3,6 @@
 ** sys.ops
 */
 
-VERSION = PARROT_VERSION;
-
 =head1 NAME
 
 sys.ops - System Interaction Opcodes
@@ -31,17 +29,21 @@ Spawn a subprocess whose program name and arguments are contained in the array
 $2 and wait for it to finish. The return status, which is very
 system-dependent, goes in $1.
 
-RT#36619: spawnw should return something less system-dependent, and more
-object-like. see RT ticket [perl #36619] for more info.
+TT #847: C<spawnw()> should itself handle splitting up command-line arguments,
+rather than depending on the shell to do so in potentially unsafe manner.
+See https://trac.parrot.org/parrot/ticket/847.
+
+TT #848: C<spawnw()> should return something less system-dependent, and more
+object-like. See https://trac.parrot.org/parrot/ticket/848.
 
 =cut
 
 inline op spawnw(out INT, in STR) {
-  $1 = Parrot_Run_OS_Command(interp, $2);
+    $1 = Parrot_Run_OS_Command(interp, $2);
 }
 
 inline op spawnw(out INT, invar PMC) {
-  $1 = Parrot_Run_OS_Command_Argv(interp, $2);
+    $1 = Parrot_Run_OS_Command_Argv(interp, $2);
 }
 
 ###############################################################################
@@ -62,17 +64,17 @@ and store it in $1.
 =cut
 
 inline op err(out INT) {
-  $1 = errno;
+    $1 = errno;
 }
 
 op err(out STR) {
-  const char * const tmp = strerror(errno);
-  $1 = string_make(interp, tmp, strlen(tmp), "ascii", 0);
+    const char * const tmp = strerror(errno);
+    $1 = string_make(interp, tmp, strlen(tmp), "ascii", 0);
 }
 
 op err(out STR, in INT) {
-  const char * const tmp = strerror($2);
-  $1 = string_make(interp, tmp, strlen(tmp), "ascii", 0);
+    const char * const tmp = strerror($2);
+    $1 = string_make(interp, tmp, strlen(tmp), "ascii", 0);
 }
 
 
@@ -86,7 +88,7 @@ in $1.
 =cut
 
 inline op time(out INT) {
-  $1 = Parrot_intval_time();
+    $1 = Parrot_intval_time();
 }
 
 
@@ -100,7 +102,7 @@ microseconds) in $1.
 =cut
 
 inline op time(out NUM) {
-  $1 = Parrot_floatval_time();
+    $1 = Parrot_floatval_time();
 }
 
 ########################################
@@ -173,35 +175,35 @@ decoding.
 =cut
 
 op gmtime(out STR, in INT) {
-  struct tm tm;
-  const time_t t = (time_t) $2;
-  char resultbuffer[26];
-  Parrot_gmtime_r(&t, &tm);
-  Parrot_asctime_r(&tm, resultbuffer);
-  $1 = Parrot_str_new(interp, resultbuffer, 25);
+    struct tm tm;
+    const time_t t = (time_t) $2;
+    char resultbuffer[26];
+    Parrot_gmtime_r(&t, &tm);
+    Parrot_asctime_r(&tm, resultbuffer);
+    $1 = Parrot_str_new(interp, resultbuffer, 25);
 }
 
 op localtime(out STR, in INT) {
-  struct tm tm;
-  const time_t t = (time_t) $2;
-  char resultbuffer[26];
-  Parrot_localtime_r(&t, &tm);
-  Parrot_asctime_r(&tm, resultbuffer);
-  $1 = Parrot_str_new(interp, resultbuffer, 25);
+    struct tm tm;
+    const time_t t = (time_t) $2;
+    char resultbuffer[26];
+    Parrot_localtime_r(&t, &tm);
+    Parrot_asctime_r(&tm, resultbuffer);
+    $1 = Parrot_str_new(interp, resultbuffer, 25);
 }
 
 op decodetime(out PMC, in INT) {
-  struct tm tm;
-  const time_t t = (time_t) $2;
-  Parrot_gmtime_r(&t, &tm);
-  $1 = tm_to_array(interp, &tm);
+    struct tm tm;
+    const time_t t = (time_t) $2;
+    Parrot_gmtime_r(&t, &tm);
+    $1 = tm_to_array(interp, &tm);
 }
 
 op decodelocaltime(out PMC, in INT) {
-  struct tm tm;
-  const time_t t = (time_t) $2;
-  Parrot_localtime_r(&t, &tm);
-  $1 = tm_to_array(interp, &tm);
+    struct tm tm;
+    const time_t t = (time_t) $2;
+    Parrot_localtime_r(&t, &tm);
+    $1 = tm_to_array(interp, &tm);
 }
 
 ########################################
@@ -262,11 +264,11 @@ even if it's really running on an OS X system.
 =cut
 
 inline op sysinfo(out STR, in INT) {
-   $1 = sysinfo_s(interp, $2);
+    $1 = sysinfo_s(interp, $2);
 }
 
 inline op sysinfo(out INT, in INT) {
-   $1 = sysinfo_i(interp, $2);
+    $1 = sysinfo_i(interp, $2);
 }
 
 ########################################
@@ -280,27 +282,27 @@ Sleep for $1 seconds.
 =cut
 
 inline op sleep(in INT) :flow {
-  opcode_t *next = expr NEXT();
-  if ($1 < 0) {
-      opcode_t * const handler = Parrot_ex_throw_from_op_args(interp, next,
-        EXCEPTION_NEG_SLEEP,
-        "Cannot go back in time");
-      goto ADDRESS(handler);
-  }
-  next = (opcode_t *)Parrot_cx_schedule_sleep(interp, (FLOATVAL) $1, next);
-  goto ADDRESS(next);
+    opcode_t *next = expr NEXT();
+    if ($1 < 0) {
+        opcode_t * const handler = Parrot_ex_throw_from_op_args(interp, next,
+            EXCEPTION_NEG_SLEEP,
+            "Cannot go back in time");
+        goto ADDRESS(handler);
+    }
+    next = (opcode_t *)Parrot_cx_schedule_sleep(interp, (FLOATVAL) $1, next);
+    goto ADDRESS(next);
 }
 
 inline op sleep(in NUM) :flow {
-  opcode_t *next = expr NEXT();
-  if ($1 < 0.0) {
-      opcode_t * const handler = Parrot_ex_throw_from_op_args(interp, next,
-          EXCEPTION_NEG_SLEEP,
-          "Cannot go back in time");
-      goto ADDRESS(handler);
-  }
-  next = (opcode_t *)Parrot_cx_schedule_sleep(interp, $1, next);
-  goto ADDRESS(next);
+    opcode_t *next = expr NEXT();
+    if ($1 < 0.0) {
+        opcode_t * const handler = Parrot_ex_throw_from_op_args(interp, next,
+            EXCEPTION_NEG_SLEEP,
+            "Cannot go back in time");
+        goto ADDRESS(handler);
+    }
+    next = (opcode_t *)Parrot_cx_schedule_sleep(interp, $1, next);
+    goto ADDRESS(next);
 }
 
 ########################################

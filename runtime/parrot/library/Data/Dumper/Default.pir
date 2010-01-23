@@ -110,7 +110,7 @@ Dumps a 'generic' Hash.
     .param pmc hash
     .local string indent
     .local string subindent
-    .local pmc iter
+    .local pmc it
     .local string key
     .local pmc val
     .local pmc keys
@@ -124,13 +124,12 @@ Dumps a 'generic' Hash.
     print " {"
 
     new keys, "ResizablePMCArray"
-    new iter, "Iterator", hash
-    set iter, 0
+    it = iter hash
 
 iter_loop:
-    unless iter, iter_end
+    unless it, iter_end
 
-    shift key, iter
+    shift key, it
     push keys, key
     branch iter_loop
 
@@ -422,11 +421,24 @@ Dump a capture object.
     .local string subindent, indent
     (subindent, indent) = dumper.'newIndent'()
 
-    .local pmc hash, iter
+    # Sort hash keys before dump to preseve order
+    # Use RPA instead of RSA because RSA doesn't have 'sort' method
+    .local pmc hash, it, keys
     hash = self.'hash'()
-    iter = new 'Iterator', hash
+    keys = new ['ResizablePMCArray']
+    it = iter hash
+  dump_hash_keys_loop:
+    unless it goto dump_hash_keys_end
+    .local string key
+    key = shift it
+    push keys, key
+    goto dump_hash_keys_loop
+  dump_hash_keys_end:
+    keys.'sort'()
+
+    it = iter keys
   dump_hash_loop:
-    unless iter goto dump_hash_end
+    unless it goto dump_hash_end
     if hasstuff goto dump_hash_1
     print " {"
     hasstuff = 1
@@ -435,7 +447,7 @@ Dump a capture object.
     print subindent
     .local string key
     .local pmc val
-    key = shift iter
+    key = shift it
     val = hash[key]
     print "<"
     print key

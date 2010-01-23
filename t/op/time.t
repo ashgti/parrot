@@ -1,129 +1,123 @@
-#!perl
+#!parrot
 # Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
-
-use strict;
-use warnings;
-use lib qw( . lib ../lib ../../lib );
-use Test::More;
-use Parrot::Test tests => 7;
 
 =head1 NAME
 
 t/op/time.t - Time and Sleep
 
-=head1 SYNOPSIS
-
-    % prove t/op/time.t
-
-=head1 DESCRIPTION
-
-Tests the C<time> and C<sleep> operations.
-
 =cut
 
-pasm_output_is( <<'CODE', <<'OUTPUT', "time_i" );
-        time    I0
-        time    I1
-        ge      I0, 0, OK1
-        branch  FAIL
-OK1:    print "ok, (!= 1970) Grateful Dead not\n"
-        ge      I1, I0, OK2
-        branch FAIL
-OK2:    print "ok, (now>before) timelords need not apply\n"
-        branch  OK_ALL
-FAIL:   print "failure\n"
-        print "I0 was: "
-        print I0
-        print "\nI1 was: "
-        print I0
-        print "\n"
-OK_ALL:
-        end
-CODE
-ok, (!= 1970) Grateful Dead not
-ok, (now>before) timelords need not apply
-OUTPUT
-
-pasm_output_is( <<'CODE', <<'OUTPUT', "time_n" );
-        time    N0
-        time    N1
-        ge      N0, 0.0, OK1
-        branch  FAIL
-OK1:    print "ok, (!= 1970) Grateful Dead not\n"
-        ge      N1, N0, OK2
-        branch FAIL
-OK2:    print "ok, (now>before) timelords need not apply\n"
-        branch  OK_ALL
-FAIL:   print "failure\n"
-OK_ALL:
-        end
-CODE
-ok, (!= 1970) Grateful Dead not
-ok, (now>before) timelords need not apply
-OUTPUT
-
-pasm_output_is( <<CODE, <<OUTPUT, "sleep" );
-        print   "start\\n"
-
-        time    I1
-
-        sleep   1
-        set     I0, 1
-        sleep   I0
-
-        time    I0
-
-        gt      I0, I1, ALLOK
-        print   "no, sleeping made time go the wrong way "
-
-ALLOK:
-        print   "done\\n"
-        end
-CODE
-start
-done
-OUTPUT
-
-pasm_error_output_like( <<CODE, <<OUT , "sleep" );
-        sleep   -1
-        end
-CODE
-/Cannot go back in time/
-OUT
-
-my $year;
-( undef, undef, undef, undef, undef, $year ) = localtime();
-$year += 1900;
-
-# don't run this test 1 tick before the year changes #'
-
-pasm_output_is( <<'CODE', $year, "decodelocaltime" );
-    time I0
-    decodelocaltime P0, I0
-    .include "tm.pasm"
-    set I0, P0[.TM_YEAR]
-    print I0
-    end
-CODE
-
-pir_output_is(<<'CODE', "Tue Jan  1 00:00:00 2008\n25", "gmtime string length");
-.sub _ :main
-$I0 = 1199145600
-$S0 = gmtime $I0
-print $S0
-$I1 = length $S0
-print $I1
-.end
-CODE
-
-pir_output_is(<<'CODE', <<OUTPUT, "time(FLOATVAL) vs time(INTVAL)");
 .sub main :main
+    .include 'test_more.pir'
+
+    plan(29)
+    test_time_i()
+    test_time_n()
+    test_sleep_i()
+    test_sleep_i_negative()
+    test_sleep_n()
+    test_sleep_n_negative()
+    test_tm_pasm()
+    test_gmtime_s_i()
+    test_time_n_vs_time_i()
+    test_decodetime_p_i()
+    test_localtime_s_i()
+    test_decodelocaltime_p_i()
+.end
+
+.sub test_time_i
+    $I0 = time
+    $I2 = isge $I0, 0
+    ok($I2, "Current int time is greater than 0")
+
+    $I1 = time
+    $I2 = isge $I1, $I2
+    ok($I2, "Current int time is greater than older time")
+.end
+
+.sub test_time_n
+    $N0 = time
+    $I0 = isge $N0, 0.0
+    ok($I0, "Current num time is greater than 0.0")
+
+    $N1 = time
+    $I0 = isge $N1, $N0
+    ok($I0, "Current num time is greater than older time")
+.end
+
+.sub test_sleep_i
+    $I0 = time
+    sleep 1
+    $I1 = time
+    $I2 = isgt $I1, $I0
+    ok($I2, "sleep_i increases time")
+    $I2 = $I0 + 1
+    $I3 = isge $I1, $I2
+    ok($I3, "sleep_i slept for at least the amount of time specified")
+.end
+
+.sub test_sleep_i_negative
+    push_eh cannot_sleep_negative
+    sleep -1
+    pop_eh
+    ok(0, "Guess what? Just time traveled")
+    .return()
+  cannot_sleep_negative:
+    pop_eh
+    ok(1, "Cannot sleep_i backwards")
+.end
+
+.sub test_sleep_n
+    $N0 = time
+    sleep 1.1
+    $N1 = time
+    $I2 = isgt $N1, $N0
+    ok($I2, "sleep_n increases time")
+    $N2 = $N0 + 1.0
+    $I2 = isge $N1, $N2
+    ok($I2, "sleep_n slept for at least the integer amount of time specified")
+.end
+
+.sub test_sleep_n_negative
+    push_eh cannot_sleep_negative
+    sleep -1.2
+    pop_eh
+    ok(0, "Guess what? Just time traveled")
+    .return()
+  cannot_sleep_negative:
+    pop_eh
+    ok(1, "Cannot sleep_n backwards")
+.end
+
+.sub test_tm_pasm
+    .include "tm.pasm"
+    is(.TM_SEC, 0, "TM_SEC ok")
+    is(.TM_MIN, 1, "TM_MIN ok")
+    is(.TM_HOUR, 2, "TM_HOUR ok")
+    is(.TM_MDAY, 3, "TM_MDAY ok")
+    is(.TM_MON, 4, "TM_MON ok")
+    is(.TM_YEAR, 5, "TM_YEAR ok")
+    is(.TM_WDAY, 6, "TM_WDAY ok")
+    is(.TM_YDAY, 7, "TM_YDAY ok")
+    is(.TM_ISDST, 8, "TM_ISDST ok")
+.end
+
+.sub test_gmtime_s_i
+    $S0 = gmtime 0
+    $I0 = isnull $S0
+    is($I0, 0, "gmtime string is not null")
+    is($S0, "Thu Jan  1 00:00:00 1970\n", "correct epoch")
+    $I1 = length $S0
+    is($I1, 25, "string is the correct length")
+.end
+
+.sub test_time_n_vs_time_i
     .local int time_int
-    time time_int
+    time_int = time
 
     .local num time_float
-    time time_float
+    time_float = time
 
     # check if time_float is within [time_int - 5;time_int + 5]
     .local int time_int_lower
@@ -133,17 +127,37 @@ pir_output_is(<<'CODE', <<OUTPUT, "time(FLOATVAL) vs time(INTVAL)");
     time_int_upper = time_int + 5
     if time_float > time_int_upper goto FAIL
 
-    print "ok\n"
-    goto END
+    ok(1, "time_n value corresponds to time_i value")
+    .return()
 
-FAIL: print "not ok\n"
-    goto END
-
-END:
+  FAIL:
+    ok(0, "time_n value does not correspond to time_t value")
+    .return()
 .end
-CODE
-ok
-OUTPUT
+
+.sub test_decodetime_p_i
+    $P0 = decodetime 0
+    $I0 = $P0
+    is($I0, 9, "decodetime result has 9 values")
+    $S0 = typeof $P0
+    is($S0, "Array", "decodetime returns the correct PMC type")
+.end
+
+.sub test_localtime_s_i
+    $S0 = localtime 0
+    $I0 = isnull $S0
+    is($I0, 0, "localtime string is not a null string")
+    $I0 = length $S0
+    is($I0, 25, "localtime string is the correct length")
+.end
+
+.sub test_decodelocaltime_p_i
+    $P0 = decodelocaltime 0
+    $I0 = $P0
+    is($I0, 9, "decodelocaltime result has 9 values")
+    $S0 = typeof $P0
+    is($S0, "Array", "decodelocaltime returns the correct PMC type")
+.end
 
 
 # Local Variables:
@@ -151,4 +165,4 @@ OUTPUT
 #   cperl-indent-level: 4
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4:
+# vim: expandtab shiftwidth=4 filetype=pir:

@@ -17,11 +17,13 @@ $core = q{
 ** pseudo-core.ops
 */
 
+BEGIN_OPS_PREAMBLE
+
 #include "parrot/dynext.h"
 #include "parrot/embed.h"
 #include "../interp/interp_guts.h"
 
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 =head1 NAME
 
@@ -52,8 +54,8 @@ inline op end() :base_core :check_event :flow {
 
 =item B<load_bytecode>(in STR)
 
-Load Parrot bytecode from file $1, and
-RT#42381 search the library path to locate the file.
+Load Parrot bytecode from file $1, and search the library path to locate the
+file.
 
 =cut
 
@@ -150,8 +152,6 @@ as the Parrot interpreter itself.
 /*
 ** pseudo-debug.ops
 */
-
-VERSION = PARROT_VERSION;
 
 =head1 NAME
 
@@ -269,8 +269,6 @@ $string = q{
  * $Id$
 ** pseudo-string.ops
 */
-
-VERSION = PARROT_VERSION;
 
 =head1 NAME
 

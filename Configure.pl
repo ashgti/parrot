@@ -196,6 +196,25 @@ run the tests described in C<--test=build>.
 
 =back
 
+=item C<--configure_trace>
+
+Store the results of each configuration step in a Storable F<.sto> file on
+disk, for later analysis by F<Parrot::Configure::Trace> methods.
+
+=item Operating system-specific configuration options
+
+=over 4
+
+=item C<--darwin_no_fink>
+
+On Darwin, do not probe for Fink libraries.
+
+=item C<--darwin_no_macports>
+
+On Darwin, do not probe for Macports libraries.
+
+=back
+
 =back
 
 =head2 Compile Options
@@ -213,8 +232,8 @@ Link parrot dynamically.
 =item C<--m=32>
 
 Create a 32-bit executable on 64-architectures like x86_64. This
-option appends -m32 to compiler and linker programs and does
-s/lib64/lib/g on link flags.
+option appends C<-m32> to compiler and linker programs and does
+C<s/lib64/lib/g> on link flags.
 
 This option is experimental. See F<config/init/defaults.pm> for more.
 
@@ -228,7 +247,7 @@ Turn on profiled compile (gcc only for now)
 
 =item C<--optimize>
 
-Add perl5's $Config{optimize} to the compiler flags.
+Add Perl 5's C<$Config{optimize}> to the compiler flags.
 
 =item C<--optimize=flags>
 
@@ -332,14 +351,13 @@ Don't build cgoto core. This is recommended when you are short of memory.
 
 Use JIT system.
 
+=item C<--buildframes>
+
+Dynamically build NCI call frames.
+
 =item C<--execcapable>
 
 Use JIT to emit a native executable.
-
-=item C<--gc=(type)>
-
-Determine the type of garbage collection. The value for C<type> should be one
-of: C<gc>, C<libc>, C<malloc> or C<malloc-trace>. The default is C<gc>.
 
 =back
 
@@ -603,8 +621,8 @@ configuration file.
     auto::isreg
     auto::arch
     auto::jit
+    auto::frames
     auto::cpu
-    auto::funcptr
     auto::cgoto
     auto::inline
     auto::gc
@@ -638,11 +656,11 @@ configuration file.
 
 You may see how this works in practice by calling:
 
-    perl Configure.pl --file=xconf/samples/yourfoobar
+    perl Configure.pl --file=examples/config/file/configcompiler
 
 or
 
-    perl Configure.pl --file=xconf/samples/testfoobar
+    perl Configure.pl --file=examples/config/file/configwithfatalstep
 
 =head1 SEE ALSO
 

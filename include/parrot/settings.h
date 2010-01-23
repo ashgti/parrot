@@ -26,8 +26,7 @@
 #endif /* DISABLE_GC_DEBUG */
 
 /* Helpful internal macro for testing whether we are currently
- * debugging garbage collection and memory management. See also the
- * definition of GC_VERBOSE in include/parrot/gc_api.h. */
+ * debugging garbage collection and memory management. */
 #if DISABLE_GC_DEBUG
 #  define GC_DEBUG(interp) 0
 #else
@@ -35,42 +34,11 @@
 #endif /* DISABLE_GC_DEBUG */
 
 /*
- * GC_SUBSYSTEM selection
- * 0 ... MS  stop-the-world mark & sweep
- * 1 ... IMS incremental mark & sweep
- * 2 ... GMS generational mark & sweep
- * 3 ... INF infinite memory "collector"
- *
- * Please note that only 0 and 3 currently work (and INF doesn't really
- * "work").
+ * GC_DEFAULT_TYPE selection
+ * MS  -- stop-the-world mark & sweep
+ * INF -- infinite memory "collector"
  */
-
-#define PARROT_GC_SUBSYSTEM 0
-
-#if PARROT_GC_SUBSYSTEM == 0
-#  define PARROT_GC_MS      1
-#  define PARROT_GC_IMS     0
-#  define PARROT_GC_GMS     0
-#  define PARROT_GC_INF     0
-#endif
-#if PARROT_GC_SUBSYSTEM == 1
-#  define PARROT_GC_MS      0
-#  define PARROT_GC_IMS     1
-#  define PARROT_GC_GMS     0
-#  define PARROT_GC_INF     0
-#endif
-#if PARROT_GC_SUBSYSTEM == 2
-#  define PARROT_GC_MS      0
-#  define PARROT_GC_IMS     0
-#  define PARROT_GC_GMS     1
-#  define PARROT_GC_INF     0
-#endif
-#if PARROT_GC_SUBSYSTEM == 3
-#  define PARROT_GC_MS      0
-#  define PARROT_GC_IMS     0
-#  define PARROT_GC_GMS     0
-#  define PARROT_GC_INF     1
-#endif
+#define PARROT_GC_DEFAULT_TYPE MS
 
 /*
  * JIT/i386 can use the CGP run core for external functions instead

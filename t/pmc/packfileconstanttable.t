@@ -6,7 +6,6 @@
 
 t/pmc/packfileconstanttable.t - test the PackfileConstantTable PMC
 
-
 =head1 SYNOPSIS
 
     % prove t/pmc/packfileconstanttable.t
@@ -27,7 +26,7 @@ Tests the PackfileConstantTable PMC.
 .sub 'main' :main
 .include 'test_more.pir'
 .include 'packfile_constants.pasm'
-    'plan'(14)
+    'plan'(16)
 
     'test_sanity'()
     'test_elements'()
@@ -120,7 +119,7 @@ Tests the PackfileConstantTable PMC.
     ct[0] = "string"
     $I0 = elements ct
     is($I0, 1, "String element added")
-    
+
     ct[1] = 1.0
     $I0 = elements ct
     is($I0, 2, "Number elements added")
@@ -147,7 +146,7 @@ Tests the PackfileConstantTable PMC.
     $I1 = pfc.'get_or_create_constant'('foo')
     $I2 = pfc.'get_or_create_constant'('foo')
     is($I1, $I2, "get_or_create_constant returs same string value for same key")
-    
+
     $I2 = pfc.'get_or_create_constant'('bar')
     $I0 = $I1 != $I2
     ok($I0, "get_or_create_constant returs different string values for different keys")
@@ -156,10 +155,26 @@ Tests the PackfileConstantTable PMC.
     $I1 = pfc.'get_or_create_constant'(1.0)
     $I2 = pfc.'get_or_create_constant'(1.0)
     is($I1, $I2, "get_or_create_constant returs same number value for same key")
-    
+
     $I2 = pfc.'get_or_create_constant'(42.1)
     $I0 = $I1 != $I2
     ok($I0, "get_or_create_constant returs different number values for different keys")
+
+    $P0 = new ['FixedIntegerArray']
+    $P0 = 1
+    $P0[0] = 42
+    $P1 = new ['FixedIntegerArray']
+    $P1 = 1
+    $P1[0] = 42
+    $P2 = new ['FixedIntegerArray']
+    $P2 = 1
+    $P2[0] = 84
+
+    $I0 = pfc.'get_or_create_constant'($P0)
+    $I1 = pfc.'get_or_create_constant'($P1)
+    is($I0, $I1, "get_or_create_constant returns same index for equal PMCs")
+    $I2 = pfc.'get_or_create_constant'($P2)
+    isnt($I0, $I2, "get_or_create_constant returns different index for different PMCs")
 .end
 
 .sub '_get_consttable'
@@ -184,4 +199,4 @@ Tests the PackfileConstantTable PMC.
 #   cperl-indent-level: 4
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4:
+# vim: expandtab shiftwidth=4 ft=pir:

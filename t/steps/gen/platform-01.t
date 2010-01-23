@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 13;
 use Carp;
 use Cwd;
 use File::Copy;
@@ -14,10 +14,9 @@ use File::Temp qw( tempdir );
 use File::Spec;
 use lib qw( lib );
 use_ok('config::gen::platform');
-use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
+use Parrot::Configure::Step::Test;
 use Parrot::Configure::Test qw(
-    test_step_thru_runstep
     test_step_constructor_and_description
 );
 use Parrot::Configure::Utils qw( _slurp );
@@ -32,7 +31,9 @@ my ($args, $step_list_ref) = process_options(
     }
 );
 
-my $conf = Parrot::Configure->new;
+my $conf = Parrot::Configure::Step::Test->new;
+$conf->include_config_results( $args );
+
 my $pkg = q{gen::platform};
 $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
@@ -41,51 +42,10 @@ my $step = test_step_constructor_and_description($conf);
 ok(-f $step->{platform_interface},
     "Located required platform interface header");
 
-my $platform_orig = $conf->data->get_p5('OSNAME');
-my $archname_orig = $conf->data->get_p5('archname');
-$conf->data->set_p5( archname => 'foo-bar' );
+my $platform_orig = $conf->data->get('osname');
+my $archname_orig = $conf->data->get('archname');
+$conf->data->set( archname => 'foo-bar' );
 my $verbose = 0;
-
-########## _get_platform() ##########
-
-$conf->data->set_p5( OSNAME => 'msys' );
-is( $step->_get_platform( $conf, $verbose ), q{win32},
-    "Got expected platform for msys");
-
-$conf->data->set_p5( OSNAME => 'mingw' );
-is( $step->_get_platform( $conf, $verbose ), q{win32},
-    "Got expected platform for mingw");
-
-$conf->data->set_p5( OSNAME => 'MSWin32' );
-is( $step->_get_platform( $conf, $verbose ), q{win32},
-    "Got expected platform for MSWin32");
-
-# re-set to original values
-$conf->data->set_p5( OSNAME => $platform_orig );
-$conf->data->set_p5( archname => $archname_orig );
-
-$conf->data->set_p5( archname => 'ia64-bar' );
-is( $step->_get_platform( $conf, $verbose ), q{ia64},
-    "Got expected platform for ia64");
-
-$conf->data->set_p5( archname => 'foo-bar' );
-$conf->data->set_p5( OSNAME => 'foo' );
-{
-    $verbose = 1;
-    my ($stdout, $stderr, $rv);
-    my $expected = q{generic};
-    capture(
-        sub { $rv = $step->_get_platform( $conf, $verbose ) },
-        \$stdout,
-        \$stderr,
-    );
-    is( $rv, $expected, "Got expected platform for foo");
-    like( $stdout, qr/platform='$expected'/, "Got expected verbose output");
-}
-
-# re-set to original values
-$conf->data->set_p5( archname => $archname_orig );
-$conf->data->set_p5( OSNAME => $platform_orig );
 
 ########## _get_generated() ##########
 
@@ -120,12 +80,13 @@ my $cwd = cwd();
     chdir $tdir or croak "Unable to change to temporary directory";
     $conf->data->set( platform_asm => 1 );
     my $platform = 'aix';
+    $conf->data->set( platform => $platform );
     mkpath( 'src', { mode => 0755 } ) or croak "Unable to make testing directory";
     my $asmfile = File::Spec->catfile( 'src', 'platform_asm.s' );
     open my $FH, '>', $asmfile or croak "Unable to open handle for writing";
     print $FH "Hello asm\n";
     close $FH or croak "Unable to close handle after writing";
-    $step->_handle_asm($conf, $platform);
+    $step->_handle_asm($conf);
     my $text = _slurp( $asmfile );
     like($text, qr/Hello asm/s, "File unchanged, as expected");
 
@@ -133,14 +94,17 @@ my $cwd = cwd();
 }
 # re-set to original values
 $conf->data->set( platform_asm => $platform_asm_orig );
+$conf->data->set( platform     => $platform_orig );
 
 {
     my $tdir = tempdir( CLEANUP => 1 );
     chdir $tdir or croak "Unable to change to temporary directory";
     $conf->data->set( platform_asm => 1 );
     my $platform = 'aix';
+    $conf->data->set( platform => $platform );
 
-    mkpath( 'src', { mode => 0755 } ) or croak "Unable to make testing directory";
+    mkpath( 'src', { mode => 0755 } )
+        or croak "Unable to make testing directory";
 
     my $asmfile = File::Spec->catfile( 'src', 'platform_asm.s' );
     open my $FH, '>', $asmfile or croak "Unable to open handle for writing";
@@ -148,14 +112,15 @@ $conf->data->set( platform_asm => $platform_asm_orig );
     close $FH or croak "Unable to close handle after writing";
 
     my $path = File::Spec->catdir( 'config', 'gen', 'platform', $platform );
-    mkpath( $path, { mode => 0755 } ) or croak "Unable to make testing directory";
+    mkpath( $path, { mode => 0755 } )
+        or croak "Unable to make testing directory";
 
     my $configfile = File::Spec->catfile( $path, 'asm.s' );
     open my $FH2, '>', $configfile or croak "Unable to open handle for writing";
     print $FH2 "Goodbye world\n";
     close $FH2 or croak "Unable to close handle after writing";
 
-    $step->_handle_asm($conf, $platform);
+    $step->_handle_asm($conf);
 
     my $text = _slurp( $asmfile );
     like($text, qr/Goodbye world/s, "File changed, as expected");
@@ -164,12 +129,14 @@ $conf->data->set( platform_asm => $platform_asm_orig );
 }
 # re-set to original values
 $conf->data->set( platform_asm => $platform_asm_orig );
+$conf->data->set( platform     => $platform_orig );
 
 ########## _handle_begin_c() ##########
 {
     my $tdir = tempdir( CLEANUP => 1 );
     chdir $tdir or croak "Unable to change to temporary directory";
     my $platform = 'darwin';
+    $conf->data->set( platform => $platform );
 
     my $path = File::Spec->catdir( 'config', 'gen', 'platform', $platform );
     mkpath( $path, { mode => 0755 } ) or croak "Unable to make testing directory";

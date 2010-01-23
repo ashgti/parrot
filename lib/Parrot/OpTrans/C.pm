@@ -52,16 +52,23 @@ Returns the C C<#define> macros for register access etc.
 sub defines {
     my $type = __PACKAGE__;
     return <<END;
+#include "pmc/pmc_callcontext.h"
+
 /* defines - $0 -> $type */
 #undef CONST
 #define REL_PC     ((size_t)(cur_opcode - (opcode_t *)interp->code->base.data))
 #define CUR_OPCODE cur_opcode
-#define IREG(i) REG_INT(interp, cur_opcode[i])
-#define NREG(i) REG_NUM(interp, cur_opcode[i])
-#define PREG(i) REG_PMC(interp, cur_opcode[i])
-#define SREG(i) REG_STR(interp, cur_opcode[i])
-#define CONST(i) CONTEXT(interp)->constants[cur_opcode[i]]
+#define IREG(i) (CUR_CTX->bp.regs_i[cur_opcode[i]])
+#define NREG(i) (CUR_CTX->bp.regs_n[-1L - cur_opcode[i]])
+#define PREG(i) (CUR_CTX->bp_ps.regs_p[-1L - cur_opcode[i]])
+#define SREG(i) (CUR_CTX->bp_ps.regs_s[cur_opcode[i]])
+#define CONST(i) Parrot_pcc_get_constants(interp, interp->ctx)[cur_opcode[i]]
 END
+}
+
+sub add_body_prelude {
+    my ($self) = @_;
+    return "    Parrot_Context const * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);\n";
 }
 
 =item C<gen_goto($where)>
@@ -98,18 +105,6 @@ sub expr_offset {
     my ( $self, $offset ) = @_;
 
     return "cur_opcode + $offset";
-}
-
-=item C<expr_pop()>
-
-Returns the C code for C<POP()>. Called by C<goto_offset()>.
-
-=cut
-
-sub expr_pop {
-    my ($self) = @_;
-
-    return "pop_dest(interp)";
 }
 
 our %arg_maps = (

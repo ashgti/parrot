@@ -24,26 +24,23 @@ C<interpinfo> opcode.
 
 =cut
 
-SKIP: {
-    skip( "we really shouldn't run just a label - use a sub", 1 );
-
-    pasm_output_is( <<'CODE', <<'OUTPUT', "runinterp - new style" );
+# we probably shouldn't just run a label, but this catches a potential seggie
+pasm_output_is( <<'CODE', <<'OUTPUT', "runinterp - new style" );
     new P0, 'ParrotInterpreter'
-    print "calling\n"
+    say 'calling'
     # set_addr/invoke ?
     runinterp P0, foo
-    print "ending\n"
+    say 'ending'
     end
-    print "bad things!\n"
+    say 'bad things!'
   foo:
-    print "In 2\n"
+    say 'In 2'
     end
 CODE
 calling
 In 2
 ending
 OUTPUT
-}
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'runinterp - works with printing' );
 .sub 'test' :main
@@ -89,8 +86,6 @@ CODE
 ok\s2\n$/x
 OUTPUT
 
-# This is the behavior as of Parrot 0.4.3
-# RT #46819 Should there be a warning?
 pasm_output_is( <<'CODE', 'nada:', 'interp - warnings' );
     new P0, 'Undef'
     set I0, P0
@@ -162,9 +157,6 @@ pir_output_is( <<'CODE', <<'OUTPUT', "interpinfo & getinterp: current runcore" )
     if $I0 == .PARROT_SWITCH_CORE     goto ok1
     if $I0 == .PARROT_CGOTO_CORE      goto ok1
     if $I0 == .PARROT_CGP_CORE        goto ok1
-    if $I0 == .PARROT_JIT_CORE        goto ok1
-    if $I0 == .PARROT_SWITCH_JIT_CORE goto ok1
-    if $I0 == .PARROT_CGP_JIT_CORE    goto ok1
     if $I0 == .PARROT_EXEC_CORE       goto ok1
     if $I0 == .PARROT_GC_DEBUG_CORE   goto ok1
     print 'not '
@@ -182,7 +174,6 @@ CODE
 ok 1
 ok 2
 OUTPUT
-
 
 # Local Variables:
 #   mode: cperl

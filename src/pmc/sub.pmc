@@ -35,12 +35,33 @@ print_sub_name(PARROT_INTERP, ARGIN_NULLOK(PMC *sub))
     print_pbc_location(interp);
 }
 
-/*
- * A sub now contains more data like namespace, which makes it
- * effectively a container. Therefore need_ext has to be set
- */
-pmclass Sub need_ext {
-    ATTR struct Parrot_sub * sub; /* the Parrot sub structure */
+pmclass Sub auto_attrs {
+    ATTR PackFile_ByteCode *seg;        /* bytecode segment */
+    ATTR size_t             start_offs; /* sub entry in ops from seg->base.data */
+    ATTR size_t             end_offs;
+
+    ATTR INTVAL             HLL_id;         /* see src/hll.c XXX or per segment? */
+    ATTR PMC               *namespace_name; /* where this Sub is in - this is either
+                                             * a String or a [Key] and describes
+                                             * the relative path in the NameSpace
+                                             */
+    ATTR PMC               *namespace_stash; /* the actual hash, HLL::namespace */
+    ATTR STRING            *name;            /* name of the sub */
+    ATTR STRING            *method_name;     /* method name of the sub */
+    ATTR STRING            *ns_entry_name;   /* ns entry name of the sub */
+    ATTR STRING            *subid;           /* The ID of the sub. */
+    ATTR INTVAL             vtable_index;    /* index in Parrot_vtable_slot_names */
+    ATTR PMC               *multi_signature; /* list of types for MMD */
+    ATTR UINTVAL            n_regs_used[4];  /* INSP in PBC */
+
+    ATTR PMC               *lex_info;        /* LexInfo PMC */
+    ATTR PMC               *outer_sub;       /* :outer for closures */
+    ATTR PMC               *eval_pmc;        /* eval container / NULL */
+    ATTR PMC               *ctx;             /* the context this sub is in */
+    ATTR UINTVAL            comp_flags;      /* compile time and additional flags */
+    ATTR Parrot_sub_arginfo *arg_info;       /* Argument counts and flags. */
+
+    ATTR PMC               *outer_ctx;       /* outer context, if a closure */
 
 /*
 
@@ -68,10 +89,121 @@ Initializes the subroutine.
      */
     VTABLE void init() {
         Parrot_Sub_attributes * const attrs =
-            mem_allocate_typed(Parrot_Sub_attributes);
+            (Parrot_Sub_attributes *) PMC_data(SELF);
 
-        attrs->sub     = new_sub(INTERP);
-        PMC_data(SELF) = attrs;
+        attrs->seg             = INTERP->code;
+        attrs->outer_sub       = PMCNULL;
+        attrs->multi_signature = PMCNULL;
+        attrs->namespace_name  = PMCNULL;
+
+        PObj_custom_mark_destroy_SETALL(SELF);
+    }
+
+/*
+
+=item C<void init_pmc()>
+
+Initializes the "detached" subroutine from passed Hash. "Detached" means that
+surboutine is fully constructed but not attached to interpreter.
+
+=cut
+
+*/
+
+    VTABLE void init_pmc(PMC* init) {
+        Parrot_Sub_attributes * const attrs =
+            (Parrot_Sub_attributes *) PMC_data(SELF);
+        STRING *field;
+
+        field = CONST_STRING(INTERP, "start_offs");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->start_offs = VTABLE_get_integer_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "end_offs");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->end_offs = VTABLE_get_integer_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "HLL_id");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->HLL_id = VTABLE_get_integer_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "namespace_name");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->namespace_name = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "namespace_stash");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->namespace_stash = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "name");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->name = VTABLE_get_string_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "method_name");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->method_name = VTABLE_get_string_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "ns_entry_name");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->ns_entry_name = VTABLE_get_string_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "subid");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->subid = VTABLE_get_string_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "vtable_index");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->vtable_index = VTABLE_get_integer_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "multi_signature");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->multi_signature = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "lex_info");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->lex_info = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "outer_sub");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->outer_sub = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+
+        /* comp_flags is actually UINTVAL */
+        field = CONST_STRING(INTERP, "comp_flags");
+        if (VTABLE_exists_keyed_str(INTERP, init, field))
+            attrs->comp_flags = (UINTVAL)VTABLE_get_integer_keyed_str(INTERP, init, field);
+
+        field = CONST_STRING(INTERP, "n_regs_used");
+        if (VTABLE_exists_keyed_str(INTERP, init, field)) {
+            PMC   *tmp = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+            INTVAL i;
+            for (i = 0; i < 4; ++i)
+                attrs->n_regs_used[i] = VTABLE_get_integer_keyed_int(INTERP, tmp, i);
+        }
+
+        field = CONST_STRING(INTERP, "arg_info");
+        if (VTABLE_exists_keyed_str(INTERP, init, field)) {
+            PMC   *tmp = VTABLE_get_pmc_keyed_str(INTERP, init, field);
+            /* Allocate structure to store argument information in. */
+            attrs->arg_info = mem_allocate_zeroed_typed(Parrot_sub_arginfo);
+            /*
+            Hash.get_integer_keyed_str return 0 if key doesn't exists.
+            So, don't check existence of key, just use it.
+            NB: Don't split line. CONST_STRING b0rked.
+            */
+            attrs->arg_info->pos_required = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "pos_required"));
+            attrs->arg_info->pos_optional = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "pos_optional"));
+            attrs->arg_info->pos_slurpy = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "pos_slurpy"));
+            attrs->arg_info->named_required = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "named_required"));
+            attrs->arg_info->named_optional = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "named_optional"));
+            attrs->arg_info->named_slurpy = VTABLE_get_integer_keyed_str(INTERP, tmp, CONST_STRING(INTERP, "named_slurpy"));
+        }
+
+
+        /*
+        C<eval_pmc> and C<ctx> are not handled here. And shouldn't be handled
+        here at all because of run-time nature.
+        */
+
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -86,22 +218,12 @@ Destroys the subroutine.
 */
 
     VTABLE void destroy() {
-        Parrot_sub *sub;
-        GET_ATTR_sub(INTERP, SELF, sub);
+        Parrot_Sub_attributes *sub = PARROT_SUB(SELF);
 
         if (sub) {
             if (sub->arg_info)
                 mem_sys_free(sub->arg_info);
-            if (sub->ctx)
-                Parrot_free_context(INTERP, sub->ctx, 1);
-            if (sub->outer_ctx)
-                Parrot_free_context(INTERP, sub->outer_ctx, 1);
-
-            mem_sys_free(sub);
         }
-
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
     }
 
 /*
@@ -119,7 +241,8 @@ Sets the name of the subroutine.
 */
 
     VTABLE STRING *get_string() {
-        Parrot_sub *sub;
+        STRING *name;
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
 
         if (sub->name)
@@ -129,7 +252,7 @@ Sets the name of the subroutine.
     }
 
     VTABLE void set_string_native(STRING *subname) {
-        Parrot_sub *sub;
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
         sub->name = Parrot_str_copy(INTERP, subname);
     }
@@ -163,7 +286,7 @@ Returns the address of the actual subroutine.
 */
 
     VTABLE void *get_pointer() {
-        Parrot_sub *sub;
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
         return sub->seg->base.data + sub->start_offs;
     }
@@ -181,10 +304,10 @@ now.> -DRS
 */
 
     VTABLE INTVAL get_integer_keyed(PMC *key) {
-        Parrot_sub *sub;
+        Parrot_Sub_attributes *sub;
         UNUSED(key)
-
         PMC_get_sub(INTERP, SELF, sub);
+
         return (INTVAL) (sub->seg->base.data);
     }
 
@@ -219,11 +342,11 @@ Invokes the subroutine.
 */
 
     VTABLE opcode_t *invoke(void *next) {
-        Parrot_sub     *sub;
-        Parrot_Context *caller_ctx;
-        Parrot_Context *context;
-        PMC            *ccont;
-        opcode_t       *pc;
+        Parrot_Sub_attributes *sub;
+        PMC                   *caller_ctx;
+        PMC                   *context;
+        PMC                   *ccont;
+        opcode_t              *pc;
 
         PMC_get_sub(INTERP, SELF, sub);
         if (Interp_trace_TEST(INTERP, PARROT_TRACE_SUB_CALL_FLAG))
@@ -252,7 +375,7 @@ Invokes the subroutine.
          *
          */
         pc                   = sub->seg->base.data + sub->start_offs;
-        caller_ctx           = CONTEXT(interp);
+        caller_ctx           = CURRENT_CONTEXT(interp);
         ccont                = INTERP->current_cont;
         INTERP->current_cont = NULL;
 
@@ -263,67 +386,65 @@ Invokes the subroutine.
 
         /* plain subroutine call
          * create new context, place it in interpreter */
-        context               = Parrot_set_new_context(INTERP, sub->n_regs_used);
-        context->current_sub  = SELF;
-        context->caller_ctx   = caller_ctx;
-        context->current_pc   = pc;
-        context->current_cont = ccont;
+        context = Parrot_pcc_get_signature(INTERP, caller_ctx);
+        if (PMC_IS_NULL(context))
+            context = pmc_new(INTERP, enum_class_CallContext);
+        CURRENT_CONTEXT(INTERP) = context;
+        Parrot_pcc_set_caller_ctx(INTERP, context, caller_ctx);
+        Parrot_pcc_allocate_registers(INTERP, context, sub->n_regs_used);
+        Parrot_pcc_init_context(INTERP, context, caller_ctx);
+
+        Parrot_pcc_set_sub(interp, context, SELF);
+        Parrot_pcc_set_continuation(interp, context, ccont);
+        Parrot_pcc_set_constants(interp, context, sub->seg->const_table->constants);
 
         /* check recursion/call depth */
-        if (++context->recursion_depth > INTERP->recursion_limit)
+        if (Parrot_pcc_inc_recursion_depth(INTERP, context) > INTERP->recursion_limit)
             Parrot_ex_throw_from_c_args(INTERP, next, CONTROL_ERROR,
                     "maximum recursion depth exceeded");
 
         /* and copy set context variables */
-        PMC_cont(ccont)->from_ctx = context;
+        PARROT_CONTINUATION(ccont)->from_ctx = context;
 
         /* if this is an outer sub, then we need to set sub->ctx
          * to the new context (refcounted) and convert the
          * retcontinuation to a normal continuation.  */
         if (PObj_get_FLAGS(SELF) & SUB_FLAG_IS_OUTER) {
-            /* release any previously held context */
-            if (sub->ctx)
-                Parrot_free_context(interp, sub->ctx, 1);
-            sub->ctx = Parrot_context_ref(interp, context);
+            sub->ctx = context;
             /* convert retcontinuation to a continuation */
             ccont->vtable = interp->vtables[enum_class_Continuation];
         }
 
-        /* reference counting should work */
-        Parrot_context_ref(interp, context);
-
         if (!PMC_IS_NULL(INTERP->current_object)) {
-            context->current_object = INTERP->current_object;
+            Parrot_pcc_set_object(interp, context, INTERP->current_object);
             INTERP->current_object  = NULL;
         }
-
-        context->current_HLL       = sub->HLL_id;
-        context->current_namespace = sub->namespace_stash;
 
         /* create pad if needed
          * TODO move this up in front of argument passing
          *      and factor out common code with coroutine pmc
          */
         if (!PMC_IS_NULL(sub->lex_info)) {
-            context->lex_pad = pmc_new_init(INTERP,
+            Parrot_pcc_set_lex_pad(interp, context, pmc_new_init(INTERP,
                     Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
-                    sub->lex_info);
-            VTABLE_set_pointer(INTERP, context->lex_pad, context);
+                    sub->lex_info));
+            VTABLE_set_pointer(INTERP, Parrot_pcc_get_lex_pad(interp, context), context);
         }
 
-        if (sub->outer_ctx) {
+        if (!PMC_IS_NULL(sub->outer_ctx)) {
             /* set outer context */
-            context->outer_ctx = Parrot_context_ref(interp, sub->outer_ctx);
+            Parrot_pcc_set_outer_ctx(interp, context, sub->outer_ctx);
         }
         else {
             /* autoclose */
-            Parrot_Context *c;
-            for (c = context; !c->outer_ctx; c = c->outer_ctx) {
+            PMC *c = context;
+            PMC *outer_c = Parrot_pcc_get_outer_ctx(interp, c);
+            for (c = context; PMC_IS_NULL(outer_c); c = outer_c) {
 
                 PMC         *outer_pmc;
-                Parrot_sub  *current_sub, *outer_sub;
+                Parrot_Sub_attributes *current_sub, *outer_sub;
 
-                PMC_get_sub(INTERP, c->current_sub, current_sub);
+                PMC_get_sub(INTERP, Parrot_pcc_get_sub(interp, c), current_sub);
                 outer_pmc   = current_sub->outer_sub;
 
                 if (PMC_IS_NULL(outer_pmc))
@@ -331,26 +452,25 @@ Invokes the subroutine.
 
                 PMC_get_sub(INTERP, outer_pmc, outer_sub);
 
-                if (!outer_sub->ctx) {
-                    Parrot_Context * const dummy = Parrot_alloc_context(INTERP,
+                if (PMC_IS_NULL(outer_sub->ctx)) {
+                    PMC * const dummy = Parrot_alloc_context(INTERP,
                                                 outer_sub->n_regs_used, NULL);
-                    dummy->current_sub    = outer_pmc;
+                    Parrot_pcc_set_sub(interp, dummy, outer_pmc);
 
                     if (!PMC_IS_NULL(outer_sub->lex_info)) {
-                        dummy->lex_pad = pmc_new_init(INTERP,
+                        Parrot_pcc_set_lex_pad(interp, dummy, pmc_new_init(INTERP,
                                Parrot_get_ctx_HLL_type(interp, enum_class_LexPad),
-                               outer_sub->lex_info);
-                        VTABLE_set_pointer(INTERP, dummy->lex_pad, dummy);
+                               outer_sub->lex_info));
+                        VTABLE_set_pointer(INTERP, Parrot_pcc_get_lex_pad(interp, dummy), dummy);
                     }
 
-                    if (outer_sub->outer_ctx) {
-                        dummy->outer_ctx = Parrot_context_ref(interp,
-                                               outer_sub->outer_ctx);
-                    }
-                    outer_sub->ctx = Parrot_context_ref(interp, dummy);
+                    if (!PMC_IS_NULL(outer_sub->outer_ctx))
+                        Parrot_pcc_set_outer_ctx(interp, dummy, outer_sub->outer_ctx);
+                    outer_sub->ctx = dummy;
                 }
 
-                c->outer_ctx = Parrot_context_ref(interp, outer_sub->ctx);
+                Parrot_pcc_set_outer_ctx(interp, c, outer_sub->ctx);
+                outer_c = outer_sub->ctx;
             }
         }
 
@@ -364,12 +484,11 @@ Invokes the subroutine.
             &&     pc[2] == PARROT_OP_get_params_pc))) {
 
                 /* TODO keep it or resize it */
-                --context->recursion_depth;
+                Parrot_pcc_dec_recursion_depth(INTERP, context);
 
                 PObj_get_FLAGS(ccont) &= ~SUB_FLAG_TAILCALL;
-                context->caller_ctx    = caller_ctx->caller_ctx;
-
-                Parrot_free_context(INTERP, caller_ctx, 1);
+                Parrot_pcc_set_caller_ctx(interp, context,
+                        Parrot_pcc_get_caller_ctx(interp, caller_ctx));
             }
         }
 
@@ -388,21 +507,15 @@ Creates and returns a clone of the subroutine.
 
     VTABLE PMC *clone() {
         PMC        * const ret = pmc_new(INTERP, SELF->vtable->base_type);
-        Parrot_sub *dest_sub;
-        Parrot_sub *sub;
+        Parrot_Sub_attributes *dest_sub;
+        Parrot_Sub_attributes *sub;
 
+        /* XXX Why? */
         /* we have to mark it ourselves */
         PObj_custom_mark_destroy_SETALL(ret);
 
-        PMC_get_sub(INTERP, ret, sub);
-
-        /* release any previously held contexts */
-        if (sub->ctx)
-            Parrot_free_context(INTERP, sub->ctx, 1);
-        if (sub->outer_ctx)
-            Parrot_free_context(INTERP, sub->outer_ctx, 1);
-
         PMC_get_sub(INTERP, SELF, dest_sub);
+        PMC_get_sub(INTERP, ret, sub);
 
         /* first set the sub struct, Parrot_str_copy may cause GC */
         *sub = *dest_sub;
@@ -412,12 +525,6 @@ Creates and returns a clone of the subroutine.
 
         /* Be sure not to share arg_info. */
         dest_sub->arg_info = NULL;
-
-        /* mark any newly held contexts */
-        if (sub->ctx)
-            Parrot_context_ref(INTERP, sub->ctx);
-        if (sub->outer_ctx)
-            Parrot_context_ref(INTERP, sub->outer_ctx);
 
         return ret;
     }
@@ -439,22 +546,14 @@ Set SELF to the data in other.
     VTABLE void assign_pmc(PMC *other) {
         /* only handle the case where the other PMC is the same type */
         if (other->vtable->base_type == SELF->vtable->base_type) {
-            Parrot_sub *my_sub;
-            Parrot_sub *other_sub;
+            Parrot_Sub_attributes *my_sub;
+            Parrot_Sub_attributes *other_sub;
+
             PMC_get_sub(INTERP, SELF, my_sub);
             PMC_get_sub(INTERP, other, other_sub);
 
-            /* Increase reference count of destination before
-             * freeing the one in self, to avoid problems in
-             * case of self assignment */
-            if (other_sub->ctx)
-                Parrot_context_ref(interp, other_sub->ctx);
-            /* get rid of this context, if attached */
-            if (my_sub->ctx)
-                Parrot_free_context(INTERP, my_sub->ctx, 1);
-
             /* copy the sub struct */
-            memmove(my_sub, other_sub, sizeof (Parrot_sub));
+            memmove(my_sub, other_sub, sizeof (Parrot_Sub_attributes));
 
             /* copy the name so it's a different string in memory */
             if (my_sub->name)
@@ -477,36 +576,23 @@ Marks the sub as live.
 */
 
     VTABLE void mark() {
-        Parrot_sub *sub;
-        PMC_get_sub(INTERP, SELF, sub);
+        Parrot_Sub_attributes * const sub = PARROT_SUB(SELF);
 
         if (!sub)
             return;
 
-        if (sub->name)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->name);
-        if (sub->method_name)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->method_name);
-        if (sub->ns_entry_name)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->ns_entry_name);
-        if (!PMC_IS_NULL(sub->namespace_name))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->namespace_name);
-        if (!PMC_IS_NULL(sub->namespace_stash))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->namespace_stash);
-        if (!PMC_IS_NULL(sub->multi_signature))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->multi_signature);
-        if (!PMC_IS_NULL(sub->lex_info))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->lex_info);
-        if (!PMC_IS_NULL(sub->outer_sub))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->outer_sub);
-        if (!PMC_IS_NULL(sub->eval_pmc))
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->eval_pmc);
-        if (sub->subid)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *) sub->subid);
-        if (sub->ctx)
-            mark_context(interp, sub->ctx);
-        if (sub->outer_ctx)
-            mark_context(interp, sub->outer_ctx);
+        Parrot_gc_mark_STRING_alive(INTERP, sub->name);
+        Parrot_gc_mark_STRING_alive(INTERP, sub->method_name);
+        Parrot_gc_mark_STRING_alive(INTERP, sub->ns_entry_name);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->namespace_name);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->namespace_stash);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->multi_signature);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->lex_info);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->outer_sub);
+        Parrot_gc_mark_PMC_alive(INTERP, sub->eval_pmc);
+        Parrot_gc_mark_STRING_alive(INTERP, sub->subid);
+        Parrot_gc_mark_PMC_alive(interp, sub->ctx);
+        Parrot_gc_mark_PMC_alive(interp, sub->outer_ctx);
     }
 
 /*
@@ -520,7 +606,8 @@ Returns whether the two subroutines are equal.
 */
 
     MULTI INTVAL is_equal(PMC *value) {
-        Parrot_sub *my_sub, *value_sub;
+        Parrot_Sub_attributes *my_sub;
+        Parrot_Sub_attributes *value_sub;
 
         PMC_get_sub(INTERP, SELF, my_sub);
         PMC_get_sub(INTERP, value, value_sub);
@@ -545,18 +632,11 @@ Archives the subroutine.
 */
 
     VTABLE void visit(visit_info *info) {
-        Parrot_sub *sub;
+        VISIT_PMC_ATTR(INTERP, info, SELF, Sub, namespace_name);
 
-        PMC_get_sub(INTERP, SELF, sub);
+        VISIT_PMC_ATTR(INTERP, info, SELF, Sub, multi_signature);
 
-        info->thaw_ptr = &sub->namespace_name;
-        (info->visit_pmc_now)(INTERP, sub->namespace_name, info);
-
-        info->thaw_ptr = &sub->multi_signature;
-        (info->visit_pmc_now)(INTERP, sub->multi_signature, info);
-
-        info->thaw_ptr = &sub->outer_sub;
-        (info->visit_pmc_now)(INTERP, sub->outer_sub, info);
+        VISIT_PMC_ATTR(INTERP, info, SELF, Sub, outer_sub);
 
         /*
          * XXX visit_pmc_now is wrong, because it breaks
@@ -566,20 +646,18 @@ Archives the subroutine.
          *
          * Therefore the hash must be last during visit for now.
          */
-        info->thaw_ptr = &sub->lex_info;
-        (info->visit_pmc_now)(INTERP, sub->lex_info, info);
+        VISIT_PMC_ATTR(INTERP, info, SELF, Sub, lex_info);
+
         SUPER(info);
     }
 
     VTABLE void freeze(visit_info *info) {
-        IMAGE_IO   * const io  = info->image_io;
-        Parrot_sub        *sub;
-        STRING            *hll_name;
+        Parrot_Sub_attributes *sub;
+        STRING                *hll_name;
         int i;
 
-        PMC_get_sub(INTERP, SELF, sub);
-
         SUPER(info);
+        PMC_get_sub(INTERP, SELF, sub);
         /*
          * we currently need to write these items:
          * - start offset in byte-code segment
@@ -598,35 +676,35 @@ Archives the subroutine.
          * - subid
          */
 
-        VTABLE_push_integer(INTERP, io, (INTVAL) sub->start_offs);
-        VTABLE_push_integer(INTERP, io, (INTVAL) sub->end_offs);
-        VTABLE_push_integer(INTERP, io,
+        VTABLE_push_integer(INTERP, info, (INTVAL) sub->start_offs);
+        VTABLE_push_integer(INTERP, info, (INTVAL) sub->end_offs);
+        VTABLE_push_integer(INTERP, info,
             (INTVAL)(PObj_get_FLAGS(pmc) & SUB_FLAG_PF_MASK));
 
-        VTABLE_push_string(INTERP, io, sub->name);
+        VTABLE_push_string(INTERP, info, sub->name);
 
         if (!sub->method_name)
             sub->method_name = CONST_STRING(INTERP, "");
-        VTABLE_push_string(INTERP, io, sub->method_name);
+        VTABLE_push_string(INTERP, info, sub->method_name);
 
         if (!sub->ns_entry_name)
             sub->ns_entry_name = CONST_STRING(INTERP, "");
-        VTABLE_push_string(INTERP, io, sub->ns_entry_name);
+        VTABLE_push_string(INTERP, info, sub->ns_entry_name);
 
         hll_name = Parrot_get_HLL_name(INTERP, sub->HLL_id);
         if (!hll_name)
             hll_name = CONST_STRING(INTERP, "");
-        VTABLE_push_string(INTERP, io, hll_name);
+        VTABLE_push_string(INTERP, info, hll_name);
 
-        VTABLE_push_integer(INTERP, io, (INTVAL)sub->comp_flags);
-        VTABLE_push_integer(INTERP, io, sub->vtable_index);
+        VTABLE_push_integer(INTERP, info, (INTVAL)sub->comp_flags);
+        VTABLE_push_integer(INTERP, info, sub->vtable_index);
 
         for (i = 0; i < 4; ++i)
-            VTABLE_push_integer(INTERP, io, sub->n_regs_used[i]);
+            VTABLE_push_integer(INTERP, info, sub->n_regs_used[i]);
 
         if (!sub->subid)
             sub->subid = CONST_STRING(INTERP, "");
-        VTABLE_push_string(INTERP, io, sub->subid);
+        VTABLE_push_string(INTERP, info, sub->subid);
     }
 
 /*
@@ -640,36 +718,33 @@ Unarchives the subroutine.
 */
 
     VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+        Parrot_Sub_attributes *sub;
+        INTVAL flags;
+        int    i;
+
         SUPER(info);
 
-        if (info->extra_flags == EXTRA_IS_NULL) {
-            Parrot_sub *sub;
-            INTVAL flags;
-            int    i;
+        PMC_get_sub(INTERP, SELF, sub);
 
-            PMC_get_sub(INTERP, SELF, sub);
+        /* we get relative offsets */
+        sub->start_offs   = (size_t) VTABLE_shift_integer(INTERP, info);
+        sub->end_offs     = (size_t) VTABLE_shift_integer(INTERP, info);
+        flags             = VTABLE_shift_integer(INTERP, info);
 
-            /* we get relative offsets */
-            sub->start_offs   = (size_t) VTABLE_shift_integer(INTERP, io);
-            sub->end_offs     = (size_t) VTABLE_shift_integer(INTERP, io);
-            flags             = VTABLE_shift_integer(INTERP, io);
+        PObj_get_FLAGS(SELF) |= flags & SUB_FLAG_PF_MASK;
 
-            PObj_get_FLAGS(SELF) |= flags & SUB_FLAG_PF_MASK;
+        sub->name           = VTABLE_shift_string(INTERP, info);
+        sub->method_name    = VTABLE_shift_string(INTERP, info);
+        sub->ns_entry_name  = VTABLE_shift_string(INTERP, info);
+        sub->HLL_id         = Parrot_get_HLL_id(INTERP,
+            VTABLE_shift_string(INTERP, info));
+        sub->comp_flags     = VTABLE_shift_integer(INTERP, info);
+        sub->vtable_index   = VTABLE_shift_integer(INTERP, info);
 
-            sub->name           = VTABLE_shift_string(INTERP, io);
-            sub->method_name    = VTABLE_shift_string(INTERP, io);
-            sub->ns_entry_name  = VTABLE_shift_string(INTERP, io);
-            sub->HLL_id         = Parrot_get_HLL_id(INTERP,
-                VTABLE_shift_string(INTERP, io));
-            sub->comp_flags     = VTABLE_shift_integer(INTERP, io);
-            sub->vtable_index   = VTABLE_shift_integer(INTERP, io);
+        for (i = 0; i < 4; ++i)
+            sub->n_regs_used[i] = VTABLE_shift_integer(INTERP, info);
 
-            for (i = 0; i < 4; ++i)
-                sub->n_regs_used[i] = VTABLE_shift_integer(INTERP, io);
-
-            sub->subid        = VTABLE_shift_string(INTERP, io);
-        }
+        sub->subid        = VTABLE_shift_string(INTERP, info);
     }
 
 /*
@@ -686,13 +761,13 @@ Returns the full set of meta-data about the sub.
     {
         /* Create a hash, then use inspect_str to get all of the data to
          * fill it up with. */
-        PMC    * const metadata          = pmc_new(interp, enum_class_Hash);
-        STRING * const pos_required_str  = CONST_STRING(interp, "pos_required");
-        STRING * const pos_optional_str  = CONST_STRING(interp, "pos_optional");
+        PMC    * const metadata           = pmc_new(interp, enum_class_Hash);
+        STRING * const pos_required_str   = CONST_STRING(interp, "pos_required");
+        STRING * const pos_optional_str   = CONST_STRING(interp, "pos_optional");
         STRING * const named_required_str = CONST_STRING(interp, "named_required");
         STRING * const named_optional_str = CONST_STRING(interp, "named_optional");
-        STRING * const pos_slurpy_str    = CONST_STRING(interp, "pos_slurpy");
-        STRING * const named_slurpy_str  = CONST_STRING(interp, "named_slurpy");
+        STRING * const pos_slurpy_str     = CONST_STRING(interp, "pos_slurpy");
+        STRING * const named_slurpy_str   = CONST_STRING(interp, "named_slurpy");
 
         VTABLE_set_pmc_keyed_str(interp, metadata, pos_required_str,
             VTABLE_inspect_str(interp, SELF, pos_required_str));
@@ -756,9 +831,9 @@ The number of optional named arguments
 
     VTABLE PMC *inspect_str(STRING *what)
     {
-        Parrot_sub *sub;
-        PMC        *retval;
-        INTVAL      count_found = -1;
+        Parrot_Sub_attributes *sub;
+        PMC                   *retval;
+        INTVAL                 count_found = -1;
 
         PMC_get_sub(INTERP, SELF, sub);
 
@@ -846,6 +921,14 @@ The number of optional named arguments
 
 =over 4
 
+=item C<INTVAL start_offs()>
+
+Return the start offset of the Sub.
+
+=item C<INTVAL end_offs()>
+
+Return the end offset of the Sub.
+
 =item C<PMC *get_namespace()>
 
 Return the namespace PMC, where the Sub is defined.
@@ -880,12 +963,31 @@ slurpy arguments).
 =cut
 
 */
+    METHOD start_offs() {
+        Parrot_Sub_attributes  *sub;
+        INTVAL                  start_offs;
+        PMC_get_sub(INTERP, SELF, sub);
+        start_offs = sub->start_offs;
+        RETURN(INTVAL start_offs);
+    }
+
+    METHOD end_offs() {
+        Parrot_Sub_attributes  *sub;
+        INTVAL                  end_offs;
+        PMC_get_sub(INTERP, SELF, sub);
+        end_offs = sub->end_offs;
+        RETURN(INTVAL end_offs);
+    }
 
     METHOD get_namespace() {
-        Parrot_sub *sub;
         PMC *_namespace;
-
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
+        /*
+        XXX Rakudo's failing with with this code on ASSERT. Why???
+        GET_ATTR_namespace_stash(INTERP, SELF, _namespace);
+        PARROT_ASSERT(_namespace == sub->namespace_stash || !"consistency!!!");
+        */
         _namespace = sub->namespace_stash;
         RETURN(PMC *_namespace);
     }
@@ -894,65 +996,65 @@ slurpy arguments).
 
         /* TODO switch to canonical NiSP order
          * see also imcc/reg_alloc.c */
-        static const char types[] = "INSP";
-        char *p;
-        Parrot_sub         *sub;
-        char       * const kind = Parrot_str_to_cstring(interp, reg);
-        INTVAL             regs_used;
+        STRING                *types = CONST_STRING(INTERP, "INSP");
+        Parrot_Sub_attributes *sub;
+        INTVAL                 regs_used;
+        INTVAL                 kind;
 
         PMC_get_sub(INTERP, SELF, sub);
-
         PARROT_ASSERT(sub->n_regs_used);
 
-        if (!*kind || kind[1]) {
-            Parrot_str_free_cstring(kind);
+        if (!reg || Parrot_str_length(INTERP, reg) != 1) {
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
                 "illegal register kind '%Ss'", reg);
         }
 
-        p = strchr(types, *kind);
-        Parrot_str_free_cstring(kind);
+        kind = Parrot_str_find_index(INTERP, types, reg, 0);
 
-        if (!p)
+        if (kind == -1)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
                 "illegal register kind '%Ss'", reg);
 
-        regs_used = sub->n_regs_used[p - types];
+        regs_used = sub->n_regs_used[kind];
         RETURN(INTVAL regs_used);
     }
 
     METHOD get_lexinfo() {
-        Parrot_sub *sub;
         PMC        *lexinfo;
-
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
-        lexinfo = sub->lex_info ? sub->lex_info : PMCNULL;
+
+        lexinfo = sub->lex_info ? sub->lex_info: PMCNULL;
+
         RETURN(PMC *lexinfo);
     }
 
     METHOD get_subid() {
-        Parrot_sub *sub;
         STRING     *subid;
-
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
+
         subid = sub->subid ? sub->subid : CONST_STRING(interp, "");
+
         RETURN(STRING *subid);
     }
 
     METHOD get_outer() {
-        Parrot_sub *sub;
-        PMC        *outersub;
-
+        PMC                   *outersub;
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
+
         outersub = sub->outer_sub ? sub->outer_sub : PMCNULL;
+
         RETURN(PMC *outersub);
     }
 
     METHOD set_outer(PMC *outer) {
         /* Set outer sub. */
-        Parrot_sub *sub;
-
+        Parrot_Sub_attributes *sub;
+        PMC *tmp1;
         PMC_get_sub(INTERP, SELF, sub);
+
         sub->outer_sub = outer;
 
         /* Make sure outer flag of that sub is set. */
@@ -967,18 +1069,23 @@ slurpy arguments).
 
         /* If we've got a context around for the outer sub, set it as the
          * outer context. */
-        if (CONTEXT(interp)->caller_ctx->caller_ctx->current_sub == outer)
-            sub->outer_ctx = Parrot_context_ref(interp, CONTEXT(interp)->caller_ctx->caller_ctx);
-        else if (CONTEXT(interp)->caller_ctx->current_sub == outer)
-            sub->outer_ctx = Parrot_context_ref(interp, CONTEXT(interp)->caller_ctx);
+        tmp1 = CURRENT_CONTEXT(interp);
+        while (!PMC_IS_NULL(tmp1)) {
+            if (Parrot_pcc_get_sub(interp, tmp1) == outer) {
+                sub->outer_ctx = tmp1;
+                break;
+            }
+            tmp1 = Parrot_pcc_get_caller_ctx(interp, tmp1);
+        }
     }
 
     METHOD get_multisig() {
-        Parrot_sub *sub;
-        PMC        *multisig;
-
+        PMC                 *multisig;
+        Parrot_Sub_attributes *sub;
         PMC_get_sub(INTERP, SELF, sub);
+
         multisig = sub->multi_signature ? sub->multi_signature : PMCNULL;
+
         RETURN(PMC *multisig);
     }
 

@@ -3,19 +3,22 @@
 ** obscure.ops
 */
 
+BEGIN_OPS_PREAMBLE
+
 #include <math.h>
 
-VERSION = PARROT_VERSION;
+END_OPS_PREAMBLE
 
 =head1 NAME
 
-obscure.ops - Obscure Mathmatical Opcodes
+obscure.ops - Obscure Mathematical Opcodes
 
 =cut
 
 =head1 DESCRIPTION
 
-Parrot's library of obscure ops.
+Parrot's library of obscure mathematical ops. These turn common
+trig expressions into a single op.
 
 To use this library of ops, add this directive to your PIR:
 
@@ -48,7 +51,7 @@ Set $1 to the coversine (in radians) of $2.
 =cut
 
 inline op covers(out NUM, in NUM) :advanced_math {
-  $1 = 1.0 - sin($2);
+    $1 = 1.0 - sin($2);
 }
 
 
@@ -62,7 +65,7 @@ Set $1 to the exsecant of $2 (given in radians).
 
 
 inline op exsec(out NUM, in NUM) :advanced_math {
-  $1 = (1.0 / cos($2)) - 1.0;
+    $1 = (1.0 / cos($2)) - 1.0;
 }
 
 
@@ -75,7 +78,7 @@ Set $1 to the haversine (in radians) of $2.
 =cut
 
 inline op hav(out NUM, in NUM) {
-  $1 = 0.5 * (1.0 - cos($2));
+    $1 = 0.5 * (1.0 - cos($2));
 }
 
 
@@ -88,7 +91,7 @@ Set $1 to the versine (in radians) of $2.
 =cut
 
 inline op vers(out NUM, in NUM) :advanced_math {
-  $1 = 1.0 - cos($2);
+    $1 = 1.0 - cos($2);
 }
 
 
@@ -101,7 +104,7 @@ inline op vers(out NUM, in NUM) :advanced_math {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2001-2008, Parrot Foundation.
+Copyright (C) 2001-2009, Parrot Foundation.
 
 =head1 LICENSE
 

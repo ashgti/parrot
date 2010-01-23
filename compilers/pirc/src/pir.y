@@ -250,6 +250,7 @@ static char const * const pir_type_names[] = { "int", "string", "pmc", "num" };
     struct symbol      *symb;
     struct macro_def   *mval;
     struct macro_param *pval;
+
 }
 
 
@@ -638,7 +639,7 @@ macro_statements  : macro_statement
                   | macro_statements macro_statement
                   ;
 
-macro_statement   : macro_instr "\n"
+macro_statement   : macro_instr newline
                   ;
 
 macro_instr       : macro_label_decl
@@ -707,7 +708,7 @@ sub_end           : ".end"
                   ;
 
 sub_head          : ".sub" sub_id
-                         { new_subr(lexer, $2); }
+                         { new_subr(lexer, lexer->sval /*$2*/); }
                   ;
 
 sub_id            : identifier
@@ -1695,7 +1696,7 @@ long_invocation      : ".call" sub opt_ret_cont
                            { $$ = invoke(lexer, CALL_PCC, $2, $3); }
                      | ".nci_call" pmc_object
                            { $$ = invoke(lexer, CALL_NCI, $2); }
-                     | ".invocant" pmc_object "\n"
+                     | ".invocant" pmc_object newline
                        ".meth_call" method
                            { $$ = invoke(lexer, CALL_METHOD, $2, $5); }
                      ;
@@ -2199,7 +2200,7 @@ pasm_contents             : pasm_init pasm_lines
  * not allowed, so we don't have any name collisions.
  */
 pasm_init                 : opt_nl
-                                { new_subr(lexer, "@start"); }
+                                { new_subr(lexer, Parrot_str_new(lexer->interp, "@start", 6)); }
                           ;
 
 pasm_lines                : pasm_line
@@ -2207,10 +2208,10 @@ pasm_lines                : pasm_line
                           ;
 
 pasm_line                 : pasm_statement
-                          | namespace_decl "\n"
+                          | namespace_decl newline
                           | lex_decl                /* lex_decl rule has already a "\n" token */
-                          | location_directive "\n"
-                          | macro_definition "\n"
+                          | location_directive newline
+                          | macro_definition newline
                           | macro_expansion
                           ;
 
@@ -2233,7 +2234,7 @@ pasm_sub_head             : ".pcc_sub"
                                                               hence NULL */
                           ;
 
-pasm_instruction          : parrot_op op_args "\n"
+pasm_instruction          : parrot_op op_args newline
                                 {
 
                                   if (is_parrot_op(lexer, $1)) {

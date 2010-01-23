@@ -27,6 +27,7 @@ Win32 System Programming, 2nd Edition.
 #endif
 
 #include "parrot/parrot.h"
+#include "pmc/pmc_filehandle.h"
 #include "io_private.h"
 
 #ifdef PIO_OS_WIN32
@@ -50,11 +51,11 @@ static INTVAL convert_flags_to_win32(
 PARROT_WARN_UNUSED_RESULT
 static INTVAL io_is_tty_win32(PIOHANDLE fd);
 
-#define ASSERT_ARGS_convert_flags_to_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_convert_flags_to_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(fdwAccess) \
-    || PARROT_ASSERT_ARG(fdwShareMode) \
-    || PARROT_ASSERT_ARG(fdwCreate)
-#define ASSERT_ARGS_io_is_tty_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+    , PARROT_ASSERT_ARG(fdwShareMode) \
+    , PARROT_ASSERT_ARG(fdwCreate))
+#define ASSERT_ARGS_io_is_tty_win32 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -336,10 +337,17 @@ Parrot_io_close_win32(PARROT_INTERP, ARGMOD(PMC *filehandle))
         if (CloseHandle(os_handle) == 0)
             result = GetLastError();
         Parrot_io_set_os_handle(interp, filehandle, INVALID_HANDLE_VALUE);
+
         if (flags & PIO_F_PIPE) {
-            INTVAL procid =  VTABLE_get_integer_keyed_int(interp, filehandle, 0);
+            INTVAL procid  = VTABLE_get_integer_keyed_int(interp, filehandle, 0);
             HANDLE process = (HANDLE) procid;
-            WaitForSingleObject(process, INFINITE);
+            DWORD  status  = WaitForSingleObject(process, INFINITE);
+            DWORD  exit_code;
+
+            if (status != WAIT_FAILED && GetExitCodeProcess(process, &exit_code))
+                SETATTR_FileHandle_exit_status(interp, filehandle, exit_code);
+            else
+                SETATTR_FileHandle_exit_status(interp, filehandle, 1);
             CloseHandle(process);
         }
     }
@@ -439,7 +447,7 @@ Parrot_io_read_win32(PARROT_INTERP,
 
     s = Parrot_io_make_string(interp, buf, 2048);
     len = s->bufused;
-    buffer = s->strstart;
+    buffer = Buffer_bufstart(s);
 
     if (ReadFile(Parrot_io_get_os_handle(interp, filehandle),
                 (LPVOID) buffer, (DWORD) len, &countread, NULL)) {
@@ -693,8 +701,6 @@ Parrot_io_open_pipe_win32(PARROT_INTERP, ARGMOD(PMC *filehandle),
             NULL, NULL, TRUE, 0,
             NULL, NULL, &start, &procinfo) == 0)
         goto fail;
-    Parrot_str_free_cstring(cmd);
-    cmd = NULL;
     if (f_read) {
         Parrot_io_set_os_handle(interp, io, hread);
         CloseHandle(hwrite);
@@ -703,6 +709,8 @@ Parrot_io_open_pipe_win32(PARROT_INTERP, ARGMOD(PMC *filehandle),
         Parrot_io_set_os_handle(interp, io, hwrite);
         CloseHandle(hread);
     }
+
+    Parrot_str_free_cstring(cmd);
     CloseHandle(procinfo.hThread);
     VTABLE_set_integer_keyed_int(interp, io, 0, (INTVAL)procinfo.hProcess);
     return io;

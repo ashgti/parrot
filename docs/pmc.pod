@@ -30,36 +30,6 @@ provide a limited amount of storage.  The use of this storage encouraged poor
 encapsulation and hidden dependencies between PMCs.  Any new code should not
 use the UnionVal, which will eventually be removed from Parrot.
 
-=head2 PMC_EXT
-
-C<PMC_EXT> is a member of the PMC struct which contains two currently used
-pointers.  PMCs which need C<PMC_EXT> should have C<need_ext> in their
-C<pmclass> declaration.  A PMC should declare C<need_ext> for either of the
-reasons listed below.
-
-Note that the C<_synchronize> member of the C<PMC_EXT> struct is obsolete and
-due to be removed.
-
-=over 4
-
-=item * The PMC needs metadata.
-
-The C<_metadata> member of C<PMC_EXT> is used to store attributes.  If your PMC
-will use attributes (not to be confused with ATTRs), your PMC should declare
-C<need_ext>.  Note that if code attempts to add an attribute to a PMC which
-doesn't have a C<PMC_EXT>, a C<PMC_EXT> with the appropriate C<_metadata> will
-be added dynamically.  In this case, C<need_ext> is a way of telling Parrot to
-take care of this when the PMC is initialized.
-
-=item * The PMC is an aggregate which holds GCable objects.
-
-If the PMC is an aggregate which can contain other GCable object, it needs to
-declare C<need_ext>.  GCable objects include other PMCs and Parrot STRINGs.
-Unlike attribute metadata, all PMCs which contain GCable objects need to
-declare C<need_ext>.
-
-=back
-
 =head2 ATTRs and C<PMC_data()>
 
 If your PMC needs to store more data than will fit into the 8 bits of the PMC
@@ -72,7 +42,7 @@ more ATTRs, the C<Parrot_x_attributes> struct must be allocated and assigned to
 C<PMC_data> in the PMC's C<init()> and C<init_pmc()> VTABLE functions (if used)
 and it must be destroyed in the C<destroy()> VTABLE function.  PMCs with ATTRs
 also need to indicate that they need active destruction by calling
-C<PObj_active_destroy_SET()> or C<PObj_custom_mark_destroy_SETALL()>.
+C<PObj_custom_destroy_SET()> or C<PObj_custom_mark_destroy_SETALL()>.
 
 If your PMC only needs to store a single pointer, it can use C<PMC_data> directly.
 Note that this may make maintaining your PMC difficult, should more data ever
@@ -110,10 +80,10 @@ implement the B<mark()> VTABLE function and set this flag.  The B<mark()>
 VTABLE function must call B<Parrot_gc_mark_PObj_alive()> on all B<PObj>s which your PMC
 contains.
 
-=item PObj_active_destroy_FLAG
+=item PObj_custom_destroy_FLAG
 
 If your PMC allocates any memory or opens any resources during its lifetime, it
-must set B<PObj_active_destroy> and implement the B<destroy()> VTABLE function to
+must set B<PObj_custom_destroy> and implement the B<destroy()> VTABLE function to
 free those resources.
 
 =item PObj_needs_early_gc_FLAG

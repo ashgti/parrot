@@ -12,12 +12,12 @@ BEGIN {
     our $topdir = realpath($Bin) . "/../..";
     unshift @INC, qq{$topdir/lib};
 }
-use Test::More qw(no_plan); # tests => 29;
+use Test::More tests => 31;
 use Carp;
 use Parrot::Configure::Options qw| process_options |;
 
 {
-    my $configfile = q{xconf/samples/testfoobar};
+    my $configfile = q{examples/config/file/configwithfatalstep};
     my ($args, $steps_list_ref) = _test_good_config_file($configfile);
 
     ok(! defined $args->{maintainer}, 
@@ -40,7 +40,7 @@ use Parrot::Configure::Options qw| process_options |;
 }
 
 {
-    my $configfile = q{xconf/samples/yourfoobar};
+    my $configfile = q{examples/config/file/configcompiler};
     my ($args, $steps_list_ref) = _test_good_config_file($configfile);
     
     my $c_compiler = '/usr/bin/gcc';

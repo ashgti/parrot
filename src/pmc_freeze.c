@@ -8,11 +8,6 @@ src/pmc_freeze.c - Freeze and thaw functionality
 
 =head1 DESCRIPTION
 
-Freeze uses the C<next_for_GC pointer()> to remember seen PMCs. PMCs are
-written as IDs (or tags), which are calculated from their arena address.
-This PMC number is multiplied by four. The 2 low bits indicate a seen
-PMC or a PMC of the same type as the previous one respectively.
-
 Thawing PMCs uses a list with (maximum) size of the amount of PMCs to
 keep track of retrieved PMCs.
 
@@ -23,7 +18,7 @@ C<< pmc->vtable->visit >>, which is called for the first PMC initially.
 Container PMCs call a "todo-callback" for all contained PMCs. The
 individual action vtable (freeze/thaw) is then called for all todo-PMCs.
 
-In the current implementation C<IMAGE_IO> is a stand-in for some kind of
+In the current implementation C<visit_info> is a stand-in for some kind of
 serializer PMC which will eventually be written. It associates a Parrot
 C<STRING> with a vtable.
 
@@ -32,26 +27,14 @@ C<STRING> with a vtable.
 */
 
 #include "parrot/parrot.h"
+#include "pmc/pmc_callcontext.h"
 #include "pmc_freeze.str"
 
 /* HEADERIZER HFILE: include/parrot/pmc_freeze.h */
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void add_pmc_next_for_GC(SHIM_INTERP,
-    ARGIN(PMC *pmc),
-    ARGOUT(visit_info *info))
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*info);
-
-static void add_pmc_todo_list(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *pmc),
-    ARGIN(visit_info *info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
-
-static void create_image(PARROT_INTERP,
+static void create_buffer(PARROT_INTERP,
     ARGIN_NULLOK(PMC *pmc),
     ARGMOD(visit_info *info))
         __attribute__nonnull__(1)
@@ -59,210 +42,65 @@ static void create_image(PARROT_INTERP,
         FUNC_MODIFIES(*info);
 
 PARROT_INLINE
-static void do_action(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *pmc),
-    ARGIN(visit_info *info),
-    int seen,
-    UINTVAL id)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
-
-PARROT_INLINE
-static void do_thaw(PARROT_INTERP,
-    ARGIN_NULLOK(PMC* pmc),
-    ARGIN(visit_info *info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
-
-PARROT_INLINE
-static void freeze_pmc(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *pmc),
-    ARGIN(visit_info *info),
-    int seen,
-    UINTVAL id)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3);
-
-static void ft_init(PARROT_INTERP, ARGIN(visit_info *info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static UINTVAL id_from_pmc(PARROT_INTERP, ARGIN(PMC* pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_INLINE
-static int next_for_GC_seen(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *pmc),
-    ARGIN(visit_info *info),
-    ARGOUT(UINTVAL *id))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*id);
-
-static void op_append(PARROT_INTERP,
-    ARGIN(STRING *s),
-    opcode_t b,
+static void ensure_buffer_size(PARROT_INTERP,
+    ARGIN(visit_info *io),
     size_t len)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static INTVAL get_visit_integer(PARROT_INTERP, ARGIN(visit_info *io))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_INLINE
-static void op_check_size(PARROT_INTERP, ARGIN(STRING *s), size_t len)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+static INTVAL INFO_HAS_DATA(ARGIN(visit_info *io))
+        __attribute__nonnull__(1);
 
-static void pmc_add_ext(PARROT_INTERP, ARGIN(PMC *pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void push_ascii_integer(PARROT_INTERP, ARGIN(IMAGE_IO *io), INTVAL v)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void push_ascii_number(PARROT_INTERP,
-    ARGIN(const IMAGE_IO *io),
-    FLOATVAL v)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static void push_ascii_pmc(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
-    ARGIN(const PMC* v))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
-
-static void push_ascii_string(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
-    ARGIN(const STRING *s))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
+PARROT_INLINE
+static INTVAL OUTPUT_LENGTH(ARGIN(visit_info *io))
+        __attribute__nonnull__(1);
 
 static void push_opcode_integer(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
+    ARGIN(visit_info *io),
     INTVAL v)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 static void push_opcode_number(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
+    ARGIN(visit_info *io),
     FLOATVAL v)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void push_opcode_pmc(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
-    ARGIN(PMC* v))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
-
 static void push_opcode_string(PARROT_INTERP,
-    ARGIN(IMAGE_IO *io),
+    ARGIN(visit_info *io),
     ARGIN(STRING *v))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC* run_thaw(PARROT_INTERP,
-    ARGIN(STRING* image),
-    visit_enum_type what)
-        __attribute__nonnull__(1)
+static INTVAL shift_opcode_integer(SHIM_INTERP, ARGIN(visit_info *io))
         __attribute__nonnull__(2);
 
-static INTVAL shift_ascii_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(2);
-
-static FLOATVAL shift_ascii_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC* shift_ascii_pmc(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static STRING* shift_ascii_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-static INTVAL shift_opcode_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(2);
-
-static FLOATVAL shift_opcode_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC* shift_opcode_pmc(PARROT_INTERP, ARGIN(IMAGE_IO *io))
-        __attribute__nonnull__(1)
+static FLOATVAL shift_opcode_number(SHIM_INTERP, ARGIN(visit_info *io))
         __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static STRING* shift_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
+static STRING* shift_opcode_string(PARROT_INTERP, ARGIN(visit_info *io))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void str_append(PARROT_INTERP,
-    ARGMOD(STRING *s),
-    ARGIN(const void *b),
-    size_t len)
+static void visit_info_init(PARROT_INTERP,
+    ARGOUT(visit_info *info),
+    visit_enum_type what,
+    ARGIN(STRING *input),
+    ARGIN(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*s);
-
-PARROT_INLINE
-PARROT_CANNOT_RETURN_NULL
-static PMC* thaw_create_pmc(PARROT_INTERP,
-    ARGIN(const visit_info *info),
-    INTVAL type)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_INLINE
-static int thaw_pmc(PARROT_INTERP,
-    ARGMOD(visit_info *info),
-    ARGOUT(UINTVAL *id),
-    ARGOUT(INTVAL *type))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
         __attribute__nonnull__(4)
-        FUNC_MODIFIES(*info)
-        FUNC_MODIFIES(*id)
-        FUNC_MODIFIES(*type);
-
-static void todo_list_init(PARROT_INTERP, ARGOUT(visit_info *info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
+        __attribute__nonnull__(5)
         FUNC_MODIFIES(*info);
-
-PARROT_INLINE
-static int todo_list_seen(PARROT_INTERP,
-    ARGIN(PMC *pmc),
-    ARGMOD(visit_info *info),
-    ARGOUT(UINTVAL *id))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*info)
-        FUNC_MODIFIES(*id);
-
-static void visit_loop_next_for_GC(PARROT_INTERP,
-    ARGIN(PMC *current),
-    ARGIN(visit_info *info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
 
 static void visit_loop_todo_list(PARROT_INTERP,
     ARGIN_NULLOK(PMC *current),
@@ -270,161 +108,65 @@ static void visit_loop_todo_list(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-static void visit_next_for_GC(PARROT_INTERP,
-    ARGIN(PMC* pmc),
-    ARGIN(visit_info* info))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
-
-static void visit_todo_list(PARROT_INTERP,
+static void visit_todo_list_freeze(PARROT_INTERP,
     ARGIN_NULLOK(PMC* pmc),
     ARGIN(visit_info* info))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
+PARROT_INLINE
 static void visit_todo_list_thaw(PARROT_INTERP,
-    ARGIN_NULLOK(PMC* old),
+    SHIM(PMC* pmc_not_used),
     ARGIN(visit_info* info))
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_add_pmc_next_for_GC __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_add_pmc_todo_list __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_create_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_create_image __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(info))
+#define ASSERT_ARGS_ensure_buffer_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_do_action __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_get_visit_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_do_thaw __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_INFO_HAS_DATA __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_OUTPUT_LENGTH __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_push_opcode_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_freeze_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_push_opcode_number __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_ft_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_push_opcode_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_id_from_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io) \
+    , PARROT_ASSERT_ARG(v))
+#define ASSERT_ARGS_shift_opcode_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_shift_opcode_number __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_shift_opcode_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_next_for_GC_seen __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(io))
+#define ASSERT_ARGS_visit_info_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info) \
-    || PARROT_ASSERT_ARG(id)
-#define ASSERT_ARGS_op_append __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(info) \
+    , PARROT_ASSERT_ARG(input) \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_visit_loop_todo_list __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_op_check_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(info))
+#define ASSERT_ARGS_visit_todo_list_freeze __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_pmc_add_ext __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(info))
+#define ASSERT_ARGS_visit_todo_list_thaw __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_push_ascii_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_push_ascii_number __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_push_ascii_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io) \
-    || PARROT_ASSERT_ARG(v)
-#define ASSERT_ARGS_push_ascii_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io) \
-    || PARROT_ASSERT_ARG(s)
-#define ASSERT_ARGS_push_opcode_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_push_opcode_number __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_push_opcode_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io) \
-    || PARROT_ASSERT_ARG(v)
-#define ASSERT_ARGS_push_opcode_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io) \
-    || PARROT_ASSERT_ARG(v)
-#define ASSERT_ARGS_run_thaw __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(image)
-#define ASSERT_ARGS_shift_ascii_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_ascii_number __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_ascii_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_ascii_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_opcode_integer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_opcode_number __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_opcode_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_shift_opcode_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(io)
-#define ASSERT_ARGS_str_append __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(s) \
-    || PARROT_ASSERT_ARG(b)
-#define ASSERT_ARGS_thaw_create_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_thaw_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info) \
-    || PARROT_ASSERT_ARG(id) \
-    || PARROT_ASSERT_ARG(type)
-#define ASSERT_ARGS_todo_list_init __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_todo_list_seen __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(info) \
-    || PARROT_ASSERT_ARG(id)
-#define ASSERT_ARGS_visit_loop_next_for_GC __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(current) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_visit_loop_todo_list __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_visit_next_for_GC __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_visit_todo_list __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
-#define ASSERT_ARGS_visit_todo_list_thaw __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(info)
+    , PARROT_ASSERT_ARG(info))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
-
-/*
- * define this to 1 for testing. TODO: 1 is broken.
- */
-#ifndef FREEZE_ASCII
-#  define FREEZE_ASCII 0
-#endif
-
-/* normal freeze can use next_for_GC ptrs or a seen hash */
-#define FREEZE_USE_NEXT_FOR_GC 0
 
 /* when thawing a string longer then this size, we first do a GC run and then
  * block GC - the system can't give us more headers */
@@ -432,328 +174,130 @@ static void visit_todo_list_thaw(PARROT_INTERP,
 #define THAW_BLOCK_GC_SIZE 100000
 
 /* preallocate freeze image for aggregates with this estimation */
-#if FREEZE_ASCII
-#  define FREEZE_BYTES_PER_ITEM 17
-#else
-#  define FREEZE_BYTES_PER_ITEM 9
-#endif
+#define FREEZE_BYTES_PER_ITEM 9
+
+/* macros/constants to handle packing/unpacking of PMC IDs and flags
+ * the 2 LSBs are used for flags, all other bits are used for PMC ID
+ */
+#define PackID_new(id, flags)       (((UINTVAL)(id) * 4) | ((UINTVAL)(flags) & 3))
+#define PackID_get_PMCID(id)        ((UINTVAL)(id) / 4)
+#define PackID_set_PMCID(lv, id)    (lv) = PackID_new((id), PackID_get_FLAGS(lv))
+#define PackID_get_FLAGS(id)        ((UINTVAL)(id) & 3)
+#define PackID_set_FLAGS(lv, flags) (lv) = PackID_new(PackID_get_PMCID(lv), (flags))
+
+enum {
+    enum_PackID_normal     = 0,
+    enum_PackID_seen       = 1,
+};
 
 /*
-
-=head2 Image Stream Functions
-
-=over 4
-
-=item C<static void str_append(PARROT_INTERP, STRING *s, const void *b, size_t
-len)>
-
-Appends C<len> bytes from buffer C<*b> to string C<*s>.
-
-Plain ascii - for testing only:
-
-For speed reasons we mess around with the string buffers directly.
-
-No encoding of strings, no transcoding.
-
-=cut
-
-*/
-
-static void
-str_append(PARROT_INTERP, ARGMOD(STRING *s), ARGIN(const void *b), size_t len)
-{
-    ASSERT_ARGS(str_append)
-    const size_t used = s->bufused;
-    const int need_free = (int)PObj_buflen(s) - used - len;
-    /*
-     * grow by factor 1.5 or such
-     */
-    if (need_free <= 16) {
-        size_t new_size = (size_t) (PObj_buflen(s) * 1.5);
-        if (new_size < PObj_buflen(s) - need_free + 512)
-            new_size = PObj_buflen(s) - need_free + 512;
-        Parrot_gc_reallocate_string_storage(interp, s, new_size);
-        PARROT_ASSERT(PObj_buflen(s) - used - len >= 15);
-    }
-    mem_sys_memcopy((void *)((ptrcast_t)s->strstart + used), b, len);
-    s->bufused += len;
-    s->strlen += len;
-}
-
-/*
-
-=item C<static void push_ascii_integer(PARROT_INTERP, IMAGE_IO *io, INTVAL v)>
-
-Pushes an ASCII version of the integer C<v> onto the end of the C<*io>
-"stream".
-
-=cut
-
-*/
-
-static void
-push_ascii_integer(PARROT_INTERP, ARGIN(IMAGE_IO *io), INTVAL v)
-{
-    ASSERT_ARGS(push_ascii_integer)
-    char buffer[20];
-    const size_t len = snprintf(buffer, sizeof (buffer), "%d ", (int) v);
-    str_append(interp, io->image, buffer, len);
-}
-
-/*
-
-=item C<static void push_ascii_number(PARROT_INTERP, const IMAGE_IO *io,
-FLOATVAL v)>
-
-Pushes an ASCII version of the number C<v> onto the end of the C<*io>
-"stream".
-
-=cut
-
-*/
-
-static void
-push_ascii_number(PARROT_INTERP, ARGIN(const IMAGE_IO *io), FLOATVAL v)
-{
-    ASSERT_ARGS(push_ascii_number)
-    char buffer[40];
-    const size_t len = snprintf(buffer, sizeof (buffer), "%g ", (double) v);
-    str_append(interp, io->image, buffer, len);
-}
-
-/*
-
-=item C<static void push_ascii_string(PARROT_INTERP, IMAGE_IO *io, const STRING
-*s)>
-
-Pushes an ASCII version of the string C<*s> onto the end of the C<*io>
-"stream".
-
-For testing only - no encodings and such.
-
-XXX no string delimiters - so no space allowed.
-
-=cut
-
-*/
-
-static void
-push_ascii_string(PARROT_INTERP, ARGIN(IMAGE_IO *io), ARGIN(const STRING *s))
-{
-    ASSERT_ARGS(push_ascii_string)
-    const UINTVAL length = Parrot_str_byte_length(interp, s);
-    char * const buffer = (char *)malloc(4*length); /* XXX Why 4?  What does that mean? */
-    char *cursor = buffer;
-    UINTVAL idx = 0;
-
-    /* temporary--write out in UTF-8 */
-    for (idx = 0; idx < length; ++idx) {
-        *cursor++ = (unsigned char)Parrot_str_indexed(interp, s, idx);
-    }
-
-    str_append(interp, io->image, buffer, cursor - buffer);
-    str_append(interp, io->image, " ", 1);
-
-    mem_sys_free(buffer);
-}
-
-/*
-
-=item C<static void push_ascii_pmc(PARROT_INTERP, IMAGE_IO *io, const PMC* v)>
-
-Pushes an ASCII version of the PMC C<*v> onto the end of the C<*io>
-"stream".
-
-=cut
-
-*/
-
-static void
-push_ascii_pmc(PARROT_INTERP, ARGIN(IMAGE_IO *io), ARGIN(const PMC* v))
-{
-    ASSERT_ARGS(push_ascii_pmc)
-    char buffer[20];
-    const size_t len = snprintf(buffer, sizeof (buffer), "%p ", (const void *)v);
-    str_append(interp, io->image, buffer, len);
-}
-
-/*
-
-=item C<static INTVAL shift_ascii_integer(PARROT_INTERP, IMAGE_IO *io)>
-
-Removes and returns an integer from the start of the C<*io> "stream".
-
-=cut
-
-*/
-
-static INTVAL
-shift_ascii_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-{
-    ASSERT_ARGS(shift_ascii_integer)
-    char * const start = (char*)io->image->strstart;
-    char *p = start;
-    const INTVAL i = strtoul(p, &p, 10);
-
-    ++p;
-    PARROT_ASSERT(p <= start + io->image->bufused);
-    io->image->strstart = p;
-    io->image->bufused -= (p - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-    return i;
-}
-
-/*
-
-=item C<static FLOATVAL shift_ascii_number(PARROT_INTERP, IMAGE_IO *io)>
-
-Removes and returns an number from the start of the C<*io> "stream".
-
-=cut
-
-*/
-
-static FLOATVAL
-shift_ascii_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-{
-    ASSERT_ARGS(shift_ascii_number)
-    char * const start = (char*)io->image->strstart;
-    char *p = start;
-    const FLOATVAL f = (FLOATVAL) strtod(p, &p);
-
-    ++p;
-    PARROT_ASSERT(p <= start + io->image->bufused);
-    io->image->strstart = p;
-    io->image->bufused -= (p - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-    return f;
-}
-
-/*
-
-=item C<static STRING* shift_ascii_string(PARROT_INTERP, IMAGE_IO *io)>
-
-Removes and returns an string from the start of the C<*io> "stream".
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static STRING*
-shift_ascii_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
-{
-    ASSERT_ARGS(shift_ascii_string)
-    STRING *s;
-
-    char * const start = (char*)io->image->strstart;
-    char *p = start;
-
-    while (*p != ' ')
-        ++p;
-    ++p;
-    PARROT_ASSERT(p <= start + io->image->bufused);
-    io->image->strstart = p;
-    io->image->bufused -= (p - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-    s = string_make(interp, start, p - start - 1, "iso-8859-1", 0);
-/*    s = string_make(interp, start, p - start - 1, "UTF-8", 0); */
-    return s;
-}
-
-/*
-
-=item C<static PMC* shift_ascii_pmc(PARROT_INTERP, IMAGE_IO *io)>
-
-Removes and returns a PMC from the start of the C<*io> "stream".
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC*
-shift_ascii_pmc(SHIM_INTERP, ARGIN(IMAGE_IO *io))
-{
-    ASSERT_ARGS(shift_ascii_pmc)
-    char * const start = (char*)io->image->strstart;
-    char *p = start;
-    const unsigned long i = strtoul(p, &p, 16);
-    ++p;
-    PARROT_ASSERT(p <= start + io->image->bufused);
-    io->image->strstart = p;
-    io->image->bufused -= (p - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-    return (PMC*) i;
-}
-
-/*
-
-=back
 
 =head2 C<opcode_t> IO Functions
 
 =over 4
 
-=item C<static void op_check_size(PARROT_INTERP, STRING *s, size_t len)>
+=item C<static void ensure_buffer_size(PARROT_INTERP, visit_info *io, size_t
+len)>
 
 Checks the size of the "stream" buffer to see if it can accommodate
-C<len> more bytes. If not then the buffer is expanded.
+C<len> more bytes. If not, expands the buffer.
+
+=cut
+
+*/
+
+#define GET_VISIT_CURSOR(io) \
+    ((opcode_t *)(((char *)Buffer_bufstart((io)->buffer) + (io)->pos)))
+#define SET_VISIT_CURSOR(io, x) do {\
+    (io)->pos = ((char *)(x) - (char *)Buffer_bufstart((io)->buffer)); \
+} while (0)
+#define INC_VISIT_CURSOR(io, x) do {\
+    (io)->pos += (x); \
+} while (0)
+
+#define BYTECODE_SHIFT_OK(io) PARROT_ASSERT((io)->pos <= (io)->input_length)
+
+
+PARROT_INLINE
+static void
+ensure_buffer_size(PARROT_INTERP, ARGIN(visit_info *io), size_t len)
+{
+    ASSERT_ARGS(ensure_buffer_size)
+    Buffer *buf         = io->buffer;
+    const size_t used   = io->pos;
+    const int need_free = Buffer_buflen(buf) - used - len;
+
+    /* grow by factor 1.5 or such */
+    if (need_free <= 16) {
+        size_t new_size = (size_t) (Buffer_buflen(buf) * 1.5);
+        if (new_size < Buffer_buflen(buf) - need_free + 512)
+            new_size = Buffer_buflen(buf) - need_free + 512;
+        Parrot_gc_reallocate_buffer_storage(interp, buf, new_size);
+
+        PARROT_ASSERT(Buffer_buflen(buf) - used - len >= 15);
+    }
+
+#ifndef DISABLE_GC_DEBUG
+    Parrot_gc_compact_memory_pool(interp);
+#endif
+
+}
+
+/*
+
+=item C<static INTVAL OUTPUT_LENGTH(visit_info *io)>
+
+XXX TODO
 
 =cut
 
 */
 
 PARROT_INLINE
-static void
-op_check_size(PARROT_INTERP, ARGIN(STRING *s), size_t len)
-{
-    ASSERT_ARGS(op_check_size)
-    const size_t used = s->bufused;
-    const int need_free = (int)PObj_buflen(s) - used - len;
-    /*
-     * grow by factor 1.5 or such
-     */
-    if (need_free <= 16) {
-        size_t new_size = (size_t) (PObj_buflen(s) * 1.5);
-        if (new_size < PObj_buflen(s) - need_free + 512)
-            new_size = PObj_buflen(s) - need_free + 512;
-        Parrot_gc_reallocate_string_storage(interp, s, new_size);
-        PARROT_ASSERT(PObj_buflen(s) - used - len >= 15);
-    }
-#ifndef DISABLE_GC_DEBUG
-    Parrot_gc_compact_memory_pool(interp);
-#endif
+static INTVAL
+OUTPUT_LENGTH(ARGIN(visit_info *io)) {
+    ASSERT_ARGS(OUTPUT_LENGTH)
+    return io->pos;
 }
 
 /*
 
-=item C<static void op_append(PARROT_INTERP, STRING *s, opcode_t b, size_t len)>
+=item C<static INTVAL INFO_HAS_DATA(visit_info *io)>
 
-Appends the opcode C<b> to the string C<*s>.
+XXX TODO
 
 =cut
 
 */
 
-static void
-op_append(PARROT_INTERP, ARGIN(STRING *s), opcode_t b, size_t len)
-{
-    ASSERT_ARGS(op_append)
-    char *str_pos;
+PARROT_INLINE
+static INTVAL
+INFO_HAS_DATA(ARGIN(visit_info *io)) {
+    ASSERT_ARGS(INFO_HAS_DATA)
+    return io->pos < io->input_length;
+}
 
-    op_check_size(interp, s, len);
-    str_pos = s->strstart + s->bufused;
-    *((opcode_t *)(str_pos)) = b;
-    s->bufused += len;
-    s->strlen += len;
+
+/*
+
+=item C<static INTVAL get_visit_integer(PARROT_INTERP, visit_info *io)>
+
+get the flags describing the visit action
+
+=cut
+
+*/
+
+static INTVAL
+get_visit_integer(PARROT_INTERP, ARGIN(visit_info *io)) {
+    ASSERT_ARGS(get_visit_integer)
+    return io->what;
 }
 
 /*
 
-=item C<static void push_opcode_integer(PARROT_INTERP, IMAGE_IO *io, INTVAL v)>
+=item C<static void push_opcode_integer(PARROT_INTERP, visit_info *io, INTVAL
+v)>
 
 Pushes the integer C<v> onto the end of the C<*io> "stream".
 
@@ -764,16 +308,19 @@ XXX assumes sizeof (opcode_t) == sizeof (INTVAL).
 */
 
 static void
-push_opcode_integer(PARROT_INTERP, ARGIN(IMAGE_IO *io), INTVAL v)
+push_opcode_integer(PARROT_INTERP, ARGIN(visit_info *io), INTVAL v)
 {
     ASSERT_ARGS(push_opcode_integer)
-    PARROT_ASSERT(sizeof (opcode_t) == sizeof (INTVAL));
-    op_append(interp, io->image, (opcode_t)v, sizeof (opcode_t));
+    size_t len = PF_size_integer() * sizeof (opcode_t);
+    ensure_buffer_size(interp, io, len);
+    SET_VISIT_CURSOR(io, PF_store_integer(GET_VISIT_CURSOR(io), v));
 }
+
 
 /*
 
-=item C<static void push_opcode_number(PARROT_INTERP, IMAGE_IO *io, FLOATVAL v)>
+=item C<static void push_opcode_number(PARROT_INTERP, visit_info *io, FLOATVAL
+v)>
 
 Pushes the number C<v> onto the end of the C<*io> "stream".
 
@@ -782,25 +329,19 @@ Pushes the number C<v> onto the end of the C<*io> "stream".
 */
 
 static void
-push_opcode_number(PARROT_INTERP, ARGIN(IMAGE_IO *io), FLOATVAL v)
+push_opcode_number(PARROT_INTERP, ARGIN(visit_info *io), FLOATVAL v)
 {
     ASSERT_ARGS(push_opcode_number)
-    const size_t   len  = PF_size_number() * sizeof (opcode_t);
-    STRING * const s    = io->image;
-    const size_t   used = s->bufused;
-    opcode_t      *ignored;
-
-    op_check_size(interp, s, len);
-    ignored = PF_store_number((opcode_t *)((ptrcast_t)s->strstart + used), &v);
-    UNUSED(ignored);
-
-    s->bufused += len;
-    s->strlen  += len;
+    size_t len = PF_size_number() * sizeof (opcode_t);
+    ensure_buffer_size(interp, io, len);
+    SET_VISIT_CURSOR(io, PF_store_number(GET_VISIT_CURSOR(io), &v));
 }
+
 
 /*
 
-=item C<static void push_opcode_string(PARROT_INTERP, IMAGE_IO *io, STRING *v)>
+=item C<static void push_opcode_string(PARROT_INTERP, visit_info *io, STRING
+*v)>
 
 Pushes the string C<*v> onto the end of the C<*io> "stream".
 
@@ -809,42 +350,34 @@ Pushes the string C<*v> onto the end of the C<*io> "stream".
 */
 
 static void
-push_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io), ARGIN(STRING *v))
+push_opcode_string(PARROT_INTERP, ARGIN(visit_info *io), ARGIN(STRING *v))
 {
     ASSERT_ARGS(push_opcode_string)
-    const size_t len = PF_size_string(v) * sizeof (opcode_t);
-    STRING * const s = io->image;
-    const size_t used = s->bufused;
-    opcode_t      *ignored;
-
-    op_check_size(interp, s, len);
-    ignored = PF_store_string((opcode_t *)((ptrcast_t)s->strstart + used), v);
-    UNUSED(ignored);
-
-    s->bufused += len;
-    s->strlen += len;
+    size_t len = PF_size_string(v) * sizeof (opcode_t);
+    ensure_buffer_size(interp, io, len);
+    SET_VISIT_CURSOR(io, PF_store_string(GET_VISIT_CURSOR(io), v));
 }
 
 /*
 
-=item C<static void push_opcode_pmc(PARROT_INTERP, IMAGE_IO *io, PMC* v)>
+=item C<static void push_opcode_pmc(PARROT_INTERP, visit_info *io, PMC *v)>
 
-Pushes the PMC C<*v> onto the end of the C<*io> "stream".
+Pushes a reference to pmc C<*v> onto the end of the C<*io> "stream". If C<*v>
+hasn't been seen yet, it is also pushed onto the todo list.
 
 =cut
 
 */
 
 static void
-push_opcode_pmc(PARROT_INTERP, ARGIN(IMAGE_IO *io), ARGIN(PMC* v))
-{
-    ASSERT_ARGS(push_opcode_pmc)
-    op_append(interp, io->image, (opcode_t)v, sizeof (opcode_t));
+push_opcode_pmc(PARROT_INTERP, ARGIN(visit_info *io), ARGIN(PMC *v)) {
+    io->thaw_ptr = &v;
+    (io->visit_pmc_now)(interp, v, io);
 }
 
 /*
 
-=item C<static INTVAL shift_opcode_integer(PARROT_INTERP, IMAGE_IO *io)>
+=item C<static INTVAL shift_opcode_integer(PARROT_INTERP, visit_info *io)>
 
 Removes and returns an integer from the start of the C<*io> "stream".
 
@@ -853,45 +386,20 @@ Removes and returns an integer from the start of the C<*io> "stream".
 */
 
 static INTVAL
-shift_opcode_integer(SHIM_INTERP, ARGIN(IMAGE_IO *io))
+shift_opcode_integer(SHIM_INTERP, ARGIN(visit_info *io))
 {
     ASSERT_ARGS(shift_opcode_integer)
-    const char * const   start  = (char *)io->image->strstart;
-    char               **opcode = &io->image->strstart;
-    const INTVAL i              = PF_fetch_integer(io->pf,
-                                    (const opcode_t **)opcode);
-
-    io->image->bufused -= ((char *)io->image->strstart - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-
+    opcode_t *pos  = GET_VISIT_CURSOR(io);
+    const INTVAL i = PF_fetch_integer(io->pf, (const opcode_t **)&pos);
+    SET_VISIT_CURSOR(io, pos);
+    BYTECODE_SHIFT_OK(io);
     return i;
 }
 
-/*
-
-=item C<static PMC* shift_opcode_pmc(PARROT_INTERP, IMAGE_IO *io)>
-
-Removes and returns an PMC from the start of the C<*io> "stream".
-
-Note that this actually reads a PMC id, not a PMC.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC*
-shift_opcode_pmc(PARROT_INTERP, ARGIN(IMAGE_IO *io))
-{
-    ASSERT_ARGS(shift_opcode_pmc)
-    INTVAL i = shift_opcode_integer(interp, io);
-    return (PMC *)i;
-}
 
 /*
 
-=item C<static FLOATVAL shift_opcode_number(PARROT_INTERP, IMAGE_IO *io)>
+=item C<static FLOATVAL shift_opcode_number(PARROT_INTERP, visit_info *io)>
 
 Removes and returns an number from the start of the C<*io> "stream".
 
@@ -900,23 +408,20 @@ Removes and returns an number from the start of the C<*io> "stream".
 */
 
 static FLOATVAL
-shift_opcode_number(SHIM_INTERP, ARGIN(IMAGE_IO *io))
+shift_opcode_number(SHIM_INTERP, ARGIN(visit_info *io))
 {
     ASSERT_ARGS(shift_opcode_number)
-    const char * const   start  = (const char *)io->image->strstart;
-    char               **opcode = &io->image->strstart;
-    const FLOATVAL       f      = PF_fetch_number(io->pf,
-                                    (const opcode_t **)opcode);
-
-    io->image->bufused -= ((char *)io->image->strstart - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-
+    opcode_t *pos     = GET_VISIT_CURSOR(io);
+    const FLOATVAL f  = PF_fetch_number(io->pf, (const opcode_t **)&pos);
+    SET_VISIT_CURSOR(io, pos);
+    BYTECODE_SHIFT_OK(io);
     return f;
 }
 
+
 /*
 
-=item C<static STRING* shift_opcode_string(PARROT_INTERP, IMAGE_IO *io)>
+=item C<static STRING* shift_opcode_string(PARROT_INTERP, visit_info *io)>
 
 Removes and returns a string from the start of the C<*io> "stream".
 
@@ -924,21 +429,38 @@ Removes and returns a string from the start of the C<*io> "stream".
 
 */
 
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-shift_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
+shift_opcode_string(PARROT_INTERP, ARGIN(visit_info *io))
 {
     ASSERT_ARGS(shift_opcode_string)
-    char * const   start  = (char*)io->image->strstart;
-    char         **opcode = &io->image->strstart;
-    STRING * const s      = PF_fetch_string(interp, io->pf,
-                                (const opcode_t **)opcode);
-
-    io->image->bufused -= ((char *)io->image->strstart - start);
-    PARROT_ASSERT((int)io->image->bufused >= 0);
-
+    opcode_t *pos    = GET_VISIT_CURSOR(io);
+    STRING * const s = PF_fetch_string(interp, io->pf, (const opcode_t **)&pos);
+    SET_VISIT_CURSOR(io, pos);
+    BYTECODE_SHIFT_OK(io);
     return s;
+}
+
+/*
+
+=item C<static PMC *shift_opcode_pmc(PARROT_INTERP, visit_info *io)>
+
+Removes and returns a reference to a pmc from the start of the C<*io> "stream".
+
+=cut
+
+*/
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+static PMC *
+shift_opcode_pmc(PARROT_INTERP, ARGIN(visit_info *io)) {
+    PMC *result;
+    io->thaw_ptr = &result;
+    (io->visit_pmc_now)(interp, NULL, io);
+    return result;
 }
 
 /*
@@ -949,21 +471,9 @@ shift_opcode_string(PARROT_INTERP, ARGIN(IMAGE_IO *io))
 
 =over 4
 
-=item C<static void pmc_add_ext(PARROT_INTERP, PMC *pmc)>
-
-Adds a C<PMC_EXT> to C<*pmc>.
-
 =cut
 
 */
-
-static void
-pmc_add_ext(PARROT_INTERP, ARGIN(PMC *pmc))
-{
-    ASSERT_ARGS(pmc_add_ext)
-    if (pmc->vtable->flags & VTABLE_PMC_NEEDS_EXT)
-        Parrot_gc_add_pmc_ext(interp, pmc);
-}
 
 /*
  * this function setup stuff may be replaced by a real PMC
@@ -971,579 +481,156 @@ pmc_add_ext(PARROT_INTERP, ARGIN(PMC *pmc))
  * TODO add read/write header functions, e.g. vtable->init_pmc
  */
 
-#if FREEZE_ASCII
-static image_funcs ascii_funcs = {
-    push_ascii_integer,
-    push_ascii_pmc,
-    push_ascii_string,
-    push_ascii_number,
-    shift_ascii_integer,
-    shift_ascii_pmc,
-    shift_ascii_string,
-    shift_ascii_number
-};
-#else
 static image_funcs opcode_funcs = {
+    get_visit_integer,
     push_opcode_integer,
-    push_opcode_pmc,
     push_opcode_string,
     push_opcode_number,
+    push_opcode_pmc,
     shift_opcode_integer,
-    shift_opcode_pmc,
     shift_opcode_string,
-    shift_opcode_number
+    shift_opcode_number,
+    shift_opcode_pmc
 };
-#endif
 
 /*
 
-=item C<static void ft_init(PARROT_INTERP, visit_info *info)>
-
-Initializes the freeze/thaw subsystem.
-
-=cut
-
-*/
-
-static void
-ft_init(PARROT_INTERP, ARGIN(visit_info *info))
-{
-    ASSERT_ARGS(ft_init)
-    STRING *s = info->image;
-    PackFile *pf;
-
-    /* We want to store a 16-byte aligned header, but the actual
-     * header may be shorter. */
-    const unsigned int header_length = PACKFILE_HEADER_BYTES +
-        (PACKFILE_HEADER_BYTES % 16 ?
-         16 - PACKFILE_HEADER_BYTES % 16 : 0);
-
-    info->image_io = mem_allocate_typed(IMAGE_IO);
-    info->image_io->image = s = info->image;
-#if FREEZE_ASCII
-    info->image_io->vtable = &ascii_funcs;
-#else
-    info->image_io->vtable = &opcode_funcs;
-#endif
-    pf = info->image_io->pf = PackFile_new(interp, 0);
-    if (info->what == VISIT_FREEZE_NORMAL ||
-        info->what == VISIT_FREEZE_AT_DESTRUCT) {
-
-        op_check_size(interp, s, header_length);
-        mem_sys_memcopy(s->strstart, pf->header, PACKFILE_HEADER_BYTES);
-        s->bufused += header_length;
-        s->strlen += header_length;
-    }
-    else {
-        if (Parrot_str_byte_length(interp, s) < header_length) {
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_INVALID_STRING_REPRESENTATION,
-                "bad string to thaw");
-        }
-
-        /* TT #749: use the validation logic from Packfile_unpack */
-        if (pf->header->bc_major != PARROT_PBC_MAJOR
-        ||  pf->header->bc_minor != PARROT_PBC_MINOR)
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_STRING_REPRESENTATION,
-                    "can't thaw a PMC from Parrot %d.%d", pf->header->bc_major,
-                    pf->header->bc_minor);
-
-        mem_sys_memcopy(pf->header, s->strstart, PACKFILE_HEADER_BYTES);
-        PackFile_assign_transforms(pf);
-        s->bufused -= header_length;
-        LVALUE_CAST(char *, s->strstart) += header_length;
-    }
-
-    info->last_type = -1;
-    info->id_list = pmc_new(interp, enum_class_Array);
-    info->id = 0;
-    info->extra_flags = EXTRA_IS_NULL;
-    info->container = NULL;
-}
-
-/*
-
-=item C<static void todo_list_init(PARROT_INTERP, visit_info *info)>
+=item C<static void visit_info_init(PARROT_INTERP, visit_info *info,
+visit_enum_type what, STRING *input, PMC *pmc)>
 
 Initializes the C<*info> lists.
 
 =cut
 
 */
+#define GROW_TO_16_BYTE_BOUNDARY(size) ((size) + ((size) % 16 ? 16 - (size) % 16 : 0))
 
 static void
-todo_list_init(PARROT_INTERP, ARGOUT(visit_info *info))
+visit_info_init(PARROT_INTERP, ARGOUT(visit_info *info),
+  visit_enum_type what, ARGIN(STRING *input), ARGIN(PMC *pmc))
 {
-    ASSERT_ARGS(todo_list_init)
-    info->visit_pmc_now = visit_todo_list;
-    info->visit_pmc_later = add_pmc_todo_list;
-    /* we must use PMCs here, so that they get marked properly */
-    info->todo = pmc_new(interp, enum_class_Array);
-    info->seen = pmc_new(interp, enum_class_Hash);
+    ASSERT_ARGS(visit_info_init)
+    /* We want to store a 16-byte aligned header, but the actual * header may be shorter. */
+    const unsigned int header_length = GROW_TO_16_BYTE_BOUNDARY(PACKFILE_HEADER_BYTES);
+
+    PackFile *pf = info->pf = PackFile_new(interp, 0);
+    info->what = what;
+    info->vtable = &opcode_funcs;
+    info->image_io = info; /* backwards-compat hack */
+
+    if (info->what == VISIT_FREEZE_NORMAL) {
+        info->visit_pmc_now  = visit_todo_list_freeze;
+        create_buffer(interp, pmc, info);
+        ensure_buffer_size(interp, info, header_length);
+        mem_sys_memcopy(GET_VISIT_CURSOR(info), pf->header, PACKFILE_HEADER_BYTES);
+        INC_VISIT_CURSOR(info, header_length);
+    }
+    else { /* VISIT_THAW_ */
+        int unpacked_length;
+        info->visit_pmc_now    = visit_todo_list_thaw;
+        info->buffer = (Buffer *)input;
+        PARROT_ASSERT(input->_bufstart == input->strstart);
+        SET_VISIT_CURSOR(info, Buffer_bufstart(info->buffer));
+        info->input_length = input->strlen;
+
+        pf->options |= PFOPT_PMC_FREEZE_ONLY;
+        unpacked_length = PackFile_unpack(interp, pf, GET_VISIT_CURSOR(info), info->input_length);
+        if (!unpacked_length) {
+            PackFile_destroy(interp, info->pf);
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_STRING_REPRESENTATION,
+                    "PackFile header failed during unpack");
+        }
+        else {
+            INC_VISIT_CURSOR(info, header_length);
+        }
+    }
+
+    /* we must use PMCs here so that they get marked properly */
+    info->todo        = pmc_new(interp, enum_class_Array);
+    info->seen        = pmc_new(interp, enum_class_Hash);
     VTABLE_set_pointer(interp, info->seen, parrot_new_intval_hash(interp));
-
-    ft_init(interp, info);
-}
-
-
-/*
-
-=item C<static void freeze_pmc(PARROT_INTERP, PMC *pmc, visit_info *info, int
-seen, UINTVAL id)>
-
-Freeze PMC, setting type, seen, and "same-as-last" indicators as
-appropriate.
-
-=cut
-
-*/
-
-PARROT_INLINE
-static void
-freeze_pmc(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGIN(visit_info *info),
-        int seen, UINTVAL id)
-{
-    ASSERT_ARGS(freeze_pmc)
-    IMAGE_IO * const io = info->image_io;
-    INTVAL type;
-
-    if (PMC_IS_NULL(pmc)) {
-        /* NULL + seen bit */
-        VTABLE_push_pmc(interp, io, (PMC*) 1);
-        return;
-    }
-    type = pmc->vtable->base_type;
-
-    if (PObj_is_object_TEST(pmc))
-        type = enum_class_Object;
-    if (seen) {
-        if (info->extra_flags) {
-            id |= 3;
-            VTABLE_push_pmc(interp, io, (PMC*)id);
-            VTABLE_push_integer(interp, io, info->extra_flags);
-            return;
-        }
-        id |= 1;         /* mark bit 0 if this PMC is known */
-    }
-    else if (type == info->last_type) {
-        id |= 2;         /* mark bit 1 and don't write type */
-    }
-    VTABLE_push_pmc(interp, io, (PMC*)id);
-    if (! (id & 3)) {    /* else write type */
-        VTABLE_push_integer(interp, io, type);
-        info->last_type = type;
-    }
-}
-
-/*
-
-=item C<static int thaw_pmc(PARROT_INTERP, visit_info *info, UINTVAL *id, INTVAL
-*type)>
-
-Freeze and thaw a PMC (id).
-
-For example, the ASCII representation of the C<Array>
-
-    P0 = [P1=666, P2=777, P0]
-
-may look like this:
-
-    0xdf4 30 3 0xdf8 33 666 0xdf2 777 0xdf5
-
-where 30 is C<class_enum_Array>, 33 is C<class_enum_Integer>, the
-type of the second C<Integer> is suppressed, the repeated P0 has bit 0
-set.
-
-=cut
-
-*/
-
-PARROT_INLINE
-static int
-thaw_pmc(PARROT_INTERP, ARGMOD(visit_info *info),
-        ARGOUT(UINTVAL *id), ARGOUT(INTVAL *type))
-{
-    ASSERT_ARGS(thaw_pmc)
-    PMC *n;
-    IMAGE_IO * const io = info->image_io;
-    int seen = 0;
-
+    info->id_list     = pmc_new(interp, enum_class_Array);
+    info->id          = 0;
     info->extra_flags = EXTRA_IS_NULL;
-    n = VTABLE_shift_pmc(interp, io);
-    if (((UINTVAL) n & 3) == 3) {
-        /* pmc has extra data */
-        info->extra_flags = VTABLE_shift_integer(interp, io);
-    }
-    else if ((UINTVAL) n & 1) {     /* seen PMCs have bit 0 set */
-        seen = 1;
-    }
-    else if ((UINTVAL) n & 2) {     /* prev PMC was same type */
-        *type = info->last_type;
-    }
-    else {                          /* type follows */
-        *type = VTABLE_shift_integer(interp, io);
-        info->last_type = *type;
-        if (*type <= 0)
-            Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                "Unknown PMC type to thaw %d", (int) *type);
 
-        if (*type >= interp->n_vtable_max ||
-            !interp->vtables[*type]) {
-            /* that ought to be a class */
-            *type = enum_class_Class;
-        }
-    }
-    *id = (UINTVAL) n;
-    return seen;
+    visit_loop_todo_list(interp, pmc, info);
+    PackFile_destroy(interp, info->pf);
 }
 
-/*
-
-=item C<static void do_action(PARROT_INTERP, PMC *pmc, visit_info *info, int
-seen, UINTVAL id)>
-
-Called from C<visit_next_for_GC()> and C<visit_todo_list()> to perform
-the action specified in C<< info->what >>.
-
-Currently only C<VISIT_FREEZE_NORMAL> is implemented.
-
-=cut
-
-*/
 
 PARROT_INLINE
-static void
-do_action(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGIN(visit_info *info),
-        int seen, UINTVAL id)
-{
-    ASSERT_ARGS(do_action)
-    switch (info->what) {
-        case VISIT_FREEZE_AT_DESTRUCT:
-        case VISIT_FREEZE_NORMAL:
-            freeze_pmc(interp, pmc, info, seen, id);
-            if (pmc)
-                info->visit_action = pmc->vtable->freeze;
-            break;
-        default:
-            Parrot_ex_throw_from_c_args(interp, NULL, 1, "Illegal action %ld",
-                (long)info->what);
-    }
-}
-
-/*
-
-=item C<static PMC* thaw_create_pmc(PARROT_INTERP, const visit_info *info,
-INTVAL type)>
-
-Called from C<do_thaw()> to attach the vtable etc. to C<*pmc>.
-
-=cut
-
-*/
-
-PARROT_INLINE
-PARROT_CANNOT_RETURN_NULL
 static PMC*
-thaw_create_pmc(PARROT_INTERP, ARGIN(const visit_info *info),
-        INTVAL type)
+id_list_get(PARROT_INTERP, ARGIN(visit_info *info), UINTVAL id) {
+    List * const id_list = (List *)PMC_data(info->id_list);
+    PMC **pos = (PMC **)Parrot_pmc_array_get(interp, id_list, id, enum_type_PMC);
+
+    if (pos && pos != ((void *)-1))
+        return *pos;
+    return NULL;
+}
+
+/*
+
+=item C<static void visit_todo_list_thaw(PARROT_INTERP, PMC* pmc_not_used,
+visit_info* info)>
+
+Callback for thaw - action first.
+thaws and return a PMC.
+
+=cut
+
+*/
+
+PARROT_INLINE
+static void
+visit_todo_list_thaw(PARROT_INTERP, SHIM(PMC* pmc_not_used), ARGIN(visit_info* info))
 {
-    ASSERT_ARGS(thaw_create_pmc)
-    PMC *pmc;
-    switch (info->what) {
-        case VISIT_THAW_NORMAL:
+    ASSERT_ARGS(visit_todo_list_thaw)
+
+    UINTVAL  n            = VTABLE_shift_integer(interp, info);
+    UINTVAL  id           = PackID_get_PMCID(n);
+    int      packid_flags = PackID_get_FLAGS(n);
+    PMC     *pmc          = PMCNULL;
+
+    PARROT_ASSERT(info->what == VISIT_THAW_NORMAL);
+
+    switch (packid_flags) {
+      case enum_PackID_seen:
+        if (id) /* got a non-NULL PMC */
+            pmc = id_list_get(interp, info, id);
+        break;
+      case enum_PackID_normal:
+        {
+            INTVAL type = VTABLE_shift_integer(interp, info);
+            if (type <= 0 || type > interp->n_vtable_max)
+                Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown PMC type to thaw %d", type);
+
             pmc = pmc_new_noinit(interp, type);
-            break;
-        case VISIT_THAW_CONSTANTS:
-            pmc = constant_pmc_new_noinit(interp, type);
-            break;
-        default:
-            Parrot_ex_throw_from_c_args(interp, NULL, 1, "Illegal visit_next type");
-    }
-    return pmc;
-}
-
-/*
-
-=item C<static void do_thaw(PARROT_INTERP, PMC* pmc, visit_info *info)>
-
-Called by C<visit_todo_list_thaw()> to thaw and return a PMC.
-
-C<seen> is false if this is the first time the PMC has been encountered.
-
-=cut
-
-*/
-
-PARROT_INLINE
-static void
-do_thaw(PARROT_INTERP, ARGIN_NULLOK(PMC* pmc), ARGIN(visit_info *info))
-{
-    ASSERT_ARGS(do_thaw)
-    UINTVAL id;
-    INTVAL type;
-    PMC ** pos;
-    int must_have_seen;
-    type = 0; /* it's set below, avoid compiler warning. */
-    must_have_seen = thaw_pmc(interp, info, &id, &type);
-
-    id >>= 2;
-
-    if (!id) {
-        /* got a NULL PMC */
-        pmc = PMCNULL;
-        if (!info->thaw_result)
-            info->thaw_result = pmc;
-        else
-            *info->thaw_ptr = pmc;
-        return;
-    }
-
-    pos = (PMC **)list_get(interp, (List *)PMC_data(info->id_list), id, enum_type_PMC);
-    if (pos == (void*)-1)
-        pos = NULL;
-    else if (pos) {
-        pmc = *(PMC**)pos;
-        if (!pmc)
-            pos = NULL;
-    }
-    if (pos) {
-        if (info->extra_flags == EXTRA_IS_PROP_HASH) {
-            interp->vtables[enum_class_default]->thaw(interp, pmc, info);
-            return;
-        }
-        /* else maybe VTABLE_thaw ... but there is no other extra stuff */
-
-#if FREEZE_USE_NEXT_FOR_GC
-        /*
-         * the next_for_GC method doesn't keep track of repeated scalars
-         * and such, as these are lacking the next_for_GC pointer, so
-         * these are just duplicated with their data.
-         * But we track these when thawing, so that we don't create dups
-         */
-        if (!must_have_seen) {
-            /* so we must consume the bytecode */
             VTABLE_thaw(interp, pmc, info);
+
+            {
+                List * const todo    = (List *)PMC_data(info->todo);
+                List * const id_list = (List *)PMC_data(info->id_list);
+                Parrot_pmc_array_assign(interp, id_list, id, pmc, enum_type_PMC);
+                /* remember nested aggregates depth first */
+                Parrot_pmc_array_unshift(interp, todo, pmc, enum_type_PMC);
+            }
         }
-#else
-        PARROT_ASSERT(must_have_seen);
-#endif
-        /*
-         * that's a duplicate
-         if (info->container)
-         GC_WRITE_BARRIER(interp, info->container, NULL, pmc);
-         */
-        *info->thaw_ptr = pmc;
-        return;
+        break;
+      default:
+        Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown PMC id args thaw %d", packid_flags);
+        break;
     }
 
-    PARROT_ASSERT(!must_have_seen);
-    pmc = thaw_create_pmc(interp, info, type);
-
-    VTABLE_thaw(interp, pmc, info);
-    if (info->extra_flags == EXTRA_CLASS_EXISTS) {
-        pmc = (PMC *)info->extra;
-        info->extra = NULL;
-        info->extra_flags = 0;
-    }
-    if (!info->thaw_result)
-        info->thaw_result = pmc;
-    else {
-        if (info->container) {
-            GC_WRITE_BARRIER(interp, info->container, NULL, pmc);
-        }
-        *info->thaw_ptr = pmc;
-    }
-    list_assign(interp, (List *)PMC_data(info->id_list), id, pmc, enum_type_PMC);
-    /* remember nested aggregates depth first */
-    if (pmc->pmc_ext)
-        list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
+    *info->thaw_ptr = pmc;
 }
 
 
 /*
 
-=item C<static UINTVAL id_from_pmc(PARROT_INTERP, PMC* pmc)>
-
-Find a PMC in an arena, and return an id (left-shifted 2 bits),
-based on its position.
-
-If not found, throw an exception.
-
-=cut
-
-*/
-
-static UINTVAL
-id_from_pmc(PARROT_INTERP, ARGIN(PMC* pmc))
-{
-    ASSERT_ARGS(id_from_pmc)
-    return Parrot_gc_get_pmc_index(interp, pmc) << 2;
-}
-
-/*
-
-=item C<static void add_pmc_next_for_GC(PARROT_INTERP, PMC *pmc, visit_info
-*info)>
-
-Remembers the PMC for later processing.
-
-=cut
-
-*/
-
-static void
-add_pmc_next_for_GC(SHIM_INTERP, ARGIN(PMC *pmc), ARGOUT(visit_info *info))
-{
-    ASSERT_ARGS(add_pmc_next_for_GC)
-    if (pmc->pmc_ext) {
-        PMC_next_for_GC(info->mark_ptr) = pmc;
-        info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
-    }
-}
-
-/*
-
-=item C<static int next_for_GC_seen(PARROT_INTERP, PMC *pmc, visit_info *info,
-UINTVAL *id)>
-
-Remembers next child to visit via the C<next_for_GC pointer> generate a
-unique ID per PMC and freeze the ID (not the PMC address) so thaw the
-hash-lookup can be replaced by an array lookup then which is a lot
-faster.
-
-=cut
-
-*/
-
-PARROT_INLINE
-static int
-next_for_GC_seen(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc),
-        ARGIN(visit_info *info), ARGOUT(UINTVAL *id))
-{
-    ASSERT_ARGS(next_for_GC_seen)
-    int seen = 0;
-
-    if (PMC_IS_NULL(pmc)) {
-        *id = 0;
-        return 1;
-    }
-
-    /*
-     * we can only remember PMCs with a next_for_GC pointer
-     * which is located in pmc_ext
-     */
-    if (pmc->pmc_ext) {
-        /* already seen? */
-        if (!PMC_IS_NULL(PMC_next_for_GC(pmc))) {
-            seen = 1;
-            goto skip;
-        }
-        /* put pmc at the end of the list */
-        PMC_next_for_GC(info->mark_ptr) = pmc;
-        /* make end self-referential */
-        info->mark_ptr = PMC_next_for_GC(pmc) = pmc;
-    }
-skip:
-    *id = id_from_pmc(interp, pmc);
-    return seen;
-}
-
-/*
-
-=item C<static void add_pmc_todo_list(PARROT_INTERP, PMC *pmc, visit_info
-*info)>
-
-Remembers the PMC to be processed later.
-
-=cut
-
-*/
-
-static void
-add_pmc_todo_list(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGIN(visit_info *info))
-{
-    ASSERT_ARGS(add_pmc_todo_list)
-    list_push(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
-}
-
-/*
-
-=item C<static int todo_list_seen(PARROT_INTERP, PMC *pmc, visit_info *info,
-UINTVAL *id)>
-
-Returns true if the PMC was seen, otherwise it put it on the todo list,
-generates an ID (tag) for PMC, offset by 4 as are addresses, low bits
-are flags.
-
-=cut
-
-*/
-
-PARROT_INLINE
-static int
-todo_list_seen(PARROT_INTERP, ARGIN(PMC *pmc), ARGMOD(visit_info *info),
-        ARGOUT(UINTVAL *id))
-{
-    ASSERT_ARGS(todo_list_seen)
-    HashBucket * const b =
-        parrot_hash_get_bucket(interp,
-                (Hash *)VTABLE_get_pointer(interp, info->seen), pmc);
-
-    if (b) {
-        *id = (UINTVAL) b->value;
-        return 1;
-    }
-
-    info->id += 4;      /* next id to freeze */
-    *id = info->id;
-    parrot_hash_put(interp,
-            (Hash *)VTABLE_get_pointer(interp, info->seen), pmc, (void*)*id);
-    /* remember containers */
-    if (pmc->pmc_ext)
-        list_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
-    return 0;
-}
-
-/*
-
-=item C<static void visit_next_for_GC(PARROT_INTERP, PMC* pmc, visit_info*
+=item C<static void visit_todo_list_freeze(PARROT_INTERP, PMC* pmc, visit_info*
 info)>
-
-C<visit_child> callbacks:
-
-Checks if the PMC was seen, generate an ID for it if not, then do the
-appropriate action.
-
-=cut
-
-*/
-
-static void
-visit_next_for_GC(PARROT_INTERP, ARGIN(PMC* pmc), ARGIN(visit_info* info))
-{
-    ASSERT_ARGS(visit_next_for_GC)
-    UINTVAL id;
-    const int seen = next_for_GC_seen(interp, pmc, info, &id);
-    UNUSED(seen);
-
-    Parrot_ex_throw_from_c_args(interp, NULL, 1, "todo convert to depth first");
-    /* do_action(interp, pmc, info, seen, id); UNCOMMENT WHEN TODO IS DONE*/
-    /*
-     * TODO probe for class methods that override the default.
-     * To avoid overhead, we could have an array[class_enums]
-     * which (after first find_method) has a bit, if a user
-     * callback is there.
-     */
-    /* UNCOMMENT WHEN TODO IS DONE
-    if (!seen)
-        (info->visit_action)(interp, pmc, info);
-    */
-}
-
-/*
-
-=item C<static void visit_todo_list(PARROT_INTERP, PMC* pmc, visit_info* info)>
 
 Checks the seen PMC via the todo list.
 
@@ -1552,69 +639,42 @@ Checks the seen PMC via the todo list.
 */
 
 static void
-visit_todo_list(PARROT_INTERP, ARGIN_NULLOK(PMC* pmc), ARGIN(visit_info* info))
+visit_todo_list_freeze(PARROT_INTERP, ARGIN_NULLOK(PMC* pmc), ARGIN(visit_info* info))
 {
-    ASSERT_ARGS(visit_todo_list)
+    ASSERT_ARGS(visit_todo_list_freeze)
     UINTVAL id;
-    int seen;
+    int packid_type;
+
+    PARROT_ASSERT(info->what == VISIT_FREEZE_NORMAL);
 
     if (PMC_IS_NULL(pmc)) {
-        seen = 1;
-        id = 0;
+        id   = 0;
+        packid_type = enum_PackID_seen;
     }
-    else
-        seen = todo_list_seen(interp, pmc, info, &id);
-    do_action(interp, pmc, info, seen, id);
-    if (!seen)
-        (info->visit_action)(interp, pmc, info);
-}
-
-/*
-
-=item C<static void visit_todo_list_thaw(PARROT_INTERP, PMC* old, visit_info*
-info)>
-
-Callback for thaw - action first.
-
-Todo-list and seen handling is all in C<do_thaw()>.
-
-=cut
-
-*/
-
-static void
-visit_todo_list_thaw(PARROT_INTERP, ARGIN_NULLOK(PMC* old), ARGIN(visit_info* info))
-{
-    ASSERT_ARGS(visit_todo_list_thaw)
-    do_thaw(interp, old, info);
-}
-
-/*
-
-=item C<static void visit_loop_next_for_GC(PARROT_INTERP, PMC *current,
-visit_info *info)>
-
-Put first item on todo list, then run as long as there are items to be
-done.
-
-=cut
-
-*/
-
-static void
-visit_loop_next_for_GC(PARROT_INTERP, ARGIN(PMC *current),
-        ARGIN(visit_info *info))
-{
-    ASSERT_ARGS(visit_loop_next_for_GC)
-    visit_next_for_GC(interp, current, info);
-    if (current->pmc_ext) {
-        PMC *prev = NULL;
-
-        while (current != prev) {
-            VTABLE_visit(interp, current, info);
-            prev = current;
-            current = PMC_next_for_GC(current);
+    else {
+        Hash *hash = (Hash *)VTABLE_get_pointer(interp, info->seen);
+        HashBucket * const b = parrot_hash_get_bucket(interp, hash, pmc);
+        if (b) {
+            id = (UINTVAL) b->value;
+            packid_type = enum_PackID_seen;
         }
+        else {
+            info->id++; /* next id to freeze */
+            id = info->id;
+            packid_type = enum_PackID_normal;
+        }
+    }
+
+    VTABLE_push_integer(interp, info, PackID_new(id, packid_type));
+
+    if (packid_type == enum_PackID_normal) {
+        Hash *hash = (Hash *)VTABLE_get_pointer(interp, info->seen);
+        PARROT_ASSERT(pmc);
+        VTABLE_push_integer(interp, info,
+                PObj_is_object_TEST(pmc) ? enum_class_Object : pmc->vtable->base_type);
+        parrot_hash_put(interp, hash, pmc, (void *)id);
+        Parrot_pmc_array_unshift(interp, (List *)PMC_data(info->todo), pmc, enum_type_PMC);
+        VTABLE_freeze(interp, pmc, info);
     }
 }
 
@@ -1636,65 +696,37 @@ visit_loop_todo_list(PARROT_INTERP, ARGIN_NULLOK(PMC *current),
 {
     ASSERT_ARGS(visit_loop_todo_list)
     PMC        **list_item;
-    List        *finish_list    = NULL;
     List * const todo           = (List *)PMC_data(info->todo);
-    int          finished_first = 0;
-    const int    thawing        = info->what == VISIT_THAW_CONSTANTS
-                               || info->what == VISIT_THAW_NORMAL;
-    int          i;
-
-    /* create a list that contains PMCs that need thawfinish */
-    if (thawing) {
-        PMC * const finish_list_pmc = pmc_new(interp, enum_class_Array);
-        finish_list                 = (List *)PMC_data(finish_list_pmc);
-    }
+    const int    thawing        = info->what == VISIT_THAW_NORMAL;
 
     (info->visit_pmc_now)(interp, current, info);
 
     /* can't cache upper limit, visit may append items */
-again:
-    while ((list_item = (PMC**)list_shift(interp, todo, enum_type_PMC))) {
+    while ((list_item = (PMC **)Parrot_pmc_array_shift(interp, todo, enum_type_PMC))) {
         current = *list_item;
         if (!current)
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                "NULL current PMC in visit_loop_todo_list");
+                    "NULL current PMC in visit_loop_todo_list");
 
         PARROT_ASSERT(current->vtable);
 
-        /* Workaround for thawing constants. Clear constant flag */
-        /* See src/packfile.c:3999 */
-        if (thawing)
-            PObj_constant_CLEAR(current);
-
         VTABLE_visit(interp, current, info);
 
-        if (thawing) {
-            if (current == info->thaw_result)
-                finished_first = 1;
-            if (current->vtable->thawfinish != interp->vtables[enum_class_default]->thawfinish)
-                list_unshift(interp, finish_list, current, enum_type_PMC);
-        }
+        VISIT_PMC(interp, info, PMC_metadata(current));
     }
 
+    if (thawing)
+        /* we're done reading the image */
+        PARROT_ASSERT(!INFO_HAS_DATA(info));
+
     if (thawing) {
-        INTVAL n;
-        /* if image isn't consumed, there are some extra data to thaw */
-        if (info->image->bufused > 0) {
-            (info->visit_pmc_now)(interp, NULL, info);
-            goto again;
-        }
-
         /* on thawing call thawfinish for each processed PMC */
-        if (!finished_first) {
-            /* the first create PMC might not be in the list,
-             * if it has no pmc_ext */
-            list_unshift(interp, finish_list, info->thaw_result, enum_type_PMC);
-        }
-
-        n = list_length(interp, finish_list);
+        List        *finish_list = (List *)PMC_data(info->id_list);
+        const INTVAL n           = Parrot_pmc_array_length(interp, finish_list);
+        int          i;
 
         for (i = 0; i < n ; ++i) {
-            current = *(PMC**)list_get(interp, finish_list, i, enum_type_PMC);
+            current = *(PMC**)Parrot_pmc_array_get(interp, finish_list, i, enum_type_PMC);
             if (!PMC_IS_NULL(current))
                 VTABLE_thawfinish(interp, current, info);
         }
@@ -1704,68 +736,97 @@ again:
 
 /*
 
-=item C<static void create_image(PARROT_INTERP, PMC *pmc, visit_info *info)>
+=item C<static void create_buffer(PARROT_INTERP, PMC *pmc, visit_info *info)>
 
-Allocate image to some estimated size.
+Allocate buffer to some estimated size.
 
 =cut
 
 */
 
 static void
-create_image(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGMOD(visit_info *info))
+create_buffer(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGMOD(visit_info *info))
 {
-    ASSERT_ARGS(create_image)
+    ASSERT_ARGS(create_buffer)
     STRING *array = CONST_STRING(interp, "array");
     STRING *hash  = CONST_STRING(interp, "hash");
     INTVAL  len;
 
-    if (!PMC_IS_NULL(pmc) && (VTABLE_does(interp, pmc, array) ||
-        VTABLE_does(interp, pmc, hash))) {
+    if (!PMC_IS_NULL(pmc)
+    && (VTABLE_does(interp, pmc, array) || VTABLE_does(interp, pmc, hash))) {
         const INTVAL items = VTABLE_elements(interp, pmc);
         /* TODO check e.g. first item of aggregate and estimate size */
-        len = items * FREEZE_BYTES_PER_ITEM;
+        len = (items ? items : 1) * FREEZE_BYTES_PER_ITEM;
     }
     else
         len = FREEZE_BYTES_PER_ITEM;
 
-    info->image = Parrot_str_new_noinit(interp, enum_stringrep_one, len);
+    info->buffer = (Buffer *)Parrot_gc_new_bufferlike_header(interp, sizeof (Buffer));
+    Parrot_gc_allocate_buffer_storage_aligned(interp, info->buffer, len);
+    SET_VISIT_CURSOR(info, Buffer_bufstart(info->buffer));
 }
+
 
 /*
 
-=item C<static PMC* run_thaw(PARROT_INTERP, STRING* image, visit_enum_type
-what)>
+=back
 
-Performs thawing. C<what> indicates what to be thawed.
+=head2 Public Interface
 
-Thaw could use the C<next_for_GC> pointers as todo-list too, but this
-would need 2 runs through the arenas to clean the C<next_for_GC>
-pointers.
+=over 4
 
-For now it seems cheaper to use a list for remembering contained
-aggregates. We could of course decide dynamically, which strategy to
-use, e.g.: given a big image, the first thawed item is a small
-aggregate. This implies, it probably contains (or some big strings) more
-nested containers, for which the C<next_for_GC> approach could be a win.
+=item C<STRING* Parrot_freeze(PARROT_INTERP, PMC *pmc)>
+
+Freeze using either method.
 
 =cut
 
 */
 
+PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-static PMC*
-run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
+STRING*
+Parrot_freeze(PARROT_INTERP, ARGIN(PMC *pmc))
 {
-    ASSERT_ARGS(run_thaw)
+    ASSERT_ARGS(Parrot_freeze)
     visit_info info;
-    int gc_block = 0;
-    const UINTVAL bufused = image->bufused;
 
-    info.image = image;
+    visit_info_init(interp, &info, VISIT_FREEZE_NORMAL, STRINGNULL, pmc);
+    return Parrot_str_new_from_buffer(interp, info.buffer, OUTPUT_LENGTH(&info));
+}
+
+
+/*
+
+=item C<PMC* Parrot_thaw(PARROT_INTERP, STRING *image)>
+
+Thaws a PMC.  Called from the C<thaw> opcode.
+
+For now it seems cheaper to use a list for remembering contained
+aggregates. We could of course decide dynamically, which strategy to
+use, e.g.: given a big image, the first thawed item is a small
+aggregate. This implies, it probably contains (or some big strings) more
+nested containers, for which another approach could be a win.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_thaw(PARROT_INTERP, ARGIN(STRING *image))
+{
+    ASSERT_ARGS(Parrot_thaw)
+
+    visit_info  info;
+    int         gc_block = 0;
+    PMC        *result;
+
     /*
-     * if we are thawing a lot of PMCs, its cheaper to do
+     * if we are thawing a lot of PMCs, it's cheaper to do
      * a GC run first and then block GC - the limit should be
      * chosen so that no more then one GC run would be triggered
      *
@@ -1781,127 +842,25 @@ run_thaw(PARROT_INTERP, ARGIN(STRING* image), visit_enum_type what)
         gc_block = 1;
     }
 
-    info.what = what;   /* _NORMAL or _CONSTANTS */
-    todo_list_init(interp, &info);
-    info.visit_pmc_now = visit_todo_list_thaw;
-    info.visit_pmc_later = add_pmc_todo_list;
-
-    info.thaw_result = NULL;
-    /*
-     * run thaw loop
-     */
-    visit_loop_todo_list(interp, NULL, &info);
-    /*
-     * thaw does "consume" the image string by incrementing strstart
-     * and decrementing bufused - restore that
-     */
-    LVALUE_CAST(char *, image->strstart) -= bufused;
-    image->bufused = bufused;
-    PARROT_ASSERT(image->strstart >= (char *)PObj_bufstart(image));
+    info.thaw_ptr = &result;
+    visit_info_init(interp, &info, VISIT_THAW_NORMAL, image, PMCNULL);
+    BYTECODE_SHIFT_OK(&info);
 
     if (gc_block) {
         Parrot_unblock_GC_mark(interp);
         Parrot_unblock_GC_sweep(interp);
     }
-    PackFile_destroy(interp, info.image_io->pf);
-    mem_sys_free(info.image_io);
-    info.image_io = NULL;
-    return info.thaw_result;
+
+    return result;
 }
+
 
 /*
 
-=back
+=item C<PMC* Parrot_thaw_constants(PARROT_INTERP, STRING *image)>
 
-=head2 Public Interface
-
-=over 4
-
-=item C<STRING* Parrot_freeze_at_destruct(PARROT_INTERP, PMC* pmc)>
-
-This function must not consume any resources (except the image itself).
-It uses the C<next_for_GC> pointer, so its not reentrant and must not be
-interrupted by a GC run.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-STRING*
-Parrot_freeze_at_destruct(PARROT_INTERP, ARGIN(PMC* pmc))
-{
-    ASSERT_ARGS(Parrot_freeze_at_destruct)
-    visit_info info;
-
-    Parrot_block_GC_mark(interp);
-    Parrot_gc_cleanup_next_for_GC(interp);
-    info.what = VISIT_FREEZE_AT_DESTRUCT;
-    info.mark_ptr = pmc;
-    info.thaw_ptr = NULL;
-    info.visit_pmc_now = visit_next_for_GC;
-    info.visit_pmc_later = add_pmc_next_for_GC;
-    create_image(interp, pmc, &info);
-    ft_init(interp, &info);
-
-    visit_loop_next_for_GC(interp, pmc, &info);
-
-    Parrot_unblock_GC_mark(interp);
-    PackFile_destroy(interp, info.image_io->pf);
-    mem_sys_free(info.image_io);
-    return info.image;
-}
-
-/*
-
-=item C<STRING* Parrot_freeze(PARROT_INTERP, PMC* pmc)>
-
-Freeze using either method.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-STRING*
-Parrot_freeze(PARROT_INTERP, ARGIN(PMC* pmc))
-{
-    ASSERT_ARGS(Parrot_freeze)
-#if FREEZE_USE_NEXT_FOR_GC
-    ASSERT_ARGS(Parrot_freeze)
-    /*
-     * we could do a GC run here before, to free resources
-     */
-    return Parrot_freeze_at_destruct(interp, pmc);
-#else
-    /*
-     * freeze using a todo list and seen hash
-     * Please note that both have to be PMCs, so that trace_system_stack
-     * can call mark on the PMCs
-     */
-    visit_info info;
-
-    info.what = VISIT_FREEZE_NORMAL;
-    create_image(interp, pmc, &info);
-    todo_list_init(interp, &info);
-
-    visit_loop_todo_list(interp, pmc, &info);
-
-    PackFile_destroy(interp, info.image_io->pf);
-    mem_sys_free(info.image_io);
-    return info.image;
-#endif
-}
-
-/*
-
-=item C<PMC* Parrot_thaw(PARROT_INTERP, STRING* image)>
-
-Thaw a PMC, called from the C<thaw> opcode.
+Thaws constants, used by PackFile for unpacking PMC constants.
+This is a lie. It does nothing different from Parrot_thaw at the moment.
 
 =cut
 
@@ -1911,40 +870,19 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
-Parrot_thaw(PARROT_INTERP, ARGIN(STRING* image))
-{
-    ASSERT_ARGS(Parrot_thaw)
-    return run_thaw(interp, image, VISIT_THAW_NORMAL);
-}
-
-/*
-
-=item C<PMC* Parrot_thaw_constants(PARROT_INTERP, STRING* image)>
-
-Thaw the constants. This is used by PackFile for unpacking PMC
-constants.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-PMC*
-Parrot_thaw_constants(PARROT_INTERP, ARGIN(STRING* image))
+Parrot_thaw_constants(PARROT_INTERP, ARGIN(STRING *image))
 {
     ASSERT_ARGS(Parrot_thaw_constants)
-    return run_thaw(interp, image, VISIT_THAW_CONSTANTS);
+    return Parrot_thaw(interp, image);
 }
+
 
 /*
 
-=item C<PMC* Parrot_clone(PARROT_INTERP, PMC* pmc)>
+=item C<PMC* Parrot_clone(PARROT_INTERP, PMC *pmc)>
 
 There are for sure shortcuts to clone faster, e.g. always thaw the image
-immediately or use a special callback. But for now we just thaw a frozen
-PMC.
+immediately or use a special callback.  For now we just thaw a frozen PMC.
 
 =cut
 
@@ -1954,11 +892,12 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
-Parrot_clone(PARROT_INTERP, ARGIN(PMC* pmc))
+Parrot_clone(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_clone)
     return VTABLE_clone(interp, pmc);
 }
+
 
 /*
 
@@ -1966,7 +905,7 @@ Parrot_clone(PARROT_INTERP, ARGIN(PMC* pmc))
 
 =head1 TODO
 
-The seen-hash version for freezing might go away sometimes.
+The seen-hash version for freezing might go away sometime.
 
 =head1 SEE ALSO
 

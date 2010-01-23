@@ -410,6 +410,7 @@ push code_as_data, 110
 push code_as_data, 101
 push code_as_data, 119
 push code_as_data, 32
+push code_as_data, 91
 push code_as_data, 34
 push code_as_data, 71
 push code_as_data, 101
@@ -417,12 +418,14 @@ push code_as_data, 116
 push code_as_data, 111
 push code_as_data, 112
 push code_as_data, 116
-push code_as_data, 58
-push code_as_data, 58
+push code_as_data, 34
+push code_as_data, 59
+push code_as_data, 34
 push code_as_data, 79
 push code_as_data, 98
 push code_as_data, 106
 push code_as_data, 34
+push code_as_data, 93
 push code_as_data, 10
 push code_as_data, 32
 push code_as_data, 32
@@ -2171,8 +2174,6 @@ push code_as_data, 99
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 10
 push code_as_data, 32
 push code_as_data, 32
@@ -2203,26 +2204,13 @@ push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 61
 push code_as_data, 32
-push code_as_data, 110
-push code_as_data, 101
-push code_as_data, 119
-push code_as_data, 32
-push code_as_data, 39
-push code_as_data, 73
+push code_as_data, 105
 push code_as_data, 116
 push code_as_data, 101
 push code_as_data, 114
-push code_as_data, 97
-push code_as_data, 116
-push code_as_data, 111
-push code_as_data, 114
-push code_as_data, 39
-push code_as_data, 44
 push code_as_data, 32
 push code_as_data, 100
 push code_as_data, 97
@@ -2235,8 +2223,6 @@ push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 61
 push code_as_data, 32
@@ -2321,8 +2307,6 @@ push code_as_data, 115
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 103
 push code_as_data, 111
@@ -2395,8 +2379,6 @@ push code_as_data, 116
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 32
@@ -2630,8 +2612,6 @@ push code_as_data, 99
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 10
 push code_as_data, 32
 push code_as_data, 32
@@ -2639,26 +2619,13 @@ push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 61
 push code_as_data, 32
-push code_as_data, 110
-push code_as_data, 101
-push code_as_data, 119
-push code_as_data, 32
-push code_as_data, 39
-push code_as_data, 73
+push code_as_data, 105
 push code_as_data, 116
 push code_as_data, 101
 push code_as_data, 114
-push code_as_data, 97
-push code_as_data, 116
-push code_as_data, 111
-push code_as_data, 114
-push code_as_data, 39
-push code_as_data, 44
 push code_as_data, 32
 push code_as_data, 100
 push code_as_data, 97
@@ -2671,8 +2638,6 @@ push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 61
 push code_as_data, 32
@@ -2814,8 +2779,6 @@ push code_as_data, 115
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 103
 push code_as_data, 111
@@ -2888,8 +2851,6 @@ push code_as_data, 116
 push code_as_data, 32
 push code_as_data, 105
 push code_as_data, 116
-push code_as_data, 101
-push code_as_data, 114
 push code_as_data, 32
 push code_as_data, 32
 push code_as_data, 32
@@ -3554,7 +3515,7 @@ push code_as_data, 10
 
     # Specification of command line arguments.
     .local pmc getopts
-    getopts = new "Getopt::Obj"
+    getopts = new ["Getopt";"Obj"]
     push getopts, "print-code-as-data"
 
     # Looking at command line
@@ -3622,14 +3583,14 @@ DO_QUINE:
     .param pmc data
 
    .include "iterator.pasm"
-   .local pmc iter
+   .local pmc it
    .local int char_int
 
-   iter = new 'Iterator', data
-    iter = .ITERATE_FROM_START # reset iterator, begin at start
+   it = iter data
+    it = .ITERATE_FROM_START # reset iterator, begin at start
     ITER_LOOP:
-    unless iter goto ITER_END         # while (entries) ...
-        char_int = shift iter         # get entry
+    unless it goto ITER_END         # while (entries) ...
+        char_int = shift it         # get entry
         print 'push code_as_data, '
         print char_int
         print "\n"
@@ -3643,16 +3604,16 @@ DO_QUINE:
 
    .include "iterator.pasm"
 
-   .local pmc iter
-    iter = new 'Iterator', data
-    iter = .ITERATE_FROM_START # reset iterator, begin at start
+   .local pmc it
+    it = iter data
+    it = .ITERATE_FROM_START # reset iterator, begin at start
 
    .local int    char_int
    .local string char_string
 
     ITER_LOOP:
-    unless iter goto ITER_END         # while (entries) ...
-        char_int = shift iter         # get entry
+    unless it goto ITER_END         # while (entries) ...
+        char_int = shift it         # get entry
         char_string = chr char_int
         print char_string
         goto ITER_LOOP

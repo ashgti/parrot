@@ -131,18 +131,18 @@ C<gcd>X<gcd opcode> (greatest common divisor) and C<lcm>X<lcm opcode>
 
 =head3 Floating-point operations
 
-The most common floating-point operations are C<ln>X<ln opcode> (natural
-log), C<log2>X<log2 opcode> (log base 2), C<log10>X<log10 opcode> (log
-base 10), and C<exp>X<exp opcode> (I<e>G<x>), as well as a full set of
-trigonometric opcodes such as C<sin>X<sin opcode> (sine), C<cos>X<cos
-opcode> (cosine), C<tan>X<tan opcode> (tangent), C<sec>X<sec opcode>
-(secant), C<cosh>X<cosh opcode> (hyperbolic cosine), C<tanh>X<tanh
+The most common floating-point operations are C<ln>X<ln opcode> (natural log),
+C<log2>X<log2 opcode> (log base 2), C<log10>X<log10 opcode> (log base 10), and
+C<exp>X<exp opcode> (I<e>G<x>), as well as a full set of trigonometric opcodes
+such as C<sin>X<sin opcode> (sine), C<cos>X<cos opcode> (cosine), C<tan>X<tan
+opcode> (tangent), C<sec>X<sec opcode> (secant), C<sinh>X<sinh opcode>
+(hyperbolic sine), C<cosh>X<cosh opcode> (hyperbolic cosine), C<tanh>X<tanh
 opcode> (hyperbolic tangent), C<sech>X<sech opcode> (hyperbolic secant),
 C<asin>X<asin opcode> (arc sine), C<acos>X<acos opcode> (arc cosine),
-C<atan>C<atan opcode> (arc tangent), C<asec>X<asec opcode> (arc secant),
+C<atan>X<atan opcode> (arc tangent), C<asec>X<asec opcode> (arc secant),
 C<exsec>X<exsec opcode> (exsecant), C<hav>X<hav opcode> (haversine), and
-C<vers>X<vers opcode> (versine).  All angle arguments for the
-X<trigonometric opcodes> trigonometric opcodes are in radians:
+C<vers>X<vers opcode> (versine).  All angle arguments for the X<trigonometric
+opcodes> trigonometric opcodes are in radians:
 
 =begin PIR_FRAGMENT
 
@@ -160,7 +160,7 @@ many of these opcodes require the result to be a number.
 X<logical opcodes>
 The logical opcodes evaluate the truth of their arguments.  They are most
 useful to make decisions for control flow.  Integers and numeric PMCs
-support logical are false if they're 0 and true otherwise. Strings are
+are false if they're 0 and true otherwise. Strings are
 false if they're the empty string or a single character "0", and true
 otherwise. PMCs are true when their C<get_bool>X<get_bool vtable
 function> vtable function returns a nonzero value.
@@ -188,7 +188,7 @@ it's true and the second argument otherwise:
 =end PIR_FRAGMENT
 
 Both C<and> and C<or> are short-circuiting ops. If they can determine what
-value to return from the first argument, they'll never evaluate the third.
+value to return from the first argument, they'll never evaluate the second.
 This is significant only for PMCs, as they might have side effects on
 evaluation.
 
@@ -403,7 +403,7 @@ immediately follows. All text until the terminator is part of the string. The
 terminator must appear on its own line, must appear at the beginning of the
 line, and may not have any trailing whitespace.
 
-  $S2 = << "End_Token"
+  $S2 = <<"End_Token"
   This is a multi-line string literal. Notice that
   it doesn't use quotation marks.
   End_Token
@@ -828,7 +828,7 @@ the PMC in the final string result.
 
 =begin PIR_FRAGMENT
 
-  $P0 = new "Array"
+  $P0 = new "ResizablePMCArray"
   push $P0, "hi"
   push $P0, 0
   push $P0, 1
@@ -1030,7 +1030,7 @@ X<scalar PMCs>
 X<PMCs (Polymorphic Containers);scalar>
 In most of the examples shown so far, PMCs duplicate the behavior of integers,
 numbers, and strings. Parrot provides a set of PMCs for this exact purpose.
-C<Integer>, C<Number>, and C<String> are thin overlays on Parrot's low-level
+C<Integer>, C<Float>, and C<String> are thin overlays on Parrot's low-level
 integers, numbers, and strings.
 
 A previous example showed a string literal assigned to a PMC variable of type
@@ -1045,7 +1045,7 @@ types and their PMC equivalents:
   $P1 = new 'String'
   $P1 = "5 birds"
 
-  $P2 = new 'Number'
+  $P2 = new 'Float'
   $P2 = 3.14
 
 =end PIR_FRAGMENT
@@ -1068,7 +1068,7 @@ type is "boxing".>
   $P1 = $S1
 
   $N2 = 3.14
-  $P2 = new 'Number'
+  $P2 = new 'Float'
   $P2 = $N2
 
 =end PIR_FRAGMENT
@@ -1082,7 +1082,7 @@ object from an integer, number, or string literal or variable.
 
   $P1 = box $S1  # $P1 is a "String"
 
-  $P2 = box 3.14 # $P2 is a "Number"
+  $P2 = box 3.14 # $P2 is a "Float"
 
 =end PIR_FRAGMENT
 
@@ -1110,7 +1110,7 @@ the low-level type.N<The reverse of "boxing" is "unboxing".>
 
 =end PIR_FRAGMENT
 
-This example creates C<Integer>X<Integer PMC>, C<Number>X<Number PMC>,
+This example creates C<Integer>X<Integer PMC>, C<Float>X<Float PMC>,
 and C<String>X<String PMC> PMCs, and shows the effect of assigning each
 one back to a low-level type.
 
@@ -1278,16 +1278,6 @@ argument, the PMC over which to iterate:
 =begin PIR_FRAGMENT
 
   $P1 = iter $P2
-
-=end PIR_FRAGMENT
-
-Alternatively, you can also create an iterator by creating a new
-C<Iterator>X<Iterator PMC> PMC, passing the aggregate PMC as an
-initialization parameter to C<new>:
-
-=begin PIR_FRAGMENT
-
-  $P1 = new "Iterator", $P2
 
 =end PIR_FRAGMENT
 
@@ -1785,7 +1775,7 @@ namespace, just like the C<get_namespace> opcode:
 
   $P1 = $P0.'find_namespace'("Duck")
 
-The C<add_namespace>C<add_namespace method> method adds a new namespace
+The C<add_namespace>X<add_namespace method> method adds a new namespace
 as a child of the namespace object:
 
   $P0.'add_namespace'($P1)

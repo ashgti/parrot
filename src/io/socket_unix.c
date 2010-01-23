@@ -30,7 +30,7 @@ APitUE - W. Richard Stevens, AT&T SFIO, Perl 5 (Nick Ing-Simmons)
 
 #include "parrot/parrot.h"
 #include "io_private.h"
-#include "../pmc/pmc_socket.h"
+#include "pmc/pmc_socket.h"
 
 #ifdef PIO_OS_UNIX
 
@@ -49,10 +49,10 @@ static void get_sockaddr_in(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_get_sockaddr_in __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_get_sockaddr_in __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sockaddr) \
-    || PARROT_ASSERT_ARG(host)
+    , PARROT_ASSERT_ARG(sockaddr) \
+    , PARROT_ASSERT_ARG(host))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -105,7 +105,7 @@ Parrot_io_sockaddr_in(PARROT_INTERP, ARGIN(STRING *addr), INTVAL port)
     PMC  * const sockaddr = pmc_new(interp, enum_class_Sockaddr);
 
     get_sockaddr_in(interp, sockaddr, s, port);
-    free(s);
+    Parrot_str_free_cstring(s);
     return sockaddr;
 }
 
@@ -166,14 +166,14 @@ AGAIN:
     if ((connect(io->os_handle, (struct sockaddr *)SOCKADDR_REMOTE(socket),
             sizeof (struct sockaddr_in))) != 0) {
         switch (errno) {
-            case EINTR:
-                goto AGAIN;
-            case EINPROGRESS:
-                goto AGAIN;
-            case EISCONN:
-                return 0;
-            default:
-                return -1;
+          case EINTR:
+            goto AGAIN;
+          case EINPROGRESS:
+            goto AGAIN;
+          case EISCONN:
+            return 0;
+          default:
+            return -1;
         }
     }
 
@@ -312,21 +312,21 @@ AGAIN:
     }
     else {
         switch (errno) {
-            case EINTR:
-                goto AGAIN;
+          case EINTR:
+            goto AGAIN;
 #    ifdef EWOULDBLOCK
-            case EWOULDBLOCK:
-                goto AGAIN;
+          case EWOULDBLOCK:
+            goto AGAIN;
 #    else
-            case EAGAIN:
-                goto AGAIN;
+          case EAGAIN:
+            goto AGAIN;
 #    endif
-            case EPIPE:
-                /* XXX why close it here and not below */
-                close(io->os_handle);
-                return -1;
-            default:
-                return -1;
+          case EPIPE:
+            /* XXX why close it here and not below */
+            close(io->os_handle);
+            return -1;
+          default:
+            return -1;
         }
     }
 }
@@ -361,24 +361,24 @@ AGAIN:
     }
     else {
         switch (errno) {
-            case EINTR:
-                goto AGAIN;
+          case EINTR:
+            goto AGAIN;
 #    ifdef EWOULDBLOCK
-            case EWOULDBLOCK:
-                goto AGAIN;
+          case EWOULDBLOCK:
+            goto AGAIN;
 #    else
-            case EAGAIN:
-                goto AGAIN;
+          case EAGAIN:
+            goto AGAIN;
 #    endif
-            case ECONNRESET:
-                /* XXX why close it on err return result is -1 anyway */
-                close(io->os_handle);
-                *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
-                return -1;
-            default:
-                close(io->os_handle);
-                *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
-                return -1;
+          case ECONNRESET:
+            /* XXX why close it on err return result is -1 anyway */
+            close(io->os_handle);
+            *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
+            return -1;
+          default:
+            close(io->os_handle);
+            *s = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
+            return -1;
         }
     }
 }
@@ -392,12 +392,12 @@ Utility function for polling a single IO stream with a timeout.
 
 Returns a 1 | 2 | 4 (read, write, error) value.
 
-This is not equivalent to any speficic POSIX or BSD socket call, however
+This is not equivalent to any specific POSIX or BSD socket call, but
 it is a useful, common primitive.
 
 Not at all usefule --leo.
 
-Also, a buffering layer above this may choose to reimpliment by checking
+Also, a buffering layer above this may choose to reimplement by checking
 the read buffer.
 
 =cut

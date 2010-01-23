@@ -1,12 +1,12 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 70;
+use Parrot::Test tests => 71;
 use Parrot::Config qw(%PConfig);
 
 =head1 NAME
@@ -1355,7 +1355,32 @@ hello from Parrot
 31
 OUTPUT
 
-    pasm_output_is( <<'CODE', <<'OUTPUT', "nci_vP" );
+    pir_output_is( << 'CODE', << "OUTPUT", "nci_pi - null" );
+
+.include "datatypes.pasm"
+
+.sub test :main
+
+  # load library
+  .local pmc libnci_test
+  libnci_test = loadlib "libnci_test"
+  unless libnci_test goto FAILED
+
+  # calling a function in libnci_test
+  .local pmc nci_pi
+  dlfunc nci_pi, libnci_test, "nci_pi", "pi"
+  .local pmc result
+  result = nci_pi( 10 )
+  unless_null result, FAILED
+  print "got null"
+FAILED:
+  print "\n"
+.end
+CODE
+got null
+OUTPUT
+
+    pasm_output_is( <<'CODE', <<'OUTPUT', "nci_vP", todo => 'Disabled to avoid linkage problems, see src/nci_test.c' );
   loadlib P1, "libnci_test"
   dlfunc P0, P1, "nci_vP", "vP"
   new P5, ['String']
@@ -1373,7 +1398,7 @@ OUTPUT
 
   # Tests with callback functions
   my @todo = $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ ?
-    ( todo => 'RT #49718, add scheduler tasks to JIT' ) : ();
+    ( todo => 'TT #1316, add scheduler tasks to JIT' ) : ();
 
   pasm_output_is( <<'CODE', <<'OUTPUT', "nci_cb_C1 - PASM", @todo );
 
@@ -2646,11 +2671,6 @@ CODE
 3
 OUTPUT
 
-{
-    local $TODO = 0;
-    if ($PConfig{jitcapable}){
-        $TODO = "TT #551 - jitted NCI sig with V is broken";
-    }
 pir_output_is( << 'CODE', << 'OUTPUT', "nci_vVi - void** out parameter" );
 .sub test :main
     .local string library_name
@@ -2665,15 +2685,18 @@ pir_output_is( << 'CODE', << 'OUTPUT', "nci_vVi - void** out parameter" );
     nci_vp = dlfunc libnci_test, "nci_vp", "vp"
 
     .local pmc opaque
+    null opaque
+    nci_vp(opaque)
+
     opaque = new ['Pointer']
     $I0 = 10
     nci_vVi(opaque, $I0)
     nci_vp(opaque)
 .end
 CODE
+got null
 got 10
 OUTPUT
-}
 
 pir_output_is( << 'CODE', << 'OUTPUT', "nci_ttt - t_tt parameter" );
 .sub test :main
@@ -2711,11 +2734,6 @@ CODE
 1
 OUTPUT
 
-{
-    local $TODO = 0;
-    if ($PConfig{jitcapable}){
-        $TODO = "TT #551 - jitted NCI sig with V is broken";
-    }
 pir_output_is( << 'CODE', << 'OUTPUT', "nci_vV - char** out parameter" );
 .sub test :main
     .local string library_name
@@ -2763,7 +2781,6 @@ Hello bright new world!
 It is a beautiful day!
 Go suck a lemon.
 OUTPUT
-}
 
 # Local Variables:
 #   mode: cperl

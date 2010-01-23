@@ -103,38 +103,38 @@ static opcode_t * wait_for_wakeup(PARROT_INTERP,
     ARGIN_NULLOK(opcode_t *next))
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_do_event __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_do_event __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(event)
-#define ASSERT_ARGS_dup_entry __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(entry)
-#define ASSERT_ARGS_dup_entry_interval __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(entry)
-#define ASSERT_ARGS_event_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(data)
-#define ASSERT_ARGS_event_to_exception __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(event))
+#define ASSERT_ARGS_dup_entry __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(entry))
+#define ASSERT_ARGS_dup_entry_interval __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(entry))
+#define ASSERT_ARGS_event_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(data))
+#define ASSERT_ARGS_event_to_exception __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(event)
-#define ASSERT_ARGS_init_events_all __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_init_events_first __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_io_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_io_thread_ready_rd __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(ios)
-#define ASSERT_ARGS_Parrot_sigaction __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(handler)
-#define ASSERT_ARGS_Parrot_unblock_signal __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_process_events __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(event_q)
-#define ASSERT_ARGS_schedule_signal_event __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_sig_handler __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_stop_io_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_store_io_event __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(event))
+#define ASSERT_ARGS_init_events_all __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_init_events_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_io_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_io_thread_ready_rd __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(ios))
+#define ASSERT_ARGS_Parrot_sigaction __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(handler))
+#define ASSERT_ARGS_Parrot_unblock_signal __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_process_events __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(event_q))
+#define ASSERT_ARGS_schedule_signal_event __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_sig_handler __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_stop_io_thread __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_store_io_event __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(ios) \
-    || PARROT_ASSERT_ARG(ev)
-#define ASSERT_ARGS_wait_for_wakeup __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(ev))
+#define ASSERT_ARGS_wait_for_wakeup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -244,14 +244,14 @@ sig_handler(int signum)
 {
     ASSERT_ARGS(sig_handler)
     switch (signum) {
-        case SIGINT:
-            sig_int = 1;
-            break;
-        case SIGHUP:
-            sig_hup = 1;
-            break;
-        default:
-            break;
+      case SIGINT:
+        sig_int = 1;
+        break;
+      case SIGHUP:
+        sig_hup = 1;
+        break;
+      default:
+        break;
     }
 }
 
@@ -477,21 +477,21 @@ Parrot_schedule_event(PARROT_INTERP, ARGMOD(parrot_event* ev))
     ev->interp  = interp;
     entry->data = ev;
     switch (ev->type) {
-        case EVENT_TYPE_TIMER:
-        case EVENT_TYPE_SLEEP:
-            entry->type = QUEUE_ENTRY_TYPE_TIMED_EVENT;
-            insert_entry(event_queue, entry);
-            break;
-        case EVENT_TYPE_CALL_BACK:
-        case EVENT_TYPE_SIGNAL:
-        case EVENT_TYPE_IO:
-            entry->type = QUEUE_ENTRY_TYPE_EVENT;
-            unshift_entry(event_queue, entry);
-            break;
-        default:
-            entry->type = QUEUE_ENTRY_TYPE_EVENT;
-            push_entry(event_queue, entry);
-            break;
+      case EVENT_TYPE_TIMER:
+      case EVENT_TYPE_SLEEP:
+        entry->type = QUEUE_ENTRY_TYPE_TIMED_EVENT;
+        insert_entry(event_queue, entry);
+        break;
+      case EVENT_TYPE_CALL_BACK:
+      case EVENT_TYPE_SIGNAL:
+      case EVENT_TYPE_IO:
+        entry->type = QUEUE_ENTRY_TYPE_EVENT;
+        unshift_entry(event_queue, entry);
+        break;
+      default:
+        entry->type = QUEUE_ENTRY_TYPE_EVENT;
+        push_entry(event_queue, entry);
+        break;
     }
 }
 
@@ -722,13 +722,13 @@ Parrot_schedule_interp_qentry(PARROT_INTERP, ARGIN(struct QUEUE_ENTRY *entry))
      * in front or at the end of the queue
      */
     switch (event->type) {
-        case EVENT_TYPE_CALL_BACK:
-        case EVENT_TYPE_SIGNAL:
-            unshift_entry(interp->task_queue, entry);
-            break;
-        default:
-            push_entry(interp->task_queue, entry);
-            break;
+      case EVENT_TYPE_CALL_BACK:
+      case EVENT_TYPE_SIGNAL:
+        unshift_entry(interp->task_queue, entry);
+        break;
+      default:
+        push_entry(interp->task_queue, entry);
+        break;
     }
 }
 
@@ -749,52 +749,52 @@ Parrot_schedule_broadcast_qentry(ARGIN(struct QUEUE_ENTRY *entry))
     parrot_event * const event = (parrot_event *)entry->data;
 
     switch (event->type) {
-        case EVENT_TYPE_SIGNAL:
-            edebug((stderr, "broadcast signal\n"));
-            /*
-             * we don't have special signal handlers in usercode yet
-             * e.g.:
-             * install handler like exception handler *and*
-             * set a interpreter flag, that a handler exists
-             * we then could examine that flag (after LOCKing it)
-             * and dispatch the exception to all interpreters that
-             * handle it
-             * Finally, we send the first (main) interpreter that signal
-             *
-             * For now just send to all.
-             *
-             */
-            switch (event->u.signal) {
-                case SIGHUP:
-                case SIGINT:
-                    {
-                    if (n_interpreters) {
-                        size_t i;
-                        LOCK(interpreter_array_mutex);
-                        for (i = 1; i < n_interpreters; ++i) {
-                            Interp *interp;
-                            edebug((stderr, "deliver SIGINT to %d\n", i));
-                            interp = interpreter_array[i];
-                            if (interp)
-                                Parrot_schedule_interp_qentry(interp,
+      case EVENT_TYPE_SIGNAL:
+        edebug((stderr, "broadcast signal\n"));
+        /*
+         * we don't have special signal handlers in usercode yet
+         * e.g.:
+         * install handler like exception handler *and*
+         * set a interpreter flag, that a handler exists
+         * we then could examine that flag (after LOCKing it)
+         * and dispatch the exception to all interpreters that
+         * handle it
+         * Finally, we send the first (main) interpreter that signal
+         *
+         * For now just send to all.
+         *
+         */
+        switch (event->u.signal) {
+          case SIGHUP:
+          case SIGINT:
+            {
+                if (n_interpreters) {
+                    size_t i;
+                    LOCK(interpreter_array_mutex);
+                    for (i = 1; i < n_interpreters; ++i) {
+                        Interp *interp;
+                        edebug((stderr, "deliver SIGINT to %d\n", i));
+                        interp = interpreter_array[i];
+                        if (interp)
+                            Parrot_schedule_interp_qentry(interp,
                                         dup_entry(entry));
-                        }
-                        UNLOCK(interpreter_array_mutex);
                     }
-                    Parrot_schedule_interp_qentry(interpreter_array[0], entry);
-                    edebug((stderr, "deliver SIGINT to 0\n"));
-                    }
-                    break;
-                default:
-                    mem_sys_free(entry);
-                    mem_sys_free(event);
+                    UNLOCK(interpreter_array_mutex);
+                }
+                Parrot_schedule_interp_qentry(interpreter_array[0], entry);
+                edebug((stderr, "deliver SIGINT to 0\n"));
             }
             break;
-        default:
+          default:
             mem_sys_free(entry);
             mem_sys_free(event);
-            exit_fatal(1, "Unknown event to broadcast");
-            break;
+        }
+        break;
+      default:
+        mem_sys_free(entry);
+        mem_sys_free(event);
+        exit_fatal(1, "Unknown event to broadcast");
+        break;
     }
 }
 
@@ -919,83 +919,82 @@ io_thread(SHIM(void *data))
         const int retval = select(n_highest, &rfds, &wfds, NULL, NULL);
 
         switch (retval) {
-            case -1:
-                if (errno == EINTR) {
-                    edebug((stderr, "select EINTR\n"));
-                    if (sig_int) {
-                        edebug((stderr, "int arrived\n"));
-                        sig_int = 0;
-                        /*
-                         * signal the event thread
-                         */
-                        schedule_signal_event(SIGINT);
-                    }
-                    if (sig_hup) {
-                        edebug((stderr, "int arrived\n"));
-                        sig_hup = 0;
-                        /*
-                         * signal the event thread
-                         */
-                        schedule_signal_event(SIGHUP);
-                    }
-
+          case -1:
+            if (errno == EINTR) {
+                edebug((stderr, "select EINTR\n"));
+                if (sig_int) {
+                    edebug((stderr, "int arrived\n"));
+                    sig_int = 0;
+                    /*
+                     * signal the event thread
+                     */
+                    schedule_signal_event(SIGINT);
                 }
-                break;
-            case 0:     /* timeout - can't happen */
-                break;
-            default:
-                edebug((stderr, "IO ready\n"));
-                for (i = 0; i < n_highest; ++i) {
-                    if (FD_ISSET(i, &rfds)) {
-                        if (i == PIPE_READ_FD) {
-                            io_thread_msg buf;
-                            /*
-                             * a command arrived
-                             */
-                            edebug((stderr, "msg arrived\n"));
-                            if (read(PIPE_READ_FD, &buf, sizeof (buf)) != sizeof (buf))
-                                exit_fatal(1,
-                                        "read error from msg pipe");
-                            switch (buf.command) {
-                                case IO_THR_MSG_TERMINATE:
-                                    running = 0;
+                if (sig_hup) {
+                    edebug((stderr, "int arrived\n"));
+                    sig_hup = 0;
+                    /*
+                     * signal the event thread
+                     */
+                    schedule_signal_event(SIGHUP);
+                }
+
+            }
+            break;
+          case 0:     /* timeout - can't happen */
+            break;
+          default:
+            edebug((stderr, "IO ready\n"));
+            for (i = 0; i < n_highest; ++i) {
+                if (FD_ISSET(i, &rfds)) {
+                    if (i == PIPE_READ_FD) {
+                        io_thread_msg buf;
+                        /*
+                         * a command arrived
+                         */
+                        edebug((stderr, "msg arrived\n"));
+                        if (read(PIPE_READ_FD, &buf, sizeof (buf)) != sizeof (buf))
+                            exit_fatal(1,
+                                    "read error from msg pipe");
+                        switch (buf.command) {
+                          case IO_THR_MSG_TERMINATE:
+                            running = 0;
+                            break;
+                          case IO_THR_MSG_ADD_SELECT_RD:
+                            {
+                                PMC * const pio = buf.ev->u.io_event.pio;
+                                const int fd = Parrot_io_getfd(buf.ev->interp, pio);
+                                if (FD_ISSET(fd, &act_rfds)) {
+                                    mem_sys_free(buf.ev);
                                     break;
-                                case IO_THR_MSG_ADD_SELECT_RD:
-                                    {
-                                        PMC * const pio = buf.ev->u.io_event.pio;
-                                        const int fd = Parrot_io_getfd(buf.ev->interp, pio);
-                                        if (FD_ISSET(fd, &act_rfds)) {
-                                            mem_sys_free(buf.ev);
-                                            break;
-                                        }
-                                        FD_SET(fd, &act_rfds);
-                                        if (fd >= n_highest)
-                                            n_highest = fd + 1;
-                                        store_io_event(&ios, buf.ev);
-                                    }
-                                    break;
-                                    /* TODO */
-                                default:
-                                    exit_fatal(1,
-                                            "unhandled msg in pipe");
-                                    break;
+                                }
+                                FD_SET(fd, &act_rfds);
+                                if (fd >= n_highest)
+                                    n_highest = fd + 1;
+                                store_io_event(&ios, buf.ev);
                             }
+                            break;
+                          default:
+                            /* TODO */
+                            exit_fatal(1, "unhandled msg in pipe");
+                            break;
+                        }
 
-                        }
-                        else {
-                            /*
-                             * one of the io_event fds is ready
-                             * remove from active set, as we don't
-                             * want to fire again during io_handler
-                             * invocation
-                             */
-                            FD_CLR(i, &act_rfds);
-                            io_thread_ready_rd(&ios, i);
-                        }
+                    }
+                    else {
+                        /*
+                         * one of the io_event fds is ready
+                         * remove from active set, as we don't
+                         * want to fire again during io_handler
+                         * invocation
+                         */
+                        FD_CLR(i, &act_rfds);
+                        io_thread_ready_rd(&ios, i);
                     }
                 }
-                /* TODO check fds */
-                break;
+            }
+            /* TODO check fds */
+            break;
         }
     }
     edebug((stderr, "IO thread terminated\n"));
@@ -1155,37 +1154,37 @@ process_events(ARGMOD(QUEUE *event_q))
         parrot_event *event = NULL;
 
         switch (entry->type) {
-            case QUEUE_ENTRY_TYPE_EVENT:
-                entry = nosync_pop_entry(event_q);
-                event = (parrot_event *)entry->data;
-                break;
+          case QUEUE_ENTRY_TYPE_EVENT:
+            entry = nosync_pop_entry(event_q);
+            event = (parrot_event *)entry->data;
+            break;
 
-            case QUEUE_ENTRY_TYPE_TIMED_EVENT:
-                event = (parrot_event *)entry->data;
-                now   = Parrot_floatval_time();
+          case QUEUE_ENTRY_TYPE_TIMED_EVENT:
+            event = (parrot_event *)entry->data;
+            now   = Parrot_floatval_time();
 
-                /*
-                 * if the timer_event isn't due yet, ignore the event
-                 * (we were signalled on insert of the event)
-                 * wait until we get at it again when time has elapsed
-                 */
-                if (now < event->u.timer_event.abs_time)
-                    return 1;
-                entry = nosync_pop_entry(event_q);
+            /*
+             * if the timer_event isn't due yet, ignore the event
+             * (we were signalled on insert of the event)
+             * wait until we get at it again when time has elapsed
+             */
+            if (now < event->u.timer_event.abs_time)
+                return 1;
+            entry = nosync_pop_entry(event_q);
 
-                /* if event is repeated dup and reinsert it */
+            /* if event is repeated dup and reinsert it */
 
-                if (event->u.timer_event.interval) {
-                    if (event->u.timer_event.repeat) {
-                        if (event->u.timer_event.repeat != -1)
-                            event->u.timer_event.repeat--;
-                        nosync_insert_entry(event_q,
+            if (event->u.timer_event.interval) {
+                if (event->u.timer_event.repeat) {
+                    if (event->u.timer_event.repeat != -1)
+                        event->u.timer_event.repeat--;
+                    nosync_insert_entry(event_q,
                                 dup_entry_interval(entry, now));
-                    }
                 }
-                break;
-            default:
-                exit_fatal(1, "Unknown queue entry");
+            }
+            break;
+          default:
+            exit_fatal(1, "Unknown queue entry");
         }
         PARROT_ASSERT(event);
         if (event->type == EVENT_TYPE_NONE) {
@@ -1418,24 +1417,24 @@ event_to_exception(PARROT_INTERP, ARGIN(const parrot_event* event))
     const int exit_code = -event->u.signal;
 
     switch (event->u.signal) {
-        case SIGINT:
-        case SIGHUP:
-            /*
-             * SIGINT is silent, if no exception handler is
-             * installed: set severity to EXCEPT_exit
-             */
-            {
-                STRING * const message = CONST_STRING(interp, "Caught signal.");
-                PMC           *exception = Parrot_ex_build_exception(interp,
+      case SIGINT:
+      case SIGHUP:
+        /*
+         * SIGINT is silent, if no exception handler is
+         * installed: set severity to EXCEPT_exit
+         */
+        {
+            STRING * const message = CONST_STRING(interp, "Caught signal.");
+            PMC           *exception = Parrot_ex_build_exception(interp,
                                         EXCEPT_exit, exit_code, message);
 
-                Parrot_ex_throw_from_c(interp, exception);
-            }
-            break;
-        default:
-            Parrot_ex_throw_from_c_args(interp, NULL, exit_code,
+            Parrot_ex_throw_from_c(interp, exception);
+        }
+        break;
+      default:
+        Parrot_ex_throw_from_c_args(interp, NULL, exit_code,
                     "Caught signal.");
-            break;
+        break;
     }
 }
 
@@ -1460,43 +1459,43 @@ do_event(PARROT_INTERP, ARGIN(parrot_event* event), ARGIN_NULLOK(opcode_t *next)
     ASSERT_ARGS(do_event)
     edebug((stderr, "do_event %s\n", et(event)));
     switch (event->type) {
-        case EVENT_TYPE_TERMINATE:
-            next = NULL;        /* this will terminate the run loop */
-            break;
-        case EVENT_TYPE_SIGNAL:
-            interp->sleeping = 0;
-            /* generate exception */
-            event_to_exception(interp, event);
-            /* not reached - will longjmp */
-            break;
-        case EVENT_TYPE_TIMER:
-            /* run ops, save registers */
-            Parrot_runops_fromc_args_event(interp,
-                    event->u.timer_event.sub, "v");
-            break;
-        case EVENT_TYPE_CALL_BACK:
-            edebug((stderr, "starting user cb\n"));
-            Parrot_run_callback(interp, event->u.call_back.cbi,
+      case EVENT_TYPE_TERMINATE:
+        next = NULL;        /* this will terminate the run loop */
+        break;
+      case EVENT_TYPE_SIGNAL:
+        interp->sleeping = 0;
+        /* generate exception */
+        event_to_exception(interp, event);
+        /* not reached - will longjmp */
+        break;
+      case EVENT_TYPE_TIMER:
+        /* run ops, save registers */
+        Parrot_pcc_invoke_sub_from_c_args(interp,
+                    event->u.timer_event.sub, "->");
+        break;
+      case EVENT_TYPE_CALL_BACK:
+        edebug((stderr, "starting user cb\n"));
+        Parrot_run_callback(interp, event->u.call_back.cbi,
                     event->u.call_back.external_data);
-            break;
-        case EVENT_TYPE_IO:
-            edebug((stderr, "starting io handler\n"));
-            Parrot_runops_fromc_args_event(interp,
+        break;
+      case EVENT_TYPE_IO:
+        edebug((stderr, "starting io handler\n"));
+        Parrot_pcc_invoke_sub_from_c_args(interp,
                     event->u.io_event.handler,
-                    "vPP",
+                    "PP->",
                     event->u.io_event.pio,
                     event->u.io_event.user_data);
-            break;
-        case EVENT_TYPE_SLEEP:
-            interp->sleeping = 0;
-            break;
-        case EVENT_TYPE_SUSPEND_FOR_GC:
-            edebug((stderr, "suspend for gc\n"));
-            pt_suspend_self_for_gc(interp);
-            break;
-        default:
-            fprintf(stderr, "Unhandled event type %d\n", (int)event->type);
-            break;
+        break;
+      case EVENT_TYPE_SLEEP:
+        interp->sleeping = 0;
+        break;
+      case EVENT_TYPE_SUSPEND_FOR_GC:
+        edebug((stderr, "suspend for gc\n"));
+        pt_suspend_self_for_gc(interp);
+        break;
+      default:
+        fprintf(stderr, "Unhandled event type %d\n", (int)event->type);
+        break;
     }
     mem_sys_free(event);
     return next;

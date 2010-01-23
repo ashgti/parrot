@@ -5,15 +5,15 @@
 
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Carp;
 use lib qw( lib t/configure/testlib );
+use_ok('config::init::defaults');
 use_ok('config::auto::format');
 use Parrot::BuildUtil;
-use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
+use Parrot::Configure::Step::Test;
 use Parrot::Configure::Test qw(
-    test_step_thru_runstep
     test_step_constructor_and_description
 );
 
@@ -24,7 +24,8 @@ my ($args, $step_list_ref) = process_options( {
     mode            => q{configure},
 } );
 
-my $conf = Parrot::Configure->new();
+my $conf = Parrot::Configure::Step::Test->new;
+$conf->include_config_results( $args );
 
 my ($task, $step_name, $step, $ret);
 my $pkg = q{auto::format};
@@ -97,15 +98,16 @@ $step = test_step_constructor_and_description($conf);
     );
 }
 {
-    use Config;
-    my $p5format = '%.15' . $Config{sPRIgldbl};
+    my $p5format = '%.15' . $conf->data->get('sPRIgldbl_provisional');
     $p5format =~ s/"//g;; # Perl 5's Config value has embedded double quotes
     $conf->data->set( nv => 'long double' );
+    eval {
     auto::format::_set_floatvalfmt_nvsize($conf);
+};
     is($conf->data->get( 'floatvalfmt' ), $p5format,
-        "floatvalfmt set as expected");
+        "floatvalfmt set as expected: nv long double");
     is($conf->data->get( 'nvsize' ), $conf->data->get( 'hugefloatvalsize' ),
-        "nvsize set as expected");
+        "nvsize set as expected: nv long double");
     $conf->data->set(
         nv          => undef,
         floatvalfmt => undef,

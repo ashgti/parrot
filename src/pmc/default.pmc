@@ -48,7 +48,7 @@ caller(PARROT_INTERP, PMC *pmc /*NULLOK*/)
 /*
 
 =item C<static void cant_do_method(PARROT_INTERP, PMC *pmc,
-                                   const char *methname)>
+                                   int index)>
 
 Throws an exception "$methname() not implemented in class '$class'", used by
 all unimplemented messages.
@@ -59,10 +59,11 @@ all unimplemented messages.
 
 PARROT_DOES_NOT_RETURN
 static void
-cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
+cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, int index)
 {
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ILL_INHERIT,
-            "%s() not implemented in class '%Ss'", methname,
+            "%s() not implemented in class '%Ss'",
+            Parrot_get_vtable_name(interp, index),
             caller(interp, pmc));
 }
 
@@ -70,7 +71,7 @@ cant_do_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
 /*
 
 =item C<static void cant_do_write_method(PARROT_INTERP, PMC *pmc,
-                                   const char *methname)>
+                                   int index)>
 
 Throws an exception "$methname() on read-only instance of '$class'", used by
 all updating messages on read-only instances.
@@ -81,10 +82,11 @@ all updating messages on read-only instances.
 
 PARROT_DOES_NOT_RETURN
 static void
-cant_do_write_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, const char *methname)
+cant_do_write_method(PARROT_INTERP, PMC *pmc /*NULLOK*/, int index)
 {
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_WRITE_TO_CONSTCLASS,
-            "%s() in read-only instance of '%Ss'", methname,
+            "%s() in read-only instance of '%Ss'",
+            Parrot_get_vtable_name(interp, index),
             caller(interp, pmc));
 }
 
@@ -106,30 +108,14 @@ in a future call to C<propagate_std_props()>
 static INTVAL
 check_set_std_props(PARROT_INTERP, PMC *pmc, STRING *key, PMC *value)
 {
-    /* the quick hack below cannot be used because the string could
-       be constructed in an interpreter that is later destroyed */
-#if  0
-    /* RT #46659
-     * a quick hack, to prevent freeing that string during GC
-     * triggered in t/pmc/pmc_62.t when configured with --gc=libc
-     */
-    static STRING *ro;
-    if (!ro)
-        ro = string_make(interp, "_ro", 3, "ascii",
-            PObj_constant_FLAG|PObj_external_FLAG);
-    if (Parrot_str_equal(interp, key, ro)) {
-#else
-
     /*
      * s2 in Parrot_str_equal is freed here
      */
     if (Parrot_str_equal(interp, key, CONST_STRING(interp, "_ro"))) {
-#endif
         /* pmc should set/clear readonly */
         const INTVAL on = VTABLE_get_bool(interp, value);
 
         /* morph to Const/normal class or readonly class */
-        /* RT #46661 warn when this fails? */
         if (on && (pmc->vtable->flags & VTABLE_HAS_CONST_TOO))
             pmc->vtable = interp->vtables[pmc->vtable->base_type + 1];
         else if (!on && (pmc->vtable->flags & (VTABLE_IS_CONST_FLAG)))
@@ -228,11 +214,7 @@ static PMC*
 make_prop_hash(PARROT_INTERP, PMC *self) {
     PMC *prop;
 
-    if (!self->pmc_ext)
-        Parrot_gc_add_pmc_ext(interp, self);
-
     PMC_metadata(self) = prop = pmc_new(interp, enum_class_Hash);
-    GC_WRITE_BARRIER(interp, self, NULL, prop);
     propagate_std_props(interp, self, prop);
     return prop;
 }
@@ -325,6 +307,19 @@ With a null C<initializer>, calls C<init()>, else throws an exception.
 
 /*
 
+=item C<void destroy()>
+
+Does nothing.
+
+=cut
+
+*/
+
+    VTABLE void destroy() {
+    }
+
+/*
+
 =item C<PMC *instantiate(PMC *init)>
 
 Default fallback. Creates a new PMC of the type of the class SELF and
@@ -375,10 +370,10 @@ NULL PMC is returned.
 */
 
     VTABLE PMC *getprop(STRING *key) {
-        if (SELF->pmc_ext && PMC_metadata(SELF))
-            return VTABLE_get_pmc_keyed_str(INTERP, PMC_metadata(SELF), key);
-        else
+        if (PMC_IS_NULL(PMC_metadata(SELF)))
             return check_get_std_props(interp, SELF, key);
+        else
+            return VTABLE_get_pmc_keyed_str(INTERP, PMC_metadata(SELF), key);
     }
 
 /*
@@ -395,15 +390,10 @@ Sets the property for C<*key> to C<*value>.
         if (check_set_std_props(INTERP, SELF, key, value))
             return;
 
-        if (SELF->pmc_ext && PMC_metadata(SELF)) {
-            VTABLE_set_pmc_keyed_str(INTERP,
-                PMC_metadata(SELF), key, value);
-        }
-        else {
-            PMC * const prop = make_prop_hash(INTERP, SELF);
+        if (PMC_IS_NULL(PMC_metadata(SELF)))
+            make_prop_hash(INTERP, SELF);
 
-            VTABLE_set_pmc_keyed_str(INTERP, prop, key, value);
-        }
+        VTABLE_set_pmc_keyed_str(INTERP, PMC_metadata(SELF), key, value);
     }
 
 /*
@@ -417,7 +407,7 @@ Deletes the property for C<*key>.
 */
 
     VTABLE void delprop(STRING *key) {
-        if (SELF->pmc_ext && PMC_metadata(SELF))
+        if (!PMC_IS_NULL(PMC_metadata(SELF)))
             VTABLE_delete_keyed_str(INTERP, PMC_metadata(SELF), key);
     }
 
@@ -432,10 +422,7 @@ Returns the PMC's properties or the NULL PMC if no properties exist.
 */
 
     VTABLE PMC *getprops() {
-        if (!SELF->pmc_ext)
-            Parrot_gc_add_pmc_ext(INTERP, SELF);
-
-        if (!PMC_metadata(SELF)) {
+        if (PMC_IS_NULL(PMC_metadata(SELF))) {
             if (has_pending_std_props(SELF))
                 return make_prop_hash(INTERP, SELF);
             else
@@ -714,6 +701,21 @@ and C<value>.
 
 /*
 
+=item C<INTVAL hashvalue()>
+
+Calculate hashvalue for PMC. Default behaviour stringify and use string.
+
+=cut
+
+*/
+
+    INTVAL hashvalue() {
+        STRING *s = SELF.get_string();
+        return key_hash_STRING(INTERP, s, 0);
+    }
+
+/*
+
 =item C<INTVAL is_equal(PMC *value)>
 
 Default fallback. Performs a multiple dispatch call for 'is_equal'.
@@ -829,22 +831,6 @@ Converts C<key> to a PMC key and calls C<delete_keyed()> with it.
 
 /*
 
-=item C<PMC *nextkey_keyed_int(INTVAL key, INTVAL w)>
-
-Converts C<key> to a PMC key and returns the result of calling
-C<nextkey_keyed()> with it.
-
-=cut
-
-*/
-
-    VTABLE PMC *nextkey_keyed_int(INTVAL key, INTVAL w) {
-        PMC *const r_key = INT2KEY(INTERP, key);
-        return SELF.nextkey_keyed(r_key, w);
-    }
-
-/*
-
 =item C<INTVAL can(STRING *method)>
 
 Reports whether the PMC "can" perform C<method>.
@@ -904,8 +890,8 @@ true (1) is returned; otherwise, false (0) is returned.
 */
 
     VTABLE INTVAL isa_pmc(PMC *lookup) {
-       Hash   * const isa_hash = SELF->vtable->isa_hash;
-       STRING *pmc_name;
+        Hash   * const isa_hash = SELF->vtable->isa_hash;
+        STRING *pmc_name;
 
         if (PMC_IS_NULL(lookup))
             return 0;
@@ -915,7 +901,6 @@ true (1) is returned; otherwise, false (0) is returned.
         if (!isa_hash)
             return Parrot_str_equal(interp, SELF->vtable->whoami, pmc_name);
 
-        /* RT #46665 - walk mro */
         return parrot_hash_exists(INTERP, isa_hash, (void *)pmc_name);
     }
 
@@ -932,7 +917,6 @@ true (1) is returned; otherwise, false (0) is returned.
 */
 
     VTABLE INTVAL isa(STRING *_class) {
-        /* RT #46665 - walk mro */
         Hash * const isa_hash = SELF->vtable->isa_hash;
         if (!isa_hash)
             return Parrot_str_equal(interp, SELF->vtable->whoami, _class);
@@ -1068,18 +1052,6 @@ Used by GC to mark the PMC.
 */
 
     VTABLE void visit(visit_info *info) {
-        /* default - mark prop hash */
-        if (SELF->pmc_ext && PMC_metadata(SELF) &&
-            info->extra_flags != EXTRA_IS_PROP_HASH) {
-            info->extra_flags = EXTRA_IS_PROP_HASH;
-            info->extra       = PMC_metadata(SELF);
-
-            /* place escape mark */
-            (info->visit_pmc_now)(INTERP, SELF, info);
-
-            /* place and the prop hash */
-            (info->visit_pmc_now)(INTERP, PMC_metadata(SELF), info);
-        }
     }
 
 /*
@@ -1123,17 +1095,7 @@ Initializes the PMC during unarchiving.
 
     VTABLE void thaw(visit_info *info) {
         /* default - initialize the PMC */
-        if (info->extra_flags == EXTRA_IS_PROP_HASH) {
-            if (!SELF->pmc_ext)
-                Parrot_gc_add_pmc_ext(INTERP, SELF);
-
-            info->thaw_ptr  = &PMC_metadata(SELF);
-            info->container = SELF;
-
-            (info->visit_pmc_now)(INTERP, PMC_metadata(SELF), info);
-        }
-        else
-            SELF.init();
+        SELF.init();
     }
 
 /*

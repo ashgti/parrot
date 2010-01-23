@@ -115,6 +115,33 @@ Return the C<P6protoobject> for the invocant.
 .end
 
 
+=item WHERE()
+
+Return the memory address for the invocant.
+
+=cut
+
+.sub 'WHERE' :method
+    $I0 = get_addr self
+    .return ($I0)
+.end
+
+
+=item WHO()
+
+Return the package for the object.
+
+=cut
+
+.sub 'WHO' :method
+    $P0 = typeof self
+    $P0 = getprop 'metaclass', $P0
+    $P0 = getattribute $P0, 'parrotclass'
+    $P0 = $P0.'get_namespace'()
+    .return ($P0)
+.end
+
+
 =item PROTOOVERRIDES()
 
 Return a list of methods to be overridden in protoobjects
@@ -227,31 +254,44 @@ Deprecated; use add_parent(class, parentclass)
     .local pmc parrotclassns, mroiter, methods, methoditer
     parrotclassns = parrotclass.'get_namespace'()
     $P0 = parentclass.'inspect'('all_parents')
-    mroiter = new 'Iterator', $P0
+    mroiter = iter $P0
   mro_loop:
     unless mroiter goto mro_end
     $P0 = shift mroiter
     methods = $P0.'methods'()
-    methoditer = new 'Iterator', methods
+    methoditer = iter methods
   method_loop:
     unless methoditer goto mro_loop
-    $S0 = shift methoditer
-    $P0 = parrotclassns[$S0]
-    if null $P0 goto add_method
-    $I0 = isa $P0, 'MultiSub'
-    unless $I0 goto method_loop
-  add_method:
-    $P0 = methods[$S0]
-    $I0 = isa $P0, 'NCI'
+    .local string methodname
+    .local pmc methodpmc
+    methodname = shift methoditer
+    methodpmc = methods[methodname]
+    # don't add NCI methods (they don't work)
+    $I0 = isa methodpmc, 'NCI'
     if $I0 goto method_loop
+    # if there's no existing entry, add method directly
+    $P0 = parrotclassns[methodname]
+    if null $P0 goto add_method
+    # if existing entry isn't a MultiSub, skip it
+    $I0 = isa $P0, ['MultiSub']
+    unless $I0 goto method_loop
     push_eh err
-    parrotclassns.'add_sub'($S0, $P0)
-    pop_eh
+    parrotclassns.'add_sub'(methodname, methodpmc)
   err:
+    pop_eh
+    goto method_loop
+  add_method:
+    parrotclassns[methodname] = methodpmc
     goto method_loop
   mro_end:
 
   end:
+.end
+.sub 'add_parent' :method :multi(_,P6metaclass,_)
+    .param pmc obj
+    .param pmc parentclass
+    $P0 = getattribute obj, 'parrotclass'
+    self.'add_parent'($P0, parentclass)
 .end
 
 
@@ -346,7 +386,8 @@ Add C<role> to C<class>.
 .end
 
 
-=item register(parrotclass [, 'name'=>name] [, 'protoobject'=>proto] [, 'parent'=>parentclass] [, 'hll'=>hll])
+=item register(parrotclass [, 'name'=>name] [, 'protoobject'=>proto]
+               [, 'parent'=>parentclass] [, 'hll'=>hll] [, 'how'=>how)
 
 Sets objects of type C<parrotclass> to use C<protoobject>,
 and verifies that C<parrotclass> has P6object methods defined
@@ -358,6 +399,9 @@ The C<name> parameter causes objects to be registered using a name
 that differs from the parrotclass name.  This is useful when needing
 to map to a class name that already exists in Parrot (e.g., 'Hash'
 or 'Object').
+
+The C<how> parameter allows you to specify an already-existing metaclass
+instance to be used for this class rather than creating a new one.
 
 =cut
 
@@ -400,11 +444,11 @@ or 'Object').
     $S0 = parentclass
     parentclass = split ' ', $S0
   parent_array:
-    .local pmc iter, item
-    iter = new 'Iterator', parentclass
+    .local pmc it, item
+    it = iter parentclass
   parent_loop:
-    unless iter goto parent_done
-    item = shift iter
+    unless it goto parent_done
+    item = shift it
     $S0 = item
     $P0 = split ';', $S0
     $I0 = elements $P0
@@ -423,7 +467,10 @@ or 'Object').
     self.'add_parent'(item, 'to'=>parrotclass)
     goto parent_loop
   parent_done:
+    $I0 = isa parrotclass, 'P6object'
+    if $I0 goto isa_p6object_already
     self.'add_parent'('P6object', 'to'=>parrotclass)
+  isa_p6object_already:
 
     ##  determine parrotclass' canonical p6-name
     .local string name
@@ -441,16 +488,20 @@ or 'Object').
     ns = split '::', name
   have_ns:
 
-    ##  get the metaclass (how) from :protoobject, or create one
+    ##  get the metaclass (how) from :how, or :protoobject, or create one
     .local pmc how
+    how = options['how']
+    unless null how goto have_how
     $P0 = options['protoobject']
     if null $P0 goto make_how
     how = $P0.'HOW'()
-    goto have_how
+    goto how_setup
   make_how:
     ##  create a metaclass for parrotclass
-    how = new 'P6metaclass'
+    $P0 = typeof self
+    how = new $P0
     setattribute how, 'parrotclass', parrotclass
+  have_how:
 
     ##  create an anonymous class for the protoobject
     .local pmc protoclass, protoobject
@@ -469,10 +520,10 @@ or 'Object').
     methodname = shift protooverrides
     unless methodname goto override_loop
     $P0 = parrotclass.'inspect'('all_parents')
-    iter = new 'Iterator', $P0
+    it = iter $P0
   method_loop:
-    unless iter goto method_end
-    $P0 = shift iter
+    unless it goto method_end
+    $P0 = shift it
     $P0 = $P0.'methods'()
     $P0 = $P0[methodname]
     if null $P0 goto method_loop
@@ -506,7 +557,7 @@ or 'Object').
     push ns, 'EXPORT'
     push ns, 'ALL'
     set_root_global ns, $S0, protoobject
-    goto have_how
+    goto how_setup
 
     ##  anonymous classes have empty strings for shortname and longname
   anonymous_class:
@@ -515,7 +566,7 @@ or 'Object').
     setattribute how, 'longname', longname
     setattribute how, 'shortname', shortname
 
-  have_how:
+  how_setup:
     ##  attach the metaclass object to the parrotclass
     setprop parrotclass, 'metaclass', how
 
@@ -576,7 +627,7 @@ of names separated by spaces.
     goto have_parrotclass
   have_parrotclass:
 
-    .local pmc attrlist, iter
+    .local pmc attrlist, it
     attrlist = options['attr']
     if null attrlist goto attr_done
     $I0 = does attrlist, 'array'
@@ -584,10 +635,10 @@ of names separated by spaces.
     $S0 = attrlist
     attrlist = split ' ', $S0
   have_attrlist:
-    iter = new 'Iterator', attrlist
+    it = iter attrlist
   iter_loop:
-    unless iter goto iter_end
-    $S0 = shift iter
+    unless it goto iter_end
+    $S0 = shift it
     unless $S0 goto iter_loop
     addattribute parrotclass, $S0
     goto iter_loop
@@ -751,21 +802,26 @@ will be used in lieu of this one.)
     $P0 = self.'HOW'()
     parrotclass = $P0.'get_parrotclass'(self)
 
+    # Perl6Object (legacy) and Mu accept anything.
     $S0 = parrotclass
     if $S0 == 'Perl6Object' goto accept_anyway
+    if $S0 == 'Mu' goto accept_anyway
 
-    $I0 = isa topic, 'Junction'
-    if $I0 goto normal_check
-
-    if $S0 == 'Any' goto accept_anyway
-
-  normal_check:
+    # Otherwise, just try a normal check.
     $I0 = can topic, 'HOW'
     unless $I0 goto end
     topicwhat = topic.'WHAT'()
     $I0 = isa topicwhat, parrotclass
     if $I0 goto end
     $I0 = does topic, parrotclass
+    if $I0 goto end
+
+    # If this fails, and we want Any, and it's something form outside
+    # of the Perl 6 world, we'd best just accept it.
+    unless $S0 == 'Any' goto end
+    $I0 = isa topicwhat, 'Perl6Object'
+    unless $I0 goto accept_anyway
+    $I0 = 0
     goto end
 
   accept_anyway:
@@ -795,4 +851,3 @@ Copyright (C) 2008, Parrot Foundation.
 #   fill-column: 100
 # End:
 # vim: expandtab shiftwidth=4 ft=pir:
-

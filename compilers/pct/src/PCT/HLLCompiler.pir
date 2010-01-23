@@ -32,7 +32,7 @@ running compilers from a command line.
     $P0 = split ' ', 'parse past post pir evalpmc'
     setattribute self, '@stages', $P0
 
-    $P0 = split ' ', 'e=s help|h target=s dumper=s trace|t=s encoding=s output|o=s combine version|v'
+    $P0 = split ' ', 'e=s help|h target=s dumper=s trace|t=s encoding=s output|o=s combine version|v stagestats'
     setattribute self, '@cmdoptions', $P0
 
     $P1 = box <<'    USAGE'
@@ -41,11 +41,11 @@ running compilers from a command line.
   Options:
     USAGE
 
-    .local pmc iter
-    iter = new 'Iterator', $P0
+    .local pmc it
+    it = iter $P0
   options_loop:
-    unless iter goto options_end
-    $P3  = shift iter
+    unless it goto options_end
+    $P3  = shift it
     $P1 .= "    "
     $P1 .= $P3
     $P1 .= "\n"
@@ -193,15 +193,15 @@ Delete a stage from the compilation process queue.
 .sub 'removestage' :method
     .param string stagename
 
-    .local pmc stages, iter, newstages
+    .local pmc stages, it, newstages
     stages = getattribute self, '@stages'
     newstages = new 'ResizableStringArray'
 
-    iter = new 'Iterator', stages
+    it = iter stages
   iter_loop:
-    unless iter goto iter_end
+    unless it goto iter_end
     .local pmc current
-    current = shift iter
+    current = shift it
     if current == stagename goto iter_loop
       push newstages, current
     goto iter_loop
@@ -245,14 +245,14 @@ be added at every instance of the repeated stage.
       target = adverbs['after']
 
   positional_insert:
-    .local pmc iter, newstages
+    .local pmc it, newstages
     newstages = new 'ResizableStringArray'
 
-    iter = new 'Iterator', stages
+    it = iter stages
   iter_loop:
-    unless iter goto iter_end
+    unless it goto iter_end
     .local pmc current
-    current = shift iter
+    current = shift it
     unless current == target goto no_insert_before
       unless position == 'before' goto no_insert_before
         push newstages, stagename
@@ -289,22 +289,46 @@ when the stage corresponding to target has been reached.
     .param pmc source
     .param pmc adverbs         :slurpy :named
 
+    .local pmc compiling, options
+    compiling = new ['Hash']
+    .lex '%*COMPILING', compiling
+    compiling['%?OPTIONS'] = adverbs
+
     .local string target
     target = adverbs['target']
     target = downcase target
 
-    .local pmc stages, result, iter
+    .local int stagestats
+    stagestats = adverbs['stagestats']
+
+    .local pmc stages, result, it
     result = source
     stages = getattribute self, '@stages'
-    iter = new 'Iterator', stages
+    it = iter stages
+    if stagestats goto stagestats_loop
+
   iter_loop:
-    unless iter goto iter_end
+    unless it goto have_result
     .local string stagename
-    stagename = shift iter
+    stagename = shift it
     result = self.stagename(result, adverbs :flat :named)
     if target == stagename goto have_result
     goto iter_loop
-  iter_end:
+
+  stagestats_loop:
+    unless it goto have_result
+    stagename = shift it
+    $N0 = time
+    result = self.stagename(result, adverbs :flat :named)
+    $N1 = time
+    $N2 = $N1 - $N0
+    printerr "Stage '"
+    printerr stagename
+    printerr "': "
+    printerr $N2
+    printerr " sec\n"
+    if target == stagename goto have_result
+    goto stagestats_loop
 
   have_result:
     .return (result)
@@ -387,7 +411,11 @@ to any options and return the resulting parse tree.
     null action
     if target == 'parse' goto have_action
     parseactions = self.'parseactions'()
-    unless parseactions goto have_action
+    $I0 = isa parseactions, ['Undef']
+    if $I0 goto have_action
+    ##  if parseactions is a protoobject, use it directly
+    $I0 = isa parseactions, 'P6protoobject'
+    if $I0 goto action_exact
     ##  if parseactions is a Class or array, make action directly from that
     $I0 = isa parseactions, 'Class'
     if $I0 goto action_make
@@ -398,6 +426,7 @@ to any options and return the resulting parse tree.
     ##  if parseactions is not a String, use it directly.
     $I0 = isa parseactions, 'String'
     if $I0 goto action_string
+  action_exact:
     action = parseactions
     goto have_action
   action_namespace:
@@ -543,6 +572,13 @@ options provided.
     .local string target
     target = adverbs['target']
     if target != '' goto end
+    .local pmc outer_ctx, outer
+    outer_ctx = adverbs['outer_ctx']
+    if null outer_ctx goto outer_done
+    outer = outer_ctx['current_sub']
+    $P1 = $P0[0]
+    $P1.'set_outer'(outer)
+  outer_done:
     $I0 = adverbs['trace']
     trace $I0
     $P0 = $P0(args :flat)
@@ -690,13 +726,13 @@ options are passed to the evaluator.
   have_files_array:
     .local string code
     code = ''
-    .local pmc iter
-    iter = new 'Iterator', files
+    .local pmc it
+    it = iter files
   iter_loop:
-    unless iter goto iter_end
+    unless it goto iter_end
     .local string iname
     .local pmc ifh
-    iname = shift iter
+    iname = shift it
     ifh = new 'FileHandle'
     unless encoding == 'utf8' goto iter_loop_1
     ifh.'encoding'(encoding)
@@ -735,14 +771,14 @@ Performs option processing of command-line args
     .local string arg0
     arg0 = shift args
     .local pmc getopts
-    getopts = new 'Getopt::Obj'
+    getopts = new ['Getopt';'Obj']
     getopts.'notOptStop'(1)
     $P0 = getattribute self, '@cmdoptions'
-    .local pmc iter
-    iter = new 'Iterator', $P0
+    .local pmc it
+    it = iter $P0
   getopts_loop:
-    unless iter goto getopts_end
-    $S0 = shift iter
+    unless it goto getopts_end
+    $S0 = shift it
     push getopts, $S0
     goto getopts_loop
   getopts_end:
@@ -783,11 +819,11 @@ Generic method for compilers invoked from a shell command line.
     opts = self.'process_args'(args)
 
     ##   merge command-line args with defaults passed in from caller
-    .local pmc iter
-    iter = new 'Iterator', opts
+    .local pmc it
+    it = iter opts
   mergeopts_loop:
-    unless iter goto mergeopts_end
-    $S0 = shift iter
+    unless it goto mergeopts_end
+    $S0 = shift it
     $P0 = opts[$S0]
     adverbs[$S0] = $P0
     goto mergeopts_loop

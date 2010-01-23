@@ -5,19 +5,16 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  47;
+use Test::More tests =>  29;
 use Carp;
 use Cwd;
 use File::Spec;
 use File::Temp qw( tempdir );
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
 use_ok('config::auto::gdbm');
-use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
+use Parrot::Configure::Step::Test;
 use Parrot::Configure::Test qw(
-    test_step_thru_runstep
-    rerun_defaults_for_testing
     test_step_constructor_and_description
 );
 use IO::CaptureOutput qw| capture |;
@@ -37,11 +34,10 @@ my ($args, $step_list_ref) = process_options( {
     mode => q{configure},
 } );
 
-my $conf = Parrot::Configure->new;
+my $conf = Parrot::Configure::Step::Test->new;
+$conf->include_config_results( $args );
 
 my $serialized = $conf->pcfreeze();
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
 
 my $pkg = q{auto::gdbm};
 
@@ -56,24 +52,18 @@ is($step->result(), q{no}, "Expected result was set");
 
 $conf->replenish($serialized);
 
-########## --without-gdbm; _handle_darwin_for_fink() ##########
+########## --without-gdbm ##########
 
 ($args, $step_list_ref) = process_options( {
     argv => [ q{--without-gdbm} ],
     mode => q{configure},
 } );
-rerun_defaults_for_testing($conf, $args );
 $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
 my $osname;
 my ($flagsbefore, $flagsafter);
 $osname = 'foobar';
-$flagsbefore = $conf->data->get( 'linkflags' );
-ok($step->_handle_darwin_for_fink($conf, $osname, 'gdbm.h'),
-    "handle_darwin_for_fink() returned true value");
-$flagsafter = $conf->data->get( 'linkflags' );
-is($flagsbefore, $flagsafter, "No change in linkflags, as expected");
 my $cwd = cwd();
 {
     my $tdir = tempdir( CLEANUP => 1 );
@@ -84,12 +74,6 @@ my $cwd = cwd();
     my $includedir = File::Spec->catdir( $tdir, 'include' );
     $conf->data->set('fink_lib_dir' => $libdir);
     $conf->data->set('fink_include_dir' => $includedir);
-    $osname = 'darwin';
-    $flagsbefore = $conf->data->get( 'linkflags' );
-    ok($step->_handle_darwin_for_fink($conf, $osname, 'gdbm.h'),
-        "handle_darwin_for_fink() returned true value");
-    $flagsafter = $conf->data->get( 'linkflags' );
-    is($flagsbefore, $flagsafter, "No change in linkflags, as expected");
 
     ok(chdir $cwd, "Able to change back to original directory after testing");
 }
@@ -107,15 +91,6 @@ my $cwd = cwd();
     print $FH "Hello world\n";
     close $FH or croak "Could not close after writing";
 
-    $osname = 'darwin';
-    $flagsbefore = $conf->data->get( 'linkflags' );
-    ok($step->_handle_darwin_for_fink($conf, $osname, 'gdbm.h'),
-        "handle_darwin_for_fink() returned true value");
-    $flagsafter = $conf->data->get( 'linkflags' );
-    isnt($flagsbefore, $flagsafter, "Change in linkflags, as expected");
-    like($conf->data->get( 'linkflags' ), qr/-L\Q$libdir\E/,
-        "'linkflags' modified as expected");
-
     ok(chdir $cwd, "Able to change back to original directory after testing");
 }
 
@@ -127,7 +102,6 @@ $conf->replenish($serialized);
     argv => [ q{--without-gdbm} ],
     mode => q{configure},
 } );
-rerun_defaults_for_testing($conf, $args );
 $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);

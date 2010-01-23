@@ -30,17 +30,17 @@ static INTVAL register_encoding(SHIM_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_register_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_register_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(encodingname) \
-    || PARROT_ASSERT_ARG(encoding)
+    , PARROT_ASSERT_ARG(encoding))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
-ENCODING *Parrot_default_encoding_ptr;
-ENCODING *Parrot_fixed_8_encoding_ptr;
-ENCODING *Parrot_utf8_encoding_ptr;
-ENCODING *Parrot_ucs2_encoding_ptr;
-ENCODING *Parrot_utf16_encoding_ptr;
+ENCODING *Parrot_default_encoding_ptr = NULL;
+ENCODING *Parrot_fixed_8_encoding_ptr = NULL;
+ENCODING *Parrot_utf8_encoding_ptr    = NULL;
+ENCODING *Parrot_ucs2_encoding_ptr    = NULL;
+ENCODING *Parrot_utf16_encoding_ptr   = NULL;
 
 typedef struct One_encoding {
     NOTNULL(ENCODING *encoding);
@@ -133,7 +133,7 @@ Parrot_find_encoding(SHIM_INTERP, ARGIN(const char *encodingname))
 *encodingname)>
 
 Loads an encoding. Currently throws an exception because we cannot load
-encodings. See RT #58186.
+encodings. See https://trac.parrot.org/parrot/wiki/StringsTasklist.
 
 =cut
 
@@ -456,7 +456,7 @@ Parrot_find_encoding_converter(PARROT_INTERP, ARGIN(ENCODING *lhs), ARGIN(ENCODI
     UNUSED(lhs);
     UNUSED(rhs);
 
-    /* XXX Apparently unwritten RT #58188 */
+    /* XXX Apparently unwritten https://trac.parrot.org/parrot/wiki/StringsTasklist */
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
         "Can't find encoding converters yet.");
 }

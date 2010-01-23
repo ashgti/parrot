@@ -21,7 +21,7 @@ out-of-bounds test. Checks INT and PMC keys.
     .include 'fp_equality.pasm'
     .include 'test_more.pir'
 
-    plan(121)
+    plan(128)
 
     resize_tests()
     negative_array_size()
@@ -30,6 +30,7 @@ out-of-bounds test. Checks INT and PMC keys.
     set_keyed_get_keyed_tests()
     interface_check()
     inherited_sort_method()
+    sort_subclass()
     push_pmc()
     push_int()
     push_string()
@@ -48,6 +49,8 @@ out-of-bounds test. Checks INT and PMC keys.
     method_forms_of_unshift_etc()
     sort_with_broken_cmp()
     addr_tests()
+    equality_tests()
+    sort_tailcall()
 .end
 
 
@@ -325,6 +328,35 @@ lp:
     goto lp
 done:
     is(sorted, "1 2 5 9 10 ", "inherited sort method works")
+.end
+
+
+.sub sort_subclass
+    .local pmc subrpa, arr
+    subrpa = subclass ['ResizablePMCArray'], 'ssRPA'
+    arr = new subrpa
+    arr[0] = 'p'
+    arr[1] = 'a'
+    arr[2] = 'z'
+    # Use a comparator that gives a reverse alphabetical order
+    # to make sure sort is using it, and not some default from
+    # elsewhere.
+    .local pmc comparator
+    comparator = get_global 'compare_reverse'
+    arr.'sort'(comparator)
+    .local string s, aux
+    s = typeof arr
+    concat s, ':'
+    aux = join '-', arr
+    concat s, aux
+    is(s, 'ssRPA:z-p-a', "sort works in a pir subclass, TT #218")
+.end
+
+.sub compare_reverse
+    .param string a
+    .param string b
+    $I0 = cmp_str b, a
+    .return($I0)
 .end
 
 
@@ -703,7 +735,7 @@ loop:
 .sub get_array_string
     .param pmc p
     $S0 = ''
-    $P3 = new ['Iterator'], p
+    $P3 = iter p
 loop:
     unless $P3 goto loop_end
     $P4 = shift $P3
@@ -831,9 +863,8 @@ loop_end:
 .end
 
 
-#RT #40958 - can't iterate subclass of ResizablePMCArray
 .sub iterate_subclass_of_rpa
-    .local pmc arr, iter
+    .local pmc arr, it
     $P0 = subclass 'ResizablePMCArray', 'MyArray'
 
     arr = new ['MyArray']
@@ -844,10 +875,10 @@ loop_end:
     is($I0, 3, "RPA subclass has correct element count")
 
     $S1 = ''
-    iter = new ['Iterator'], arr
+    it = iter arr
 loop:
-    unless iter goto end
-    $P2 = shift iter
+    unless it goto end
+    $P2 = shift it
     $S0 = $P2
     concat $S1, $S0
     concat $S1, ","
@@ -870,7 +901,6 @@ end:
 .end
 
 
-#RT #56636 - segfault from sort if comparison is always 1
 .sub sort_with_broken_cmp
     .local pmc array
     array = new ['ResizablePMCArray']
@@ -912,7 +942,84 @@ end:
     is($I0, $I1, 'Adding element to RPA keeps same addr')
 .end
 
+.sub 'equality_tests'
+    .local pmc array1, array2, array3, array4
+    array1 = new ['ResizablePMCArray']
+    array2 = new ['ResizablePMCArray']
+    array3 = new ['ResizablePMCArray']
 
+    array1[0] = "Hello Parrot!"
+    array1[1] = 1664
+    array1[2] = 2.718
+
+    $P0 = box "Hello Parrot!"
+    array2[0] = $P0
+    $P0 = box 1664
+    array2[1] = $P0
+    $P0 = box 2.718
+    array2[2] = $P0
+
+    array3[0] = "Goodbye Parrot!"
+    array3[1] = 1664
+    array3[2] = 2.718
+
+    array4 = clone array1
+
+    is(array1, array2, 'Physically disjoint, but equal arrays')
+    is(array1, array4, 'Clones are equal')
+    isnt(array1, array3, 'Different arrays')
+.end
+
+.sub sort_tailcall
+    .local pmc array
+    array = new 'ResizablePMCArray'
+    push array, 4
+    push array, 5
+    push array, 3
+    push array, 2
+    push array, 5
+    push array, 1
+   
+    .local string unsorted 
+    unsorted = join ' ', array
+    is(unsorted,"4 5 3 2 5 1", "unsorted array")
+
+    ## sort using a non-tailcall function 
+    .const 'Sub' cmp_normal = 'cmp_normal_tailcall'
+    $P1 = clone array
+    $P1.'sort'(cmp_normal)
+    .local string sorted1
+    sorted1 = join ' ', $P1
+    is (sorted1, "1 2 3 4 5 5", "sorted array, no tailcall")
+
+    ## sort using a tailcall function
+    .const 'Sub' cmp_tailcall = 'cmp_tailcall_tailcall'
+    $P1 = clone array
+    $P1.'sort'(cmp_tailcall)
+    .local string sorted2
+    sorted2 = join ' ', $P1
+    is(sorted2, "1 2 3 4 5 5", "sorted array, with tailcall")
+.end
+
+.sub 'cmp_func_tailcall'
+    .param pmc a
+    .param pmc b
+    $I0 = cmp a, b
+    .return ($I0)
+.end
+
+.sub 'cmp_normal_tailcall'
+    .param pmc a
+    .param pmc b
+    $P0 = 'cmp_func_tailcall'(a, b)
+    .return ($P0)
+.end
+
+.sub 'cmp_tailcall_tailcall'
+    .param pmc a
+    .param pmc b
+    .tailcall 'cmp_func_tailcall'(a, b)
+.end
 # don't forget to change the test plan
 
 # Local Variables:

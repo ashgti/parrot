@@ -13,12 +13,12 @@ Implementing a Perl 6 style print statement.
 
 .sub 'print'
     .param pmc list            :slurpy
-    .local pmc iter
+    .local pmc it
 
-    iter = new 'Iterator', list
+    it = iter list
   iter_loop:
-    unless iter goto iter_end
-    $P0 = shift iter
+    unless it goto iter_end
+    $P0 = shift it
     print $P0
     goto iter_loop
   iter_end:
@@ -127,6 +127,22 @@ test counter to 0 and outputs the TAP plan line.
     .param int sec
     sleep sec
     .return ()
+.end
+
+=item C<eval(lang,code)>
+
+=cut
+
+.sub 'eval'
+    .param string text
+    .param string lang
+    .local pmc c, code
+    lang = downcase lang
+    load_language lang
+    c = compreg lang
+    code = c.'compile'(text)
+    $P0 = code()
+    .return ($P0)
 .end
 
 =back

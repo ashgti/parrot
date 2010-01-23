@@ -153,16 +153,16 @@ FixedPMCArray:\s\d+\.\d+s\n
 #        Estimated\sops:\s200000000\n
 #        Elapsed\stime:\s\s\d+\.\d+\n
 #        M\sop\/s:\s\s\s\s\s\s\s\s\d+\.\d+\n$/x,
-    q{oo1.pasm}     => qq(10\n),
-    q{oo2.pasm}     => qq(10\n),
-    q{oo3.pasm}     => qq(10\n),
+    q{oo1.pir}      => qq(10\n),
+    q{oo2.pir}      => qq(10\n),
+    q{oo3.pir}      => qq(10\n),
     q{oo4.pasm}     => qq(500000\n),
     q{oo5.pir}      => qq(10\n),
     q{oo6.pir}      => qq(500000\n),
     q{oofib.pir}    => qr/^fib\(24\)\s=\s46368\s\d+\.\d+s$/x,
     q{overload.pir} => qq(42\n),
-    q{primes.pasm}  => qr/^N\sprimes\sup\sto\s1000\sis:\s168\n
-        last\sis:\s1001\n
+    q{primes.pasm}  => qr/^N\sprimes\sup\sto\s5000\sis:\s669\n
+        last\sis:\s4999\n
         Elapsed\stime:\s\d+\.\d+\n$/x,
     q{primes2.pir} => qr/^N\sprimes\scalculated\sto\s500\sis\s96\n
         last\sis:\s499\n$/x,

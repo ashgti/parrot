@@ -19,7 +19,7 @@ integer type without going to an I register.
 
 */
 
-#include "pmc_bigint.h"
+#include "pmc/pmc_bigint.h"
 
 static void
 maybe_throw_overflow_error(PARROT_INTERP)
@@ -43,11 +43,12 @@ upgrade_self_to_bignum(PARROT_INTERP, PMC *self)
     return self;
 }
 
-pmclass Integer extends scalar provides integer provides scalar {
+pmclass Integer extends scalar provides integer provides scalar auto_attrs {
     ATTR INTVAL iv; /* the value of this Integer */
 
 /*
-=item C<PMC instantiate(PMC *sig)>
+
+=item C<PMC init_pmc(PMC *init)>
 
 Create a new Integer with arguments passed according to pdd03.
 
@@ -55,52 +56,22 @@ Create a new Integer with arguments passed according to pdd03.
 
 Initializes the integer with a default value of C<0>.
 
-=item C<void destroy()>
-
-Destroys this PMC.
-
 =cut
 
 */
 
-    VTABLE PMC *instantiate(PMC *sig) {
-        PMC            * const ret    = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
-        const opcode_t * const arg_op = interp->current_args;
-        INTVAL                 init   = 0;
-
-        if (VTABLE_elements(interp, sig) == 2) {
-            switch (VTABLE_get_integer_keyed_int(INTERP, sig, 1)) {
-                case PARROT_ARG_I:
-                    init = REG_INT(interp, arg_op[3]);
-                    break;
-                case PARROT_ARG_IC:
-                    init = arg_op[3];
-                    break;
-                default:
-                    Parrot_ex_throw_from_c_args(INTERP, NULL,
-                            EXCEPTION_SYNTAX_ERROR,
-                            "Integer.instantiate: unhandled initializer");
-                    break;
-            }
-        }
-
-        VTABLE_set_integer_native(INTERP, ret, init);
-        return ret;
-    }
-
-
     VTABLE void init() {
         Parrot_Integer_attributes * const attrs =
-            mem_allocate_typed(Parrot_Integer_attributes);
+            (Parrot_Integer_attributes *)PMC_data(SELF);
 
         attrs->iv      = 0;
-        PMC_data(SELF) = attrs;
-        PObj_active_destroy_SET(SELF);
     }
 
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
+    VTABLE void init_pmc(PMC *init) {
+        Parrot_Integer_attributes * const attrs =
+            (Parrot_Integer_attributes *)PMC_data(SELF);
+
+        attrs->iv      = VTABLE_get_integer(INTERP, init);
     }
 
 /*
@@ -117,29 +88,6 @@ Creates an exact duplicate of this PMC.
         VTABLE_set_integer_native(INTERP, clone, SELF.get_integer());
         return clone;
     }
-
-/*
-
-=item C<PMC instantiate_str(STRING *rep)>
-
-Class method to construct an Integer from the string representation C<rep>.
-
-=cut
-
-*/
-
-    VTABLE PMC *instantiate_str(STRING *rep, INTVAL flags) {
-        const INTVAL type = SELF->vtable->base_type;
-        PMC * const  res  = (flags & PObj_constant_FLAG)
-            ? constant_pmc_new(INTERP, type)
-            : pmc_new(INTERP, type);
-
-        /* Parrot_str_to_int catches overflow automatically, so we don't need to
-           worry about it here. */
-        VTABLE_set_integer_native(INTERP, res, Parrot_str_to_int(INTERP, rep));
-        return res;
-    }
-
 
 /*
 
@@ -207,7 +155,9 @@ Returns the boolean value of the Integer.
 
 */
     VTABLE INTVAL get_bool() {
-        return SELF.get_integer() ? 1 : 0;
+        INTVAL iv;
+        GET_ATTR_iv(INTERP, SELF, iv);
+        return iv ? 1 : 0;
     }
 
 /*
@@ -221,7 +171,9 @@ Returns the floating-point value of the integer.
 
 */
     VTABLE FLOATVAL get_number() {
-        return SELF.get_integer();
+        INTVAL iv;
+        GET_ATTR_iv(INTERP, SELF, iv);
+        return (FLOATVAL)iv;
     }
 
 
@@ -265,8 +217,6 @@ Returns the string value of the integer.
 
 /*
 
-=item C<void set_integer_same(PMC *value)>
-
 =item C<void set_integer_native(INTVAL value)>
 
 Sets the value of the integer to the value of the C<Integer> C<*value>.
@@ -274,11 +224,6 @@ Sets the value of the integer to the value of the C<Integer> C<*value>.
 =cut
 
 */
-
-    VTABLE void set_integer_same(PMC *value) {
-        SELF.set_integer_native(VTABLE_get_integer(INTERP, value));
-    }
-
 
     VTABLE void set_integer_native(INTVAL value) {
         SET_ATTR_iv(INTERP, SELF, value);
@@ -1063,7 +1008,7 @@ Returns SELF to the C<value>th power in C<dest>.
 
 Raises SELF to the C<value>th power.
 
-RT #46631 Complex and BigInt rhs.
+TODO:  TT #1228: Implement Complex and BigInt RHS values for the pow() functions
 
 =cut
 
@@ -1154,17 +1099,17 @@ The C<==> operation.
         PMC *temp;
 
         switch (value->vtable->base_type) {
-            case enum_class_BigInt:
-                temp = pmc_new(INTERP, enum_class_BigInt);
-                VTABLE_set_integer_native(INTERP, temp, SELF.get_integer());
-                Parrot_mmd_multi_dispatch_from_c_args(interp,
+          case enum_class_BigInt:
+            temp = pmc_new(INTERP, enum_class_BigInt);
+            VTABLE_set_integer_native(INTERP, temp, SELF.get_integer());
+            Parrot_mmd_multi_dispatch_from_c_args(interp,
                     "is_equal", "PP->I", temp, value, &retval);
-                return retval;
-                break;
-            default:
-                return (VTABLE_get_integer(INTERP, SELF)
-                    ==  VTABLE_get_integer(INTERP, value));
-                break;
+            return retval;
+            break;
+          default:
+            return (VTABLE_get_integer(INTERP, SELF)
+                ==  VTABLE_get_integer(INTERP, value));
+            break;
         }
     }
 
@@ -1193,17 +1138,24 @@ Returns the result of comparing the integer with C<*value>.
 
 
     MULTI INTVAL cmp(Float value) {
-        const FLOATVAL diff = SELF.get_number() - VTABLE_get_number(INTERP, value);
-        return diff > 0 ? 1 : diff < 0 ? -1 : 0;
+        INTVAL iv;
+        GET_ATTR_iv(interp, SELF, iv);
+
+        {
+            const FLOATVAL diff = (FLOATVAL)iv - VTABLE_get_number(INTERP, value);
+            return diff > 0 ? 1 : diff < 0 ? -1 : 0;
+        }
     }
 
 
     MULTI INTVAL cmp(DEFAULT value) {
         /* int or undef */
-        const INTVAL selfint  = SELF.get_integer();
-        const INTVAL valueint = VTABLE_get_integer(INTERP, value);
-
-        return selfint > valueint ? 1 : selfint < valueint ? -1 : 0;
+        INTVAL selfint;
+        GET_ATTR_iv(interp, SELF, selfint);
+        {
+            const INTVAL valueint = VTABLE_get_integer(INTERP, value);
+            return selfint > valueint ? 1 : selfint < valueint ? -1 : 0;
+        }
     }
 
 
@@ -1254,15 +1206,16 @@ Increments the integer.
 */
 
     VTABLE void increment() {
-        const INTVAL a = VTABLE_get_integer(INTERP, SELF);
-        const INTVAL c = a + 1;
+        INTVAL a, c;
+        GET_ATTR_iv(interp, SELF, a);
+        c = a + 1;
 
         /* did not overflow */
         if ((c^a) >= 0 || (c^1) >= 0)
-            VTABLE_set_integer_native(interp, SELF, c);
+            SET_ATTR_iv(interp, SELF, c);
         else {
-            pmc_reuse(INTERP, SELF, enum_class_BigInt, 0);
-            VTABLE_set_integer_native(INTERP, SELF, a);
+            pmc_reuse(interp, SELF, enum_class_BigInt, 0);
+            VTABLE_set_integer_native(interp, SELF, a);
             VTABLE_increment(interp, SELF);
         }
     }
@@ -1307,7 +1260,7 @@ Sets C<dest> to the absolute value of SELF.
     VTABLE PMC *absolute(PMC *dest) {
         const INTVAL a = abs(SELF.get_integer());
 
-        /* RT #46635 overflow for -maxint */
+        /* TT # 1245 overflow for -maxint */
         dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         VTABLE_set_integer_native(INTERP, dest, a);
@@ -1359,9 +1312,8 @@ Used to archive the integer.
 
 */
     VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
         SUPER(info);
-        VTABLE_push_integer(INTERP, io, SELF.get_integer());
+        VTABLE_push_integer(INTERP, info, SELF.get_integer());
     }
 
 
@@ -1375,10 +1327,8 @@ Used to unarchive the integer.
 
 */
     VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
         SUPER(info);
-        if (info->extra_flags == EXTRA_IS_NULL)
-            SELF.set_integer_native(VTABLE_shift_integer(INTERP, io));
+        SELF.set_integer_native(VTABLE_shift_integer(INTERP, info));
     }
 }
 

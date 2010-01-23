@@ -309,7 +309,7 @@ Accessor (get and set) for the I/O stream's encoding attribute. Currently,
 the only valid value to set is 'utf8' which turns on UTF-8 reading/writing
 mode for the stream. The default behavior is fixed-width 8-bit characters.
 
-=item C<get_fd> [RT #48312]
+=item C<get_fd>
 
 =begin PIR_FRAGMENT
 
@@ -1053,12 +1053,12 @@ comprehensive list of asynchronous I/O implementation options.
 
 =head2 References
 
-  F<src/io/io.c>
+  F<src/io/core.c>
   F<src/ops/io.ops>
   F<include/parrot/io.h>
   F<runtime/parrot/library/Stream/*>
-  F<src/io/io_unix.c>
-  F<src/io/io_win32.c>
+  F<src/io/unix.c>
+  F<src/io/win32.c>
   Perl 5's IO::AIO
   Perl 5's POE
 

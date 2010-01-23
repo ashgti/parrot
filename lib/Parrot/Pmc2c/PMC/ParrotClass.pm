@@ -1,7 +1,15 @@
 # Copyright (C) 2007, Parrot Foundation.
 # $Id$
 
-=head1 Parrot::Pmc2c::ParrotClass Instance Methods
+=head1 NAME
+
+Parrot::Pmc2c::ParrotClass
+
+=head1 DESCRIPTION
+
+Instance Methods
+
+=head1 METHODS
 
 =over 4
 
@@ -18,6 +26,8 @@ use Parrot::Pmc2c::ComposedMethod;
 Mixes in delegate.pmc methods for all unimplmented methods except
 @dont_delegate which should fall through to the default.pmc
 implementation.
+
+=back
 
 =cut
 
@@ -43,7 +53,6 @@ our @dont_delegate = qw(
     getprops
     is_same
     morph
-    nextkey_keyed_int
     set_integer_keyed_int
     set_number_keyed_int
     set_pmc_keyed_int

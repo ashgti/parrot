@@ -7,7 +7,7 @@ docs/parrot.pod - Parrot
 
 =head1 The Parrot Virtual Machine
 
-Parrot is a language-agnostic common bytecode format and interpreter for
+Parrot is a language-agnostic common bytecode format and an interpreter for
 dynamic languages.
 
 =head2 Documentation
@@ -80,10 +80,6 @@ implement your own PMC type.
 =item F<embed.pod>
 
 Describes the embedding subsystem in excruciating detail.
-
-=item F<jit.pod>
-
-A brief description of Parrot's Just-In-Time compiler.
 
 =item F<memory_internals.pod>
 

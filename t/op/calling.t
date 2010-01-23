@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
-use Parrot::Test tests => 94;
+use Parrot::Test tests => 97;
 
 =head1 NAME
 
@@ -447,7 +447,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too few" );
     print $P0
 .end
 CODE
-/too few arguments passed/
+/too few positional arguments/
 OUTPUT
 
 pir_output_like(
@@ -478,7 +478,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too many - force ge
     print "nada"
 .end
 CODE
-/too many arguments passed/
+/too many positional arguments/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too many" );
@@ -496,7 +496,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too many" );
     print $P0
 .end
 CODE
-/too many arguments passed/
+/too many positional arguments/
 OUTPUT
 
 pir_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, too many - catch exception" );
@@ -524,7 +524,7 @@ arg_handler:
 #    print $S1
 .end
 CODE
-/^caught: too many arguments passed/
+/^caught: too many positional arguments/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "argc mismatch, optional" );
@@ -571,7 +571,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch, optional" );
     .param int got_k :opt_flag
 .end
 CODE
-/too many arguments passed/
+/too many positional arguments/
 OUTPUT
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "get_param later" );
@@ -1210,7 +1210,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "too many args via :flat" );
     $P35 = _fn1(1, $P34 :flat)
 .end
 CODE
-/too many arguments passed \(5\) - 4 params expected/
+/too many positional arguments: 5 passed, 4 expected/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "too few args via :flat" );
@@ -1242,7 +1242,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "too few args via :flat" );
     $P35 = _fn1(1, $P34 :flat)
 .end
 CODE
-/too few arguments passed \(3\) - 4 params expected/
+/too few positional arguments: 3 passed, 4 \(or more\) expected/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "tailcall to NCI" );
@@ -1406,7 +1406,10 @@ CODE
 ok
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "clone_key_arg" );
+my @todo = ( todo => 'broken with JIT (TT #983)' )
+    if ( defined $ENV{TEST_PROG_ARGS} and
+        $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ );
+pir_output_is( <<'CODE', <<'OUTPUT', "clone_key_arg", @todo );
 .sub main :main
     foo()
     print "ok\n"
@@ -1748,6 +1751,36 @@ CODE
 ok
 OUTPUT
 
+pir_output_is( <<'CODE', <<'OUTPUT', "named - 3 slurpy hash PIR" );
+.sub main :main
+    foo('a' => 10 , 'b' => 20, 'c' => 30)
+    print "ok\n"
+    end
+.end
+.sub foo
+    .param int a :named('a')
+    .param pmc bar :slurpy :named
+    print a
+    print ' '
+    elements $I1, bar
+    print $I1
+    print ' '
+    typeof $S0, bar
+    print $S0
+    print ' '
+    set $I2, bar['b']
+    print $I2
+    print ' '
+    set $I2, bar['c']
+    print $I2
+    print "\n"
+.end
+
+CODE
+10 2 Hash 20 30
+ok
+OUTPUT
+
 pasm_output_is( <<'CODE', <<'OUTPUT', "named - 3 slurpy hash" );
 .pcc_sub main:
     set_args "0x200, 0, 0x200, 0,0x200, 0", "a", 10, "b", 20, 'c', 30
@@ -1951,7 +1984,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "named => pos passing" );
         .param int b
 .end
 CODE
-/many named arguments/
+/too few positional/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', "named optional - set" );
@@ -2085,7 +2118,7 @@ CODE
 1120
 OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch - missing named" );
+pir_error_output_like( <<'CODE', qr/too few named arguments/, "argc mismatch - missing named" );
 .sub main :main
     .include "errors.pasm"
     errorson .PARROT_ERRORS_PARAM_COUNT_FLAG
@@ -2102,10 +2135,8 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch - missing named" );
         print "\n"
 .end
 CODE
-/too few arguments/
-OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch - missing named" );
+pir_error_output_like( <<'CODE', qr/too few named arguments/, "argc mismatch - missing named" );
 .sub main :main
     .include "errors.pasm"
     errorson .PARROT_ERRORS_PARAM_COUNT_FLAG
@@ -2122,8 +2153,6 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch - missing named" );
         print "\n"
 .end
 CODE
-/too few arguments/
-OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "argc mismatch - too many named" );
 .sub main :main
@@ -2258,7 +2287,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
     .param pmc args :slurpy :named
 .end
 CODE
-/positional inside named args at position 2/
+/too many positional arguments/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
@@ -2271,10 +2300,10 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "unexpected positional arg" );
     .param pmc args :slurpy :named
 .end
 CODE
-/positional inside named args at position 3/
+/named arguments must follow all positional arguments/
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #40490 - flat/slurpy named arguments" );
+pir_output_is( <<'CODE', <<'OUTPUT', "flat/slurpy named arguments" );
 .sub 'main' :main
         .local pmc args
         args = new 'Hash'
@@ -2345,7 +2374,6 @@ pir_output_is( <<'CODE', <<'OUTPUT', "slurpy named after :optional" );
     foo($P0 :flat, 'abc' => 3)
     $P0 = new 'ResizablePMCArray'
     foo($P0 :flat, 'abc' => 4)
-    # Shorter version of RT #53926
     $P0 = new 'Hash'
     $P0['abc'] = 5
     foo($P0 :named :flat)
@@ -2394,7 +2422,7 @@ CODE
 2
 OUTPUT
 
-pir_error_output_like( <<'CODE', <<'OUTPUT', "arg mismatch with no params", todo=> 'RT #39844' );
+pir_error_output_like( <<'CODE', <<'OUTPUT', "arg mismatch with no params", todo=> 'TT #1033' );
 .sub main :main
   foo(1)
 .end
@@ -2405,7 +2433,7 @@ CODE
 /too many arguments passed\(1\) - 0 params expected/
 OUTPUT
 
-# See Rakudo RT #62730
+# See Rakudo queue http://rt.perl.org/rt3/Ticket/Display.html?id=62730
 pir_output_is( <<'CODE', <<'OUTPUT', "named from register, not constant" );
 .sub 'main'
     $S0 = 'foo'
@@ -2432,6 +2460,53 @@ foo
 42
 OUTPUT
 
+# See Rakudo queue http://rt.perl.org/rt3/Ticket/Display.html?id=62730
+pir_output_is( <<'CODE', <<'OUTPUT', "Handling :flat of emtpy arguments" );
+.sub 'main'
+    $P0   = new ['Undef']
+    ($P0) = foo()
+    $S0   = typeof $P0
+    say $S0
+.end
+
+.sub 'foo'
+    .param pmc arg :slurpy
+    $S0 = typeof arg
+    say $S0
+    .return (arg :flat)
+.end
+CODE
+ResizablePMCArray
+Undef
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "Tailcall from vtable" );
+
+.sub main :main
+$P1 = newclass "Foo"
+$P2 = new "Foo"
+
+## Should return 2, but doesn't.
+$I1 = elements $P2
+$S1 = $I1
+say $S1
+.end
+
+.namespace ["Foo"]
+
+.sub elements :vtable
+$I0 = 13
+$I1 = 2
+.tailcall identity($I1)
+.end
+
+.sub identity
+.param int arg
+.return (arg)
+.end
+CODE
+2
+OUTPUT
 
 # Local Variables:
 #   mode: cperl

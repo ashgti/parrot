@@ -4,13 +4,13 @@ $Id$
 
 =head1 NAME
 
-src/pmc/orderedhashiterator.pmc - Implementation of Iterator for OrderedHash.
+src/pmc/orderedhashiterator.pmc
 
 =head1 DESCRIPTION
 
-=head1 SYNOPSIS
+Implementation of Iterator for OrderedHash.
 
-=head1 Methods
+=head1 METHODS
 
 =over 4
 
@@ -18,10 +18,10 @@ src/pmc/orderedhashiterator.pmc - Implementation of Iterator for OrderedHash.
 
 */
 
-#include "pmc_orderedhash.h"
-#include "pmc_hashiteratorkey.h"
+#include "pmc/pmc_orderedhash.h"
+#include "pmc/pmc_hashiteratorkey.h"
 
-pmclass OrderedHashIterator extends Iterator no_ro {
+pmclass OrderedHashIterator extends Iterator no_ro auto_attrs {
     ATTR PMC        *pmc_hash;      /* the Hash which this Iterator iterates */
     ATTR PMC        *next_entry;    /* Next entry to shift/pop */
     ATTR INTVAL      pos;           /* */
@@ -41,7 +41,7 @@ Defaults iteration mode to iterate from start.
 
     VTABLE void init_pmc(PMC *hash) {
         Parrot_OrderedHashIterator_attributes * const attrs =
-            mem_allocate_zeroed_typed(Parrot_OrderedHashIterator_attributes);
+           (Parrot_OrderedHashIterator_attributes *) PMC_data(SELF);
 
         attrs->pmc_hash         = hash;
         attrs->pos              = 0;
@@ -49,21 +49,7 @@ Defaults iteration mode to iterate from start.
         attrs->next_entry       = PARROT_ORDEREDHASH(hash)->first;
         PMC_data(SELF)          = attrs;
 
-        PObj_custom_mark_destroy_SETALL(SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-destroys this PMC
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
+        PObj_custom_mark_SET(SELF);
     }
 
 /*
@@ -78,8 +64,7 @@ Marks the hash as live.
 
     VTABLE void mark() {
         PMC * const hash = PARROT_ORDEREDHASHITERATOR(SELF)->pmc_hash;
-        if (hash)
-             Parrot_gc_mark_PObj_alive(INTERP, (PObj *)hash);
+        Parrot_gc_mark_PMC_alive(INTERP, hash);
     }
 
 /*
@@ -130,6 +115,7 @@ Marks the hash as live.
 Returns this Iterator's Hash.
 
 =cut
+
 */
     VTABLE PMC* get_pmc() {
         return PARROT_ORDEREDHASHITERATOR(SELF)->pmc_hash;

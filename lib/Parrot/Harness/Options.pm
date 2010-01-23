@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2008, Parrot Foundation.
+# Copyright (C) 2006-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -7,6 +7,8 @@ Parrot::Harness::Options - Handle options and argument processing in F<t/harness
 
 =head1 DESCRIPTION
 
+This package exports subroutines on request only.  The subroutines are useful
+in providing command-line options to Parrot's F<t/harness>.
 
 =cut
 
@@ -88,8 +90,9 @@ sub remap_runcore_opts
     my ($opts_ref) = @_;
 
     my %remap      = (
-        'j' => '-runcore=jit',
+        'j' => '-runcore=fast',
         'g' => '-runcore=cgoto',
+        'G' => '-runcore=gcdebug',
         'C' => '-runcore=cgp',
         'S' => '-runcore=switch',
         'b' => '-runcore=bounds',
@@ -114,12 +117,13 @@ sub Usage {
 perl t/harness [options] [testfiles]
     -w         ... warnings on
     -g         ... run CGoto
-    -j         ... run JIT
     -C         ... run CGP
     -S         ... run Switched
     -b         ... run bounds checked
     --run-exec ... run exec core
     -f         ... run fast core
+    -j         ... run fast core
+    -r         ... run the compiled pbc
     -v         ... run parrot with -v : This is NOT the same as prove -v
                    All tests run with this option will probably fail
     -d         ... run debug

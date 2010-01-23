@@ -8,7 +8,7 @@ t/pmc/exception_handler.t - test ExceptionHandler PMC
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/exception_handler.t
+    % prove t/pmc/exceptionhandler.t
 
 =head1 DESCRIPTION
 
@@ -22,7 +22,8 @@ Tests the ExceptionHandler PMC.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(8)
+    # If test exited with "bad plan" MyHandlerCan.can_handle wasn't invoked.
+    plan(9)
 
     .local pmc eh
     eh = new ['ExceptionHandler']
@@ -213,6 +214,7 @@ Tests the ExceptionHandler PMC.
 
 .sub can_handle :method
     .param pmc ex
+    ok(1, 'MyHandlerCan.can_handle invoked')
     .return(1)
 .end
 

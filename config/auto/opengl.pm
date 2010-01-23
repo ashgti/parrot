@@ -10,7 +10,7 @@ config/auto/opengl.pm - Probe for OpenGL, GLU, and GLUT libraries
 =head1 DESCRIPTION
 
 Determines whether the platform supports OpenGL, GLU and GLUT.  The optimal
-result at this time is to find OpenGL 2.1, GLU 1.3, and GLUT API version 4.
+result at this time is to find OpenGL 3.2, GLU 1.3, and GLUT API version 4.
 
 You will typically need to install the headers and libraries required for
 compiling OpenGL/GLU/GLUT applications as a separate step in addition to
@@ -85,8 +85,13 @@ F<nvidia-devel> (?)
 
 =head2 Windows
 
-On Windows, Parrot supports three different compiler environments, each of
-which has different requirements for OpenGL support:
+On Windows, Parrot supports four different compiler environments, each of
+which has different requirements for OpenGL support.  Generally you should not
+attempt to mix the Cygwin variants (installing some X OpenGL libs and some
+w32api OpenGL libs) as this will almost certainly result in runtime errors
+like this one:
+
+    freeglut ERROR: Function <glutDisplayFunc> called without first calling 'glutInit'.
 
 
 =head3 MSVC
@@ -112,22 +117,22 @@ see L<http://www.transmissionzero.co.uk/computing/using-glut-with-mingw/>.
 
 =head3 Cygwin/X
 
-Requires a X server and F<libglut-devel>, F<libGL-devel>, F<libGLU-devel>,
+Requires an X server and F<libglut-devel>, F<libGL-devel>, F<libGLU-devel>,
 F<freeglut> and its dependencies.
 
 This is tried first.
 
+
 =head3 Cygwin/w32api
 
-The Cygwin/w32api for native opengl support
-is only tried if F</usr/include/GL> does not exist.
+Requires the F<opengl> and F<w32api> packages.
 
-The problem is that the L<NCI|pdds/draft/pdd16_native_call.pod>
-tries the header files to create the imports and not the libraries,
-and if the F</usr/include/GL> headers are found these are used, despite
-the w32api GLUT libraries are defined.
+Cygwin/w32api for native opengl support is only tried if
+F</usr/include/GL> does not exist.  The problem is that the OpenGL header files
+are used to create the OpenGL function list, and not the libraries themselves.
+If the F</usr/include/GL> headers are found these are used, even if the w32api
+GLUT libraries are defined.
 
-F<opengl>, F<w32api>
 
 =cut
 
@@ -162,7 +167,7 @@ sub runstep {
 
     return $self->_handle_no_opengl($conf) if $without;
 
-    my $osname = $conf->data->get_p5('OSNAME');
+    my $osname = $conf->data->get('osname');
 
     my $extra_libs = $self->_select_lib( {
             conf            => $conf,
@@ -178,12 +183,6 @@ sub runstep {
             darwin          => '-framework OpenGL -framework GLUT',
             default         => '-lglut -lGLU -lGL',
     } );
-
-    # On OS X check the presence of the OpenGL headers in the standard
-    # Fink/macports locations.
-    # Mindlessly morphed from readline ... may need to be fixed
-    $self->_handle_darwin_for_fink    ($conf, $osname, 'GL/glut.h');
-    $self->_handle_darwin_for_macports($conf, $osname, 'GL/glut.h');
 
     $conf->cc_gen('config/auto/opengl/opengl_c.in');
     my $has_glut = 0;

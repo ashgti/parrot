@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -319,17 +319,20 @@ sub full_body {
 
 # Called from rewrite_body() to perform the actual substitutions.
 sub _substitute {
-    my $self = shift;
-    local $_ = shift;
-    my $trans = shift;
+    my $self           = shift;
+    local $_           = shift;
+    my $trans          = shift;
+    my $preamble_only  = shift;
 
-    s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
+    my $rewrote_access =
+        s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
+
+    die "Argument access not allowed in preamble\n"
+        if $preamble_only && $rewrote_access;
 
     s/{{=0,=([^{]*?)}}/   $trans->restart_address($1) . "; {{=0}}"; /me;
     s/{{=0,\+=([^{]*?)}}/ $trans->restart_offset($1)  . "; {{=0}}"; /me;
     s/{{=0,-=([^{]*?)}}/  $trans->restart_offset(-$1) . "; {{=0}}"; /me;
-
-    s/{{=\*}}/            $trans->goto_pop();       /me;
 
     s/{{\+=([^{]*?)}}/    $trans->goto_offset($1);  /me;
     s/{{-=([^{]*?)}}/     $trans->goto_offset(-$1); /me;
@@ -343,7 +346,7 @@ sub _substitute {
     return $_;
 }
 
-=item C<rewrite_body($body, $trans)>
+=item C<rewrite_body($body, $trans, [$preamble])>
 
 Performs the various macro substitutions using the specified transform,
 correctly handling nested substitions, and repeating over the whole string
@@ -355,7 +358,7 @@ method >> >>> to C<VTABLE_I<method>>.
 =cut
 
 sub rewrite_body {
-    my ( $self, $body, $trans ) = @_;
+    my ( $self, $body, $trans, $preamble_only ) = @_;
 
     # use vtable macros
     $body =~ s!
@@ -367,7 +370,7 @@ sub rewrite_body {
         !VTABLE_$1(!sgx;
 
     while (1) {
-        my $new_body = $self->_substitute( $body, $trans );
+        my $new_body = $self->_substitute( $body, $trans, !!$preamble_only );
 
         last if $body eq $new_body;
 
@@ -395,7 +398,11 @@ sub source {
         return qq{PANIC(interp, "How did you do that");\n};
     }
 
-    return $self->rewrite_body( $self->full_body, $trans );
+    my $prelude = $trans->can( 'add_body_prelude' )
+                ? $trans->add_body_prelude()
+                : '';
+
+    return $self->rewrite_body( $prelude . $self->full_body, $trans );
 }
 
 =item C<size()>

@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -11,10 +11,10 @@ use Parrot::Test;
 
 $ENV{TEST_PROG_ARGS} ||= '';
 
-plan( skip_all => 'lexicals not thawed properly from PBC, RT #60652' )
+plan( skip_all => 'lexicals not thawed properly from PBC, TT #1171' )
     if $ENV{TEST_PROG_ARGS} =~ /--run-pbc/;
 
-plan( tests => 47 );
+plan( tests => 57 );
 
 =head1 NAME
 
@@ -1109,7 +1109,7 @@ CODE
 42
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', 'Example for RT #44395' );
+pir_output_is( <<'CODE', <<'OUTPUT', 'nested scopes' );
 
 =for never
 
@@ -1249,7 +1249,7 @@ Sub 2 was called 4 times. Any sub was called 11 times.
 Sub 3 was called 4 times. Any sub was called 12 times.
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure (RT #56184)' );
+pir_output_is( <<'CODE', <<'OUTPUT', 'Double-inner scope called from closure' );
 .sub 'main' :main
     .local pmc x
     x = 'foo'()
@@ -1290,7 +1290,7 @@ hello world
 hello world
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398:  Patrick's request" );
+pir_output_is( <<'CODE', <<'OUTPUT', "Patrick's request" );
 .sub 'main' :main
     foo('try 1')
     foo('try 2')
@@ -1323,7 +1323,7 @@ outer foo try 3
 inner foo try 3
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Bob's recursion bug");
+pir_output_is( <<'CODE', <<'OUTPUT', "Bob's recursion bug");
 .sub main :main
     rpwi(0)
 .end
@@ -1360,7 +1360,7 @@ rpwi:  recursive case
 [got 99]
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "RT #56398: Jonathan's recursive case" );
+pir_output_is( <<'CODE', <<'OUTPUT', "Jonathan's recursive case" );
 .sub 'main' :main
     $P0 = new 'ResizablePMCArray'
     push $P0, 'a'
@@ -1463,6 +1463,153 @@ CODE
 #     ]
 #     script
 # ]
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', 'TT #536: lexical sub lookup' );
+.sub 'main'
+    .const 'Sub' $P0 = 'lexfoo'
+    .lex 'foo1', $P0
+    .lex 'foo2', $P0
+
+    'foo1'(1)
+    'foo2'(2)
+.end
+
+.sub 'lexfoo'
+    .param int count
+    print 'ok '
+    print count
+    say ' - looking up lexical sub'
+.end
+
+.sub 'foo2'
+    .param int count
+    print 'not ok '
+    print count
+    say ' - looked up global sub, not lexical'
+.end
+CODE
+ok 1 - looking up lexical sub
+ok 2 - looking up lexical sub
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', 'find_dynamic_lex basic' );
+.sub 'main'
+    $P0 = box 'main'
+    .lex '$*VAR', $P0
+    'foo'()
+    $P1 = find_dynamic_lex '$*VAR'
+    if null $P1 goto p1_null
+    print 'not '
+  p1_null:
+    say 'null'
+.end
+
+.sub 'foo'
+    $P1 = find_dynamic_lex '$*VAR'
+    say $P1
+.end
+CODE
+main
+null
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', "find_dynamic_lex doesn't search outer" );
+.sub 'main'
+    $P0 = box 'main'
+    .lex '$*VAR', $P0
+    'bar'()
+.end
+
+.sub 'bar'
+    $P0 = box 'bar'
+    .lex '$*VAR', $P0
+    'foo'()
+.end
+
+.sub 'foo' :outer('main')
+    $P1 = find_dynamic_lex '$*VAR'
+    say $P1
+    $P1 = find_lex '$*VAR'
+    say $P1
+.end
+CODE
+bar
+main
+OUTPUT
+
+
+pir_output_is( <<'CODE', <<'OUTPUT', 'find_dynamic_lex two levels deep' );
+.sub 'main'
+    $P0 = box 'main'
+    .lex '$*VAR', $P0
+    'bar'()
+.end
+
+.sub 'bar'
+    'foo'()
+.end
+
+.sub 'foo'
+    $P1 = find_dynamic_lex '$*VAR'
+    say $P1
+.end
+CODE
+main
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', '.lex should not accept $S#');
+.sub 'main'
+    $S0 = 'hello world'
+    .lex '$var', $S0
+.end
+CODE
+/error.*Cannot use S register with \.lex/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', '.lex should not accept $I#');
+.sub 'main'
+    $I0 = 5
+    .lex '$var', $I0
+.end
+CODE
+/error.*Cannot use I register with \.lex/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', '.lex should not accept $N#');
+.sub 'main'
+    $N0 = 3.14
+    .lex '$pi', $N0
+.end
+CODE
+/error.*Cannot use N register with \.lex/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'store_lex should not accept $S#');
+.sub 'main'
+    $S0 = 'hello world'
+    store_lex '$var', $S0
+.end
+CODE
+/error/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'store_lex should not accept $I#');
+.sub 'main'
+    $I0 = 5
+    store_lex '$var', $I0
+.end
+CODE
+/error/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'store_lex should not accept $N#');
+.sub 'main'
+    $N0 = 3.14
+    store_lex '$pi', $N0
+.end
+CODE
+/error/
 OUTPUT
 
 # Local Variables:

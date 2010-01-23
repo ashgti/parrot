@@ -10,7 +10,6 @@ void init()
 # init must be first for JITed vtable meths
 void init_pmc(PMC* initializer)
 PMC* instantiate(PMC* sig)
-PMC* instantiate_str(STRING* rep, INTVAL flags)
 void morph(PMC* type) :write
 void mark()
 void destroy()
@@ -23,7 +22,6 @@ void delprop(STRING* key)
 PMC* getprops()
 
 INTVAL type()
-INTVAL type_keyed(PMC* key)
 
 STRING* name()
 
@@ -57,7 +55,6 @@ PMC* get_pmc()
 PMC* get_pmc_keyed(PMC* key)
 PMC* get_pmc_keyed_int(INTVAL key)
 PMC* get_pmc_keyed_str(STRING* key)
-PMC* slice(PMC* key, INTVAL flag)
 
 void* get_pointer()
 void* get_pointer_keyed(PMC* key)
@@ -66,13 +63,11 @@ void* get_pointer_keyed_str(STRING* key)
 
 [STORE] :write
 void set_integer_native(INTVAL value)
-void set_integer_same(PMC* value)
 void set_integer_keyed(PMC* key, INTVAL value)
 void set_integer_keyed_int(INTVAL key, INTVAL value)
 void set_integer_keyed_str(STRING* key, INTVAL value)
 
 void set_number_native(FLOATVAL value)
-void set_number_same(PMC* value)
 void set_number_keyed(PMC* key, FLOATVAL value)
 void set_number_keyed_int(INTVAL key, FLOATVAL value)
 void set_number_keyed_str(STRING* key, FLOATVAL value)
@@ -83,7 +78,6 @@ void set_bignum_str(STRING* value)
 
 void set_string_native(STRING* value)
 void assign_string_native(STRING* value)
-void set_string_same(PMC* value)
 void set_string_keyed(PMC* key, STRING* value)
 void set_string_keyed_int(INTVAL key, STRING* value)
 void set_string_keyed_str(STRING* key, STRING* value)
@@ -316,10 +310,8 @@ void delete_keyed_int(INTVAL key)
 void delete_keyed_str(STRING* key)
 
 [MAIN]
-PMC* nextkey_keyed(PMC* key, INTVAL what)
-PMC* nextkey_keyed_int(INTVAL key, INTVAL what)
-PMC* nextkey_keyed_str(STRING* key, INTVAL what)
 PMC* get_iter()
+INTVAL hashvalue()
 
 opcode_t* invoke(void* next)
 

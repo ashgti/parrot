@@ -17,7 +17,7 @@ t/pmc/mmd.t - Multi-Method Dispatch
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/mmd.t
+    % prove t/pmc/multidispatch.t
 
 =head1 DESCRIPTION
 
@@ -413,7 +413,7 @@ pir_error_output_like( <<'CODE', <<'OUT', "MMD single method, dispatch failure" 
 .end
 CODE
 /\A\(_, Float\) method:  1, 9\.5
-No applicable methods/
+No applicable candidates/
 OUT
 
 pir_output_is( <<'CODE', <<'OUT', "MMD on argument count" );
@@ -583,7 +583,7 @@ CODE
 PSt ok 2
 PSt ok 3
 String ok 4
-No applicable methods/
+No applicable candidates/
 OUT
 
 pir_output_is( <<'CODE', <<'OUT', 'MMD on PMC types 3' );
@@ -723,7 +723,7 @@ PSt ok 3
 String ok 4
 OUT
 
-pir_output_is( <<'CODE', <<'OUT', "MMD on PMC types - Any", todo => 'RT #41374' );
+pir_output_is( <<'CODE', <<'OUT', "MMD on PMC types - Any", todo => 'TT #1320' );
 
 .sub main :main
     $P0 = new ['String']
@@ -809,7 +809,7 @@ CODE
 42
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "add as method - inherited", todo => 'RT #41374' );
+pir_output_is( <<'CODE', <<'OUTPUT', "add as method - inherited", todo => 'TT #1320' );
 .sub main :main
     .local pmc d, l, r
     .local pmc pint
@@ -998,7 +998,7 @@ PMC
 nothing
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "use a core func for an object", todo => 'RT #59628' );
+pir_output_is( <<'CODE', <<'OUTPUT', "use a core func for an object");
 .sub main :main
     .local pmc d, l, r, cl
     cl = newclass "AInt"
@@ -1226,7 +1226,7 @@ CODE
 Called multi for class
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "unicode sub names and multi (RT #39254)" );
+pir_output_is( <<'CODE', <<'OUTPUT', "unicode sub names and multi" );
 .sub unicode:"\u7777" :multi(string)
   .param pmc arg
   print 'String:'

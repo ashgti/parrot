@@ -74,13 +74,13 @@ static void register_static_converters(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_Parrot_str_internal_register_charset_names \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_register_charset __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_register_charset __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(charsetname) \
-    || PARROT_ASSERT_ARG(charset)
-#define ASSERT_ARGS_register_static_converters __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+    , PARROT_ASSERT_ARG(charset))
+#define ASSERT_ARGS_register_static_converters __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -168,7 +168,7 @@ Parrot_find_charset(SHIM_INTERP, ARGIN(const char *charsetname))
 
 =item C<CHARSET * Parrot_load_charset(PARROT_INTERP, const char *charsetname)>
 
-Throws an exception (Can't load charsets dynamically yet. RT#58184).
+Throws an exception (Can't load charsets dynamically yet. https://trac.parrot.org/parrot/wiki/StringsTasklist).
 
 =cut
 

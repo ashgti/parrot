@@ -140,19 +140,6 @@ static PackFile* pbc_merge_loadpbc(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void pbc_merge_pic_index(PARROT_INTERP,
-    ARGMOD(pbc_merge_input **inputs),
-    int num_inputs,
-    ARGMOD(PackFile *pf),
-    ARGMOD(PackFile_ByteCode *bc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(4)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*inputs)
-        FUNC_MODIFIES(*pf)
-        FUNC_MODIFIES(*bc);
-
 static void pbc_merge_write(PARROT_INTERP,
     ARGMOD(PackFile *pf),
     ARGIN(const char *filename))
@@ -161,46 +148,41 @@ static void pbc_merge_write(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*pf);
 
-#define ASSERT_ARGS_help __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_pbc_merge_begin __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_help __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pbc_merge_begin __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs)
-#define ASSERT_ARGS_pbc_merge_bytecode __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs))
+#define ASSERT_ARGS_pbc_merge_bytecode __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(pf)
-#define ASSERT_ARGS_pbc_merge_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs) \
+    , PARROT_ASSERT_ARG(pf))
+#define ASSERT_ARGS_pbc_merge_constants __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_pbc_merge_ctpointers __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs) \
+    , PARROT_ASSERT_ARG(pf) \
+    , PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_pbc_merge_ctpointers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_pbc_merge_debugs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs) \
+    , PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_pbc_merge_debugs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_pbc_merge_fixups __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs) \
+    , PARROT_ASSERT_ARG(pf) \
+    , PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_pbc_merge_fixups __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_pbc_merge_loadpbc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(inputs) \
+    , PARROT_ASSERT_ARG(pf) \
+    , PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_pbc_merge_loadpbc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(fullname)
-#define ASSERT_ARGS_pbc_merge_pic_index __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(fullname))
+#define ASSERT_ARGS_pbc_merge_write __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(inputs) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_pbc_merge_write __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pf) \
-    || PARROT_ASSERT_ARG(filename)
+    , PARROT_ASSERT_ARG(pf) \
+    , PARROT_ASSERT_ARG(filename))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -378,7 +360,7 @@ pbc_merge_bytecode(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
     /* Stash produced bytecode. */
     bc_seg->base.data = bc;
     bc_seg->base.size = cursor;
-    bc_seg->base.name = mem_sys_strdup("MERGED");
+    bc_seg->base.name = Parrot_str_new_constant(interp, "MERGED");
     return bc_seg;
 }
 
@@ -454,17 +436,17 @@ pbc_merge_constants(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
             /* If it's a sub PMC, need to deal with offsets. */
             if (copy->type == PFC_PMC) {
                 switch (copy->u.key->vtable->base_type) {
-                    case enum_class_Sub:
-                    case enum_class_Coroutine:
-                        {
-                        Parrot_sub *sub;
+                  case enum_class_Sub:
+                  case enum_class_Coroutine:
+                    {
+                        Parrot_Sub_attributes *sub;
                         PMC_get_sub(interp, copy->u.key, sub);
                         sub->start_offs += inputs[i]->code_start;
                         sub->end_offs += inputs[i]->code_start;
-                        }
-                        break;
-                    default:
-                        break;
+                    }
+                    break;
+                  default:
+                    break;
                 }
             }
 
@@ -555,18 +537,16 @@ pbc_merge_fixups(PARROT_INTERP, ARGIN(pbc_merge_input **inputs),
 
             /* Set new offset and bytecode pointer. */
             switch (copy->type) {
-                case enum_fixup_label:
-                    copy->offset = cur_entry->offset + inputs[i]->code_start;
-                    break;
-                case enum_fixup_sub:
-                    copy->offset = cur_entry->offset + inputs[i]->const_start;
-                    break;
-                default:
-                    Parrot_io_eprintf(interp, "PBC Merge: Unknown fixup type");
-                    Parrot_exit(interp, 1);
+              case enum_fixup_label:
+                copy->offset = cur_entry->offset + inputs[i]->code_start;
+                break;
+              case enum_fixup_sub:
+                copy->offset = cur_entry->offset + inputs[i]->const_start;
+                break;
+              default:
+                Parrot_io_eprintf(interp, "PBC Merge: Unknown fixup type");
+                Parrot_exit(interp, 1);
             }
-
-            copy->seg = bc;
 
             /* Slot it into the list. */
             fixups[cursor] = copy;
@@ -633,8 +613,6 @@ pbc_merge_debugs(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
             mappings[num_mappings + j] = mapping;
         }
 
-        /* Update counts.  The "- 1" allows for the fact that the size value
-           itself is included in in_seg->base.size.  See RT#58660. */
         num_lines    += in_seg->base.size - 1;
         num_mappings += in_seg->num_mappings;
     }
@@ -649,59 +627,6 @@ pbc_merge_debugs(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
 
     debug_seg->mappings     = mappings;
     debug_seg->num_mappings = num_mappings;
-}
-
-/*
-
-=item C<static void pbc_merge_pic_index(PARROT_INTERP, pbc_merge_input **inputs,
-int num_inputs, PackFile *pf, PackFile_ByteCode *bc)>
-
-This function merges the pic_index segments from the input PBC files.
-
-=cut
-
-*/
-
-static void
-pbc_merge_pic_index(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
-                 int num_inputs, ARGMOD(PackFile *pf), ARGMOD(PackFile_ByteCode *bc))
-{
-    ASSERT_ARGS(pbc_merge_pic_index)
-    int i;
-    PackFile_Segment *pic_index;
-    size_t size;
-    opcode_t cursor = 0;
-    opcode_t start = 0;
-    opcode_t last = 0;
-
-    /* calc needed size */
-    for (i = 0, size = 0; i < num_inputs; i++) {
-        PackFile_Segment * const in_seg  = inputs[i]->pf->cur_cs->pic_index;
-        size   += in_seg->size;
-    }
-    pic_index = PackFile_Segment_new_seg(interp,
-              &pf->directory, PF_UNKNOWN_SEG, "PIC_idx_MERGED", 1);
-    pic_index->data
-        = (opcode_t *)mem_sys_allocate_zeroed(size * sizeof (opcode_t));
-    pic_index->size = size;
-
-    for (i = 0, size = 0; i < num_inputs; i++) {
-        PackFile_Segment * const in_seg = inputs[i]->pf->cur_cs->pic_index;
-        size_t j;
-        /*
-         * pic_index is 0 or an ever increasing (by 1) number
-         */
-        for (j = 0; j < in_seg->size; j++) {
-            const opcode_t k = in_seg->data[j];
-            if (k) {
-                pic_index->data[cursor] = k + start;
-                last = k;
-            }
-            cursor++;
-        }
-        start = last;
-    }
-    bc->pic_index = pic_index;
 }
 
 /*
@@ -747,14 +672,14 @@ pbc_merge_ctpointers(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
         for (cur_arg = 1; cur_arg < op->op_count; cur_arg++) {
             /* Pick out any indexes into the constant table and correct them. */
             switch (op->types[cur_arg - 1]) {
-                case PARROT_ARG_NC:
-                case PARROT_ARG_PC:
-                case PARROT_ARG_SC:
-                case PARROT_ARG_KC:
-                    ops[cur_op] += inputs[cur_input]->const_start;
-                    break;
-                default:
-                    break;
+              case PARROT_ARG_NC:
+              case PARROT_ARG_PC:
+              case PARROT_ARG_SC:
+              case PARROT_ARG_KC:
+                ops[cur_op] += inputs[cur_input]->const_start;
+                break;
+              default:
+                break;
             }
 
             /* Move along the bytecode array. */
@@ -773,14 +698,14 @@ pbc_merge_ctpointers(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
             const int sig_items = VTABLE_elements(interp, sig);
             for (cur_arg = 0; cur_arg < sig_items; cur_arg++) {
                 switch (VTABLE_get_integer_keyed_int(interp, sig, cur_arg)) {
-                    case PARROT_ARG_NC:
-                    case PARROT_ARG_PC:
-                    case PARROT_ARG_SC:
-                    case PARROT_ARG_KC:
-                        ops[cur_op] += inputs[cur_input]->const_start;
-                        break;
-                    default:
-                        break;
+                  case PARROT_ARG_NC:
+                  case PARROT_ARG_PC:
+                  case PARROT_ARG_SC:
+                  case PARROT_ARG_KC:
+                    ops[cur_op] += inputs[cur_input]->const_start;
+                    break;
+                  default:
+                    break;
                 }
                 cur_op++;
             }
@@ -822,7 +747,6 @@ pbc_merge_begin(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs), int num_inputs)
 
     pbc_merge_fixups(interp, inputs, num_inputs, merged, bc);
     pbc_merge_debugs(interp, inputs, num_inputs, merged, bc);
-    pbc_merge_pic_index(interp, inputs, num_inputs, merged, bc);
 
     /* Walk bytecode and fix ops that reference the constants table. */
     pbc_merge_ctpointers(interp, inputs, num_inputs, bc);
@@ -910,17 +834,17 @@ main(int argc, const char **argv)
     }
     while ((status = longopt_get(interp, argc, argv, options, &opt)) > 0) {
         switch (opt.opt_id) {
-            case 'o':
-                if (output_file == NULL)
-                    output_file = opt.opt_arg;
-                else
-                    help(interp);
-                break;
-            case '?':
+          case 'o':
+            if (output_file == NULL)
+                output_file = opt.opt_arg;
+            else
                 help(interp);
-                break;
-            default:
-                break;
+            break;
+          case '?':
+            help(interp);
+            break;
+          default:
+            break;
         }
     }
     if (status == -1 || !output_file) {

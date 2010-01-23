@@ -406,7 +406,6 @@ CODE
 OUTPUT
 
     # Concatenate unicode: with iso-8859-1
-    # See RT #39930 for discussion
     pir_output_is(
         <<'CODE', <<"OUTPUT", "Concat unicode with iso-8859-1" );
 .sub main
@@ -550,7 +549,7 @@ CODE
 OUT
 }
 
-pir_output_is( <<'CODE', <<'OUT', 'concatenation of utf8 and iso-8859-1 (TT#752)' );
+pir_output_is( <<'CODE', <<'OUT', 'concatenation of utf8 and iso-8859-1 (TT #752)' );
 .sub 'main'
 
     $S1 = chr 0xe5

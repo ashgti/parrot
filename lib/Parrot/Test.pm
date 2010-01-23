@@ -100,6 +100,11 @@ Runs the Parrot Assembler code and passes the test if a string comparison of
 the output with the unexpected result is false I<and> if Parrot exits with a
 non-zero exit code.
 
+=item C<pasm_exit_code_is($code, $exit_code, $description)>
+
+Runs the PASM code and passes the test if the exit code equals $exit_code,
+fails the test otherwise.
+
 =item C<pir_output_is($code, $expected, $description)>
 
 Runs the PIR code and passes the test if a string comparison of output with the
@@ -129,6 +134,11 @@ the unexpected result is false.
 Runs the PIR code and passes the test if a string comparison of the output with
 the unexpected result is false I<and> if Parrot exits with a non-zero exit
 code.
+
+=item C<pir_exit_code_is($code, $exit_code, $description)>
+
+Runs the PIR code and passes the test if the exit code equals $exit_code,
+fails the test otherwise.
 
 =item C<pbc_output_is($code, $expected, $description)>
 
@@ -160,6 +170,11 @@ with the unexpected result is false.
 Runs the Parrot Bytecode and passes the test if a string comparison of output
 with the unexpected result is false I<and> if Parrot exits with a non-zero exit
 code.
+
+=item C<pbc_exit_code_is($code, $exit_code, $description)>
+
+Runs the Parrot Bytecode and passes the test if the exit code equals $exit_code,
+fails the test otherwise.
 
 =item C<pir_2_pasm_is($code, $expected, $description)>
 
@@ -249,7 +264,6 @@ Writes C<$code> into the file C<$code_f>.
 
 Generate functions that are only used by a couple of
 Parrot::Test::<lang> modules.
-See RT#43266.
 This implementation is experimental and currently only works
 for languages/pipp.
 
@@ -275,7 +289,7 @@ require Exporter;
 require Test::Builder;
 require Test::More;
 
-our @EXPORT = qw( plan run_command skip slurp_file);
+our @EXPORT = qw( plan run_command skip slurp_file pbc_postprocess_output_like );
 
 use base qw( Exporter );
 
@@ -492,6 +506,59 @@ sub generate_languages_functions {
     }
 }
 
+=over
+
+=item "pbc_postprocess_output_like"
+
+Takes a path to binary which will post process PBC, a file to run, the extension
+of the file, one regex or an array reference of regexes,  and an optional
+diagnostic message. This function generates PBC for the input file, then post
+processes this with the binary and captures the output. The output is then
+verified to match the single or multiple regular expressions given.
+
+    my $postprocess = File::Spec->catfile( ".", "pbc_dump" );
+    my $file  = 'foo.pir';
+    my $ext   = 'pir';
+    my $check = [ qr/has a foo/, qr/and a bar/ ];
+    pbc_postprocess_output_like ( $postprocess,
+                                  $file, $ext, $check,
+                                  "checking pbc_dump"
+                                );
+
+=back
+
+=cut
+
+sub pbc_postprocess_output_like {
+    my ( $postprocess, $file, $ext, $check, $diag ) = @_;
+    my $testno   = $builder->current_test() + 1;
+    my $codefn   = "$0.$testno.$ext";
+    my $pbcfn    = "$0.$testno.pbc";
+    my $stdoutfn = "$0.$testno.stdout";
+    my $f        = IO::File->new(">$codefn");
+    my $parrot   = File::Spec->catfile( ".", $PConfig{test_prog} );
+    $f->print($file);
+    $f->close();
+    system("$parrot -o $pbcfn $codefn 2>&1");
+    system("$postprocess $pbcfn >$stdoutfn 2>&1");
+    $f = IO::File->new($stdoutfn);
+
+    my $output = join( '', <$f> );
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    unlink ($codefn, $pbcfn, $stdoutfn);
+    if (ref $check eq 'ARRAY') {
+        for my $regex (@$check) {
+            Test::More::like( $output, $regex, $diag );
+            $testno++;
+        }
+    }
+    else {
+        Test::More::like( $output, $check, $diag );
+    }
+
+}
+
 # The following methods are private.  They should not be used by modules
 # inheriting from Parrot::Test.
 
@@ -526,13 +593,13 @@ sub _run_test_file {
     # Name of the file with test code.
     # This depends on which kind of code we are testing.
     my $code_f;
-    if ( $func =~ m/^pir_.*?output/ ) {
+    if ( $func =~ m/^pir_(exit_code|.*?output)/ ) {
         $code_f = per_test( '.pir', $test_no );
     }
-    elsif ( $func =~ m/^pasm_.*?output_/ ) {
+    elsif ( $func =~ m/^pasm_(exit_code|.*?output_)/ ) {
         $code_f = per_test( '.pasm', $test_no );
     }
-    elsif ( $func =~ m/^pbc_.*?output_/ ) {
+    elsif ( $func =~ m/^pbc_(exit_code|.*?output_)/ ) {
         $code_f = per_test( '.pbc', $test_no );
     }
     else {
@@ -631,6 +698,7 @@ sub _generate_test_functions {
     my %parrot_test_map = map {
         $_ . '_output_is'           => 'is_eq',
         $_ . '_error_output_is'     => 'is_eq',
+        $_ . '_exit_code_is'        => 'is_eq',
         $_ . '_output_isnt'         => 'isnt_eq',
         $_ . '_error_output_isnt'   => 'isnt_eq',
         $_ . '_output_like'         => 'like',
@@ -669,6 +737,18 @@ sub _generate_test_functions {
             local *{ $call_pkg . '::TODO' } = ## no critic Variables::ProhibitConditionalDeclarations
                 \$extra{todo}
                 if defined $extra{todo};
+
+            if ( $func =~ /_exit_code_is$/ ) {
+                $expected = int($expected);
+                if ($exit_code == $expected) {
+                    my $pass = $builder->$meth( $exit_code, $expected, $desc );
+                    return $pass;
+                }
+                else {
+                    $builder->ok(0);
+                    return 0;
+                }
+            }
 
             if ( $func =~ /_error_/ ) {
                 return _handle_error_output( $builder, $real_output, $expected, $desc )
@@ -964,6 +1044,10 @@ sub _generate_test_functions {
                     . "$PConfig{ld_out}$exe_f "
                     . "$obj_f $cfg "
                     . "$PConfig{libparrot_linkflags} "
+            # If rpath is defined (and therefore rpath_blib), use it to get at the build libraries
+            . ( defined($PConfig{rpath_blib})
+            ? (  $PConfig{rpath_blib} . " " )
+            : "" )
                     . "$PConfig{linkflags} $PConfig{ld_debug} "
                     . "$iculibs $PConfig{libs}";
                 my $exit_code = run_command(
@@ -1039,7 +1123,7 @@ sub _handle_test_options {
 
     my $out = $options->{'STDOUT'} || '';
     my $err = $options->{'STDERR'} || '';
-    ##  File::Temp overloads 'eq' here, so we need the quotes. RT #58840
+    ##  File::Temp overloads 'eq' here, so we need the quotes.
     if ( $out and $err and "$out" eq "$err" ) {
         $err = '&STDOUT';
     }

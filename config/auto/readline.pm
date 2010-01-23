@@ -39,7 +39,7 @@ sub runstep {
     my $verbose = $conf->options->get('verbose');
 
     my $cc     = $conf->data->get('cc');
-    my $osname = $conf->data->get_p5('OSNAME');
+    my $osname = $conf->data->get('osname');
 
     my $extra_libs = $self->_select_lib( {
         conf            => $conf,
@@ -48,11 +48,6 @@ sub runstep {
         win32_nongcc    => 'readline.lib',
         default         => '-lreadline',
     } );
-
-    # On OS X check the presence of the readline header in the standard
-    # Fink/macports locations.
-    $self->_handle_darwin_for_fink($conf, $osname, 'readline/readline.h');
-    $self->_handle_darwin_for_macports($conf, $osname, q{readline/readline.h});
 
     $conf->cc_gen('config/auto/readline/readline_c.in');
     my $has_readline = 0;
@@ -82,6 +77,7 @@ sub runstep {
         }
     }
     $conf->data->set( HAS_READLINE => $has_readline );
+    $self->set_result($has_readline ? 'yes' : 'no');
 
     return 1;
 }

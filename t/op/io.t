@@ -52,27 +52,21 @@ Tests various io opcodes.
 .end
 
 .sub 'tt661_todo_test' :anon
-    # Checks whether the platform is linux, MSWin32, darwin: on other
-    # platforms, the following tests are todo'ed.
+    # As of r41963, these tests need to be todo'ed at least on Win32. Add new
+    # platforms known to fail.
     .include 'sysinfo.pasm'
     $S0 = sysinfo .SYSINFO_PARROT_OS
-    if $S0 == 'linux' goto tt661_ok
-    if $S0 == 'MSWin32' goto tt661_ok
-    if $S0 == 'darwin' goto tt661_ok
-    if $S0 == 'openbsd' goto tt661_ok
+    if $S0 == 'MSWin32' goto tt661_todo
 
     .return (0)
 
-  tt661_ok:
+  tt661_todo:
     .return (1)
 .end
 
 .include 'iglobals.pasm'
 
 .sub 'open_pipe_for_reading'
-    $I0 = tt661_todo_test()
-    unless $I0 goto open_pipe_for_reading_todoed
-
     .local pmc interp
     interp = getinterp
 
@@ -96,21 +90,18 @@ Tests various io opcodes.
     unless pipe goto open_pipe_for_reading_failed
     .local string line
     line = readline pipe
-    like('This is Parrot', ":s This is Parrot", 'open pipe for reading')
+    line = substr line, 0, 14
+    is('This is Parrot', line, 'open pipe for reading')
     .return ()
 
   open_pipe_for_reading_failed:
     nok(1, 'open pipe for reading')
     .return ()
-
-  open_pipe_for_reading_todoed:
-    todo(1, 'Unimplemented in this platform, TT #661')
 .end
 
 .sub 'open_pipe_for_writing'
     $I0 = tt661_todo_test()
-    unless $I0 goto open_pipe_for_writing_todoed
-
+    if $I0 goto open_pipe_for_writing_todoed
     .local pmc interp
     interp = getinterp
 
@@ -145,7 +136,8 @@ Tests various io opcodes.
     .return ()
 
   open_pipe_for_writing_todoed:
-    todo(1, 'Unimplemented in this platform, TT #661')
+    todo(0, 'Unimplemented in this platform, TT #661')
+
 .end
 
 # Local Variables:

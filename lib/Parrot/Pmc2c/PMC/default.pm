@@ -1,7 +1,15 @@
 # Copyright (C) 2007-2008, Parrot Foundation.
 # $Id$
 
-=head1 Parrot::Pmc2c::PMC::default Instance Methods
+=head1 NAME
+
+Parrot::Pmc2c::PMC::default
+
+=head1 DESCRIPTION
+
+Instance Methods
+
+=head1 METHODS
 
 =over 4
 
@@ -16,6 +24,8 @@ use base qw( Parrot::Pmc2c::PMC );
 =item C<pre_method_gen()>
 
 Always true.
+
+=back
 
 =cut
 
@@ -79,8 +89,8 @@ sub _generate_default_method {
         $param =~ s/.*\b(\w+)/$1/;
         $body .= "    UNUSED($param)\n";
     }
-    my $vt_method_name = $method->name;
-    $body .= qq{    $stub_func(interp, pmc, "$vt_method_name");\n};
+    my $vt_method_name = uc $method->name;
+    $body .= qq{    $stub_func(interp, pmc, PARROT_VTABLE_SLOT_$vt_method_name);\n};
 
     $clone->body( Parrot::Pmc2c::Emitter->text($body));
 

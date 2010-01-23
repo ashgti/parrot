@@ -20,8 +20,6 @@ my @steps = qw(
     auto::gcc
     auto::glibc
     auto::backtrace
-    auto::fink
-    auto::macports
     auto::msvc
     auto::attributes
     auto::warnings
@@ -42,8 +40,8 @@ my @steps = qw(
     auto::isreg
     auto::arch
     auto::jit
+    auto::frames
     auto::cpu
-    auto::funcptr
     auto::cgoto
     auto::inline
     auto::gc

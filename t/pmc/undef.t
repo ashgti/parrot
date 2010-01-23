@@ -1,5 +1,5 @@
 #! parrot
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -19,7 +19,7 @@ Tests mainly morphing undef to other types.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(21)
+    plan(24)
 
     morph_to_string()
     undef_pmc_is_false()
@@ -49,9 +49,18 @@ Tests mainly morphing undef to other types.
     pmc1 = new ['Undef']
     if pmc1 goto PMC1_IS
       ok( 1, 'PMC Undef created by new is false' )
-      .return()
+      goto logical_not
     PMC1_IS:
     ok( 0, 'PMC Undef created by new is false' )
+
+  logical_not:
+    unless pmc1 goto logical_not_passed
+    ok( 0, 'logical_not of PMC Undef created by new is false' )
+    goto done
+  logical_not_passed:
+    ok( 1, 'logical_not of PMC Undef created by new is true' )
+
+  done:
 .end
 
 .sub undef_pmc_is_not_defined
@@ -161,27 +170,47 @@ Tests mainly morphing undef to other types.
     $P1 = new ['Undef']
     $P2 = new ['Undef']
     if $P1 == $P2 goto ok
-        ok( 0, 'Undef == Undef (RT #33603)' )
+        ok( 0, 'Undef == Undef' )
         .return()
   ok:
-    ok( 1, 'Undef == Undef (RT #33603)' )
+    ok( 1, 'Undef == Undef' )
 .end
 
 .sub set_undef_to_object
     $P0 = new "Undef"
+    $P1 = get_class 'Integer'
     $P2 = new 'Integer'
     assign $P0, $P2
-    ok( 1, 'Assign Integer to Undef' )
+    $I0 = isa $P0, $P1
+    ok( $I0, 'Assign Integer to Undef' )
 
     $P0 = new "Undef"
     $P1 = newclass "HI"
     $P2 = new $P1
     assign $P0, $P2
-    ok( 1, 'Assign Object to Undef' )
+    $I0 = isa $P0, $P1
+    ok( $I0, 'Assign Object to Undef' )
+
+    $S0 = $P0
+    is( $S0, 'A string', '... and the right object' )
+
+    $P0 = new "Undef"
+    $P1 = subclass 'ResizablePMCArray', 'FooRPA'
+    $P2 = new $P1
+    assign $P0, $P2
+    $I0 = isa $P0, $P1
+    ok( $I0, 'Assign Object with PMC parent to Undef' )
 
     # TODO: Needs tests to verify that the values and metadata are preserved
     #       across the assignment
 .end
+
+.namespace [ 'HI' ]
+
+.sub get_string :vtable :method
+    .return( 'A string' )
+.end
+
 # Local Variables:
 #   mode: pir
 #   fill-column: 100

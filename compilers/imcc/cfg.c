@@ -144,56 +144,56 @@ static void sort_loops(PARROT_INTERP, ARGIN(IMC_Unit *unit))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_analyse_life_block __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_analyse_life_block __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(bb) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_analyse_life_symbol __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_analyse_life_symbol __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_bb_add_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_bb_add_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(from) \
-    || PARROT_ASSERT_ARG(to)
-#define ASSERT_ARGS_bb_check_set_addr __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(from) \
+    , PARROT_ASSERT_ARG(to))
+#define ASSERT_ARGS_bb_check_set_addr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(bb) \
-    || PARROT_ASSERT_ARG(label)
-#define ASSERT_ARGS_bb_findadd_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(bb) \
+    , PARROT_ASSERT_ARG(label))
+#define ASSERT_ARGS_bb_findadd_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(from) \
-    || PARROT_ASSERT_ARG(label)
-#define ASSERT_ARGS_bb_remove_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(from) \
+    , PARROT_ASSERT_ARG(label))
+#define ASSERT_ARGS_bb_remove_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(edge)
-#define ASSERT_ARGS_check_invoke_type __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(edge))
+#define ASSERT_ARGS_check_invoke_type __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins)
-#define ASSERT_ARGS_free_dominance_frontiers __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_free_dominators __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_free_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_free_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_init_basic_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_make_basic_block __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins))
+#define ASSERT_ARGS_free_dominance_frontiers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_free_dominators __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_free_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_free_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_init_basic_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_make_basic_block __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins)
-#define ASSERT_ARGS_mark_loop __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ins))
+#define ASSERT_ARGS_mark_loop __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(e)
-#define ASSERT_ARGS_propagate_need __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(e))
+#define ASSERT_ARGS_propagate_need __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(bb) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_sort_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_sort_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
+    , PARROT_ASSERT_ARG(unit))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -278,10 +278,9 @@ find_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int first)
         }
     }
 
-    /* RT #48280: Now the way to check for a sub is unit->type */
     ins = unit->instructions;
 
-    if (first && ins->type == ITLABEL && (ins->symregs[0]->type & VT_PCC_SUB)) {
+    if (unit->type & IMC_PCCSUB) {
         IMCC_debug(interp, DEBUG_CFG, "pcc_sub %s nparams %d\n",
                 ins->symregs[0]->name, ins->symregs[0]->pcc_sub->nargs);
         expand_pcc_sub(interp, unit, ins);
@@ -304,7 +303,6 @@ find_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int first)
 
         if (ins->opnum == -1 && (ins->type & ITPCCSUB)) {
             if (first) {
-                /* RT #48280: Now the way to check for a sub is unit->type */
                 if (ins->type & ITLABEL) {
                     expand_pcc_sub_ret(interp, unit, ins);
                     ins->type &= ~ITLABEL;
@@ -417,7 +415,6 @@ build_cfg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
     for (i = 0; i < unit->n_basic_blocks; i++) {
         Basic_block * const bb = unit->bb_list[i];
-        Edge               *pred;
         SymReg             *addr;
 
         /* if the block can fall-through */
@@ -437,74 +434,6 @@ build_cfg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
              ||  STREQ(bb->start->opname, "invokecc")) {
             if (check_invoke_type(interp, unit, bb->start) == INVOKE_SUB_LOOP)
                 bb_add_edge(unit, bb, unit->bb_list[0]);
-        }
-
-        if (STREQ(bb->end->opname, "ret")) {
-            Instruction *sub;
-            IMCC_debug(interp, DEBUG_CFG, "found ret in bb %d\n", i);
-
-            /* now go back, find labels and connect these with bsrs */
-
-            /* this doesn't work, if this is a local backward sub call
-             * the bsr isn't chained yet so the pred_list is empty
-             *
-             * s. #25948
-             */
-            if (!bb->pred_list) {
-                unsigned int j;
-
-                for (j = i; j < unit->n_basic_blocks; j++) {
-                    Basic_block * const b_bsr = unit->bb_list[j];
-
-                    if (STREQ(b_bsr->end->opname, "bsr")) {
-                        SymReg *addr = get_branch_reg(b_bsr->end);
-
-                        if (addr)
-                            bb_findadd_edge(interp, unit, b_bsr, addr);
-                    }
-                }
-            }
-            /* end #25948 */
-
-            for (pred = bb->pred_list; pred; pred = pred->next) {
-                int found = 0;
-
-                if (STREQ(pred->from->end->opname, "bsr")) {
-                    int j;
-                    {
-                        SymReg * const r = pred->from->end->symregs[0];
-                        sub              = pred->to->start;
-
-                        if ((sub->type & ITLABEL)
-                        &&   STREQ(sub->symregs[0]->name, r->name))
-                            found = 1;
-                    }
-invok:
-                    j = pred->from->index;
-
-                    if (found) {
-                        IMCC_debug(interp, DEBUG_CFG,
-                                "\tcalled from bb %d '%I'\n",
-                                j, pred->from->end);
-
-                        for (; sub && sub != bb->end; sub = sub->next) {
-                            unit->bb_list[sub->bbindex]->flag |= BB_IS_SUB;
-                        }
-
-                        bb_add_edge(unit, bb, unit->bb_list[j + 1]);
-
-                        IMCC_debug(interp, DEBUG_CFG, "\tand does saveall no\n");
-                    }
-                }
-                else if (STREQ(pred->from->end->opname, "invoke")) {
-                    found = 1;
-                    sub   = pred->to->start;
-                    goto invok;
-                }
-
-                if (!found)
-                    IMCC_debug(interp, DEBUG_CFG, "\tcalled from unknown!\n");
-            }
         }
 
         last = bb;
@@ -560,8 +489,6 @@ bb_findadd_edge(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Basic_block *from),
         bb_add_edge(unit, from, unit->bb_list[r->first_ins->bbindex]);
     else {
         IMCC_debug(interp, DEBUG_CFG, "register branch %I ", from->end);
-        /* RT #48282 is probably only ok, if the invoke is "near" the
-         *     set_addr ins */
         for (ins = from->end; ins; ins = ins->prev) {
             if ((ins->type & ITBRANCH)
             &&   STREQ(ins->opname, "set_addr")
@@ -1005,7 +932,7 @@ propagate_need(ARGMOD(Basic_block *bb), ARGIN(const SymReg *r), int i)
                  * path where the var is not initialized, so this might even be
                  * correct :)
                  *
-                 * RT #48286 subroutines
+                 * TT #1244: emit warning in propagate_need()
                  */
 #if 0
                 if (pred->index == 0) {
@@ -1573,10 +1500,10 @@ them).
 void
 search_predecessors_not_in(ARGIN(const Basic_block *node), ARGMOD(Set *s))
 {
-   ASSERT_ARGS(search_predecessors_not_in)
-   Edge *edge;
+    ASSERT_ARGS(search_predecessors_not_in)
+    Edge *edge;
 
-   for (edge = node->pred_list; edge; edge = edge->pred_next) {
+    for (edge = node->pred_list; edge; edge = edge->pred_next) {
         Basic_block * const pred = edge->from;
 
         if (!set_contains(s, pred->index)) {
@@ -1584,7 +1511,7 @@ search_predecessors_not_in(ARGIN(const Basic_block *node), ARGMOD(Set *s))
            pred->loop_depth++;
            search_predecessors_not_in(pred, s);
         }
-   }
+    }
 }
 
 /*** Utility functions ***/

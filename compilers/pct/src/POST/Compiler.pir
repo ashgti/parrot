@@ -82,6 +82,8 @@ Return generated PIR for C<node> and all of its children.
     pos = cpost['pos']
     if null pos goto done_subline
     source = cpost['source']
+    $I0 = can source, 'lineof'
+    unless $I0 goto done_subline
     line = source.'lineof'(pos)
     inc line
   done_subline:
@@ -100,7 +102,7 @@ the generated pir of C<node>'s children.
 
 .sub 'pir' :method :multi(_,_)
     .param pmc node
-    .tailcall self.'pir_children'(node)
+    self.'pir_children'(node)
 .end
 
 
@@ -133,6 +135,7 @@ Return pir for an operation node.
     if pirop == 'call' goto pirop_call
     if pirop == 'callmethod' goto pirop_callmethod
     if pirop == 'return' goto pirop_return
+    if pirop == 'yield' goto pirop_yield
     if pirop == 'tailcall' goto pirop_tailcall
     if pirop == 'inline' goto pirop_inline
 
@@ -154,6 +157,10 @@ Return pir for an operation node.
 
   pirop_return:
     fmt = "    .return (%,)"
+    goto pirop_emit
+
+  pirop_yield:
+    fmt = "    .yield (%,)"
     goto pirop_emit
 
   pirop_tailcall:
@@ -293,11 +300,11 @@ the sub.
     .local pmc paramlist
     paramlist = node['paramlist']
     if null paramlist goto paramlist_done
-    .local pmc iter
-    iter = new 'Iterator', paramlist
+    .local pmc it
+    it = iter paramlist
   param_loop:
-    unless iter goto paramlist_done
-    $P0 = shift iter
+    unless it goto paramlist_done
+    $P0 = shift it
     if null $P0 goto param_loop
     subpir .= $P0
     goto param_loop

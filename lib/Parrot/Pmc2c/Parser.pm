@@ -68,8 +68,7 @@ sub parse_pmc {
 
     my $filebase = basename($filename);
     $filebase =~ s/\.pmc$//;
-    # Note: this can be changed to a die() after the 1.4 release. (TT #665)
-    warn("PMC filename $filebase.pmc does not match pmclass name $pmcname!\n")
+    die("PMC filename $filebase.pmc does not match pmclass name $pmcname!\n")
         unless lc($filebase) eq lc($pmcname);
     my $pmc = Parrot::Pmc2c::PMC->create($pmcname);
     $pmc->preamble( Parrot::Pmc2c::Emitter->text( $preamble, $filename, 1 ) );
@@ -146,6 +145,9 @@ sub find_attrs {
           | \(\*\w*\)\(.*?\)
         )
 
+        # Array size
+        (\[\d+\])?
+
         # modifiers
         \s*
         ((?::\w+\s*)*)
@@ -159,19 +161,21 @@ sub find_attrs {
     }sx;
 
     while ($pmcbody =~ s/($attr_re)//o) {
-        my ($type, $name, @modifiers, $comment);
+        my ($type, $name, $array_size, @modifiers, $comment);
         $type = $2;
         $name = $3;
-        @modifiers = split /\s/, $4;
-        $comment = $5;
+        $array_size = $4 || '';
+        @modifiers = split /\s/, $5;
+        $comment = $6;
 
         $lineno += count_newlines($1);
 
         $pmc->add_attribute(Parrot::Pmc2c::Attribute->new(
             {
-                name      => $name,
-                type      => $type,
-                modifiers => \@modifiers,
+                name       => $name,
+                type       => $type,
+                array_size => $array_size,
+                modifiers  => \@modifiers,
             }
         ));
     }

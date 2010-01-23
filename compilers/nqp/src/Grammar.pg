@@ -215,7 +215,7 @@ token block {
 
 rule routine_def {
     $<declarator>=['sub'|'method']
-    <ident>
+    $<name>=[<ident>[':sym<'<-[>]>+'>']?]
     '(' <signature> ')'
     <block>
     {*}
@@ -301,6 +301,7 @@ token colonpair {
 rule package_declarator {
     $<sym>=[module|class]
     <name>
+    [ 'is' <parent=name> ]?
     [
     || ';' <statement_block> {*}                           #= statement_block
     || <block> {*}                                         #= block

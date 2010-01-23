@@ -46,7 +46,7 @@ sub runstep {
         return 1;
     }
 
-    my $osname = $conf->data->get_p5('OSNAME');
+    my $osname = $conf->data->get('osname');
 
     my $extra_libs = $self->_select_lib( {
         conf            => $conf,
@@ -55,11 +55,6 @@ sub runstep {
         win32_nongcc    => 'pcre.lib',
         default         => '-lpcre',
     } );
-
-    # On OS X check the presence of the pcre headers in the standard
-    # Fink/macports locations.
-    $self->_handle_darwin_for_fink    ($conf, $osname, 'pcre.h');
-    $self->_handle_darwin_for_macports($conf, $osname, 'pcre.h');
 
     $conf->cc_gen('config/auto/pcre/pcre_c.in');
     eval { $conf->cc_build( q{}, $extra_libs ) };

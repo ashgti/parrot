@@ -22,6 +22,7 @@ Functions for loading and initializing dynamic link libraries.
 #include "parrot/dynext.h"
 #include "dynext.str"
 #include "pmc/pmc_parrotlibrary.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: include/parrot/dynext.h */
 
@@ -99,37 +100,37 @@ static void store_lib_pmc(PARROT_INTERP,
         __attribute__nonnull__(3)
         __attribute__nonnull__(4);
 
-#define ASSERT_ARGS_clone_string_into __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_clone_string_into __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(d) \
-    || PARROT_ASSERT_ARG(s) \
-    || PARROT_ASSERT_ARG(value)
-#define ASSERT_ARGS_dlopen_string __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(s) \
+    , PARROT_ASSERT_ARG(value))
+#define ASSERT_ARGS_dlopen_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_get_path __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_get_path __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(handle) \
-    || PARROT_ASSERT_ARG(wo_ext)
-#define ASSERT_ARGS_is_loaded __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(handle) \
+    , PARROT_ASSERT_ARG(wo_ext))
+#define ASSERT_ARGS_is_loaded __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_make_string_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_make_string_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(string)
-#define ASSERT_ARGS_run_init_lib __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(string))
+#define ASSERT_ARGS_run_init_lib __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(handle) \
-    || PARROT_ASSERT_ARG(wo_ext)
-#define ASSERT_ARGS_set_cstring_prop __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(handle) \
+    , PARROT_ASSERT_ARG(wo_ext))
+#define ASSERT_ARGS_set_cstring_prop __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(lib_pmc) \
-    || PARROT_ASSERT_ARG(what) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_store_lib_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(lib_pmc) \
+    , PARROT_ASSERT_ARG(what) \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_store_lib_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(lib_pmc) \
-    || PARROT_ASSERT_ARG(path) \
-    || PARROT_ASSERT_ARG(type)
+    , PARROT_ASSERT_ARG(lib_pmc) \
+    , PARROT_ASSERT_ARG(path) \
+    , PARROT_ASSERT_ARG(type))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -232,8 +233,8 @@ dlopen_string(PARROT_INTERP, ARGIN(STRING *path))
 {
     ASSERT_ARGS(dlopen_string)
 
-    char *pathstr = Parrot_str_to_cstring(interp, path);
-    void *handle = Parrot_dlopen(pathstr);
+    char * const pathstr = Parrot_str_to_cstring(interp, path);
+    void *       handle  = Parrot_dlopen(pathstr);
     Parrot_str_free_cstring(pathstr);
     return handle;
 }
@@ -428,6 +429,13 @@ run_init_lib(PARROT_INTERP, ARGIN(void *handle),
     void (*init_func)(PARROT_INTERP, PMC *);
     PMC *lib_pmc;
 
+    UINTVAL regs_used[]     = { 2, 2, 2, 2 }; /* Arbitrary values */
+    const int parrot_hll_id = 0;
+    PMC * context = Parrot_push_context(interp, regs_used);
+    Parrot_pcc_set_HLL(interp, context, parrot_hll_id);
+    Parrot_pcc_set_namespace(interp, context,
+            Parrot_get_HLL_namespace(interp, parrot_hll_id));
+
     /*
      * work around gcc 3.3.3 and other problem with dynpmcs
      * something during library loading doesn't stand a GC run
@@ -474,6 +482,8 @@ run_init_lib(PARROT_INTERP, ARGIN(void *handle),
 
     /* UNLOCK */
     Parrot_unblock_GC_mark(interp);
+
+    Parrot_pop_context(interp);
 
     return lib_pmc;
 }
@@ -522,9 +532,9 @@ static PMC *
 make_string_pmc(PARROT_INTERP, ARGIN(STRING *string))
 {
     ASSERT_ARGS(make_string_pmc)
-    PMC * const ret = VTABLE_instantiate_str(interp,
-        interp->vtables[enum_class_String]->pmc_class,
-        string, PObj_constant_FLAG);
+    PMC * const ret = constant_pmc_new(interp, enum_class_String);
+    VTABLE_set_string_native(interp, ret, string);
+
     return ret;
 }
 
@@ -555,7 +565,7 @@ Parrot_clone_lib_into(ARGMOD(Interp *d), ARGMOD(Interp *s), ARGIN(PMC *lib_pmc))
         VTABLE_getprop(s, lib_pmc, filename));
     STRING * const lib_name = clone_string_into(d, s,
         VTABLE_getprop(s, lib_pmc, libname));
-    void * const handle = PMC_data(lib_pmc);
+    void * const handle = VTABLE_get_pointer(s, lib_pmc);
     STRING * const type =
         VTABLE_get_string(s, VTABLE_getprop(s, lib_pmc, type_str));
 

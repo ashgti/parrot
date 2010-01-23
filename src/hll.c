@@ -31,6 +31,7 @@ feature.
 
 #include "parrot/parrot.h"
 #include "parrot/dynext.h"
+#include "pmc/pmc_callcontext.h"
 #include "hll.str"
 
 /* HEADERIZER HFILE: include/parrot/hll.h */
@@ -43,8 +44,8 @@ PARROT_WARN_UNUSED_RESULT
 static PMC* new_hll_entry(PARROT_INTERP, ARGIN_NULLOK(STRING *entry_name))
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_new_hll_entry __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
+#define ASSERT_ARGS_new_hll_entry __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -53,7 +54,7 @@ static PMC* new_hll_entry(PARROT_INTERP, ARGIN_NULLOK(STRING *entry_name))
 #define END_READ_HLL_INFO(interp, hll_info)
 #define START_WRITE_HLL_INFO(interp, hll_info) \
     do { \
-        if (PMC_sync((interp)->HLL_info)) { \
+        if (PObj_is_PMC_shared_TEST(hll_info) && PMC_sync((interp)->HLL_info)) { \
             (hll_info) = (interp)->HLL_info = \
                 Parrot_clone((interp), (interp)->HLL_info); \
             if (PMC_sync((interp)->HLL_info)) \
@@ -90,14 +91,7 @@ new_hll_entry(PARROT_INTERP, ARGIN_NULLOK(STRING *entry_name))
     PMC * const entry = constant_pmc_new(interp, enum_class_FixedPMCArray);
 
     if (entry_name && !STRING_IS_EMPTY(entry_name)) {
-        char   * const cstring    = Parrot_str_to_cstring(interp, entry_name);
-        const  UINTVAL len        = Parrot_str_byte_length(interp, entry_name);
-        STRING *const_name        = Parrot_str_new_init(interp, cstring,
-            len, PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
-            PObj_constant_FLAG);
-
-        Parrot_str_free_cstring(cstring);
-        VTABLE_set_pmc_keyed_str(interp, hll_info, const_name, entry);
+        VTABLE_set_pmc_keyed_str(interp, hll_info, entry_name, entry);
     }
     else
         VTABLE_push_pmc(interp, hll_info, entry);
@@ -362,8 +356,8 @@ Parrot_register_HLL_type(PARROT_INTERP, INTVAL hll_id,
             "no such HLL ID (%vd)", hll_id);
 
     /* the type might already be registered in a non-conflicting way, in which
-     * case we can avoid copying */
-    if (PMC_sync(hll_info)) {
+     * ca se we can avoid copying */
+    if (PObj_is_PMC_shared_TEST(hll_info) && PMC_sync(hll_info)) {
         if (hll_type == Parrot_get_HLL_type(interp, hll_id, core_type))
             return;
     }
@@ -446,7 +440,7 @@ INTVAL
 Parrot_get_ctx_HLL_type(PARROT_INTERP, INTVAL core_type)
 {
     ASSERT_ARGS(Parrot_get_ctx_HLL_type)
-    const INTVAL hll_id = CONTEXT(interp)->current_HLL;
+    const INTVAL hll_id = Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp));
 
     return Parrot_get_HLL_type(interp, hll_id, core_type);
 }
@@ -468,7 +462,7 @@ PMC*
 Parrot_get_ctx_HLL_namespace(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_get_ctx_HLL_namespace)
-    return Parrot_get_HLL_namespace(interp, CONTEXT(interp)->current_HLL);
+    return Parrot_get_HLL_namespace(interp, Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp)));
 }
 
 /*
@@ -553,6 +547,7 @@ Parrot_regenerate_HLL_namespaces(PARROT_INTERP)
 Leopold Toetsch
 
 =cut
+
 
 */
 

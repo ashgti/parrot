@@ -1,4 +1,4 @@
-This is Parrot, version 1.3.0
+This is Parrot, version 1.9.0
 ------------------------------
 
 Parrot is Copyright (C) 2001-2009, Parrot Foundation.
@@ -14,17 +14,17 @@ For more details, see the full text of the license in the file LICENSE.
 PREREQUISITES
 -------------
 
-You need a C compiler, a linker, and a make program of course. If you will be
-linking with the ICU library you have to download and install it before
-configuring Parrot.
+You need a C compiler, a linker, and a make program of course.
 
-Get it from http://site.icu-project.org/download
+If you will be linking with the ICU library you have to download and install it before
+configuring Parrot. Get it from http://site.icu-project.org/download
 
-You also need Perl 5.8.4 or newer, Storable 2.12 or newer, and Bundle::Parrot
-to run various configure and build scripts.
+You also need Perl 5.8.4 or newer, and Storable 2.12 or newer
+for running various configure and build scripts.
 
 For most of the platforms that we are supporting initially, Parrot should build
-out of the box.  PLATFORM lists our target platforms.
+out of the box. docs/parrot.pod lists the core platforms.
+PLATFORMS provides reports on the platforms on which Parrot has been built and tested. 
 
 INSTRUCTIONS
 ------------
@@ -84,6 +84,13 @@ By default, this installs in /usr/local, with the Parrot executable in
 
 But please note that dynamic libs will not be found for non-standard
 locations unless you set LD_LIBRARY_PATH or similar.
+
+If you want to build high level languages on top of Parrot, you should
+also run
+
+    make install-dev
+
+to install development files which compilers need in their build process.
 
 Look at docs/parrot.pod and docs/intro.pod for where to go from here.  If you
 have any problems, see the section "How To Submit A Bug Report" in

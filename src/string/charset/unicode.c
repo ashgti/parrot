@@ -145,65 +145,65 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_compare __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_compare __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(lhs) \
-    || PARROT_ASSERT_ARG(rhs)
-#define ASSERT_ARGS_compose __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(lhs) \
+    , PARROT_ASSERT_ARG(rhs))
+#define ASSERT_ARGS_compose __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_compute_hash __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_compute_hash __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_cs_rindex __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_decompose __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_downcase __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_cs_rindex __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_decompose __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_downcase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_downcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_find_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_downcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_find_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string)
-#define ASSERT_ARGS_find_not_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string))
+#define ASSERT_ARGS_find_not_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string)
-#define ASSERT_ARGS_get_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string))
+#define ASSERT_ARGS_get_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string)
-#define ASSERT_ARGS_get_graphemes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string))
+#define ASSERT_ARGS_get_graphemes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string) \
-    || PARROT_ASSERT_ARG(dest_string)
-#define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string) \
+    , PARROT_ASSERT_ARG(dest_string))
+#define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string)
-#define ASSERT_ARGS_set_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string))
+#define ASSERT_ARGS_set_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(source_string) \
-    || PARROT_ASSERT_ARG(insert_string)
-#define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(source_string) \
+    , PARROT_ASSERT_ARG(insert_string))
+#define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_titlecase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_to_charset __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_titlecase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_to_charset __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_u_iscclass __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_upcase __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_u_iscclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_upcase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_upcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_validate __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_upcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_validate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(src)
+    , PARROT_ASSERT_ARG(src))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -394,7 +394,7 @@ static STRING*
 decompose(PARROT_INTERP, SHIM(STRING *src))
 {
     ASSERT_ARGS(decompose)
-    /* TODO: RT #59696 Implement this. */
+    /* TODO: https://trac.parrot.org/parrot/wiki/StringsTasklist Implement this. */
     UNIMPL;
 }
 
@@ -440,7 +440,7 @@ upcase(PARROT_INTERP, ARGIN(STRING *src))
 
     /* use all available space - see below XXX */
     /* TODO downcase, titlecase too */
-    dest_len = PObj_buflen(src) / sizeof (UChar);
+    dest_len = Buffer_buflen(src) / sizeof (UChar);
     src_len  = src->bufused     / sizeof (UChar);
 
     /*
@@ -642,7 +642,7 @@ static void
 upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
-    /* TODO: RT #59696 Implement this. */
+    /* TODO: https://trac.parrot.org/parrot/wiki/StringsTasklist Implement this. */
     UNIMPL;
 }
 
@@ -662,7 +662,7 @@ static void
 downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
-    /* TODO: RT #59696 Implement this. */
+    /* TODO: https://trac.parrot.org/parrot/wiki/StringsTasklist Implement this. */
     UNIMPL;
 }
 
@@ -682,7 +682,7 @@ static void
 titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
-    /* TODO: RT #59696 Implement this. */
+    /* TODO: https://trac.parrot.org/parrot/wiki/StringsTasklist Implement this. */
     UNIMPL;
 }
 
@@ -750,7 +750,7 @@ cs_rindex(PARROT_INTERP, SHIM(STRING *source_string),
         SHIM(STRING *search_string), SHIM(UINTVAL offset))
 {
     ASSERT_ARGS(cs_rindex)
-    /* TODO: RT #59696 Implement this. */
+    /* TODO: https://trac.parrot.org/parrot/wiki/StringsTasklist Implement this. */
     UNIMPL;
 }
 
@@ -834,14 +834,14 @@ u_iscclass(PARROT_INTERP, UINTVAL codepoint, INTVAL flags)
     if (flags & enum_cclass_whitespace) {
         /* from http://www.unicode.org/Public/UNIDATA/PropList.txt */
         switch (codepoint) {
-            case 0x1680: case 0x180e: case 0x2000: case 0x2001:
-            case 0x2002: case 0x2003: case 0x2004: case 0x2005:
-            case 0x2006: case 0x2007: case 0x2008: case 0x2009:
-            case 0x200a: case 0x2028: case 0x2029: case 0x202f:
-            case 0x205f: case 0x3000:
-                return 1;
-            default:
-                break;
+          case 0x1680: case 0x180e: case 0x2000: case 0x2001:
+          case 0x2002: case 0x2003: case 0x2004: case 0x2005:
+          case 0x2006: case 0x2007: case 0x2008: case 0x2009:
+          case 0x200a: case 0x2028: case 0x2029: case 0x202f:
+          case 0x205f: case 0x3000:
+            return 1;
+          default:
+            break;
         }
     }
 
@@ -968,6 +968,11 @@ find_not_cclass(PARROT_INTERP, INTVAL flags,
     UINTVAL     pos = offset;
     UINTVAL     end = offset + count;
     int         bit;
+
+    if (pos > source_string->strlen) {
+        /* XXX: Throw in this case? */
+        return offset + count;
+    }
 
     ENCODING_ITER_INIT(interp, source_string, &iter);
 

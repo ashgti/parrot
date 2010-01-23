@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -648,7 +648,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "implicit :main with wrong # args."
   .param int op2
 .end
 CODE
-/too few arguments passed \(1\) - 2 params expected/
+/too few positional arguments: 1 passed, 2 \(or more\) expected/
 OUTPUT
 
 pir_error_output_like( <<'CODE', <<'OUTPUT', "explicit :main with wrong # args." );
@@ -657,7 +657,7 @@ pir_error_output_like( <<'CODE', <<'OUTPUT', "explicit :main with wrong # args."
   .param int op2
 .end
 CODE
-/too few arguments passed \(1\) - 2 params expected/
+/too few positional arguments: 1 passed, 2 \(or more\) expected/
 OUTPUT
 
 ($TEMP, $temp_pasm) = create_tempfile(UNLINK => 1);
@@ -688,7 +688,7 @@ print $TEMP <<'EOF';
 .end
 
 # :load or other pragmas are only evaluated on the first
-# instruction of a compilation unit
+# instruction of a subroutine
 .sub _sub1 :load
   say "in sub1"
   returncc
@@ -835,7 +835,10 @@ the_sub
 main
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "caller introspection via interp" );
+my @todo = ( todo => 'broken with JIT (TT #983)' )
+    if ( defined $ENV{TEST_PROG_ARGS} and
+        $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ );
+pir_output_is( <<'CODE', <<'OUTPUT', "caller introspection via interp", @todo );
 .sub main :main
 .include "interpinfo.pasm"
     # this test will fail when run with -Oc
@@ -1130,19 +1133,19 @@ OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', ':postcomp' );
 .sub main :main
-    say "main"
+    say 'main'
 .end
 .sub pc :postcomp
-    print "pc\n"
+    say 'pc'
 .end
 .sub im :immediate
-    print "im\n"
+    say 'im'
 .end
 .sub pc2 :postcomp
-    print "pc2\n"
+    say 'pc2'
 .end
 .sub im2 :immediate
-    print "im2\n"
+    say 'im2'
 .end
 CODE
 im
@@ -1222,38 +1225,6 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'literal \u in sub name (not unicode)' );
 .end
 CODE
 ok
-OUTPUT
-
-pir_output_is( <<'CODE', <<'OUTPUT', 'load_bytecode with .pir (RT #39807)' );
-.sub main :main
-    load_bytecode 'PGE.pbc'
-    load_bytecode 'dumper.pir'
-    load_bytecode 'PGE/Dumper.pir'
-
-    $P0 = compreg 'PGE::P5Regex'
-    $P1 = $P0('aabb*')
-    $P2 = $P1('fooaabbbar')
-
-    _dumper($P2)
-.end
-CODE
-"VAR1" => PMC 'PGE;Match' => "aabbb" @ 3
-OUTPUT
-
-pir_output_is( <<'CODE', <<'OUTPUT', 'load_bytecode with .pbc (RT #39807)' );
-.sub main :main
-    load_bytecode 'PGE.pbc'
-    load_bytecode 'dumper.pbc'
-    load_bytecode 'PGE/Dumper.pbc'
-
-    $P0 = compreg 'PGE::P5Regex'
-    $P1 = $P0('aabb*')
-    $P2 = $P1('fooaabbbar')
-
-    _dumper($P2)
-.end
-CODE
-"VAR1" => PMC 'PGE;Match' => "aabbb" @ 3
 OUTPUT
 
 pir_error_output_like( <<'CODE', qr/Null PMC access in invoke()/, 'invoking null pmc' );
@@ -1467,8 +1438,8 @@ I can has outer from eval?
 OUTPUT
 
 $ENV{TEST_PROG_ARGS} ||= '';
-my @todo = $ENV{TEST_PROG_ARGS} =~ /--run-pbc/
-    ? ( todo => 'lexicals not thawed properly from PBC, RT #60652' )
+@todo = $ENV{TEST_PROG_ARGS} =~ /--run-pbc/
+    ? ( todo => 'lexicals not thawed properly from PBC, TT #1171' )
     : ();
 pir_output_is( <<'CODE', <<'OUTPUT', ':outer with identical sub names', @todo );
 .sub 'main' :main
@@ -1621,6 +1592,141 @@ bar
 bazsubid
 OUTPUT
 
+pir_output_is( <<'CODE', <<'OUTPUT', 'Thaw PIR subclass', todo => 'See TT #132' );
+.sub main :main
+
+  $P0 = get_class 'Sub'
+  $P1 = subclass $P0, 'myProc'
+
+  .local pmc pirC
+  pirC = compreg 'PIR'
+
+  .local string code
+  code = <<"END_CODE"
+
+.sub bar
+  say "hi"
+.end
+END_CODE
+
+  .local pmc compiled
+  compiled = pirC(code)
+  compiled = compiled[0] # just want the first executable sub here.
+
+  compiled() # works
+
+  .local pmc sub
+  sub = new 'myProc'
+  assign sub, compiled
+  sub() # works
+
+  $S0 = freeze sub
+  say "frozen"
+  $P2 = thaw $S0
+  say "thawed"
+  $P2()
+.end
+CODE
+hi
+hi
+frozen
+thawed
+hi
+OUTPUT
+
+pir_output_is( <<'CODE', <<'OUTPUT', 'init_pmc' );
+.sub 'main'
+    .local pmc init, s, regs, arg_info
+    
+    init = new ['Hash']
+    init['start_offs']  = 42
+    init['end_offs']    = 115200
+    
+    regs = new ['FixedIntegerArray']
+    regs = 4
+    regs[0] = 1
+    regs[1] = 2
+    regs[2] = 6
+    regs[3] = 24
+    init['n_regs_used'] = regs
+
+    arg_info = new ['Hash']
+    arg_info['pos_required']    = 1
+    arg_info['pos_optional']    = 1
+    arg_info['pos_slurpy']      = 2
+    arg_info['named_required']  = 3
+    arg_info['named_optional']  = 5
+    arg_info['named_slurpy']    = 8
+    init['arg_info'] = arg_info
+
+    s = new ['Sub'], init
+
+    $I0 = s.'start_offs'()
+    print 'start_offs '
+    say $I0
+
+    print 'end_offs '
+    $I0 = s.'end_offs'()
+    say $I0
+
+    # Check n_regs_used
+    $I0 = s.'__get_regs_used'('I')
+    print 'I regs '
+    say $I0
+
+    $I0 = s.'__get_regs_used'('N')
+    print 'N regs '
+    say $I0
+
+    $I0 = s.'__get_regs_used'('S')
+    print 'S regs '
+    say $I0
+
+    $I0 = s.'__get_regs_used'('P')
+    print 'P regs '
+    say $I0
+
+    # Check arg_info
+    $P0 = inspect s, 'pos_required'
+    print 'pos_required '
+    say $P0
+
+    $P0 = inspect s, 'pos_optional'
+    print 'pos_optional '
+    say $P0
+    
+    $P0 = inspect s, 'pos_slurpy'
+    print 'pos_slurpy '
+    say $P0
+
+    $P0 = inspect s, 'named_required'
+    print 'named_required '
+    say $P0
+
+    $P0 = inspect s, 'named_optional'
+    print 'named_optional '
+    say $P0
+
+    $P0 = inspect s, 'named_slurpy'
+    print 'named_slurpy '
+    say $P0
+
+    # We need more tests for other fields. And more accessors obviously.
+.end
+CODE
+start_offs 42
+end_offs 115200
+I regs 1
+N regs 2
+S regs 6
+P regs 24
+pos_required 1
+pos_optional 1
+pos_slurpy 2
+named_required 3
+named_optional 5
+named_slurpy 8
+OUTPUT
 
 # Local Variables:
 #   mode: cperl

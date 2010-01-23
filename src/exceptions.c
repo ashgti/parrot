@@ -19,8 +19,6 @@ Define the the core subsystem for exceptions.
 */
 
 #include "parrot/parrot.h"
-#include "parrot/call.h"
-#include "parrot/exceptions.h"
 #include "exceptions.str"
 #include "pmc/pmc_continuation.h"
 
@@ -38,24 +36,16 @@ static PMC * build_exception_from_args(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_CAN_RETURN_NULL
-static opcode_t * pass_exception_args(PARROT_INTERP,
-    ARGIN(const char *sig),
-    ARGIN(opcode_t *dest),
-    ARGIN(Parrot_Context * old_ctx),
-    ...)
+static void setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4);
+        __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_build_exception_from_args __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_build_exception_from_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(format)
-#define ASSERT_ARGS_pass_exception_args __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(format))
+#define ASSERT_ARGS_setup_exception_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(sig) \
-    || PARROT_ASSERT_ARG(dest) \
-    || PARROT_ASSERT_ARG(old_ctx)
+    , PARROT_ASSERT_ARG(sig))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -107,9 +97,16 @@ die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
     INTVAL         exit_status = 1;
     const INTVAL   severity    = VTABLE_get_integer_keyed_str(interp, exception, CONST_STRING(interp, "severity"));
 
+    /* In some cases we have a fatal exception before the IO system
+     * is completely initialized. Do some attempt to output the
+     * message to stderr, to help diagnosing. */
+    int use_perr = !PMC_IS_NULL(Parrot_io_STDERR(interp));
+
     /* flush interpreter output to get things printed in order */
-    Parrot_io_flush(interp, Parrot_io_STDOUT(interp));
-    Parrot_io_flush(interp, Parrot_io_STDERR(interp));
+    if (!PMC_IS_NULL(Parrot_io_STDOUT(interp)))
+        Parrot_io_flush(interp, Parrot_io_STDOUT(interp));
+    if (use_perr)
+        Parrot_io_flush(interp, Parrot_io_STDERR(interp));
 
     if (interp->pdb) {
         Interp * interpdeb = interp->pdb->debugger;
@@ -120,7 +117,14 @@ die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
     }
 
     if (Parrot_str_not_equal(interp, message, CONST_STRING(interp, ""))) {
-        Parrot_io_eprintf(interp, "%S\n", message);
+        if (use_perr)
+            Parrot_io_eprintf(interp, "%S\n", message);
+        else {
+            char * const msg = Parrot_str_to_cstring(interp, message);
+            fflush(stderr);
+            fprintf(stderr, "\n%s\n", msg);
+            Parrot_str_free_cstring(msg);
+        }
 
         /* caution against output swap (with PDB_backtrace) */
         fflush(stderr);
@@ -141,7 +145,7 @@ die_from_exception(PARROT_INTERP, ARGIN(PMC *exception))
      * returning NULL from here returns resume address NULL to the
      * runloop, which will terminate the thread function finally
      *
-     * RT #45917 this check should better be in Parrot_exit
+     * TT #1287 this check should better be in Parrot_exit
      */
 
     /* no exception handler, but this is not the main thread */
@@ -226,20 +230,7 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
     }
 
     address    = VTABLE_invoke(interp, handler, dest);
-
-    /* XXX This is an obvious hack. We need to identify here whether this is
-       an ExceptionHandler proper or a PIR-defined subclass. This conditional
-       monstrosity attempts to check whether this is an object of a PIR-defined
-       subclass. When we have garbage-collectable PMCs, we shouldn't need to do
-       this nonsense. See TT#154 for details */
-    if (handler->vtable->base_type == enum_class_Object) {
-        /* Don't know what to do here to make sure the exception parameter gets
-           passed properly. */
-    }
-    /* Set up the continuation context of the handler in the interpreter. */
-    else if (PMC_cont(handler)->current_results)
-        address = pass_exception_args(interp, "P", address,
-                CONTEXT(interp), exception);
+    setup_exception_args(interp, "P", exception);
 
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {
         /* it's a C exception handler */
@@ -253,30 +244,29 @@ Parrot_ex_throw_from_op(PARROT_INTERP, ARGIN(PMC *exception), ARGIN_NULLOK(void 
 
 /*
 
-=item C<static opcode_t * pass_exception_args(PARROT_INTERP, const char *sig,
-opcode_t *dest, Parrot_Context * old_ctx, ...)>
+=item C<static void setup_exception_args(PARROT_INTERP, const char *sig, ...)>
 
-Passes arguments to the exception handler routine. These are retrieved with
-the .get_results() directive in PIR code.
+Sets up arguments to the exception handler invocation.
 
 =cut
 
 */
 
 PARROT_CAN_RETURN_NULL
-static opcode_t *
-pass_exception_args(PARROT_INTERP, ARGIN(const char *sig),
-        ARGIN(opcode_t *dest), ARGIN(Parrot_Context * old_ctx), ...)
+static void
+setup_exception_args(PARROT_INTERP, ARGIN(const char *sig), ...)
 {
-    ASSERT_ARGS(pass_exception_args)
-    va_list   ap;
-    opcode_t *next;
+    ASSERT_ARGS(setup_exception_args)
+    va_list  args;
+    PMC     *sig_obj;
 
-    va_start(ap, old_ctx);
-    next = parrot_pass_args_fromc(interp, sig, dest, old_ctx, ap);
-    va_end(ap);
+    va_start(args, sig);
+    sig_obj = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL, sig, args);
+    va_end(args);
 
-    return next;
+    CALLSIGNATURE_is_exception_SET(sig_obj);
+
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), sig_obj);
 }
 
 /*
@@ -342,24 +332,12 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     ASSERT_ARGS(Parrot_ex_throw_from_c)
 
     Parrot_runloop    *return_point = interp->current_runloop;
-    RunProfile * const profile      = interp->profile;
     opcode_t *address;
     PMC        * const handler      =
                              Parrot_cx_find_handler_local(interp, exception);
 
     if (PMC_IS_NULL(handler))
         die_from_exception(interp, exception);
-
-    /* If profiling, remember end time of lastop and generate entry for
-     * exception. */
-    if (profile && Interp_flags_TEST(interp, PARROT_PROFILE_FLAG)) {
-        const FLOATVAL now = Parrot_floatval_time();
-
-        profile->data[profile->cur_op].time += now - profile->starttime;
-        profile->cur_op                      = PARROT_PROF_EXCEPTION;
-        profile->starttime                   = now;
-        profile->data[PARROT_PROF_EXCEPTION].numcalls++;
-    }
 
     if (Interp_debug_TEST(interp, PARROT_BACKTRACE_DEBUG_FLAG)) {
         STRING * const exit_code = CONST_STRING(interp, "exit_code");
@@ -374,8 +352,10 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
     }
 
     /* Note the thrower.
-     * XXX TT#596 - pass in current context instead when we have context PMCs. */
-    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), CONTEXT(interp)->current_cont);
+     * XXX TT #596 - pass in current context instead when we have context PMCs. */
+    /* Don't split line. It will break CONST_STRING handling */
+    VTABLE_set_attr_str(interp, exception, CONST_STRING(interp, "thrower"), Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp)));
+
 
     /* it's a C exception handler */
     if (PObj_get_FLAGS(handler) & SUB_FLAG_C_HANDLER) {
@@ -386,9 +366,7 @@ Parrot_ex_throw_from_c(PARROT_INTERP, ARGIN(PMC *exception))
 
     /* Run the handler. */
     address = VTABLE_invoke(interp, handler, NULL);
-    if (PMC_cont(handler)->current_results)
-        address = pass_exception_args(interp, "P", address,
-                CONTEXT(interp), exception);
+    setup_exception_args(interp, "P", exception);
     PARROT_ASSERT(return_point->handler_start == NULL);
     return_point->handler_start = address;
     longjmp(return_point->resume, 2);
@@ -513,6 +491,8 @@ Parrot_ex_rethrow_from_c(PARROT_INTERP, ARGIN(PMC *exception))
 
 Mark an exception as unhandled, as part of rethrowing it.
 
+=back
+
 =cut
 
 */
@@ -526,40 +506,6 @@ Parrot_ex_mark_unhandled(PARROT_INTERP, ARGIN(PMC *exception))
 }
 
 /*
-
-=item C<size_t Parrot_ex_calc_handler_offset(PARROT_INTERP)>
-
-Retrieve an exception from the concurrency scheduler, prepare a call to the
-handler, and return the offset to the handler so it can become the next op in
-the runloop.
-
-TT #546: This function appears to be unused.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-size_t
-Parrot_ex_calc_handler_offset(PARROT_INTERP)
-{
-    ASSERT_ARGS(Parrot_ex_calc_handler_offset)
-    PMC * const exception = VTABLE_pop_pmc(interp, interp->scheduler);
-
-    /* now fill rest of exception, locate handler and get
-     * destination of handler */
-    opcode_t * const handler_address = Parrot_ex_throw_from_op(interp, exception, NULL);
-
-    if (handler_address == NULL)
-        PANIC(interp, "Unable to calculate opcode address for exception handler");
-
-    /* return the *offset* of the handler */
-    return handler_address - interp->code->base.data;
-}
-
-/*
-
-=back
 
 =head2 Error Functions
 
