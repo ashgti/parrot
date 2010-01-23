@@ -54,12 +54,15 @@ rerun_defaults_for_testing($conf, $args );
 $conf->add_steps($pkg);
 $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
+# Next line avoids an uninitialized value warning.
+$conf->data->set( 'osname' => 'mswin32' );
 $ret = $step->runstep($conf);
 ok( $ret, "runstep() returned true value" );
 like( $step->result(), qr/yes|no/, "Result is either 'yes' or 'no'" );
 ok( defined( $conf->data->get( 'HAS_LIBJIT' ) ),
    "'HAS_LIBJIT' has defined value" );
 $conf->cc_clean();
+$conf->data->set( 'osname' => undef );
 
 ########## _evaluate_cc_run ##########
 
@@ -142,6 +145,7 @@ ok( ! $conf->data->get( 'libjit_has_alloca'),
     "without libJIT, 'libjit_has_alloca' has false value" );
 is( $conf->data->get( 'libs' ), "",
     "Got expected value for libs" );
+$conf->cc_clean();
 
 ################### DOCUMENTATION ###################
 
