@@ -477,10 +477,10 @@ The created key = "\1idx".
 */
 
     VTABLE void set_pmc_keyed_int(INTVAL idx, PMC *val) {
-        const INTVAL     n = STATICSELF.elements();
+        const INTVAL   n   = STATICSELF.elements();
         STRING * const fmt = CONST_STRING(INTERP, "\1%d");
-        PMC * list_entry;
-        INTVAL pos;
+        PMC           *list_entry;
+        INTVAL         pos;
 
         if (idx < -n)
             idx = -idx - n - 1;
@@ -742,6 +742,22 @@ Used to unarchive the hash.
         Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(SELF);
         find_bounds(INTERP, attrs->hash, &attrs->first, &attrs->last);
         SUPER(info);
+    }
+
+/*
+
+=item C<get_pmc()>
+
+Get underlying regular Hash. Used in UnManagedStruct.
+
+=cut
+
+*/
+
+    VTABLE PMC* get_pmc() {
+        PMC *hash;
+        GET_ATTR_hash(INTERP, SELF, hash);
+        return hash;
     }
 }
 
