@@ -742,16 +742,14 @@ Used to unarchive the hash.
 */
 
     VTABLE void visit(visit_info *info) {
-        PMC **hash = &(PARROT_ORDEREDHASH(SELF)->hash);
-        info->thaw_ptr = hash;
-        (info->visit_pmc_now)(INTERP, *hash, info);
+        VISIT_PMC_ATTR(INTERP, info, SELF, OrderedHash, hash);
         SUPER(info);
     }
 
     VTABLE void thawfinish(visit_info *info) {
-        Parrot_OrderedHash_attributes *attrs =
-                PARROT_ORDEREDHASH(SELF);
+        Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(SELF);
         find_bounds(INTERP, attrs->hash, &attrs->first, &attrs->last);
+        SUPER(info);
     }
 }
 
