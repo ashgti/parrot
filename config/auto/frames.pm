@@ -61,7 +61,10 @@ sub _handle_can_build_call_frames {
         $self->set_result( 'yes' );
     }
     else {
-        $conf->data->set(cc_build_call_frames  => '');
+        $conf->data->set(
+            cc_build_call_frames  => '',
+            has_exec_protect      => undef
+        );
         $self->set_result( 'no' );
     }
     return 1;
