@@ -252,11 +252,19 @@ Main set function.
     VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
         Parrot_OrderedHash_attributes *attrs =
                 PARROT_ORDEREDHASH(SELF);
+
         /* Check for old entry */
         PMC *list_entry = VTABLE_get_pmc_keyed(INTERP, attrs->hash, key);
         if (!PMC_IS_NULL(list_entry)) {
             /* We have old entry. Just update value */
-            VTABLE_set_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_VALUE, value);
+            PMC *nextkey = key_next(INTERP, key);
+            if (nextkey) {
+                PMC *old_value = VTABLE_get_pmc_keyed_int(INTERP, list_entry,
+                        ORDERED_HASH_ITEM_VALUE);
+                VTABLE_set_pmc_keyed(INTERP, value, nextkey, value);
+            }
+            else
+                VTABLE_set_pmc_keyed_int(INTERP, list_entry, ORDERED_HASH_ITEM_VALUE, value);
             return;
         }
 
@@ -366,14 +374,9 @@ Sets the PMC value of the element at index C<key> to C<val>.
 
     VTABLE PMC *get_pmc_keyed(PMC *key) {
         PMC * item;
+        /* Access by integer index */
         if ((PObj_get_FLAGS(key) & KEY_type_FLAGS) == KEY_integer_FLAG) {
-            PMC * const item = SELF.get_pmc_keyed_int(VTABLE_get_integer(INTERP, key));
-            PMC * const next = VTABLE_shift_pmc(INTERP, key);
-
-            if (!next)
-                return item;
-
-            return VTABLE_get_pmc_keyed(INTERP, item, next);
+            return SELF.get_pmc_keyed_int(VTABLE_get_integer(INTERP, key));
         }
 
         item = VTABLE_get_pmc_keyed(INTERP, PARROT_ORDEREDHASH(SELF)->hash, key);
@@ -598,17 +601,6 @@ The created key = "\1idx".
 */
 
     VTABLE INTVAL defined_keyed(PMC *key) {
-        if ((PObj_get_FLAGS(key) & KEY_type_FLAGS) == KEY_integer_FLAG) {
-            /* Don't fetch item prematurely. It's costy */
-            INTVAL    intval = VTABLE_get_integer(INTERP, key);
-            PMC * const next = VTABLE_shift_pmc(INTERP, key);
-
-            if (!next)
-                return STATICSELF.defined_keyed_int(intval);
-
-            return VTABLE_defined_keyed(INTERP, STATICSELF.get_pmc_keyed_int(intval), next);
-        }
-
         /* We store list_item (which is defined). So fetch original PMC and check it */
         PMC * const item = STATICSELF.get_pmc_keyed(key);
         if (PMC_IS_NULL(item))
