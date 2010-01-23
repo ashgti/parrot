@@ -200,11 +200,6 @@ Marks the OrderedHash as live.
         /* Don't mark C<first> and C<last>. They are in lookup hash anyway */
     }
 
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-    }
-
 /*
 
 =item C<PMC *get_iter()>
