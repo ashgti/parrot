@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 28;
+use Test::More tests => 23;
 use lib qw( lib t/configure/testlib );
 use_ok('config::auto::frames');
 use Parrot::Configure::Options qw( process_options );
