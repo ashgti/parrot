@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -53,6 +53,7 @@ Sort this array, optionally using the provided cmp_func
             else
                 Parrot_quicksort(interp, (void **)PMC_array(SELF), n, cmp_func);
         }
+        RETURN(PMC *SELF);
     }
 
 /*
@@ -721,16 +722,13 @@ Used to unarchive the array.
     }
 
     VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
         SUPER(info);
-        VTABLE_push_integer(INTERP, io, VTABLE_elements(INTERP, SELF));
+        VTABLE_push_integer(INTERP, info, VTABLE_elements(INTERP, SELF));
     }
 
     VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
         SUPER(info);
-        if (info->extra_flags == EXTRA_IS_NULL)
-            SELF.set_integer_native(VTABLE_shift_integer(INTERP, io));
+        SELF.set_integer_native(VTABLE_shift_integer(INTERP, info));
     }
 
 /*

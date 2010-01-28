@@ -31,12 +31,10 @@ use Parrot::Harness::Smoke qw(
 local @ARGV = @ARGV;
 (my $longopts, @ARGV) = handle_long_options(@ARGV);
 
-$ENV{RUNNING_MAKE_TEST} = $longopts->{running_make_test};
-
 # Suck the short options into the TEST_PROG_ARGS
 # environmental variable.
 my %opts;
-getopts('wgjPCSefbvdr?hO:D:', \%opts);
+getopts('wgGjPCSefbvdr?hO:D:', \%opts);
 
 if ($opts{'?'} || $opts{h} || $longopts->{help}) {
     Usage();
@@ -141,6 +139,10 @@ Turn warnings on.
 
 Run the C<CGoto> core.
 
+=item C<-G>
+
+Run the C<GCDebug> core.
+
 =item C<-j>
 
 Alias for running with the fast core.
@@ -184,10 +186,6 @@ See 'parrot --help-debug' for available flags.
 There are also long command line options:
 
 =over 4
-
-=item C<--running-make-test>
-
-Some test scripts run more quickly when this is set.
 
 =item C<--gc-debug>
 

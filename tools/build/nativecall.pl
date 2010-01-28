@@ -49,12 +49,12 @@ my %sig_table = (
              "    }\n" .
              "    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"P\", final_destination);",
     },
-    i => { as_proto => "int",    sig_char => "I" },
-    l => { as_proto => "long",   sig_char => "I" },
-    c => { as_proto => "char",   sig_char => "I" },
-    s => { as_proto => "short",  sig_char => "I" },
-    f => { as_proto => "float",  sig_char => "N" },
-    d => { as_proto => "double", sig_char => "N" },
+    i => { as_proto => "int",    sig_char => "I", return_type => "INTVAL" },
+    l => { as_proto => "long",   sig_char => "I", return_type => "INTVAL" },
+    c => { as_proto => "char",   sig_char => "I", return_type => "INTVAL" },
+    s => { as_proto => "short",  sig_char => "I", return_type => "INTVAL" },
+    f => { as_proto => "float",  sig_char => "N", return_type => "FLOATVAL" },
+    d => { as_proto => "double", sig_char => "N", return_type => "FLOATVAL" },
     t => { as_proto => "char *",
            other_decl => "STRING *final_destination;",
            ret_assign => "final_destination = Parrot_str_new(interp, return_data, 0);\n    Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"S\", final_destination);",
@@ -454,25 +454,15 @@ SHIM(PMC *pmc_nci), NOTNULL(STRING *signature), SHIM(int *jitted))
     PMC        *b;
     PMC        *iglobals;
     PMC        *temp_pmc;
-    UINTVAL    signature_len;
 
     PMC        *HashPointer   = NULL;
 
     /* And in here is the platform-independent way. Which is to say
        "here there be hacks" */
-    signature_len = Parrot_str_byte_length(interp, signature);
 
-#ifndef CAN_BUILD_CALL_FRAMES
-    if (0 == signature_len)
-       return F2DPTR(pcf_v_);
-#endif
-
-    /* remove deprecated void argument 'v' character */
-    if (2 == signature_len && 'v' == Parrot_str_indexed(interp, signature, 1)) {
-       Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG, "function signature argument character 'v' ignored");
-       Parrot_str_chopn_inplace(interp, signature, 1);
-       signature_len = Parrot_str_byte_length(interp, signature);
-    }
+    /* fixup empty signatures */
+    if (STRING_IS_EMPTY(signature))
+        signature = CONST_STRING(interp, "v");
 
     iglobals = interp->iglobals;
 
