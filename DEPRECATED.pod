@@ -23,7 +23,7 @@ shipped, this feature may be removed in B<any> upcoming release, and
 you should no longer rely on it.
 
 Whenever deprecated items are removed, information
-regarding how to cope with the removal will be added to
+regarding how to cope with the removal should be added to
 L<https://trac.parrot.org/parrot/wiki/Deprecation>.
 
 When running parrot, you can receive warnings about deprecated opcodes.
@@ -108,13 +108,6 @@ using this PMC should migrate to ResizablePMCArray or something more suitable.
 
 L<https://trac.parrot.org/parrot/ticket/1303>
 
-=item OrderedHash PMC [eligible in 2.1]
-
-This PMC is old, haskish and will be reimplemented with some backward incompatible
-changes in semantic of handling removed elements.
-
-L<https://trac.parrot.org/parrot/ticket/1403>
-
 =item CPointer PMC [eligible in 2.1]
 
 And all uses in the Parrot calling conventions.
@@ -162,14 +155,6 @@ get_results no longer used to fetch exception object.
 
 L<https://trac.parrot.org/parrot/ticket/1406>
 
-=item dlfunc signatures [eligible in 2.1]
-
-C<xv>-style signatures will no longer work. See PDD16 for details.
-
-F<pdds/draft/pdd16_native_call.pod>
-
-L<https://trac.parrot.org/parrot/ticket/1410>
-
 =back
 
 =head1 Bytecode
@@ -189,10 +174,6 @@ L<https://trac.parrot.org/parrot/ticket/451>
 L<https://trac.parrot.org/parrot/ticket/451>
 
 =back
-
-=head1 Class Features
-
-[Nothing at this time.]
 
 =head1 Debugger
 
@@ -399,7 +380,7 @@ L<https://trac.parrot.org/parrot/ticket/842>
 
 =over 4
 
-=item tools/build/dynoplibs.pl and tools/build/dynpmc.pl [eligible in 1.1]
+=item tools/build/dynpmc.pl [eligible in 1.1]
 
 Replaced with makefiles.
 
@@ -432,12 +413,10 @@ L<https://trac.parrot.org/parrot/ticket/852>
 =item Library name changes [eligible in 2.1]
 
 The use of C<::> a namespace separator is deprecated.  Core libraries will
-change to use multi-level keys instead.  For example, C<Getopt::Obj> will
-change to C<Getopt; Obj>.  Affected libraries include C<Data::Dumper>,
-C<Getopt::Obj>, C<Parrot::Coroutine>, C<SDL>, C<Test::Builder>,
-C<YAML::Dumper>, and C<PCRE::NCI>.
-
-As well, anything under F<examples/> is subject to this change.
+change to use multi-level keys instead.  For example, C<Data::Dumper> will
+change to C<Data; Dumper>.  Affected libraries also include:
+C<Parrot::Coroutine>, C<SDL>, C<Test::Builder>, C<YAML::Dumper>, and
+C<PCRE::NCI>.
 
 =back
 

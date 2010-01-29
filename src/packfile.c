@@ -1052,7 +1052,7 @@ PackFile_unpack(PARROT_INTERP, ARGMOD(PackFile *self),
         /* No UUID; fine, nothing more to do. */
     }
     else if (header->uuid_type == 1) {
-        if (packed_size < PACKFILE_HEADER_BYTES + header->uuid_size) {
+        if (packed_size < (size_t) PACKFILE_HEADER_BYTES + header->uuid_size) {
             Parrot_io_eprintf(NULL, "PackFile_unpack: "
                     "Buffer length %d is shorter than PACKFILE_HEADER_BYTES + uuid_size %d\n",
                     packed_size, PACKFILE_HEADER_BYTES + header->uuid_size);
