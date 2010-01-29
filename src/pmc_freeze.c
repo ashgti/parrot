@@ -696,21 +696,20 @@ visit_loop_todo_list(PARROT_INTERP, ARGIN_NULLOK(PMC *current),
         ARGIN(visit_info *info))
 {
     ASSERT_ARGS(visit_loop_todo_list)
-    PMC        *list_item;
-    const int    thawing        = info->what == VISIT_THAW_NORMAL;
+    const int  thawing = (info->what == VISIT_THAW_NORMAL);
+    PMC * const todolist = info->todo;
 
     (info->visit_pmc_now)(interp, current, info);
 
     /* can't cache upper limit, visit may append items */
-    while ((current = VTABLE_shift_pmc(interp, info->todo))) {
+    while (VTABLE_elements(interp, todolist)) {
+        current = VTABLE_shift_pmc(interp, todolist);
         if (!current)
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                     "NULL current PMC in visit_loop_todo_list");
 
         PARROT_ASSERT(current->vtable);
-
         VTABLE_visit(interp, current, info);
-
         VISIT_PMC(interp, info, PMC_metadata(current));
     }
 
