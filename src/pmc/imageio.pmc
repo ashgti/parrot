@@ -1,0 +1,147 @@
+/*
+Copyright (C) 2010 Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/imageio.pmc - ImageIO PMC
+
+=head1 DESCRIPTION
+
+Freezes and thaws other PMCs.
+
+*/
+
+/* when thawing a string longer then this size, we first do a GC run and then
+ * block GC - the system can't give us more headers */
+
+#define THAW_BLOCK_GC_SIZE 100000
+
+/* preallocate freeze image for aggregates with this estimation */
+#define FREEZE_BYTES_PER_ITEM 9
+
+/* macros/constants to handle packing/unpacking of PMC IDs and flags
+ * the 2 LSBs are used for flags, all other bits are used for PMC ID
+ */
+#define PackID_new(id, flags)       (((UINTVAL)(id) * 4) | ((UINTVAL)(flags) & 3))
+#define PackID_get_PMCID(id)        ((UINTVAL)(id) / 4)
+#define PackID_set_PMCID(lv, id)    (lv) = PackID_new((id), PackID_get_FLAGS(lv))
+#define PackID_get_FLAGS(id)        ((UINTVAL)(id) & 3)
+#define PackID_set_FLAGS(lv, flags) (lv) = PackID_new(PackID_get_PMCID(lv), (flags))
+
+enum {
+    enum_PackID_normal     = 0,
+    enum_PackID_seen       = 1,
+};
+
+PARROT_INLINE
+static opcode_t
+GET_VISIT_CURSOR(PMC *pmc){
+    char  *buf = (char *)Buffer_bufstart(PARROT_IMAGEIO(pmc)->buffer);
+    size_t pos = PARROT_IMAGEIO(pmc)->pos;
+    return buf + pos;
+}
+
+PARROT_INLINE
+static void
+SET_VISIT_CURSOR(PMC *pmc, char *cursor) {
+    char *bufstart  = (char *)Buffer_bufstart(PARROT_IMAGEIO(pmc)->buffer);
+    PARROT_IMAGEIO(pmc)->pos = (cursor - bufstart);
+}
+
+PARROT_INLINE
+static void
+INC_VISIT_CURSOR(PMC *pmc, unsigned int inc) {
+    PARROT_IMAGEIO(pmc)->pos += inc;
+}
+
+#define BYTECODE_SHIFT_OK(pmc) PARROT_ASSERT( \
+    PARROT_IMAGEIO(pmc)->pos <= PARROT_IMAGEIO(pmc)->input_length )
+
+
+/*
+static void ensure_buffer_size(PARROT_INTERP, PMC *io, size_t len)
+
+Checks the size of the buffer to see if it can accommodate 'len' more
+bytes. If not, expands the buffer.
+
+*/
+
+PARROT_INLINE
+static void
+ensure_buffer_size(PARROT_INTERP, ARGIN(PMC *io), size_t len)
+{
+    Buffer *buf         = PARROT_IMAGEIO(io)->buffer;
+    const size_t used   = PARROT_IMAGEIO(io)->pos;
+    const int need_free = Buffer_buflen(buf) - used - len;
+
+    /* grow by factor 1.5 or such */
+    if (need_free <= 16) {
+        size_t new_size = (size_t) (Buffer_buflen(buf) * 1.5);
+        if (new_size < Buffer_buflen(buf) - need_free + 512)
+            new_size = Buffer_buflen(buf) - need_free + 512;
+        Parrot_gc_reallocate_buffer_storage(interp, buf, new_size);
+
+        PARROT_ASSERT(Buffer_buflen(buf) - used - len >= 15);
+    }
+
+#ifndef DISABLE_GC_DEBUG
+    Parrot_gc_compact_memory_pool(interp);
+#endif
+
+}
+
+PARROT_INLINE
+static INTVAL
+INFO_HAS_DATA(ARGIN(PMC *io)) {
+    return PARROT_IMAGEIO(io)->pos < PARROT_IMAGEIO(io)->input_length;
+}
+
+pmclass ImageIO auto_attrs {
+    ATTR Buffer          *buffer;         /* buffer to store the image */
+    ATTR size_t           pos;            /* current read/write position in buffer */
+    ATTR size_t           input_length;
+    ATTR INTVAL           what;
+    ATTR PMC            **thaw_ptr;       /* where to thaw a new PMC */
+    ATTR PMC             *seen;           /* seen hash */
+    ATTR PMC             *todo;           /* todo list */
+    ATTR PMC             *id_list;        /* seen list used by thaw */
+    ATTR UINTVAL          id;             /* freze ID of PMC */
+    ATTR INTVAL           extra_flags;    /* concerning to extra */
+    ATTR struct PackFile *pf;
+
+*/
+=head1 VTABLES
+
+=over 4
+
+=cut
+
+*/
+
+/*
+
+=item C<void init()>
+
+Initializes the PMC.
+
+=cut
+
+*/
+
+/*
+
+=back
+
+=cut
+
+*/
+
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
