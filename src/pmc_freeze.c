@@ -768,7 +768,7 @@ create_buffer(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), ARGMOD(visit_info *info))
     else
         len = FREEZE_BYTES_PER_ITEM;
 
-    info->buffer = (Buffer *)Parrot_gc_new_bufferlike_header(interp, sizeof (Buffer));
+    info->buffer = (Buffer *)Parrot_gc_new_string_header(interp, sizeof (Buffer));
     Parrot_gc_allocate_buffer_storage_aligned(interp, info->buffer, len);
     SET_VISIT_CURSOR(info, Buffer_bufstart(info->buffer));
 }
