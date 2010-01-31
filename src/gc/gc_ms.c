@@ -571,6 +571,7 @@ gc_ms_reallocate_buffer(PARROT_INTERP, void *old, size_t newsize)
     old_size = aligned_size(buffer, Buffer_buflen(buffer));
 
     needed   = new_size - old_size;
+    copysize = Buffer_buflen(buffer);
 
 #if 0
     XXX
@@ -581,8 +582,6 @@ gc_ms_reallocate_buffer(PARROT_INTERP, void *old, size_t newsize)
         Buffer_buflen(buffer) = newsize;
         return;
     }
-
-    copysize = Buffer_buflen(buffer);
 
     if (!PObj_COW_TEST(buffer))
         pool->guaranteed_reclaimable += copysize;
