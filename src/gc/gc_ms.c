@@ -679,6 +679,29 @@ static size_t
 gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
 {
     ASSERT_ARGS(gc_ms_get_gc_info)
+
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    switch(which) {
+        case TOTAL_MEM_ALLOC:
+            return mem_pools->memory_allocated;
+        case GC_MARK_RUNS:
+            return mem_pools->gc_mark_runs;
+        case GC_COLLECT_RUNS:
+            return mem_pools->gc_collect_runs;
+        case ACTIVE_PMCS:
+        case ACTIVE_BUFFERS:
+        case TOTAL_PMCS:
+        case TOTAL_BUFFERS:
+        case HEADER_ALLOCS_SINCE_COLLECT:
+        case MEM_ALLOCS_SINCE_COLLECT:
+        case TOTAL_COPIED:
+        case IMPATIENT_PMCS:
+        case GC_LAZY_MARK_RUNS:
+        case EXTENDED_PMCS:
+        case CURRENT_RUNCORE:
+        default:
+            break;
+    }
     return 0;
 }
 
