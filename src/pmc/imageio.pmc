@@ -357,6 +357,54 @@ VTABLE PMC *shift_pmc() {
     return result;
 }
 
+VTABLE void set_pmc(PMC *p)
+{
+        UINTVAL header_length = GROW_TO_16_BYTE_BOUNDARY(PACKFILE_HEADER_BYTES);
+
+        PARROT_IMAGEIO(SELF)->what = VISIT_FREEZE_NORMAL;
+        PARROT_IMAGEIO(SELF)->visit_pmc_now  = visit_todo_list_freeze;
+        create_buffer(INTERP, p, SELF);
+        ensure_buffer_size(INTERP, SELF, header_length);
+        mem_sys_memcopy(GET_VISIT_CURSOR(SELF),
+            PARROT_IMAGEIO(SELF)->pf->header, PACKFILE_HEADER_BYTES);
+        INC_VISIT_CURSOR(SELF, header_length);
+
+        PARROT_IMAGEIO(SELF)->seen = pmc_new(INTERP, enum_class_Hash);
+        VTABLE_set_pointer(INTERP, PARROT_IMAGEIO(SELF)->seen,
+            parrot_new_intval_hash(INTERP));
+
+        visit_loop_todo_list(INTERP, p, SELF);
+}
+
+VTABLE void set_string_native(STRING *image) {
+        UINTVAL header_length = GROW_TO_16_BYTE_BOUNDARY(PACKFILE_HEADER_BYTES);
+        int unpacked_length;
+
+        PARROT_IMAGEIO(SELF)->what          = VISIT_THAW_NORMAL;
+        PARROT_IMAGEIO(SELF)->visit_pmc_now = visit_todo_list_thaw;
+        PARROT_IMAGEIO(SELF)->buffer        = (Buffer *)image;
+
+        PARROT_ASSERT(image->_bufstart == image->strstart);
+
+        SET_VISIT_CURSOR(SELF, Buffer_bufstart(PARROT_IMAGEIO(SELF)->buffer));
+        PARROT_IMAGEIO(SELF)->input_length = image->strlen;
+
+        PARROT_IMAGEIO(SELF)->pf->options |= PFOPT_PMC_FREEZE_ONLY;
+        unpacked_length = PackFile_unpack(interp, PARROT_IMAGEIO(SELF)->pf,
+            GET_VISIT_CURSOR(SELF), PARROT_IMAGEIO(SELF)->input_length);
+
+        if (!unpacked_length) {
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_STRING_REPRESENTATION,
+                    "PackFile header failed during unpack");
+        }
+        else {
+            INC_VISIT_CURSOR(SELF, header_length);
+        }
+
+        visit_loop_todo_list(interp, pmc, SELF);
+}
+
 /*
 
 =back
