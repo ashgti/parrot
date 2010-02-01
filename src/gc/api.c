@@ -537,8 +537,7 @@ Parrot_gc_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer),
         pool->possibly_reclaimable   += copysize;
 #endif
 
-    mem = (char *)interp->gc_sys->reallocate_buffer(interp, Buffer_bufstart(buffer), new_size);
-    mem = aligned_mem(buffer, mem);
+    mem = (char *)interp->gc_sys->reallocate_buffer(interp, buffer, new_size);
 
 #if 0
     /* We shouldn't ever have a 0 from size, but we do. If we can track down
