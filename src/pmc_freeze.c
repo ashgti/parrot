@@ -797,10 +797,9 @@ STRING*
 Parrot_freeze(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_freeze)
-    visit_info info;
-
-    visit_info_init(interp, &info, VISIT_FREEZE_NORMAL, STRINGNULL, pmc);
-    return Parrot_str_new_from_buffer(interp, info.buffer, OUTPUT_LENGTH(&info));
+    PMC *image = pmc_new(interp, enum_class_ImageIO);
+    VTABLE_set_pmc(interp, image, pmc);
+    return VTABLE_get_string(interp, image);
 }
 
 
@@ -828,7 +827,7 @@ Parrot_thaw(PARROT_INTERP, ARGIN(STRING *image))
 {
     ASSERT_ARGS(Parrot_thaw)
 
-    visit_info  info;
+    PMC        *info     = pmc_new(interp, enum_class_ImageIO);
     int         gc_block = 0;
     PMC        *result;
 
@@ -849,9 +848,8 @@ Parrot_thaw(PARROT_INTERP, ARGIN(STRING *image))
         gc_block = 1;
     }
 
-    info.thaw_ptr = &result;
-    visit_info_init(interp, &info, VISIT_THAW_NORMAL, image, PMCNULL);
-    BYTECODE_SHIFT_OK(&info);
+    VTABLE_set_pointer(interp, info, &result);
+    VTABLE_set_string_native(interp, info, image);
 
     if (gc_block) {
         Parrot_unblock_GC_mark(interp);
