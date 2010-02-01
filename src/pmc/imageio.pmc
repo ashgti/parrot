@@ -62,6 +62,32 @@ INC_VISIT_CURSOR(PMC *pmc, UINTVAL inc) {
 
 
 
+static void
+create_buffer(PARROT_INTERP, PMC *pmc, PMC *info)
+{
+    INTVAL  len;
+
+    if (!PMC_IS_NULL(pmc)) {
+        STRING *array = CONST_STRING(interp, "array");
+        STRING *hash  = CONST_STRING(interp, "hash");
+        INTVAL  items = 1;
+
+        if (VTABLE_does(interp, pmc, array) || VTABLE_does(interp, pmc, hash)) {
+            items += VTABLE_elements(interp, pmc);
+        }
+        len = items * FREEZE_BYTES_PER_ITEM;
+    }
+    else
+        len = FREEZE_BYTES_PER_ITEM;
+
+    PARROT_IMAGEIO(info)->buffer = 
+        (Buffer *)Parrot_gc_new_bufferlike_header(interp, sizeof (Buffer));
+    Parrot_gc_allocate_buffer_storage_aligned(interp,
+        PARROT_IMAGEIO(info)->buffer, len);
+    SET_VISIT_CURSOR(info, (char *)Buffer_bufstart(PARROT_IMAGEIO(info)->buffer));
+}
+
+
 /*
 static void ensure_buffer_size(PARROT_INTERP, PMC *io, size_t len)
 
@@ -91,6 +117,147 @@ ensure_buffer_size(PARROT_INTERP, ARGIN(PMC *io), size_t len)
     Parrot_gc_compact_memory_pool(INTERP);
 #endif
 
+}
+
+PARROT_INLINE
+static INTVAL
+INFO_HAS_DATA(ARGIN(PMC *io)) {
+    return PARROT_IMAGEIO(io)->pos < PARROT_IMAGEIO(io)->input_length;
+}
+
+PARROT_INLINE
+static PMC*
+id_list_get(PARROT_INTERP, PMC *io, UINTVAL id) {
+    List * const id_list = (List *)PMC_data(PARROT_IMAGEIO(io)->id_list);
+    PMC **pos = (PMC **)Parrot_pmc_array_get(interp, id_list, id, enum_type_PMC);
+
+    if (pos && pos != ((void *)-1))
+        return *pos;
+    return NULL;
+}
+
+PARROT_INLINE
+static void
+visit_todo_list_thaw(PARROT_INTERP, SHIM(PMC* pmc_not_used), ARGIN(PMC* info))
+{
+    UINTVAL  n            = VTABLE_shift_integer(interp, info);
+    UINTVAL  id           = PackID_get_PMCID(n);
+    int      packid_flags = PackID_get_FLAGS(n);
+    PMC     *pmc          = PMCNULL;
+
+    PARROT_ASSERT(PARROT_IMAGEIO(info)->what == VISIT_THAW_NORMAL);
+
+    switch (packid_flags) {
+      case enum_PackID_seen:
+        if (id) /* got a non-NULL PMC */
+            pmc = id_list_get(interp, info, id);
+        break;
+      case enum_PackID_normal:
+        {
+            INTVAL type = VTABLE_shift_integer(interp, info);
+            if (type <= 0 || type > interp->n_vtable_max)
+                Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown PMC type to thaw %d", type);
+
+            pmc = pmc_new_noinit(interp, type);
+            VTABLE_thaw(interp, pmc, info);
+
+            {
+                List * const todo    = (List *)PMC_data(PARROT_IMAGEIO(info)->todo);
+                List * const id_list = (List *)PMC_data(PARROT_IMAGEIO(info)->id_list);
+                Parrot_pmc_array_assign(interp, id_list, id, pmc, enum_type_PMC);
+                /* remember nested aggregates depth first */
+                Parrot_pmc_array_unshift(interp, todo, pmc, enum_type_PMC);
+            }
+        }
+        break;
+      default:
+        Parrot_ex_throw_from_c_args(interp, NULL, 1, "Unknown PMC id args thaw %d", packid_flags);
+        break;
+    }
+
+    *(PARROT_IMAGEIO(info)->thaw_ptr) = pmc;
+}
+
+static void
+visit_todo_list_freeze(PARROT_INTERP, PMC* pmc, PMC* info)
+{
+    UINTVAL id;
+    int packid_type;
+
+    PARROT_ASSERT(PARROT_IMAGEIO(info)->what == VISIT_FREEZE_NORMAL);
+
+    if (PMC_IS_NULL(pmc)) {
+        id   = 0;
+        packid_type = enum_PackID_seen;
+    }
+    else {
+        Hash *hash = (Hash *)VTABLE_get_pointer(interp, PARROT_IMAGEIO(info)->seen);
+        HashBucket * const b = parrot_hash_get_bucket(interp, hash, pmc);
+        if (b) {
+            id = (UINTVAL) b->value;
+            packid_type = enum_PackID_seen;
+        }
+        else {
+            PARROT_IMAGEIO(info)->id++; /* next id to freeze */
+            id = PARROT_IMAGEIO(info)->id;
+            packid_type = enum_PackID_normal;
+        }
+    }
+
+    VTABLE_push_integer(interp, info, PackID_new(id, packid_type));
+
+    if (packid_type == enum_PackID_normal) {
+        Hash *hash = (Hash *)VTABLE_get_pointer(interp, PARROT_IMAGEIO(info)->seen);
+        PARROT_ASSERT(pmc);
+        VTABLE_push_integer(interp, info,
+                PObj_is_object_TEST(pmc) ? enum_class_Object : pmc->vtable->base_type);
+        parrot_hash_put(interp, hash, pmc, (void *)id);
+        Parrot_pmc_array_unshift(interp,
+            (List *)PMC_data(PARROT_IMAGEIO(info)->todo), pmc, enum_type_PMC);
+        VTABLE_freeze(interp, pmc, info);
+    }
+}
+
+static void
+visit_loop_todo_list(PARROT_INTERP, PMC *current, PMC *info)
+{
+    PMC        **list_item;
+    List * const todo           = (List *)PMC_data(PARROT_IMAGEIO(info)->todo);
+    const int    thawing        = PARROT_IMAGEIO(info)->what == VISIT_THAW_NORMAL;
+
+    (PARROT_IMAGEIO(info)->visit_pmc_now)(interp, current, info);
+
+    /* can't cache upper limit, visit may append items */
+    while ((list_item = (PMC **)Parrot_pmc_array_shift(interp, todo, enum_type_PMC))) {
+        current = *list_item;
+        if (!current)
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                    "NULL current PMC in visit_loop_todo_list");
+
+        PARROT_ASSERT(current->vtable);
+
+        VTABLE_visit(interp, current, info);
+
+        VISIT_PMC(interp, info, PMC_metadata(current));
+    }
+
+    if (thawing)
+        /* we're done reading the image */
+        PARROT_ASSERT(!INFO_HAS_DATA(info));
+
+    if (thawing) {
+        /* on thawing call thawfinish for each processed PMC */
+        List        *finish_list = (List *)PMC_data(PARROT_IMAGEIO(info)->id_list);
+        const INTVAL n           = Parrot_pmc_array_length(interp, finish_list);
+        int          i;
+
+        /* Thaw in reverse order. We have to fully thaw younger PMCs before use them in older */
+        for (i = n-1; i >= 0; --i) {
+            current = *(PMC**)Parrot_pmc_array_get(interp, finish_list, i, enum_type_PMC);
+            if (!PMC_IS_NULL(current))
+                VTABLE_thawfinish(interp, current, info);
+        }
+    }
 }
 
 pmclass ImageIO auto_attrs {
