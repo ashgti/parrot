@@ -39,10 +39,12 @@ static void fix_pmc_syncs(
         FUNC_MODIFIES(*dest_interp);
 
 static void free_buffer(SHIM_INTERP,
+    ARGIN(Memory_Pools *mem_pools),
     ARGMOD(Fixed_Size_Pool *pool),
     ARGMOD(Buffer *b))
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*b);
 
@@ -139,7 +141,8 @@ static int sweep_cb_pmc(PARROT_INTERP,
        PARROT_ASSERT_ARG(dest_interp) \
     , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_free_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(pool) \
+       PARROT_ASSERT_ARG(mem_pools) \
+    , PARROT_ASSERT_ARG(pool) \
     , PARROT_ASSERT_ARG(b))
 #define ASSERT_ARGS_free_buffer_malloc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(b))
@@ -790,8 +793,8 @@ free_buffer_malloc(SHIM_INTERP, SHIM(Fixed_Size_Pool *pool),
 
 /*
 
-=item C<static void free_buffer(PARROT_INTERP, Fixed_Size_Pool *pool, Buffer
-*b)>
+=item C<static void free_buffer(PARROT_INTERP, Memory_Pools *mem_pools,
+Fixed_Size_Pool *pool, Buffer *b)>
 
 Frees a buffer, returning it to the memory pool for Parrot to possibly
 reuse later.
@@ -801,7 +804,8 @@ reuse later.
 */
 
 static void
-free_buffer(SHIM_INTERP, ARGMOD(Fixed_Size_Pool *pool), ARGMOD(Buffer *b))
+free_buffer(SHIM_INTERP, ARGIN(Memory_Pools *mem_pools),
+        ARGMOD(Fixed_Size_Pool *pool), ARGMOD(Buffer *b))
 {
     ASSERT_ARGS(free_buffer)
     Variable_Size_Pool * const mem_pool = (Variable_Size_Pool *)pool->mem_pool;
