@@ -715,7 +715,7 @@ Finish thawing.
         else
             pos = &INTERP->HLL_info;
 
-        info->thaw_ptr = pos;
+        VTABLE_set_pointer(interp, info, pos);
         (info->visit_pmc_now)(INTERP, *pos, info);
     }
 

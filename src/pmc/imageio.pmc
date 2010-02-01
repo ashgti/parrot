@@ -445,7 +445,7 @@ hasn't been seen yet, it is also pushed onto the todo list.
 */
 
 VTABLE void push_pmc(PMC *v) {
-    PARROT_IMAGEIO(SELF)->thaw_ptr = &v;
+    VTABLE_set_pointer(interp, SELF, &v);
     (PARROT_IMAGEIO(SELF)->visit_pmc_now)(INTERP, v, SELF);
 }
 
@@ -519,7 +519,7 @@ Removes and returns a reference to a pmc from the start of the image.
 
 VTABLE PMC *shift_pmc() {
     PMC *result;
-    PARROT_IMAGEIO(SELF)->thaw_ptr = &result;
+    VTABLE_set_pointer(interp, SELF, &result);
     (PARROT_IMAGEIO(SELF)->visit_pmc_now)(interp, NULL, PARROT_IMAGEIO(SELF));
     return result;
 }

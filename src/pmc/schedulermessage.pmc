@@ -223,7 +223,7 @@ C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 
         /* 1) visit message data */
         pos            = &core_struct->data;
-        info->thaw_ptr = pos;
+        VTABLE_set_pointer(interp, info, pos);
         (info->visit_pmc_now)(INTERP, *pos, info);
     }
 
