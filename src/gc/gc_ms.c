@@ -79,6 +79,9 @@ static void gc_ms_free_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static void* gc_ms_free_buffer(PARROT_INTERP, void *data)
+        __attribute__nonnull__(1);
+
 static void gc_ms_free_pmc_header(PARROT_INTERP, ARGFREE(PMC *pmc))
         __attribute__nonnull__(1);
 
@@ -189,6 +192,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_free_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_gc_ms_free_buffer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -270,6 +275,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
     gc->allocate_buffer               = gc_ms_allocate_buffer;
     gc->reallocate_buffer             = gc_ms_reallocate_buffer;
     gc->allocate_buffer_with_pointers = gc_ms_allocate_buffer_with_pointers;
+    gc->free_buffer                   = gc_ms_free_buffer;
 
     gc->block_gc_mark           = gc_ms_block_gc_mark;
     gc->unblock_gc_mark         = gc_ms_unblock_gc_mark;
@@ -627,6 +633,11 @@ gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
         pool = Parrot_gc_get_attribute_pool(interp, mem_pools, size);
 
     return Parrot_gc_get_attributes_from_pool(interp, pool);
+}
+
+static void*
+gc_ms_free_buffer(PARROT_INTERP, void *data)
+{
 }
 
 static void
