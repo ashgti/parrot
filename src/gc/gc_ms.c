@@ -79,7 +79,7 @@ static void gc_ms_free_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void* gc_ms_free_buffer(PARROT_INTERP, void *data)
+static void gc_ms_free_buffer(PARROT_INTERP, void *data)
         __attribute__nonnull__(1);
 
 static void gc_ms_free_pmc_header(PARROT_INTERP, ARGFREE(PMC *pmc))
@@ -635,7 +635,7 @@ gc_ms_allocate_fixed_size_buffer(PARROT_INTERP, size_t size)
     return Parrot_gc_get_attributes_from_pool(interp, pool);
 }
 
-static void*
+static void
 gc_ms_free_buffer(PARROT_INTERP, void *data)
 {
 }
