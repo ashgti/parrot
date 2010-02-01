@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2010 Parrot Foundation.
+Copyright (C) 2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -58,7 +58,7 @@ INC_VISIT_CURSOR(PMC *pmc, UINTVAL inc) {
 }
 
 #define BYTECODE_SHIFT_OK(pmc) PARROT_ASSERT( \
-    PARROT_IMAGEIO(pmc)->pos <= PARROT_IMAGEIO(pmc)->input_length )
+    PARROT_IMAGEIO(pmc)->pos <= PARROT_IMAGEIO(pmc)->input_length)
 
 
 
@@ -80,7 +80,7 @@ create_buffer(PARROT_INTERP, PMC *pmc, PMC *info)
     else
         len = FREEZE_BYTES_PER_ITEM;
 
-    PARROT_IMAGEIO(info)->buffer = 
+    PARROT_IMAGEIO(info)->buffer =
         (Buffer *)Parrot_gc_new_bufferlike_header(interp, sizeof (Buffer));
     Parrot_gc_allocate_buffer_storage_aligned(interp,
         PARROT_IMAGEIO(info)->buffer, len);
@@ -243,9 +243,14 @@ visit_loop_todo_list(PARROT_INTERP, PMC *current, PMC *info)
         const INTVAL n = VTABLE_elements(interp, PARROT_IMAGEIO(info)->id_list);
         int          i;
 
-        /* XXX There are no younger or older pmcs in a directed graph that allows cycles. Any code that
-               requires a specific order here is likely broken. */
-        /* Thaw in reverse order. We have to fully thaw younger PMCs before use them in older */
+        /*
+         * Thaw in reverse order. We have to fully thaw younger PMCs
+         * before use them in older.
+         *
+         * XXX There are no younger or older pmcs in a directed graph
+         *     that allows cycles. Any code that requires a specific
+         *      order here is likely broken.
+         */
         for (i = n-1; i >= 0; --i) {
             current = VTABLE_get_pmc_keyed_int(interp, PARROT_IMAGEIO(info)->id_list, i);
             if (!PMC_IS_NULL(current))
@@ -341,7 +346,7 @@ Returns the content of the image as a string.
 */
 
     VTABLE STRING *get_string() {
-        return Parrot_str_new_from_buffer(INTERP, 
+        return Parrot_str_new_from_buffer(INTERP,
                                           PARROT_IMAGEIO(SELF)->buffer,
                                           PARROT_IMAGEIO(SELF)->pos);
     }
