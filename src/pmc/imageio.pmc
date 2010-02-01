@@ -509,9 +509,9 @@ VTABLE STRING *shift_string()
 
 /*
 
-=item C<static PMC *shift_opcode_pmc(PARROT_INTERP, visit_info *io)>
+=item C<static PMC *shift_pmc()>
 
-Removes and returns a reference to a pmc from the start of the C<*io> "stream".
+Removes and returns a reference to a pmc from the start of the image.
 
 =cut
 

@@ -220,7 +220,7 @@ void Parrot_pmc_array_unshift(PARROT_INTERP,
 PARROT_EXPORT
 void Parrot_pmc_array_visit(PARROT_INTERP,
     ARGIN(List *list),
-    ARGMOD(visit_info *info))
+    ARGMOD(PMC *info))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)

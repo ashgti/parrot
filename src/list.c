@@ -1648,7 +1648,7 @@ C<pinfo> is the visit info, (see include/parrot/pmc_freeze.h>).
 
 PARROT_EXPORT
 void
-Parrot_pmc_array_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(visit_info *info))
+Parrot_pmc_array_visit(PARROT_INTERP, ARGIN(List *list), ARGMOD(PMC *info))
 {
     ASSERT_ARGS(Parrot_pmc_array_visit)
     List_chunk        *chunk;
