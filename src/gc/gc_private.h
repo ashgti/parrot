@@ -98,6 +98,7 @@ typedef struct GC_Subsystem {
     /* Finalize _child_ interpeter. Update interp->parent_interp if needed */
     void (*finalize_gc_system) (PARROT_INTERP);
 
+    /* Run GC "mark" explicitely */
     void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
 
     /* Allocation functions with explicit freeing counterparts */
@@ -112,7 +113,7 @@ typedef struct GC_Subsystem {
 
     /* Buffer allocation routines */
     /* Allocate buffer which doesn't contains interior pointers */
-    void* (*allocate_buffer)(PARROT_INTERP, size_t size);
+    void* (*allocate_buffer)(PARROT_INTERP, size_t size, UINTVAL flags);
     void* (*reallocate_buffer)(PARROT_INTERP, void *buffer, size_t newsize);
 
     /* Allocate buffer which contains interior pointers */

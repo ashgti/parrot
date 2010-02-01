@@ -467,7 +467,7 @@ Parrot_gc_allocate_buffer_storage_aligned(PARROT_INTERP,
     Buffer_buflen(buffer) = 0;
     Buffer_bufstart(buffer) = NULL;
     new_size = aligned_size(buffer, size);
-    mem = (char*)interp->gc_sys->allocate_buffer(interp, new_size);
+    mem = (char*)interp->gc_sys->allocate_buffer(interp, new_size, 0);
     mem = aligned_mem(buffer, mem);
     Buffer_bufstart(buffer) = mem;
     if (PObj_is_COWable_TEST(buffer))
@@ -591,7 +591,7 @@ Parrot_gc_allocate_string_storage(PARROT_INTERP, ARGOUT(STRING *str),
 #endif
 
     new_size = aligned_string_size(size);
-    mem      = (char *)interp->gc_sys->allocate_buffer(interp, new_size);
+    mem      = (char *)interp->gc_sys->allocate_buffer(interp, new_size, str->flags);
     mem     += sizeof (void*);
 
     Buffer_bufstart(str) = str->strstart = mem;
@@ -687,7 +687,7 @@ Parrot_gc_reallocate_string_storage(PARROT_INTERP, ARGMOD(STRING *str),
     /* only copy used memory, not total string buffer */
     copysize = str->bufused;
 
-    mem = (char *)interp->gc_sys->allocate_buffer(interp, new_size);
+    mem = (char *)interp->gc_sys->allocate_buffer(interp, new_size, str->flags);
     mem += sizeof (void *);
 
     /* copy mem from strstart, *not* bufstart */

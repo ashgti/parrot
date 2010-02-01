@@ -45,7 +45,9 @@ static void* gc_ms_allocate_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
         __attribute__nonnull__(2);
 
 PARROT_CAN_RETURN_NULL
-static void* gc_ms_allocate_buffer(PARROT_INTERP, size_t size)
+static void* gc_ms_allocate_buffer(PARROT_INTERP,
+    size_t size,
+    UINTVAL flags)
         __attribute__nonnull__(1);
 
 PARROT_CAN_RETURN_NULL
@@ -533,11 +535,14 @@ gc_ms_free_attributes(PARROT_INTERP, ARGIN(PMC *pmc))
 
 PARROT_CAN_RETURN_NULL
 static void*
-gc_ms_allocate_buffer(PARROT_INTERP, size_t size)
+gc_ms_allocate_buffer(PARROT_INTERP, size_t size, UINTVAL flags)
 {
     ASSERT_ARGS(gc_ms_allocate_buffer)
     Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
-    return mem_allocate(interp, mem_pools, size, mem_pools->memory_pool);
+    Variable_Size_Pool * const pool      = flags & PObj_constant_FLAG
+                ? mem_pools->constant_string_pool
+                : mem_pools->memory_pool;
+    return mem_allocate(interp, mem_pools, size, pool);
 }
 
 PARROT_CAN_RETURN_NULL
@@ -557,7 +562,7 @@ gc_ms_reallocate_buffer(PARROT_INTERP, void *old, size_t newsize)
      * If there is no old buffer just allocate new one
      */
     if (!buffer)
-        return gc_ms_allocate_buffer(interp, newsize);
+        return gc_ms_allocate_buffer(interp, newsize, 0);
 
     /*
      * we don't shrink buffers
@@ -595,7 +600,7 @@ gc_ms_reallocate_buffer(PARROT_INTERP, void *old, size_t newsize)
         pool->possibly_reclaimable   += copysize;
 #endif
 
-    mem = (char *)gc_ms_allocate_buffer(interp, new_size);
+    mem = (char *)gc_ms_allocate_buffer(interp, new_size, 0);
     mem = aligned_mem(buffer, mem);
 
     /* We shouldn't ever have a 0 from size, but we do. If we can track down
