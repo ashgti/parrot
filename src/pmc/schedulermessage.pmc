@@ -217,14 +217,8 @@ C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 */
 
     VTABLE void visit(PMC *info) {
-        Parrot_SchedulerMessage_attributes * const core_struct =
-            PARROT_SCHEDULERMESSAGE(SELF);
-        PMC **pos;
-
-        /* 1) visit message data */
-        pos            = &core_struct->data;
-        VTABLE_set_pointer(interp, info, pos);
-        (info->visit_pmc_now)(INTERP, *pos, info);
+        /* visit message data */
+        VISIT_PMC(INTERP, info, PARROT_SCHEDULERMESSAGE(SELF)->data);
     }
 
 /*

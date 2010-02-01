@@ -737,17 +737,12 @@ C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 
     VTABLE void visit(PMC *info) {
         Parrot_Object_attributes * const obj_data = PARROT_OBJECT(SELF);
-        PMC **pos;
 
         /* 1) visit class */
-        pos            = &obj_data->_class;
-        VTABLEpos;
-        (info->visit_pmc_now)(INTERP, *pos, info);
+        VISIT_PMC(INTERP, info, obj_data->_class);
 
         /* 2) visit the attributes */
-        pos      = &obj_data->attrib_store;
-        VTABLE_set_pointer(interp, info, pos);
-        (info->visit_pmc_now)(INTERP, *pos, info);
+        VISIT_PMC(INTERP, info, obj_data->attrib_store);
     }
 
 /*

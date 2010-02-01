@@ -714,8 +714,7 @@ Used to unarchive the array.
         PMC   **pos    = PMC_array(SELF);
 
         for (i = 0; i < n; ++i, ++pos) {
-            VTABLE_set_pointer(interp, info, pos);
-            (info->visit_pmc_now)(INTERP, *pos, info);
+            VISIT_PMC(INTERP, info, *pos);
         }
 
         SUPER(info);

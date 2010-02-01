@@ -684,7 +684,6 @@ Finish thawing.
 */
 
     VTABLE void visit(PMC *info) {
-        PMC **pos;
         /*
          * the information frozen here is part of all PBCs
          * we probably need to freeze all dynamic extensible
@@ -710,13 +709,11 @@ Finish thawing.
         /*  HLL_info */
         if (VTABLE_get_integer(INTERP, info) == VISIT_THAW_NORMAL ||
             VTABLE_get_integer(INTERP, info) == VISIT_THAW_CONSTANTS) {
-            pos = &PMC_args(SELF);
+            VISIT_PMC(interp, info, PMC_args(SELF));
         }
         else
-            pos = &INTERP->HLL_info;
+            VISIT_PMC(interp, info, INTERP->HLL_info);
 
-        VTABLE_set_pointer(interp, info, pos);
-        (info->visit_pmc_now)(INTERP, *pos, info);
     }
 
     VTABLE void thaw(PMC *info) {
