@@ -37,11 +37,11 @@ enum {
 };
 
 PARROT_INLINE
-static opcode_t
+static opcode_t *
 GET_VISIT_CURSOR(PMC *pmc){
     char  *buf = (char *)Buffer_bufstart(PARROT_IMAGEIO(pmc)->buffer);
     size_t pos = PARROT_IMAGEIO(pmc)->pos;
-    return buf + pos;
+    return (opcode_t *)(buf + pos);
 }
 
 PARROT_INLINE
@@ -324,7 +324,7 @@ Marks the PMC as alive.
 
 */
     VTABLE void mark() {
-        Parrot_gc_mark_PObj_alive(INTERP, PARROT_IMAGEIO(SELF)->buffer);
+        Parrot_gc_mark_PObj_alive(INTERP, (PObj *)(PARROT_IMAGEIO(SELF)->buffer));
         Parrot_gc_mark_PMC_alive(INTERP, PARROT_IMAGEIO(SELF)->todo);
         Parrot_gc_mark_PMC_alive(INTERP, PARROT_IMAGEIO(SELF)->seen);
         Parrot_gc_mark_PMC_alive(INTERP, PARROT_IMAGEIO(SELF)->id_list);
@@ -388,7 +388,7 @@ Pushes the integer C<v> onto the end of the image.
 VTABLE void push_integer(INTVAL v) {
     size_t len = PF_size_integer() * sizeof (opcode_t);
     ensure_buffer_size(interp, SELF, len);
-    SET_VISIT_CURSOR(SELF, PF_store_integer(GET_VISIT_CURSOR(SELF), v));
+    SET_VISIT_CURSOR(SELF, (char *)PF_store_integer(GET_VISIT_CURSOR(SELF), v));
 }
 
 
@@ -406,7 +406,7 @@ VTABLE void push_float(FLOATVAL v)
 {
     size_t len = PF_size_number() * sizeof (opcode_t);
     ensure_buffer_size(interp, SELF, len);
-    SET_VISIT_CURSOR(SELF, PF_store_number(GET_VISIT_CURSOR(SELF), &v));
+    SET_VISIT_CURSOR(SELF, (char *)PF_store_number(GET_VISIT_CURSOR(SELF), &v));
 }
 
 
@@ -424,7 +424,7 @@ VTABLE void push_string(STRING *v)
 {
     size_t len = PF_size_string(v) * sizeof (opcode_t);
     ensure_buffer_size(INTERP, SELF, len);
-    SET_VISIT_CURSOR(SELF, PF_store_string(GET_VISIT_CURSOR(SELF), v));
+    SET_VISIT_CURSOR(SELF, (char *)PF_store_string(GET_VISIT_CURSOR(SELF), v));
 }
 
 /*
@@ -457,7 +457,7 @@ VTABLE INTVAL shift_integer()
 {
     opcode_t *pos  = GET_VISIT_CURSOR(SELF);
     const INTVAL i = PF_fetch_integer(PARROT_IMAGEIO(SELF)->pf, (const opcode_t **)&pos);
-    SET_VISIT_CURSOR(SELF, pos);
+    SET_VISIT_CURSOR(SELF, (char *)pos);
     BYTECODE_SHIFT_OK(SELF);
     return i;
 }
@@ -476,7 +476,7 @@ Removes and returns an number from the start of the image.
 VTABLE FLOATVAL shift_float() {
     opcode_t *pos    = GET_VISIT_CURSOR(SELF);
     const FLOATVAL f = PF_fetch_number(PARROT_IMAGEIO(SELF)->pf, (const opcode_t **)&pos);
-    SET_VISIT_CURSOR(SELF, pos);
+    SET_VISIT_CURSOR(SELF, (char *)pos);
     BYTECODE_SHIFT_OK(SELF);
     return f;
 }
@@ -496,7 +496,7 @@ VTABLE STRING *shift_string()
 {
     opcode_t *pos    = GET_VISIT_CURSOR(SELF);
     STRING * const s = PF_fetch_string(interp, PARROT_IMAGEIO(SELF)->pf, (const opcode_t **)&pos);
-    SET_VISIT_CURSOR(SELF, pos);
+    SET_VISIT_CURSOR(SELF, (char *)pos);
     BYTECODE_SHIFT_OK(SELF);
     return s;
 }
@@ -548,7 +548,7 @@ VTABLE void set_string_native(STRING *image) {
 
         PARROT_ASSERT(image->_bufstart == image->strstart);
 
-        SET_VISIT_CURSOR(SELF, Buffer_bufstart(PARROT_IMAGEIO(SELF)->buffer));
+        SET_VISIT_CURSOR(SELF, (char *)Buffer_bufstart(PARROT_IMAGEIO(SELF)->buffer));
         PARROT_IMAGEIO(SELF)->input_length = image->strlen;
 
         PARROT_IMAGEIO(SELF)->pf->options |= PFOPT_PMC_FREEZE_ONLY;
