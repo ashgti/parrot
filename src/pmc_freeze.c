@@ -33,8 +33,6 @@ individual action vtable (freeze/thaw) is then called for all todo-PMCs.
 
 /*
 
-=back
-
 =head2 Public Interface
 
 =over 4
