@@ -332,7 +332,13 @@ Sets the PMC value of the element at index C<key> to C<val>.
 */
 
     VTABLE void set_pmc_keyed_str(STRING *key, PMC *value) {
-        PMC *pkey = box_string(INTERP, key);
+        /* Wallpapering problem with HLL Strings as keys */
+        /* Apparently HLL registry in Parrot uses OrderedHash */
+        /* Now we have chicken and egg problem during freeze/thaw */
+        /* When we try to thaw OrderedHash which stores HLL mapping */
+        /* Reported by François Perrad */
+        PMC *pkey = pmc_new(INTERP, enum_class_String);
+        VTABLE_set_string_native(INTERP, pkey, key);
         VTABLE_set_pmc_keyed(INTERP, SELF, pkey, value);
     }
 
@@ -720,15 +726,15 @@ the clone via integers has different indices, if items were deleted.
     }
 /*
 
-=item C<void visit(visit_info *info)>
+=item C<void visit(PMC *info)>
 
 Used during archiving to visit the elements in the hash.
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Used to archive the hash.
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Used to unarchive the hash.
 
@@ -736,12 +742,12 @@ Used to unarchive the hash.
 
 */
 
-    VTABLE void visit(visit_info *info) {
+    VTABLE void visit(PMC *info) {
         VISIT_PMC_ATTR(INTERP, info, SELF, OrderedHash, hash);
         SUPER(info);
     }
 
-    VTABLE void thawfinish(visit_info *info) {
+    VTABLE void thawfinish(PMC *info) {
         Parrot_OrderedHash_attributes *attrs = PARROT_ORDEREDHASH(SELF);
         find_bounds(INTERP, attrs->hash, &attrs->first, &attrs->last);
         SUPER(info);

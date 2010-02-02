@@ -566,12 +566,12 @@ OUTPUT
   print "loaded\n"
   dlfunc P0, P1, "nci_ssc", "ssc"
   print "dlfunced\n"
-  set I5, 2
+  set I5, -2
   set I6, 3
   set_args "0,0", I5, I6
   get_results "0", I5
   invokecc P0
-  ne I5, 6, nok_1
+  ne I5, -6, nok_1
   print "ok 1\n"
   end
 nok_1: print "nok 1\n"
@@ -2367,7 +2367,7 @@ SKIP:
     print "\n"
 
     .local pmc nci_vv
-    nci_vv = dlfunc libnci_test, "nci_vv", "vv"
+    nci_vv = dlfunc libnci_test, "nci_vv", ""
     nci_vv()
     $I1 = nci_dlvar_int[0]
     print $I1
