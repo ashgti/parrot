@@ -608,8 +608,8 @@ hash_thaw(PARROT_INTERP, ARGMOD(Hash *hash), ARGMOD(PMC *info))
 
 /*
 
-=item C<static void hash_freeze(PARROT_INTERP, const Hash * const hash,
-PMC *info)>
+=item C<static void hash_freeze(PARROT_INTERP, const Hash * const hash, PMC
+*info)>
 
 Freezes hash into a string.
 
