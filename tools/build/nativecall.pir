@@ -79,15 +79,6 @@ F<docs/pdds/pdd16_native_call.pod>.
 /* HEADERIZER HFILE: none */
 /* HEADERIZER STOP */
 
-/*
- * if the architecture can build some or all of these signatures
- * enable the define below
- * - the JITed function will be called first
- * - if it returns NULL, the hardcoded version will do the job
- */
-
-#include "frame_builder.h"
-
 /* All our static functions that call in various ways. Yes, terribly
    hackish, but that is just fine */
 

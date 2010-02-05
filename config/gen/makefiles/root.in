@@ -474,7 +474,6 @@ INTERP_O_FILES = \
     src/misc$(O) \
     src/multidispatch$(O) \
     src/frame_builder$(O) \
-    src/nci$(O) \
     src/oo$(O) \
     src/packfile$(O) \
     src/packout$(O) \
@@ -505,13 +504,23 @@ INTERP_O_FILES = \
 
 OPS_FILES = @ops@ $(GEN_OPSFILES)
 
-O_FILES = \
+COMMON_O_FILES = \
     $(INTERP_O_FILES) \
     $(CHARSET_O_FILES) \
     $(IO_O_FILES) \
     $(CLASS_O_FILES) \
     $(ENCODING_O_FILES) \
     $(IMCC_O_FILES)
+
+STAGE1_O_FILES = \
+    $(COMMON_O_FILES) \
+    src/bootstrap/nci$(O)
+
+STAGE2_O_FILES = \
+    $(COMMON_O_FILES) \
+    src/nci$(O)
+
+O_FILES = $(STAGE2_O_FILES)
 
 ###############################################################################
 #
@@ -793,6 +802,7 @@ help :
 	@echo "  tags-vi:           Create tags for the vi editor."
 	@echo "  tags-emacs:        Create tags for the EMACS editor."
 	@echo "  perlcritic:        Check Perl code with Perl::Critic."
+	@echo "  bootstrap:         Regenerate src/bootstrap."
 	@echo ""
 	@echo "Release:"
 	@echo "  release:           Create a tarball."
@@ -835,10 +845,10 @@ $(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT) $(PBC_TO_EXE)
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
 	$(PARROT) pbc_to_exe.pbc parrot_config.pbc
 
-$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(O_FILES) \
+$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(STAGE1_O_FILES) \
     lib/Parrot/OpLib/core.pm src/null_config$(O)
 	$(LINK) @ld_out@$@ src/main$(O) src/null_config$(O) \
-	$(O_FILES) $(ICU_SHARED) $(C_LIBS) $(LINKFLAGS)
+	$(STAGE1_O_FILES) $(ICU_SHARED) $(C_LIBS) $(LINKFLAGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 $(INSTALLABLEPARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
@@ -1379,6 +1389,14 @@ src/nci$(O) : src/nci.str \
         include/pmc/pmc_managedstruct.h \
         include/pmc/pmc_nci.h \
         include/pmc/pmc_pointer.h
+
+src/bootstrap/nci$(O) : src/bootstrap/nci.str \
+        $(INC_DIR)/oplib/ops.h $(GENERAL_H_FILES) \
+        src/frame_builder.h \
+        include/pmc/pmc_managedstruct.h \
+        include/pmc/pmc_nci.h \
+        include/pmc/pmc_pointer.h
+        # $(INC_DIR)/oplib/ops.h $(PARROT_H_HEADERS) \
 
 src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
         include/pmc/pmc_fixedintegerarray.h \
@@ -1965,6 +1983,11 @@ opsrenumber :
 
 pmcrenumber :
 	$(PERL) tools/dev/pmcrenumber.pl src/pmc/pmc.num
+
+bootstrap : $(PARROT) $(BUILD_TOOLS_DIR)/nativecall.pir \
+	$(LIBRARY_DIR)/data_json.pbc config/gen/call_list/core.in
+	$(PARROT) $(BUILD_TOOLS_DIR)/nativecall.pir <config/gen/call_list/core.in >src/bootstrap/nci.c
+
 
 ###############################################################################
 #
