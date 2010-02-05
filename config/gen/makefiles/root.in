@@ -505,6 +505,14 @@ INTERP_O_FILES = \
 
 OPS_FILES = @ops@ $(GEN_OPSFILES)
 
+O_FILES = \
+    $(INTERP_O_FILES) \
+    $(CHARSET_O_FILES) \
+    $(IO_O_FILES) \
+    $(CLASS_O_FILES) \
+    $(ENCODING_O_FILES) \
+    $(IMCC_O_FILES)
+
 ###############################################################################
 #
 # BUILD TARGET CONFIGURATIONS:
@@ -827,10 +835,10 @@ $(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT) $(PBC_TO_EXE)
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
 	$(PARROT) pbc_to_exe.pbc parrot_config.pbc
 
-$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
+$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(O_FILES) \
     lib/Parrot/OpLib/core.pm src/null_config$(O)
 	$(LINK) @ld_out@$@ src/main$(O) src/null_config$(O) \
-	@rpath_blib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
+	$(O_FILES) $(ICU_SHARED) $(C_LIBS) $(LINKFLAGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 $(INSTALLABLEPARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
@@ -886,14 +894,6 @@ src/io/socket_unix$(O) : $(PARROT_H_HEADERS) include/pmc/pmc_socket.h src/io/io_
 src/io/socket_win32$(O) : $(PARROT_H_HEADERS) \
         src/io/io_private.h \
         include/pmc/pmc_socket.h
-
-O_FILES = \
-    $(INTERP_O_FILES) \
-    $(CHARSET_O_FILES) \
-    $(IO_O_FILES) \
-    $(CLASS_O_FILES) \
-    $(ENCODING_O_FILES) \
-    $(IMCC_O_FILES)
 
 lib_deps_object : $(O_FILES)
 	$(PERL) tools/dev/lib_deps.pl object $(O_FILES)
