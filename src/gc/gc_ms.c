@@ -694,16 +694,23 @@ gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
         case GC_COLLECT_RUNS:
             return mem_pools->gc_collect_runs;
         case ACTIVE_PMCS:
+            return mem_pools->pmc_pool->total_objects -
+                   mem_pools->pmc_pool->num_free_objects;
         case ACTIVE_BUFFERS:
         case TOTAL_PMCS:
+            return mem_pools->pmc_pool->total_objects;
         case TOTAL_BUFFERS:
         case HEADER_ALLOCS_SINCE_COLLECT:
+            return mem_pools->header_allocs_since_last_collect;
         case MEM_ALLOCS_SINCE_COLLECT:
+            return mem_pools->mem_allocs_since_last_collect;
         case TOTAL_COPIED:
+            return mem_pools->memory_collected;
         case IMPATIENT_PMCS:
+            return mem_pools->num_early_gc_PMCs;
         case GC_LAZY_MARK_RUNS:
+            return mem_pools->gc_lazy_mark_runs;
         case EXTENDED_PMCS:
-        case CURRENT_RUNCORE:
         default:
             break;
     }
