@@ -1049,9 +1049,9 @@ Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_pmc_needs_early_collection)
     PObj_needs_early_gc_SET(pmc);
-#if 0
-    ++interp->mem_pools->num_early_gc_PMCs;
-#endif
+    // XXX Temporary hack. We have to encapsulate it in GC_Subsystem.
+    Memory_Pools *mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    ++mem_pools->num_early_gc_PMCs;
 }
 
 
