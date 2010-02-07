@@ -120,7 +120,7 @@ if [ "$1" != "--noconf" ]; then
     perl Configure.pl --debugging $conf --nomanicheck
 fi
 tail myconfig
-make -s || exit 1
+make -s corevm || exit 1
 
 ./parrot -o t/native_pbc/integer_${N}.pbc -a - <<EOF
 print 0x10203040
