@@ -108,6 +108,9 @@ typedef struct GC_Subsystem {
     /* Run GC "mark" explicitely */
     void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
 
+    /* Compact string pool */
+    void (*do_compact)(PARROT_INTERP);
+
     /* Allocation functions with explicit freeing counterparts */
     PMC*    (*allocate_pmc_header)(PARROT_INTERP, UINTVAL flags);
     void    (*free_pmc_header)(PARROT_INTERP, PMC *pmc);

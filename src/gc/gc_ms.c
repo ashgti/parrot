@@ -72,6 +72,9 @@ static void gc_ms_block_gc_mark(PARROT_INTERP)
 static void gc_ms_block_gc_sweep(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+static void gc_ms_compact(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void gc_ms_finalize(PARROT_INTERP,
     ARGIN(Memory_Pools * const mem_pools))
         __attribute__nonnull__(1)
@@ -188,6 +191,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_block_gc_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_compact __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
@@ -264,8 +269,10 @@ Parrot_gc_ms_init(PARROT_INTERP)
     GC_Subsystem *gc = interp->gc_sys;
 
     gc->init_child_interp  = gc_ms_init_child_inter;
-    gc->do_gc_mark         = gc_ms_mark_and_sweep;
     gc->finalize_gc_system = NULL;
+
+    gc->do_gc_mark         = gc_ms_mark_and_sweep;
+    gc->do_compact         = gc_ms_compact;
 
     gc->allocate_pmc_header     = gc_ms_allocate_pmc_header;
     gc->free_pmc_header         = gc_ms_free_pmc_header;
@@ -414,6 +421,25 @@ gc_ms_finalize(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools))
     /* now sweep everything that's left */
     Parrot_gc_sweep_pool(interp, mem_pools, mem_pools->pmc_pool);
     Parrot_gc_sweep_pool(interp, mem_pools, mem_pools->constant_pmc_pool);
+}
+
+/*
+
+=item C<static void gc_ms_compact(PARROT_INTERP)>
+
+Compact string pool.
+
+=cut
+
+*/
+
+static void
+gc_ms_compact(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_compact)
+    Memory_Pools * const mem_pools = (Memory_Pools*)interp->gc_sys->gc_private;
+    compact_pool(interp, mem_pools, mem_pools->memory_pool);
+    return;
 }
 
 /*

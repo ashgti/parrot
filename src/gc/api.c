@@ -736,7 +736,7 @@ void
 Parrot_gc_compact_memory_pool(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_compact_memory_pool)
-    // XXX compact_pool(interp, interp->mem_pools->memory_pool);
+    interp->gc_sys->do_compact(interp);
 }
 
 /*
