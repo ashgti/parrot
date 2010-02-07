@@ -674,17 +674,18 @@ COMMON_STR_FILES = \
     src/scheduler.str \
     src/spf_render.str \
     src/spf_vtable.str \
-    src/string/api.str \
     src/sub.str \
     \
     $(CLASS_STR_FILES)
 
 STAGE0_STR_FILES = \
     $(COMMON_STR_FILES) \
+    src/bootstrap/string/api.str \
     src/bootstrap/nci.str
 
 STAGE1_STR_FILES = \
     $(COMMON_STR_FILES) \
+    src/string/api.str \
     src/nci.str
 
 src/string/private_cstring.h : $(STAGE1_STR_FILES) $(BUILD_TOOLS_DIR)/c2str.pl
@@ -1834,6 +1835,7 @@ clean : \
 	$(RM_F) chartypes "*.s" "*~"
 	$(RM_F) $(FLUID_FILES_1)
 	$(RM_F) $(FLUID_FILES_2)
+	$(RM_F) $(STAGE0_STR_FILES) $(STAGE1_STR_FILES)
 	$(RM_RF) lib/Parrot/OpLib
 	$(RM_F) $(NQP_CLEANUPS) $(PGE_CLEANUPS) $(TGE_CLEANUPS) $(JSON_CLEANUPS)
 	$(RM_F) $(PIRC_CLEANUPS) $(PCT_CLEANUPS)
