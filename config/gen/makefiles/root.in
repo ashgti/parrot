@@ -431,8 +431,6 @@ IO_O_FILES = \
     src/io/socket_win32$(O)
 
 INTERP_O_FILES = \
-    src/string/api$(O) \
-    \
     src/ops/core_ops$(O) \
     src/ops/core_ops_switch$(O) \
     \
@@ -512,15 +510,17 @@ COMMON_O_FILES = \
     $(ENCODING_O_FILES) \
     $(IMCC_O_FILES)
 
+STAGE0_O_FILES = \
+    $(COMMON_O_FILES) \
+    src/bootstrap/nci$(O) \
+    src/bootstrap/string/api$(O)
+
 STAGE1_O_FILES = \
     $(COMMON_O_FILES) \
-    src/bootstrap/nci$(O)
+    src/nci$(O) \
+    src/string/api$(O)
 
-STAGE2_O_FILES = \
-    $(COMMON_O_FILES) \
-    src/nci$(O)
-
-O_FILES = $(STAGE2_O_FILES)
+O_FILES = $(STAGE1_O_FILES)
 
 ###############################################################################
 #
@@ -646,7 +646,7 @@ $(GEN_LIBRARY) : $(PARROT) $(GEN_PASM_INCLUDES)
 .c.str : # suffix rule (limited support)
 	$(PERL) $(BUILD_TOOLS_DIR)/c2str.pl $< > $@
 
-STR_FILES = \
+COMMON_STR_FILES = \
     src/debug.str \
     src/dynext.str \
     src/events.str \
@@ -664,7 +664,6 @@ STR_FILES = \
     src/library.str \
     src/multidispatch.str \
     src/frame_builder.str \
-    src/nci.str \
     src/packfile.str \
     src/pmc.str \
     src/pmc_freeze.str \
@@ -680,8 +679,20 @@ STR_FILES = \
     \
     $(CLASS_STR_FILES)
 
-src/string/private_cstring.h : $(STR_FILES) $(BUILD_TOOLS_DIR)/c2str.pl
+STAGE0_STR_FILES = \
+    $(COMMON_STR_FILES) \
+    src/bootstrap/nci.str
+
+STAGE1_STR_FILES = \
+    $(COMMON_STR_FILES) \
+    src/nci.str
+
+src/string/private_cstring.h : $(STAGE1_STR_FILES) $(BUILD_TOOLS_DIR)/c2str.pl
 	$(PERL) $(BUILD_TOOLS_DIR)/c2str.pl --all
+
+src/bootstrap/string/private_cstring.h : $(STAGE0_STR_FILES) $(BUILD_TOOLS_DIR)/c2str.pl
+	$(PERL) $(BUILD_TOOLS_DIR)/c2str.pl --all \
+	    --string-private-h src/bootstrap/string/private_cstring.h
 
 H2INC = $(BUILD_TOOLS_DIR)/h2inc.pl
 
@@ -845,10 +856,10 @@ $(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT) $(PBC_TO_EXE)
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
 	$(PARROT) pbc_to_exe.pbc parrot_config.pbc
 
-$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(STAGE1_O_FILES) \
+$(MINIPARROT) : src/main$(O) $(GEN_HEADERS) $(STAGE0_O_FILES) \
     lib/Parrot/OpLib/core.pm src/null_config$(O)
 	$(LINK) @ld_out@$@ src/main$(O) src/null_config$(O) \
-	$(STAGE1_O_FILES) $(ICU_SHARED) $(C_LIBS) $(LINKFLAGS)
+	$(STAGE0_O_FILES) $(ICU_SHARED) $(C_LIBS) $(LINKFLAGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
 $(INSTALLABLEPARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
@@ -1232,6 +1243,12 @@ src/sub$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/oplib/ops.h \
 
 src/string/api$(O) : $(PARROT_H_HEADERS) src/string/api.str \
         src/string/private_cstring.h
+
+src/bootstrap/string/api.c : src/string/api.c
+	$(CP) $< $@
+
+src/bootstrap/string/api$(O) : $(PARROT_H_HEADERS) src/bootstrap/string/api.str \
+	src/bootstrap/string/private_cstring.h
 
 src/string/primitives$(O) : $(PARROT_H_HEADERS)
 

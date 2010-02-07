@@ -25,6 +25,14 @@ use IO::File ();
 my $outfile          = 'all_cstring.str';
 my $string_private_h = 'src/string/private_cstring.h';
 
+my ( $do_all, $do_init, $file );
+Getopt::Long::GetOptions(
+    "all"                => \$do_all,
+    "init"               => \$do_init,
+    "outfile=s"          => \$outfile,
+    "string-private-h=s" => \$string_private_h,
+);
+
 # add read/write permissions even if we don't read/write the file
 # for example, Solaris requires write permissions for exclusive locks
 my $ALL = IO::File->new($outfile, O_CREAT | O_RDWR)
@@ -33,12 +41,6 @@ my $ALL = IO::File->new($outfile, O_CREAT | O_RDWR)
 flock( $ALL, LOCK_EX ) or die "Can't lock '$outfile': $!\n";
 
 $ALL->seek(2, 0); # in case its been appended to while we waited for the lock
-
-my ( $result, $do_all, $do_init, $file );
-$result = Getopt::Long::GetOptions(
-    "all"  => \$do_all,
-    "init" => \$do_init,
-);
 
 $do_all and do {
     read_all();
