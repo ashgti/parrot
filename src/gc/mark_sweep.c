@@ -891,6 +891,7 @@ initialize_fixed_size_pools(PARROT_INTERP, ARGIN(Memory_Pools *mem_pools))
     /* Init the constant string header pool */
     mem_pools->constant_string_header_pool       = new_string_pool(interp, mem_pools, 1);
     mem_pools->constant_string_header_pool->name = "constant_string_header";
+    mem_pools->constant_string_header_pool->skip = GC_ALWAYS_SKIP;
 
     /* Init the buffer header pool
      *
@@ -909,6 +910,7 @@ initialize_fixed_size_pools(PARROT_INTERP, ARGIN(Memory_Pools *mem_pools))
     /* constant PMCs */
     mem_pools->constant_pmc_pool                    = new_pmc_pool(interp, mem_pools);
     mem_pools->constant_pmc_pool->name              = "constant_pmc";
+    mem_pools->constant_pmc_pool->skip              = GC_ALWAYS_SKIP;
     mem_pools->constant_pmc_pool->objects_per_alloc =
         CONSTANT_PMC_HEADERS_PER_ALLOC;
 }

@@ -6,11 +6,11 @@
 
 =head1 NAME
 
-tools/dev/cc_flags.pl - Process compiler flags
+tools/build/cc_flags.pl - Process compiler flags
 
 =head1 SYNOPSIS
 
-    % perl tools/dev/cc_flags.pl transform compiler flags
+    % perl tools/build/cc_flags.pl transform compiler flags
 
 =head1 DESCRIPTION
 
@@ -19,23 +19,12 @@ compiler for each C file.
 
 See F<config/gen/makefiles/CFLAGS.in> for the transformation file format.
 
-=head1 SEE ALSO
-
-F<config/gen/cflags/root.in>.
-
 =cut
 
 ################################################################################
 
 use strict;
 use warnings;
-
-my $verbose;
-
-if ($ARGV[0] eq '-v') {
-    $verbose = 1;
-    shift;
-}
 
 my $cflags = shift;
 
@@ -118,8 +107,6 @@ if ($cfile) {
         }
     }
 
-    # print "@ARGV\n";
-
     # Visual C++ already prints the source file name...
     if ( $ARGV[0] =~ /cl(?:\.exe)?/i ) {
 
@@ -132,10 +119,6 @@ if ($cfile) {
     else {
         print "$cfile\n";
     }
-}
-
-if ($verbose) {
-    print join ' ', @ARGV;
 }
 
 exit system(@ARGV) / 256;

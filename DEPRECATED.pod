@@ -48,12 +48,6 @@ L<https://trac.parrot.org/parrot/ticket/448>
 
 L<https://trac.parrot.org/parrot/ticket/452>
 
-=item Hash changes to AssociativePMCArray [eligible in 1.5]
-
-Also OrderedHash to OrderedAssociativePMCArray.
-
-L<https://trac.parrot.org/parrot/ticket/679>
-
 =item Method stdhandle in ParrotInterpreter [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/264>
@@ -74,16 +68,6 @@ file may not be inserted directly in the body of the generated one,
 so this usage will not be allowed.
 
 L<https://trac.parrot.org/parrot/ticket/918>
-
-=item The visit_info structure and associated VTABLEs. [eligible in 2.1]
-
-The current freeze/thaw implementation makes heavy use of the visit_info
-structure and the VTABLE interface attached to it. This structure will
-be replaced with a PMC of equivalent functionality and with a possibly
-similar interface. The freeze, thaw, and visit vtables of all PMCs should be
-updated to the provided interim API before this change is made.
-
-L<https://trac.parrot.org/parrot/ticket/1305>
 
 =item Overriding vtable invoke in PIR objects [experimental]
 
@@ -154,15 +138,15 @@ L<https://trac.parrot.org/parrot/ticket/1406>
 
 =over 4
 
-=item packfile structure [eligible in 1.1]
+=item packfile structure [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
-=item opcode numbering [eligible in 1.1]
+=item opcode numbering [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
-=item PMC numbering [eligible in 1.1]
+=item PMC numbering [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
@@ -366,18 +350,6 @@ deprecated.  Use C< Q:PIR { ... } >  or C< Q:PIR {{ ... }} >
 instead.
 
 L<https://trac.parrot.org/parrot/ticket/842>
-
-=back
-
-=head1 build tools
-
-=over 4
-
-=item tools/build/dynpmc.pl [eligible in 1.1]
-
-Replaced with makefiles.
-
-L<https://trac.parrot.org/parrot/ticket/338>
 
 =back
 
