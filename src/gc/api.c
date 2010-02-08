@@ -348,7 +348,7 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
         break;
     }
 
-    initialize_var_size_pools(interp);
+    initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp);
     Parrot_gc_initialize_fixed_size_pools(interp, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
@@ -634,7 +634,7 @@ Parrot_gc_allocate_buffer_storage_aligned(PARROT_INTERP,
     Buffer_buflen(buffer) = 0;
     Buffer_bufstart(buffer) = NULL;
     new_size = aligned_size(buffer, size);
-    mem = (char *)mem_allocate(interp, new_size,
+    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size,
         interp->mem_pools->memory_pool);
     mem = aligned_mem(buffer, mem);
     Buffer_bufstart(buffer) = mem;
@@ -701,7 +701,7 @@ Parrot_gc_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer),
     else
         pool->possibly_reclaimable   += copysize;
 
-    mem = (char *)mem_allocate(interp, new_size, pool);
+    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
     mem = aligned_mem(buffer, mem);
 
     /* We shouldn't ever have a 0 from size, but we do. If we can track down
@@ -751,7 +751,7 @@ Parrot_gc_allocate_string_storage(PARROT_INTERP, ARGOUT(STRING *str),
                 : interp->mem_pools->memory_pool;
 
     new_size = aligned_string_size(size);
-    mem      = (char *)mem_allocate(interp, new_size, pool);
+    mem      = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
     mem     += sizeof (void*);
 
     Buffer_bufstart(str) = str->strstart = mem;
@@ -816,7 +816,7 @@ Parrot_gc_reallocate_string_storage(PARROT_INTERP, ARGMOD(STRING *str),
     else
         pool->possibly_reclaimable   += Buffer_buflen(str);
 
-    mem = (char *)mem_allocate(interp, new_size, pool);
+    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
     mem += sizeof (void *);
 
     /* copy mem from strstart, *not* bufstart */
@@ -865,7 +865,7 @@ void
 Parrot_gc_compact_memory_pool(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_compact_memory_pool)
-    compact_pool(interp, interp->mem_pools->memory_pool);
+    compact_pool(interp, interp->mem_pools, interp->mem_pools->memory_pool);
 }
 
 /*

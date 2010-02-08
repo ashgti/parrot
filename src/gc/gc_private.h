@@ -126,7 +126,7 @@ typedef struct Memory_Block {
 
 typedef struct Variable_Size_Pool {
     Memory_Block *top_block;
-    void (*compact)(PARROT_INTERP, struct Variable_Size_Pool *);
+    void (*compact)(PARROT_INTERP, struct Memory_Pools *const, struct Variable_Size_Pool *);
     size_t minimum_block_size;
     size_t total_allocated; /* total bytes allocated to this pool */
     size_t guaranteed_reclaimable;     /* bytes that can definitely be reclaimed*/
@@ -453,21 +453,28 @@ void check_buffer_ptr(
         FUNC_MODIFIES(* pobj)
         FUNC_MODIFIES(* pool);
 
-void compact_pool(PARROT_INTERP, ARGMOD(Variable_Size_Pool *pool))
+void compact_pool(PARROT_INTERP,
+    ARGIN(Memory_Pools *mem_pools),
+    ARGMOD(Variable_Size_Pool *pool))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
 
-void initialize_var_size_pools(PARROT_INTERP)
-        __attribute__nonnull__(1);
+void initialize_var_size_pools(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 void * mem_allocate(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools),
     size_t size,
     ARGMOD(Variable_Size_Pool *pool))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4)
         FUNC_MODIFIES(*pool);
 
 void merge_pools(
@@ -489,11 +496,14 @@ void merge_pools(
     , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_compact_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_initialize_var_size_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools))
 #define ASSERT_ARGS_mem_allocate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_merge_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(dest) \
