@@ -833,6 +833,142 @@ Parrot_gc_reallocate_string_storage(PARROT_INTERP, ARGMOD(STRING *str),
 
 /*
 
+=item C<void * Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)>
+
+Allocates a new attribute structure for a PMC if it has the auto_attrs flag
+set.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    ASSERT_ARGS(Parrot_gc_allocate_pmc_attributes)
+    const size_t attr_size = pmc->vtable->attr_size;
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
+            interp->mem_pools, attr_size);
+    void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
+    memset(attrs, 0, attr_size);
+    PMC_data(pmc) = attrs;
+    return attrs;
+#else
+    void * const data =  mem_sys_allocate_zeroed(attr_size);
+    PMC_data(pmc) = data;
+    return data;
+#endif
+}
+
+/*
+
+=item C<void Parrot_gc_free_pmc_attributes(PARROT_INTERP, PMC *pmc)>
+
+Deallocates an attibutes structure from a PMC if it has the auto_attrs
+flag set.
+
+*/
+
+void
+Parrot_gc_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    ASSERT_ARGS(Parrot_gc_free_pmc_attributes)
+    void * const data = PMC_data(pmc);
+
+    if (data) {
+
+#if GC_USE_FIXED_SIZE_ALLOCATOR
+        const size_t attr_size = pmc->vtable->attr_size;
+        const size_t item_size = attr_size < sizeof (void *) ? sizeof (void *) : attr_size;
+        PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
+        const size_t idx = item_size - sizeof (void *);
+        Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
+#else
+        mem_sys_free(PMC_data(pmc));
+        PMC_data(pmc) = NULL;
+#endif
+    }
+}
+
+/*
+
+=item C<void * Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t
+size)>
+
+Allocates a fixed-size chunk of memory for use. This memory is not manually
+managed and needs to be freed with C<Parrot_gc_free_fixed_size_storage>
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_fixed_size_storage)
+    PMC_Attribute_Pool *pool = NULL;
+    const size_t idx = (size < sizeof (void *)) ? 0 : (size - sizeof (void *));
+
+    /* get the pool directly, if possible, for great speed */
+    if (interp->mem_pools->num_attribs > idx)
+        pool = interp->mem_pools->attrib_pools[idx];
+
+    /* otherwise create it */
+    if (!pool)
+        pool = Parrot_gc_get_attribute_pool(interp, interp->mem_pools, size);
+
+    return Parrot_gc_get_attributes_from_pool(interp, pool);
+}
+
+/*
+
+=item C<void Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, void
+*data)>
+
+Manually deallocates fixed size storage allocated with
+C<Parrot_gc_allocate_fixed_size_storage>
+
+*/
+
+void
+Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data))
+{
+    ASSERT_ARGS(Parrot_gc_free_fixed_size_storage)
+
+    const size_t item_size = size < sizeof (void *) ? sizeof (void *) : size;
+    const size_t idx   = size - sizeof (void *);
+    PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
+    Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
+}
+
+
+/*
+
+=item C<static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+PMC_Attribute_Pool *pool, void *data)>
+
+Frees a fixed-size data item back to the pool for later reallocation.  Private
+to this file.
+
+*/
+
+static void
+Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
+    ARGMOD(PMC_Attribute_Pool *pool),
+    ARGMOD(void *data))
+{
+    ASSERT_ARGS(Parrot_gc_free_attributes_from_pool)
+    PMC_Attribute_Free_List * const item = (PMC_Attribute_Free_List *)data;
+
+    item->next      = pool->free_list;
+    pool->free_list = item;
+
+    pool->num_free_objects++;
+}
+
+/*
+
 =item C<void Parrot_gc_mark_and_sweep(PARROT_INTERP, UINTVAL flags)>
 
 Calls the configured garbage collector to find and reclaim unused
@@ -1504,143 +1640,6 @@ Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
     ASSERT_ARGS(Parrot_gc_pmc_needs_early_collection)
     PObj_needs_early_gc_SET(pmc);
     ++interp->mem_pools->num_early_gc_PMCs;
-}
-
-
-/*
-
-=item C<void * Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)>
-
-Allocates a new attribute structure for a PMC if it has the auto_attrs flag
-set.
-
-=cut
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-void *
-Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
-{
-    ASSERT_ARGS(Parrot_gc_allocate_pmc_attributes)
-    const size_t attr_size = pmc->vtable->attr_size;
-#if GC_USE_FIXED_SIZE_ALLOCATOR
-    PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
-            interp->mem_pools, attr_size);
-    void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
-    memset(attrs, 0, attr_size);
-    PMC_data(pmc) = attrs;
-    return attrs;
-#else
-    void * const data =  mem_sys_allocate_zeroed(attr_size);
-    PMC_data(pmc) = data;
-    return data;
-#endif
-}
-
-/*
-
-=item C<void Parrot_gc_free_pmc_attributes(PARROT_INTERP, PMC *pmc)>
-
-Deallocates an attibutes structure from a PMC if it has the auto_attrs
-flag set.
-
-*/
-
-void
-Parrot_gc_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
-{
-    ASSERT_ARGS(Parrot_gc_free_pmc_attributes)
-    void * const data = PMC_data(pmc);
-
-    if (data) {
-
-#if GC_USE_FIXED_SIZE_ALLOCATOR
-        const size_t attr_size = pmc->vtable->attr_size;
-        const size_t item_size = attr_size < sizeof (void *) ? sizeof (void *) : attr_size;
-        PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
-        const size_t idx = item_size - sizeof (void *);
-        Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
-#else
-        mem_sys_free(PMC_data(pmc));
-        PMC_data(pmc) = NULL;
-#endif
-    }
-}
-
-/*
-
-=item C<void * Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t
-size)>
-
-Allocates a fixed-size chunk of memory for use. This memory is not manually
-managed and needs to be freed with C<Parrot_gc_free_fixed_size_storage>
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-void *
-Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
-{
-    ASSERT_ARGS(Parrot_gc_allocate_fixed_size_storage)
-    PMC_Attribute_Pool *pool = NULL;
-    const size_t idx = (size < sizeof (void *)) ? 0 : (size - sizeof (void *));
-
-    /* get the pool directly, if possible, for great speed */
-    if (interp->mem_pools->num_attribs > idx)
-        pool = interp->mem_pools->attrib_pools[idx];
-
-    /* otherwise create it */
-    if (!pool)
-        pool = Parrot_gc_get_attribute_pool(interp, interp->mem_pools, size);
-
-    return Parrot_gc_get_attributes_from_pool(interp, pool);
-}
-
-/*
-
-=item C<void Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, void
-*data)>
-
-Manually deallocates fixed size storage allocated with
-C<Parrot_gc_allocate_fixed_size_storage>
-
-*/
-
-void
-Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data))
-{
-    ASSERT_ARGS(Parrot_gc_free_fixed_size_storage)
-
-    const size_t item_size = size < sizeof (void *) ? sizeof (void *) : size;
-    const size_t idx   = size - sizeof (void *);
-    PMC_Attribute_Pool ** const pools = interp->mem_pools->attrib_pools;
-    Parrot_gc_free_attributes_from_pool(interp, pools[idx], data);
-}
-
-
-/*
-
-=item C<static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
-PMC_Attribute_Pool *pool, void *data)>
-
-Frees a fixed-size data item back to the pool for later reallocation.  Private
-to this file.
-
-*/
-
-static void
-Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
-    ARGMOD(PMC_Attribute_Pool *pool),
-    ARGMOD(void *data))
-{
-    ASSERT_ARGS(Parrot_gc_free_attributes_from_pool)
-    PMC_Attribute_Free_List * const item = (PMC_Attribute_Free_List *)data;
-
-    item->next      = pool->free_list;
-    pool->free_list = item;
-
-    pool->num_free_objects++;
 }
 
 /*
