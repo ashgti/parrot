@@ -350,7 +350,8 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 
     initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp, interp->mem_pools);
-    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
+    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools,
+                                          GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
