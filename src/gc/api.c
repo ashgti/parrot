@@ -135,20 +135,24 @@ static void Parrot_gc_merge_buffer_pools(PARROT_INTERP,
         FUNC_MODIFIES(*source);
 
 static int sweep_cb_buf(PARROT_INTERP,
+    ARGIN(Memory_Pools *mem_pools),
     ARGMOD(Fixed_Size_Pool *pool),
     SHIM(int flag),
     ARGIN(void *arg))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(4)
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(5)
         FUNC_MODIFIES(*pool);
 
 static int sweep_cb_pmc(PARROT_INTERP,
+    ARGIN(Memory_Pools *mem_pools),
     ARGMOD(Fixed_Size_Pool *pool),
     SHIM(int flag),
     SHIM(void *arg))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
 
 #define ASSERT_ARGS_fix_pmc_syncs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -170,10 +174,12 @@ static int sweep_cb_pmc(PARROT_INTERP,
     , PARROT_ASSERT_ARG(source))
 #define ASSERT_ARGS_sweep_cb_buf __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool) \
     , PARROT_ASSERT_ARG(arg))
 #define ASSERT_ARGS_sweep_cb_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -388,7 +394,8 @@ Parrot_gc_new_pmc_header(PARROT_INTERP, UINTVAL flags)
     Fixed_Size_Pool * const pool = flags & PObj_constant_FLAG
             ? interp->mem_pools->constant_pmc_pool
             : interp->mem_pools->pmc_pool;
-    PMC * const pmc = (PMC *)pool->get_free_object(interp, pool);
+    PMC * const pmc = (PMC *)pool->get_free_object(interp, interp->mem_pools,
+            pool);
 
     if (!pmc)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
@@ -424,7 +431,7 @@ Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
     Parrot_pmc_destroy(interp, pmc);
 
     PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
-    pool->add_free_object(interp, pool, (PObj *)pmc);
+    pool->add_free_object(interp, interp->mem_pools, pool, (PObj *)pmc);
     pool->num_free_objects++;
 }
 
@@ -532,7 +539,7 @@ Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
     ASSERT_ARGS(Parrot_gc_free_string_header)
     if (!PObj_constant_TEST(s)) {
         Fixed_Size_Pool * const pool = interp->mem_pools->string_header_pool;
-        pool->add_free_object(interp, pool, s);
+        pool->add_free_object(interp, interp->mem_pools, pool, s);
     }
 }
 
@@ -579,7 +586,7 @@ static void *
 get_free_buffer(PARROT_INTERP, ARGIN(Fixed_Size_Pool *pool))
 {
     ASSERT_ARGS(get_free_buffer)
-    return pool->get_free_object(interp, pool);
+    return pool->get_free_object(interp, interp->mem_pools, pool);
 }
 
 /*
@@ -600,7 +607,7 @@ Parrot_gc_free_bufferlike_header(PARROT_INTERP, ARGMOD(Buffer *obj),
 {
     ASSERT_ARGS(Parrot_gc_free_bufferlike_header)
     Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, size);
-    pool->add_free_object(interp, pool, obj);
+    pool->add_free_object(interp, interp->mem_pools, pool, obj);
 }
 
 /*
@@ -1086,8 +1093,8 @@ Parrot_gc_destroy_header_pools(PARROT_INTERP)
 
 /*
 
-=item C<static int sweep_cb_pmc(PARROT_INTERP, Fixed_Size_Pool *pool, int flag,
-void *arg)>
+=item C<static int sweep_cb_pmc(PARROT_INTERP, Memory_Pools *mem_pools,
+Fixed_Size_Pool *pool, int flag, void *arg)>
 
 Performs a garbage collection sweep of the given pmc pool, then frees it. Calls
 C<Parrot_gc_sweep_pool> to perform the sweep, and C<free_pool> to free the pool and
@@ -1098,7 +1105,9 @@ all its arenas. Always returns C<0>.
 */
 
 static int
-sweep_cb_pmc(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool),
+sweep_cb_pmc(PARROT_INTERP,
+        ARGIN(Memory_Pools *mem_pools),
+        ARGMOD(Fixed_Size_Pool *pool),
         SHIM(int flag), SHIM(void *arg))
 {
     ASSERT_ARGS(sweep_cb_pmc)
@@ -1109,8 +1118,8 @@ sweep_cb_pmc(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool),
 
 /*
 
-=item C<static int sweep_cb_buf(PARROT_INTERP, Fixed_Size_Pool *pool, int flag,
-void *arg)>
+=item C<static int sweep_cb_buf(PARROT_INTERP, Memory_Pools *mem_pools,
+Fixed_Size_Pool *pool, int flag, void *arg)>
 
 Performs a final garbage collection sweep, then frees the pool. Calls
 C<Parrot_gc_sweep_pool> to perform the sweep, and C<free_pool> to free the pool and
@@ -1121,8 +1130,10 @@ all its arenas.
 */
 
 static int
-sweep_cb_buf(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool), SHIM(int flag),
-        ARGIN(void *arg))
+sweep_cb_buf(PARROT_INTERP,
+        ARGIN(Memory_Pools *mem_pools),
+        ARGMOD(Fixed_Size_Pool *pool),
+        SHIM(int flag), ARGIN(void *arg))
 {
     ASSERT_ARGS(sweep_cb_buf)
     UNUSED(arg);

@@ -46,10 +46,12 @@ static void free_buffer_malloc(SHIM_INTERP,
         FUNC_MODIFIES(*b);
 
 static void free_pmc_in_pool(PARROT_INTERP,
+    ARGIN(Memory_Pools *mem_pools),
     SHIM(Fixed_Size_Pool *pool),
     ARGMOD(PObj *p))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4)
         FUNC_MODIFIES(*p);
 
 PARROT_WARN_UNUSED_RESULT
@@ -92,6 +94,7 @@ static PMC_Attribute_Pool * Parrot_gc_create_attrib_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(b))
 #define ASSERT_ARGS_free_pmc_in_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(p))
 #define ASSERT_ARGS_new_bufferlike_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -306,9 +309,9 @@ Parrot_gc_sweep_pool(PARROT_INTERP, ARGMOD(Fixed_Size_Pool *pool))
                 }
 
                 if (gc_object)
-                    gc_object(interp, pool, b);
+                    gc_object(interp, interp->mem_pools, pool, b);
 
-                pool->add_free_object(interp, pool, b);
+                pool->add_free_object(interp, interp->mem_pools, pool, b);
             }
 next:
             b = (PObj *)((char *)b + object_size);
@@ -554,8 +557,8 @@ new_pmc_pool(PARROT_INTERP)
 
 /*
 
-=item C<static void free_pmc_in_pool(PARROT_INTERP, Fixed_Size_Pool *pool, PObj
-*p)>
+=item C<static void free_pmc_in_pool(PARROT_INTERP, Memory_Pools *mem_pools,
+Fixed_Size_Pool *pool, PObj *p)>
 
 Frees a PMC that is no longer being used. Calls a custom C<destroy> VTABLE
 method if one is available.
@@ -565,7 +568,9 @@ method if one is available.
 */
 
 static void
-free_pmc_in_pool(PARROT_INTERP, SHIM(Fixed_Size_Pool *pool),
+free_pmc_in_pool(PARROT_INTERP,
+        ARGIN(Memory_Pools *mem_pools),
+        SHIM(Fixed_Size_Pool *pool),
         ARGMOD(PObj *p))
 {
     ASSERT_ARGS(free_pmc_in_pool)
@@ -892,7 +897,7 @@ header_pools_iterate_callback(PARROT_INTERP, int flag, ARGIN_NULLOK(void *arg),
             ? mem_pools->constant_pmc_pool
             : mem_pools->pmc_pool;
 
-        const int ret_val = (func)(interp, pool,
+        const int ret_val = (func)(interp, interp->mem_pools, pool,
             flag & (POOL_PMC | POOL_CONST) , arg);
 
         if (ret_val)
@@ -903,7 +908,7 @@ header_pools_iterate_callback(PARROT_INTERP, int flag, ARGIN_NULLOK(void *arg),
         INTVAL i;
 
         if (flag & POOL_CONST) {
-            const int ret_val = (func)(interp,
+            const int ret_val = (func)(interp, interp->mem_pools,
                 mem_pools->constant_string_header_pool,
                 POOL_BUFFER | POOL_CONST, arg);
 
@@ -915,7 +920,7 @@ header_pools_iterate_callback(PARROT_INTERP, int flag, ARGIN_NULLOK(void *arg),
             Fixed_Size_Pool * const pool = mem_pools->sized_header_pools[i];
 
             if (pool) {
-                const int ret_val = (func)(interp, pool, POOL_BUFFER, arg);
+                const int ret_val = (func)(interp, interp->mem_pools, pool, POOL_BUFFER, arg);
                 if (ret_val)
                     return ret_val;
             }
