@@ -12,13 +12,13 @@ sub runstep {
     my $share_ext = $conf->option_or_data('share_ext');
     my $version   = $conf->option_or_data('VERSION');
     my $ccflags = $conf->data->get('ccflags');
-    if ( $ccflags !~ /-pthread/ ) {
+    if ( $ccflags !~ /-pthread\b/ ) {
         $ccflags .= ' -pthread';
     }
     $conf->data->set( ccflags => $ccflags );
 
     my $libs = $conf->data->get('libs');
-    if ( $libs !~ /-lpthread/ ) {
+    if ( $libs !~ /-lpthread\b/ ) {
         $libs .= ' -lpthread';
     }
     $conf->data->set(
@@ -33,10 +33,11 @@ sub runstep {
         libparrot_soname       => "-Wl,-soname=libparrot$share_ext.$version",
     );
 
-    if ( ( split( m/-/, $conf->data->get_p5('archname'), 2 ) )[0] eq 'powerpc' ) {
+    if ( ( split( m/-/, $conf->data->get('archname_provisional'), 2 ) )[0] eq 'powerpc' ) {
         $conf->data->set( as => 'as -mregnames' );
     }
 
+    $conf->data->set( clock_best => '-D_POSIX_TIMERS -DCLOCK_BEST=CLOCK_MONOTONIC' );
 }
 
 1;

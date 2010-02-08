@@ -19,7 +19,7 @@ stores Parrot strings.
 
 */
 
-pmclass FixedStringArray need_ext provides array {
+pmclass FixedStringArray auto_attrs provides array {
     ATTR STRING **str_array; /* where the STRINGs are stored */
     ATTR UINTVAL  size;      /* element count */
 
@@ -40,12 +40,6 @@ Initializes the array.
 */
 
     VTABLE void init() {
-
-        Parrot_FixedStringArray_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_FixedStringArray_attributes);
-
-        PMC_data(SELF) = attrs;
-
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -67,8 +61,6 @@ Destroys the array.
 
         if (str_array)
             mem_sys_free(str_array);
-
-        mem_sys_free(PMC_data(SELF));
     }
 
 /*
@@ -126,8 +118,7 @@ Marks the array as live.
             GET_ATTR_size(INTERP, SELF, size);
 
             for (i = 0; i < size; i++) {
-                if (str_array[i])
-                    Parrot_gc_mark_PObj_alive(INTERP, (PObj *) str_array[i]);
+                Parrot_gc_mark_STRING_alive(INTERP, str_array[i]);
             }
         }
     }
@@ -219,8 +210,8 @@ Returns the integer value of the element at index C<key>.
 */
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
-        PMC * const tempPMC = SELF.get_pmc_keyed_int(key);
-        return VTABLE_get_integer(INTERP, tempPMC);
+        STRING * const element = SELF.get_string_keyed_int(key);
+        return Parrot_str_to_int(interp, element);
     }
 
 /*
@@ -251,8 +242,8 @@ Returns the floating-point value of the element at index C<key>.
 */
 
     VTABLE FLOATVAL get_number_keyed_int(INTVAL key) {
-        PMC * const tempPMC = SELF.get_pmc_keyed_int(key);
-        return VTABLE_get_number(INTERP, tempPMC);
+        STRING * const element = SELF.get_string_keyed_int(key);
+        return Parrot_str_to_num(interp, element);
     }
 
 /*
@@ -281,7 +272,6 @@ Returns the Parrot string value of the element at index C<key>.
 */
 
     VTABLE STRING *get_string_keyed_int(INTVAL key) {
-
         STRING **str_array;
         UINTVAL  size;
 
@@ -382,11 +372,7 @@ Sets the integer value of the element at index C<key> to C<value>.
 */
 
     VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
-        PMC    *const ret = pmc_new(INTERP, enum_class_String);
-        STRING *val;
-
-        VTABLE_set_integer_native(INTERP, ret, value);
-        val = VTABLE_get_string(INTERP, ret);
+        STRING *val = Parrot_str_from_int(interp, value);
         SELF.set_string_keyed_int(key, val);
     }
 
@@ -417,11 +403,7 @@ C<value>.
 */
 
     VTABLE void set_number_keyed_int(INTVAL key, FLOATVAL value) {
-        PMC    *const ret = pmc_new(INTERP, enum_class_String);
-        STRING *val;
-
-        VTABLE_set_number_native(INTERP, ret, value);
-        val = VTABLE_get_string(INTERP, ret);
+        STRING *val = Parrot_str_from_num(interp, value);
         SELF.set_string_keyed_int(key, val);
     }
 
@@ -459,7 +441,7 @@ Sets the Parrot string value of the element at index C<key> to C<value>.
                 "FixedStringArray: index out of bounds!");
 
         GET_ATTR_str_array(INTERP, SELF, str_array);
-        GC_WRITE_BARRIER(INTERP, SELF, str_array[key], value);
+
         str_array[key] = value;
     }
 
@@ -512,6 +494,8 @@ C<value>.
 
 /*
 
+=item C<STRING *get_string()>
+
 =item C<STRING *get_repr()>
 
 Returns the Parrot string representation C<key>.
@@ -519,6 +503,9 @@ Returns the Parrot string representation C<key>.
 =cut
 
 */
+    VTABLE STRING *get_string() {
+        return STATICSELF.get_repr();
+    }
 
     VTABLE STRING *get_repr() {
 
@@ -527,9 +514,9 @@ Returns the Parrot string representation C<key>.
         INTVAL        j;
 
         for (j = 0; j < n; ++j) {
-            PMC * const val = SELF.get_pmc_keyed_int(j);
+            STRING * const val = SELF.get_string_keyed_int(j);
             res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, "\""));
-            res = Parrot_str_append(INTERP, res, VTABLE_get_repr(INTERP, val));
+            res = Parrot_str_append(INTERP, res, val);
             res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, "\""));
 
             if (j < n - 1)
@@ -541,6 +528,43 @@ Returns the Parrot string representation C<key>.
     }
 
 
+/*
+
+=item C<INTVAL is_equal(PMC *value)>
+
+The C<==> operation. Compares two array to hold equal elements.
+
+=cut
+
+*/
+
+    VTABLE INTVAL is_equal(PMC *value) {
+        INTVAL j, n;
+
+        if (value->vtable->base_type != SELF->vtable->base_type)
+            return 0;
+
+        n = SELF.elements();
+
+        if (VTABLE_elements(INTERP, value) != n)
+            return 0;
+
+        for (j = 0; j < n; ++j) {
+            STRING * const item1 = SELF.get_string_keyed_int(j);
+            STRING * const item2 = VTABLE_get_string_keyed_int(INTERP, value, j);
+
+            if (item1 == item2)
+                continue;
+
+            if (item1 == NULL ||  item2 == NULL)
+                return 0;
+
+            if (!Parrot_str_equal(interp, item1, item2))
+                return 0;
+        }
+
+        return 1;
+    }
 
 /*
 
@@ -550,52 +574,47 @@ Returns the Parrot string representation C<key>.
 
 =over 4
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Used to archive the string.
 
 =cut
 
 */
-    VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const   io  = info->image_io;
+    VTABLE void freeze(PMC *info) {
         STRING           **str_array;
         UINTVAL            size, i;
 
         GET_ATTR_size(INTERP, SELF, size);
         GET_ATTR_str_array(INTERP, SELF, str_array);
-        VTABLE_push_integer(INTERP, io, size);
+        VTABLE_push_integer(INTERP, info, size);
 
         for (i = 0; i < size; ++i)
-            VTABLE_push_string(INTERP, io, str_array[i]);
+            VTABLE_push_string(INTERP, info, str_array[i]);
     }
 
 /*
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Used to unarchive the string.
 
 =cut
 
 */
-    VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+    VTABLE void thaw(PMC *info) {
+        UINTVAL  i, size;
+        STRING **str_array;
+
+        SELF.init();
         SUPER(info);
 
-        if (info->extra_flags == EXTRA_IS_NULL) {
-            UINTVAL  i, size;
-            STRING **str_array;
+        size   = VTABLE_shift_integer(INTERP, info);
+        SELF.set_integer_native((INTVAL)size);
+        GET_ATTR_str_array(INTERP, SELF, str_array);
 
-            SELF.init();
-
-            size   = VTABLE_shift_integer(INTERP, io);
-            SELF.set_integer_native((INTVAL)size);
-            GET_ATTR_str_array(INTERP, SELF, str_array);
-
-            for (i = 0; i < size; ++i)
-                str_array[i] = VTABLE_shift_string(INTERP, io);
-        }
+        for (i = 0; i < size; ++i)
+            str_array[i] = VTABLE_shift_string(INTERP, info);
     }
 }
 

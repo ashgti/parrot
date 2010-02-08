@@ -19,7 +19,7 @@ BEGIN {
     }
     unshift @INC, qq{$topdir/lib};
 }
-use Test::More tests => 44;
+use Test::More tests => 52;
 use Carp;
 use File::Basename;
 use File::Copy;
@@ -44,11 +44,11 @@ my ( $tie, $msg, @lines );
     ok( chdir $tdir, 'changed to temp directory for testing' );
 
     my $temppmcdir = qq{$tdir/src/pmc};
-    for ( qq{$tdir/src}, $temppmcdir ) {
+    for ( qq{$tdir/src}, qq{$tdir/include}, qq{$tdir/include/pmc}, $temppmcdir ) {
         ok( mkdir($_), "created $_ under tempdir" );
     }
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc" );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc" );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -87,10 +87,12 @@ my ( $tie, $msg, @lines );
     ok( chdir $tdir, 'changed to temp directory for testing' );
     my $pmcdir = q{src/pmc};
     ok( ( mkdir qq{$tdir/src} ), "created src/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include} ), "created include/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include/pmc} ), "created include/pmc/ under tempdir" );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc" );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc" );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -101,7 +103,7 @@ my ( $tie, $msg, @lines );
     is( $copycount, $pmcfilecount, "all src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
-    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/array.pmc}, );
+    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/resizablepmcarray.pmc}, );
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -125,10 +127,10 @@ my ( $tie, $msg, @lines );
     )->dump_pmc();
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
 
     $rv = $self->gen_c();
-    ok( $rv, "gen_c completed successfully; args:  default.pmc and array.pmc" );
+    ok( $rv, "gen_c completed successfully; args:  default.pmc and resizablepmcarray.pmc" );
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -139,10 +141,12 @@ my ( $tie, $msg, @lines );
     ok( chdir $tdir, 'changed to temp directory for testing' );
     my $pmcdir = q{src/pmc};
     ok( ( mkdir qq{$tdir/src} ), "created src/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include} ), "created include/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include/pmc} ), "created include/pmc/ under tempdir" );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc" );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc" );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -153,7 +157,7 @@ my ( $tie, $msg, @lines );
     is( $copycount, $pmcfilecount, "src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
-    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/array.pmc}, );
+    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/resizablepmcarray.pmc}, );
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -190,6 +194,8 @@ my ( $tie, $msg, @lines );
     ok( chdir $tdir, 'changed to temp directory for testing' );
     my $pmcdir = q{src/pmc};
     ok( ( mkdir qq{$tdir/src} ), "created src/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include} ), "created include/ under tempdir" );
+    ok( ( mkdir qq{$tdir/include/pmc} ), "created include/pmc/ under tempdir" );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 

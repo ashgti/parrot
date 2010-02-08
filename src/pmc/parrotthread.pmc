@@ -47,12 +47,10 @@ and these methods:
 static void
 stop_GC(Interp *parent, Interp *thread)
 {
-#if 0
     Parrot_block_GC_mark(parent);
     Parrot_block_GC_mark(thread);
     Parrot_block_GC_sweep(parent);
     Parrot_block_GC_sweep(thread);
-#endif
 }
 
 /* XXX FIXME probably not the best interface [see also list post of
@@ -62,6 +60,11 @@ stop_GC(Interp *parent, Interp *thread)
 static INTVAL do_thread_run(PARROT_INTERP, PMC *thread,
                             INTVAL clone_flags, PMC *sub, PMC *args) {
     INTVAL tid = VTABLE_get_integer(interp, thread);
+
+    if (PMC_IS_NULL(sub)) {
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
+            "Invalid thread sub");
+    }
 
     clone_interpreter(PMC_interp(thread), interp, clone_flags);
 
@@ -82,7 +85,7 @@ static INTVAL do_thread_run_clone_default(PARROT_INTERP,
 }
 
 
-pmclass ParrotThread extends ParrotInterpreter need_ext no_ro {
+pmclass ParrotThread extends ParrotInterpreter no_ro {
 
 /*
 
@@ -103,14 +106,12 @@ Equivalent to calling run with PARROT_CLONE_DEFAULT.
     void class_init() {
         const int typ = enum_class_ParrotThread;
 
-        if (pass) {
-            register_nci_method(INTERP, typ,
-                    F2DPTR(do_thread_run), "run", "IJOIP@");
+        register_nci_method(INTERP, typ,
+                F2DPTR(do_thread_run), "run", "IJOIP@");
 
-            /* XXX appropriate name given that this won't clone globals? */
-            register_nci_method(INTERP, typ,
-                    F2DPTR(do_thread_run_clone_default), "run_clone", "IJOP@");
-        }
+        /* XXX appropriate name given that this won't clone globals? */
+        register_nci_method(INTERP, typ,
+                F2DPTR(do_thread_run_clone_default), "run_clone", "IJOP@");
     }
 
 /*

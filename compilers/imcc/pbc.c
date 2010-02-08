@@ -6,7 +6,8 @@
 #include "imc.h"
 #include "pbc.h"
 #include "parrot/packfile.h"
-#include "../src/pmc/pmc_sub.h"
+#include "pmc/pmc_sub.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: compilers/imcc/pbc.h */
 
@@ -164,6 +165,13 @@ static void imcc_globals_destroy(PARROT_INTERP,
     SHIM(void *param))
         __attribute__nonnull__(1);
 
+static void init_fixedintegerarray_from_string(PARROT_INTERP,
+    ARGIN(PMC *p),
+    ARGIN(STRING *s))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
 static void make_new_sub(PARROT_INTERP, ARGIN(IMC_Unit *unit))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -178,15 +186,6 @@ PARROT_MALLOC
 static PMC* mk_multi_sig(PARROT_INTERP, ARGIN(const SymReg *r))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-static int old_blocks(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-PARROT_CONST_FUNCTION
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static const char * slice_deb(int bits);
 
 static void store_fixup(PARROT_INTERP,
     ARGIN(const SymReg *r),
@@ -209,97 +208,91 @@ static void verify_signature(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_add_1_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_add_1_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key) \
-    || PARROT_ASSERT_ARG(s_key)
-#define ASSERT_ARGS_add_const_num __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_add_const_pmc_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key) \
+    , PARROT_ASSERT_ARG(s_key))
+#define ASSERT_ARGS_add_const_num __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_add_const_pmc_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_str __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_add_const_table __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_add_const_table_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_add_const_table __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_add_const_table_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key)
-#define ASSERT_ARGS_add_const_table_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key))
+#define ASSERT_ARGS_add_const_table_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_build_key __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_build_key __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key_reg)
-#define ASSERT_ARGS_constant_folding __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key_reg))
+#define ASSERT_ARGS_constant_folding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(sub_pmc)
-#define ASSERT_ARGS_find_global_label __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(sub_pmc))
+#define ASSERT_ARGS_find_global_label __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(sym) \
-    || PARROT_ASSERT_ARG(pc)
-#define ASSERT_ARGS_find_outer __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(sym) \
+    , PARROT_ASSERT_ARG(pc))
+#define ASSERT_ARGS_find_outer __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_find_sub_by_subid __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_find_sub_by_subid __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(lookup) \
-    || PARROT_ASSERT_ARG(sym) \
-    || PARROT_ASSERT_ARG(pc)
-#define ASSERT_ARGS_fixup_globals __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_get_codesize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(lookup) \
+    , PARROT_ASSERT_ARG(sym) \
+    , PARROT_ASSERT_ARG(pc))
+#define ASSERT_ARGS_fixup_globals __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_get_codesize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(src_lines)
-#define ASSERT_ARGS_get_old_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(src_lines))
+#define ASSERT_ARGS_get_old_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ins_line)
-#define ASSERT_ARGS_imcc_globals_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_make_new_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ins_line))
+#define ASSERT_ARGS_imcc_globals_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_init_fixedintegerarray_from_string \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit)
-#define ASSERT_ARGS_make_pmc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(p) \
+    , PARROT_ASSERT_ARG(s))
+#define ASSERT_ARGS_make_new_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_mk_multi_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit))
+#define ASSERT_ARGS_make_pmc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_old_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_slice_deb __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_store_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_mk_multi_sig __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_store_key_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_store_fixup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(str)
-#define ASSERT_ARGS_store_sub_size __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_verify_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_store_key_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(pc)
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_store_sub_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_verify_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(pc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
-
-#ifdef HAS_JIT
-
-PARROT_WARN_UNUSED_RESULT
-static int old_blocks(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-#endif /* HAS_JIT */
 
 /*
 
@@ -467,10 +460,11 @@ e_pbc_open(PARROT_INTERP, SHIM(void *param))
 
     /* we need some segments */
     if (!interp->code) {
-        PMC *self;
+        const char *n    = IMCC_INFO(interp)->state->file;
+        STRING     *name = Parrot_str_new(interp, n, strlen(n));
+        PMC        *self;
 
-        cs->seg = interp->code =
-            PF_create_default_segs(interp, IMCC_INFO(interp)->state->file, 1);
+        cs->seg = interp->code = PF_create_default_segs(interp, name, 1);
 
         /*
          * create a PMC constant holding the interpreter state
@@ -487,84 +481,6 @@ e_pbc_open(PARROT_INTERP, SHIM(void *param))
 
     return 0;
 }
-
-
-#ifdef HAS_JIT
-
-/*
-
-=item C<static int old_blocks(PARROT_INTERP)>
-
-Gets the size/line of bytecode in ops at this point.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-static int
-old_blocks(PARROT_INTERP)
-{
-    ASSERT_ARGS(old_blocks)
-    const  subs_t *s;
-    size_t         size = 0;
-
-    for (s = IMCC_INFO(interp)->globals->cs->subs; s; s = s->prev) {
-        size += s->n_basic_blocks;
-    }
-
-    return size;
-}
-
-
-/*
-
-=item C<opcode_t * make_jit_info(PARROT_INTERP, const IMC_Unit *unit)>
-
-Creates JIT information for this compilation unit.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-opcode_t *
-make_jit_info(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
-{
-    ASSERT_ARGS(make_jit_info)
-    const size_t old  = old_blocks(interp);
-    const size_t size = unit->n_basic_blocks + old;
-
-    if (!IMCC_INFO(interp)->globals->cs->jit_info) {
-        const size_t len  = strlen(IMCC_INFO(interp)->globals->cs->seg->base.name) + 5;
-        char * const name = mem_allocate_n_typed(len, char);
-
-        snprintf(name, len, "%s_JIT",
-            IMCC_INFO(interp)->globals->cs->seg->base.name);
-
-        IMCC_INFO(interp)->globals->cs->jit_info =
-                PackFile_Segment_new_seg(interp,
-                    interp->code->base.dir, PF_UNKNOWN_SEG, name, 1);
-
-        mem_sys_free(name);
-    }
-
-    /* store current size */
-    IMCC_INFO(interp)->globals->cs->subs->n_basic_blocks = unit->n_basic_blocks;
-
-    /* offset of block start and end, 4 * registers_used */
-    IMCC_INFO(interp)->globals->cs->jit_info->data =
-        mem_realloc_n_typed(IMCC_INFO(interp)->globals->cs->jit_info->data,
-            size * 4, opcode_t);
-
-    IMCC_INFO(interp)->globals->cs->jit_info->size = size * 4;
-
-    return IMCC_INFO(interp)->globals->cs->jit_info->data + old * 4;
-}
-
-#endif /* HAS_JIT */
-
 
 /*
 
@@ -673,7 +589,10 @@ store_fixup(PARROT_INTERP, ARGIN(const SymReg *r), int pc, int offset)
         fixup->type |= VT_ENCODED;
 
     if (r->usage & U_SUBID_LOOKUP)
-      fixup->usage = U_SUBID_LOOKUP;
+        fixup->usage = U_SUBID_LOOKUP;
+
+    if (r->usage & U_LEXICAL)
+        fixup->usage |= U_LEXICAL;
 
     /* set_p_pc   = 2  */
     fixup->color  = pc;
@@ -867,7 +786,9 @@ fixup_globals(PARROT_INTERP)
                 subs_t *s1;
 
                 /* check in matching namespace */
-                if (fixup->usage & U_SUBID_LOOKUP) {
+                if (fixup->usage & U_LEXICAL)
+                    s1 = NULL;
+                else if (fixup->usage & U_SUBID_LOOKUP) {
                     subid_lookup = 1;
                     /* s1 = find_sub_by_subid(interp, fixup->name, &pc); */
                     s1 = find_sub_by_subid(interp, fixup->name, s, &pc);
@@ -997,7 +918,7 @@ IMCC_string_from_reg(PARROT_INTERP, ARGIN(const SymReg *r))
 
 /*
 
-=item C<STRING * IMCC_string_from__STRINGC(PARROT_INTERP, const char *buf)>
+=item C<STRING * IMCC_string_from__STRINGC(PARROT_INTERP, char *buf)>
 
 =cut
 
@@ -1006,7 +927,7 @@ IMCC_string_from_reg(PARROT_INTERP, ARGIN(const SymReg *r))
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 STRING *
-IMCC_string_from__STRINGC(PARROT_INTERP, ARGIN(const char *buf))
+IMCC_string_from__STRINGC(PARROT_INTERP, ARGIN(char *buf))
 {
     ASSERT_ARGS(IMCC_string_from__STRINGC)
     const int ascii = (*buf == '\'' || *buf == '"');
@@ -1206,7 +1127,7 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
                 while (n) {
                     STRING     *lex_name;
                     const int   k = n->color;
-                    Parrot_sub *sub;
+                    Parrot_Sub_attributes *sub;
                     PARROT_ASSERT(k >= 0);
 
                     lex_name = constants[k]->u.string;
@@ -1214,12 +1135,11 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
 
                     PMC_get_sub(interp, sub_pmc, sub);
                     IMCC_debug(interp, DEBUG_PBC_CONST,
-                            "add lexical '%s' to sub name '%s'\n",
-                            n->name, (char*)sub->name->strstart);
+                            "add lexical '%s' to sub name '%Ss'\n",
+                            n->name, sub->name);
 
-                    Parrot_PCCINVOKE(interp, lex_info,
-                            string_from_literal(interp, "declare_lex_preg"),
-                            "SI->", lex_name, r->color);
+                    VTABLE_set_integer_keyed_str(interp, lex_info,
+                            lex_name, r->color);
 
                     /* next possible name */
                     n = n->reg;
@@ -1256,7 +1176,8 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
     subs_t      *s;
     PMC         *current;
     STRING      *cur_name;
-    Parrot_sub *sub;
+    char        *cur_name_str;
+    Parrot_Sub_attributes *sub;
     size_t      len;
 
     if (!unit->outer)
@@ -1281,19 +1202,22 @@ find_outer(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
     }
 
     /* could be eval too; check if :outer is the current sub */
-    current = CONTEXT(interp)->current_sub;
+    current = Parrot_pcc_get_sub(interp, CURRENT_CONTEXT(interp));
 
-    if (!current)
+    if (PMC_IS_NULL(current))
         IMCC_fatal(interp, 1, "Undefined :outer sub '%s'.\n",
                    unit->outer->name);
 
     PMC_get_sub(interp, current, sub);
     cur_name = sub->name;
 
-    if (cur_name->strlen == len
-    && (memcmp((char*)cur_name->strstart, unit->outer->name, len) == 0))
+    cur_name_str = Parrot_str_to_cstring(interp,  sub->name);
+    if (strlen(cur_name_str) == len
+    && (memcmp(cur_name_str, unit->outer->name, len) == 0)) {
+        Parrot_str_free_cstring(cur_name_str);
         return current;
-
+    }
+    Parrot_str_free_cstring(cur_name_str);
     return NULL;
 }
 
@@ -1321,9 +1245,9 @@ static int
 add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
 {
     ASSERT_ARGS(add_const_pmc_sub)
-    PMC                 *ns_pmc;
-    PMC                 *sub_pmc;
-    Parrot_sub          *sub, *outer_sub;
+    PMC                   *ns_pmc;
+    PMC                   *sub_pmc;
+    Parrot_Sub_attributes *sub, *outer_sub;
 
     const int            k            = add_const_table(interp);
     PackFile_ConstTable * const ct    = interp->code->const_table;
@@ -1420,22 +1344,22 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
 
     if (ns_const >= 0 && ns_const < ct->const_count) {
         switch (ct->constants[ns_const]->type) {
-            case PFC_KEY:
-                ns_pmc = ct->constants[ns_const]->u.key;
-                break;
-            case PFC_STRING:
-                ns_pmc = constant_pmc_new(interp, enum_class_String);
-                VTABLE_set_string_native(interp, ns_pmc, ct->constants[ns_const]->u.string);
-                break;
-            default:
-                break;
+          case PFC_KEY:
+            ns_pmc = ct->constants[ns_const]->u.key;
+            break;
+          case PFC_STRING:
+            ns_pmc = constant_pmc_new(interp, enum_class_String);
+            VTABLE_set_string_native(interp, ns_pmc, ct->constants[ns_const]->u.string);
+            break;
+          default:
+            break;
         }
     }
 
     sub->namespace_name = ns_pmc;
     sub->start_offs     = offs;
     sub->end_offs       = end;
-    sub->HLL_id         = CONTEXT(interp)->current_HLL;
+    sub->HLL_id         = Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp));
 
     for (i = 0; i < 4; ++i)
         sub->n_regs_used[i] = unit->n_regs_used[i];
@@ -1512,14 +1436,13 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         PMC_get_sub(interp, sub->outer_sub, outer_sub);
 
     IMCC_debug(interp, DEBUG_PBC_CONST,
-            "add_const_pmc_sub '%s' flags %x color %d (%s) "
-            "lex_info %s :outer(%s)\n",
+            "add_const_pmc_sub '%s' flags %x color %d (%Ss) "
+            "lex_info %s :outer(%Ss)\n",
             r->name, r->pcc_sub->pragma, k,
-            (char *) sub_pmc->vtable->whoami->strstart,
+            sub_pmc->vtable->whoami,
             sub->lex_info ? "yes" : "no",
-            sub->outer_sub ?
-                (char *)outer_sub->name->strstart :
-                "*none*");
+            sub->outer_sub? outer_sub->name :
+            Parrot_str_new(interp, "*none*", 0));
 
     /*
      * create entry in our fixup (=symbol) table
@@ -1583,42 +1506,6 @@ add_const_key(PARROT_INTERP, ARGIN(const opcode_t *key), int size, ARGIN(const c
 
 /*
 
-=item C<static const char * slice_deb(int bits)>
-
-Returns debugging information for the indicated slice type.
-
-=cut
-
-*/
-
-PARROT_CONST_FUNCTION
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static const char *
-slice_deb(int bits)
-{
-    ASSERT_ARGS(slice_deb)
-    if ((bits & VT_SLICE_BITS) == (VT_START_SLICE|VT_END_SLICE))
-        return "start+end";
-
-    if ((bits & VT_SLICE_BITS) == (VT_START_ZERO|VT_END_SLICE))
-        return "..end";
-
-    if ((bits & VT_SLICE_BITS) == (VT_START_SLICE|VT_END_INF))
-        return "start..";
-
-    if (bits & VT_START_SLICE)
-        return "start";
-
-    if (bits & VT_END_SLICE)
-        return "end";
-
-    return "";
-}
-
-
-/*
-
 =item C<static opcode_t build_key(PARROT_INTERP, SymReg *key_reg)>
 
 Builds a Key PMC from the given SymReg.
@@ -1655,7 +1542,7 @@ build_key(PARROT_INTERP, ARGIN(SymReg *key_reg))
 
     for (key_length = 0; reg ; reg = reg->nextkey, key_length++) {
         SymReg *r = reg;
-        int     var_type, slice_bits, type;
+        int     type;
 
         if ((pc - key - 2) >= KEYLEN)
             IMCC_fatal(interp, 1, "build_key:"
@@ -1667,69 +1554,63 @@ build_key(PARROT_INTERP, ARGIN(SymReg *key_reg))
         if (r->reg)
             r = r->reg;
 
-        var_type   = type & ~VT_SLICE_BITS;
-        slice_bits = type &  VT_SLICE_BITS;
+        switch (type) {
+          case VTIDENTIFIER:       /* P[S0] */
+          case VTPASM:             /* P[S0] */
+          case VTREG:              /* P[S0] */
+            if (r->set == 'I')
+                *pc++ = PARROT_ARG_I;    /* register type */
+            else if (r->set == 'S')
+                *pc++ = PARROT_ARG_S;
+            else
+                IMCC_fatal(interp, 1, "build_key: wrong register set\n");
 
-        switch (var_type) {
-            case VTIDENTIFIER:       /* P[S0] */
-            case VTPASM:             /* P[S0] */
-            case VTREG:              /* P[S0] */
-                if (r->set == 'I')
-                    *pc++ = PARROT_ARG_I | slice_bits;    /* register type */
-                else if (r->set == 'S')
-                    *pc++ = PARROT_ARG_S | slice_bits;
-                else
-                    IMCC_fatal(interp, 1, "build_key: wrong register set\n");
+            /* don't emit mapped regs in key parts */
+            if (r->color < 0)
+                *pc++ = -1 - r->color;
+            else
+                *pc++ = r->color;
 
-                /* don't emit mapped regs in key parts */
-                if (r->color < 0)
-                    *pc++ = -1 - r->color;
-                else
-                    *pc++ = r->color;
+            sprintf(s+strlen(s), "%c%d", r->set, (int)r->color);
 
-                sprintf(s+strlen(s), "%c%d", r->set, (int)r->color);
+            IMCC_debug(interp, DEBUG_PBC_CONST,
+                    " keypart reg %s %c%d\n",
+                    r->name, r->set, (int)r->color);
+            break;
+          case VT_CONSTP:
+          case VTCONST:
+          case VTCONST|VT_ENCODED:
+            switch (r->set) {
+              case 'S':                       /* P["key"] */
+                /* str constant */
+                *pc++ = PARROT_ARG_SC;
+
+                /* constant idx */
+                *pc++ = r->color;
 
                 IMCC_debug(interp, DEBUG_PBC_CONST,
-                        " keypart reg %s %c%d slice %s\n",
-                        r->name, r->set, (int)r->color,
-                        slice_deb(slice_bits));
+                        " keypart SC %s #%d\n",
+                        r->name, r->color);
                 break;
-            case VT_CONSTP:
-            case VTCONST:
-            case VTCONST|VT_ENCODED:
-                switch (r->set) {
-                    case 'S':                       /* P["key"] */
-                        /* str constant */
-                        *pc++ = PARROT_ARG_SC | slice_bits;
+              case 'I':                       /* P[;42;..] */
+                /* int constant */
+                *pc++ = PARROT_ARG_IC;
 
-                        /* constant idx */
-                        *pc++ = r->color;
+                /* value */
+                *pc++ = r->color = atol(r->name);
 
-                        IMCC_debug(interp, DEBUG_PBC_CONST,
-                                " keypart SC %s #%d slice %s\n",
-                                r->name, r->color,
-                                slice_deb(slice_bits));
-                        break;
-                    case 'I':                       /* P[;42;..] */
-                        /* int constant */
-                        *pc++ = PARROT_ARG_IC | slice_bits;
-
-                        /* value */
-                        *pc++ = r->color = atol(r->name);
-
-                        IMCC_debug(interp, DEBUG_PBC_CONST,
-                                " keypart IC %s #%d slice %s\n",
-                                r->name, r->color,
-                                slice_deb(slice_bits));
-                        break;
-                    default:
-                        IMCC_fatal(interp, 1, "build_key: unknown set\n");
-                }
-                sprintf(s+strlen(s), "%cc" INTVAL_FMT, r->set, r->color);
+                IMCC_debug(interp, DEBUG_PBC_CONST,
+                        " keypart IC %s #%d\n",
+                        r->name, r->color);
                 break;
-            default:
-                IMCC_fatal(interp, 1, "build_key: "
-                    "unknown type 0x%x on %s\n", var_type, r->name);
+              default:
+                IMCC_fatal(interp, 1, "build_key: unknown set\n");
+            }
+            sprintf(s+strlen(s), "%cc" INTVAL_FMT, r->set, r->color);
+            break;
+          default:
+            IMCC_fatal(interp, 1, "build_key: "
+                    "unknown type 0x%x on %s\n", type, r->name);
         }
     }
 
@@ -1802,6 +1683,97 @@ IMCC_int_from_reg(PARROT_INTERP, ARGIN(const SymReg *r))
     return i;
 }
 
+/*
+
+=item C<static void init_fixedintegerarray_from_string(PARROT_INTERP, PMC *p,
+STRING *s)>
+
+Initializes the passed FIA from a string representation I<"(el0, el1, ...)">.
+
+=cut
+
+*/
+
+static void
+init_fixedintegerarray_from_string(PARROT_INTERP, ARGIN(PMC *p), ARGIN(STRING *s))
+{
+    ASSERT_ARGS(init_fixedintegerarray_from_string)
+    INTVAL  n, elem, i, l;
+    char   *src, *chr, *start;
+    int     base;
+
+    if (s->encoding != Parrot_fixed_8_encoding_ptr)
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
+            "unhandled string encoding in FixedIntegerArray initialization");
+
+    l = Parrot_str_byte_length(interp, s);
+
+    if (!l)
+        return;
+
+    chr = src = Parrot_str_to_cstring(interp, s);
+
+    /* "()" - no args */
+    if (l <= 2 && *src == '(') {
+        Parrot_str_free_cstring(src);
+        return;
+    }
+
+    /* count commas */
+    n = 0;
+    while (*chr) {
+        if (*chr == ',')
+            n++;
+        chr++;
+    }
+
+    /* presize the array */
+    VTABLE_set_integer_native(interp, p, n + 1);
+
+    /* parse string */
+    chr = src;
+
+    for (i = l, n = 0; i; --i, ++chr) {
+        switch (*chr) {
+          case ' ':
+            continue;
+          case '\t':
+            continue;
+          case '(':
+            continue;
+          case ')':
+            break;
+          case ',':
+            n++;
+            break;
+          default:
+            base = 10;
+            if (*chr == '0') {
+                ++chr;
+                --i;
+                if (*chr == 'b' || *chr == 'B') {
+                    base = 2;
+                    ++chr;
+                    --i;
+                }
+                else if (*chr == 'x' || *chr == 'X') {
+                    base = 16;
+                    ++chr;
+                    --i;
+                }
+            }
+            start = chr;
+            elem  = strtoul(chr, &chr, base);
+            --chr;
+            i -= (chr - start);
+            VTABLE_set_integer_keyed_int(interp, p, n, elem);
+            break;
+        }
+    }
+
+    Parrot_str_free_cstring(src);
+
+}
 
 /*
 
@@ -1833,7 +1805,26 @@ make_pmc_const(PARROT_INTERP, ARGMOD(SymReg *r))
     else
         s = Parrot_str_unescape(interp, r->name, 0, NULL);
 
-    p = VTABLE_instantiate_str(interp, _class, s, PObj_constant_FLAG);
+    p  = constant_pmc_new(interp, r->pmc_type);
+
+    switch (r->pmc_type) {
+      case enum_class_Integer:
+        VTABLE_set_integer_native(interp, p, Parrot_str_to_int(interp, s));
+        break;
+      case enum_class_Float:
+        VTABLE_set_number_native(interp, p, Parrot_str_to_num(interp, s));
+        break;
+      case enum_class_String:
+        VTABLE_set_string_native(interp, p, s);
+        break;
+      case enum_class_FixedIntegerArray:
+        init_fixedintegerarray_from_string(interp, p, s);
+        break;
+      default:
+        Parrot_ex_throw_from_c_args(interp, NULL,
+            EXCEPTION_INVALID_OPERATION,
+            "Can't generate PMC constant for this type.");
+    }
 
     /* append PMC constant */
     r->color = add_const_table_pmc(interp, p);
@@ -1861,34 +1852,34 @@ add_1_const(PARROT_INTERP, ARGMOD(SymReg *r))
         return;
 
     switch (r->set) {
-        case 'I':
-            r->color = IMCC_int_from_reg(interp, r);
-            break;
-        case 'S':
-            if (r->type & VT_CONSTP)
-                r = r->reg;
-            r->color = add_const_str(interp, r);
-            break;
-        case 'N':
-            r->color = add_const_num(interp, r->name);
-            break;
-        case 'K':
-            {
+      case 'I':
+        r->color = IMCC_int_from_reg(interp, r);
+        break;
+      case 'S':
+        if (r->type & VT_CONSTP)
+            r = r->reg;
+        r->color = add_const_str(interp, r);
+        break;
+      case 'N':
+        r->color = add_const_num(interp, r->name);
+        break;
+      case 'K':
+        {
             SymReg *key = r;
 
             for (r = r->nextkey; r; r = r->nextkey)
                 if (r->type & VTCONST)
                     add_1_const(interp, r);
                 build_key(interp, key);
-            }
-            break;
-        case 'P':
-            make_pmc_const(interp, r);
-            IMCC_debug(interp, DEBUG_PBC_CONST,
+        }
+        break;
+      case 'P':
+        make_pmc_const(interp, r);
+        IMCC_debug(interp, DEBUG_PBC_CONST,
                     "PMC const %s\tcolor %d\n", r->name, r->color);
-            break;
-        default:
-            break;
+        break;
+      default:
+        break;
     }
 
     if (r)
@@ -2012,8 +2003,12 @@ e_pbc_end_sub(PARROT_INTERP, SHIM(void *param), ARGIN(IMC_Unit *unit))
 
     pragma = ins->symregs[0]->pcc_sub->pragma;
 
-    if (pragma & P_IMMEDIATE) {
-        /* clear global symbols temporarily -- RT #60000, for example */
+    if (IMCC_INFO(interp)->write_pbc && !(pragma & P_ANON))
+        return 0;
+
+    if (pragma & P_IMMEDIATE
+    && (!IMCC_INFO(interp)->write_pbc || (pragma & P_ANON))) {
+        /* clear global symbols temporarily -- TT #1324, for example */
         imcc_globals *g      = IMCC_INFO(interp)->globals;
         SymHash       ghash;
 
@@ -2150,24 +2145,14 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
         constant_folding(interp, unit);
         store_sub_size(interp, code_size, ins_size);
 
-        /*
-         * allocate code and pic_index
-         *
-         * pic_index is half the size of the code, as one PIC-cacheable opcode
-         * is at least two opcodes wide - see below how to further decrease
-         * this storage
-         */
+        /* allocate code */
         interp->code->base.data       = (opcode_t *)
             mem_sys_realloc(interp->code->base.data, bytes);
 
         /* reallocating this removes its mmaped-ness; needs encapsulation */
         interp->code->base.pf->is_mmap_ped = 0;
 
-        interp->code->pic_index->data = (opcode_t *)
-            mem_sys_realloc(interp->code->pic_index->data, bytes / 2);
-
         interp->code->base.size       = oldsize + code_size;
-        interp->code->pic_index->size = (oldsize + code_size) / 2;
 
         IMCC_INFO(interp)->pc  = (opcode_t *)interp->code->base.data + oldsize;
         IMCC_INFO(interp)->npc = 0;
@@ -2224,17 +2209,13 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
         /* Add annotations seg if we're missing one. */
         if (!interp->code->annotations) {
             /* Create segment. "_ANN" is added to the name */
-            const               size_t len  = strlen(interp->code->base.name) + 5;
-            char               * const name = (char *) mem_sys_allocate(len);
-            int                        add  = interp->code && interp->code->base.dir;
+            STRING *name = Parrot_sprintf_c(interp, "%Ss_ANN", interp->code->base.name);
+            int                        add  = interp->code->base.dir ? 1 : 0;
             PackFile_Directory * const dir  = add ? interp->code->base.dir :
                     &interp->initial_pf->directory;
-            strcpy(name, interp->code->base.name);
-            strcat(name, "_ANN");
             interp->code->annotations = (PackFile_Annotations *)
                     PackFile_Segment_new_seg(interp, dir,
                         PF_ANNOTATIONS_SEG, name, add);
-            mem_sys_free(name);
             interp->code->annotations->code = interp->code;
 
             /* Create initial group. */
@@ -2244,18 +2225,18 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
 
         /* Add annotation. */
         switch (ins->symregs[1]->set) {
-            case 'I':
-                annotation_type = PF_ANNOTATION_KEY_TYPE_INT;
-                break;
-            case 'N':
-                annotation_type = PF_ANNOTATION_KEY_TYPE_NUM;
-                break;
-            case 'S':
-                annotation_type = PF_ANNOTATION_KEY_TYPE_STR;
-                break;
-            default:
-                IMCC_fatal(interp, 1, "e_pbc_emit:"
-                        "invalid type for annotation value\n");
+          case 'I':
+            annotation_type = PF_ANNOTATION_KEY_TYPE_INT;
+            break;
+          case 'N':
+            annotation_type = PF_ANNOTATION_KEY_TYPE_NUM;
+            break;
+          case 'S':
+            annotation_type = PF_ANNOTATION_KEY_TYPE_STR;
+            break;
+          default:
+            IMCC_fatal(interp, 1, "e_pbc_emit:"
+                    "invalid type for annotation value\n");
         }
         PackFile_Annotations_add_entry(interp, interp->code->annotations,
                     IMCC_INFO(interp)->pc - interp->code->base.data,
@@ -2292,21 +2273,6 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
 
         op = (opcode_t)ins->opnum;
 
-        /* add PIC idx */
-        if (parrot_PIC_op_is_cached(op)) {
-            const size_t offs = IMCC_INFO(interp)->pc - interp->code->base.data;
-            /*
-             * for pic_idx fitting into a short, we could
-             * further reduce the size by storing shorts
-             * the relation code_size / pic_index_size could
-             * indicate the used storage
-             *
-             * drawback: if we reach 0xffff, we'd have to resize again
-             */
-            interp->code->pic_index->data[offs / 2] =
-                ++IMCC_INFO(interp)->globals->cs->pic_idx;
-        }
-
         /* Start generating the bytecode */
         *(IMCC_INFO(interp)->pc)++   = op;
 
@@ -2318,52 +2284,52 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
 
         for (i = 0; i < op_info->op_count-1; i++) {
             switch (op_info->types[i]) {
-                case PARROT_ARG_IC:
-                    /* branch instruction */
-                    if (op_info->labels[i]) {
-                        if (last_label == 1)
-                            /* we don't have a branch with offset 1 !? */
-                            IMCC_fatal(interp, 1, "e_pbc_emit: "
+              case PARROT_ARG_IC:
+                /* branch instruction */
+                if (op_info->labels[i]) {
+                    if (last_label == 1)
+                        /* we don't have a branch with offset 1 !? */
+                        IMCC_fatal(interp, 1, "e_pbc_emit: "
                                     "no label offset found\n");
-                        *(IMCC_INFO(interp)->pc)++      = last_label;
-                        last_label = 1;
-                        break;
-                        /* else fall through */
-                    }
-                case PARROT_ARG_I:
-                case PARROT_ARG_N:
-                case PARROT_ARG_S:
-                case PARROT_ARG_P:
-                case PARROT_ARG_K:
-                case PARROT_ARG_KI:
-                case PARROT_ARG_KIC:
-                case PARROT_ARG_SC:
-                case PARROT_ARG_NC:
-                case PARROT_ARG_PC:
-                    r     = ins->symregs[i];
-
-                    if (r->type & VT_CONSTP)
-                        r = r->reg;
-
-                    *(IMCC_INFO(interp)->pc)++ = (opcode_t) r->color;
-                    IMCC_debug(interp, DEBUG_PBC, " %d", r->color);
+                    *(IMCC_INFO(interp)->pc)++      = last_label;
+                    last_label = 1;
                     break;
-                case PARROT_ARG_KC:
-                    r = ins->symregs[i];
-                    if (r->set == 'K') {
-                        PARROT_ASSERT(r->color >= 0);
-                        *(IMCC_INFO(interp)->pc)++ = r->color;
-                    }
-                    else {
-                        *(IMCC_INFO(interp)->pc)++ = build_key(interp, r);
-                    }
-                    IMCC_debug(interp, DEBUG_PBC, " %d",
+                    /* else fall through */
+                }
+              case PARROT_ARG_I:
+              case PARROT_ARG_N:
+              case PARROT_ARG_S:
+              case PARROT_ARG_P:
+              case PARROT_ARG_K:
+              case PARROT_ARG_KI:
+              case PARROT_ARG_KIC:
+              case PARROT_ARG_SC:
+              case PARROT_ARG_NC:
+              case PARROT_ARG_PC:
+                r     = ins->symregs[i];
+
+                if (r->type & VT_CONSTP)
+                    r = r->reg;
+
+                *(IMCC_INFO(interp)->pc)++ = (opcode_t) r->color;
+                IMCC_debug(interp, DEBUG_PBC, " %d", r->color);
+                break;
+              case PARROT_ARG_KC:
+                r = ins->symregs[i];
+                if (r->set == 'K') {
+                    PARROT_ASSERT(r->color >= 0);
+                    *(IMCC_INFO(interp)->pc)++ = r->color;
+                }
+                else {
+                    *(IMCC_INFO(interp)->pc)++ = build_key(interp, r);
+                }
+                IMCC_debug(interp, DEBUG_PBC, " %d",
                         IMCC_INFO(interp)->pc[-1]);
-                    break;
-                default:
-                    IMCC_fatal(interp, 1, "e_pbc_emit:"
+                break;
+              default:
+                IMCC_fatal(interp, 1, "e_pbc_emit:"
                             "unknown argtype in parrot op\n");
-                    break;
+                break;
             }
         }
         if (ins->opnum == PARROT_OP_set_args_pc

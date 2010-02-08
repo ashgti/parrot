@@ -2,23 +2,24 @@
 # $Id$
 
 # Setup of some commands
-PERL    := @perl@
-CHMOD   := @chmod@
-MKPATH  := @mkpath@
-RM_F    := @rm_f@
-RM_RF   := @rm_rf@
-PERLDOC := @perldoc@
-VERSION := @VERSION@@DEVEL@
+PERL    = @perl@
+CHMOD   = @chmod@
+MKPATH  = @mkpath@
+TOUCH   = @touch@
+RM_F    = @rm_f@
+RM_RF   = @rm_rf@
+PERLDOC = @perldoc@
+VERSION = @VERSION@@DEVEL@
 
 # long list of .pod files
-POD := @TEMP_pod@
+POD = @TEMP_pod@
 
 #
 # Targets
 #
 
 # The default target
-all: doc-prep packfile-c.pod $(POD)
+all: packfile-c.pod $(POD)
 
 # This is a listing of all targets, that are meant to be called by users
 # Most of them are proxied in the root makefile parrot/Makefile
@@ -33,15 +34,18 @@ help :
 	@echo "  html-clean:        Remove the generated HTML documentation."
 	@echo ""
 
+$(POD): doc-prep
+
 doc-prep:
 	$(MKPATH) ops
+	$(TOUCH) doc-prep
 
 packfile-c.pod: ../src/packfile.c
 #IF(new_perldoc):	$(PERLDOC) -ud packfile-c.pod ../src/packfile.c
 #ELSE:	$(PERLDOC) -u ../src/packfile.c > packfile-c.pod
 
 clean:
-	$(RM_F) packfile-c.pod $(POD)
+	$(RM_F) packfile-c.pod $(POD) doc-prep
 
 html: all
 	$(PERL) -I../lib ../tools/docs/write_docs.pl --silent --version=$(VERSION)

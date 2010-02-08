@@ -550,7 +550,8 @@ sub _print_preamble_source {
     print $fh $self->{preamble};
     print $fh <<END_C;
 #include "$self->{include}"
-#include "../pmc/pmc_parrotlibrary.h"
+#include "pmc/pmc_parrotlibrary.h"
+#include "pmc/pmc_callcontext.h"
 
 $self->{defines}
 
@@ -685,7 +686,7 @@ sub _print_goto_opcode {
     __asm__ ("jmp *4(%ebp)");  /* jump to ret addr, used by JIT */
 # endif
 #endif
-    _reg_base = (char*)interp->ctx.bp.regs_i;
+    _reg_base = (char*)Parrot_pcc_get_regs_ni(interp, CURRENT_CONTEXT(interp))->regs_i;
     goto **(void **)cur_opcode;
 
 END_C

@@ -19,7 +19,7 @@ lexicals at runtime.
 
 */
 
-pmclass DynLexPad dynpmc provides lexpad need_ext {
+pmclass DynLexPad dynpmc provides lexpad auto_attrs {
     ATTR Hash *hash;
     ATTR PMC  *init; /* the PMC used to initialize this DynLexPad */
 
@@ -42,8 +42,7 @@ lexinfo.
         Hash *hash;
 
         Parrot_DynLexPad_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_DynLexPad_attributes);
-        PMC_data(SELF) = attrs;
+            (Parrot_DynLexPad_attributes *) PMC_data(SELF);
 
         if (VTABLE_elements(interp, lexinfo)) {
             attrs->init = pmc_new_init(interp, enum_class_LexPad, lexinfo);
@@ -175,9 +174,9 @@ doesn't exist, it is created.
 
 /*
 
-=item C<METHOD PMC* get_lexinfo()>
+=item C<void destroy()>
 
-Return the LexInfo PMC, if any or a Null PMC.
+Destroy DynLexPad.
 
 =cut
 
@@ -188,7 +187,6 @@ Return the LexInfo PMC, if any or a Null PMC.
             parrot_hash_destroy(interp, PARROT_DYNLEXPAD(SELF)->hash);
             PARROT_DYNLEXPAD(SELF)->hash = NULL;
         }
-        mem_sys_free(PMC_data(SELF));
     }
 /*
 
@@ -202,8 +200,7 @@ Marks the lexpad hash as live.
 
     VTABLE void mark() {
         PMC *std_pad = PARROT_DYNLEXPAD(SELF)->init;
-        if (std_pad)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)std_pad);
+        Parrot_gc_mark_PMC_alive(INTERP, std_pad);
         if (PARROT_DYNLEXPAD(SELF)->hash)
             parrot_mark_hash(interp, PARROT_DYNLEXPAD(SELF)->hash);
     }

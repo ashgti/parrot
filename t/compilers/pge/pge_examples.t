@@ -12,11 +12,15 @@ use Parrot::Test::PGE;
 
 =head1 NAME
 
-t/library/pge_examples.t - Parrot Grammar Engine tests of examples
+t/library/pge_examples.t
 
 =head1 SYNOPSIS
 
     % prove t/compilers/pge/pge_examples.t
+
+=head1 DESCRIPTION
+
+Parrot Grammar Engine tests of examples
 
 =cut
 
@@ -52,8 +56,7 @@ ok2
 OUT
 
 # 2
-my @todo = (($^O =~ /darwin/i) ? (todo => 'Darwin segfault -- TT #479') : ());
-pir_output_is( <<'CODE', <<'OUT', "parse FASTA", @todo );
+pir_output_is( <<'CODE', <<'OUT', "parse FASTA" );
 
 # Grok fasta files, which usually contain DNA, RNA or protein sequences.
 # http://en.wikipedia.org/wiki/FASTA_format

@@ -183,11 +183,7 @@ configuration has begun.
 
 =item C<--test=build>
 
-Run tests found in F<t/postconfigure/>, F<t/tools/pmc2cutils/>,
-F<t/tools/ops2cutils/> and F<t/tools/ops2pm/> I<after> configuration has
-completed.  These tests demonstrate (a) that certain of Parrot's configuration
-tools are working properly post-configuration; and (b) that certain of
-Parrot's build tools will work properly once you call F<make>.
+Run tests found in F<t/steps/>,  F<t/postconfigure/> and F<t/pharness>.
 
 =item C<--test>
 
@@ -204,6 +200,10 @@ disk, for later analysis by F<Parrot::Configure::Trace> methods.
 =item Operating system-specific configuration options
 
 =over 4
+
+=item C<--hintsfile=filename>
+
+Use filename as the hints file.
 
 =item C<--darwin_no_fink>
 
@@ -232,8 +232,8 @@ Link parrot dynamically.
 =item C<--m=32>
 
 Create a 32-bit executable on 64-architectures like x86_64. This
-option appends -m32 to compiler and linker programs and does
-s/lib64/lib/g on link flags.
+option appends C<-m32> to compiler and linker programs and does
+C<s/lib64/lib/g> on link flags.
 
 This option is experimental. See F<config/init/defaults.pm> for more.
 
@@ -247,7 +247,7 @@ Turn on profiled compile (gcc only for now)
 
 =item C<--optimize>
 
-Add perl5's $Config{optimize} to the compiler flags.
+Add Perl 5's C<$Config{optimize}> to the compiler flags.
 
 =item C<--optimize=flags>
 
@@ -350,6 +350,10 @@ Don't build cgoto core. This is recommended when you are short of memory.
 =item C<--jitcapable>
 
 Use JIT system.
+
+=item C<--buildframes>
+
+Dynamically build NCI call frames.
 
 =item C<--execcapable>
 
@@ -617,8 +621,8 @@ configuration file.
     auto::isreg
     auto::arch
     auto::jit
+    auto::frames
     auto::cpu
-    auto::funcptr
     auto::cgoto
     auto::inline
     auto::gc
@@ -641,7 +645,6 @@ configuration file.
     gen::config_h
     gen::core_pmcs
     gen::crypto
-    gen::parrot_include
     gen::opengl
     gen::call_list
     gen::makefiles
@@ -652,11 +655,11 @@ configuration file.
 
 You may see how this works in practice by calling:
 
-    perl Configure.pl --file=xconf/samples/yourfoobar
+    perl Configure.pl --file=examples/config/file/configcompiler
 
 or
 
-    perl Configure.pl --file=xconf/samples/testfoobar
+    perl Configure.pl --file=examples/config/file/configwithfatalstep
 
 =head1 SEE ALSO
 

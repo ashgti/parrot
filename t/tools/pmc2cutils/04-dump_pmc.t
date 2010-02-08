@@ -19,7 +19,7 @@ BEGIN {
     }
     unshift @INC, qq{$topdir/lib};
 }
-use Test::More tests => 106;
+use Test::More tests => 108;
 use File::Basename;
 use File::Copy;
 use FindBin;
@@ -84,7 +84,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -95,7 +95,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     is( $copycount, $pmcfilecount, "all src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
-    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/array.pmc}, );
+    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/resizablepmcarray.pmc}, );
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -120,7 +120,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
 
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -136,7 +136,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -163,7 +163,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     ok( $self->dump_pmc(), "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
 
-    @args = (qq{$temppmcdir/array.pmc});
+    @args = (qq{$temppmcdir/resizablepmcarray.pmc});
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -174,7 +174,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     );
     isa_ok( $self, q{Parrot::Pmc2c::Pmc2cMain} );
     ok( $self->dump_pmc(), "dump_pmc succeeded" );
-    ok( -f qq{$temppmcdir/array.dump}, "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump}, "resizablepmcarray.dump created as expected" );
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -311,12 +311,12 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
         my $rv = copy( $pmcfile, qq{$temppmcdir/$basename} );
         $copycount++ if $rv;
     }
-    is( $copycount, $pmcfilecount, "all src/pmc/*.pmc files copied to tempdir" );
+    is( $copycount, $pmcfilecount,
+        "all src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
     @args = (
         qq{$temppmcdir/default.pmc},
-
         #    qq{$temppmcdir/scalar.pmc},
         qq{$temppmcdir/integer.pmc},
     );
@@ -332,12 +332,10 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     $dump_file = $self->dump_vtable("$main::topdir/src/vtable.tbl");
     ok( -e $dump_file, "dump_vtable created vtable.dump" );
 
-    eval { $self->dump_pmc(); };
-    like(
-        $@,
-        qr/^cannot find file 'scalar\.dump' in path/,
-        "ERROR WAS '$@', path is $temppmcdir"
-    );
+     $self->dump_pmc();
+    ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
+    ok( ! -f qq{$temppmcdir/scalar.dump},  "scalar.dump not created as expected" );
+    ok( -f qq{$temppmcdir/integer.dump}, "integer.dump created as expected" );
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -351,7 +349,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -387,7 +385,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
 
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -401,7 +399,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -445,7 +443,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -456,7 +454,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     is( $copycount, $pmcfilecount, "all src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
-    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/array.pmc}, );
+    @args = ( qq{$temppmcdir/default.pmc}, qq{$temppmcdir/resizablepmcarray.pmc}, );
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -481,25 +479,25 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
 
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
 
     my @mtimes;
 
     $mtimes[0]{default} = ( stat(qq{$temppmcdir/default.dump}) )[9];
-    $mtimes[0]{array}   = ( stat(qq{$temppmcdir/array.dump}) )[9];
+    $mtimes[0]{array}   = ( stat(qq{$temppmcdir/resizablepmcarray.dump}) )[9];
 
     sleep(2);
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
 
     $mtimes[1]{default} = ( stat(qq{$temppmcdir/default.dump}) )[9];
-    $mtimes[1]{array}   = ( stat(qq{$temppmcdir/array.dump}) )[9];
+    $mtimes[1]{array}   = ( stat(qq{$temppmcdir/resizablepmcarray.dump}) )[9];
 
     #    is( $mtimes[0]{default}, $mtimes[1]{default},
     #        "default.dump correctly not overwritten");
     #    isnt( $mtimes[0]{array}, $mtimes[1]{array},
-    #        "array.dump correctly overwritten");
+    #        "resizablepmcarray.dump correctly overwritten");
 
     ok( chdir $cwd, "changed back to original directory" );
 }
@@ -513,7 +511,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     my $temppmcdir = qq{$tdir/src/pmc};
     ok( ( mkdir $temppmcdir ), "created src/pmc/ under tempdir" );
 
-    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/array.pmc", );
+    my @pmcfiles = ( "$main::topdir/src/pmc/default.pmc", "$main::topdir/src/pmc/resizablepmcarray.pmc", );
     my $pmcfilecount = scalar(@pmcfiles);
     my $copycount;
     foreach my $pmcfile (@pmcfiles) {
@@ -524,7 +522,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     is( $copycount, $pmcfilecount, "all src/pmc/*.pmc files copied to tempdir" );
     my @include = ( $tdir, $temppmcdir, @include_orig );
 
-    @args = ( qq{$temppmcdir/array.pmc}, );
+    @args = ( qq{$temppmcdir/resizablepmcarray.pmc}, );
     $self = Parrot::Pmc2c::Pmc2cMain->new(
         {
             include => \@include,
@@ -548,7 +546,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     )->dump_pmc();
 
     ok( $self->dump_pmc(),               "dump_pmc succeeded" );
-    ok( -f qq{$temppmcdir/array.dump},   "array.dump created as expected" );
+    ok( -f qq{$temppmcdir/resizablepmcarray.dump},   "resizablepmcarray.dump created as expected" );
     ok( -f qq{$temppmcdir/default.dump}, "default.dump created as expected" );
 
     ok( chdir $cwd, "changed back to original directory" );
@@ -587,10 +585,6 @@ James E Keenan
 =head1 SEE ALSO
 
 Parrot::Pmc2c, F<pmc2c.pl>.
-        "array.dump correctly overwritten");
-
-    ok(chdir $cwd, "changed back to original directory");
-}
 
 pass("Completed all tests in $0");
 

@@ -92,13 +92,11 @@ So we do a bit of cheating here, and load it during class initialization.
 */
 
     VTABLE void class_init() {
-        if (pass) {
 #ifdef WIN32
-            /* RT #46393: What if libgdbm.so cannot be loaded */
-            /* Parrot_load_lib(interp, slib, NULL); */
-            STRING *slib = CONST_STRING(interp, "gdbm3");
+        /* TT #1252:  What if libgdbm.so cannot be loaded */
+        /* Parrot_load_lib(interp, slib, NULL); */
+        STRING *slib = CONST_STRING(interp, "gdbm3");
 #endif
-        }
     }
 
     VTABLE void init() {
@@ -107,13 +105,14 @@ So we do a bit of cheating here, and load it during class initialization.
 
         attrs->db_handle = mem_allocate_zeroed_typed(GDBM_FH);
         PMC_data(SELF)   = attrs;
-        PObj_active_destroy_SET(SELF);
+        PObj_custom_destroy_SET(SELF);
     }
 
     VTABLE void destroy() {
         mem_sys_free(
                 ((Parrot_GDBMHash_attributes *)PMC_data(SELF))->db_handle);
         mem_sys_free(PMC_data(SELF));
+        PMC_data(SELF) = NULL;
     }
 
     VTABLE void* get_pointer() {
@@ -215,12 +214,15 @@ Returns true if the hash size is not zero.
         if (!dbf) return;
         keystr = make_hash_key(interp, key);
 
-        key_gdbm.dsize = keystr->strlen;
-        key_gdbm.dptr  = keystr->strstart;
-        val_gdbm.dsize = value->strlen;
-        val_gdbm.dptr  = value->strstart;
+        key_gdbm.dptr  = Parrot_str_to_cstring(interp, keystr);
+        key_gdbm.dsize = strlen(key_gdbm.dptr);
+        val_gdbm.dptr  = Parrot_str_to_cstring(interp, value);
+        val_gdbm.dsize = strlen(val_gdbm.dptr);
 
         gdbm_store(dbf, key_gdbm, val_gdbm, GDBM_REPLACE);
+
+        Parrot_str_free_cstring(key_gdbm.dptr);
+        Parrot_str_free_cstring(val_gdbm.dptr);
 
         return;
     }
@@ -248,11 +250,12 @@ Returns the string value for the element at C<*key>.
 
         keystr         = make_hash_key(interp, key);
 
-        key_gdbm.dsize = keystr->strlen;
-        key_gdbm.dptr  = keystr->strstart;
+        key_gdbm.dptr  = Parrot_str_to_cstring(interp, keystr);
+        key_gdbm.dsize = strlen(key_gdbm.dptr);
         val_gdbm       = gdbm_fetch(dbf, key_gdbm);
 
         val = Parrot_str_new(interp, val_gdbm.dptr, val_gdbm.dsize);
+        Parrot_str_free_cstring(key_gdbm.dptr);
         free(val_gdbm.dptr);
 
         return val;
@@ -346,15 +349,19 @@ Returns whether a key C<*key> exists in the hash.
         STRING* keystr;
         GDBM_FILE dbf = PMC_dbfh(SELF);
         datum key_gdbm;
+        INTVAL ret;
 
         if (!key) return 0;
         if (!dbf) return 0;
         keystr = make_hash_key(interp, key);
 
-        key_gdbm.dsize = keystr->strlen;
-        key_gdbm.dptr  = keystr->strstart;
+        key_gdbm.dptr  = Parrot_str_to_cstring(interp, keystr);
+        key_gdbm.dsize = strlen(key_gdbm.dptr);
 
-        return gdbm_exists(dbf, key_gdbm);
+        ret = gdbm_exists(dbf, key_gdbm);
+        Parrot_str_free_cstring(key_gdbm.dptr);
+
+        return ret;
     }
 
 /*
@@ -376,12 +383,14 @@ Deletes the element associated with C<*key>.
         if (!dbf) return;
         keystr = make_hash_key(interp, key);
 
-        key_gdbm.dsize = keystr->strlen;
-        key_gdbm.dptr  = keystr->strstart;
+        key_gdbm.dptr  = Parrot_str_to_cstring(interp, keystr);
+        key_gdbm.dsize = strlen(key_gdbm.dptr);
 
         if (gdbm_exists(dbf, key_gdbm)) {
            gdbm_delete(dbf, key_gdbm);
         }
+
+        Parrot_str_free_cstring(key_gdbm.dptr);
 
         return;
     }

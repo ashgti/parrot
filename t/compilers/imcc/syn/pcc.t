@@ -7,7 +7,7 @@ use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
 use Parrot::Config;
-use Parrot::Test tests => 23;
+use Parrot::Test tests => 26;
 
 ##############################
 # Parrot Calling Conventions
@@ -510,7 +510,6 @@ CODE
 foo
 OUT
 
-#RT #58866 calling a PIR sub with 206 params segfaults parrot
 my $too_many_args = <<'CODE';
 .sub main :main
     'foo'(_ARGS_)
@@ -561,6 +560,80 @@ pir_output_is( <<'CODE', <<'OUT', 'Unicode allowed in method names, TT #730' );
 CODE
 ok 1 - Unicode method names allowed
 ok 2 - Unicode method names allowed
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', 'named parameters', todo => 'long version fails, TT #1030');
+.sub main
+.local pmc foo
+foo = get_global 'foo'
+
+foo('x' => 1, 'y' => 2)
+foo(1 :named('x'), 2 :named('y'))
+
+.begin_call
+.set_arg 1 :named('x')
+.set_arg 2 :named('y')
+.call foo
+.end_call
+.end
+
+.sub foo
+.param int i :named('y')
+.param int j :named('x')
+say i
+say j
+.end
+
+CODE
+2
+1
+2
+1
+2
+1
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', 'escape sequences in sub names, TT #1125' );
+.sub 'main'
+    say "xyz:<\" \">"
+    .const 'Sub' $P0 = 'foo'
+    say $P0
+
+    say ""
+
+    say "xyz:<\\>"
+    .const 'Sub' $P1 = 'bar'
+    say $P1
+.end
+
+.sub "xyz:<\" \">" :subid('foo')
+    say "xyz-quote"
+.end
+
+.sub "xyz:<\\>" :subid('bar')
+    say "xyz-backslash"
+.end
+CODE
+xyz:<" ">
+xyz:<" ">
+
+xyz:<\>
+xyz:<\>
+OUT
+
+pir_output_is( <<'CODE', <<'OUT', ':named should default to param name', todo=>'TT #1152');
+.sub main
+  $I0 = 'incr'('value'=>3)
+  say $I0
+.end
+
+.sub 'incr'
+  .param int value :named
+  inc value
+  .return(value)
+.end
+CODE
+4
 OUT
 
 # Local Variables:

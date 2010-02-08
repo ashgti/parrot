@@ -29,39 +29,31 @@ For a language 'Xyz', this script will create the following
 files and directories (relative to C<path>, which defaults
 to F<xyz> if an explicit C<path> isn't given):
 
+    PARROT_REVISION
     README
-    Configure.pl
+    setup.pir
     xyz.pir
-    build/PARROT_REVISION
-    build/Makefile.in
-    build/src/ops/Makefile.in
-    build/src/pmc/Makefile.in
-    build/gen_parrot.pl
     doc/running.pod
     doc/Xyz.pod
-    dynext/.ignore
-    library/.ignore
-    src/builtins/say.pir
-    src/parser/grammar.pg
-    src/parser/grammar-oper.pg
-    src/parser/actions.pm
+    src/Xyz.pir
+    src/Xyz/Grammar.pm
+    src/Xyz/Actions.pm
+    src/Xyz/Compiler.pm
+    src/Xyz/Runtime.pm
     src/pmc/xyz.pmc
     src/ops/xyz.ops
-    t/harness
+    src/xyz.pir
     t/00-sanity.t
+    xyz/.ignore
 
 Any files that already exist are skipped, so this script can
 be used to repopulate a language directory with omitted files.
 
-After populating the language directory, the script attempts to
-run Configure.pl to automatically generate the Makefile
-from build/Makefile.in . This step is only executed if the
-optional C<path> argument is not specified.
-
 If all goes well, after creating the language shell one can simply
 change to the language directory and type
 
-    $ make test
+    $ parrot setup.pir
+    $ parrot setup.pir test
 
 to verify that the new language compiles and configures properly.
 
@@ -130,12 +122,6 @@ while (<DATA>) {
 ##  close the last file
 close($fh) if $fh;
 
-##  build the initial makefile if no path was specified on command line
-unless ($ARGV[1]) {
-  my $reconfigure = "$PConfig{perl} Configure.pl";
-  system("cd $lclang && $reconfigure");
-}
-
 ##  we're done
 1;
 
@@ -191,576 +177,117 @@ __DATA__
 __README__
 Language '@lang@' was created with @script@, r@rev@.
 
-See doc/@lang@.pod for the documentation, and
-doc/running.pod for the command-line options.
+    $ parrot setup.pir
+    $ parrot setup.pir test
 
-__Configure.pl__
+__setup.pir__
+#!/usr/bin/env parrot
 # @Id@
 
 =head1 NAME
 
-Configure.pl - a configure script for a high level language running on Parrot
+setup.pir - Python distutils style
 
-=head1 SYNOPSIS
+=head1 DESCRIPTION
 
-  perl Configure.pl --help
+No Configure step, no Makefile generated.
 
-  perl Configure.pl
+=head1 USAGE
 
-  perl Configure.pl --parrot_config=<path_to_parrot>
-
-  perl Configure.pl --gen-parrot [ -- --options-for-configure-parrot ]
+    $ parrot setup.pir build
+    $ parrot setup.pir test
+    $ sudo parrot setup.pir install
 
 =cut
 
-use strict;
-use warnings;
-use 5.008;
+.sub 'main' :main
+    .param pmc args
+    $S0 = shift args
+    load_bytecode 'distutils.pbc'
 
-use Getopt::Long qw(:config auto_help);
+    .local int reqsvn
+    $P0 = open 'PARROT_REVISION', 'r'
+    $S0 = readline $P0
+    reqsvn = $S0
+    close $P0
 
-our ( $opt_parrot_config, $opt_gen_parrot);
-GetOptions( 'parrot_config=s', 'gen-parrot' );
+    .local pmc config
+    config = get_config()
+    $I0 = config['revision']
+    unless reqsvn > $I0 goto L1
+    $S1 = "Parrot revision r"
+    $S0 = reqsvn
+    $S1 .= $S0
+    $S1 .= " required (currently r"
+    $S0 = $I0
+    $S1 .= $S0
+    $S1 .= ")\n"
+    printerr $S1
+    end
+  L1:
 
-#  Update/generate parrot build if needed
-if ($opt_gen_parrot) {
-    system($^X, 'build/gen_parrot.pl', @ARGV);
-}
+    $P0 = new 'Hash'
+    $P0['name'] = '@lang@'
+    $P0['abstract'] = 'the @lang@ compiler'
+    $P0['description'] = 'the @lang@ for Parrot VM.'
 
-#  Get a list of parrot-configs to invoke.
-my @parrot_config_exe = $opt_parrot_config
-                      ? ( $opt_parrot_config )
-                      : (
-                          'parrot/parrot_config',
-                          '../../parrot_config',
-                          'parrot_config',
-                        );
+    # build
+@no_ops@    $P1 = new 'Hash'
+@no_ops@    $P1['@lclang@_ops'] = 'src/ops/@lclang@.ops'
+@no_ops@    $P0['dynops'] = $P1
 
-#  Get configuration information from parrot_config
-my %config = read_parrot_config(@parrot_config_exe);
-unless (%config) {
-    die "Unable to locate parrot_config.";
-}
+@no_pmc@    $P2 = new 'Hash'
+@no_pmc@    $P3 = split ' ', 'src/pmc/@lclang@.pmc'
+@no_pmc@    $P2['@lclang@_group'] = $P3
+@no_pmc@    $P0['dynpmc'] = $P2
 
-#  Create the Makefile using the information we just got
-create_makefiles(%config);
+    $P4 = new 'Hash'
+    $P4['src/gen_actions.pir'] = 'src/@lang@/Actions.pm'
+    $P4['src/gen_compiler.pir'] = 'src/@lang@/Compiler.pm'
+    $P4['src/gen_grammar.pir'] = 'src/@lang@/Grammar.pm'
+    $P4['src/gen_runtime.pir'] = 'src/@lang@/Runtime.pm'
+    $P0['pir_nqp-rx'] = $P4
 
-sub read_parrot_config {
-    my @parrot_config_exe = @_;
-    my %config = ();
-    for my $exe (@parrot_config_exe) {
-        no warnings;
-        if (open my $PARROT_CONFIG, '-|', "$exe --dump") {
-            print "Reading configuration information from $exe\n";
-            while (<$PARROT_CONFIG>) {
-                $config{$1} = $2 if (/(\w+) => '(.*)'/);
-            }
-            close $PARROT_CONFIG;
-            last if %config;
-        }
-    }
-    %config;
-}
+    $P5 = new 'Hash'
+    $P6 = split "\n", <<'SOURCES'
+src/@lclang@.pir
+src/gen_actions.pir
+src/gen_compiler.pir
+src/gen_grammar.pir
+src/gen_runtime.pir
+SOURCES
+    $S0 = pop $P6
+    $P5['@lclang@/@lclang@.pbc'] = $P6
+    $P5['@lclang@.pbc'] = '@lclang@.pir'
+    $P0['pbc_pir'] = $P5
 
+    $P7 = new 'Hash'
+    $P7['parrot-@lclang@'] = '@lclang@.pbc'
+    $P0['installable_pbc'] = $P7
 
-#  Generate Makefiles from a configuration
-sub create_makefiles {
-    my %config = @_;
-    my %makefiles = (
-        'build/Makefile.in'         => 'Makefile',
-@no_pmc@        'build/src/pmc/Makefile.in' => 'src/pmc/Makefile',
-@no_ops@        'build/src/ops/Makefile.in' => 'src/ops/Makefile',
-    );
-    my $build_tool = $config{libdir} . $config{versiondir}
-                   . '/tools/dev/gen_makefile.pl';
+    # test
+    $S0 = get_parrot()
+    $S0 .= ' @lclang@.pbc'
+    $P0['prove_exec'] = $S0
 
-    foreach my $template (keys %makefiles) {
-        my $makefile = $makefiles{$template};
-        print "Creating $makefile\n";
-        system($config{perl}, $build_tool, $template, $makefile);
-    }
-}
+    # install
+    $P0['inst_lang'] = '@lclang@/@lclang@.pbc'
+
+    # dist
+    $P0['doc_files'] = 'README'
+
+    .tailcall setup(args :flat, $P0 :flat :named)
+.end
+
 
 # Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
+#   mode: pir
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4:
+# vim: expandtab shiftwidth=4 ft=pir:
 
-__build/PARROT_REVISION__
+__PARROT_REVISION__
 @rev@
-__build/src/ops/Makefile.in__
-## @Id@
-
-# values from parrot_config
-VERSION_DIR   := @versiondir@
-INCLUDE_DIR   := @includedir@$(VERSION_DIR)
-LIB_DIR       := @libdir@$(VERSION_DIR)
-#STAGING_DIR   := ../../dynext
-STAGING_DIR   := @build_dir@/runtime/parrot/dynext
-#INSTALL_DIR   := $(LIB_DIR)/languages/@lclang@/dynext
-INSTALL_DIR   := $(LIB_DIR)/dynext
-
-# Set up extensions
-LOAD_EXT      := @load_ext@
-O             := @o@
-
-# Setup some commands
-PERL          := @perl@
-RM_F          := @rm_f@
-CHMOD         := @chmod@
-CP            := @cp@
-CC            := @cc@ -c
-LD            := @ld@
-LDFLAGS       := @ldflags@ @ld_debug@ @rpath_blib@ @linkflags@
-LD_LOAD_FLAGS := @ld_load_flags@
-CFLAGS        := @ccflags@ @cc_shared@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@
-CC_OUT        := @cc_o_out@
-LD_OUT        := @ld_out@
-LIBPARROT     := @inst_libparrot_ldflags@
-
-OPS2C           := $(PERL) $(LIB_DIR)/tools/build/ops2c.pl
-
-INCLUDES        := -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/pmc
-LINKARGS        := $(LDFLAGS) $(LD_LOAD_FLAGS) $(LIBPARROT)
-
-OPS_FILE := @lclang@.ops
-
-CLEANUPS := \
-  "*$(LOAD_EXT)" \
-  "*$(O)" \
-  "*.c" \
-  "*.h" \
-  "$(STAGING_DIR)/@lclang@_ops*$(LOAD_EXT)"
-
-
-all: staging
-
-generate: $(OPS_FILE)
-	$(OPS2C) C --dynamic $(OPS_FILE)
-	$(OPS2C) CSwitch --dynamic $(OPS_FILE)
-#IF(cg_flag):	$(OPS2C) CGoto --dynamic $(OPS_FILE)
-#IF(cg_flag):	$(OPS2C) CGP --dynamic $(OPS_FILE)
-
-compile: generate
-	$(CC) $(CC_OUT)@lclang@_ops$(O) $(INCLUDES) $(CFLAGS) @lclang@_ops.c
-	$(CC) $(CC_OUT)@lclang@_ops_switch$(O) $(INCLUDES) $(CFLAGS) @lclang@_ops_switch.c
-#IF(cg_flag):	$(CC) $(CC_OUT)@lclang@_ops_cg$(O) $(INCLUDES) $(CFLAGS) @lclang@_ops_cg.c
-#IF(cg_flag):	$(CC) $(CC_OUT)@lclang@_ops_cgp$(O) $(INCLUDES) $(CFLAGS) @lclang@_ops_cgp.c
-
-linklibs: compile
-	$(LD) $(LD_OUT)@lclang@_ops$(LOAD_EXT) @lclang@_ops$(O) $(LINKARGS)
-	$(LD) $(LD_OUT)@lclang@_ops_switch$(LOAD_EXT) @lclang@_ops_switch$(O) $(LINKARGS)
-#IF(cg_flag):	$(LD) $(LD_OUT)@lclang@_ops_cg$(LOAD_EXT) @lclang@_ops_cg$(O) $(LINKARGS)
-#IF(cg_flag):	$(LD) $(LD_OUT)@lclang@_ops_cgp$(LOAD_EXT) @lclang@_ops_cgp$(O) $(LINKARGS)
-
-staging: linklibs
-#IF(cygwin or hpux):	CHMOD 0775 "*$(LOAD_EXT)"
-	$(CP) "*$(LOAD_EXT)" $(STAGING_DIR)
-
-install:
-#IF(cygwin or hpux):	CHMOD 0775 "*$(LOAD_EXT)"
-	$(CP) "*$(LOAD_EXT)" $(INSTALL_DIR)
-
-uninstall:
-	$(RM_F) "$(INSTALL_DIR)/@lclang@_ops*$(LOAD_EXT)"
-
-Makefile: ../../build/src/ops/Makefile.in
-	cd ../.. && $(PERL) Configure.pl
-
-clean:
-	$(RM_F) $(CLEANUPS)
-
-realclean:
-	$(RM_F) $(CLEANUPS) Makefile
-
-# Local variables:
-#   mode: makefile
-# End:
-# vim: ft=make:
-
-__build/src/pmc/Makefile.in__
-## @Id@
-
-# values from parrot_config
-VERSION_DIR   := @versiondir@
-INCLUDE_DIR   := @includedir@$(VERSION_DIR)
-LIB_DIR       := @libdir@$(VERSION_DIR)
-SRC_DIR       := @srcdir@$(VERSION_DIR)
-TOOLS_DIR     := @libdir@$(VERSION_DIR)/tools/lib
-#STAGING_DIR   := ../../dynext
-STAGING_DIR   := @build_dir@/runtime/parrot/dynext
-#INSTALL_DIR   := $(LIB_DIR)/languages/@lclang@/dynext
-INSTALL_DIR   := $(LIB_DIR)/dynext
-
-# Set up extensions
-LOAD_EXT      := @load_ext@
-O             := @o@
-
-# Setup some commands
-PERL          := @perl@
-RM_F          := @rm_f@
-CHMOD         := @chmod@
-CP            := @cp@
-CC            := @cc@ -c
-LD            := @ld@
-LDFLAGS       := @ldflags@ @ld_debug@
-LD_LOAD_FLAGS := @ld_load_flags@
-CFLAGS        := @ccflags@ @cc_shared@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@
-CC_OUT        := @cc_o_out@
-LD_OUT        := @ld_out@
-LIBPARROT     := @inst_libparrot_ldflags@
-
-PMC2C_INCLUDES  := --include $(SRC_DIR) --include $(SRC_DIR)/pmc
-PMC2C           := $(PERL) $(LIB_DIR)/tools/build/pmc2c.pl
-PMC2CD          := $(PMC2C) --dump $(PMC2C_INCLUDES)
-PMC2CC          := $(PMC2C) --c $(PMC2C_INCLUDES)
-
-INCLUDES        := -I$(INCLUDE_DIR) -I$(INCLUDE_DIR)/pmc
-LINKARGS        := $(LDFLAGS) $(LD_LOAD_FLAGS) $(LIBPARROT)
-
-@uclang@_GROUP := @lclang@_group
-
-PMC_SOURCES := \
-  @lclang@.pmc
-
-OBJS := \
-  lib-$(@uclang@_GROUP)$(O) \
-  @lclang@$(O)
-
-CLEANUPS := \
-  "*$(LOAD_EXT)" \
-  "*$(O)" \
-  "*.c" \
-  "*.h" \
-  "*.dump" \
-#IF(win32):  "*.exp" \
-#IF(win32):  "*.ilk" \
-#IF(win32):  "*.manifext" \
-#IF(win32):  "*.pdb" \
-#IF(win32):  "*.lib" \
-  $(STAGING_DIR)/$(@uclang@_GROUP)$(LOAD_EXT)
-
-
-all: staging
-
-generate: $(PMC_SOURCES)
-	$(PMC2CD) @lclang@.pmc
-	$(PMC2CC) @lclang@.pmc
-	$(PMC2C) --library $(@uclang@_GROUP) --c $(PMC_SOURCES)
-
-compile: generate
-	$(CC) $(CC_OUT)@lclang@$(O) $(INCLUDES) $(CFLAGS) @lclang@.c
-	$(CC) $(CC_OUT)lib-$(@uclang@_GROUP)$(O) $(INCLUDES) $(CFLAGS) $(@uclang@_GROUP).c
-
-linklibs: compile
-	$(LD) $(LD_OUT)$(@uclang@_GROUP)$(LOAD_EXT) $(OBJS) $(LINKARGS)
-
-staging: linklibs
-#IF(cygwin or hpux):	CHMOD 0775 "*$(LOAD_EXT)"
-	$(CP) "*$(LOAD_EXT)" $(STAGING_DIR)
-
-install:
-#IF(cygwin or hpux):	CHMOD 0775 "*$(LOAD_EXT)"
-	$(CP) "*$(LOAD_EXT)" $(INSTALL_DIR)
-
-uninstall:
-	$(RM_F) $(INSTALL_DIR)/$(@uclang@_GROUP)$(LOAD_EXT)
-
-Makefile: ../../build/src/pmc/Makefile.in
-	cd ../.. && $(PERL) Configure.pl
-
-clean:
-	$(RM_F) $(CLEANUPS)
-
-realclean:
-	$(RM_F) $(CLEANUPS) Makefile
-
-# Local variables:
-#   mode: makefile
-# End:
-# vim: ft=make:
-
-__build/Makefile.in__
-## @Id@
-
-## arguments we want to run parrot with
-PARROT_ARGS   :=
-
-## configuration settings
-VERSION       := @versiondir@
-BIN_DIR       := @bindir@
-LIB_DIR       := @libdir@$(VERSION)
-DOC_DIR       := @docdir@$(VERSION)
-MANDIR        := @mandir@$(VERSION)
-
-# Set up extensions
-LOAD_EXT      := @load_ext@
-O             := @o@
-
-# Various paths
-PERL6GRAMMAR  := $(LIB_DIR)/library/PGE/Perl6Grammar.pbc
-NQP           := $(LIB_DIR)/languages/nqp/nqp.pbc
-PCT           := $(LIB_DIR)/library/PCT.pbc
-PMC_DIR       := src/pmc
-OPS_DIR       := src/ops
-
-## Setup some commands
-MAKE          := @make_c@
-PERL          := @perl@
-CAT           := @cat@
-CHMOD         := @chmod@
-CP            := @cp@
-MKPATH        := @mkpath@
-RM_F          := @rm_f@
-RM_RF         := @rm_rf@
-POD2MAN       := pod2man
-#IF(parrot_is_shared and not(cygwin or win32)):export LD_RUN_PATH := @blib_dir@:$(LD_RUN_PATH)
-PARROT        := $(BIN_DIR)/parrot@exe@
-PBC_TO_EXE    := $(BIN_DIR)/pbc_to_exe@exe@
-#IF(darwin):
-#IF(darwin):# MACOSX_DEPLOYMENT_TARGET must be defined for OS X compilation/linking
-#IF(darwin):export MACOSX_DEPLOYMENT_TARGET := @osx_version@
-
-@UCLANG@_GROUP := $(PMC_DIR)/@lclang@_group$(LOAD_EXT)
-@UCLANG@_OPS := $(OPS_DIR)/@lclang@_ops$(LOAD_EXT)
-
-@no_pmc@PMC_DEPS := build/src/pmc/Makefile.in $(PMC_DIR)/@lclang@.pmc
-@no_ops@OPS_DEPS := build/src/ops/Makefile.in $(OPS_DIR)/@lclang@.ops
-
-SOURCES := \
-  src/gen_grammar.pir \
-  src/gen_actions.pir \
-  src/gen_builtins.pir \
-  @lclang@.pir
-
-BUILTINS_PIR := \
-  src/builtins/say.pir
-
-DOCS := README
-
-BUILD_CLEANUPS := \
-  @lclang@.pbc \
-  "src/gen_*.pir" \
-  "*.c" \
-  "*$(O)" \
-  @lclang@@exe@ \
-#IF(win32):  parrot-@lclang@.exe \
-#IF(win32):  parrot-@lclang@.iss \
-#IF(win32):  "setup-parrot-*.exe" \
-  installable_@lclang@@exe@
-
-TEST_CLEANUPS :=
-
-# the default target
-build: \
-  $(@UCLANG@_OPS) \
-  $(@UCLANG@_GROUP) \
-  @lclang@.pbc
-
-all: build @lclang@@exe@ installable
-
-@lclang@.pbc: $(SOURCES)
-	$(PARROT) $(PARROT_ARGS) -o @lclang@.pbc @lclang@.pir
-
-@lclang@@exe@: @lclang@.pbc
-	$(PBC_TO_EXE) @lclang@.pbc
-
-src/gen_grammar.pir: $(PERL6GRAMMAR) src/parser/grammar.pg src/parser/grammar-oper.pg
-	$(PARROT) $(PARROT_ARGS) $(PERL6GRAMMAR) \
-	    --output=src/gen_grammar.pir \
-	    src/parser/grammar.pg \
-	    src/parser/grammar-oper.pg
-
-src/gen_actions.pir: $(NQP) src/parser/actions.pm
-	$(PARROT) $(PARROT_ARGS) $(NQP) --output=src/gen_actions.pir \
-	    --target=pir src/parser/actions.pm
-
-src/gen_builtins.pir: $(BUILTINS_PIR)
-	$(CAT) $(BUILTINS_PIR) > src/gen_builtins.pir
-
-$(@UCLANG@_GROUP): $(PMC_DEPS)
-@no_pmc@	$(MAKE) $(PMC_DIR)
-
-$(@UCLANG@_OPS): $(OPS_DEPS)
-@no_ops@	$(MAKE) $(OPS_DIR)
-
-installable: installable_@lclang@@exe@
-
-installable_@lclang@@exe@: @lclang@.pbc
-	$(PBC_TO_EXE) @lclang@.pbc --install
-
-Makefile: build/Makefile.in
-	$(PERL) Configure.pl
-
-# This is a listing of all targets, that are meant to be called by users
-help:
-	@echo ""
-	@echo "Following targets are available for the user:"
-	@echo ""
-	@echo "  build:             @lclang@.pbc"
-	@echo "                     This is the default."
-	@echo "  @lclang@@exe@      Self-hosting binary not to be installed."
-	@echo "  all:               @lclang@.pbc @lclang@@exe@ installable"
-	@echo "  installable:       Create libs and self-hosting binaries to be installed."
-	@echo "  install:           Install the installable targets and docs."
-	@echo ""
-	@echo "Testing:"
-	@echo "  test:              Run the test suite."
-	@echo "  test-installable:  Test self-hosting targets."
-	@echo "  testclean:         Clean up test results."
-	@echo ""
-	@echo "Cleaning:"
-	@echo "  clean:             Basic cleaning up."
-	@echo "  realclean:         Removes also files generated by 'Configure.pl'"
-	@echo "  distclean:         Removes also anything built, in theory"
-	@echo ""
-	@echo "Misc:"
-	@echo "  help:              Print this help message."
-	@echo ""
-
-test: build
-	$(PERL) -I$(LIB_DIR)/tools/lib t/harness --bindir=$(BIN_DIR)
-
-# basic run for missing libs
-test-installable: installable
-	echo "1" | ./installable_@lclang@@exe@
-
-install: installable
-@no_ops@	$(MAKE) $(OPS_DIR) install
-@no_pmc@	$(MAKE) $(PMC_DIR) install
-	$(CP) installable_@lclang@@exe@ $(BIN_DIR)/parrot-@lclang@@exe@
-	$(CHMOD) 0755 $(BIN_DIR)/parrot-@lclang@@exe@
-	-$(MKPATH) $(LIB_DIR)/languages/@lclang@
-	$(CP) @lclang@.pbc $(LIB_DIR)/languages/@lclang@/@lclang@.pbc
-@no_doc@	-$(MKPATH) $(MANDIR)/man1
-@no_doc@	$(POD2MAN) doc/running.pod > $(MANDIR)/man1/parrot-@lclang@.1
-@no_doc@	-$(MKPATH) $(DOC_DIR)/languages/@lclang@
-@no_doc@	$(CP) $(DOCS) $(DOC_DIR)/languages/@lclang@
-
-uninstall:
-@no_ops@	$(MAKE) $(OPS_DIR) uninstall
-@no_pmc@	$(MAKE) $(PMC_DIR) uninstall
-	$(RM_F) $(BIN_DIR)/parrot-@lclang@@exe@
-	$(RM_RF) $(LIB_DIR)/languages/@lclang@
-@no_doc@	$(RM_F) $(MANDIR)/man1/parrot-@lclang@.1
-@no_doc@	$(RM_RF) $(DOC_DIR)/languages/@lclang@
-
-win32-inno-installer: installable
-@no_doc@	-$(MKPATH) man/man1
-@no_doc@	$(POD2MAN) doc/running.pod > man/man1/parrot-@lclang@.1
-@no_doc@	-$(MKPATH) man/html
-@no_doc@	pod2html --infile doc/running.pod --outfile man/html/parrot-@lclang@.html
-	$(CP) installable_@lclang@@exe@ parrot-@lclang@.exe
-	$(PERL) -I$(LIB_DIR)/tools/lib $(LIB_DIR)/tools/dev/mk_inno_language.pl @lclang@
-	iscc parrot-@lclang@.iss
-
-testclean:
-	$(RM_F) $(TEST_CLEANUPS)
-
-clean:
-@no_ops@	$(MAKE) $(OPS_DIR) clean
-@no_pmc@	$(MAKE) $(PMC_DIR) clean
-	$(RM_F) $(TEST_CLEANUPS) $(BUILD_CLEANUPS)
-
-realclean:
-@no_ops@	$(MAKE) $(OPS_DIR) realclean
-@no_pmc@	$(MAKE) $(PMC_DIR) realclean
-	$(RM_F) $(TEST_CLEANUPS) $(BUILD_CLEANUPS) Makefile
-
-distclean: realclean
-
-# Local variables:
-#   mode: makefile
-# End:
-# vim: ft=make:
-
-__build/gen_parrot.pl__
-#! perl
-
-=head1 TITLE
-
-gen_parrot.pl - script to obtain and build Parrot for @lang@
-
-=head2 SYNOPSIS
-
-    perl gen_parrot.pl [--option-for-Configure-pl]
-
-=head2 DESCRIPTION
-
-Maintains an appropriate copy of Parrot in the parrot/ subdirectory.
-The revision of Parrot to be used in the build is given by the
-build/PARROT_REVISION file.
-
-=cut
-
-use strict;
-use warnings;
-use 5.008;
-
-##  determine what revision of Parrot we require
-open my $REQ, 'build/PARROT_REVISION'
-    or die "cannot open build/PARROT_REVISION ($!)\n";
-my $required = <$REQ>;
-chomp $required;
-close $REQ;
-
-{
-    no warnings;
-    if (open my $REV, '-|', 'parrot/parrot_config revision') {
-        my $revision = <$REV>;
-        close $REV;
-        chomp $revision;
-        if ($revision >= $required) {
-            print "Parrot r$revision already available (r$required required)\n";
-            exit(0);
-        }
-    }
-}
-
-print "Checking out Parrot r$required via svn...\n";
-system("svn checkout -r $required https://svn.parrot.org/parrot/trunk parrot");
-
-chdir('parrot');
-
-
-##  If we have a Makefile from a previous build, do a 'make realclean'
-if (-f 'Makefile') {
-    my %config = read_parrot_config();
-    my $make = $config{'make'};
-    if ($make) {
-        print "Performing '$make realclean'\n";
-        system($make, 'realclean');
-    }
-}
-
-##  Configure Parrot
-system($^X, 'Configure.pl', @ARGV);
-
-my %config = read_parrot_config();
-my $make = $config{'make'};
-system( $make );
-system( $make, 'install-dev' );
-
-sub read_parrot_config {
-    my %config = ();
-    if (open my $CFG, 'config_lib.pasm') {
-        while (<$CFG>) {
-            $config{$1} = $2 if (/P0\["(.*?)"], "(.*?)"/);
-        }
-        close $CFG;
-    }
-    %config;
-}
-
-# Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
-#   fill-column: 100
-# End:
-# vim: expandtab shiftwidth=4:
-
 __doc/@lang@.pod__
 # @Id@
 
@@ -805,7 +332,52 @@ A number of additional options are available:
 
 __dynext/.ignore__
 
+__@lclang@/.ignore__
+
 __@lclang@.pir__
+# @Id@
+
+=head1 TITLE
+
+@lclang@.pir - A @lang@ compiler.
+
+=head2 Description
+
+This is the entry point for the @lang@ compiler.
+
+=head2 Functions
+
+=over 4
+
+=item main(args :slurpy)  :main
+
+Start compilation by passing any command line C<args>
+to the @lang@ compiler.
+
+=cut
+
+.sub 'main' :main
+    .param pmc args
+
+    load_language '@lclang@'
+
+    $P0 = compreg '@lang@'
+    $P1 = $P0.'command_line'(args)
+.end
+
+=back
+
+=cut
+
+# Local Variables:
+#   mode: pir
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4 ft=pir:
+
+__src/@lclang@.pir__
+# @Id@
+
 =head1 TITLE
 
 @lclang@.pir - A @lang@ compiler.
@@ -829,37 +401,25 @@ object.
 
 =cut
 
-.namespace [ '@lang@::Compiler' ]
-
+.HLL '@lclang@'
 @no_pmc@.loadlib '@lclang@_group'
 
-.sub 'onload' :anon :load :init
-    load_bytecode 'PCT.pbc'
+.namespace []
 
-    $P0 = get_hll_global ['PCT'], 'HLLCompiler'
-    $P1 = $P0.'new'()
-    $P1.'language'('@lang@')
-    $P1.'parsegrammar'('@lang@::Grammar')
-    $P1.'parseactions'('@lang@::Grammar::Actions')
+.sub '' :anon :load
+    load_bytecode 'HLL.pbc'
+
+    .local pmc hllns, parrotns, imports
+    hllns = get_hll_namespace
+    parrotns = get_root_namespace ['parrot']
+    imports = split ' ', 'PAST PCT HLL Regex Hash'
+    parrotns.'export_to'(hllns, imports)
 .end
 
-=item main(args :slurpy)  :main
-
-Start compilation by passing any command line C<args>
-to the @lang@ compiler.
-
-=cut
-
-.sub 'main' :main
-    .param pmc args
-
-    $P0 = compreg '@lang@'
-    $P1 = $P0.'command_line'(args)
-.end
-
-.include 'src/gen_builtins.pir'
 .include 'src/gen_grammar.pir'
 .include 'src/gen_actions.pir'
+.include 'src/gen_compiler.pir'
+.include 'src/gen_runtime.pir'
 
 =back
 
@@ -871,163 +431,121 @@ to the @lang@ compiler.
 # End:
 # vim: expandtab shiftwidth=4 ft=pir:
 
-__src/parser/grammar.pg__
-# @Id@
-
+__src/@lang@/Grammar.pm__
 =begin overview
 
-This is the grammar for @lang@ written as a sequence of Perl 6 rules.
+This is the grammar for @lang@ in Perl 6 rules.
 
 =end overview
 
-grammar @lang@::Grammar is PCT::Grammar;
+grammar @lang@::Grammar is HLL::Grammar;
 
-rule TOP {
-    <statement>*
-    [ $ || <panic: 'Syntax error'> ]
-    {*}
+token TOP {
+    <statementlist>
+    [ $ || <.panic: "Syntax error"> ]
 }
 
-##  this <ws> rule treats # as "comment to eol"
-##  you may want to replace it with something appropriate
+## Lexer items
+
+# This <ws> rule treats # as "comment to eol".
 token ws {
     <!ww>
     [ '#' \N* \n? | \s+ ]*
 }
 
+## Statements
+
+rule statementlist { [ <statement> | <?> ] ** ';' }
+
 rule statement {
-    'say' <expression> [ ',' <expression> ]* ';'
-    {*}
+    | <statement_control>
+    | <EXPR>
 }
 
-rule value {
-    | <integer> {*}                              #= integer
-    | <quote> {*}                                #= quote
+proto token statement_control { <...> }
+rule statement_control:sym<say>   { <sym> [ <EXPR> ] ** ','  }
+rule statement_control:sym<print> { <sym> [ <EXPR> ] ** ','  }
+
+## Terms
+
+token term:sym<integer> { <integer> }
+token term:sym<quote> { <quote> }
+
+proto token quote { <...> }
+token quote:sym<'> { <?[']> <quote_EXPR: ':q'> }
+token quote:sym<"> { <?["]> <quote_EXPR: ':qq'> }
+
+## Operators
+
+INIT {
+    @lang@::Grammar.O(':prec<u>, :assoc<left>',  '%multiplicative');
+    @lang@::Grammar.O(':prec<t>, :assoc<left>',  '%additive');
 }
 
-token integer { \d+ {*} }
+token circumfix:sym<( )> { '(' <.ws> <EXPR> ')' }
 
-token quote {
-    [ \' <string_literal: '\'' > \' | \" <string_literal: '"' > \" ]
-    {*}
-}
+token infix:sym<*>  { <sym> <O('%multiplicative, :pirop<mul>')> }
+token infix:sym</>  { <sym> <O('%multiplicative, :pirop<div>')> }
 
-##  terms
-token term {
-    | <value> {*}                                #= value
-}
-
-rule expression is optable { ... }
-
-__src/parser/grammar-oper.pg__
-# @Id@
-
-##  expressions and operators
-proto 'term:'     is precedence('=')     is parsed(&term)      { ... }
-
-## multiplicative operators
-proto infix:<*>   is looser(term:)       is pirop('mul')     { ... }
-proto infix:</>   is equiv(infix:<*>)    is pirop('div')     { ... }
-
-## additive operators
-proto infix:<+>   is looser(infix:<*>)   is pirop('add')     { ... }
-proto infix:<->   is equiv(infix:<+>)    is pirop('sub')     { ... }
-
-__src/parser/actions.pm__
-# @Id@
-
-=begin comments
-
-@lang@::Grammar::Actions - ast transformations for @lang@
-
-This file contains the methods that are used by the parse grammar
-to build the PAST representation of an @lang@ program.
-Each method below corresponds to a rule in F<src/parser/grammar.pg>,
-and is invoked at the point where C<{*}> appears in the rule,
-with the current match object as the first argument.  If the
-line containing C<{*}> also has a C<#= key> comment, then the
-value of the comment is passed as the second argument to the method.
-
-=end comments
-
-class @lang@::Grammar::Actions;
+token infix:sym<+>  { <sym> <O('%additive, :pirop<add>')> }
+token infix:sym<->  { <sym> <O('%additive, :pirop<sub>')> }
+__src/@lang@/Actions.pm__
+class @lang@::Actions is HLL::Actions;
 
 method TOP($/) {
-    my $past := PAST::Block.new( :blocktype('declaration'), :node( $/ ) );
-    for $<statement> {
-        $past.push( $( $_ ) );
-    }
-    make $past;
+    make PAST::Block.new( $<statementlist>.ast , :hll<@lclang@>, :node($/) );
 }
 
+method statementlist($/) {
+    my $past := PAST::Stmts.new( :node($/) );
+    for $<statement> { $past.push( $_.ast ); }
+    make $past;
+}
 
 method statement($/) {
-    my $past := PAST::Op.new( :name('say'), :pasttype('call'), :node( $/ ) );
-    for $<expression> {
-        $past.push( $( $_ ) );
-    }
+    make $<statement_control> ?? $<statement_control>.ast !! $<EXPR>.ast;
+}
+
+method statement_control:sym<say>($/) {
+    my $past := PAST::Op.new( :name<say>, :pasttype<call>, :node($/) );
+    for $<EXPR> { $past.push( $_.ast ); }
     make $past;
 }
 
-##  expression:
-##    This is one of the more complex transformations, because
-##    our grammar is using the operator precedence parser here.
-##    As each node in the expression tree is reduced by the
-##    parser, it invokes this method with the operator node as
-##    the match object and a $key of 'reduce'.  We then build
-##    a PAST::Op node using the information provided by the
-##    operator node.  (Any traits for the node are held in $<top>.)
-##    Finally, when the entire expression is parsed, this method
-##    is invoked with the expression in $<expr> and a $key of 'end'.
-method expression($/, $key) {
-    if ($key eq 'end') {
-        make $($<expr>);
-    }
-    else {
-        my $past := PAST::Op.new( :name($<type>),
-                                  :pasttype($<top><pasttype>),
-                                  :pirop($<top><pirop>),
-                                  :lvalue($<top><lvalue>),
-                                  :node($/)
-                                );
-        for @($/) {
-            $past.push( $($_) );
-        }
-        make $past;
-    }
+method statement_control:sym<print>($/) {
+    my $past := PAST::Op.new( :name<print>, :pasttype<call>, :node($/) );
+    for $<EXPR> { $past.push( $_.ast ); }
+    make $past;
 }
 
+method term:sym<integer>($/) { make $<integer>.ast; }
+method term:sym<quote>($/) { make $<quote>.ast; }
 
-##  term:
-##    Like 'statement' above, the $key has been set to let us know
-##    which term subrule was matched.
-method term($/, $key) {
-    make $( $/{$key} );
+method quote:sym<'>($/) { make $<quote_EXPR>.ast; }
+method quote:sym<">($/) { make $<quote_EXPR>.ast; }
+
+method circumfix:sym<( )>($/) { make $<EXPR>.ast; }
+
+__src/@lang@/Compiler.pm__
+class @lang@::Compiler is HLL::Compiler;
+
+INIT {
+    @lang@::Compiler.language('@lang@');
+    @lang@::Compiler.parsegrammar(@lang@::Grammar);
+    @lang@::Compiler.parseactions(@lang@::Actions);
+}
+__src/@lang@/Runtime.pm__
+# language-specific runtime functions go here
+
+sub print(*@args) {
+    pir::print(pir::join('', @args));
+    1;
 }
 
-
-method value($/, $key) {
-    make $( $/{$key} );
+sub say(*@args) {
+    pir::say(pir::join('', @args));
+    1;
 }
-
-
-method integer($/) {
-    make PAST::Val.new( :value( ~$/ ), :returns('Integer'), :node($/) );
-}
-
-
-method quote($/) {
-    make PAST::Val.new( :value( $($<string_literal>) ), :node($/) );
-}
-
-
-# Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
-#   fill-column: 100
-# End:
-# vim: expandtab shiftwidth=4:
-
 __src/pmc/@lclang@.pmc__
 /*
 Copyright (C) 20xx, Parrot Foundation.
@@ -1093,7 +611,6 @@ pmclass @lang@
     provides array
     group   @lclang@_group
 
-    need_ext
     dynpmc
     {
 /*
@@ -1106,7 +623,6 @@ initialize the pmc class. Store some constants, etc.
 
 */
 
-    /* RT#48194: move any constant string declarations here so we just do them once. */
     void class_init() {
     }
 
@@ -1199,7 +715,6 @@ the end of the vector.
         } else if (new_size > old_size) {
             pos = 0;
             for (; new_size != old_size; old_size++, pos++) {
-                /* RT#48196 clone this? */
                 VTABLE_push_pmc(INTERP, SELF,
                     VTABLE_get_pmc_keyed_int(INTERP, SELF, pos));
             }
@@ -1246,70 +761,6 @@ inline op @lclang@_pmc_addr(out INT, invar PMC) :base_core {
  * End:
  * vim: expandtab shiftwidth=4:
  */
-__src/builtins/say.pir__
-# @Id@
-
-=head1
-
-say.pir -- simple implementation of a say function
-
-=cut
-
-.namespace []
-
-.sub 'say'
-    .param pmc args            :slurpy
-    .local pmc it
-    it = iter args
-  iter_loop:
-    unless it goto iter_end
-    $P0 = shift it
-    print $P0
-    goto iter_loop
-  iter_end:
-    print "\n"
-    .return ()
-.end
-
-
-# Local Variables:
-#   mode: pir
-#   fill-column: 100
-# End:
-# vim: expandtab shiftwidth=4 ft=pir:
-
-__t/harness__
-#! perl
-
-# @Id@
-
-# pragmata
-use strict;
-use warnings;
-use Getopt::Long;
-use 5.008;
-
-our %harness_args = (
-    language  => '@lang@',
-    verbosity => 0,
-);
-
-GetOptions(
-        'verbosity=i'       => \$harness_args{verbosity},
-        'bindir=s'          => \my $bindir,
-        # A sensible default is num_cores + 1.
-        # Many people have two cores these days.
-        'jobs:3'            => \$harness_args{jobs},
-);
-
-if ($bindir) {
-    $harness_args{exec} = [$bindir.'/parrot', '@lclang@.pbc'];
-}
-else {
-    $harness_args{compiler} = '@lclang@.pbc';
-}
-
-eval 'use Parrot::Test::Harness %harness_args';
 
 __t/00-sanity.t__
 # This just checks that the basic parsing and call to builtin say() works.

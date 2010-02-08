@@ -3,68 +3,68 @@
 Parrot was reported to compile and run tests successfully on the following
 platforms.
 See also http://www.parrot.org/smolder for recent test results.
-See also t/TESTS.STATUS.pod about the status of the test suite.
+See also t/TESTS_STATUS.pod about the status of the test suite.
 
 This list is divided into 2 sections: "Supported" (as defined by
 docs/parrot.pod) and "Extra".
 
 
 Supported platforms:
-Platform                     B8    Runloops      Feature Comp Test Inst YYYYMMDD
-                                CGoto JIT EXEC   Thr Sig
+Platform                     B8  Runloops   Feature Comp Test Inst YYYYMMDD
+                                CGoto EXEC   Thr Sig
 --------------------------------------------------------------------------------
-cygwin1.5.25-x86-gcc3.4.4     4   Y    Y    -     -   -   Y    Y     Y  20090315
-darwin8.11.1-x86-gcc4.0.1    ??   ?    N    ?     ?   ?   Y    Y     Y  20090720
-linux-x86-gcc4.1.2                Y    Y    ?     Y   Y   Y    Y     ?  20090419
-linux-x86-gcc4.1.3                Y    Y    ?     Y   Y   Y    Y     ?  20080414
-linux-x86-gcc4.2.3                Y    Y    ?     Y   Y   Y    Y     ?  20080715
-linux-x86-gcc4.2.4                Y    Y    ?     Y   Y   Y    Y     ?  20081023
-linux-x86-gcc4.3.2                Y    Y    ?     Y   Y   Y    Y     ?  20081030
-linux-x86-llvm-gcc-4.2            Y    Y    ?     ?   ?   Y    Y     ?  20090514
-sol10-sparc-cc_5.9           B4   Y    -    -     Y   Y   Y    Y     ?  20090720
-sol10-sparc-cc_5.9           B8   Y    -    -     Y   Y   Y    Y     ?  20090720
-sol10-sparc-gcc_4.0.2        B4   Y    -    -     Y   Y   Y    Y/1   ?  20080510
-sol10-sparc-gcc_4.0.2        B8   Y    -    -     Y   Y   Y    Y/2   ?  20080518
-win32-x86-mingw_gcc3.4.5          Y    Y    -     -   -   Y    Y     Y  20090421
-win32-x86-msvc_9.0                -    Y    -     Y   -   Y    Y     ?  20090317
+cygwin1.5.25-x86-gcc3.4.4     4   Y    -     -   -   Y    Y     Y  20090315
+darwin8.11.1-x86-gcc4.0.1    ??   Y    ?     ?   ?   Y    Y     N  20091020
+linux-x86-gcc4.1.2                Y    ?     Y   Y   Y    Y     ?  20090419
+linux-x86-gcc4.2.4                Y    ?     Y   Y   Y    Y     ?  20081023
+linux-x86-gcc4.3.2                Y    ?     Y   Y   Y    Y     ?  20081030
+linux-x86-gcc4.4.1                Y    ?     Y   Y   Y    Y     ?  20091103
+linux-x86-g++4.4.1                Y    ?     Y   Y   Y    Y     Y  20091116
+linux-x86-llvm-gcc-4.2            Y    ?     ?   ?   Y    Y     ?  20091021
+sol10-sparc-cc_5.9           B4   Y    -     Y   Y   Y    Y     ?  20090720
+sol10-sparc-cc_5.9           B8   Y    -     Y   Y   Y    Y     ?  20090720
+win32-x86-mingw_gcc3.4.5          Y    -     -   -   Y    N/1   ?  20091116
+win32-x86-msvc_9.0                -    -     Y   -   Y    Y     Y  20091215
 
 
 Extra Platforms:
 
-Platform                     B8    Runloops      Feature Comp Test Inst YYYYMMDD
-                                CGoto JIT EXEC   Thr Sig
+Platform                     B8  Runloops   Feature Comp Test Inst YYYYMMDD
+                                CGoto EXEC   Thr Sig
 --------------------------------------------------------------------------------
-aix5.3-power-gcc4.2          B8   -    -    -             Y    ?     ?  20080510
-cygwin1.7.0-x86-gcc4.3.2      4   Y    Y    -     -   -   Y    Y     Y  20090315
-dragonfly2.2.0-i386-gcc-4.1.2 4   Y    Y    -     Y   Y   Y    Y     ?  20090427
-freebsd-x86-gcc-4.2.1         4   Y    Y    Y     ?   ?   Y    Y     Y  20090415
-freebsd-amd64-gcc-4.2.1       8   Y    -    -     ?   ?   Y    Y     Y  20090720
-linux-amd64-clang-r73854      8   ?    ?    =     Y   Y   Y/4  Y/1   ?  20090622
-linux-amd64-clang-r75433      8   Y    N    ?     ?   ?   Y    Y     ?  20090712
-linux-ppc-gcc3.4.5                Y    Y    Y     ?   ?   Y    Y     ?  20080519
-linux-s390x-gcc4.1.2         B4   ?    -    -     Y   Y   Y    Y/2   ?  20080908
-linux-amd64-gcc4.1.2          8   Y    -    -     Y   Y   Y    Y     ?  20080220
-linux-amd64-gcc4.3.2          8   Y    -    -     Y   Y   Y    Y     ?  20081118
-linux-amd64-gcc4.3.3          8   Y    Y    ?     Y   Y   Y    Y     ?  20090712
-netbsd3.1-ppc-gcc-3.3.3       B   Y    Y    ?     Y   Y   Y    Y     ?  20090419
-netbsd4.0-alpha-gcc-4.1.2     8   Y    -    ?     Y   Y   Y    Y     ?  20090518
-netbsd4.0-arm-gcc-4.1.2           Y    -    ?     Y   Y   Y    Y     ?  20090518
-netbsd4.0-i386-gcc-4.1.2          Y    Y    ?     Y   Y   Y    Y     ?  20090517
-netbsd4.0-ppc-gcc-4.1.2       B   Y    Y    ?     Y   Y   Y    Y     ?  20090519
-netbsd4.0-sparc64-gcc-4.1.2  B8   Y    -    -     Y   Y   Y    Y     ?  20090519
-netbsd4.0-x86_64-gcc-4.1.2    8   Y    -    ?     Y   Y   Y    Y     ?  20090519
-netbsd5.0-i386-gcc-4.1.3          Y    Y    ?     Y   Y   Y    Y     ?  20090519
-netbsd5.0-ppc-gcc-4.1.3       B   Y    Y    ?     Y   Y   Y    Y     ?  20090517
-netbsd5.0-mipseb32-gcc-4.1.3  B   Y    -    ?     Y   Y   Y    Y     ?  20090518
-netbsd5.0-sparc-gcc-4.1.3     B   Y    -    -     Y   Y   Y    Y     ?  20090519
-netbsd5.0-sparc64-gcc-4.1.3  B8   Y    -    -     Y   Y   Y    Y/1   ?  20090519
-netbsd5.0-x86_64-gcc-4.1.3    8   Y    -    -     Y   Y   Y    Y     ?  20090419
-opensolaris-x86-gcc_4.0.3     4   Y    Y    ?     ?   ?   Y    Y/2   ?  20080325
-win32-x86-mingw_gcc4.3.0          Y    Y    -     -   -   Y    Y/88  ?  20081203
-win32-x86-msvc_6.0            4   -    Y    -     -   -   Y    Y/8   ?  20090315
-win32-x64-msvc_9.0            8   -    -    -     -   -   Y    Y/51  ?  20081203
-win32-x64-mingw_gcc3.4.5      8   Y    Y    ?     ?   ?   Y    Y     ?  20090210
-win64-amd64-msvc_9.0          8   N    N    N     ?   ?   Y*3  N     ?  20090720
+cygwin1.7.0-x86-gcc4.3.2      4   Y    -     -   -   Y    Y     Y  20090315
+dragonfly2.2.0-i386-gcc-4.1.2 4   Y    -     Y   Y   Y    Y     ?  20090427
+freebsd-x86-gcc-4.2.1         4   Y    Y     ?   ?   Y    Y     Y  20090415
+freebsd-amd64-gcc-4.2.1       8   Y    -     ?   ?   Y    Y     Y  20090720
+linux-amd64-clang-r73854      8   ?    =     Y   Y   Y/4  Y/1   ?  20090622
+linux-amd64-clang-r75433      8   Y    ?     ?   ?   Y    Y*2   ?  20090913
+linux-amd64-gcc4.3.2          8   Y    -     Y   Y   Y    Y/1   Y  20091020
+linux-amd64-gcc4.3.3          8   Y    ?     Y   Y   Y    Y     ?  20090712
+linux-amd64-gcc4.4.1          8   Y    ?     Y   Y   Y    Y     Y  20091020
+linux-amd64-g++4.4.1          8   Y    ?     Y   Y   Y    Y     Y  20091116
+linux-ppc-gcc_4.4.2               Y    Y     Y   Y   Y    Y     Y  20100118
+linux-ppc64-gcc_4.4.2             Y    Y     Y   Y   Y    Y     Y  20100118
+linux-arm-gcc_4.4.2               Y    Y     Y   Y   Y    Y     Y  20100118
+netbsd3.1-ppc-gcc-3.3.3       B   Y    ?     Y   Y   Y    Y     ?  20090419
+netbsd4.0-alpha-gcc-4.1.2     8   Y    ?     Y   Y   Y    Y     ?  20090518
+netbsd4.0-arm-gcc-4.1.2           Y    ?     Y   Y   Y    Y     ?  20090518
+netbsd4.0-i386-gcc-4.1.2          Y    ?     Y   Y   Y    Y     ?  20090517
+netbsd4.0-ppc-gcc-4.1.2       B   Y    ?     Y   Y   Y    Y     ?  20090519
+netbsd4.0-sparc64-gcc-4.1.2  B8   Y    -     Y   Y   Y    Y     ?  20090519
+netbsd4.0-x86_64-gcc-4.1.2    8   Y    ?     Y   Y   Y    Y     ?  20090519
+netbsd5.0-i386-gcc-4.1.3          Y    ?     Y   Y   Y    Y     ?  20090519
+netbsd5.0-ppc-gcc-4.1.3       B   Y    ?     Y   Y   Y    Y     ?  20090517
+netbsd5.0-mipseb32-gcc-4.1.3  B   Y    ?     Y   Y   Y    Y     ?  20090518
+netbsd5.0-sparc-gcc-4.1.3     B   Y    -     Y   Y   Y    Y     ?  20090519
+netbsd5.0-sparc64-gcc-4.1.3  B8   Y    -     Y   Y   Y    Y/1   ?  20090519
+netbsd5.0-x86_64-gcc-4.1.3    8   Y    -     Y   Y   Y    Y     ?  20090419
+opensol2009.06-x86-gcc3.4.3   4   ?    ?     ?   ?   Y    Y/2   Y  20091215
+win32-x86-mingw_gcc4.3.0          Y    -     -   -   Y    Y/88  ?  20081203
+win32-x86-msvc_6.0            4   -    -     -   -   Y    Y/8   ?  20090315
+win32-x64-msvc_9.0            8   -    -     -   -   Y    Y/17  ?  20091020
+win32-x64-mingw_gcc3.4.5      8   Y    ?     ?   ?   Y    Y     ?  20090210
+win64-amd64-msvc_9.0          8   N    N     ?   ?   Y*1  N     ?  20090720
+
 
 Legend:
 ?   ... unknown or untested
@@ -92,11 +92,9 @@ Inst  ... "make install" is ok
 YYYYMMDD  The date tested.
 
 Remarks:
-*1 gcc and cc defaults to 32bits on solaris, for 64bit use
-   --ccflags='-m64' --ldflags='-m64' --linkflags='-m64'
-*2 http://rt.perl.org/rt3/Ticket/Display.html?id=60926
-*3 64-bit MSVC uses 32-bit int and long values. For 64-bit use
+*1 64-bit MSVC uses 32-bit int and long values. For 64-bit use
    --ccflags="-GS- -MD" --intval="long long" --opcode="long long"
+*2 only builds when configured --without-gmp. See TT #1006
 
 The following configurations are also working on x86/linux (and possibly
 other platforms):

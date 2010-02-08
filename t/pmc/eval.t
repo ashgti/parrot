@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -316,9 +316,9 @@ hello from foo_2
 2 1 1 1
 OUTPUT
 
-(my $fh, $temp_pbc)  = create_tempfile( SUFFIX => '.pbc', UNLINK => 1 ); 
+(my $fh, $temp_pbc)  = create_tempfile( SUFFIX => '.pbc', UNLINK => 1 );
 close $fh;
-        
+
 pir_output_is( <<"CODE", <<'OUTPUT', "eval.get_string - same file" );
 .sub main :main
   .local pmc f1, f2
@@ -499,7 +499,7 @@ foo
 bar
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "catch compile err: RT:#39892" );
+pir_output_is( <<'CODE', <<'OUTPUT', "catch compile err" );
 .sub main :main
      push_eh handler
      $P2 = compreg "PIR"

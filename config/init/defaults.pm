@@ -20,8 +20,9 @@ use base qw(Parrot::Configure::Step);
 
 use Config;
 use FindBin;    # see build_dir
-use Parrot::Configure::Step;
 use Parrot::BuildUtil;
+use Parrot::Configure::Step;
+use Parrot::Harness::DefaultTests ();
 use Cwd qw(abs_path);
 use File::Spec;
 
@@ -45,7 +46,11 @@ sub runstep {
     # the corresponding values in the Parrot::Configure object.  In
     # order to provide access to the original values from Perl 5
     # %Config, we grab those settings we need now and store them in
-    # special keys within the Parrot::Configure object.
+    # special keys within the Parrot::Configure object.  We label these keys
+    # '_provisional' to alert users that these should only be used during
+    # configuration and testing of configuration steps.  They should not be
+    # used during Parrot's build, nor should they be used in 'make test'.
+    #
     # This is a multi-stage process.
 
     # Stage 1:
@@ -53,13 +58,13 @@ sub runstep {
         archname
         ccflags
         d_socklen_t
-        longsize
         optimize
-        sig_name
         scriptdirexp
-        use64bitint
+        sig_name
+        sPRIgldbl
+        sPRIgldbl
     | ) {
-        $conf->data->set_p5( $orig => $Config{$orig} );
+        $conf->data->set( qq|${orig}_provisional| => $Config{$orig} );
     }
 
     # Stage 2 (anticipating needs of config/auto/headers.pm):
@@ -70,7 +75,7 @@ sub runstep {
     # Stage 3 (Along similar lines, look up values from Perl 5 special
     # variables and stash them for later lookups.  Name them according
     # to their 'use English' names as documented in 'perlvar'.)
-    $conf->data->set_p5( OSNAME => $^O );
+    $conf->data->set( OSNAME_provisional => $^O );
 
     my $ccdlflags = $Config{ccdlflags};
     $ccdlflags =~ s/\s*-Wl,-rpath,\S*//g if $conf->options->get('disable-rpath');
@@ -134,7 +139,7 @@ sub runstep {
 
         libs => $Config{libs},
 
-        cc_inc     => "-I./include",
+        cc_inc     => "-I./include -I./include/pmc",
         cc_debug   => '-g',
         link_debug => '',
 
@@ -182,7 +187,6 @@ sub runstep {
         libparrot_soname => '',
 
         perl      => $^X,
-        perl_inc  => $self->find_perl_headers(),
         test_prog => 'parrot',
 
         # some utilities in Makefile
@@ -243,10 +247,11 @@ sub runstep {
         # generate #line directives. These can confuse
         # debugging internals.
         no_lines_flag => $conf->options->get('no-line-directives') ? '--no-lines' : '',
+
+        tempdir => File::Spec->tmpdir,
     );
 
-    # add profiling if needed
-    # RT #41497 gcc syntax
+    # TT #855:  Profiling options are too specific to GCC
     if ( $conf->options->get('profile') ) {
         $conf->data->set(
             cc_debug => " -pg ",
@@ -254,19 +259,17 @@ sub runstep {
         );
     }
 
+    $conf->data->set( clock_best => "" );
+
     $conf->data->set( 'archname', $Config{archname});
+
     # adjust archname, cc and libs for e.g. --m=32
-    # RT#41499 this is maybe gcc only
-    # RT#41500 adjust lib install-path /lib64 vs. lib
     # remember corrected archname - jit.pm was using $Config('archname')
     _64_bit_adjustments($conf);
 
-    return 1;
-}
+    _set_default_tests($conf);
 
-sub find_perl_headers {
-    my $self = shift;
-    return File::Spec->catdir( $Config::Config{archlib}, 'CORE' );
+    return 1;
 }
 
 sub _64_bit_adjustments {
@@ -292,6 +295,20 @@ sub _64_bit_adjustments {
         $conf->data->set( 'archname', $archname );
     }
     return 1;
+}
+
+sub _set_default_tests {
+    my $conf = shift;
+    $conf->data->set( 'runcore_tests' =>
+        ( join ' ' => @Parrot::Harness::DefaultTests::runcore_tests ) );
+    $conf->data->set( 'core_tests' =>
+        ( join ' ' => @Parrot::Harness::DefaultTests::core_tests ) );
+    $conf->data->set( 'library_tests' =>
+        ( join ' ' => @Parrot::Harness::DefaultTests::library_tests ) );
+    $conf->data->set( 'configure_tests' =>
+        ( join ' ' => @Parrot::Harness::DefaultTests::configure_tests ) );
+    $conf->data->set( 'developing_tests' =>
+        ( join ' ' => @Parrot::Harness::DefaultTests::developing_tests ) );
 }
 
 1;

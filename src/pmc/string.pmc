@@ -20,7 +20,7 @@ functions in F<src/string.c>.
 
 */
 
-pmclass String extends scalar provides string provides scalar {
+pmclass String extends scalar provides string provides scalar auto_attrs {
     ATTR STRING * str_val;
 
 /*
@@ -34,50 +34,10 @@ Initializes the string.
 */
 
     VTABLE void init() {
-        Parrot_String_attributes *attrs =
-            mem_allocate_typed(Parrot_String_attributes);
+        STRING *str_val = STRINGNULL;
+        SET_ATTR_str_val(INTERP, SELF, str_val);
 
-        attrs->str_val = Parrot_str_new_noinit(INTERP, enum_stringrep_one, 0);
-        PMC_data(SELF) = attrs;
-
-        PObj_custom_mark_destroy_SETALL(SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-Destroys this String PMC.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-    }
-
-
-/*
-
-=item C<PMC instantiate_str(STRING *rep)>
-
-Class method to construct a String from the string representation C<rep>.
-
-=cut
-
-*/
-    VTABLE PMC *instantiate_str(STRING *rep, INTVAL flags) {
-        PMC         *res;
-        const INTVAL type   = SELF->vtable->base_type;
-
-        if (flags & PObj_constant_FLAG)
-            res = constant_pmc_new(INTERP, type);
-        else
-            res = pmc_new(INTERP, type);
-
-        SET_ATTR_str_val(INTERP, res, rep);
-        return res;
+        PObj_custom_mark_SET(SELF);
     }
 
 /*
@@ -92,10 +52,12 @@ Marks the string as live.
 
     VTABLE void mark() {
         STRING *str_val;
-        GET_ATTR_str_val(INTERP, SELF, str_val);
 
-        if (str_val)
-            Parrot_gc_mark_PObj_alive(INTERP, (PObj *)str_val);
+        if (!PMC_data(SELF))
+            return;
+
+        GET_ATTR_str_val(INTERP, SELF, str_val);
+        Parrot_gc_mark_STRING_alive(INTERP, str_val);
     }
 
 /*
@@ -110,7 +72,6 @@ Creates a copy of the string.
 
     VTABLE PMC *clone() {
         PMC * const dest = pmc_new(INTERP, SELF->vtable->base_type);
-        PObj_custom_mark_destroy_SETALL(dest);
         VTABLE_set_string_native(INTERP, dest, Parrot_str_copy(INTERP, SELF.get_string()));
         return dest;
     }
@@ -239,11 +200,16 @@ Sets the value of the string to that of the specified C<string>.
 */
 
     VTABLE void set_string_native(STRING *value) {
+        /* in lieu of a STRINGNULL, promote any NULL STRINGs to empty ones */
+        if (!value)
+            value = Parrot_str_new(INTERP, NULL, 0);
+
         /* Only allow constant PMCs to embed constant strings */
         if (PObj_constant_TEST(SELF) && !PObj_constant_TEST(value)) {
-            char *copy = Parrot_str_to_cstring(INTERP, value);
-            value      = Parrot_str_new_init(INTERP, copy, strlen(copy),
-                    PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET, PObj_constant_FLAG);
+            char * const copy = Parrot_str_to_cstring(INTERP, value);
+            value             = Parrot_str_new_init(INTERP, copy, strlen(copy),
+                PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
+                PObj_constant_FLAG);
             Parrot_str_free_cstring(copy);
         }
 
@@ -266,22 +232,6 @@ Sets the value of the string to a copy of the specified C<string>.
                     Parrot_str_set(INTERP, SELF.get_string(), value));
         else
             SET_ATTR_str_val(INTERP, SELF, NULL);
-    }
-
-/*
-
-=item C<VOID set_string_same(PMC *value)>
-
-Sets the value of the string to the value of
-the specified C<String> PMC.
-
-=cut
-
-*/
-
-    VTABLE void set_string_same(PMC *value) {
-        SET_ATTR_str_val(INTERP, SELF,
-            Parrot_str_set(INTERP, SELF.get_string(), VTABLE_get_string(INTERP, value)));
     }
 
 /*
@@ -664,6 +614,16 @@ Replace the string at C<key> with the chr of C<value>.
         return string_ord(INTERP, s, pos);
     }
 
+    VTABLE PMC *get_pmc_keyed(PMC *key) {
+        return SELF.get_pmc_keyed_int(VTABLE_get_integer(INTERP, key));
+    }
+
+    VTABLE PMC *get_pmc_keyed_int(INTVAL pos) {
+        PMC * const dest = pmc_new(INTERP, SELF->vtable->base_type);
+        VTABLE_set_string_native(INTERP, dest, SELF.get_string_keyed_int(pos));
+        return dest;
+    }
+
     VTABLE void set_string_keyed(PMC *key, STRING * const value) {
         SELF.set_string_keyed_int(VTABLE_get_integer(INTERP, key), value);
     }
@@ -684,6 +644,14 @@ Replace the string at C<key> with the chr of C<value>.
         STRING * const c = string_chr(INTERP, (UINTVAL) value);
         Parrot_str_replace(INTERP, s, pos, 1, c, NULL);
         VTABLE_set_string_native(INTERP, SELF, s);
+    }
+
+    VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
+        SELF.set_pmc_keyed_int(VTABLE_get_integer(INTERP, key), value);
+    }
+
+    VTABLE void set_pmc_keyed_int(INTVAL pos, PMC *value) {
+        SELF.set_string_keyed_int(pos, VTABLE_get_string(INTERP, value));
     }
 /*
 
@@ -730,17 +698,18 @@ TODO Currently overflow to BigInt is B<not> handled nor detected.
                         enum_class_Integer));
 
         /* TODO verify encoding */
-        const STRING *me         = VTABLE_get_string(INTERP, SELF);
-        const char   *start      = me->strstart;
-        const char   * const end = start + me->bufused;
-        UINTVAL              i   = 0;
+        const STRING *me  = VTABLE_get_string(INTERP, SELF);
+        char         *str = Parrot_str_to_cstring(INTERP, me);
+        UINTVAL       i   = 0;
+        size_t        j   = 0;
+        size_t        len = strlen(str);
 
         if (base < 2 || base > 36)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
                     "invalid conversion to int - bad base %d", base);
 
-        while (start < end) {
-            const unsigned char c = *start;
+        while (j < len) {
+            const unsigned char c = str[j];
             int dig;
 
             if (isdigit((unsigned char)c))
@@ -756,17 +725,23 @@ TODO Currently overflow to BigInt is B<not> handled nor detected.
                 break;
 
             i = i * base + dig;
-            ++start;
+            j++;
         }
 
-        if (start < end)
+        if (j < len) {
+            char ch = str[j];
+            Parrot_str_free_cstring(str);
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
-                    "invalid conversion to int - bad char %c", *start);
+                    "invalid conversion to int - bad char %c", ch);
+        }
 
+        Parrot_str_free_cstring(str);
         /* TODO: autopromote to BigInt instead of casting away the high bit */
         VTABLE_set_integer_native(INTERP, result, (INTVAL)i);
         RETURN(PMC *result);
     }
+
+
 /*
 
 =back
@@ -774,12 +749,6 @@ TODO Currently overflow to BigInt is B<not> handled nor detected.
 =head2 Iterator Interface
 
 =over 4
-
-=item C<PMC *slice(PMC *key, INTVAL f)>
-
-Return a new iterator for the slice PMC C<key> if f==0.
-
-Return a new pythonic slice if f == 1.
 
 =item C<PMC *get_iter(PMC *key)>
 
@@ -789,25 +758,12 @@ Return a new iterator for this string.
 
 Return length of the string.
 
-
 =cut
 
 */
 
     VTABLE INTVAL elements() {
         return Parrot_str_byte_length(INTERP, VTABLE_get_string(INTERP, SELF));
-    }
-
-    VTABLE PMC *slice(PMC *key, INTVAL f) {
-        if (f == 0) {
-            STRING     *name = CONST_STRING(interp, "set_key");
-            PMC * const iter = pmc_new_init(INTERP, enum_class_Iterator, SELF);
-            Parrot_PCCINVOKE(interp, iter, name, "P->", key);
-            return iter;
-        }
-
-        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_OPERATION,
-                "String: Unknown slice type");
     }
 
     VTABLE PMC *get_iter() {
@@ -822,33 +778,30 @@ Return length of the string.
 
 =over 4
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Used to archive the string.
 
 =cut
 
 */
-    VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+    VTABLE void freeze(PMC *info) {
         SUPER(info);
-        VTABLE_push_string(INTERP, io, VTABLE_get_string(INTERP, SELF));
+        VTABLE_push_string(INTERP, info, VTABLE_get_string(INTERP, SELF));
     }
 
 /*
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Used to unarchive the string.
 
 =cut
 
 */
-    VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+    VTABLE void thaw(PMC *info) {
         SUPER(info);
-        if (info->extra_flags == EXTRA_IS_NULL)
-            SET_ATTR_str_val(INTERP, SELF, VTABLE_shift_string(INTERP, io));
+        SET_ATTR_str_val(INTERP, SELF, VTABLE_shift_string(INTERP, info));
     }
 /*
 
@@ -897,7 +850,7 @@ Translate ascii string C<src> with entries from C<trans_table>.
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
                 "Can't translate non-ascii");
 
-        p = (unsigned char *)src->strstart;
+        p = (unsigned char *)Buffer_bufstart(src);
         /* TODO verify trans table */
 
         GETATTR_FixedIntegerArray_int_array(INTERP, table, tr_data);
@@ -931,7 +884,7 @@ Reverse the ascii STRING C<src> in place.
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
                 "Can't reverse non-ascii");
 
-        p = (unsigned char *)src->strstart;
+        p = (unsigned char *)Buffer_bufstart(src);
 
         for (i = 0, --len; i < len; ++i, --len) {
             const unsigned char ch = p[len];
@@ -964,7 +917,7 @@ Checks if the ascii STRING C<str> is just an integer.
                 "Can't is_integer non-ascii");
 
         i = 0;
-        p = (unsigned char *)src->strstart;
+        p = (unsigned char *)Buffer_bufstart(src);
 
         if (p[i] == '-' || p[i] == '+' ||
             (p[i] >= '0' && p[i] <= '9')) {
@@ -983,8 +936,10 @@ Checks if the ascii STRING C<str> is just an integer.
         PMC   * const ret    = SUPER();
 
         GET_ATTR_str_val(INTERP, SELF, str_val);
-        /* prevent wrong garbage collection */
-        PObj_is_shared_SET(str_val);
+        if (!STRING_IS_NULL(str_val)) {
+            /* prevent wrong garbage collection */
+            PObj_is_shared_SET(str_val);
+        }
         return ret;
     }
 

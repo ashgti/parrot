@@ -21,7 +21,8 @@
 #include "imc.h"
 #include "parrot/dynext.h"
 #include "parrot/embed.h"
-#include "../../src/pmc/pmc_sub.h"
+#include "pmc/pmc_sub.h"
+#include "pmc/pmc_callcontext.h"
 #include "pbc.h"
 #include "parser.h"
 #include "optimizer.h"
@@ -93,24 +94,24 @@ static Instruction * var_arg_ins(PARROT_INTERP,
         FUNC_MODIFIES(*unit)
         FUNC_MODIFIES(*r);
 
-#define ASSERT_ARGS_change_op __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_change_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_imcc_compile_file __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_imcc_compile_file __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(fullname) \
-    || PARROT_ASSERT_ARG(error_message)
-#define ASSERT_ARGS_imcc_destroy_macro_values __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(value)
-#define ASSERT_ARGS_try_rev_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(fullname) \
+    , PARROT_ASSERT_ARG(error_message))
+#define ASSERT_ARGS_imcc_destroy_macro_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(value))
+#define ASSERT_ARGS_try_rev_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(r)
-#define ASSERT_ARGS_var_arg_ins __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(r))
+#define ASSERT_ARGS_var_arg_ins __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(r)
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(r))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -386,7 +387,7 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     int dirs = 0;
     Instruction *ins;
     op_info_t   *op_info;
-    char fullname[64], format[128];
+    char fullname[64] = "", format[128] = "";
 
     if (STREQ(name, ".annotate")) {
         ins = _mk_instruction(name, "", n, r, 0);
@@ -464,19 +465,19 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     /* XXX Speed up some by keep track of the end of format ourselves */
     for (i = 0; i < n; i++) {
         switch (op_info->dirs[i]) {
-            case PARROT_ARGDIR_INOUT:
-                dirs |= 1 << (16 + i);
-                /* go on */
-            case PARROT_ARGDIR_IN:
-                dirs |= 1 << i ;
-                break;
+          case PARROT_ARGDIR_INOUT:
+            dirs |= 1 << (16 + i);
+            /* go on */
+          case PARROT_ARGDIR_IN:
+            dirs |= 1 << i ;
+            break;
 
-            case PARROT_ARGDIR_OUT:
-                dirs |= 1 << (16 + i);
-                break;
+          case PARROT_ARGDIR_OUT:
+            dirs |= 1 << (16 + i);
+            break;
 
-            default:
-                PARROT_ASSERT(0);
+          default:
+            PARROT_ASSERT(0);
         };
 
         if (keyvec & KEY_BIT(i)) {
@@ -555,9 +556,7 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
         ||  STREQ(name, "returncc"))
             ins->type |= IF_goto;
         else if (STREQ(fullname, "jump_i")
-             ||  STREQ(fullname, "jsr_i")
-             ||  STREQ(fullname, "branch_i")
-             ||  STREQ(fullname, "bsr_i"))
+             ||  STREQ(fullname, "branch_i"))
             IMCC_INFO(interp)->dont_optimize = 1;
     }
     else if (STREQ(name, "set") && n == 2) {
@@ -622,14 +621,14 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     /* imcc always compiles to interp->code
      * save old cs, make new
      */
-    char name[64];
+    STRING                *name;
     PackFile_ByteCode     *old_cs, *new_cs;
     PMC                   *sub      = NULL;
     struct _imc_info_t    *imc_info = NULL;
     struct parser_state_t *next;
     void                  *yyscanner;
-    Parrot_Context        *ignored;
-    INTVAL regs_used[4] = {3, 3, 3, 3};
+    PMC                   *ignored;
+    UINTVAL regs_used[4] = {3, 3, 3, 3};
     INTVAL eval_number;
 
     do_yylex_init(interp, &yyscanner);
@@ -655,7 +654,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     eval_number = ++eval_nr;
     UNLOCK(eval_nr_lock);
 
-    snprintf(name, sizeof (name), "EVAL_" INTVAL_FMT, eval_number);
+    name = Parrot_sprintf_c(interp, "EVAL_" INTVAL_FMT, eval_number);
     new_cs = PF_create_default_segs(interp, name, 0);
     old_cs = Parrot_switch_to_cs(interp, new_cs, 0);
 
@@ -663,7 +662,9 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
 
     /* spit out the sourcefile */
     if (Interp_debug_TEST(interp, PARROT_EVAL_DEBUG_FLAG)) {
-        FILE * const fp = fopen(name, "w");
+        char *buf = Parrot_str_to_cstring(interp, name);
+        FILE * const fp = fopen(buf, "w");
+        Parrot_str_free_cstring(buf);
         if (fp) {
             fputs(s, fp);
             fclose(fp);
@@ -677,7 +678,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
         IMCC_INFO(interp)->state->next = NULL;
 
     IMCC_INFO(interp)->state->pasm_file = pasm_file;
-    IMCC_INFO(interp)->state->file      = mem_sys_strdup(name);
+    IMCC_INFO(interp)->state->file      = Parrot_str_to_cstring(interp, name);
     IMCC_INFO(interp)->expect_pasm      = 0;
 
     compile_string(interp, s, yyscanner);
@@ -695,7 +696,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     IMCC_pop_parser_state(interp, yyscanner);
 
     if (!IMCC_INFO(interp)->error_code) {
-        Parrot_sub *sub_data;
+        Parrot_Sub_attributes *sub_data;
 
         /*
          * create sub PMC
@@ -707,7 +708,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
         sub_data->seg        = new_cs;
         sub_data->start_offs = 0;
         sub_data->end_offs   = new_cs->base.size;
-        sub_data->name       = Parrot_str_new(interp, name, 0);
+        sub_data->name       = Parrot_str_copy(interp, name);
 
         *error_message = NULL;
     }
@@ -716,13 +717,14 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     }
 
     if (imc_info) {
+        SymReg *ns                  = IMCC_INFO(interp)->cur_namespace;
         IMCC_INFO(interp)           = imc_info->prev;
         mem_sys_free(imc_info);
         imc_info                    = IMCC_INFO(interp);
         IMCC_INFO(interp)->cur_unit = imc_info->last_unit;
 
-        if (IMCC_INFO(interp)->cur_namespace)
-            free_sym(IMCC_INFO(interp)->cur_namespace);
+        if (ns && ns != imc_info->cur_namespace)
+            free_sym(ns);
 
         IMCC_INFO(interp)->cur_namespace = imc_info->cur_namespace;
     }
@@ -869,12 +871,12 @@ imcc_compile_pir_ex(PARROT_INTERP, ARGIN(const char *s))
     /* We need to clear the current_results from the current context. This is
      * in order to prevent any RetContinuations that get promoted to full
      * Continuations (this happens when something is the target of a :outer)
-     * trying to return values using them when invoked. (See TT#500 for the
+     * trying to return values using them when invoked. (See TT #500 for the
      * report of the bug this fixes). */
-    opcode_t *save_results = CONTEXT(interp)->current_results;
-    CONTEXT(interp)->current_results = NULL;
+    opcode_t *save_results = Parrot_pcc_get_results(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_set_results(interp, CURRENT_CONTEXT(interp), NULL);
     sub = imcc_compile(interp, s, 0, &error_message);
-    CONTEXT(interp)->current_results = save_results;
+    Parrot_pcc_set_results(interp, CURRENT_CONTEXT(interp), save_results);
 
     if (sub)
         return sub;
@@ -906,11 +908,11 @@ imcc_compile_file(PARROT_INTERP, ARGIN(const char *fullname),
     const char                *ext;
     FILE                      *fp;
     STRING                    *fs;
-    Parrot_Context            *ignored;
+    PMC                       *ignored;
 
     /* need at least 3 regs for compilation of constant math e.g.
      * add_i_ic_ic - see also IMCC_subst_constants() */
-    INTVAL regs_used[4] = {3, 3, 3, 3};
+    UINTVAL regs_used[4] = {3, 3, 3, 3};
 
     if (IMCC_INFO(interp)->last_unit) {
         /* a reentrant compile */

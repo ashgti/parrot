@@ -7,7 +7,7 @@
 
 docs/project/ticket_triaging.pod - Managing Tickets
 
-=head1 ABSTRACT
+=head1 DESCRIPTION
 
 This document attempts to outline a set of best practices for dealing with
 tickets in Parrot's tracking system.  It is targeted at Parrot developers and
@@ -25,10 +25,10 @@ in a healthy state.  I<This means you!> Most of the document below still makes
 sense in terms of activities in trac, but the specifics are of course different
 with the new system.
 
-We still have several hundred tickets at the old RT system, but our goal is to
-close out those tickets and (if necessary), replace them with trac tickets.
-The old system is available at L<https://rt.perl.org>.  The Parrot issues are
-in the queue I<parrot>.
+Our previous bug tracking system was RT.  In November 2009 all remaining RT
+tickets were closed, with many being reopened in Trac.  No new issues should
+be opened in RT, but the old system is available at L<https://rt.perl.org>.
+The Parrot issues are in the queue I<parrot>.
 
 =head1 TICKET HANDLING PROCEDURES
 
@@ -332,11 +332,11 @@ or
 
 =item Put a subsystem identifier out the front
 
-  [tcl]: commit message
+  [json]: commit message
 
-=item If related to an RT ticket, use the ticket title
+=item If related to a Trac ticket, use the ticket number
 
-  [tcl]: #37301: [BUG] 9262: env tests failing on win32
+  [json]: Resolve #731
 
 =item Add a "Courtesy of <foo>" if supplied by someone else
 
@@ -380,18 +380,6 @@ intentions clear.
 
 Look at past commit messages, and L<http://cia.navi.cx/stats/project/parrot>
 for more best practices.
-
-=item OBTW
-
-There is a completely separate RT instance in which parrot tickets may
-occasionally appear. If you find one in this queue, create a new ticket in
-our RT system, add the original poster as a requestor to the new ticket, and
-remove yourself.
-
-Then, close the ticket in the original system, and include a reference to the
-new ticket's url in our system when you close the original ticket.
-
-L<https://rt.cpan.org/Dist/Display.html?Queue=parrot>
 
 =back
 

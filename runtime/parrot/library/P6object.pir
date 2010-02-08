@@ -115,6 +115,33 @@ Return the C<P6protoobject> for the invocant.
 .end
 
 
+=item WHERE()
+
+Return the memory address for the invocant.
+
+=cut
+
+.sub 'WHERE' :method
+    $I0 = get_addr self
+    .return ($I0)
+.end
+
+
+=item WHO()
+
+Return the package for the object.
+
+=cut
+
+.sub 'WHO' :method
+    $P0 = typeof self
+    $P0 = getprop 'metaclass', $P0
+    $P0 = getattribute $P0, 'parrotclass'
+    $P0 = $P0.'get_namespace'()
+    .return ($P0)
+.end
+
+
 =item PROTOOVERRIDES()
 
 Return a list of methods to be overridden in protoobjects
@@ -235,23 +262,36 @@ Deprecated; use add_parent(class, parentclass)
     methoditer = iter methods
   method_loop:
     unless methoditer goto mro_loop
-    $S0 = shift methoditer
-    $P0 = parrotclassns[$S0]
-    if null $P0 goto add_method
-    $I0 = isa $P0, 'MultiSub'
-    unless $I0 goto method_loop
-  add_method:
-    $P0 = methods[$S0]
-    $I0 = isa $P0, 'NCI'
+    .local string methodname
+    .local pmc methodpmc
+    methodname = shift methoditer
+    methodpmc = methods[methodname]
+    # don't add NCI methods (they don't work)
+    $I0 = isa methodpmc, 'NCI'
     if $I0 goto method_loop
+    # if there's no existing entry, add method directly
+    $P0 = parrotclassns[methodname]
+    if null $P0 goto add_method
+    # if existing entry isn't a MultiSub, skip it
+    $I0 = isa $P0, ['MultiSub']
+    unless $I0 goto method_loop
     push_eh err
-    parrotclassns.'add_sub'($S0, $P0)
-    pop_eh
+    parrotclassns.'add_sub'(methodname, methodpmc)
   err:
+    pop_eh
+    goto method_loop
+  add_method:
+    parrotclassns[methodname] = methodpmc
     goto method_loop
   mro_end:
 
   end:
+.end
+.sub 'add_parent' :method :multi(_,P6metaclass,_)
+    .param pmc obj
+    .param pmc parentclass
+    $P0 = getattribute obj, 'parrotclass'
+    self.'add_parent'($P0, parentclass)
 .end
 
 
@@ -762,21 +802,26 @@ will be used in lieu of this one.)
     $P0 = self.'HOW'()
     parrotclass = $P0.'get_parrotclass'(self)
 
+    # Perl6Object (legacy) and Mu accept anything.
     $S0 = parrotclass
     if $S0 == 'Perl6Object' goto accept_anyway
+    if $S0 == 'Mu' goto accept_anyway
 
-    $I0 = isa topic, 'Junction'
-    if $I0 goto normal_check
-
-    if $S0 == 'Any' goto accept_anyway
-
-  normal_check:
+    # Otherwise, just try a normal check.
     $I0 = can topic, 'HOW'
     unless $I0 goto end
     topicwhat = topic.'WHAT'()
     $I0 = isa topicwhat, parrotclass
     if $I0 goto end
     $I0 = does topic, parrotclass
+    if $I0 goto end
+
+    # If this fails, and we want Any, and it's something form outside
+    # of the Perl 6 world, we'd best just accept it.
+    unless $S0 == 'Any' goto end
+    $I0 = isa topicwhat, 'Perl6Object'
+    unless $I0 goto accept_anyway
+    $I0 = 0
     goto end
 
   accept_anyway:
@@ -806,4 +851,3 @@ Copyright (C) 2008, Parrot Foundation.
 #   fill-column: 100
 # End:
 # vim: expandtab shiftwidth=4 ft=pir:
-

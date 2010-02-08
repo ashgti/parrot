@@ -9,6 +9,7 @@
 #include "imc.h"
 #include "pbc.h"
 #include "optimizer.h"
+#include "pmc/pmc_callcontext.h"
 
 /*
 
@@ -53,14 +54,14 @@ static int e_file_open(PARROT_INTERP, ARGIN(void *param))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_e_file_close __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_e_file_emit __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_e_file_close __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_e_file_emit __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(ins)
-#define ASSERT_ARGS_e_file_open __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(ins))
+#define ASSERT_ARGS_e_file_open __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(param)
+    , PARROT_ASSERT_ARG(param))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -630,7 +631,7 @@ emitb(PARROT_INTERP, ARGMOD_NULLOK(IMC_Unit *unit), ARGIN_NULLOK(Instruction *i)
     }
 
     /* lexer is in next line already */
-    i->line = IMCC_INFO(interp)->line - 1;
+    i->line = IMCC_INFO(interp)->line;
 
     return i;
 }
@@ -746,34 +747,34 @@ ins_print(PARROT_INTERP, ARGIN(PMC *io), ARGIN(const Instruction *ins))
     }
 
     switch (ins->opsize-1) {
-        case -1:        /* labels */
-        case 1:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0]);
-            break;
-        case 2:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1]);
-            break;
-        case 3:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2]);
-            break;
-        case 4:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
+      case -1:        /* labels */
+      case 1:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0]);
+        break;
+      case 2:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1]);
+        break;
+      case 3:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2]);
+        break;
+      case 4:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
                     regstr[3]);
-            break;
-        case 5:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
+        break;
+      case 5:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
                     regstr[3], regstr[4]);
-            break;
-        case 6:
-            len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
+        break;
+      case 6:
+        len = Parrot_io_fprintf(interp, io, ins->format, regstr[0], regstr[1], regstr[2],
                     regstr[3], regstr[4], regstr[5]);
-            break;
-        default:
-            Parrot_io_fprintf(interp, Parrot_io_STDERR(interp),
+        break;
+      default:
+        Parrot_io_fprintf(interp, Parrot_io_STDERR(interp),
                 "unhandled: opsize (%d), op %s, fmt %s\n",
                 ins->opsize, ins->opname, ins->format);
-            exit(EXIT_FAILURE);
-            break;
+        exit(EXIT_FAILURE);
+        break;
     }
 
     return len;

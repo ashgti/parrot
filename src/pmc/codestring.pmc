@@ -34,16 +34,45 @@ C<emit> method.
 #  include <unicode/uchar.h>
 #endif
 
-pmclass CodeString extends String provides string {
-    ATTR INTVAL last_line_number; /* most recent line number seen   */
-    ATTR INTVAL last_pos;         /* most recent byte position seen */
+pmclass CodeString extends String provides string auto_attrs {
+    ATTR PMC *linepos;            /* start of line positions */
+
+/*
+
+=item C<init()>
+
+Initialize the CodeString.
+
+=cut
+
+*/
 
     VTABLE void init() {
-        Parrot_CodeString_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_CodeString_attributes);
-        attrs->str_val = Parrot_str_new_noinit(INTERP, enum_stringrep_one, 0);
-        PMC_data(SELF) = attrs;
-        PObj_custom_mark_destroy_SETALL(SELF);
+        SUPER();
+        SET_ATTR_linepos(INTERP, SELF, PMCNULL);
+        PObj_custom_mark_SET(SELF);
+    }
+
+/*
+
+=item C<mark()>
+
+Mark the CodeString as live.
+
+=cut
+
+*/
+
+    VTABLE void mark() {
+        PMC *linepos;
+
+        SUPER();
+        if (!PMC_data(SELF))
+            return;
+
+        GET_ATTR_linepos(INTERP, SELF, linepos);
+
+        Parrot_gc_mark_PMC_alive(INTERP, linepos);
     }
 
 /*
@@ -72,10 +101,10 @@ A newline is automatically added to the end of the fmt.
 */
 
   METHOD emit(STRING *fmt, PMC *args :slurpy, PMC *hash :slurpy :named) {
-    STRING *percent     = CONST_STRING(INTERP, "%");
-    STRING *comma       = CONST_STRING(INTERP, ",");
-    STRING *comma_space = CONST_STRING(INTERP, ", ");
-    STRING *newline     = CONST_STRING(INTERP, "\n");
+    STRING * const percent     = CONST_STRING(INTERP, "%");
+    STRING * const comma       = CONST_STRING(INTERP, ",");
+    STRING * const comma_space = CONST_STRING(INTERP, ", ");
+    STRING * const newline     = CONST_STRING(INTERP, "\n");
     STRING *key, *repl, *S0, *S1;
     INTVAL pos          = 0;
     INTVAL replen       = 0;
@@ -125,7 +154,7 @@ A newline is automatically added to the end of the fmt.
     }
 
     /* Add a newline if necessary */
-    if ('\n' != Parrot_str_indexed(INTERP, fmt, Parrot_str_byte_length(interp, fmt) - 1))
+    if ('\n' != Parrot_str_indexed(INTERP, fmt, Parrot_str_byte_length(INTERP, fmt) - 1))
         fmt = Parrot_str_concat(INTERP, fmt, newline, 0);
 
     GET_ATTR_str_val(INTERP, SELF, S1);
@@ -133,7 +162,7 @@ A newline is automatically added to the end of the fmt.
     VTABLE_set_string_native(INTERP, SELF, S1);
 
     RETURN(PMC *SELF);
-}
+  }
 
 
 /*
@@ -148,54 +177,55 @@ the first line is line number zero.
 */
 
   METHOD lineof(INTVAL pos) {
-    STRING *str             = NULL;
-    INTVAL  line            = 0;
-    INTVAL  ipos            = 0;
-    INTVAL  seen_first_line = 0;
-    INTVAL  jpos;
-    INTVAL  last_pos;
+    PMC    *linepos;
+    INTVAL  count;
+    INTVAL  line = 0;
 
-    GET_ATTR_last_pos(INTERP, SELF, last_pos);
+    GET_ATTR_linepos(INTERP, SELF, linepos);
 
-    /* the previous line number for this position is the same */
-    if (last_pos == pos) {
-        GET_ATTR_last_line_number(INTERP, SELF, line);
-        RETURN(INTVAL line);
-    }
+    /* build the linepos array if we haven't already done so */
+    if (!linepos || PMC_IS_NULL(linepos)) {
+        STRING *str             = NULL;
+        INTVAL  eos;
+        INTVAL  jpos;
 
-    /* start from the previous max line number and position */
-    if (last_pos < pos) {
-        GET_ATTR_last_line_number(INTERP, SELF, line);
-        ipos = last_pos;
-    }
+        linepos = pmc_new(INTERP, enum_class_ResizableIntegerArray);
+        /* get the string itself */
+        GET_ATTR_str_val(INTERP, SELF, str);
+        eos  = Parrot_str_byte_length(INTERP, str);
+        /* find the first newline, if any */
+        jpos = Parrot_str_find_cclass(INTERP, enum_cclass_newline,
+                                      str, 0, eos);
+        while (jpos < eos) {
+            jpos++;
+            /* add the start of line position */
+            VTABLE_push_integer(INTERP, linepos, jpos);
 
-    GET_ATTR_str_val(INTERP, SELF, str);
-    jpos = Parrot_str_find_cclass(INTERP, enum_cclass_newline, str, ipos, pos);
-
-    while (jpos < pos) {
-
-        if (ipos
-        &&  jpos == ipos
-        &&  string_ord(INTERP, str, jpos)     == 10
-        &&  string_ord(INTERP, str, ipos - 1) == 13) {
-            /* do not increment line; \r\n is a single line separator */
+            /* treat \r\n as a single newline */
+            if (jpos < eos
+            && string_ord(INTERP, str, jpos - 1)     == 13
+            && string_ord(INTERP, str, jpos)         == 10) {
+                jpos++;
+            }
+            /* search for the next newline */
+            jpos = Parrot_str_find_cclass(INTERP, enum_cclass_newline,
+                                          str, jpos, eos);
         }
-        else
-            line++;
-
-        ipos = jpos + 1;
-
-        jpos = Parrot_str_find_cclass(INTERP, enum_cclass_newline, str, ipos, pos);
+        /* save the array of line positions */
+        SET_ATTR_linepos(INTERP, SELF, linepos);
     }
 
-    /* cache this position and line number for next time */
-    if (pos > last_pos) {
-        SET_ATTR_last_pos(INTERP, SELF, jpos);
-        SET_ATTR_last_line_number(INTERP, SELF, line);
-    }
+    /* Find the line from the array, stop at the first index that is
+     * greater than the position we're looking for.  We do a linear
+     * search for now, * perhaps a binary search would be better someday.
+     */
+    count = VTABLE_elements(INTERP, linepos);
+    while (line < count
+          && VTABLE_get_integer_keyed_int(INTERP, linepos, line) <= pos)
+        line++;
 
     RETURN(INTVAL line);
-}
+  }
 
 
 /*
@@ -242,9 +272,9 @@ prefixed with 'unicode:'.
 */
 
   METHOD escape(STRING *str) {
-    STRING *escaped_str = Parrot_str_escape(INTERP, str);
-    STRING *quote       = CONST_STRING(INTERP, "\x22");
-    STRING *x           = CONST_STRING(INTERP, "\\x");
+    STRING *escaped_str  = Parrot_str_escape(INTERP, str);
+    STRING * const quote = CONST_STRING(INTERP, "\x22");
+    STRING * const x     = CONST_STRING(INTERP, "\\x");
     INTVAL x_pos;
     INTVAL is_unicode = 0;
     UNUSED(SELF);
@@ -256,17 +286,16 @@ prefixed with 'unicode:'.
     if (x_pos != -1) {
         is_unicode = 1;
     }
-    else
-    {
-        STRING *u = CONST_STRING(INTERP, "\\u");
+    else {
+        STRING * const u = CONST_STRING(INTERP, "\\u");
         INTVAL u_pos = Parrot_str_find_index(INTERP, escaped_str, u, 0);
         if (u_pos != -1)
             is_unicode = 1;
     }
 
     if (is_unicode) {
-        STRING *unicode = CONST_STRING(INTERP, "unicode:");
-        escaped_str     = Parrot_str_concat(INTERP, unicode, escaped_str, 1);
+        STRING * const unicode = CONST_STRING(INTERP, "unicode:");
+        escaped_str            = Parrot_str_concat(INTERP, unicode, escaped_str, 1);
     }
 
     RETURN(STRING *escaped_str);
@@ -286,17 +315,16 @@ codepoint value.  Returns -1 if an error occurs in conversion.
 
   METHOD charname_to_ord(STRING *name) {
 #if PARROT_HAS_ICU
-    UChar32    codepoint;
-    UErrorCode err       = U_ZERO_ERROR;
-    char       *cstr     = Parrot_str_to_cstring(INTERP, name);
-    codepoint = u_charFromName(U_EXTENDED_CHAR_NAME, cstr, &err);
+    UErrorCode   err       = U_ZERO_ERROR;
+    char * const cstr      = Parrot_str_to_cstring(INTERP, name);
+    UChar32      codepoint = u_charFromName(U_EXTENDED_CHAR_NAME, cstr, &err);
     Parrot_str_free_cstring(cstr);
     if (U_SUCCESS(err)) {
         RETURN(INTVAL codepoint);
     }
     RETURN(INTVAL -1);
 #else
-    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LIBRARY_ERROR,
+    Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_LIBRARY_ERROR,
         "no ICU lib loaded");
 #endif
   }
@@ -313,20 +341,19 @@ For example, C<key('Foo', 'Bar')> returns C<["Foo";"Bar"]>.
 */
 
   METHOD key(PMC *args :slurpy) {
-    STRING *open_bracket  = CONST_STRING(INTERP, "[");
-    STRING *semi          = CONST_STRING(INTERP, ";");
-    STRING *close_bracket = CONST_STRING(INTERP, "]");
-    STRING *s_array       = CONST_STRING(INTERP, "array");
-    STRING *prefix        = NULL;
-    STRING *out           = open_bracket;
-    INTVAL elements, index;
-
-    elements     = VTABLE_elements(INTERP, args);
+    INTVAL         index;
+    INTVAL         elements      = VTABLE_elements(INTERP, args);
+    STRING * const open_bracket  = CONST_STRING(INTERP, "[");
+    STRING * const semi          = CONST_STRING(INTERP, ";");
+    STRING * const close_bracket = CONST_STRING(INTERP, "]");
+    STRING * const s_array       = CONST_STRING(INTERP, "array");
+    STRING *       prefix        = NULL;
+    STRING *       out           = open_bracket;
 
     for (index = 0; index < elements; index++) {
         PMC *P0      = VTABLE_get_pmc_keyed_int(INTERP, args, index);
         if (PMC_IS_NULL(P0)) continue;
-        else if (VTABLE_does(interp, P0, s_array)) {
+        else if (VTABLE_does(INTERP, P0, s_array)) {
             INTVAL elements2, index2;
             elements2 = VTABLE_elements(INTERP, P0);
             for (index2 = 0; index2 < elements2; index2++) {

@@ -31,7 +31,6 @@ my @steps = qw(
     inter::types
     auto::ops
     auto::pmc
-    auto::alignptrs
     auto::headers
     auto::sizes
     auto::byteorder
@@ -40,8 +39,8 @@ my @steps = qw(
     auto::isreg
     auto::arch
     auto::jit
+    auto::frames
     auto::cpu
-    auto::funcptr
     auto::cgoto
     auto::inline
     auto::gc
@@ -67,7 +66,6 @@ my @steps = qw(
     gen::config_h
     gen::core_pmcs
     gen::crypto
-    gen::parrot_include
     gen::opengl
     gen::call_list
     gen::makefiles

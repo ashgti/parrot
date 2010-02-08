@@ -1,4 +1,4 @@
-# Copyright (C) 2004-2008, Parrot Foundation.
+# Copyright (C) 2004-2009, Parrot Foundation.
 
 # $Id$
 
@@ -149,9 +149,6 @@ my %calltype = (
     'void *'   => 'b',
     'void**'   => 'B',
     'void **'  => 'B',
-
-    #"BIGNUM*" => "???" # RT#43731
-    #"BIGNUM *"=> "???" # RT#43731
 );
 
 sub proto {
@@ -163,13 +160,9 @@ sub proto {
 
     # type method(interp, self, parameters...)
     my $ret = $calltype{ $type or "void" };
-    $ret .= "JO" . join( '', map { $calltype{$_} or "?" } split( /,/, $parameters ) );
-
-    # RT#43733
-    # scan src/call_list.txt if the generated signature is available
-
-    # RT#43735 report errors for "?"
-    # --leo
+    $ret .= "JO" . join( '',
+        map { $calltype{$_} or die "Unknown signature type '$_'" }
+        split( /,/, $parameters ) );
 
     return $ret;
 }
@@ -189,7 +182,7 @@ sub rewrite_nci_method {
     # Rewrite SELF.other_method(args...)
     $body->subst(
         qr{
-    \bSELF\b         # Macro: SELF
+      \bSELF\b       # Macro: SELF
       \.(\w+)        # other_method
       \(\s*(.*?)\)   # capture argument list
       }x,
@@ -199,7 +192,7 @@ sub rewrite_nci_method {
     # Rewrite STATICSELF.other_method(args...)
     $body->subst(
         qr{
-      \bSTATICSELF\b          # Macro STATICSELF
+      \bSTATICSELF\b    # Macro STATICSELF
       \.(\w+)           # other_method
       \(\s*(.*?)\)      # capture argument list
       }x,
@@ -242,15 +235,6 @@ sub rewrite_vtable_method {
         die "$pmcname defines unknown vtable method '$name'\n" unless defined $super_table->{$name};
         my $supermethod = "Parrot_" . $super_table->{$name} . "_$name";
 
-        # Rewrite DYNSUPER(args)
-        $body->subst(
-            qr{
-            \bDYNSUPER\b      # Macro: DYNSUPER
-            \(\s*(.*?)\)      # capture argument list
-          }x,
-            sub { "interp->vtables[$supertype]->$name(" . full_arguments($1) . ')' }
-        );
-
         # Rewrite OtherClass.SUPER(args...)
         $body->subst(
             qr{
@@ -267,7 +251,16 @@ sub rewrite_vtable_method {
             \bSUPER\b         # Macro: SUPER
             \(\s*(.*?)\)      # capture argument list
           }x,
-            sub { "interp->vtables[$supertype]->$name(" . full_arguments($1) . ')' }
+            sub {
+              if ($pmc->is_dynamic($super)) {
+                return "Parrot_" . $super .
+                  "_get_vtable(interp)->$name(" . full_arguments($1) .
+                  ')';
+              }
+              else {
+                return "interp->vtables[$supertype]->$name(" . full_arguments($1) . ')';
+              }
+            }
         );
     }
 

@@ -60,6 +60,12 @@ my @hlls = (
     },
 
     {
+        name       => 'blizkost',
+        scm        => 'GIT',
+        repository => 'git://github.com/jnthn/blizkost.git'
+    },
+
+    {
         name       => 'c99',
         scm        => 'SVN',
         repository => 'https://svn.parrot.org/languages/c99/trunk'
@@ -75,6 +81,12 @@ my @hlls = (
         name       => 'chitchat',
         scm        => 'SVN',
         repository => 'https://svn.parrot.org/languages/chitchat/trunk'
+    },
+
+    {
+        name       => 'close',
+        scm        => 'SVN',
+        repository => 'http://close.googlecode.com/svn/trunk/'
     },
 
     {
@@ -132,6 +144,12 @@ my @hlls = (
     },
 
     {
+        name       => 'kea',
+        scm        => 'GIT',
+        repository => 'git://github.com/leto/kea.git'
+    },
+
+    {
         name       => 'kea-cl',
         scm        => 'SVN',
         repository => 'https://rgrjr.dyndns.org/svn/kea-cl/trunk'
@@ -175,8 +193,8 @@ my @hlls = (
 
     {
         name       => 'matrixy',
-        scm        => 'SVN',
-        repository => 'http://matrixy.googlecode.com/svn/trunk'
+        scm        => 'GIT',
+        repository => 'git://github.com/Whiteknight/matrixy.git'
     },
 
     {
@@ -277,8 +295,8 @@ my @hlls = (
 
     {
         name       => 'tcl',
-        scm        => 'SVN',
-        repository => 'http://partcl.googlecode.com/svn/trunk'
+        scm        => 'GIT',
+        repository => 'git://github.com/partcl/partcl.git'
     },
 
     {
@@ -291,6 +309,12 @@ my @hlls = (
         name       => 'urm',
         scm        => 'SVN',
         repository => 'https://svn.parrot.org/languages/urm/trunk'
+    },
+
+    {
+        name       => 'winxed',
+        scm        => 'SVN',
+        repository => 'http://winxed.googlecode.com/svn/trunk/'
     },
 
     {

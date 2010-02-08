@@ -18,7 +18,7 @@ These are the vtable functions for the Key PMC class.
 
 */
 
-pmclass Key need_ext {
+pmclass Key auto_attrs {
     ATTR PMC      *next_key; /* Sometimes it's the next key, sometimes it's
                                 not.  The Key code is like that. */
     ATTR INTVAL    int_key;  /* int value of this key, or something magical if
@@ -40,25 +40,7 @@ Initializes the key.
 */
 
     VTABLE void init() {
-
-        Parrot_Key_attributes * const attrs =
-            mem_allocate_zeroed_typed(Parrot_Key_attributes);
-
-        PMC_data(SELF) = attrs;
-        PObj_custom_mark_destroy_SETALL(SELF);
-    }
-
-/*
-
-=item C<void destroy()>
-
-Destroy this Key, but not in the way anyone reading its code would want.
-
-=cut
-
-*/
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
+        PObj_custom_mark_SET(SELF);
     }
 
 /*
@@ -76,32 +58,30 @@ Creates and returns a clone of the key.
         PMC *dkey        = dest;
         PMC *key         = SELF;
 
-        PObj_custom_mark_destroy_SETALL(dest);
-
         for (; key ;) {
             switch (PObj_get_FLAGS(key) & KEY_type_FLAGS) {
-                case KEY_integer_FLAG:
-                case KEY_integer_FLAG | KEY_register_FLAG:
-                    key_set_integer(INTERP, dkey, key_integer(INTERP, key));
-                    break;
-                case KEY_number_FLAG:
-                case KEY_number_FLAG | KEY_register_FLAG:
-                    key_set_number(INTERP, dkey, key_number(INTERP, key));
-                    break;
-                case KEY_string_FLAG:
-                case KEY_string_FLAG | KEY_register_FLAG:
-                    key_set_string(INTERP, dkey,
+              case KEY_integer_FLAG:
+              case KEY_integer_FLAG | KEY_register_FLAG:
+                key_set_integer(INTERP, dkey, key_integer(INTERP, key));
+                break;
+              case KEY_number_FLAG:
+              case KEY_number_FLAG | KEY_register_FLAG:
+                key_set_number(INTERP, dkey, key_number(INTERP, key));
+                break;
+              case KEY_string_FLAG:
+              case KEY_string_FLAG | KEY_register_FLAG:
+                key_set_string(INTERP, dkey,
                         Parrot_str_copy(INTERP, VTABLE_get_string(INTERP, key)));
-                    break;
-                case KEY_pmc_FLAG:
-                case KEY_pmc_FLAG | KEY_register_FLAG:
-                    {
+                break;
+              case KEY_pmc_FLAG:
+              case KEY_pmc_FLAG | KEY_register_FLAG:
+                {
                     PMC * const p = key_pmc(INTERP, key);
                     key_set_pmc(INTERP, dkey, VTABLE_clone(INTERP, p));
-                    }
-                    break;
-                default:
-                    break;
+                }
+                break;
+              default:
+                break;
             }
 
             key = key_next(INTERP, key);
@@ -277,9 +257,6 @@ chain.
     VTABLE PMC *shift_pmc() {
         PMC *next_key;
 
-        if (!SELF->pmc_ext)
-            return NULL;
-
         GET_ATTR_next_key(INTERP, SELF, next_key);
         return next_key;
     }
@@ -306,19 +283,19 @@ Returns the key itself.
 
 /*
 
-=item C<void visit(visit_info *info)>
+=item C<void visit(PMC *info)>
 
 This is used by freeze/thaw to visit the contents of the Key.
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Archives the Key.
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Unarchives the Key.
 
-=item C<void thawfinish(visit_info *info)>
+=item C<void thawfinish(PMC *info)>
 
 Called after the Key has been thawed: convert last PMC_NULL key to NULL.
 
@@ -326,55 +303,45 @@ Called after the Key has been thawed: convert last PMC_NULL key to NULL.
 
 */
 
-    VTABLE void visit(visit_info *info) {
-
-        Parrot_Key_attributes *attrs;
-        /* at end a PMCNULL is written during thaw, which should stop visiting
-         * the key */
-
+    VTABLE void visit(PMC *info) {
         /* Sometimes visit gets an uninitialized Key.  Initialize it. */
         if (!PMC_data(SELF))
             SELF.init();
 
-        attrs = (Parrot_Key_attributes *)PMC_data(SELF);
-        info->thaw_ptr  = &attrs->next_key;
-        (info->visit_pmc_now)(INTERP, attrs->next_key, info);
+        VISIT_PMC_ATTR(INTERP, info, SELF, Key, next_key);
     }
 
-    void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
-
+    void freeze(PMC *info) {
         /* write flags */
         const INTVAL flags  = (PObj_get_FLAGS(SELF) & KEY_type_FLAGS);
 
         /* write the contents of a register - else thaw can't restore
          * the register state */
-        VTABLE_push_integer(INTERP, io, flags & ~KEY_register_FLAG);
+        VTABLE_push_integer(INTERP, info, flags & ~KEY_register_FLAG);
 
         /* and contents of this key component */
         switch (flags) {
-            case KEY_integer_FLAG:
-            case KEY_integer_FLAG | KEY_register_FLAG:
-                VTABLE_push_integer(INTERP, io, key_integer(INTERP, SELF));
-                break;
-            case KEY_number_FLAG:
-            case KEY_number_FLAG | KEY_register_FLAG:
-                VTABLE_push_float(INTERP, io, key_number(INTERP, SELF));
-                break;
-            case KEY_string_FLAG:
-            case KEY_string_FLAG | KEY_register_FLAG:
-                VTABLE_push_string(INTERP, io, key_string(INTERP, SELF));
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_KEY_NOT_FOUND,
+          case KEY_integer_FLAG:
+          case KEY_integer_FLAG | KEY_register_FLAG:
+            VTABLE_push_integer(INTERP, info, key_integer(INTERP, SELF));
+            break;
+          case KEY_number_FLAG:
+          case KEY_number_FLAG | KEY_register_FLAG:
+            VTABLE_push_float(INTERP, info, key_number(INTERP, SELF));
+            break;
+          case KEY_string_FLAG:
+          case KEY_string_FLAG | KEY_register_FLAG:
+            VTABLE_push_string(INTERP, info, key_string(INTERP, SELF));
+            break;
+          default:
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_KEY_NOT_FOUND,
                     "Unsupported key type in Key.freeze");
-                break;
+            break;
         }
     }
 
-    void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
-        const INTVAL flags  = VTABLE_shift_integer(INTERP, io) & KEY_type_FLAGS;
+    void thaw(PMC *info) {
+        const INTVAL flags  = VTABLE_shift_integer(INTERP, info) & KEY_type_FLAGS;
 
         PObj_get_FLAGS(SELF) |= flags;
         PObj_custom_mark_SET(SELF);
@@ -384,23 +351,23 @@ Called after the Key has been thawed: convert last PMC_NULL key to NULL.
 
         /* get contents */
         switch (flags) {
-            case KEY_integer_FLAG:
-                SET_ATTR_int_key(INTERP, SELF, VTABLE_shift_integer(INTERP, io));
-                break;
-            case KEY_number_FLAG:
-                VTABLE_set_number_native(INTERP, SELF, VTABLE_shift_float(INTERP, io));
-                break;
-            case KEY_string_FLAG:
-                VTABLE_set_string_native(INTERP, SELF, VTABLE_shift_string(INTERP, io));
-                break;
-            default:
-                Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_KEY_NOT_FOUND,
+          case KEY_integer_FLAG:
+            SET_ATTR_int_key(INTERP, SELF, VTABLE_shift_integer(INTERP, info));
+            break;
+          case KEY_number_FLAG:
+            VTABLE_set_number_native(INTERP, SELF, VTABLE_shift_float(INTERP, info));
+            break;
+          case KEY_string_FLAG:
+            VTABLE_set_string_native(INTERP, SELF, VTABLE_shift_string(INTERP, info));
+            break;
+          default:
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_KEY_NOT_FOUND,
                     "Unsupported key type in Key.thaw");
-                break;
+            break;
         }
     }
 
-    VTABLE void thawfinish(visit_info *info) {
+    VTABLE void thawfinish(PMC *info) {
         PMC *key = SELF;
         UNUSED(info)
 

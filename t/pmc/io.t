@@ -68,7 +68,7 @@ CODE
 a line
 OUTPUT
 
-# RT #46843
+# TT #1178
 pir_output_is( <<'CODE', <<'OUTPUT', "get_fd()/fdopen" );
 .sub main :main
     getstdout $P0
@@ -86,7 +86,7 @@ CODE
 ok
 OUTPUT
 
-# RT #46843
+# TT #1178
 pir_output_is( <<'CODE', <<'OUTPUT', 'fdopen - no close' );
 .sub main :main
     getstdout $P0
@@ -437,7 +437,7 @@ CODE
 Successful
 OUTPUT
 
-# RT #46843
+# TT #1178
 pir_output_is( <<'CODE', <<'OUT', 'standard file descriptors' );
 .sub main :main
     getstdin $P0
@@ -665,15 +665,14 @@ sub_2: 012
 sub_3: 345
 OUTPUT
 
-pir_output_like(
-    <<'CODE', <<'OUT', 'read on null PMC throws exception', todo => 'not yet implemented TT #433' );
+pir_error_output_like( <<'CODE', <<'OUT', 'read on null PMC throws exception');
 .sub main :main
     null $P1
     $S0 = read $P1, 1
     end
 .end
 CODE
-/some crazy exception/
+/read from null/
 OUT
 
 ($FOO, $temp_file) = create_tempfile( UNLINK => 1 );

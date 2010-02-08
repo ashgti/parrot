@@ -50,9 +50,9 @@ These arguments can be retrieved with the C<get_results> opcode.
 */
 
 #include "parrot/exceptions.h"
-#include "pmc_sub.h"
+#include "pmc/pmc_sub.h"
 
-pmclass Exception {
+pmclass Exception auto_attrs {
 
     ATTR INTVAL          id;           /* The task ID in the scheduler. */
     ATTR FLOATVAL        birthtime;    /* The creation time stamp of the exception. */
@@ -65,8 +65,8 @@ pmclass Exception {
     ATTR PMC            *backtrace;    /* The backtrace of an exception. */
     ATTR INTVAL          handled;      /* Whether the exception has been handled. */
     ATTR PMC            *handler_iter; /* An iterator of handlers (for rethrow). */
-    ATTR Parrot_Context *handler_ctx;  /* A stored context for handler iterator. */
-    ATTR Parrot_Context *thrower;      /* The position we were at when thrown. */
+    ATTR PMC            *handler_ctx;  /* A stored context for handler iterator. */
+    ATTR PMC            *thrower;      /* The position we were at when thrown. */
 
 /*
 
@@ -83,22 +83,16 @@ Initializes the exception with default values.
 */
 
     VTABLE void init() {
-        Parrot_Exception_attributes * const core_struct =
-            mem_allocate_zeroed_typed(Parrot_Exception_attributes);
-
         /* Set flags for custom GC mark and destroy. */
         PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
 
-        /* Set up the core struct and default values for the exception object. */
-        PMC_data(SELF)            = core_struct;
-        core_struct->severity     = EXCEPT_error;
-        core_struct->handled      = 0;
-        core_struct->message      = CONST_STRING(interp, "");
-        core_struct->payload      = PMCNULL;
-        core_struct->resume       = PMCNULL;
-        core_struct->backtrace    = PMCNULL;
-        core_struct->handler_iter = PMCNULL;
+        SET_ATTR_severity(INTERP, SELF, EXCEPT_error);
+        SET_ATTR_handled(INTERP, SELF, 0);
+        SET_ATTR_message(INTERP, SELF, NULL);
+        SET_ATTR_payload(INTERP, SELF, PMCNULL);
+        SET_ATTR_resume(INTERP, SELF, PMCNULL);
+        SET_ATTR_backtrace(INTERP, SELF, PMCNULL);
+        SET_ATTR_handler_iter(INTERP, SELF, PMCNULL);
     }
 
 /*
@@ -112,31 +106,35 @@ Initializes the exception with supplied values.
 */
 
     VTABLE void init_pmc(PMC *values) {
-        STRING * const severity = CONST_STRING(interp, "severity");
-        STRING * const message  = CONST_STRING(interp, "message");
-
-        Parrot_Exception_attributes * const core_struct =
-            mem_allocate_zeroed_typed(Parrot_Exception_attributes);
+        INTVAL severity_val;
+        STRING *message_val;
 
         INTVAL ishash = VTABLE_isa(interp, values, CONST_STRING(interp, 'Hash'));
 
-        /* Set flags for custom GC mark and destroy. */
+        if (ishash) {
+            STRING * const severity = CONST_STRING(interp, "severity");
+            STRING * const message  = CONST_STRING(interp, "message");
+            severity_val = VTABLE_get_integer_keyed_str(interp, values, severity);
+            message_val = VTABLE_get_string_keyed_str(interp, values, message);
+        }
+        else {
+            severity_val = EXCEPT_error;
+            message_val  = VTABLE_get_string(interp, values);
+        }
+
+        /* Set flags for custom GC mark. */
         PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
 
         /* Set up the core struct and default values for the exception object. */
-        PMC_data(SELF)            = core_struct;
-        core_struct->severity     = ishash
-            ? VTABLE_get_integer_keyed_str(interp, values, severity)
-            : (INTVAL) EXCEPT_error;
-        core_struct->handled      = 0;
-        core_struct->message      = ishash
-            ? VTABLE_get_string_keyed_str(interp, values, message)
-            : VTABLE_get_string(interp, values);
-        core_struct->payload      = PMCNULL;
-        core_struct->resume       = PMCNULL;
-        core_struct->backtrace    = PMCNULL;
-        core_struct->handler_iter = PMCNULL;
+
+        SET_ATTR_severity(INTERP, SELF, severity_val);
+        SET_ATTR_handled(INTERP, SELF, 0);
+        SET_ATTR_message(INTERP, SELF, message_val);
+        SET_ATTR_payload(INTERP, SELF, PMCNULL);
+        SET_ATTR_resume(INTERP, SELF, PMCNULL);
+        SET_ATTR_backtrace(INTERP, SELF, PMCNULL);
+        SET_ATTR_handler_iter(INTERP, SELF, PMCNULL);
+
     }
 
 /*
@@ -151,34 +149,13 @@ Mark any active exception data as live.
 
     VTABLE void mark() {
         Parrot_Exception_attributes * const core_struct = PARROT_EXCEPTION(SELF);
-        if (core_struct->message)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->message);
-        if (core_struct->payload)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->payload);
-        if (core_struct->resume)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->resume);
-        if (core_struct->backtrace)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->backtrace);
-        if (core_struct->handler_iter)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)core_struct->handler_iter);
-    }
-
-/*
-
-=item C<void destroy()>
-
-Destroys the exception.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        Parrot_Exception_attributes * const core_struct = PARROT_EXCEPTION(SELF);
-        if (core_struct->thrower)
-            Parrot_free_context(interp, core_struct->thrower, 1);
-        if (core_struct)
-            mem_sys_free(core_struct);
+        Parrot_gc_mark_STRING_alive(interp, core_struct->message);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->payload);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->resume);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->backtrace);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->handler_iter);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->handler_ctx);
+        Parrot_gc_mark_PMC_alive(interp, core_struct->thrower);
     }
 
 /*
@@ -208,6 +185,8 @@ Return the exception message.
     VTABLE STRING *get_string() {
         STRING *message;
         GET_ATTR_message(interp, SELF, message);
+        if (STRING_IS_NULL(message))
+            message = CONST_STRING(interp, "");
         return message;
     }
 
@@ -242,7 +221,7 @@ C<key> is "message".
         STRING *message;
 
         if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "message"))) {
-            GET_ATTR_message(interp, SELF, message);
+            message = SELF.get_string();
         }
         else {
             /* If unknown attribute name, throw an exception. */
@@ -396,7 +375,7 @@ Sets the Parrot string value for C<*key>.
         STRING *name = VTABLE_get_string(INTERP, key);
 
         if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "message"))) {
-            SET_ATTR_message(interp, SELF, value);
+            SELF.set_string_native(value);
         }
         else {
             /* If unknown attribute name, throw an exception. */
@@ -495,11 +474,7 @@ Store a context for the handler iterator.
     VTABLE void set_pointer(void *context) {
         Parrot_Exception_attributes * const core_struct = PARROT_EXCEPTION(SELF);
 
-        /* contexts are refcounted; increment and decrement appropriately */
-        if (core_struct->handler_ctx)
-            Parrot_free_context(interp, core_struct->handler_ctx, 1);
-        core_struct->handler_ctx = Parrot_context_ref(interp,
-                                       (Parrot_Context *)context);
+        core_struct->handler_ctx = (PMC*)context;
     }
 
 /*
@@ -588,8 +563,7 @@ Retrieve an attribute value for the exception object.
                 VTABLE_set_integer_native(interp, value, handled);
         }
         else if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "message"))) {
-                STRING *message;
-                GET_ATTR_message(interp, SELF, message);
+                STRING *message = SELF.get_string();
                 value = pmc_new(interp, enum_class_String);
                 VTABLE_set_string_native(interp, value, message);
         }
@@ -643,7 +617,7 @@ Set an attribute value for the exception object.
         }
         else if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "message"))) {
             STRING *message = VTABLE_get_string(interp, value);
-            SET_ATTR_message(interp, SELF, message);
+            SELF.set_string_native(message);
         }
         else if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "payload"))) {
             SET_ATTR_payload(interp, SELF, value);
@@ -659,13 +633,11 @@ Set an attribute value for the exception object.
         }
         else if (Parrot_str_equal(INTERP, name, CONST_STRING(INTERP, "thrower"))) {
             /* Ensure it's a ret cont, and extract the from_ctx.
-             * XXX TT#596 - when we have Context PMCs, just take and set that. */
-            if (VTABLE_isa(interp, value, CONST_STRING(interp, "Continuation"))) {
-                Parrot_Context *ctx = PMC_cont(value)->from_ctx;
-                if (ctx) {
-                    Parrot_context_ref(interp, ctx);
+             * XXX TT #596 - when we have Context PMCs, just take and set that. */
+            if (!PMC_IS_NULL(value) && VTABLE_isa(interp, value, CONST_STRING(interp, "Continuation"))) {
+                PMC *ctx = PMC_cont(value)->from_ctx;
+                if (!PMC_IS_NULL(ctx))
                     SET_ATTR_thrower(interp, SELF, ctx);
-                }
             }
         }
         else {
@@ -728,7 +700,7 @@ annotation. If not, returns a Hash of all of them.
         /* Get resume continuation, to find location we failed at. */
         GET_ATTR_resume(interp, SELF, resume);
         if (!PMC_IS_NULL(resume)) {
-            Parrot_cont *cont = PMC_cont(resume);
+            Parrot_Continuation_attributes *cont = PARROT_CONTINUATION(resume);
             if (cont->seg != NULL && cont->seg->annotations != NULL)
                 result = PackFile_Annotations_lookup(interp, cont->seg->annotations,
                         cont->address - cont->seg->base.data, name);
@@ -759,64 +731,24 @@ sub, or for the point of the call a level deeper for the rest.
 */
 
     METHOD backtrace() {
-        PMC *result = pmc_new(interp, enum_class_ResizablePMCArray);
+        PMC *result = PMCNULL;
         PMC *resume;
-        Parrot_Context *cur_ctx;
-        Parrot_cont    *cont;
+        PMC *cur_ctx;
+        Parrot_Continuation_attributes    *cont;
 
         /* Get starting context, then loop over them. */
         GET_ATTR_resume(interp, SELF, resume);
         if (!PMC_IS_NULL(resume)) {
             /* We have a resume continuation, so we can get the address from
              * that. */
-            cont    = PMC_cont(resume);
-            cur_ctx = cont->to_ctx;
+            cont    = PARROT_CONTINUATION(resume);
+            Parrot_pcc_invoke_method_from_c_args(INTERP, cont->to_ctx, CONST_STRING(interp, "backtrace"), "P->P", resume, &result);
         }
         else {
             /* No return continuation. Assuming we're being called  */
             cont = NULL;
             GET_ATTR_thrower(interp, SELF, cur_ctx);
-        }
-
-        {
-            while (cur_ctx) {
-                PMC        *frame       = pmc_new(interp, enum_class_Hash);
-                PMC        *annotations = NULL;
-                Parrot_sub *sub;
-
-                /* Get sub and put it in the hash. */
-                PMC *sub_pmc = cur_ctx->current_sub;
-
-                if (!sub_pmc)
-                    sub_pmc = PMCNULL;
-
-                VTABLE_set_pmc_keyed_str(interp, frame, CONST_STRING(interp, "sub"), sub_pmc);
-
-                /* Look up any annotations and put them in the hash. */
-                if (!PMC_IS_NULL(sub_pmc)) {
-                    PMC_get_sub(interp, sub_pmc, sub);
-
-                    if (sub->seg->annotations) {
-                        PackFile_ByteCode *seg = sub->seg;
-                        opcode_t          *pc  = cont && cur_ctx == cont->to_ctx
-                                               ? cont->address
-                                               : cur_ctx->current_pc;
-
-                        annotations = PackFile_Annotations_lookup(interp,
-                                        seg->annotations, pc - seg->base.data,
-                                        NULL);
-                    }
-                }
-
-                if (!annotations)
-                    annotations = pmc_new(interp, enum_class_Hash);
-
-                VTABLE_set_pmc_keyed_str(interp, frame, CONST_STRING(interp, "annotations"), annotations);
-
-                /* Push frame and go to next caller. */
-                VTABLE_push_pmc(interp, result, frame);
-                cur_ctx = cur_ctx->caller_ctx;
-            }
+            Parrot_pcc_invoke_method_from_c_args(INTERP, CURRENT_CONTEXT(INTERP), CONST_STRING(interp, "backtrace"), "->P", &result);
         }
 
         RETURN(PMC *result);

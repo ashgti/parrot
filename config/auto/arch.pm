@@ -46,7 +46,7 @@ sub runstep {
 
     if ($verbose) {
         print "determining operating system and cpu architecture\n";
-        print "archname: <$archname>\n";
+        print "archname: $archname\n";
     }
 
     if ( !defined $osname ) {
@@ -78,9 +78,10 @@ sub runstep {
         $osname  = 'cygwin';
     }
     elsif ( $cpuarch eq 'i86pc' and $osname eq 'solaris' ) {
-        # That's only the perl 32/64 bit setting. We can override it with
-        # -m64 / -m32 for ccflags and ldflags though.
-        $cpuarch = $archname =~ /-64int/ ? 'x86_64' : 'i386';
+        # That's only the perl value, and is the same for both i386
+        # and amd64.  Use uname -p instead to find the processor type.
+        chomp($archname = `uname -p`);
+        $cpuarch = $archname;
     }
 
     if ( $archname =~ m/powerpc/ ) {
@@ -91,13 +92,43 @@ sub runstep {
     $cpuarch =~ s/i[456]86/i386/i;
     $cpuarch =~ s/x86_64/amd64/i;
 
-    print "osname: $osname\ncpuarch: $cpuarch\n" if $verbose;
-
     $conf->data->set(
         cpuarch  => $cpuarch,
         osname   => $osname
     );
 
+    $conf->data->set( 'platform' => $self->_get_platform( $conf ) );
+
+    _report_verbose( $conf );
+
+    return 1;
+}
+
+sub _get_platform {
+    my ($self, $conf) = @_;
+    my $platform = lc ( $conf->data->get('osname') );
+
+    $platform = "win32" if $platform =~ /^msys/;
+    $platform = "win32" if $platform =~ /^mingw/;
+    $platform =~ s/^ms//;
+
+    if ( ( split m/-/, $conf->data->get('archname'), 2 )[0] eq 'ia64' ) {
+        $platform = 'ia64';
+    }
+
+    $platform = 'generic' unless -d "config/gen/platform/$platform";
+
+    return $platform;
+}
+
+sub _report_verbose {
+    my ($conf) = @_;
+    my $verbose = $conf->options->get( 'verbose' );
+    if ( $verbose ) {
+        print "osname:   ", $conf->data->get('osname'), "\n";
+        print "cpuarch:  ", $conf->data->get('cpuarch'), "\n";
+        print "platform: ", $conf->data->get('platform'), "\n";
+    }
     return 1;
 }
 

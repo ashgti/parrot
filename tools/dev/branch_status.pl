@@ -2,9 +2,20 @@
 # $Id$
 # Copyright (C) 2009, Parrot Foundation.
 
-=head1 branch_status
+=head1 NAME
+
+tools/dev/branch_status.pl
+
+=head1 DESCRIPTION
 
 Generate a report to help developers determine status of repository branches.
+
+This program uses modules that are not intended to be parrot requirements.
+
+Prerequisites:  Perl 5.10; XML::Twig; Perl6::Form.
+
+Assumes that you have a command line svn in your path, but doesn't have
+to be run in a working copy.
 
 =cut
 
@@ -101,13 +112,9 @@ foreach my $branch (@branches) {
 
 say '+', '=' x 68, '+';
 
-__END__
-
-=head1 Notes
-
-This program uses modules that are not intended to be parrot requirements.
-
-Assumes that you have a command line svn in your path, but doesn't have
-to be run in a working copy.
-
-=cut
+# Local Variables:
+#   mode: cperl
+#   cperl-indent-level: 4
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4:

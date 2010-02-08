@@ -61,6 +61,7 @@ can.
 #include "parrot/parrot.h"
 #include "parrot/extend.h"
 #include "pmc/pmc_sub.h"
+#include "pmc/pmc_callcontext.h"
 
 /* HEADERIZER HFILE: include/parrot/extend.h */
 
@@ -1010,7 +1011,54 @@ Parrot_free_cstring(ARGIN_NULLOK(char *string))
 
 /*
 
-=item C<void* Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc, const char
+=item C<void Parrot_ext_call(PARROT_INTERP, Parrot_PMC sub_pmc, const char
+*signature, ...)>
+
+Call a Parrot subroutine or method with the given function signature. The
+function signature holds one type character for each argument or return, these
+are:
+
+    I ... Parrot_Int
+    N ... Parrot_Float
+    S ... Parrot_String
+    P ... Parrot_PMC
+
+Returns come after the arguments, separated by an arrow, so "PN->S" takes a PMC
+and a float as arguments and returns a string.
+
+Pass the variables for the arguments and returns in the same order as the
+signature, with returns as reference to the variable (so it can be modified).
+
+    Parrot_ext_call(interp, sub, "P->S", pmc_arg, &string_result);
+
+To call a method, pass the object for the method as the first argument, and
+mark it in the signature as "Pi" ("i" stands for "invocant").
+
+    Parrot_ext_call(interp, sub, "PiP->S", object_arg, pmc_arg, &string_result);
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_ext_call(PARROT_INTERP, ARGIN(Parrot_PMC sub_pmc),
+                 ARGIN(const char *signature), ...)
+{
+    ASSERT_ARGS(Parrot_ext_call)
+    va_list args;
+    PMC  *sig_object;
+
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL, signature, args);
+    va_end(args);
+
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
+}
+
+/*
+
+=item C<void * Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc, const char
 *signature, ...)>
 
 Call a parrot subroutine with the given function signature. The first char in
@@ -1033,26 +1081,56 @@ Signature chars are:
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
-void*
+void *
 Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub_pmc,
                  ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_sub)
-    va_list     ap;
-    void       *result;
+    va_list     args;
+    PMC        *sig_object;
     Parrot_sub *sub;
+    void       *result     = NULL;
+    const char *arg_sig    = signature;
+    char        return_sig = signature[0];
 
-    PARROT_CALLIN_START(interp);
+    arg_sig++;
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL,
+        arg_sig, args);
+    va_end(args);
 
-    va_start(ap, signature);
+    /* Add the return argument onto the call signature object (a bit
+     * hackish, added for backward compatibility in deprecated API function,
+     * see TT #1145). */
+    switch (return_sig) {
+        case 'v':
+        {
+            Parrot_String full_sig = VTABLE_get_string(interp, sig_object);
+            Parrot_str_concat(interp, full_sig,
+                    Parrot_str_new_constant(interp, "->"), 0);
+            break;
+        }
+        case 'V':
+        case 'P':
+        {
+            Parrot_pcc_append_result(interp, sig_object, Parrot_str_new_constant(interp, "P"),
+                    &result);
+            break;
+        }
+        default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_INVALID_OPERATION,
+                "Dispatch: invalid return type %c!", return_sig);
+    }
+
     PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
-    result = Parrot_runops_fromc_arglist(interp, sub_pmc, signature, ap);
-    va_end(ap);
+    Parrot_pcc_set_constants(interp, CURRENT_CONTEXT(interp),
+        sub->seg->const_table->constants);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
-    PARROT_CALLIN_END(interp);
     return result;
 }
+
 
 /*
 
@@ -1071,147 +1149,24 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
                  ARGIN(const char *signature), ...)
 {
     ASSERT_ARGS(Parrot_call_sub_ret_int)
-    va_list     ap;
+    va_list     args;
+    PMC        *sig_object;
     Parrot_Int  result;
+    char        return_sig  = signature[0];
+    const char *arg_sig     = signature;
     Parrot_sub *sub;
 
-    PARROT_CALLIN_START(interp);
+    arg_sig++;
+    va_start(args, signature);
+    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL, arg_sig, args);
+    va_end(args);
 
-    va_start(ap, signature);
-    PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
-    result = Parrot_runops_fromc_arglist_reti(interp, sub_pmc, signature, ap);
-    va_end(ap);
+    /* Add the return argument onto the call signature object (a bit
+     * hackish, added for backward compatibility in deprecated API function,
+     * see TT #1145). */
+    Parrot_pcc_append_result(interp, sig_object, Parrot_str_new_constant(interp, "I"), &result);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
 
-    PARROT_CALLIN_END(interp);
-    return result;
-}
-
-/*
-
-=item C<Parrot_Float Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC
-sub_pmc, const char *signature, ...)>
-
-Like C<Parrot_call_sub>, with Parrot_Float return result.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-Parrot_Float
-Parrot_call_sub_ret_float(PARROT_INTERP, Parrot_PMC sub_pmc,
-                 ARGIN(const char *signature), ...)
-{
-    ASSERT_ARGS(Parrot_call_sub_ret_float)
-    va_list       ap;
-    Parrot_Float  result;
-    Parrot_sub   *sub;
-
-    PARROT_CALLIN_START(interp);
-
-    va_start(ap, signature);
-    PMC_get_sub(interp, sub_pmc, sub);
-    CONTEXT(interp)->constants = sub->seg->const_table->constants;
-    result = Parrot_runops_fromc_arglist_retf(interp, sub_pmc, signature, ap);
-    va_end(ap);
-
-    PARROT_CALLIN_END(interp);
-    return result;
-}
-
-/*
-
-=item C<void * Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
-Parrot_String method, const char *signature, ...)>
-
-Call the parrot subroutine C<sub> as a method on PMC object C<obj>. The method
-should have the name C<method> as a Parrot_string, and should have a function
-signature C<signature>. Any arguments to the method can be passed at the end
-as a variadic argument list.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-void *
-Parrot_call_method(PARROT_INTERP, Parrot_PMC sub, Parrot_PMC obj,
-                        Parrot_String method, ARGIN(const char *signature), ...)
-{
-    ASSERT_ARGS(Parrot_call_method)
-    void    *result;
-    va_list ap;
-
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
-    return result;
-}
-
-/*
-
-=item C<Parrot_Int Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
-Parrot_PMC obj, Parrot_String method, const char *signature, ...)>
-
-Call the parrot subroutine C<sub> as a method on PMC object C<obj>. The method
-should have the name C<method> as a Parrot_string, and should have a function
-signature C<signature>. Any arguments to the method can be passed at the end
-as a variadic argument list.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-Parrot_Int
-Parrot_call_method_ret_int(PARROT_INTERP, Parrot_PMC sub,
-        Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
-{
-    ASSERT_ARGS(Parrot_call_method_ret_int)
-    Parrot_Int result;
-    va_list    ap;
-
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist_reti(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
-    return result;
-}
-
-/*
-
-=item C<Parrot_Float Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
-Parrot_PMC obj, Parrot_String method, const char *signature, ...)>
-
-Call a parrot method for the given object.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-Parrot_Float
-Parrot_call_method_ret_float(PARROT_INTERP, Parrot_PMC sub,
-        Parrot_PMC obj, Parrot_String method, ARGIN(const char *signature), ...)
-{
-    ASSERT_ARGS(Parrot_call_method_ret_float)
-    Parrot_Float result;
-    va_list      ap;
-
-    PARROT_CALLIN_START(interp);
-    va_start(ap, signature);
-    result = Parrot_run_meth_fromc_arglist_retf(interp, sub,
-            obj, method, signature, ap);
-    va_end(ap);
-    PARROT_CALLIN_END(interp);
     return result;
 }
 

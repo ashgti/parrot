@@ -6,26 +6,21 @@
 use strict;
 use warnings;
 
-use Test::More tests => 23;
+use Test::More tests =>  8;
 use Carp;
 use lib qw( lib t/configure/testlib );
-use_ok('config::init::defaults');
-use_ok('config::init::install');
-use_ok('config::init::hints');
 use_ok('config::inter::progs');
-use Parrot::Configure;
 use Parrot::Configure::Options qw( process_options );
+use Parrot::Configure::Step::Test;
 use Parrot::Configure::Test qw(
-    test_step_thru_runstep
     test_step_constructor_and_description
 );
 use Tie::Filehandle::Preempt::Stdin;
 use IO::CaptureOutput qw| capture |;
 
 =for hints_for_testing Testing and refactoring of inter::progs should
-entail understanding of issues discussed in the following RT tickets:
-http://rt.perl.org/rt3/Ticket/Display.html?id=43174; and
-http://rt.perl.org/rt3/Ticket/Display.html?id=41168.
+entail understanding of issues discussed in
+https://trac.parrot.org/parrot/ticket/854
 
 =cut
 
@@ -38,11 +33,8 @@ my ($args, $step_list_ref) = process_options(
     }
 );
 
-my $conf = Parrot::Configure->new;
-
-test_step_thru_runstep( $conf, q{init::defaults}, $args );
-test_step_thru_runstep( $conf, q{init::install},  $args );
-test_step_thru_runstep( $conf, q{init::hints},    $args );
+my $conf = Parrot::Configure::Step::Test->new;
+$conf->include_config_results( $args );
 
 my $pkg = q{inter::progs};
 

@@ -9,7 +9,7 @@ use 5.008;
 use Getopt::Long;
 use File::Spec::Functions;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 =head1 NAME
 
@@ -60,22 +60,30 @@ $bindir = 'bin' unless $bindir;
 
 chdir $DESTDIR if ($DESTDIR);
 
+sub quote {
+    my $exe = shift;
+    $exe .= '.exe' if ($^O eq 'MSWin32');
+    $exe = '"' . $exe . '"' if ($exe =~ / /);
+    return $exe;
+}
+
 my $filename;
 my $exe;
 my $out;
 my $FH;
-my $parrot = catfile($bindir, 'parrot');
-my $pirc = catfile($bindir, 'pirc');
+my $parrot = quote(catfile($bindir, 'parrot'));
+my $pirc = quote(catfile($bindir, 'pirc'));
+my $nqp = quote(catfile($bindir, 'parrot-nqp'));
 
 #
 # parrot executable
 #
 
-$exe = catfile($bindir, 'pbc_merge');
+$exe = quote(catfile($bindir, 'pbc_merge'));
 $out = `$exe`;
 ok($out =~ /^pbc_merge/, "check pbc_merge");
 
-$exe = catfile($bindir, 'pbc_dump');
+$exe = quote(catfile($bindir, 'pbc_dump'));
 $out = `$exe`;
 ok($out =~ /^pbc_dump/, "check pbc_dump");
 
@@ -117,6 +125,15 @@ PIR
 close $FH;
 $out = `$pirc -n $filename`;
 ok($out eq "ok\n", "check pirc");
+unlink($filename);
+
+$filename = 'test.nqp';
+open $FH, '>', $filename
+        or die "Can't open $filename ($!).\n";
+print $FH "say('hello world!');\n";
+close $FH;
+$out = `$nqp $filename`;
+ok($out eq "hello world!\n", "check nqp-rx");
 unlink($filename);
 
 # compilers/tge is typically not installed

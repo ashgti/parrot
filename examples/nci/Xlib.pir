@@ -63,9 +63,17 @@ alignment.
 # Load library and store handler
     xlib = loadlib 'libX11'
     $I0 = defined xlib
-    unless $I0 goto cygwin
+    unless $I0 goto check2
     if xlib goto store
-cygwin:
+check2:
+    xlib = loadlib 'libX11.so'
+    unless $I0 goto check3
+    if xlib goto store
+check3:
+    xlib = loadlib 'libX11.so.6'
+    unless $I0 goto check4
+    if xlib goto store
+check4:
     xlib = loadlib 'cygX11-6'
     $I0 = defined xlib
     unless $I0 goto failed
@@ -930,6 +938,23 @@ doit:
     .local pmc func
     func = get_xlib_function('XUnmapWindow', 'ipp')
     $I0 = func(xdisp, xwin)
+    .return($I0)
+.end
+
+#-----------------------------------------------------------------------
+.sub ClearArea :method
+    .param int x
+    .param int y
+    .param int width
+    .param int height
+    .param int exposures
+    .local pmc xdisp
+    xdisp = self.'getdisplay'()
+    .local pmc xwin
+    xwin = getattribute self, attr_XWindow
+    .local pmc func
+    func = get_xlib_function('XClearArea', 'ippiiiii')
+    $I0 = func(xdisp, xwin, x, y, width, height, exposures)
     .return($I0)
 .end
 

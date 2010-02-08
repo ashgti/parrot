@@ -76,7 +76,7 @@ declared in the main program file (when I<not> loaded as a library).
 By default, Parrot stores all subroutines in the namespace currently
 active at the point of their declaration. The C<:anon>X<:anon subroutine
 modifier> modifier tells Parrot not to store the subroutine in the
-namespace. The C<:nsentry>X:nsentry subroutine modifier> modifier stores
+namespace. The C<:nsentry>X<:nsentry subroutine modifier> modifier stores
 the subroutine in the currenly active namespace with a different name.
 For example, Parrot will store this subroutine in the current namespace
 as C<bar>, not C<foo>:
@@ -188,7 +188,7 @@ error.
 X<named parameters>
 Named parameters are an alternative to positional parameters. Instead of
 passing parameters by their position in the string, Parrot assigns
-arguments to parameters by their name.  Consequencly you may pass named
+arguments to parameters by their name.  Consequently you may pass named
 parameters in any order.  Declare named parameters with with the
 C<:named>X<:named parameter modifier> modifier.
 
@@ -390,7 +390,7 @@ PMC.  If you call a program F<args.pir>, passing it three arguments:
 
   $ parrot args.pir foo bar baz
 
-... they will be accesible at index 1, 2, and 3 of the PMC parameter.N<Index 0
+... they will be accessible at index 1, 2, and 3 of the PMC parameter.N<Index 0
 is unused.>
 
 =begin PIR
@@ -541,7 +541,7 @@ individual pieces of metadata:
 
 =begin PIR_FRAGMENT
 
-  $P0 = inspect $P0, "pos_required"
+  $P1 = inspect $P0, "pos_required"
 
 =end PIR_FRAGMENT
 
@@ -643,7 +643,7 @@ follows these scoping rules:
 
 =begin PIR_FRAGMENT
 
-      .local int foo
+      .local pmc foo
       .lex 'foo', foo
 
 =end PIR_FRAGMENT
@@ -662,7 +662,7 @@ Parrot generates this read-only information during compilation to represent
 what it knows about lexical variables. Not all subroutines get a C<LexInfo> PMC
 by default; subroutines need to indicate to Parrot that they require a
 C<LexInfo> PMC. One way to do this is with the C<.lex> directive.  Of course,
-the C<.lex> directive only works for languages that know the names of there
+the C<.lex> directive only works for languages that know the names of their
 lexical variables at compile time. Languages where this information is not
 available can mark the subroutine with C<:lex> instead.
 

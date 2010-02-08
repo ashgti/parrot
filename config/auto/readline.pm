@@ -39,7 +39,7 @@ sub runstep {
     my $verbose = $conf->options->get('verbose');
 
     my $cc     = $conf->data->get('cc');
-    my $osname = $conf->data->get_p5('OSNAME');
+    my $osname = $conf->data->get('osname');
 
     my $extra_libs = $self->_select_lib( {
         conf            => $conf,
@@ -77,6 +77,7 @@ sub runstep {
         }
     }
     $conf->data->set( HAS_READLINE => $has_readline );
+    $self->set_result($has_readline ? 'yes' : 'no');
 
     return 1;
 }

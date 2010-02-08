@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -113,10 +113,6 @@ Transforms to C<PC' = PC + S>, where C<S> is the size of an op.
 =item C<goto ADDRESS(X)>
 
 Transforms to C<PC' = X>. This is used for absolute jumps.
-
-=item C<goto POP()>
-
-Transforms to C<< PC' = <pop> >>. Pops the address off control stack.
 
 =item C<expr OFFSET(X)>
 
@@ -500,7 +496,6 @@ END_CODE
         #   goto OFFSET(X)     {{+=X}}  PC' = PC + X  Used for branches
         #   goto NEXT()        {{+=S}}  PC' = PC + S  Where S is op size
         #   goto ADDRESS(X)    {{=X}}   PC' = X       Used for absolute jumps
-        #   goto POP()         {{=*}}   PC' = <pop>   Pop address off control stack
         #   expr OFFSET(X)     {{^+X}}  PC + X        Relative address
         #   expr NEXT()        {{^+S}}  PC + S        Where S is op size
         #   expr ADDRESS(X)    {{^X}}   X             Absolute address
@@ -536,9 +531,6 @@ END_CODE
         $branch   ||= $body =~ s/\bgoto\s+OFFSET\((.*?)\)/{{+=$1}}/mg;
                       $body =~ s/\bexpr\s+OFFSET\((.*?)\)/{{^+$1}}/mg;
 
-        $pop      ||= $body =~ s/\bgoto\s+POP\(\)/{{=*}}/mg;
-                      $body =~ s/\bexpr\s+POP\(\)/{{^*}}/mg;
-
         $next     ||= $short_name =~ /runinterp/;
         $next     ||= $body =~ s/\bexpr\s+NEXT\(\)/{{^+$op_size}}/mg;
                       $body =~ s/\bgoto\s+NEXT\(\)/{{+=$op_size}}/mg;
@@ -553,9 +545,6 @@ END_CODE
         elsif ( $body =~ s/\brestart\s+NEXT\(\)/{{=0,+=$op_size}}/mg ) {
             $restart = 1;
             $next    = 1;
-        }
-        elsif ( $short_name eq 'branch_cs' || $short_name eq 'returncc' ) {
-            $restart = 1;    # dest may be NULL to leave run-loop
         }
         elsif ( $body =~ s/\brestart\s+ADDRESS\((.*?)\)/{{=$1}}/mg ) {
             $next    = 0;
@@ -579,7 +568,6 @@ END_CODE
         # Constants here are defined in include/parrot/op.h
         or_flag( \$jumps, "PARROT_JUMP_ADDRESS"  ) if $absolute;
         or_flag( \$jumps, "PARROT_JUMP_RELATIVE" ) if $branch;
-        or_flag( \$jumps, "PARROT_JUMP_POP"      ) if $pop;
         or_flag( \$jumps, "PARROT_JUMP_ENEXT"    ) if $next;
         or_flag( \$jumps, "PARROT_JUMP_RESTART"  ) if $restart;
 
@@ -675,13 +663,9 @@ sub preamble {
 
         #s/goto\s+NEXT\(\)/{{+=$op_size}}/mg;   #not supported--dependent on op size
         s/goto\s+ADDRESS\((.*)\)/{{=$1}}/mg;
-        s/goto\s+POP\(\)/{{=*}}/mg;
         s/HALT\(\)/{{=0}}/mg;
 
-        # RT#43721: This ought to throw errors when attempting to rewrite $n
-        # argument accesses and other things that make no sense in the
-        # preamble.
-        $_ = Parrot::Op->rewrite_body( $_, $trans );
+        $_ = Parrot::Op->rewrite_body( $_, $trans, 'preamble' );
     }
 
     return $_;

@@ -1,42 +1,43 @@
 # Copyright (C) 2003-2009, Parrot Foundation.
 # $Id$
 
-PERL          := @perl@
-RM_F          := @rm_f@
-CP            := @cp@
-CHMOD         := @chmod@
-LOAD_EXT      := @load_ext@
-BUILD_DIR     := @build_dir@
-RECONFIGURE   := $(PERL) $(BUILD_DIR)/tools/dev/reconfigure.pl
-INSTALL_DIR   := $(BUILD_DIR)@slash@runtime@slash@parrot@slash@dynext
-O             := @o@
-CC            := @cc@
-LD            := @ld@
-LDFLAGS       := @ldflags@ @ld_debug@ @rpath_blib@
-LD_LOAD_FLAGS := @ld_load_flags@
-CFLAGS        := @ccflags@ @cc_shared@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@
-LIBPARROT     := @libparrot_ldflags@
+PERL          = @perl@
+RM_F          = @rm_f@
+CP            = @cp@
+CHMOD         = @chmod@
+LOAD_EXT      = @load_ext@
+BUILD_DIR     = @build_dir@
+RECONFIGURE   = $(PERL) $(BUILD_DIR)/tools/dev/reconfigure.pl
+INSTALL_DIR   = $(BUILD_DIR)@slash@runtime@slash@parrot@slash@dynext
+O             = @o@
+CC            = @cc@
+LD            = @ld@
+LDFLAGS       = @ldflags@ @ld_debug@ @rpath_blib@
+LD_LOAD_FLAGS = @ld_load_flags@
+CFLAGS        = @ccflags@ @cc_shared@ @cc_debug@ @ccwarn@ @cc_hasjit@ @cg_flag@ @gc_flag@
+LIBPARROT     = @libparrot_ldflags@
 
-BUILD_TOOLS_DIR := $(BUILD_DIR)@slash@tools@slash@build
-BUILD_LIB_DIR   := $(BUILD_DIR)@slash@blib@slash@lib
-PMC2C           := $(PERL) $(BUILD_TOOLS_DIR)@slash@pmc2c.pl
-INCLUDES        := -I$(BUILD_DIR)@slash@include -I@build_dir@@slash@src@slash@pmc
-LINKARGS        := $(LDFLAGS) $(LD_LOAD_FLAGS) $(LIBPARROT) @icu_shared@ @libs@
+BUILD_TOOLS_DIR = $(BUILD_DIR)@slash@tools@slash@build
+BUILD_LIB_DIR   = $(BUILD_DIR)@slash@blib@slash@lib
+PMC2C           = $(PERL) $(BUILD_TOOLS_DIR)@slash@pmc2c.pl
+INCLUDES        = -I$(BUILD_DIR)@slash@include -I@build_dir@@slash@include@slash@pmc
+LINKARGS        = $(LDFLAGS) $(LD_LOAD_FLAGS) $(LIBPARROT) @icu_shared@ @libs@
 
-PMC2CD := $(PERL) $(BUILD_TOOLS_DIR)/pmc2c.pl --dump
-PMC2CC := $(PERL) $(BUILD_TOOLS_DIR)/pmc2c.pl --c
+PMC2CD = $(PERL) $(BUILD_TOOLS_DIR)/pmc2c.pl --dump
+PMC2CC = $(PERL) $(BUILD_TOOLS_DIR)/pmc2c.pl --c
 
 # add your dynamic pmcs here
-PMC_TARGETS := \
+PMC_TARGETS = \
   dynlexpad$(LOAD_EXT) \
-  foo$(LOAD_EXT) \
+  foo_group$(LOAD_EXT) \
+  pccmethod_test$(LOAD_EXT) \
   rotest$(LOAD_EXT) \
 #IF(has_gdbm):  gdbmhash$(LOAD_EXT) \
   rational$(LOAD_EXT) \
 #IF(has_crypto):  digest_group$(LOAD_EXT) \
   subproxy$(LOAD_EXT)
 
-PMCS_DIGEST := \
+PMCS_DIGEST = \
   md2.pmc \
   md4.pmc \
   md5.pmc \
@@ -46,7 +47,7 @@ PMCS_DIGEST := \
   sha256.pmc \
   sha512.pmc
 
-OBJS_DIGEST := \
+OBJS_DIGEST = \
   md2$(O) \
   md4$(O) \
   md5$(O) \
@@ -56,15 +57,23 @@ OBJS_DIGEST := \
   sha256$(O) \
   sha512$(O)
 
-#IF(win32 and cc==gcc):LIB_GDBM := -llibgdbm
-#ELSIF(win32):LIB_GDBM := libgdbm.lib
-#ELSE:LIB_GDBM := -lgdbm
+PMCS_FOO = \
+  foo.pmc \
+  foo2.pmc
 
-#IF(win32 and cc==gcc):LIB_CRYPTO := -lcrypto
-#ELSIF(win32):LIB_CRYPTO := libcrypto.lib
-#ELSE:LIB_CRYPTO := -lcrypto
+OBJS_FOO = \
+  foo$(O) \
+  foo2$(O)
 
-CLEANUPS := \
+#IF(win32 and cc==gcc):LIB_GDBM = -llibgdbm
+#ELSIF(win32):LIB_GDBM = libgdbm.lib
+#ELSE:LIB_GDBM = -lgdbm
+
+#IF(win32 and cc==gcc):LIB_CRYPTO = -lcrypto
+#ELSIF(win32):LIB_CRYPTO = libcrypto.lib
+#ELSE:LIB_CRYPTO = -lcrypto
+
+CLEANUPS = \
   "*.c" \
   "pmc_*.h" \
   "*_group.h" \
@@ -91,6 +100,7 @@ Makefile: ../../config/gen/makefiles/dynpmc.in
 
 dynlexpad$(LOAD_EXT): dynlexpad$(O)
 	$(LD) @ld_out@dynlexpad$(LOAD_EXT) dynlexpad$(O) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 dynlexpad$(O): dynlexpad.c
 	$(CC) -c @cc_o_out@dynlexpad$(O) $(INCLUDES) $(CFLAGS) dynlexpad.c
@@ -101,8 +111,15 @@ dynlexpad.c: dynlexpad.dump
 dynlexpad.dump: dynlexpad.pmc
 	$(PMC2CD) dynlexpad.pmc
 
-foo$(LOAD_EXT): foo$(O)
-	$(LD) @ld_out@foo$(LOAD_EXT) foo$(O) $(LINKARGS)
+foo_group$(LOAD_EXT): $(OBJS_FOO) lib-foo_group$(O)
+	$(LD) @ld_out@foo_group$(LOAD_EXT) lib-foo_group$(O) $(OBJS_FOO) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
+
+lib-foo_group$(O): foo_group.c
+	$(CC) -c @cc_o_out@lib-foo_group$(O) $(INCLUDES) $(CFLAGS) foo_group.c
+
+foo_group.c: $(OBJS_FOO)
+	$(PMC2C) --library foo_group --c $(PMCS_FOO)
 
 foo$(O): foo.c
 	$(CC) -c @cc_o_out@foo$(O) $(INCLUDES) $(CFLAGS) foo.c
@@ -113,8 +130,31 @@ foo.c: foo.dump
 foo.dump: foo.pmc
 	$(PMC2CD) foo.pmc
 
+foo2$(O): foo.c foo2.c
+	$(CC) -c @cc_o_out@foo2$(O) $(INCLUDES) $(CFLAGS) foo2.c
+
+foo2.c: foo2.dump foo.pmc
+	$(PMC2CC) foo2.pmc
+
+foo2.dump: foo2.pmc foo.dump
+	$(PMC2CD) foo2.pmc
+
+pccmethod_test$(LOAD_EXT): pccmethod_test$(O)
+	$(LD) @ld_out@pccmethod_test$(LOAD_EXT) pccmethod_test$(O) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
+
+pccmethod_test$(O): pccmethod_test.c
+	$(CC) -c @cc_o_out@pccmethod_test$(O) $(INCLUDES) $(CFLAGS) pccmethod_test.c
+
+pccmethod_test.c: pccmethod_test.dump
+	$(PMC2CC) pccmethod_test.pmc
+
+pccmethod_test.dump: pccmethod_test.pmc
+	$(PMC2CD) pccmethod_test.pmc
+
 rotest$(LOAD_EXT): rotest$(O)
 	$(LD) @ld_out@rotest$(LOAD_EXT) rotest$(O) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 rotest$(O): rotest.c
 	$(CC) -c @cc_o_out@rotest$(O) $(INCLUDES) $(CFLAGS) rotest.c
@@ -127,6 +167,7 @@ rotest.dump: rotest.pmc
 
 gdbmhash$(LOAD_EXT): gdbmhash$(O)
 	$(LD) @ld_out@gdbmhash$(LOAD_EXT) gdbmhash$(O) $(LINKARGS) $(LIB_GDBM)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 gdbmhash$(O): gdbmhash.c
 	$(CC) -c @cc_o_out@gdbmhash$(O) $(INCLUDES) $(CFLAGS) gdbmhash.c
@@ -139,6 +180,7 @@ gdbmhash.dump: gdbmhash.pmc
 
 rational$(LOAD_EXT): rational$(O)
 	$(LD) @ld_out@rational$(LOAD_EXT) rational$(O) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 rational$(O): rational.c
 	$(CC) -c @cc_o_out@rational$(O) $(INCLUDES) $(CFLAGS) rational.c
@@ -151,6 +193,7 @@ rational.dump: rational.pmc
 
 digest_group$(LOAD_EXT): $(OBJS_DIGEST) lib-digest_group$(O)
 	$(LD) @ld_out@digest_group$(LOAD_EXT) lib-digest_group$(O) $(OBJS_DIGEST) $(LINKARGS) $(LIB_CRYPTO)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 lib-digest_group$(O): digest_group.c
 	$(CC) -c @cc_o_out@lib-digest_group$(O) $(INCLUDES) $(CFLAGS) digest_group.c
@@ -232,6 +275,7 @@ sha512.dump: sha512.pmc
 
 subproxy$(LOAD_EXT): subproxy$(O)
 	$(LD) @ld_out@subproxy$(LOAD_EXT) subproxy$(O) $(LINKARGS)
+#IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 
 subproxy$(O): subproxy.c
 	$(CC) -c @cc_o_out@subproxy$(O) $(INCLUDES) $(CFLAGS) subproxy.c

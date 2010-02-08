@@ -72,7 +72,7 @@ sub defines {
 #define NREG(i) REG_NUM(interp, cur_opcode[i])
 #define PREG(i) REG_PMC(interp, cur_opcode[i])
 #define SREG(i) REG_STR(interp, cur_opcode[i])
-#define CONST(i) CONTEXT(interp)->constants[cur_opcode[i]]
+#define CONST(i) Parrot_pcc_get_constants(interp, interp->ctx)[cur_opcode[i]]
 END
 }
 
@@ -172,20 +172,6 @@ sub goto_offset {
     my ( $self, $offset ) = @_;
 
     return "goto *ops_addr[*(cur_opcode += $offset)]";
-}
-
-=item C<goto_pop()>
-
-Transforms the C<goto POP()> macro in an ops file into the relevant C
-code.
-
-=cut
-
-sub goto_pop {
-    my ($self) = @_;
-
-    return
-"opcode_t* pop_addr = (opcode_t*)pop_dest(interp);\ncur_opcode = pop_addr;goto *ops_addr[*(pop_addr)]";
 }
 
 my %arg_maps = (

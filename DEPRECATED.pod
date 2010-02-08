@@ -23,7 +23,7 @@ shipped, this feature may be removed in B<any> upcoming release, and
 you should no longer rely on it.
 
 Whenever deprecated items are removed, information
-regarding how to cope with the removal will be added to
+regarding how to cope with the removal should be added to
 L<https://trac.parrot.org/parrot/wiki/Deprecation>.
 
 When running parrot, you can receive warnings about deprecated opcodes.
@@ -33,19 +33,9 @@ specifically by including this C<PIR> code:
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
 
-=head1 Configuration
-
-=over 4
-
-=back
-
 =head1 PMCS
 
 =over 4
-
-=item random [eligible in 1.1]
-
-L<https://trac.parrot.org/parrot/ticket/189>
 
 =item moved to dynpmc [eligible in 1.1]
 
@@ -58,21 +48,48 @@ L<https://trac.parrot.org/parrot/ticket/448>
 
 L<https://trac.parrot.org/parrot/ticket/452>
 
-=item Hash changes to AssociativePMCArray [eligible in 1.5]
-
-Also OrderedHash to OrderedAssociativePMCArray.
-
-L<https://trac.parrot.org/parrot/ticket/679>
-
 =item Method stdhandle in ParrotInterpreter [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/264>
 
-=item VTABLE nomenclature. [eligible in 1.5]
+=item various VTABLE functions [eligible in 1.5]
 
-Current list of VTABLE functions will be reviewed and cleaned.
+The get_bigint, set_bigint_*, pow, i_pow and nextkey_keyed VTABLE functions are
+deprecated and will be removed.
 
 L<https://trac.parrot.org/parrot/ticket/866>
+
+=item Use of undocumented variables in class_init [eligible in 2.1]
+
+The current implementation allows the class_init vtable function body to
+use local symbols from the generated part. For example, some PMC used
+to use the pass counter. In the future, the class_init body from the PMC
+file may not be inserted directly in the body of the generated one,
+so this usage will not be allowed.
+
+L<https://trac.parrot.org/parrot/ticket/918>
+
+=item Overriding vtable invoke in PIR objects [experimental]
+
+The VTABLE invoke in object.pmc puts SELF at the start of the
+signature call arguments when there is no current object and is
+not already here. This allows the usage of $P0() instead of $P0($P0).
+
+L<https://trac.parrot.org/parrot/ticket/103>
+
+=item All bitwise VTABLE functions [eligible in 2.1]
+
+All bitwise VTABLE functions (all VTABLE functions containing C<bitwise> in
+their names) will be removed.  Equivalent functionality will by supplied by
+bitwise dynops.
+
+L<https://trac.parrot.org/parrot/ticket/1260>
+
+=item CPointer PMC [eligible in 2.1]
+
+And all uses in the Parrot calling conventions.
+
+L<https://trac.parrot.org/parrot/ticket/1407>
 
 =back
 
@@ -96,13 +113,24 @@ address of the PMC. Uses of get_addr and set_addr that would set label values
 for Sub, Exception, and related PMC types will instead be handled by
 get_label and set_label.
 
-=item C<bsr>, C<jsr>, and C<ret> [eligible in 1.5]
+=item All bitwise ops [eligible in 2.1]
 
-L<https://trac.parrot.org/parrot/ticket/702>
+All bitwise ops (all ops containing C<bitwise> in their names) will be provided
+by dynops.  B<NOTE>: Before removing the bitwise ops, make sure that the
+equivalent dynops are available and that the major HLLs (Rakudo, Partcl, Lua,
+etc) have switched to using them.
 
-=item C<branch_cs> [eligible in 1.5]
+L<https://trac.parrot.org/parrot/ticket/1260>
 
-L<https://trac.parrot.org/parrot/ticket/470>
+=item get_results opcode order and features [eligible in 2.1]
+
+Move get_results to follow invoke.
+
+L<https://trac.parrot.org/parrot/ticket/1405>
+
+get_results no longer used to fetch exception object.
+
+L<https://trac.parrot.org/parrot/ticket/1406>
 
 =back
 
@@ -110,23 +138,23 @@ L<https://trac.parrot.org/parrot/ticket/470>
 
 =over 4
 
-=item packfile structure [eligible in 1.1]
+=item packfile structure [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
-=item opcode numbering [eligible in 1.1]
+=item opcode numbering [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
-=item PMC numbering [eligible in 1.1]
+=item PMC numbering [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/451>
 
 =back
 
-=head1 Class Features
+=head1 Debugger
 
-[Nothing at this time.]
+Assigning to registers [experimental]
 
 =head1 PIR syntax
 
@@ -134,23 +162,9 @@ L<https://trac.parrot.org/parrot/ticket/451>
 
 =item Assignment syntax with opcodes [eligible in 1.1]
 
-When the first argument of an opcode is C<OUT>, then
-the assignment syntax will be allowed, as it is today.
+L<https://trac.parrot.org/parrot/ticket/906>
 
-In any other case (i.e. C<INOUT>, C<IN>), this will become
-a syntax error. For example:
-
-    $S0 = print
-    $P0 = substr 1, 2, "x"
-
-Will have to be:
-
-    print $S0
-    substr $P0, 1, 2, "x"
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=36283>
-
-=item named class/pmc lookup in pir syntax such as new, isa, subclass, 
+=item named class/pmc lookup in pir syntax such as new, isa, subclass,
     get_class, etc [eligible in 1.1]
 
 Class PMC name resolution will be the following.
@@ -162,7 +176,7 @@ if the arg is a Array (of any sort) or Key
   Relative to the current HLL Namespace
 
 if the arg is a Namespace or Class PMC
-  The passed in class or the class attatched to the passed in namespace.
+  The passed in class or the class attached to the passed in namespace.
 
 L<https://trac.parrot.org/parrot/ticket/159>
 
@@ -170,6 +184,14 @@ L<https://trac.parrot.org/parrot/ticket/159>
 [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/511>
+
+=item continuation-based ExceptionHandlers [eligible in 2.1]
+
+L<https://trac.parrot.org/parrot/ticket/1091>
+
+=item implicit optional named parameters [eligible in 2.1]
+
+L<https://trac.parrot.org/parrot/ticket/1103>
 
 =back
 
@@ -179,15 +201,7 @@ L<https://trac.parrot.org/parrot/ticket/511>
 
 =item mmd_cvt_to_types [eligible in 1.1]
 
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=60626>
-
-=item src/pic.c and src/pic_jit.c [eligible in 1.1]
-
-These two files were a thin prototype implementation of Polymorphic Inline
-Caching that only ever applied to 4 opcodes, one of which has now been removed.
-The files (and all functions in them) are deprecated, and will be removed.
-
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=60048>
+L<https://trac.parrot.org/parrot/ticket/907>
 
 =item Subs marked with C<:vtable>/C<:method> aren't in namespace [eligible in 1.1]
 
@@ -195,7 +209,7 @@ Subs marked with C<:vtable> or C<:method> flags are no longer given a
 namespace entry by default.  Use the C<:nsentry> flag to cause this
 to happen.
 
-L<http://rt.perl.org/rt3/Ticket/Display.html?id=53302>
+L<https://trac.parrot.org/parrot/ticket/389>
 
 =item C API coding standards cleanup [eligible in 1.1]
 
@@ -206,33 +220,58 @@ check in 1.4 or 2.0 for the new names.
 
 L<https://trac.parrot.org/parrot/ticket/443>
 
-=item functions in src/stack.c [eligible in 1.5]
+=item Sub/method invocation functions [eligible in 2.1]
 
-L<https://trac.parrot.org/parrot/ticket/702>
-Here is a list of functions in this file which are currently being exported:
+The old 'Parrot_call_*' functions for invoking a sub/method object from C are
+deprecated, replaced by 'Parrot_ext_call'.
 
-  stack_system_init
-  cst_new_stack_chunk
-  new_stack
-  mark_stack
-  stack_height
-  stack_entry
-  stack_prepare_push
-  stack_push
-  stack_prepare_pop
-  stack_pop
-  pop_dest
-  stack_peep
-  Parrot_dump_dynamic_environment
-  Parrot_push_action*
-  Parrot_push_mark*
-  Parrot_pop_mark*
+L<https://trac.parrot.org/parrot/ticket/1145>
 
-* = item may be kept but reimplemented.
+=item PMC Attributes Allocation Functions [experimental]
+
+ Parrot_gc_allocate_pmc_attributes
+ Parrot_gc_free_pmc_attributes
+
+These items and related helper functions are added as experimental support
+for TT #895
+
+=item PDB_compile and PDB_eval [eligible in 2.1]
+
+The function PDB_compile doesn't work since some time, and his implementation
+was a hack. His functionality may be reimplemented in another way. Until the
+end of deprecation cycle it just throws an exception.
+
+The PDB_eval function, that used in the debugger to support the eval
+command, was using PDB_compile. His functionality must be reimplemented
+in another way and with a name that follows current conventions, in the
+meantime and until the end of the deprecation cycle it just shows a
+diagnostic message.
+
+L<https://trac.parrot.org/parrot/ticket/872>
+
+=item Parrot_oo_get_namespace [eligible in 2.1]
+
+L<https://trac.parrot.org/parrot/ticket/1069>
+
+=item STRING Out parameters in Parrot_str_* functions [eligible in 2.1]
+
+All STRING modification functions will return a STRING pointer; capture and use
+this rather than relying on in-place modification of an existing pointer.
 
 =back
 
 =head1 Compiler tools
+
+=head2 PASM1 compiler
+
+=over 4
+
+=item C<PASM1 compiler> [eligible in 2.1]
+
+See PDB_compile. Note that the current version of the C<PASM1> compiler
+issues a warning and is not functional. (However, it used to segfault.)
+
+=back
 
 =head2 Parrot Grammar Engine (PGE)
 
@@ -246,12 +285,6 @@ object is supplied.
 
 L<https://trac.parrot.org/parrot/ticket/843>
 
-=item C<find_key> method on PGE::Match [eligible in 1.5]
-
-The C<find_key> method on PGE::Match objects will be removed.
-
-L<https://trac.parrot.org/parrot/ticket/851>
-
 =back
 
 =head2 Parrot Compiler Toolkit
@@ -260,7 +293,7 @@ L<https://trac.parrot.org/parrot/ticket/851>
 
 =item PCT::HLLCompiler stages [eligible in 1.1]
 
-The interface of various methods for adding, removing, and modifying 
+The interface of various methods for adding, removing, and modifying
 the list stages in a PCT::HLLCompiler object is subject to change.
 The existing actual stages will remain; only the mechanism for specifying
 the order of individual stages is likely to change.
@@ -270,7 +303,7 @@ L<https://trac.parrot.org/parrot/ticket/462>
 =item PCT::HLLCompiler from Perl 5's Test::Harness [eligible in 1.1]
 
 In order to facilitate using PCT::HLLCompiler with test harnesses,
-the C<command_line> method of PCT::HLLCompiler object exits silently 
+the C<command_line> method of PCT::HLLCompiler object exits silently
 if it detects that it is being run in a sample run from Perl's
 Test::Harness.  Currently this detection is done by checking the
 second command line argument for "@INC"; future releases may
@@ -295,7 +328,7 @@ L<https://trac.parrot.org/parrot/ticket/868>
 =item C< $(...) > syntax  [eligible in 1.5]
 
 The C< $(...) > syntax for obtaining a result object from a Match
-object will no longer work.  The new syntax is to invoke the 
+object will no longer work.  The new syntax is to invoke the
 C<.ast> method on the Match object.
 
 L<https://trac.parrot.org/parrot/ticket/459>
@@ -303,7 +336,7 @@ L<https://trac.parrot.org/parrot/ticket/459>
 =item Quoted items [eligible in 1.5]
 
 Double-quoted strings will interpret unescaped $-names
-as interpolated variables in the string.  Bare slashes 
+as interpolated variables in the string.  Bare slashes
 will introduce regular expressions.  The C<< <foo bar> >>
 syntax will produce an array of strings instead of a single
 string.
@@ -318,54 +351,21 @@ instead.
 
 L<https://trac.parrot.org/parrot/ticket/842>
 
-=cut
-
-=back
-
-=cut
-
-=head1 build tools
-
-=over 4
-
-=item tools/build/dynoplibs.pl and tools/build/dynpmc.pl [eligible in 1.1]
-
-Replaced with makefiles.
-
-L<https://trac.parrot.org/parrot/ticket/338>
-
-=back
-
-=head1 pmc2c syntax
-
-=over 4
-
-=item "pmclass" with name not matching file's basename [eligible in 1.5]
-
-When foo.pmc contains a the line "pmclass bar", pmc2c generates a pmc_foo.h
-but tries to include pmc_bar.h.  This is a bug, but it's possible someone out
-there is using it.  This usage will result in a warning for now; after
-the 1.4 release, this warning will be upgraded to an error.
-
-L<https://trac.parrot.org/parrot/ticket/665>
-
 =back
 
 =head1 Parrot library
 
 =over 4
 
-=item Data::Replace [eligible in 1.5]
+=item MT19937 [eligible in 2.1]
 
-L<https://trac.parrot.org/parrot/ticket/108>
+L<https://trac.parrot.org/parrot/ticket/1278> - latest version now hosted
+at L<http://github.com/fperrad/parrot-MT19937>. After 2.0, users will have
+to install via C<plumage>.
 
 =item JSON, JSON, and Config;JSON [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/508>
-
-=item NCI::call_toolkit_init [eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/753>
 
 =item Cross-HLL library loading [experimental]
 
@@ -374,6 +374,14 @@ L<https://trac.parrot.org/parrot/ticket/754>
 =item OpenGL bindings and libraries [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/852>
+
+=item Library name changes [eligible in 2.1]
+
+The use of C<::> a namespace separator is deprecated.  Core libraries will
+change to use multi-level keys instead.  For example, C<Data::Dumper> will
+change to C<Data; Dumper>.  Affected libraries also include:
+C<Parrot::Coroutine>, C<SDL>, C<Test::Builder>, C<YAML::Dumper>, and
+C<PCRE::NCI>.
 
 =back
 
@@ -384,8 +392,6 @@ L<https://trac.parrot.org/parrot/ticket/852>
 =item 1
 
 L<Trac|http://trac.parrot.org/> is parrot's primary issue tracking system.
-
-Older tickets may be listed at L<RT|https://rt.perl.org/rt3>.
 
 =item 2
 

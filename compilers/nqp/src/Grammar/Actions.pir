@@ -152,10 +152,12 @@
     .param pmc match
     .local pmc expr, block, past
     .local int cond
+    .local pmc jmpstack
+    jmpstack = new 'ResizableIntegerArray'
     cond = match['EXPR']
     cond -= 1
-    bsr get_expr
-    bsr get_block
+    local_branch jmpstack, get_expr
+    local_branch jmpstack, get_block
     $P2 = get_hll_global ['PAST'], 'Op'
     past = $P2.'new'(expr, block, 'pasttype'=>'if', 'node'=>match)
 
@@ -169,8 +171,8 @@
   while:
     unless cond != 0 goto end_while
     cond -= 1
-    bsr get_expr
-    bsr get_block
+    local_branch jmpstack, get_expr
+    local_branch jmpstack, get_block
     past = $P2.'new'(expr, block, past, 'pasttype'=>'if', 'node'=>match)
     goto while
 
@@ -181,12 +183,12 @@
     expr = match['EXPR']
     expr = expr[cond]
     expr = expr.'ast'()
-    ret
+    local_return jmpstack
   get_block:
     block = match['block']
     block = block[cond]
     block = block.'ast'()
-    ret
+    local_return jmpstack
   end:
     match.'!make'(past)
 .end
@@ -369,7 +371,7 @@
 
 ##    method routine_def($/) {
 ##        my $past := $($<block>);
-##        $past.name(~$<ident>);
+##        $past.name(~$<name>);
 ##        $past.node($/);
 ##        $past.blocktype('declaration');
 ##        $past.control('return_pir');
@@ -391,7 +393,7 @@
     .local pmc past
     $P0 = match['block']
     past = $P0.'ast'()
-    $S0 = match['ident']
+    $S0 = match['name']
     past.'name'($S0)
     past.'node'(match)
     past.'blocktype'('declaration')
@@ -793,7 +795,20 @@
 ##        $past.namespace($<name><ident>);
 ##        $past.blocktype('declaration');
 ##        $past.pirflags(':init :load');
-##        if ($<sym> eq 'class') { ...code to make class... }
+##        if ($<sym> eq 'class') {
+##            my $classpast :=
+##                PAST::Op.new(
+##                    ...P6metaclass...,
+##                    ~$<name>,
+##                    :pasttype('callmethod'), :name('new_class')
+##                );
+##            if $<parent> {
+##                $classpast.push(
+##                    PAST::Val.new( ~$<parent>[0] , :named('parent') )
+##                );
+##            }
+##            $past.push($classpast);
+##        }
 ##        make $past;
 ##    }
 .sub 'package_declarator' :method
@@ -810,22 +825,22 @@
     past.'lexical'(0)
     $S0 = match['sym']
     if $S0 != 'class' goto class_done
-    .local string inline
-    inline = <<'        INLINE'
-        $P0 = get_root_global ['parrot'], 'P6metaclass'
-        $P1 = split '::', '%s'
-        push_eh subclass_done
-        $P2 = $P0.'new_class'($P1)
-      subclass_done:
-        pop_eh
-        INLINE
-    $S0 = match['name']
-    $I0 = index inline, '%s'
-    substr inline, $I0, 2, $S0
+    .local pmc classvar, classop
     $P0 = get_hll_global ['PAST'], 'Op'
-    $P1 = $P0.'new'('inline'=>inline, 'pasttype'=>'inline')
+    classvar = $P0.'new'( 'inline'=>'%r = get_root_global ["parrot"], "P6metaclass"' )
+    $P0 = get_hll_global ['PAST'], 'Op'
+    $S0 = match['name']
+    classop = $P0.'new'( classvar, $S0, 'pasttype'=>'callmethod', 'name'=>'new_class')
     $P2 = past[0]
-    $P2.'push'($P1)
+    .local pmc parent
+    parent = match['parent']
+    if null parent goto parent_done
+    $S0 = parent[0]
+    $P0 = get_hll_global ['PAST'], 'Val'
+    $P1 = $P0.'new'( 'value'=>$S0, 'named'=>'parent' )
+    classop.'push'($P1)
+  parent_done:
+    $P2.'push'(classop)
   class_done:
     match.'!make'(past)
 .end

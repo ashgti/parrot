@@ -10,7 +10,7 @@ sub runstep {
     my ( $self, $conf ) = @_;
 
     my $libs = $conf->data->get('libs');
-    if ( $libs !~ /-lpthread/ ) {
+    if ( $libs !~ /-lpthread\b/ ) {
         $libs .= ' -lpthread';
     }
     if ( $libs !~ /-lrt\b/ ) {
@@ -57,7 +57,6 @@ sub runstep {
     # code for use in shared libraries.  -KPIC for Sun's compiler, -fPIC for
     # gcc.  We don't know which compiler we're using till after the
     # gccversion test.
-    # RT#43150 Should this go into the shlibs.pl Configure.pl unit instead?
     my $solaris_cc_shared_cb = sub {
         my ( $key, $gccversion ) = @_;
 

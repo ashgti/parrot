@@ -21,7 +21,7 @@ Tests the PackfileDirectory PMC.
 
 .sub 'main' :main
 .include 'test_more.pir'
-    plan(23)
+    plan(20)
 
     'test_create'()
     'test_typeof'()
@@ -65,7 +65,7 @@ Tests the PackfileDirectory PMC.
     pf    = _pbc()
     pfdir = pf.'get_directory'()
     $I0   = elements pfdir
-    is($I0, 5, 'PackfileDirectory.elements')
+    is($I0, 4, 'PackfileDirectory.elements')
 .end
 
 
@@ -79,7 +79,6 @@ Tests the PackfileDirectory PMC.
     expected["BYTECODE"] = 2
     expected["FIXUP"]    = 1
     expected["CONSTANT"] = 1
-    expected["PIC"]      = 1
 
     pf    = _pbc()
     pfdir = pf.'get_directory'()
@@ -136,7 +135,7 @@ Tests the PackfileDirectory PMC.
   delete_seg:
     delete pfdir[$S0]
     dec $I0
-    $I1   = elements pfdir
+    $I1 = elements pfdir
     is($I0, $I1, "segment deleted")
 
   done:

@@ -11,7 +11,7 @@ config/gen/platform/ansi/exec.c
 
 =head1 DESCRIPTION
 
-RT#48264
+Functions for dealing with child processes and Execs. (Currently not implemented on this platform.)
 
 =head2 Functions
 
@@ -53,21 +53,6 @@ Parrot_Run_OS_Command_Argv(PARROT_INTERP, PMC *cmdargs)
     Parrot_warn(NULL, PARROT_WARNINGS_PLATFORM_FLAG,
             "Parrot_Run_OS_Command_Argv not implemented");
     return 0;
-}
-
-/*
-
-=item C<void Parrot_Exec_OS_Comman(PARROT_INTERP, STRING *command)>
-
-=cut
-
-*/
-
-void
-Parrot_Exec_OS_Comman(PARROT_INTERP, STRING *command)
-{
-  Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_NOSPAWN,
-         "Exec not implemented");
 }
 
 /*

@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 70;
+use Parrot::Test tests => 71;
 use Parrot::Config qw(%PConfig);
 
 =head1 NAME
@@ -566,12 +566,12 @@ OUTPUT
   print "loaded\n"
   dlfunc P0, P1, "nci_ssc", "ssc"
   print "dlfunced\n"
-  set I5, 2
+  set I5, -2
   set I6, 3
   set_args "0,0", I5, I6
   get_results "0", I5
   invokecc P0
-  ne I5, 6, nok_1
+  ne I5, -6, nok_1
   print "ok 1\n"
   end
 nok_1: print "nok 1\n"
@@ -1355,7 +1355,32 @@ hello from Parrot
 31
 OUTPUT
 
-    pasm_output_is( <<'CODE', <<'OUTPUT', "nci_vP" );
+    pir_output_is( << 'CODE', << "OUTPUT", "nci_pi - null" );
+
+.include "datatypes.pasm"
+
+.sub test :main
+
+  # load library
+  .local pmc libnci_test
+  libnci_test = loadlib "libnci_test"
+  unless libnci_test goto FAILED
+
+  # calling a function in libnci_test
+  .local pmc nci_pi
+  dlfunc nci_pi, libnci_test, "nci_pi", "pi"
+  .local pmc result
+  result = nci_pi( 10 )
+  unless_null result, FAILED
+  print "got null"
+FAILED:
+  print "\n"
+.end
+CODE
+got null
+OUTPUT
+
+    pasm_output_is( <<'CODE', <<'OUTPUT', "nci_vP", todo => 'Disabled to avoid linkage problems, see src/nci_test.c' );
   loadlib P1, "libnci_test"
   dlfunc P0, P1, "nci_vP", "vP"
   new P5, ['String']
@@ -1373,7 +1398,7 @@ OUTPUT
 
   # Tests with callback functions
   my @todo = $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ ?
-    ( todo => 'RT #49718, add scheduler tasks to JIT' ) : ();
+    ( todo => 'TT #1316, add scheduler tasks to JIT' ) : ();
 
   pasm_output_is( <<'CODE', <<'OUTPUT', "nci_cb_C1 - PASM", @todo );
 
@@ -2342,7 +2367,7 @@ SKIP:
     print "\n"
 
     .local pmc nci_vv
-    nci_vv = dlfunc libnci_test, "nci_vv", "vv"
+    nci_vv = dlfunc libnci_test, "nci_vv", ""
     nci_vv()
     $I1 = nci_dlvar_int[0]
     print $I1
@@ -2660,12 +2685,16 @@ pir_output_is( << 'CODE', << 'OUTPUT', "nci_vVi - void** out parameter" );
     nci_vp = dlfunc libnci_test, "nci_vp", "vp"
 
     .local pmc opaque
+    null opaque
+    nci_vp(opaque)
+
     opaque = new ['Pointer']
     $I0 = 10
     nci_vVi(opaque, $I0)
     nci_vp(opaque)
 .end
 CODE
+got null
 got 10
 OUTPUT
 

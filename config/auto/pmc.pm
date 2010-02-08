@@ -77,7 +77,7 @@ END
         $parent_dumps .= "src/pmc/$_.dump "
             foreach reverse( ( $self->pmc_parents($pmc) ) );
         my $parent_headers = '';
-        $parent_headers .= "src/pmc/pmc_$_.h "
+        $parent_headers .= "include/pmc/pmc_$_.h "
             for $self->pmc_parents($pmc);
 
         # add dependencies that result from METHOD usage.
@@ -86,7 +86,7 @@ END
         if (contains_pccmethod($pmc_fname)) {
             $pccmethod_depend = 'lib/Parrot/Pmc2c/PCCMETHOD.pm';
             if ($pmc ne 'fixedintegerarray') {
-                $pccmethod_depend .= ' src/pmc/pmc_fixedintegerarray.h';
+                $pccmethod_depend .= ' include/pmc/pmc_fixedintegerarray.h';
             }
         }
         my $include_headers = get_includes($pmc_fname);
@@ -98,15 +98,16 @@ src/pmc/$pmc.c : src/pmc/$pmc.dump
 src/pmc/$pmc.dump : vtable.dump $parent_dumps src/pmc/$pmc.pmc \$(PMC2C_FILES) $pccmethod_depend
 \t\$(PMC2CD) src/pmc/$pmc.pmc
 
-src/pmc/pmc_$pmc.h: src/pmc/$pmc.c
+include/pmc/pmc_$pmc.h: src/pmc/$pmc.c
 
-src/pmc/$pmc\$(O): src/pmc/$pmc.str \$(NONGEN_HEADERS) \\
-    $parent_headers $include_headers src/pmc/pmc_continuation.h
+src/pmc/$pmc\$(O): include/pmc/pmc_${pmc}.h src/pmc/$pmc.str \$(NONGEN_HEADERS) \\
+    $parent_headers $include_headers include/pmc/pmc_continuation.h \\
+    include/pmc/pmc_callcontext.h include/pmc/pmc_fixedintegerarray.h
 
 END
     }
 
-    # src/pmc/$pmc\$(O): \$(NONGEN_HEADERS) $parent_headers src/pmc/pmc_$pmc.h
+    # src/pmc/$pmc\$(O): \$(NONGEN_HEADERS) $parent_headers include/pmc/pmc_$pmc.h
 
     # build list of libraries for link line in Makefile
     my $slash = $conf->data->get('slash');
@@ -271,6 +272,8 @@ sub get_includes {
           $include = "include/" . $include;
         } elsif ($include =~ m/^pmc_|\.str$/) { # local pmc header
           $include = "src/pmc/" . $include;
+        } elsif ($include =~ m/^pmc\/pmc_|\.h$/) { # local pmc header
+          $include = "include/" . $include;
         } # else it's probably a system header, don't depend on it.
         push @retval, $include;
     }

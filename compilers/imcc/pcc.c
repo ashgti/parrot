@@ -112,39 +112,39 @@ static void unshift_self(ARGIN(SymReg *sub), ARGIN(SymReg *obj))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_insert_tail_call __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_insert_tail_call __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(sub)
-#define ASSERT_ARGS_insINS __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_insINS __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(regs)
-#define ASSERT_ARGS_move_regs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(regs))
+#define ASSERT_ARGS_move_regs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(dest) \
-    || PARROT_ASSERT_ARG(src)
-#define ASSERT_ARGS_pcc_get_args __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(dest) \
+    , PARROT_ASSERT_ARG(src))
+#define ASSERT_ARGS_pcc_get_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(op_name)
-#define ASSERT_ARGS_pcc_reg_mov __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(op_name))
+#define ASSERT_ARGS_pcc_reg_mov __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(vinfo)
-#define ASSERT_ARGS_recursive_tail_call __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(vinfo))
+#define ASSERT_ARGS_recursive_tail_call __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(unit) \
-    || PARROT_ASSERT_ARG(ins) \
-    || PARROT_ASSERT_ARG(sub)
-#define ASSERT_ARGS_unshift_self __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(unit) \
+    , PARROT_ASSERT_ARG(ins) \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_unshift_self __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(sub) \
-    || PARROT_ASSERT_ARG(obj)
+    , PARROT_ASSERT_ARG(obj))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -288,31 +288,53 @@ pcc_get_args(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins),
         regs[i + 1] = arg;
         flags       = 0;
 
-        if (arg_flags[i] & VT_FLAT)
-            flags |= PARROT_ARG_FLATTEN;
-
-        if (arg_flags[i] & VT_OPTIONAL)
-            flags |= PARROT_ARG_OPTIONAL;
-        else if (arg_flags[i] & VT_OPT_FLAG)
-            flags |= PARROT_ARG_OPT_FLAG;
-
-        if (arg_flags[i] & VT_NAMED)
-            flags |= PARROT_ARG_NAME;
-
-        /* add argument type bits */
-        if (arg->type & VTCONST)
-            flags |= PARROT_ARG_CONSTANT;
-
-        /* TODO verify if const is allowed */
-        switch (arg->set) {
-            case 'I':                               break;
-            case 'S': flags |= PARROT_ARG_STRING;   break;
-            case 'N': flags |= PARROT_ARG_FLOATVAL; break;
-            case 'K':
-            case 'P': flags |= PARROT_ARG_PMC;      break;
-            default :                               break;
+        if (arg_flags[i] & VT_CALL_SIG) {
+            if ((n > 1 || i != 0) && !(n == 2 && strcmp(args[0]->name, "self") == 0))
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERNAL_PANIC,
+                    ":call_sig must be the first and only parameter besides self");
+            if (arg_flags[i] & (VT_FLAT | VT_OPTIONAL | VT_OPT_FLAG | VT_NAMED))
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERNAL_PANIC,
+                    ":call_sig cannot be combined with any other flags");
+            if (arg->set != 'P')
+                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERNAL_PANIC,
+                    ":call_sig must be a PMC");
+            flags |= PARROT_ARG_CALL_SIG;
+            flags |= PARROT_ARG_PMC;
         }
+        else {
+            if (arg_flags[i] & VT_FLAT)
+                flags |= PARROT_ARG_FLATTEN;
 
+            if (arg_flags[i] & VT_OPTIONAL)
+                flags |= PARROT_ARG_OPTIONAL;
+            else if (arg_flags[i] & VT_OPT_FLAG)
+                flags |= PARROT_ARG_OPT_FLAG;
+
+            if (arg_flags[i] & VT_NAMED)
+                flags |= PARROT_ARG_NAME;
+
+            /* add argument type bits */
+            if (arg->type & VTCONST)
+                flags |= PARROT_ARG_CONSTANT;
+
+            /* TODO verify if const is allowed */
+            switch (arg->set) {
+              case 'I':
+                break;
+              case 'S':
+                flags |= PARROT_ARG_STRING;
+                break;
+              case 'N':
+                flags |= PARROT_ARG_FLOATVAL;
+                break;
+              case 'K':
+              case 'P':
+                flags |= PARROT_ARG_PMC;
+                break;
+              default :
+                break;
+            }
+        }
 
         snprintf(s, sizeof (s), "0x%.4x,", flags);
         if (bufpos+lenitem >= bufsize)
@@ -783,7 +805,7 @@ expand_pcc_sub_call(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *i
 
             /* insert set_p_pc with the sub as constant */
             the_sub->set    = 'p';
-            the_sub->usage  = U_FIXUP;
+            the_sub->usage |= U_FIXUP;
             the_sub->type  &= ~VTADDRESS;
             the_sub->type  |= VTCONST;   /* preserve VT_ENCODED */
             regs[0]         = reg;

@@ -46,7 +46,6 @@ sub runstep {
     # Parrot can't necessarily handle a pre-existing installed shared
     # libparrot.so. At this point, we don't know the actual name
     # of the shared parrot library. So we try some candidates.
-    # See RT #52288: the check for old_versions should be improved
     my @libs = ('libparrot.so');
     my @libpaths = ('/usr/local/lib', '/usr/lib', $conf->data->get('libdir'));
     if ($^O eq 'MSWin32') {
@@ -55,6 +54,9 @@ sub runstep {
     }
     if ($^O eq 'cygwin') {
         @libs = ('libparrot.dll.a');
+    }
+    if ($^O eq 'darwin'){
+        @libs = qw/libparrot.dylib libparrot.a/;
     }
     if (defined $ENV{LD_LIBRARY_PATH}) {
         push @libpaths, (split /:/, $ENV{LD_LIBRARY_PATH});

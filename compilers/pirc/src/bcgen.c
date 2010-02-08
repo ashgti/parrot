@@ -8,13 +8,13 @@
 
 #include "parrot/parrot.h"
 
-#include "parrot/interpreter.h"
-#include "../../../src/pmc/pmc_sub.h"
-#include "../../../src/pmc/pmc_namespace.h"
+#include "pmc/pmc_sub.h"
+#include "pmc/pmc_namespace.h"
 
 /* #include "parrot/embed.h" */
 
 #include "bcgen.h" /* XXX future maybe parrot/bcgen.h */
+
 
 /* HEADERIZER HFILE: compilers/pirc/src/bcgen.h */
 
@@ -74,25 +74,25 @@ static PMC * get_namespace_pmc(
 static int new_pbc_const(ARGIN(bytecode * const bc))
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_add_string_const_from_cstring __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_add_string_const_from_cstring __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(bc) \
-    || PARROT_ASSERT_ARG(str)
-#define ASSERT_ARGS_check_requested_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_check_requested_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_create_lexinfo __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(bc) \
-    || PARROT_ASSERT_ARG(sub)
-#define ASSERT_ARGS_create_sub_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_find_outer_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_create_sub_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_find_outer_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(bc) \
-    || PARROT_ASSERT_ARG(lexer)
-#define ASSERT_ARGS_generate_multi_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_get_namespace_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(bc)
-#define ASSERT_ARGS_new_pbc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(bc)
+    , PARROT_ASSERT_ARG(lexer))
+#define ASSERT_ARGS_generate_multi_signature __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_get_namespace_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(bc))
+#define ASSERT_ARGS_new_pbc_const __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(bc))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -481,7 +481,8 @@ new_bytecode(PARROT_INTERP, ARGIN(char const * const filename))
 
     /* create segments */
     PARROT_ASSERT(filename != NULL);
-    interp->code = PF_create_default_segs(interp, filename, 1);
+    interp->code = PF_create_default_segs(interp, Parrot_str_new(interp, filename,
+                                                                 strlen(filename)), 1);
 
     /* add interpreter globals to bytecode. XXX Why is this? */
     self         = VTABLE_get_pmc_keyed_int(interp, interp->iglobals, IGLOBALS_INTERPRETER);
@@ -578,7 +579,10 @@ create_annotations_segment(ARGIN(bytecode * const bc), ARGIN(char const * const 
     bc->interp->code->annotations = (PackFile_Annotations*)
                                     PackFile_Segment_new_seg(bc->interp,
                                         bc->interp->code->base.dir,
-                                        PF_ANNOTATIONS_SEG, segment_name, 1);
+                                        PF_ANNOTATIONS_SEG,
+                                        Parrot_str_new(bc->interp, segment_name,
+                                            strlen(segment_name)),
+                                        1);
 
     bc->interp->code->annotations->code = bc->interp->code;
 
@@ -820,7 +824,11 @@ generate_multi_signature(ARGIN(bytecode * const bc),
                 break;
             }
             case MULTI_TYPE_KEYED: {
-                /* XXX implement this */
+                /* XXX not sure if this is correct. Reuse the emit_pbc_key infrastructure
+                   for emitting key bytecode. Need to see whether this works...
+                 */
+                int index = emit_pbc_key(bc, types[i].entry.key);
+                sig_pmc   = bc->interp->code->const_table->constants[index]->u.key;
 
                 break;
             }
@@ -834,6 +842,115 @@ generate_multi_signature(ARGIN(bytecode * const bc),
     }
 
     return multi_signature;
+}
+
+/*
+
+=item C<int emit_pbc_key(bytecode * const bc, struct key * const k)>
+
+Emit bytecode for the key C<k>. First the bytecode is
+written to a temporary buffer, which is later unpacked
+in the actual PackFile. See C<store_key_bytecode()>.
+
+=cut
+
+*/
+int
+emit_pbc_key(ARGIN(bytecode * const bc), ARGIN(struct key * const k))
+{
+    ASSERT_ARGS(emit_pbc_key)
+    key_entry  *iter;
+    opcode_t   *key;
+    opcode_t    keysize;    /* total size of key in bytecode */
+    opcode_t   *pc;         /* cursor to write into key array */
+    expression *operand;
+    int         index;
+
+    /* create an array of opcode_t for storing the bytecode representation
+     * of the key. Initialize the cursor (pc) to write into this buffer.
+     * The size is 2 opcode_t's for each key plus 1 opcode_t for storing the size.
+     */
+    pc  =
+    key = (opcode_t *)mem_sys_allocate((k->keylength * 2 + 1) * sizeof (opcode_t));
+
+    /* store key length in slot 0 */
+    *pc++ = k->keylength;
+
+    /* initialize iterator */
+    iter  = k->head;
+
+    while (iter) {
+        switch (iter->expr->type) {
+          case EXPR_CONSTANT: {
+            constant *c = iter->expr->expr.c;
+            switch (c->type) {
+              case INT_VAL:
+                *pc++ = PARROT_ARG_IC;
+                *pc++ = c->val.ival;
+                break;
+              case STRING_VAL:
+                *pc++ = PARROT_ARG_SC;
+                *pc++ = add_string_const(bc, c->val.sval, "ascii");
+                break;
+              case USTRING_VAL:
+                *pc++ = PARROT_ARG_SC;
+                *pc++ = add_string_const(bc, c->val.ustr->contents,
+                                                c->val.ustr->charset);
+                break;
+              default:
+                fprintf(stderr, "wrong type of key");
+                break;
+            }
+
+            break;
+          }
+          case EXPR_TARGET: {
+            target *t = iter->expr->expr.t;
+
+            switch (t->info->type) {
+              case INT_TYPE:
+                *pc++ = PARROT_ARG_I;
+                *pc++ = t->info->color;
+                break;
+              case STRING_TYPE:
+                *pc++ = PARROT_ARG_S;
+                *pc++ = t->info->color;
+                break;
+              default:
+                fprintf(stderr, "wrong type of key");
+                break;
+            }
+            break;
+          }
+          case EXPR_KEY:
+            fprintf(stderr, "Nested keys are not supported.");
+            break;
+
+          default:
+            fprintf(stderr, "unknown expression type");
+            break;
+
+        }
+
+        iter = iter->next;
+    }
+
+    /* calculate size of key in bytecode; each field has 2 INTVALs:
+     * flags/types and the register/constant index.
+     */
+    keysize = pc - key;
+/*
+    fprintf(stderr, "key: ");
+    for (index = 0; index < keysize; ++index) {
+        fprintf(stderr, "%d|", key[index]);
+    }
+*/
+    /* store the key, and emit the index at which it's stored into the code segment */
+    index = store_key_bytecode(bc, key);
+    emit_int_arg(bc, index);
+
+    return index;
+
 }
 
 
@@ -873,7 +990,8 @@ create_lexinfo(ARGIN(bytecode * const bc), ARGIN(PMC * sub),
                 *lexiter->color);
 
 
-        Parrot_PCCINVOKE(bc->interp, lex_info, method, "SI->", lexname, *lexiter->color);
+        Parrot_pcc_invoke_method_from_c_args(bc->interp, lex_info, method, "SI->", lexname,
+                                             *lexiter->color);
 
         lexiter = lexiter->next;
     }
@@ -910,8 +1028,9 @@ find_outer_sub(ARGIN(bytecode * const bc), ARGIN_NULLOK(char const * const outer
 {
     ASSERT_ARGS(find_outer_sub)
     PMC          *current;
-    Parrot_sub   *sub;
+    Parrot_Sub_attributes *sub;
     STRING       *cur_name;
+    STRING       *out_name;
     size_t        len;
     global_label *outersub;
 
@@ -959,8 +1078,8 @@ find_outer_sub(ARGIN(bytecode * const bc), ARGIN_NULLOK(char const * const outer
     PMC_get_sub(interp, current, sub);
     cur_name = sub->name;
 
-    /* XXX can't this be a call to Parrot_str_compare() ? */
-    if (cur_name->strlen == len && (memcmp((char *)cur_name->strstart, outername, len) == 0))
+    out_name = Parrot_str_new(interp, outername, len);
+    if (Parrot_str_compare(interp, cur_name, out_name) == 0)
         return current;
 
     return NULL;
@@ -1059,58 +1178,6 @@ create_sub_pmc(ARGIN(bytecode * const bc), int iscoroutine,
     return pmc_new(bc->interp, type);
 }
 
-
-#if 0
-
-/*
-
-=item C<opcode_t * make_jit_info(PARROT_INTERP, const struct _IMC_Unit *unit)>
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-opcode_t *
-make_jit_info(PARROT_INTERP, ARGIN(const struct _IMC_Unit *unit))
-{
-    ASSERT_ARGS(make_jit_info)
-    const size_t old  = old_blocks(interp);
-    const size_t size = unit->n_basic_blocks + old;
-
-    if (!IMCC_INFO(interp)->globals->cs->jit_info) {
-        const size_t len  =
-            strlen(IMCC_INFO(interp)->globals->cs->seg->base.name) + 5;
-        char * const name = mem_allocate_n_typed(len, char);
-
-        snprintf(name, len, "%s_JIT",
-            IMCC_INFO(interp)->globals->cs->seg->base.name);
-
-        IMCC_INFO(interp)->globals->cs->jit_info =
-                PackFile_Segment_new_seg(interp,
-                    interp->code->base.dir, PF_UNKNOWN_SEG, name, 1);
-
-        mem_sys_free(name);
-    }
-
-    /* store current size */
-    IMCC_INFO(interp)->globals->cs->subs->n_basic_blocks = unit->n_basic_blocks;
-
-    /* offset of block start and end, 4 * registers_used */
-    IMCC_INFO(interp)->globals->cs->jit_info->data =
-        mem_realloc_n_typed(IMCC_INFO(interp)->globals->cs->jit_info->data,
-            size * 4, opcode_t);
-
-    IMCC_INFO(interp)->globals->cs->jit_info->size = size * 4;
-
-    return IMCC_INFO(interp)->globals->cs->jit_info->data + old * 4;
-}
-
-#endif /* HAS_JIT */
-
-
-
 /*
 
 =item C<int add_sub_pmc(bytecode * const bc, sub_info * const info, int needlex,
@@ -1131,7 +1198,7 @@ add_sub_pmc(ARGIN(bytecode * const bc), ARGIN(sub_info * const info), int needle
 {
     ASSERT_ARGS(add_sub_pmc)
     PMC                   *sub_pmc;        /* the "Sub" pmc, or a variant, such as "Coroutine" */
-    Parrot_sub            *sub;
+    Parrot_Sub_attributes *sub;
     int                    subconst_index; /* index in const table for the sub pmc */
     int                    subname_index;
     int                    i;              /* for loop iterator */

@@ -136,7 +136,7 @@ PackFile_pack(PARROT_INTERP, ARGMOD(PackFile *self), ARGOUT(opcode_t *cursor))
     size = seg->op_count;
     ret = PackFile_Segment_pack(interp, seg, cursor);
     if ((size_t)(ret - cursor) != size) {
-        fprintf(stderr, "PackFile_pack segment '%s' used size %d "
+        Parrot_io_eprintf(interp, "PackFile_pack segment '%Ss' used size %d "
                 "but reported %d\n", seg->name, (int)(ret-cursor), (int)size);
     }
 }
@@ -270,28 +270,27 @@ PackFile_Constant_pack(PARROT_INTERP,
     ASSERT_ARGS(PackFile_Constant_pack)
     PMC *key;
     size_t i;
-    opcode_t slice_bits;
     STRING *image;
 
     *cursor++ = self->type;
 
     switch (self->type) {
 
-    case PFC_NUMBER:
+      case PFC_NUMBER:
         cursor = PF_store_number(cursor, &self->u.number);
         break;
 
-    case PFC_STRING:
+      case PFC_STRING:
         cursor = PF_store_string(cursor, self->u.string);
         break;
 
-    case PFC_PMC:
+      case PFC_PMC:
         key = self->u.key;      /* the (Sub) PMC */
         image = Parrot_freeze(interp, key);
         cursor = PF_store_string(cursor, image);
         break;
 
-    case PFC_KEY:
+      case PFC_KEY:
         for (i = 0, key = self->u.key; key; i++){
             GETATTR_Key_next_key(interp, key, key);
         }
@@ -301,61 +300,50 @@ PackFile_Constant_pack(PARROT_INTERP,
         /* and now type / value per component */
         for (key = self->u.key; key;) {
             const opcode_t type = PObj_get_FLAGS(key);
-            slice_bits = 0;
-            if ((type & (KEY_start_slice_FLAG|KEY_inf_slice_FLAG)) ==
-                    (KEY_start_slice_FLAG|KEY_inf_slice_FLAG))
-                slice_bits |= PF_VT_END_INF;
-            if ((type & (KEY_end_slice_FLAG|KEY_inf_slice_FLAG)) ==
-                    (KEY_end_slice_FLAG|KEY_inf_slice_FLAG))
-                slice_bits |= PF_VT_START_ZERO;
-            if (type & KEY_start_slice_FLAG)
-                slice_bits |= PF_VT_START_SLICE;
-            if (type & KEY_end_slice_FLAG)
-                slice_bits |= PF_VT_END_SLICE;
 
             switch (type & KEY_type_FLAGS) {
-                case KEY_integer_FLAG:
-                    *cursor++ = PARROT_ARG_IC | slice_bits;
-                    GETATTR_Key_int_key(interp, key, *cursor++);
-                    break;
-                case KEY_number_FLAG:
-                    *cursor++ = PARROT_ARG_NC | slice_bits;
-                    /* Argh */
-                    *cursor++ = PackFile_find_in_const(interp, const_table, key, PFC_NUMBER);
-                    break;
-                case KEY_string_FLAG:
-                    *cursor++ = PARROT_ARG_SC | slice_bits;
-                    /* Argh */
-                    *cursor++ = PackFile_find_in_const(interp, const_table, key, PFC_STRING);
-                    break;
+              case KEY_integer_FLAG:
+                *cursor++ = PARROT_ARG_IC;
+                GETATTR_Key_int_key(interp, key, *cursor++);
+                break;
+              case KEY_number_FLAG:
+                *cursor++ = PARROT_ARG_NC;
+                /* Argh */
+                *cursor++ = PackFile_find_in_const(interp, const_table, key, PFC_NUMBER);
+                break;
+              case KEY_string_FLAG:
+                *cursor++ = PARROT_ARG_SC;
+                /* Argh */
+                *cursor++ = PackFile_find_in_const(interp, const_table, key, PFC_STRING);
+                break;
 
-                case KEY_integer_FLAG | KEY_register_FLAG:
-                    *cursor++ = PARROT_ARG_I | slice_bits;
-                    GETATTR_Key_int_key(interp, key, *cursor++);
-                    break;
-                case KEY_number_FLAG | KEY_register_FLAG:
-                    *cursor++ = PARROT_ARG_N | slice_bits;
-                    GETATTR_Key_int_key(interp, key, *cursor++);
-                    break;
-                case KEY_string_FLAG | KEY_register_FLAG:
-                    *cursor++ = PARROT_ARG_S | slice_bits;
-                    GETATTR_Key_int_key(interp, key, *cursor++);
-                    break;
-                case KEY_pmc_FLAG | KEY_register_FLAG:
-                    *cursor++ = PARROT_ARG_P | slice_bits;
-                    GETATTR_Key_int_key(interp, key, *cursor++);
-                    break;
-                default:
-                    Parrot_io_eprintf(NULL, "PackFile_Constant_pack: "
+              case KEY_integer_FLAG | KEY_register_FLAG:
+                *cursor++ = PARROT_ARG_I;
+                GETATTR_Key_int_key(interp, key, *cursor++);
+                break;
+              case KEY_number_FLAG | KEY_register_FLAG:
+                *cursor++ = PARROT_ARG_N;
+                GETATTR_Key_int_key(interp, key, *cursor++);
+                break;
+              case KEY_string_FLAG | KEY_register_FLAG:
+                *cursor++ = PARROT_ARG_S;
+                GETATTR_Key_int_key(interp, key, *cursor++);
+                break;
+              case KEY_pmc_FLAG | KEY_register_FLAG:
+                *cursor++ = PARROT_ARG_P;
+                GETATTR_Key_int_key(interp, key, *cursor++);
+                break;
+              default:
+                Parrot_io_eprintf(NULL, "PackFile_Constant_pack: "
                             "unsupported constant type\n");
-                    Parrot_exit(interp, 1);
+                Parrot_exit(interp, 1);
             }
             GETATTR_Key_next_key(interp, key, key);
         }
 
         break;
 
-    default:
+      default:
         Parrot_io_eprintf(NULL, "PackFile_Constant_pack: unsupported constant\n");
         Parrot_exit(interp, 1);
         break;

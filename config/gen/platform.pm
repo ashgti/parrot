@@ -41,44 +41,24 @@ sub runstep {
     my ( $self, $conf ) = @_;
 
     my $verbose     = $conf->options->get('verbose');
-    my $platform    = $self->_get_platform( $conf, $verbose );
     my $generated   = $self->_get_generated($conf, $verbose);
 
 
     # headers are merged into platform.h
-    $self->_set_headers($conf, $verbose, $platform, $generated);
+    $self->_set_headers($conf, $verbose, $generated);
 
     # implementation files are merged into platform.c
-    $self->_set_implementations($conf, $verbose, $platform, $generated);
+    $self->_set_implementations($conf, $verbose, $generated);
 
-    $self->_handle_asm($conf, $platform);
+    $self->_handle_asm($conf);
 
     # interface is the same for all platforms
     copy_if_diff( $self->{platform_interface},
         "include/parrot/platform_interface.h" );
 
-    $self->_set_limits($conf, $verbose, $platform);
+    $self->_set_limits($conf, $verbose);
 
     return 1;
-}
-
-sub _get_platform {
-    my $self = shift;
-    my ($conf, $verbose) = @_;
-    my $platform = lc ( $conf->data->get_p5('OSNAME') );
-
-    $platform = "win32" if $platform =~ /^msys/;
-    $platform = "win32" if $platform =~ /^mingw/;
-    $platform =~ s/^ms//;
-
-    if ( ( split m/-/, $conf->data->get_p5('archname'), 2 )[0] eq 'ia64' ) {
-        $platform = 'ia64';
-    }
-
-    $platform = 'generic' unless -d "config/gen/platform/$platform";
-
-    print " platform='$platform' " if $verbose;
-    return $platform;
 }
 
 sub _get_generated {
@@ -92,7 +72,8 @@ sub _get_generated {
 
 sub _set_headers {
     my $self = shift;
-    my ($conf, $verbose, $platform, $generated) = @_;
+    my ($conf, $verbose, $generated) = @_;
+    my $platform = $conf->data->get('platform');
     my @headers = qw/
         io.h
         math.h
@@ -196,8 +177,8 @@ END_HERE
 }
 
 sub _set_limits {
-    my $self = shift;
-    my ($conf, $verbose, $platform) = @_;
+    my ($self, $conf) = @_;
+    my $platform = $conf->data->get('platform');
 
     my $limits = "config/gen/platform/generic/platform_limits.h";
     if ( -e "config/gen/platform/$platform/platform_limits.h" ) {
@@ -210,7 +191,8 @@ sub _set_limits {
 
 sub _set_implementations {
     my $self = shift;
-    my ($conf, $verbose, $platform, $generated) = @_;
+    my ($conf, $verbose, $generated) = @_;
+    my $platform = $conf->data->get('platform');
     my @impls = qw/
         time.c
         env.c
@@ -223,6 +205,7 @@ sub _set_implementations {
         memexec.c
         exec.c
         misc.c
+        hires_timer.c
         /;
 
     my $plat_c = q{src/platform.c};
@@ -335,8 +318,8 @@ END_HERE
 }
 
 sub _handle_asm {
-    my $self = shift;
-    my ($conf, $platform) = @_;
+    my ($self, $conf) = @_;
+    my $platform = $conf->data->get('platform');
     if ( $conf->data->get('platform_asm') ) {
         my $asm_file = "config/gen/platform/$platform/asm.s";
         if ( -e $asm_file ) {

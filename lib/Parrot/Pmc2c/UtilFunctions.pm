@@ -14,6 +14,17 @@ our @EXPORT_OK = qw( count_newlines return_statement dont_edit dynext_load_code
     passable_args_from_parameter_list
 );
 
+=head1 NAME
+
+Parrot::Pmc2c::UtilFunctions
+
+=head1 DESCRIPTION
+
+Various utility functions used in PMC to C transformations.  All functionas
+are exported on request only.
+
+=head1 SUBROUTINES
+
 =over 4
 
 =item C<passable_args_from_parameter_list( $parms )>
@@ -275,9 +286,19 @@ sub spew {
 }
 
 sub filename {
-    my ( $filename, $type ) = @_;
+    my ( $filename, $type, $is_dynamic ) = @_;
 
-    $filename =~ s/(\w+)\.\w+$/pmc_$1.h/ if ( $type eq ".h" );
+    $filename =~ s/\\/\//g;
+
+    # Core PMC emit header files inside include/pmc. All others in original directory
+    if ($type eq '.h') {
+        if (defined ($is_dynamic) && $is_dynamic) {
+            $filename =~ s{(\w+)\.\w+$}{pmc_$1.h};
+        }
+        else {
+            $filename =~ s{(?:.*/)?(\w+)\.\w+$}{include/pmc/pmc_$1.h};
+        }
+    }
     $filename =~ s/\.\w+$/.c/            if ( $type eq ".c" );
     $filename =~ s/\.\w+$/.dump/         if ( $type eq ".dump" );
     $filename =~ s/\.\w+$/.pmc/          if ( $type eq ".pmc" );

@@ -48,7 +48,7 @@ An empty Hash PMC is allocated during initialization.
 
 */
 
-#include "pmc_namespace.h"
+#include "pmc/pmc_namespace.h"
 
 /* Takes a hash and initializes the role based on it. */
 static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
@@ -102,7 +102,7 @@ static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
         /* Namespace is nested in the current namespace and with the name of
          * the role. */
         role->_namespace = Parrot_make_namespace_keyed_str(interp,
-            CONTEXT(interp)->current_namespace, role->name);
+            Parrot_pcc_get_namespace(interp, CURRENT_CONTEXT(interp)), role->name);
     }
 
     /* Otherwise, we may just have a namespace. */
@@ -198,7 +198,7 @@ static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
 
 */
 
-pmclass Role need_ext {
+pmclass Role auto_attrs {
     ATTR STRING *name;            /* The name of the role. */
     ATTR PMC    *_namespace;      /* The namespace it's linked to, if any. */
     ATTR PMC    *roles;           /* Roles from which this role is composed. */
@@ -221,12 +221,11 @@ C<init_data>.
 */
 
     VTABLE void init() {
-        Parrot_Role_attributes * const role = mem_allocate_zeroed_typed(Parrot_Role_attributes);
-        PMC_data(SELF)        = role;
+        Parrot_Role_attributes * const role =
+                (Parrot_Role_attributes *) PMC_data(SELF);
 
-        /* Set flags for custom GC mark and destroy. */
+        /* Set flags for custom GC mark. */
         PObj_custom_mark_SET(SELF);
-        PObj_active_destroy_SET(SELF);
 
         /* Set up the object. */
         role->name            = CONST_STRING(interp, "");
@@ -246,20 +245,6 @@ C<init_data>.
 
 /*
 
-=item C<void destroy()>
-
-Free the memory associated with the object's underlying struct.
-
-=cut
-
-*/
-
-    VTABLE void destroy() {
-        mem_sys_free(PMC_data(SELF));
-    }
-
-/*
-
 =item C<void mark()>
 
 Mark referenced strings and PMCs in the structure as live.
@@ -271,16 +256,11 @@ Mark referenced strings and PMCs in the structure as live.
     VTABLE void mark() {
         Parrot_Role_attributes * const role = PARROT_ROLE(SELF);
 
-        if (role->name)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)role->name);
-        if (role->_namespace)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)role->_namespace);
-        if (role->roles)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)role->roles);
-        if (role->methods)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)role->methods);
-        if (role->attrib_metadata)
-            Parrot_gc_mark_PObj_alive(interp, (PObj *)role->attrib_metadata);
+        Parrot_gc_mark_STRING_alive(interp, role->name);
+        Parrot_gc_mark_PMC_alive(interp, role->_namespace);
+        Parrot_gc_mark_PMC_alive(interp, role->roles);
+        Parrot_gc_mark_PMC_alive(interp, role->methods);
+        Parrot_gc_mark_PMC_alive(interp, role->attrib_metadata);
     }
 
 /*
@@ -744,7 +724,8 @@ Compose the given role into this one, using the given exclusions and aliases.
             PMC *alias_method       :optional :named("alias_method"),
             int  got_alias_method   :opt_flag) {
         Parrot_Role_attributes *role_info = PARROT_ROLE(SELF);
-        STRING *s_name, *r_name;
+        STRING *s_name   = NULL;
+        STRING *r_name   = NULL;
 
         (STRING *s_name) = PCCINVOKE(interp, SELF, "name");
         (STRING *r_name) = PCCINVOKE(interp, role, "name");

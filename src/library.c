@@ -93,33 +93,33 @@ static STRING* try_load_path(PARROT_INTERP, ARGMOD(STRING* path))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(* path);
 
-#define ASSERT_ARGS_cnv_to_win32_filesep __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_get_search_paths __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_is_abs_path __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(file)
-#define ASSERT_ARGS_path_append __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_cnv_to_win32_filesep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_get_search_paths __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_is_abs_path __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(file))
+#define ASSERT_ARGS_path_append __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(l_path) \
-    || PARROT_ASSERT_ARG(r_path)
-#define ASSERT_ARGS_path_concat __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(l_path) \
+    , PARROT_ASSERT_ARG(r_path))
+#define ASSERT_ARGS_path_concat __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(l_path) \
-    || PARROT_ASSERT_ARG(r_path)
-#define ASSERT_ARGS_path_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(l_path) \
+    , PARROT_ASSERT_ARG(r_path))
+#define ASSERT_ARGS_path_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
+    , PARROT_ASSERT_ARG(path))
 #define ASSERT_ARGS_path_guarantee_trailing_separator \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_try_bytecode_extensions __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_try_bytecode_extensions __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
-#define ASSERT_ARGS_try_load_path __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(path))
+#define ASSERT_ARGS_try_load_path __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(path)
+    , PARROT_ASSERT_ARG(path))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -159,37 +159,50 @@ void
 parrot_init_library_paths(PARROT_INTERP)
 {
     ASSERT_ARGS(parrot_init_library_paths)
-    PMC *paths;
+    PMC    *paths;
     STRING *entry;
-    STRING *versionlib = NULL;
-
-    PMC * const iglobals = interp->iglobals;
-    PMC * const config_hash =
-            VTABLE_get_pmc_keyed_int(interp, iglobals, (INTVAL) IGLOBALS_CONFIG_HASH);
+    STRING *versionlib      = NULL;
+    STRING *builddir        = NULL;
+    PMC * const iglobals    = interp->iglobals;
+    PMC * const config_hash = VTABLE_get_pmc_keyed_int(interp, iglobals,
+                                (INTVAL)IGLOBALS_CONFIG_HASH);
 
     /* create the lib_paths array */
-    PMC * const lib_paths = pmc_new(interp, enum_class_FixedPMCArray);
+    PMC * const lib_paths   = pmc_new(interp, enum_class_FixedPMCArray);
+
     VTABLE_set_integer_native(interp, lib_paths, PARROT_LIB_PATH_SIZE);
     VTABLE_set_pmc_keyed_int(interp, iglobals,
             IGLOBALS_LIB_PATHS, lib_paths);
+
+    if (VTABLE_elements(interp, config_hash)) {
+        STRING * const libkey      = CONST_STRING(interp, "libdir");
+        STRING * const verkey      = CONST_STRING(interp, "versiondir");
+        STRING * const builddirkey = CONST_STRING(interp, "build_dir");
+        STRING * const installed   = CONST_STRING(interp, "installed");
+
+        versionlib = VTABLE_get_string_keyed_str(interp, config_hash, libkey);
+        entry      = VTABLE_get_string_keyed_str(interp, config_hash, verkey);
+        versionlib = Parrot_str_append(interp, versionlib, entry);
+
+        if (!VTABLE_get_integer_keyed_str(interp, config_hash, installed))
+            builddir = VTABLE_get_string_keyed_str(interp,
+                                config_hash, builddirkey);
+    }
 
     /* each is an array of strings */
     /* define include paths */
     paths = pmc_new(interp, enum_class_ResizableStringArray);
     VTABLE_set_pmc_keyed_int(interp, lib_paths,
             PARROT_LIB_PATH_INCLUDE, paths);
-    entry = CONST_STRING(interp, "runtime/parrot/include/");
-    VTABLE_push_string(interp, paths, entry);
-    entry = CONST_STRING(interp, "runtime/parrot/");
-    VTABLE_push_string(interp, paths, entry);
+    if (!STRING_IS_NULL(builddir)) {
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/"), 0);
+        VTABLE_push_string(interp, paths, entry);
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/runtime/parrot/include/"), 0);
+        VTABLE_push_string(interp, paths, entry);
+    }
     entry = CONST_STRING(interp, "./");
     VTABLE_push_string(interp, paths, entry);
-    if (VTABLE_elements(interp, config_hash)) {
-        STRING * const libkey = CONST_STRING(interp, "libdir");
-        STRING * const verkey = CONST_STRING(interp, "versiondir");
-        versionlib = VTABLE_get_string_keyed_str(interp, config_hash, libkey);
-        entry = VTABLE_get_string_keyed_str(interp, config_hash, verkey);
-        versionlib = Parrot_str_append(interp, versionlib, entry);
+    if (!STRING_IS_NULL(versionlib)) {
         entry = Parrot_str_concat(interp, versionlib, CONST_STRING(interp, "/include/"), 0);
         VTABLE_push_string(interp, paths, entry);
     }
@@ -199,10 +212,10 @@ parrot_init_library_paths(PARROT_INTERP)
     paths = pmc_new(interp, enum_class_ResizableStringArray);
     VTABLE_set_pmc_keyed_int(interp, lib_paths,
             PARROT_LIB_PATH_LIBRARY, paths);
-    entry = CONST_STRING(interp, "runtime/parrot/library/");
-    VTABLE_push_string(interp, paths, entry);
-    entry = CONST_STRING(interp, "runtime/parrot/");
-    VTABLE_push_string(interp, paths, entry);
+    if (!STRING_IS_NULL(builddir)) {
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/runtime/parrot/library/"), 0);
+        VTABLE_push_string(interp, paths, entry);
+    }
     entry = CONST_STRING(interp, "./");
     VTABLE_push_string(interp, paths, entry);
     if (!STRING_IS_NULL(versionlib)) {
@@ -214,8 +227,10 @@ parrot_init_library_paths(PARROT_INTERP)
     paths = pmc_new(interp, enum_class_ResizableStringArray);
     VTABLE_set_pmc_keyed_int(interp, lib_paths,
             PARROT_LIB_PATH_LANG, paths);
-    entry = CONST_STRING(interp, "runtime/parrot/languages/");
-    VTABLE_push_string(interp, paths, entry);
+    if (!STRING_IS_NULL(builddir)) {
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/runtime/parrot/languages/"), 0);
+        VTABLE_push_string(interp, paths, entry);
+    }
     entry = CONST_STRING(interp, "./");
     VTABLE_push_string(interp, paths, entry);
     if (!STRING_IS_NULL(versionlib)) {
@@ -227,8 +242,10 @@ parrot_init_library_paths(PARROT_INTERP)
     paths = pmc_new(interp, enum_class_ResizableStringArray);
     VTABLE_set_pmc_keyed_int(interp, lib_paths,
             PARROT_LIB_PATH_DYNEXT, paths);
-    entry = CONST_STRING(interp, "runtime/parrot/dynext/");
-    VTABLE_push_string(interp, paths, entry);
+    if (!STRING_IS_NULL(builddir)) {
+        entry = Parrot_str_concat(interp, builddir, CONST_STRING(interp, "/runtime/parrot/dynext/"), 0);
+        VTABLE_push_string(interp, paths, entry);
+    }
     entry = CONST_STRING(interp, "dynext/");
     VTABLE_push_string(interp, paths, entry);
     if (!STRING_IS_NULL(versionlib)) {
@@ -311,7 +328,7 @@ static int
 is_abs_path(ARGIN(const STRING *file))
 {
     ASSERT_ARGS(is_abs_path)
-    const char * const file_name = file->strstart;
+    const char * const file_name = (const char *)file->strstart;
     if (file->strlen <= 1)
         return 0;
     PARROT_ASSERT(file->encoding == Parrot_fixed_8_encoding_ptr ||
@@ -614,7 +631,7 @@ Parrot_lib_add_path(PARROT_INTERP,
     PMC * const lib_paths = VTABLE_get_pmc_keyed_int(interp, iglobals,
         IGLOBALS_LIB_PATHS);
     PMC * const paths = VTABLE_get_pmc_keyed_int(interp, lib_paths, which);
-    VTABLE_push_string(interp, paths, path_str);
+    VTABLE_unshift_string(interp, paths, path_str);
 }
 
 /*
@@ -644,9 +661,7 @@ Parrot_lib_add_path_from_cstring(PARROT_INTERP,
 =item C<STRING* Parrot_locate_runtime_file_str(PARROT_INTERP, STRING *file,
 enum_runtime_ft type)>
 
-Locate the full path for C<file_name> and the given file type(s). If
-successful, returns a C-string allocated with C<Parrot_str_to_cstring> or
-NULL otherwise.  Remember to free the string with C<Parrot_str_free_cstring()>.
+Locate the full path for C<file_name> and the given file type(s).
 
 The C<enum_runtime_ft type> is one or more of the types defined in
 F<include/parrot/library.h>.
@@ -771,7 +786,7 @@ Return a malloced C-string for the runtime prefix.  The calling function
 must free it.
 
 This function is deprecated, use Parrot_get_runtime_path instead.
-See RT#58988
+See TT #1191
 
 =cut
 
@@ -784,11 +799,10 @@ char*
 Parrot_get_runtime_prefix(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_get_runtime_prefix)
-    int     free_it;
-    char * const env = Parrot_getenv("PARROT_RUNTIME", &free_it);
+    char * const env = Parrot_getenv(interp, CONST_STRING(interp, "PARROT_RUNTIME"));
 
     if (env)
-        return free_it ? env : mem_sys_strdup(env);
+        return env;
     else {
         PMC    * const config_hash =
             VTABLE_get_pmc_keyed_int(interp, interp->iglobals, (INTVAL) IGLOBALS_CONFIG_HASH);
@@ -819,15 +833,12 @@ STRING *
 Parrot_get_runtime_path(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_get_runtime_path)
-    int     free_it;
-    char * const env = Parrot_getenv("PARROT_RUNTIME", &free_it);
+    char * const env = Parrot_getenv(interp, CONST_STRING(interp, "PARROT_RUNTIME"));
     STRING *result;
 
     if (env)
     {
         result = Parrot_str_new(interp, env, 0);
-        if (free_it)
-             free(env);
     }
     else {
         PMC    * const config_hash =

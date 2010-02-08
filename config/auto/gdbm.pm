@@ -50,7 +50,7 @@ sub runstep {
         return 1;
     }
 
-    my $osname = $conf->data->get_p5('OSNAME');
+    my $osname = $conf->data->get('osname');
 
     my $extra_libs = $self->_select_lib( {
         conf            => $conf,
@@ -70,6 +70,7 @@ sub runstep {
         $has_gdbm = $self->_evaluate_cc_run($test, $has_gdbm, $verbose);
     }
     $conf->data->set( has_gdbm => $has_gdbm );    # for gdbmhash.t and dynpmc.in
+    $self->set_result($has_gdbm ? 'yes' : 'no');
 
     return 1;
 }

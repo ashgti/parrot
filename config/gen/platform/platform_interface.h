@@ -9,6 +9,7 @@
 ** platform_interface.h
 */
 #include "parrot/config.h"
+#include "parrot/interpreter.h"
 
 /*
 ** I/O:
@@ -48,26 +49,6 @@ void *mem_realloc_executable(void *, size_t, size_t);
 #  define mem_realloc_executable(a, b, c) mem_sys_realloc((a), (c))
 #endif
 
-void* Parrot_memcpy_aligned(void*, void*, size_t);
-
-#if defined(PARROT_HAS_I386_SSE)
-
-typedef void* (*Parrot_memcpy_func_t)(void *dest, const void *src, size_t);
-extern Parrot_memcpy_func_t Parrot_memcpy_aligned_sse;
-
-#  define Parrot_memcpy_aligned(d, s, l) Parrot_memcpy_aligned_sse((d), (s), (l))
-
-#elif defined(PARROT_HAS_I386_MMX)
-
-typedef void* (*Parrot_memcpy_func_t)(void *dest, const void *src, size_t);
-extern Parrot_memcpy_func_t Parrot_memcpy_aligned_mmx;
-
-#  define Parrot_memcpy_aligned(d, s, l) Parrot_memcpy_aligned_mmx((d), (s), (l))
-
-#else
-#  define Parrot_memcpy_aligned(d, s, l) mem_sys_memcopy((d), (s), (l))
-#endif
-
 /*
 ** Time
 */
@@ -84,11 +65,9 @@ char* Parrot_asctime_r(const struct tm*, char *);
  * Env
  */
 
-void Parrot_setenv(const char *name, const char *value);
-void Parrot_unsetenv(const char *name);
-/* free_it is set by the function to either 0 or 1; if set to 1,
-   the return value of the function needs to be mem_sys_free()d after use */
-char * Parrot_getenv(const char *name, int *free_it);
+void Parrot_setenv(PARROT_INTERP, STRING *name, STRING *value);
+void Parrot_unsetenv(PARROT_INTERP, STRING *name);
+char * Parrot_getenv(PARROT_INTERP, STRING *name);
 
 /*
 ** Dynamic Loading:
@@ -126,12 +105,17 @@ int get_sys_timer_ms(void *handle);
 
 #endif
 
+/*
+ * high-resolution timer support
+ */
+
+UHUGEINTVAL Parrot_hires_get_time(void);
+UINTVAL     Parrot_hires_get_tick_duration(void);
+
 
 struct parrot_string_t;
 INTVAL Parrot_Run_OS_Command(Interp*, struct parrot_string_t *);
-void Parrot_Exec_OS_Command(Interp*, struct parrot_string_t *);
 INTVAL Parrot_Run_OS_Command_Argv(Interp*, struct PMC *);
-void Parrot_Exec_OS_Command_Argv(Interp*, struct PMC *);
 
 #endif /* PARROT_PLATFORM_INTERFACE_H_GUARD */
 

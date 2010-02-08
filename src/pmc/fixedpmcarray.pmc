@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -27,7 +27,7 @@ never be set for user arrays.
 #define PMC_size(x)  ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->size
 #define PMC_array(x) ((Parrot_FixedPMCArray_attributes *)PMC_data(x))->pmc_array
 
-pmclass FixedPMCArray need_ext provides array {
+pmclass FixedPMCArray auto_attrs provides array {
     ATTR INTVAL   size;      /* number of elements in the array */
     ATTR PMC    **pmc_array; /* pointer to PMC array */
 
@@ -44,8 +44,16 @@ Sort this array, optionally using the provided cmp_func
     METHOD sort(PMC *cmp_func :optional) {
         const INTVAL n = SELF.elements();
 
-        if (n > 1)
-           Parrot_quicksort(interp, (void **)PMC_array(SELF), n, cmp_func);
+        if (n > 1) {
+            /* XXX Workaround for TT #218 */
+            if (PObj_is_object_TEST(SELF)) {
+                PMC *parent = SELF.get_attr_str(CONST_STRING(interp, "proxy"));
+                Parrot_pcc_invoke_method_from_c_args(interp, parent, CONST_STRING(interp, "sort"), "P->", cmp_func);
+            }
+            else
+                Parrot_quicksort(interp, (void **)PMC_array(SELF), n, cmp_func);
+        }
+        RETURN(PMC *SELF);
     }
 
 /*
@@ -65,10 +73,6 @@ Initializes the array.
 */
 
     VTABLE void init() {
-        Parrot_FixedPMCArray_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_FixedPMCArray_attributes);
-
-        PMC_data(SELF) = attrs;
         PObj_custom_mark_destroy_SETALL(SELF);
     }
 
@@ -83,10 +87,8 @@ Destroys the array.
 */
 
     VTABLE void destroy() {
-        if (PMC_array(SELF)) {
+        if (PMC_array(SELF))
             mem_sys_free(PMC_array(SELF));
-        }
-        mem_sys_free(PMC_data(SELF));
     }
 
 /*
@@ -104,8 +106,8 @@ Creates and returns a copy of the array.
         const INTVAL size = PMC_size(SELF);
 
         if (size) {
-            PMC_size(dest) = size;
-            PMC_array(dest)    = mem_allocate_n_typed(size, PMC *);
+            PMC_size(dest)  = size;
+            PMC_array(dest) = mem_allocate_n_typed(size, PMC *);
             mem_copy_n_typed(PMC_array(dest), PMC_array(SELF), size, PMC *);
             PObj_custom_mark_destroy_SETALL(dest);
         }
@@ -178,7 +180,7 @@ Returns the number of elements in the array as a Parrot string. (??? -leo)
 =item C<STRING *get_repr()>
 
 Returns a string representation of the array contents.
-RT #46673 implement freeze/thaw and use that instead.
+TT #1229: implement freeze/thaw and use that instead.
 
 =cut
 
@@ -195,12 +197,10 @@ RT #46673 implement freeze/thaw and use that instead.
 
         for (i = 0; i < n; ++i) {
             PMC * const val = SELF.get_pmc_keyed_int(i);
+            if (i > 0)
+                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ", "));
 
             res = Parrot_str_append(INTERP, res, VTABLE_get_repr(INTERP, val));
-            if (n == 1)
-                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ","));
-            else if (i < n - 1)
-                res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ", "));
         }
 
         res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, ")"));
@@ -372,6 +372,10 @@ array.
         if (!size)
             return;
 
+        if (size < 0)
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                    _("FixedPMCArray: Cannot set array size to a negative number"));
+
         PMC_size(SELF) = size;
         data           = mem_allocate_n_typed(size, PMC *);
 
@@ -481,7 +485,7 @@ C<value>.
         else {
             PMC *box = SELF.get_pmc_keyed_int(k);
 
-            /* RT #46675: autovivify an Array and insert it in SELF */
+            /* TT #1295: autovivify an Array and insert it in SELF */
             if (!box)
                 box = pmc_new(INTERP, SELF.type());
 
@@ -546,7 +550,6 @@ Sets the PMC value of the element at index C<key> to C<*src>.
                 _("FixedPMCArray: index out of bounds!"));
 
         data      = PMC_array(SELF);
-        GC_WRITE_BARRIER(INTERP, SELF, data[key], src);
         data[key] = src;
     }
 
@@ -570,7 +573,7 @@ Sets the PMC at index C<key> to C<value>.
         else {
             PMC *box = SELF.get_pmc_keyed_int(k);
 
-            /* RT #46675: autovivify an Array and insert it in SELF */
+            /* TT #1295: autovivify an Array and insert it in SELF */
             if (!box)
                 box = pmc_new(INTERP, SELF.type());
 
@@ -591,7 +594,7 @@ The C<==> operation. Compares two array to hold equal elements.
     VTABLE INTVAL is_equal(PMC *value) {
         INTVAL j, n;
 
-        if (value->vtable->base_type != enum_class_FixedPMCArray)
+        if (value->vtable->base_type != SELF->vtable->base_type)
             return 0;
 
         n = SELF.elements();
@@ -617,13 +620,8 @@ The C<==> operation. Compares two array to hold equal elements.
         return 1;
     }
 
+
 /*
-
-=item C<PMC *slice(PMC *key, INTVAL f)>
-
-Return a new iterator for the slice PMC C<key> if f == 0.
-
-Return a new pythonic array slice if f == 1.
 
 =item C<PMC *get_iter()>
 
@@ -632,18 +630,6 @@ Return a new iterator for SELF.
 =cut
 
 */
-
-    VTABLE PMC *slice(PMC *key, INTVAL f) {
-        if (f == 0) {
-            STRING     *name = CONST_STRING(interp, "set_key");
-            PMC * const iter = pmc_new_init(INTERP, enum_class_Iterator, SELF);
-            Parrot_PCCINVOKE(interp, iter, name, "P->", key);
-            return iter;
-        }
-
-        Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
-                _("Array: Unknown slice type"));
-    }
 
     VTABLE PMC *get_iter() {
         return pmc_new_init(INTERP, enum_class_ArrayIterator, SELF);
@@ -704,17 +690,17 @@ of this array.
 
 /*
 
-=item C<void visit(visit_info *info)>
+=item C<void visit(PMC *info)>
 
 This is used by freeze/thaw to visit the contents of the array.
 
 C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Used to archive the array.
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Used to unarchive the array.
 
@@ -722,30 +708,26 @@ Used to unarchive the array.
 
 */
 
-    VTABLE void visit(visit_info *info) {
+    VTABLE void visit(PMC *info) {
         INTVAL  i;
         const INTVAL n = VTABLE_elements(INTERP, SELF);
         PMC   **pos    = PMC_array(SELF);
 
         for (i = 0; i < n; ++i, ++pos) {
-            info->thaw_ptr = pos;
-            (info->visit_pmc_now)(INTERP, *pos, info);
+            VISIT_PMC(INTERP, info, *pos);
         }
 
         SUPER(info);
     }
 
-    VTABLE void freeze(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+    VTABLE void freeze(PMC *info) {
         SUPER(info);
-        VTABLE_push_integer(INTERP, io, VTABLE_elements(INTERP, SELF));
+        VTABLE_push_integer(INTERP, info, VTABLE_elements(INTERP, SELF));
     }
 
-    VTABLE void thaw(visit_info *info) {
-        IMAGE_IO * const io = info->image_io;
+    VTABLE void thaw(PMC *info) {
         SUPER(info);
-        if (info->extra_flags == EXTRA_IS_NULL)
-            SELF.set_integer_native(VTABLE_shift_integer(INTERP, io));
+        SELF.set_integer_native(VTABLE_shift_integer(INTERP, info));
     }
 
 /*
@@ -785,8 +767,7 @@ Mark the array.
             return;
 
         for (i = PMC_size(SELF) - 1; i >= 0; --i)
-            if (data[i])
-                Parrot_gc_mark_PObj_alive(interp, (PObj *)data[i]);
+            Parrot_gc_mark_PMC_alive(interp, data[i]);
     }
 
 

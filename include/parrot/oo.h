@@ -32,7 +32,7 @@ typedef enum {
 #define get_attrib_num(x, y)    ((PMC **)(x))[(y)]
 #define set_attrib_num(o, x, y, z) \
     do { \
-        GC_WRITE_BARRIER(interp, (o), ((PMC **)(x))[y], (z)); \
+        Parrot_gc_write_barrier(interp, (o), ((PMC **)(x))[y], (z)); \
         ((PMC **)(x))[(y)] = (z); \
     } while (0)
 
@@ -106,6 +106,26 @@ void Parrot_invalidate_method_cache(PARROT_INTERP,
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
+PMC * Parrot_oo_find_vtable_override(PARROT_INTERP,
+    ARGIN(PMC *classobj),
+    ARGIN(STRING *name))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC * Parrot_oo_find_vtable_override_for_class(PARROT_INTERP,
+    ARGIN(PMC *classobj),
+    ARGIN(STRING *name))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -113,9 +133,8 @@ PMC * Parrot_oo_get_class(PARROT_INTERP, ARGIN(PMC *key))
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-PMC * Parrot_oo_get_class_str(PARROT_INTERP, ARGIN(STRING *name))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+PMC * Parrot_oo_get_class_str(PARROT_INTERP, ARGIN_NULLOK(STRING *name))
+        __attribute__nonnull__(1);
 
 void destroy_object_cache(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -145,30 +164,7 @@ void Parrot_oo_extract_methods_from_namespace(PARROT_INTERP,
 
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-PMC * Parrot_oo_find_vtable_override(PARROT_INTERP,
-    ARGIN(PMC *classobj),
-    ARGIN(STRING *name))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
-
-PARROT_CAN_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
-PMC * Parrot_oo_find_vtable_override_for_class(PARROT_INTERP,
-    ARGIN(PMC *classobj),
-    ARGIN(STRING *name))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3);
-
-PARROT_CAN_RETURN_NULL
-PARROT_WARN_UNUSED_RESULT
 PMC * Parrot_oo_get_namespace(SHIM_INTERP, ARGIN(const PMC *classobj))
-        __attribute__nonnull__(2);
-
-PARROT_CANNOT_RETURN_NULL
-void * Parrot_oo_new_object_attrs(PARROT_INTERP, ARGIN(PMC * class_))
-        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CAN_RETURN_NULL
@@ -185,73 +181,69 @@ INTVAL Parrot_oo_register_type(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-#define ASSERT_ARGS_Parrot_ComposeRole __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS_Parrot_ComposeRole __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(role) \
-    || PARROT_ASSERT_ARG(exclude) \
-    || PARROT_ASSERT_ARG(alias) \
-    || PARROT_ASSERT_ARG(methods_hash) \
-    || PARROT_ASSERT_ARG(roles_list)
-#define ASSERT_ARGS_Parrot_ComputeMRO_C3 __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(role) \
+    , PARROT_ASSERT_ARG(exclude) \
+    , PARROT_ASSERT_ARG(alias) \
+    , PARROT_ASSERT_ARG(methods_hash) \
+    , PARROT_ASSERT_ARG(roles_list))
+#define ASSERT_ARGS_Parrot_ComputeMRO_C3 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(_class)
-#define ASSERT_ARGS_Parrot_find_method_direct __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(_class))
+#define ASSERT_ARGS_Parrot_find_method_direct __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(_class) \
-    || PARROT_ASSERT_ARG(method_name)
-#define ASSERT_ARGS_Parrot_find_method_with_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(_class) \
+    , PARROT_ASSERT_ARG(method_name))
+#define ASSERT_ARGS_Parrot_find_method_with_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(_class) \
-    || PARROT_ASSERT_ARG(method_name)
-#define ASSERT_ARGS_Parrot_get_vtable_index __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(_class) \
+    , PARROT_ASSERT_ARG(method_name))
+#define ASSERT_ARGS_Parrot_get_vtable_index __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_Parrot_get_vtable_name __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_Parrot_get_vtable_name __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_Parrot_invalidate_method_cache \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_oo_get_class __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(key)
-#define ASSERT_ARGS_Parrot_oo_get_class_str __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_destroy_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_init_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_mark_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp)
-#define ASSERT_ARGS_Parrot_oo_clone_object __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(pmc)
-#define ASSERT_ARGS_Parrot_oo_extract_methods_from_namespace \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(self) \
-    || PARROT_ASSERT_ARG(ns)
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_oo_find_vtable_override \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(classobj) \
-    || PARROT_ASSERT_ARG(name)
+    , PARROT_ASSERT_ARG(classobj) \
+    , PARROT_ASSERT_ARG(name))
 #define ASSERT_ARGS_Parrot_oo_find_vtable_override_for_class \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(classobj) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_Parrot_oo_get_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(classobj)
-#define ASSERT_ARGS_Parrot_oo_new_object_attrs __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(classobj) \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_Parrot_oo_get_class __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(class_)
-#define ASSERT_ARGS_Parrot_oo_newclass_from_str __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(key))
+#define ASSERT_ARGS_Parrot_oo_get_class_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_destroy_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_init_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_mark_object_cache __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_oo_clone_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name)
-#define ASSERT_ARGS_Parrot_oo_register_type __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_Parrot_oo_extract_methods_from_namespace \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(name) \
-    || PARROT_ASSERT_ARG(_namespace)
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(ns))
+#define ASSERT_ARGS_Parrot_oo_get_namespace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(classobj))
+#define ASSERT_ARGS_Parrot_oo_newclass_from_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(name))
+#define ASSERT_ARGS_Parrot_oo_register_type __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(_namespace))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/oo.c */
 

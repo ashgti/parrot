@@ -8,7 +8,7 @@ t/pmc/capture.t - Test the Capture PMC
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/capture.t
+    % parrot t/pmc/capture.t
 
 =head1 DESCRIPTION
 
@@ -226,12 +226,14 @@ a variety of keys and values.
     .return ()
 
   test_get_integer_catch:
+    pop_eh
     .local pmc exception
     .local string message
     .get_results (exception)
 
     message = exception['message']
-    like(message, ':s get_integer\(\) not implemented', 'get_integer not implemented')
+    message = substr message, 0, 29
+    is(message, 'get_integer() not implemented', 'get_integer not implemented')
     .return ()
 .end
 
@@ -251,7 +253,8 @@ a variety of keys and values.
     .get_results (exception)
 
     message = exception['message']
-    like(message, ':s get_number\(\) not implemented', 'get_number not implemented')
+    message = substr message, 0, 28
+    is(message, 'get_number() not implemented', 'get_number not implemented')
     .return ()
 .end
 

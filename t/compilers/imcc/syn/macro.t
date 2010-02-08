@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -8,7 +8,7 @@ use lib qw( . lib ../lib ../../lib );
 
 use Test::More;
 use Parrot::Config;
-use Parrot::Test tests => 38;
+use Parrot::Test tests => 42;
 
 # macro tests
 
@@ -23,6 +23,44 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'macro, zero parameters' );
 .end
 CODE
 42
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'macro, zero parameters, line number' );
+.sub test :main
+.macro answer()
+    null  $P1
+    print $P1
+.endm
+    .answer()
+    end
+.end
+CODE
+/(?s:Null PMC access .*current instr.*:(4|-1)\))/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'macro, zero parameters, line number' );
+.sub test :main
+.macro answer()
+.endm
+    null $P1
+    print $P1
+    end
+.end
+CODE
+/(?s:Null PMC access .*current instr.*:(5|-1)\))/
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'macro, zero parameters, line number' );
+.sub test :main
+.macro answer()
+    null $P1
+.endm
+    .answer()
+    print $P1
+    end
+.end
+CODE
+/(?s:Null PMC access .*current instr.*:(6|-1)\))/
 OUTPUT
 
 pir_output_is( <<'CODE', <<'OUTPUT', 'macro, one unused parameter, literal term' );
@@ -326,8 +364,7 @@ CODE
 /End of file reached/
 OUTPUT
 
-my @todo = (($^O =~ /darwin/i) ? (todo => 'Darwin segfault -- RT #60926') : ());
-pir_error_output_like( <<'CODE', <<'OUTPUT', 'unterminated macro 2', @todo );
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'unterminated macro 2', );
 .sub test :main
 .macro M(A, B)
   print .A
@@ -546,6 +583,27 @@ my_func_1 my_func_1
 entering macro create_inst
 leaving macro create_inst
 my_func_2 my_func_2
+OUTPUT
+
+pir_error_output_like( <<'CODE', <<'OUTPUT', 'macro label outside of macro declaration (TT #902)' );
+.macro While(conditional, code)
+
+.label $beginwhile:
+    unless .conditional goto .$endwhile
+    .code
+  goto .$beginwhile
+.label $endwhile:
+.endm
+
+.sub main
+.While($I0 < 3, {
+say $I0
+goto .$endwhile
+inc $I0
+})
+.end
+CODE
+/Invalid LABEL outside of macro/
 OUTPUT
 
 # Local Variables:

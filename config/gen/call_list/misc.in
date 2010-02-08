@@ -32,7 +32,7 @@ v    ii
 v    illllllll
 v    l
 v    p
-v    pbip     # for libsyck
+v    pbip
 v    pi
 v    piiii
 v    pl
@@ -59,6 +59,17 @@ P    JOPPPPP
 # Added for Tcl
 I    JOSI
 P    JOSII
+
+# Added for TclLibrary
+t    p3
+i    pp3p
+i    pp3
+i    ppd
+i    ptii
+i    pipi
+t    ptti
+t    pti
+t    pttti
 
 # libpast
 p    Ji
@@ -380,6 +391,11 @@ v    p
 
 p    ppiii
 p    ppiiiiiii
+i    ppii
+i    ppiii
+i    ppiiii
+i    ppiiiii
+i    ppiiiiii
 i    ppt
 i    pppi
 i    pppii

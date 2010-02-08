@@ -30,6 +30,7 @@ APitUE - W. Richard Stevens, AT&T SFIO, Perl 5 (Nick Ing-Simmons)
 
 #include "parrot/parrot.h"
 #include "io_private.h"
+#include "pmc/pmc_filehandle.h"
 
 #ifdef PIO_OS_UNIX
 
@@ -46,8 +47,8 @@ PARROT_CONST_FUNCTION
 static int convert_flags_to_unix(INTVAL flags);
 
 static INTVAL io_is_tty_unix(PIOHANDLE fd);
-#define ASSERT_ARGS_convert_flags_to_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_io_is_tty_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
+#define ASSERT_ARGS_convert_flags_to_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_io_is_tty_unix __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -352,6 +353,13 @@ Parrot_io_close_unix(PARROT_INTERP, ARGMOD(PMC *filehandle))
         if (flags & PIO_F_PIPE) {
             int status;
             waitpid(VTABLE_get_integer_keyed_int(interp, filehandle, 0), &status, 0);
+            if (WIFEXITED(status)) {
+                SETATTR_FileHandle_exit_status(interp, filehandle, WEXITSTATUS(status));
+            }
+            else {
+                /* abnormal termination means non-zero exit status */
+                SETATTR_FileHandle_exit_status(interp, filehandle, 1);
+            }
         }
     }
     Parrot_io_set_os_handle(interp, filehandle, -1);
@@ -502,7 +510,7 @@ Parrot_io_read_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
     STRING * const s = Parrot_io_make_string(interp, buf, 2048);
 
     const size_t len = s->bufused;
-    void * const buffer = s->strstart;
+    void * const buffer = Buffer_bufstart(s);
 
     for (;;) {
         const int bytes = read(file_descriptor, buffer, len);
@@ -512,9 +520,9 @@ Parrot_io_read_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
         }
         else if (bytes < 0) {
             switch (errno) {
-            case EINTR:
+              case EINTR:
                 continue;
-            default:
+              default:
                 s->bufused = s->strlen = 0;
                 return bytes;
             }
@@ -551,7 +559,7 @@ Parrot_io_write_unix(PARROT_INTERP, ARGIN(PMC *filehandle), ARGMOD(STRING *s))
     size_t to_write = s->bufused;
     size_t written  = 0;
 
-    write_through:
+  write_through:
     while (to_write > 0) {
         const int err = write(file_descriptor, ptr, to_write);
         if (err >= 0) {
@@ -599,24 +607,24 @@ Parrot_io_seek_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
 
     if (pos >= 0) {
         switch (whence) {
-            case SEEK_SET:
-                if (offset > Parrot_io_get_file_size(interp, filehandle)) {
-                    Parrot_io_set_file_size(interp, filehandle, offset);
+          case SEEK_SET:
+            if (offset > Parrot_io_get_file_size(interp, filehandle)) {
+                Parrot_io_set_file_size(interp, filehandle, offset);
+            }
+            break;
+          case SEEK_CUR:
+            {
+                const PIOOFF_T avail = offset
+                        + Parrot_io_get_buffer_next(interp, filehandle)
+                        - Parrot_io_get_buffer_start(interp, filehandle);
+                if (avail > Parrot_io_get_file_size(interp, filehandle)) {
+                    Parrot_io_set_file_size(interp, filehandle, avail);
                 }
-                break;
-            case SEEK_CUR:
-                {
-                    const PIOOFF_T avail = offset
-                            + Parrot_io_get_buffer_next(interp, filehandle)
-                            - Parrot_io_get_buffer_start(interp, filehandle);
-                    if (avail > Parrot_io_get_file_size(interp, filehandle)) {
-                        Parrot_io_set_file_size(interp, filehandle, avail);
-                    }
-                }
-                break;
-            case SEEK_END:
-            default:
-                break;
+             }
+            break;
+          case SEEK_END:
+          default:
+            break;
         }
 
         Parrot_io_set_file_position(interp, filehandle, pos);
@@ -756,7 +764,7 @@ Parrot_io_open_pipe_unix(PARROT_INTERP, ARGMOD(PMC *filehandle),
     }
 
 #  else
-    UNUSED(l);
+    UNUSED(filehandle);
     UNUSED(command);
     UNUSED(flags);
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,

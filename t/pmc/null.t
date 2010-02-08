@@ -19,10 +19,18 @@ Tests the Null PMC.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(1)
+    plan(3)
 
     new $P0, ['Null']
     ok(1, 'Instantiated a Null PMC')
+
+    new $P1, ['Null']
+    $I0 = issame $P0, $P1
+    ok ($I0, 'Null is same as Null')
+
+    new $P2, ['Undef']
+    $I0 = issame $P0, $P2
+    nok($I0, 'Null is not same as not Undef')
 .end
 
 # Local Variables:

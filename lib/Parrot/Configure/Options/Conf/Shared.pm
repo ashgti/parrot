@@ -30,6 +30,7 @@ our @shared_valid_options = qw{
     fatal-step
     floatval
     help
+    hintsfile
     icu-config
     icuheaders
     icushared
@@ -38,6 +39,7 @@ our @shared_valid_options = qw{
     inline
     intval
     jitcapable
+    buildframes
     languages
     ld
     ldflags

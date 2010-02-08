@@ -19,6 +19,15 @@ really slowing down the bytecode execution.
 
 */
 
+PARROT_DOES_NOT_RETURN
+static void
+null_pmc_access(PARROT_INTERP, int index)
+{
+    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_NULL_REG_ACCESS,
+            "Null PMC access in %s()",
+            Parrot_get_vtable_name(interp, index));
+}
+
 pmclass Null singleton {
 
 /*
@@ -59,6 +68,22 @@ Returns true if value is also a null PMC, false otherwise.
 */
     VTABLE INTVAL is_same(PMC *value) {
         return PMC_IS_NULL(value);
+    }
+
+/*
+
+=item C<PMC *find_method(STRING *method_name)>
+
+=cut
+
+Gives a more informative message than the automaticaaly generated version.
+
+*/
+
+    VTABLE PMC *find_method(STRING *method_name) {
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_NULL_REG_ACCESS,
+                "Null PMC access in find_method('%Ss')",
+                method_name);
     }
 
 }

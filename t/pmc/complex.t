@@ -91,19 +91,6 @@ Tests the Complex PMC.
     is( message, .M, .M )
 .endm
 
-.macro fp_eq_ok( J, K, L )
-    set $N10, .J
-    set $N11, .K
-    sub $N12, $N11, $N10
-    abs $N12, $N12
-
-    set $I0, 0
-    gt  $N12, 0.000001, .$FPEQNOK
-    set $I0, 1
-.label $FPEQNOK:
-    ok( $I0, .L )
-.endm
-
 .sub string_parsing
     $P0 = new ['Complex']
     $P1 = new ['String']
@@ -1174,29 +1161,36 @@ todo:
 .end
 
 .sub add_using_subclass_of_complex_bug_59630
-    skip( 3, 'add using subclass of Complex - RT #59630' )
-    .return()
-
     $P0 = subclass 'Complex', 'MyComplex'
     addattribute $P0, "re"
     addattribute $P0, "im"
 
-    .local pmc a, b, c
+    .local pmc a, b, c, expected
     ##   a = 1 + 2i
     a = new ['MyComplex']
     a['real'] = 1
     a['imag'] = 2
-    is( a, "1+2i", '' )
+    is( a, "1+2i", 'a created' )
 
     ##   b = 3 + 4i
     b = new ['MyComplex']
     b['real'] = 3
     b['imag'] = 4
-    is( b, "3+4i" , '' )
+    is( b, "3+4i" , 'b created' )
 
     ##   c = a + b
     c = add a, b
-    is( c, "4+6i", '' )
+    expected = new ['MyComplex']
+    expected['real'] = 4
+    expected['imag'] = 6
+    $I0 = c == expected
+    $S1 = c
+    $S0 = concat $S1, ' != '
+    $S1 = expected
+    $S0 = concat $S0, $S1
+    $S0 = concat $S0, ' - subclassing Complex add returns 0+0i - TT #562'
+    $I0 = not $I0    # invert $I0 so todo does not pass
+    todo( $I0, $S0 )
 .end
 
 .namespace ['MyComplex']

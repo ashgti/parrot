@@ -56,33 +56,63 @@ any value type.
     ##  %piropsig is a table of common opcode signatures
     .local pmc piropsig
     piropsig = new 'Hash'
-    piropsig['isa']        = 'IP~'
-    piropsig['isfalse']    = 'IP'
-    piropsig['isnull']     = 'IP'
-    piropsig['issame']     = 'IPP'
-    piropsig['istrue']     = 'IP'
     piropsig['add']        = 'PP+'
     piropsig['band']       = 'PPP'
     piropsig['bxor']       = 'PPP'
     piropsig['bnot']       = 'PP'
     piropsig['bor']        = 'PPP'
+    piropsig['can']        = 'IPs'
+    piropsig['chr']        = 'Si'
+    piropsig['clone']      = 'PP'
     piropsig['concat']     = 'PP~'
+    piropsig['copy']       = '0PP'
+    piropsig['defined']    = 'IP'
+    piropsig['die']        = 'v~'
     piropsig['div']        = 'PP+'
+    piropsig['does']       = 'IPs'
+    piropsig['downcase']   = 'Ss'
+    piropsig['elements']   = 'IP'
+    piropsig['exit']       = 'vi'
     piropsig['fdiv']       = 'PP+'
-    piropsig['find_name']  = 'P~'
+    piropsig['find_name']  = 'Ps'
+    piropsig['find_dynamic_lex'] = 'Ps'
     piropsig['getprop']    = 'P~P'
+    piropsig['index']      = 'Issi'
+    piropsig['isa']        = 'IP~'
+    piropsig['isfalse']    = 'IP'
+    piropsig['isnull']     = 'IP'
+    piropsig['issame']     = 'IPP'
+    piropsig['istrue']     = 'IP'
+    piropsig['join']       = 'SsP'
+    piropsig['length']     = 'Is'
+    piropsig['load_bytecode'] = 'vs'
+    piropsig['load_language'] = 'vs'
     piropsig['mod']        = 'PP+'
     piropsig['mul']        = 'PP+'
     piropsig['neg']        = 'PP'
     piropsig['newclosure'] = 'PP'
     piropsig['not']        = 'PP'
+    piropsig['ord']        = 'Isi'
+    piropsig['pop']        = 'PP'
+    piropsig['push']       = '0P*'
+    piropsig['repeat']     = 'Ssi'
+    piropsig['shift']      = 'PP'
     piropsig['shl']        = 'PP+'
     piropsig['shr']        = 'PP+'
+    piropsig['splice']     = 'PPii'
+    piropsig['split']      = 'Pss'
     piropsig['sub']        = 'PP+'
+    piropsig['substr']     = 'Ssiis'
     piropsig['pow']        = 'NN+'
     piropsig['print']      = 'v*'
+    piropsig['say']        = 'v*'
     piropsig['set']        = 'PP'
     piropsig['setprop']    = '0P~P'
+    piropsig['setattribute'] = '0P~P'
+    piropsig['sleep']      = 'v+'
+    piropsig['trace']      = 'vi'
+    piropsig['unshift']    = '0P*'
+    piropsig['upcase']     = 'Ss'
     set_global '%piropsig', piropsig
 
     ##  %valflags specifies when PAST::Val nodes are allowed to
@@ -104,7 +134,7 @@ any value type.
     $P0.'push'(.CONTROL_OK)
     $P0.'push'(.CONTROL_BREAK)
     $P0.'push'(.CONTROL_CONTINUE)
-    $P0.'push'(.CONTROL_ERROR)
+    #$P0.'push'(.CONTROL_ERROR)
     $P0.'push'(.CONTROL_TAKE)
     $P0.'push'(.CONTROL_LEAVE)
     $P0.'push'(.CONTROL_LOOP_NEXT)
@@ -112,14 +142,11 @@ any value type.
     $P0.'push'(.CONTROL_LOOP_REDO)
     controltypes['CONTROL']   = $P0
     $P0 = new 'ResizablePMCArray'
-    $P0.'push'(.CONTROL_TAKE)
-    controltypes['GATHER']   = $P0
+    $P0.'push'(.CONTROL_RETURN)
+    controltypes['RETURN']   = $P0
     $P0 = new 'ResizablePMCArray'
     $P0.'push'(.CONTROL_OK)
     controltypes['OK'] = $P0
-    $P0 = new 'ResizablePMCArray'
-    $P0.'push'(.CONTROL_LEAVE)
-    controltypes['LEAVE'] = $P0
     $P0 = new 'ResizablePMCArray'
     $P0.'push'(.CONTROL_BREAK)
     controltypes['BREAK'] = $P0
@@ -129,6 +156,12 @@ any value type.
     $P0 = new 'ResizablePMCArray'
     $P0.'push'(.CONTROL_ERROR)
     controltypes['ERROR'] = $P0
+    $P0 = new 'ResizablePMCArray'
+    $P0.'push'(.CONTROL_TAKE)
+    controltypes['GATHER']   = $P0
+    $P0 = new 'ResizablePMCArray'
+    $P0.'push'(.CONTROL_LEAVE)
+    controltypes['LEAVE'] = $P0
     $P0 = new 'ResizablePMCArray'
     $P0.'push'(.CONTROL_LOOP_NEXT)
     controltypes['NEXT'] = $P0
@@ -174,7 +207,7 @@ Compile the abstract syntax tree given by C<past> into POST.
     set_global '@?BLOCK', blockpast
   have_blockpast:
     null $P0
-    set_global '$?SUB', $P0                                # see RT#49758
+    set_global '$?SUB', $P0
     .tailcall self.'as_post'(past, 'rtype'=>'v')
 .end
 
@@ -748,18 +781,33 @@ Return the POST representation of a C<PAST::Block>.
     unshift blockpast, node
 
     .local string name, pirflags, blocktype
-    .local pmc subid, ns, hll
+    .local pmc nsentry, subid, ns, hll
     name = node.'name'()
     pirflags = node.'pirflags'()
     blocktype = node.'blocktype'()
+    nsentry = node.'nsentry'()
     subid = node.'subid'()
     ns = node.'namespace'()
     hll = node.'hll'()
+
+    ##  handle nsentry attribute
+    $I0 = defined nsentry
+    unless $I0 goto nsentry_done
+    unless nsentry goto nsentry_anon
+    $S0 = self.'escape'(nsentry)
+    pirflags = concat pirflags, ' :nsentry('
+    pirflags = concat pirflags, $S0
+    pirflags = concat pirflags, ')'
+    goto nsentry_done
+  nsentry_anon:
+    pirflags = concat pirflags, ' :anon'
+  nsentry_done:
 
     ##  handle anonymous blocks
     if name goto have_name
     name = self.'unique'('_block')
     if ns goto have_name
+    if nsentry goto have_name
     pirflags = concat pirflags, ' :anon'
   have_name:
 
@@ -893,7 +941,6 @@ Return the POST representation of a C<PAST::Block>.
     $S0 = self.'uniquereg'('P')
     bpost.'push_pirop'('getattribute', $S0, 'exception', '"payload"')
     bpost.'push_pirop'('return', $S0)
-    bpost.'push_pirop'('rethrow', 'exception')
     goto sub_done
   control_past:
     $P0 = self.'as_post'(ctrlpast, 'rtype'=>'*')
@@ -988,6 +1035,8 @@ the node's "pasttype" attribute.
     unless $I0 goto have_lvalue
     $P0 = node[0]
     if null $P0 goto have_lvalue
+    $I1 = exists $P0['lvalue']
+    if $I1 goto have_lvalue
     $P0.'lvalue'($I0)
   have_lvalue:
 
@@ -1029,8 +1078,16 @@ a 'pasttype' of 'pirop'.
     pirop = node.'pirop'()
     ##  see if pirop is of form "pirop signature"
     $I0 = index pirop, ' '
-    if $I0 < 0 goto pirop_1
+    if $I0 < 0 goto pirop_0
     $I1 = $I0 + 1
+    signature = substr pirop, $I1
+    pirop = substr pirop, 0, $I0
+    goto have_signature
+  pirop_0:
+    ##  see if pirop is of form "pirop__signature"
+    $I0 = index pirop, '__'
+    if $I0 < 0 goto pirop_1
+    $I1 = $I0 + 2
     signature = substr pirop, $I1
     pirop = substr pirop, 0, $I0
     goto have_signature
@@ -1187,11 +1244,13 @@ a 'pasttype' of if/unless.
 
     exprpost = self.'as_post'(exprpast, 'rtype'=>exprrtype)
 
+    .local pmc jmpstack
+    jmpstack = new 'ResizableIntegerArray'
     childpast = thenpast
-    bsr make_childpost
+    local_branch jmpstack, make_childpost
     thenpost = childpost
     childpast = elsepast
-    bsr make_childpost
+    local_branch jmpstack, make_childpost
     elsepost = childpost
 
     if null elsepost goto no_elsepost
@@ -1241,7 +1300,7 @@ a 'pasttype' of if/unless.
     unless result goto ret_childpost
     childpost = self.'coerce'(childpost, result)
   ret_childpost:
-    ret
+    local_return jmpstack
 .end
 
 .sub 'unless' :method :multi(_, ['PAST';'Op'])
@@ -1832,8 +1891,7 @@ node with a 'pasttype' of bind.
 
 =item copy(PAST::Op node)
 
-Implement a 'copy' assignment (at least until we get the 'copy'
-opcode -- see RT#47828).
+Implement a 'copy' assignment (at least until we get the 'copy' opcode).
 
 =cut
 
@@ -2002,7 +2060,12 @@ attribute.
     .local pmc viviself, vivipost, vivilabel
     viviself = node.'viviself'()
     vivipost = self.'as_vivipost'(viviself, 'rtype'=>'P')
-    ops.'result'(vivipost)
+    .local string result
+    result = vivipost.'result'()
+    unless result == '' goto have_result
+    result = self.'uniquereg'('P')
+  have_result:
+    ops.'result'(result)
     ops.'push'(fetchop)
     unless viviself goto vivipost_done
     $P0 = get_hll_global ['POST'], 'Label'
@@ -2028,7 +2091,8 @@ attribute.
     subpost = get_global '$?SUB'
 
     ##  determine lexical, register, and parameter names
-    .local string name, named, pname, has_pname
+    .local string named, pname, has_pname
+    .local pmc name
     name = node.'name'()
     named = node.'named'()
     pname = self.'unique'('param_')
@@ -2054,13 +2118,17 @@ attribute.
     goto param_done
 
   param_required:
-    .local int slurpy
+    .local int call_sig, slurpy
+    call_sig = node.'call_sig'()
     slurpy = node.'slurpy'()
-    subpost.'add_param'(pname, 'named'=>named, 'slurpy'=>slurpy)
+    subpost.'add_param'(pname, 'named'=>named, 'slurpy'=>slurpy, 'call_sig'=>call_sig)
 
   param_done:
+    $I0 = defined name
+    unless $I0 goto param_lex_done
     name = self.'escape'(name)
     ops.'push_pirop'('.lex', name, ops)
+  param_lex_done:
     .return (ops)
 .end
 
@@ -2149,6 +2217,52 @@ attribute.
     .tailcall $P0.'new'(name, bindpost, 'pirop'=>'store_lex', 'result'=>bindpost)
   lexical_bind_decl:
     .tailcall $P0.'new'(name, bindpost, 'pirop'=>'.lex', 'result'=>bindpost)
+.end
+
+
+.sub 'contextual' :method :multi(_, ['PAST';'Var'])
+    .param pmc node
+    .param pmc bindpost
+    # If we've requested a contextual in a block that
+    # explicitly declares the variable as a different type,
+    # treat it as that type.
+    .local string name
+    name = node.'name'()
+    $P0 = get_global '@?BLOCK'
+    $P0 = $P0[0]
+    $P0 = $P0.'symtable'()
+    unless $P0 goto contextual
+    $P0 = $P0[name]
+    if null $P0 goto contextual
+    $S0 = $P0['scope']
+    unless $S0 goto contextual
+    if $S0 == 'contextual' goto contextual
+    .tailcall self.$S0(node, bindpost)
+
+  contextual:
+    # If this is a declaration, treat it like a normal lexical
+    .local int isdecl
+    isdecl = node.'isdecl'()
+    if isdecl goto contextual_lex
+
+    name = self.'escape'(name)
+    if bindpost goto contextual_bind
+
+  contextual_post:
+    .local pmc ops, fetchop, storeop
+    $P0 = get_hll_global ['POST'], 'Ops'
+    ops = $P0.'new'('node'=>node)
+    $P0 = get_hll_global ['POST'], 'Op'
+    fetchop = $P0.'new'(ops, name, 'pirop'=>'find_dynamic_lex')
+    storeop = $P0.'new'(name, ops, 'pirop'=>'store_dynamic_lex')
+    .tailcall self.'vivify'(node, ops, fetchop, storeop)
+
+  contextual_bind:
+    $P0 = get_hll_global ['POST'], 'Op'
+    .tailcall $P0.'new'(name, bindpost, 'pirop'=>'store_dynamic_lex', 'result'=>bindpost)
+
+  contextual_lex:
+    .tailcall self.'lexical'(node, bindpost)
 .end
 
 
@@ -2251,8 +2365,9 @@ attribute.
     .tailcall self.'vivify'(node, ops, fetchop, storeop)
 
   attribute_bind:
-    $P0 = get_hll_global ['POST'], 'Op'
-    .tailcall $P0.'new'(call_on, name, bindpost, 'pirop'=>'setattribute', 'result'=>bindpost)
+    ops.'push_pirop'('setattribute', call_on, name, bindpost)
+    ops.'result'(bindpost)
+    .return (ops)
 .end
 
 
@@ -2341,7 +2456,16 @@ to have a PMC generated containing the constant value.
     .local string rtype
     rtype = options['rtype']
     $I0 = index valflags, rtype
+    if $I0 < 0 goto result_convert
+    ops.'result'(value)
+    .return (ops)
+
+  result_convert:
+    # handle int-to-num conversion here
+    if rtype != 'n' goto result_pmc
+    $I0 = index valflags, 'i'
     if $I0 < 0 goto result_pmc
+    value = concat value, '.0'
     ops.'result'(value)
     .return (ops)
 

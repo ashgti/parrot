@@ -111,7 +111,7 @@ e2:
     a()
     collect
     a()
-    ok(1, 'register and non-register string keys should be COW (RT #60128)' )
+    ok(1, 'register and non-register string keys should be COW' )
 .end
 
 # support for do_not_collect_string_keys_early_rt_60128
@@ -169,7 +169,6 @@ code
 .namespace []
 
 .sub prepare_lib :init
-  load_bytecode 'PGE.pbc'
   $P0 = get_class 'Sub'
   $P1 = subclass $P0, 'TclProc'
   $P1 = new ['ResizablePMCArray']

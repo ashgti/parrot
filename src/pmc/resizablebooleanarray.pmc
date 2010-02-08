@@ -30,7 +30,7 @@ C<ResizableBooleanArray PMC> extends the C<FixedBooleanArray PMC>.
 /* Convert a size in bits to a size in bytes */
 #define BITS_TO_BYTES(size) ((size) / BITS_PER_CHAR)
 
-pmclass ResizableBooleanArray extends FixedBooleanArray need_ext provides array {
+pmclass ResizableBooleanArray extends FixedBooleanArray auto_attrs provides array {
     /* RBA uses the same attributes as FBA, but in RBA they're used as follows:
        size:             position of the last element (a.k.a tail_pos)
        resize_threshold: position of the first element (a.k.a. head_pos) */
@@ -392,7 +392,7 @@ Returns a copy of the array.
 
         SET_ATTR_bit_array(INTERP, dest, dest_bit_array);
 
-        PObj_active_destroy_SET(dest);
+        PObj_custom_destroy_SET(dest);
         return dest;
     }
 
@@ -404,14 +404,14 @@ Returns a copy of the array.
 
 =over 4
 
-=item C<void freeze(visit_info *info)>
+=item C<void freeze(PMC *info)>
 
 Used to archive the string.
 
 =cut
 
 */
-    VTABLE void freeze(visit_info *info) {
+    VTABLE void freeze(PMC *info) {
         /* XXX Dino - I'm concerned about freezing the entire
             allocated block of memory, it's dependent on the
             BITS_PER_CHAR value.
@@ -422,42 +422,36 @@ Used to archive the string.
         STRING           *s;
         UINTVAL           tail_pos, rounded_size, head_pos;
         unsigned char    *bit_array;
-        IMAGE_IO * const  io = info->image_io;
 
         GET_ATTR_size(INTERP, SELF, tail_pos);
         GET_ATTR_resize_threshold(INTERP, SELF, head_pos);
         GET_ATTR_bit_array(INTERP, SELF, bit_array);
         rounded_size = ROUND_BYTES(tail_pos);
 
-        VTABLE_push_integer(INTERP, io, head_pos);
-        VTABLE_push_integer(INTERP, io, tail_pos);
+        VTABLE_push_integer(INTERP, info, head_pos);
+        VTABLE_push_integer(INTERP, info, tail_pos);
 
         s = Parrot_str_new(INTERP, (char*)bit_array, rounded_size);
 
-        VTABLE_push_string(INTERP, io, s);
+        VTABLE_push_string(INTERP, info, s);
     }
 
 /*
 
-=item C<void thaw(visit_info *info)>
+=item C<void thaw(PMC *info)>
 
 Used to unarchive the string.
 
 =cut
 
 */
-    VTABLE void thaw(visit_info *info) {
+    VTABLE void thaw(PMC *info) {
         unsigned char   *bit_array;
-        IMAGE_IO * const io       = info->image_io;
-        const UINTVAL    head_pos = VTABLE_shift_integer(INTERP, io);
-        const UINTVAL    tail_pos = VTABLE_shift_integer(INTERP, io);
-        STRING * const   s        = VTABLE_shift_string(INTERP, io);
+        const UINTVAL    head_pos = VTABLE_shift_integer(INTERP, info);
+        const UINTVAL    tail_pos = VTABLE_shift_integer(INTERP, info);
+        STRING * const   s        = VTABLE_shift_string(INTERP, info);
 
-        bit_array      = (unsigned char *)mem_sys_allocate_zeroed(s->bufused);
-        mem_sys_memcopy(bit_array, (unsigned char *)s->strstart, s->bufused);
-        PMC_data(SELF) =
-            mem_allocate_zeroed_typed(Parrot_ResizableBooleanArray_attributes);
-
+        bit_array      = (unsigned char*)Parrot_str_to_cstring(INTERP, s);
         SET_ATTR_size(INTERP, SELF, tail_pos);
         SET_ATTR_resize_threshold(INTERP, SELF, head_pos);
         SET_ATTR_bit_array(INTERP, SELF, bit_array);

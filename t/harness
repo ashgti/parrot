@@ -1,9 +1,10 @@
 #!perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2009, Parrot Foundation.
 # $Id$
 
 use strict;
 use warnings;
+use Data::Dumper;$Data::Dumper::Indent=1;
 use lib qw( lib );
 
 use Getopt::Std;
@@ -13,7 +14,7 @@ use Test::Harness ();
 undef $Test::Harness::Switches;
 
 use Parrot::Harness::DefaultTests qw(
-    get_default_tests
+    get_common_tests
     @developing_tests
 );
 use Parrot::Harness::Options qw(
@@ -30,12 +31,10 @@ use Parrot::Harness::Smoke qw(
 local @ARGV = @ARGV;
 (my $longopts, @ARGV) = handle_long_options(@ARGV);
 
-$ENV{RUNNING_MAKE_TEST} = $longopts->{running_make_test};
-
 # Suck the short options into the TEST_PROG_ARGS
 # environmental variable.
 my %opts;
-getopts('wgjPCSefbvdr?hO:D:', \%opts);
+getopts('wgGjPCSefbvdr?hO:D:', \%opts);
 
 if ($opts{'?'} || $opts{h} || $longopts->{help}) {
     Usage();
@@ -50,19 +49,15 @@ my $args = get_test_prog_args(
 );
 $ENV{TEST_PROG_ARGS} = $args;
 
-# now build the list of tests to run, either from the command
-# line or from @default tests
-my @default_tests = get_default_tests(
-    $longopts->{core_tests_only},
-    $longopts->{runcore_tests_only}
-);
-
 my @tests;
 if ($longopts->{code}) {
     @tests = @developing_tests;
 }
 else {
-    @tests = map { glob($_) } (@ARGV ? @ARGV : @default_tests);
+    @tests = map { glob($_) } (@ARGV
+        ? @ARGV
+        : get_common_tests( $longopts )
+    );
 }
 
 my $harness;
@@ -119,7 +114,6 @@ else {
     }
     my $results = $harness->runtests(@tests);
 
-    # a non-zero code stops make after test failures (RT #60116)
     exit ( $results->all_passed() ? 0 : 1 );
 }
 
@@ -145,9 +139,13 @@ Turn warnings on.
 
 Run the C<CGoto> core.
 
+=item C<-G>
+
+Run the C<GCDebug> core.
+
 =item C<-j>
 
-Run with JIT enabled.
+Alias for running with the fast core.
 
 =item C<-C>
 
@@ -188,10 +186,6 @@ See 'parrot --help-debug' for available flags.
 There are also long command line options:
 
 =over 4
-
-=item C<--running-make-test>
-
-Some test scripts run more quickly when this is set.
 
 =item C<--gc-debug>
 

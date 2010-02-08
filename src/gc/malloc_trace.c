@@ -17,8 +17,6 @@
 #  include <asm/signal.h>
 #endif
 
-#include "malloc-trace.h"
-
 #define ACTION_BUF_SIZE 1024
 #define TIMESTAMP_FREQ  50
 #define LOG_NAME "/tmp/mtrace"
@@ -40,7 +38,7 @@ src/malloc-trace.c
 
 =head1 DESCRIPTION
 
-RT#48264
+TT #292
 
 =head2 Functions
 

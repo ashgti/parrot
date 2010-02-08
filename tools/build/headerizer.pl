@@ -14,13 +14,13 @@ files from .c files
 
 =head1 SYNOPSIS
 
-Update the headers in F<include/parrot> with the function declarations in
-the F<*.pmc> or F<*.c> files that correspond to the F<*.o> files passed
-on the command line.
-
     % perl tools/build/headerizer.pl OBJFILES
 
 =head1 DESCRIPTION
+
+Update the headers in F<include/parrot> with the function declarations in
+the F<*.pmc> or F<*.c> files that correspond to the F<*.o> files passed
+on the command line.
 
 =head1 TODO
 
@@ -405,14 +405,15 @@ sub make_function_decls {
         if(length($func->{name}) > 29) {
             $assert .= " \\\n    ";
         }
-        $assert .= " __attribute__unused__ int _ASSERT_ARGS_CHECK = ";
+        $assert .= " __attribute__unused__ int _ASSERT_ARGS_CHECK = (";
         if(@asserts) {
             $assert .= "\\\n       ";
-            $assert .= join(" \\\n    || ", @asserts);
+            $assert .= join(" \\\n    , ", @asserts);
         }
         else {
             $assert .= "0";
         }
+        $assert .= ")";
         push(@decls, $assert);
     }
 
@@ -653,6 +654,8 @@ Tells the headerizer where the declarations for the functions should go
 
     # In file bar.c
     /* HEADERIZER HFILE: foo.h */
+
+=back
 
 =cut
 

@@ -70,23 +70,23 @@ static void rec_climb_back_and_mark(
     ARGIN(parrot_prm_context* c))
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS__drand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__erand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__jrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__lrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__mrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__nrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS__srand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_COMPARE __attribute__unused__ int _ASSERT_ARGS_CHECK = \
+#define ASSERT_ARGS__drand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__erand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__jrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__lrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__mrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__nrand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS__srand48 __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_COMPARE __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    || PARROT_ASSERT_ARG(a) \
-    || PARROT_ASSERT_ARG(b) \
-    || PARROT_ASSERT_ARG(cmp)
-#define ASSERT_ARGS_next_rand __attribute__unused__ int _ASSERT_ARGS_CHECK = 0
-#define ASSERT_ARGS_process_cycle_without_exit __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(c)
-#define ASSERT_ARGS_rec_climb_back_and_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = \
-       PARROT_ASSERT_ARG(c)
+    , PARROT_ASSERT_ARG(a) \
+    , PARROT_ASSERT_ARG(b) \
+    , PARROT_ASSERT_ARG(cmp))
+#define ASSERT_ARGS_next_rand __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_process_cycle_without_exit __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(c))
+#define ASSERT_ARGS_rec_climb_back_and_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(c))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -544,9 +544,11 @@ PMC*
 tm_to_array(PARROT_INTERP, ARGIN(const struct tm *tm))
 {
     ASSERT_ARGS(tm_to_array)
-    PMC * const Array = pmc_new(interp, enum_class_Array);
 
+    PMC * const Array = pmc_new(interp,
+        Parrot_get_ctx_HLL_type(interp, enum_class_FixedIntegerArray));
     VTABLE_set_integer_native(interp, Array, 9);
+
     VTABLE_set_integer_keyed_int(interp, Array, 0, tm->tm_sec);
     VTABLE_set_integer_keyed_int(interp, Array, 1, tm->tm_min);
     VTABLE_set_integer_keyed_int(interp, Array, 2, tm->tm_hour);
@@ -631,7 +633,7 @@ Parrot_byte_rindex(SHIM_INTERP, ARGIN(const STRING *base),
 {
     ASSERT_ARGS(Parrot_byte_rindex)
     const INTVAL searchlen          = search->strlen;
-    const char * const search_start = search->strstart;
+    const char * const search_start = (const char *)Buffer_bufstart(search);
     UINTVAL max_possible_offset     = (base->strlen - search->strlen);
     INTVAL current_offset;
 
@@ -640,7 +642,7 @@ Parrot_byte_rindex(SHIM_INTERP, ARGIN(const STRING *base),
 
     for (current_offset = max_possible_offset; current_offset >= 0;
             current_offset--) {
-        const char * const base_start = (char *)base->strstart + current_offset;
+        const char * const base_start = (char *)Buffer_bufstart(base) + current_offset;
         if (memcmp(base_start, search_start, searchlen) == 0) {
             return current_offset;
         }
@@ -906,6 +908,7 @@ static INTVAL
 COMPARE(PARROT_INTERP, ARGIN(void *a), ARGIN(void *b), ARGIN(PMC *cmp))
 {
     ASSERT_ARGS(COMPARE)
+    INTVAL result = 0;
     if (PMC_IS_NULL(cmp))
         return VTABLE_cmp(interp, (PMC *)a, (PMC *)b);
 
@@ -914,7 +917,8 @@ COMPARE(PARROT_INTERP, ARGIN(void *a), ARGIN(void *b), ARGIN(PMC *cmp))
         return f(interp, a, b);
     }
 
-    return Parrot_runops_fromc_args_reti(interp, cmp, "IPP", a, b);
+    Parrot_pcc_invoke_sub_from_c_args(interp, cmp, "PP->I", a, b, &result);
+    return result;
 }
 
 /*

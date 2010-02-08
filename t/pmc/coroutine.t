@@ -14,7 +14,7 @@ t/pmc/coroutines.t - Coroutines
 
 =head1 SYNOPSIS
 
-    % prove t/pmc/coroutines.t
+    % prove t/pmc/coroutine.t
 
 =head1 DESCRIPTION
 
@@ -308,7 +308,7 @@ ex:
 CODE
 
 pir_output_like(
-    <<'CODE', <<'OUTPUT', "Call an exited coroutine", todo => 'goes one iteration too far.' );
+    <<'CODE', <<'OUTPUT', "Call an exited coroutine", todo => 'goes one iteration too far TT #1003' );
 .sub main :main
     .local pmc c
     c = get_global "coro"
