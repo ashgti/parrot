@@ -1206,34 +1206,6 @@ Parrot_gc_destroy_memory_pools(PARROT_INTERP)
     }
 }
 
-/*
-
-=item C<int Parrot_gc_ptr_in_memory_pool(PARROT_INTERP, void *bufstart)>
-
-Determines if the given C<bufstart> pointer points to a location inside the
-memory pool. Returns 1 if the pointer is in the memory pool, 0 otherwise.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-int
-Parrot_gc_ptr_in_memory_pool(PARROT_INTERP, ARGIN(void *bufstart))
-{
-    ASSERT_ARGS(Parrot_gc_ptr_in_memory_pool)
-    Variable_Size_Pool * const pool = interp->mem_pools->memory_pool;
-    Memory_Block * cur_block = pool->top_block;
-
-    while (cur_block) {
-        if ((char *)bufstart >= cur_block->start &&
-            (char *) bufstart < cur_block->start + cur_block->size) {
-            return 1;
-        }
-        cur_block = cur_block->prev;
-    }
-    return 0;
-}
 
 /*
 
