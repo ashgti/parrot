@@ -1,11 +1,11 @@
-#! ../../parrot
+#! ./parrot
 
-.include 't/common.pir'
+.include 'compilers/opsc/t/common.pir'
 
 .sub 'main' :main
 
     .include 'test_more.pir'
-    load_bytecode 'opsc.pbc'
+    load_bytecode 'compilers/opsc/opsc.pbc'
 
     plan(12)
 

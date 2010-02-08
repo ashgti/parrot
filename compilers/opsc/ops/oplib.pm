@@ -3,18 +3,22 @@
 
 class Ops::OpLib;
 
-=head1 NAME
+=begin NAME
 
 C<Ops::OpLib> - library of Parrot Operations.
 
-=head1 DESCRIPTION
+=end NAME
+
+=begin DESCRIPTION
 
 Responsible for loading F<src/ops/ops.num> and F<src/ops/ops.skip> files,
 parse F<.ops> files, sort them, etc.
 
 Heavily inspired by Perl5 Parrot::Ops2pm.
 
-=head1 SYNOPSIS
+=end DESCRIPTION
+
+=begin SYNOPSIS
 
     my $oplib := Ops::OpLib.new.BUILD(
         :files(@files),
@@ -22,7 +26,9 @@ Heavily inspired by Perl5 Parrot::Ops2pm.
         :skip_file('../../src/ops/ops.skip'),
     ));
 
-=head1 ATTRIBUTES
+=end SYNOPSIS
+
+=begin ATTRIBUTES
 
 =over 4
 
@@ -79,7 +85,9 @@ they are useless and/or silly."
 
 =back
 
-=head1 METHODS
+=end ATTRIBUTES
+
+=begin METHODS
 
 =over 4
 
@@ -89,7 +97,7 @@ Build OpLib.
 
 (It's NQP. In Perl 6 it should be submethod and invoked automatically)
 
-=cut
+=end METHODS
 
 method BUILD(:@files, :$num_file, :$skip_file) {
     # Process arguments
@@ -111,13 +119,15 @@ method BUILD(:@files, :$num_file, :$skip_file) {
     self;
 }
 
+=begin METHODS
+
 =item C<parse_ops>
 
 Parse all ops files passed to BUILD method. Create self.ops list for parsed
 ops.  This function is used primarily for testing.  When invoked directly, the
 HLLCompiler sets the past directly.
 
-=cut
+=end METHODS
 
 method parse_ops() {
     for self.files() {
@@ -127,11 +137,13 @@ method parse_ops() {
     }
 }
 
+=begin METHODS
+
 =item C<parse_ops_file>
 
 Parse single ops file. Returns list of parsed ops.
 
-=cut
+=end METHODS
 
 method parse_ops_file($file) {
     my $parser := self._get_compiler();
@@ -142,26 +154,32 @@ method parse_ops_file($file) {
     $past<ops>;
 }
 
+=begin METHODS
+
 =item C<set_ops_past>
 
 Assign an already-constructed past tree to self.
 
-=cut
+=end METHODS
 
 method set_ops_past($past) {
     self<ops_past> := $past;
 }
 
+=begin METHODS
+
 =item C<load_op_map_files>
 
 Load ops.num and ops.skip files.
 
-=cut
+=end METHODS
 
 method load_op_map_files() {
     self._load_num_file();
     self._load_skip_file();
 }
+
+=begin METHODS
 
 =item C<build_ops>
 
@@ -169,7 +187,7 @@ Take C<ops_past> and do any runcore-agnostic processing on it.  This means such
 things as expanding opcodes with C<in> params into multiple functions,
 determining jump flags, etc.
 
-=cut
+=end METHODS
 
 method build_ops() {
     
@@ -217,11 +235,13 @@ method build_ops() {
 
 }
 
+=begin METHODS
+
 =item C<get_jump_flags>
 
 Process the body of this op to figure out which jump flags need to be set.
 
-=cut
+=end METHODS
 
 method get_jump_flags($op) {
     my %jumps;
@@ -326,12 +346,12 @@ method _load_skip_file() {
 
 
 method _get_compiler() {
-    PIR q< 
+    Q:PIR { 
         %r = compreg 'Ops'
-    >;
+    };
 }
 
-=head2 ACCESSORS
+=begin ACCESSORS
 
 Various methods for accessing internals.
 
@@ -347,7 +367,7 @@ Various methods for accessing internals.
 
 =item * C<skiptable>
 
-=cut
+=end ACCESSORS
 
 method ops_past() {
     self<ops_past>;

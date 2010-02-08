@@ -38,8 +38,6 @@ sub _init {
 
         'compilers/ncigen/Makefile'  =>
             { SOURCE => 'compilers/ncigen/config/makefiles/ncigen.in' },
-        'compilers/opsc/Makefile'    =>
-            { SOURCE => 'config/gen/makefiles/opsc.in' },
         'src/dynpmc/Makefile'        =>
             { SOURCE => 'config/gen/makefiles/dynpmc.in' },
         'src/dynoplibs/Makefile'     =>

@@ -7,7 +7,7 @@
     .local pmc p6meta
     p6meta = new 'P6metaclass'
 
-    p6meta.'new_class'('Ops::Compiler', 'parent'=>'PCT::HLLCompiler')
+    p6meta.'new_class'('Ops::Compiler', 'parent'=>'HLL::Compiler')
 
     # Register grammar and action
     $P0 = new [ 'Ops';'Compiler' ]
@@ -50,18 +50,18 @@
 .end
 
 
-.include 'builtins.pir'
-.include 'compiler/gen_grammar.pir'
-.include 'compiler/gen_actions.pir'
-.include 'ops/oplib.pir'
-.include 'ops/gen_oplib.pir'
+.include 'compilers/opsc/builtins.pir'
+.include 'compilers/opsc/compiler/gen_grammar.pir'
+.include 'compilers/opsc/compiler/gen_actions.pir'
+.include 'compilers/opsc/ops/oplib.pir'
+.include 'compilers/opsc/ops/gen_oplib.pir'
 
-.include 'runcore/gen_base.pir'
-.include 'runcore/gen_c.pir'
-.include 'runcore/gen_cgoto.pir'
-.include 'runcore/gen_cprederef.pir'
-.include 'runcore/gen_cgp.pir'
-.include 'runcore/gen_cswitch.pir'
+.include 'compilers/opsc/runcore/gen_base.pir'
+.include 'compilers/opsc/runcore/gen_c.pir'
+.include 'compilers/opsc/runcore/gen_cgoto.pir'
+.include 'compilers/opsc/runcore/gen_cprederef.pir'
+.include 'compilers/opsc/runcore/gen_cgp.pir'
+.include 'compilers/opsc/runcore/gen_cswitch.pir'
 
 # Local Variables:
 #   mode: pir

@@ -15,7 +15,7 @@
     .tailcall $P0.'command_line'(args, 'encoding'=>'utf8', 'transcode'=>'ascii')
 .end
 
-.include 'opsc_core.pir'
+.include 'compilers/opsc/opsc_core.pir'
 
 # Local Variables:
 #   mode: pir

@@ -4,20 +4,20 @@
 
 # opsc_core contains everything except nqp.pbc
 PIR q<
-    load_bytecode "opsc_core.pbc"
+    load_bytecode "compilers/opsc/opsc_core.pbc"
 >;
 
 plan(6);
 
 my @files := qw{
-    ../../src/ops/core.ops
-    ../../src/ops/math.ops
+    src/ops/core.ops
+    src/ops/math.ops
 };
 
 my $lib := Ops::OpLib.new.BUILD(
     :files(@files),
-    :num_file('../../src/ops/ops.num'),
-    :skip_file('../../src/ops/ops.skip'),
+    :num_file('src/ops/ops.num'),
+    :skip_file('src/ops/ops.skip'),
 );
 
 $lib.parse_ops();

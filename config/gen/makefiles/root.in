@@ -117,6 +117,7 @@ include compilers/tge/Defines.mak
 include compilers/nqp/Defines.mak
 include compilers/pge/Defines.mak
 include compilers/pct/Defines.mak
+include compilers/opsc/Defines.mak
 include ext/nqp-rx/Defines.mak
 include compilers/data_json/Defines.mak
 include compilers/json/Defines.mak
@@ -2473,6 +2474,7 @@ include compilers/pirc/Rules.mak
 include compilers/nqp/Rules.mak
 include compilers/pge/Rules.mak
 include compilers/pct/Rules.mak
+include compilers/opsc/Rules.mak
 include compilers/tge/Rules.mak
 include compilers/data_json/Rules.mak
 include compilers/json/Rules.mak

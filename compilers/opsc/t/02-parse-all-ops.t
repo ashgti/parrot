@@ -1,10 +1,10 @@
 #! ../../parrot
 
-.include 't/common.pir'
+.include 'compilers/opsc/t/common.pir'
 
 .sub 'main' :main
     .include 'test_more.pir'
-    load_bytecode 'opsc.pbc'
+    load_bytecode 'compilers/opsc/opsc.pbc'
 
     .local int total
     .local pmc os, all_files, ops_files, dynops_files
