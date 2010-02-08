@@ -330,7 +330,7 @@ debug_print_buf(PARROT_INTERP, ARGIN(const Buffer *b))
 
 =over 4
 
-=item C<void compact_pool(PARROT_INTERP, Memory_Pools *mem_pools,
+=item C<void compact_pool(PARROT_INTERP, Memory_Pools * const mem_pools,
 Variable_Size_Pool *pool)>
 
 Compact the string buffer pool. Does not perform a GC scan, or mark items

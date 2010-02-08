@@ -438,28 +438,6 @@ int Parrot_gc_trace_root(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/mark_sweep.c */
 
-/* HEADERIZER BEGIN: src/gc/pools.c */
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-Fixed_Size_Pool * get_bufferlike_pool(PARROT_INTERP, size_t buffer_size)
-        __attribute__nonnull__(1);
-
-PARROT_IGNORABLE_RESULT
-int /*@alt void@*/
-header_pools_iterate_callback(PARROT_INTERP,
-    int flag,
-    ARGIN_NULLOK(void *arg),
-    NOTNULL(pool_iter_fn func))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(4);
-
-void initialize_fixed_size_pools(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
-/* HEADERIZER END: src/gc/pools.c */
 
 /* HEADERIZER BEGIN: src/gc/alloc_resources.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
