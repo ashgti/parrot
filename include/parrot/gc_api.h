@@ -233,10 +233,6 @@ void Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
 
-int Parrot_gc_get_pmc_index(PARROT_INTERP, ARGIN(PMC* pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 size_t Parrot_gc_headers_alloc_since_last_collect(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -388,9 +384,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
 #define ASSERT_ARGS_Parrot_gc_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(s))
-#define ASSERT_ARGS_Parrot_gc_get_pmc_index __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_headers_alloc_since_last_collect \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
