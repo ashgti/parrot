@@ -191,7 +191,7 @@ Parrot_gc_trace_root(PARROT_INTERP,
     mark_context_start();
 
     if (trace == GC_TRACE_SYSTEM_ONLY) {
-        trace_system_areas(interp);
+        trace_system_areas(interp, mem_pools);
         return 0;
     }
 
@@ -250,7 +250,7 @@ Parrot_gc_trace_root(PARROT_INTERP,
     Parrot_IOData_mark(interp, interp->piodata);
 
     if (trace == GC_TRACE_FULL)
-        trace_system_areas(interp);
+        trace_system_areas(interp, mem_pools);
 
     /* quick check to see if we have already marked all impatient PMCs. If we
        have, return 0 and exit here. This will alert other parts of the GC

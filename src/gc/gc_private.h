@@ -269,11 +269,14 @@ typedef struct Memory_Pools {
 /* HEADERIZER BEGIN: src/gc/system.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-void trace_system_areas(PARROT_INTERP)
-        __attribute__nonnull__(1);
+void trace_system_areas(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 #define ASSERT_ARGS_trace_system_areas __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/system.c */
 
