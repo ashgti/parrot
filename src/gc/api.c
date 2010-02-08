@@ -225,7 +225,7 @@ Parrot_gc_mark_PObj_alive(PARROT_INTERP, ARGMOD(PObj *obj))
         PMC * const p = (PMC *)obj;
 
         if (PObj_is_special_PMC_TEST(obj))
-            mark_special(interp, p);
+            mark_special(interp, interp->mem_pools, p);
 
         else if (PMC_metadata(p))
             Parrot_gc_mark_PMC_alive(interp, PMC_metadata(p));
@@ -349,8 +349,8 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     }
 
     initialize_var_size_pools(interp, interp->mem_pools);
-    initialize_fixed_size_pools(interp);
-    Parrot_gc_initialize_fixed_size_pools(interp, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
+    initialize_fixed_size_pools(interp, interp->mem_pools);
+    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
@@ -563,7 +563,7 @@ Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(Parrot_gc_new_bufferlike_header)
 
-    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, size);
+    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
 
     return get_free_buffer(interp, pool);
 }
@@ -606,7 +606,7 @@ Parrot_gc_free_bufferlike_header(PARROT_INTERP, ARGMOD(Buffer *obj),
     size_t size)
 {
     ASSERT_ARGS(Parrot_gc_free_bufferlike_header)
-    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, size);
+    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
     pool->add_free_object(interp, interp->mem_pools, pool, obj);
 }
 
@@ -910,7 +910,7 @@ Parrot_gc_merge_header_pools(ARGMOD(Interp *dest_interp),
         if (i >= dest_arena->num_sized
         || !dest_arena->sized_header_pools[i]) {
             Fixed_Size_Pool *ignored = get_bufferlike_pool(dest_interp,
-                    i * sizeof (void *));
+                    dest_interp->mem_pools, i * sizeof (void *));
             UNUSED(ignored);
             PARROT_ASSERT(dest_arena->sized_header_pools[i]);
         }
@@ -973,7 +973,7 @@ Parrot_gc_merge_buffer_pools(PARROT_INTERP,
 
         total_objects   = cur_arena->total_objects;
 
-        Parrot_append_arena_in_pool(interp, dest, cur_arena,
+        Parrot_append_arena_in_pool(interp, interp->mem_pools, dest, cur_arena,
             cur_arena->total_objects);
 
         /* XXX needed? */
@@ -1054,12 +1054,12 @@ Parrot_gc_destroy_header_pools(PARROT_INTERP)
      */
     const INTVAL start = 2;
 
-    header_pools_iterate_callback(interp, POOL_PMC, NULL, sweep_cb_pmc);
-    header_pools_iterate_callback(interp, POOL_PMC | POOL_CONST, NULL,
+    header_pools_iterate_callback(interp, interp->mem_pools, POOL_PMC, NULL, sweep_cb_pmc);
+    header_pools_iterate_callback(interp, interp->mem_pools, POOL_PMC | POOL_CONST, NULL,
             sweep_cb_pmc);
 
     for (pass = start; pass <= 2; pass++) {
-        header_pools_iterate_callback(interp, POOL_BUFFER | POOL_CONST,
+        header_pools_iterate_callback(interp, interp->mem_pools, POOL_BUFFER | POOL_CONST,
                 (void *)pass, sweep_cb_buf);
     }
 
@@ -1111,7 +1111,7 @@ sweep_cb_pmc(PARROT_INTERP,
         SHIM(int flag), SHIM(void *arg))
 {
     ASSERT_ARGS(sweep_cb_pmc)
-    Parrot_gc_sweep_pool(interp, pool);
+    Parrot_gc_sweep_pool(interp, interp->mem_pools, pool);
     free_pool(pool);
     return 0;
 }
@@ -1137,7 +1137,7 @@ sweep_cb_buf(PARROT_INTERP,
 {
     ASSERT_ARGS(sweep_cb_buf)
     UNUSED(arg);
-    Parrot_gc_sweep_pool(interp, pool);
+    Parrot_gc_sweep_pool(interp, interp->mem_pools, pool);
     free_pool(pool);
 
     return 0;
@@ -1620,7 +1620,7 @@ Parrot_gc_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
     const size_t attr_size = pmc->vtable->attr_size;
 #if GC_USE_FIXED_SIZE_ALLOCATOR
     PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
-        attr_size);
+            interp->mem_pools, attr_size);
     void * const attrs = Parrot_gc_get_attributes_from_pool(interp, pool);
     memset(attrs, 0, attr_size);
     PMC_data(pmc) = attrs;
@@ -1686,7 +1686,7 @@ Parrot_gc_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
 
     /* otherwise create it */
     if (!pool)
-        pool = Parrot_gc_get_attribute_pool(interp, size);
+        pool = Parrot_gc_get_attribute_pool(interp, interp->mem_pools, size);
 
     return Parrot_gc_get_attributes_from_pool(interp, pool);
 }

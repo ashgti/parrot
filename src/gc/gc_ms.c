@@ -182,7 +182,7 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
     /* tell the threading system that we're doing GC mark */
     pt_gc_start_mark(interp);
-    Parrot_gc_run_init(interp);
+    Parrot_gc_run_init(interp, interp->mem_pools);
 
     /* compact STRING pools to collect free headers and allocated buffers */
     Parrot_gc_compact_memory_pool(interp);
@@ -197,7 +197,7 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
         /* We've done the mark, now do the sweep. Pass the sweep callback
            function to the PMC pool and all the sized pools. */
-        header_pools_iterate_callback(interp, POOL_BUFFER | POOL_PMC,
+        header_pools_iterate_callback(interp, interp->mem_pools, POOL_BUFFER | POOL_PMC,
             (void*)&total_free, gc_ms_sweep_cb);
 
     }
@@ -239,12 +239,12 @@ gc_ms_finalize(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools))
     if (interp->scheduler) {
         Parrot_gc_mark_PMC_alive(interp, interp->scheduler);
         VTABLE_mark(interp, interp->scheduler);
-        Parrot_gc_sweep_pool(interp, interp->mem_pools->pmc_pool);
+        Parrot_gc_sweep_pool(interp, mem_pools, mem_pools->pmc_pool);
     }
 
     /* now sweep everything that's left */
-    Parrot_gc_sweep_pool(interp, interp->mem_pools->pmc_pool);
-    Parrot_gc_sweep_pool(interp, interp->mem_pools->constant_pmc_pool);
+    Parrot_gc_sweep_pool(interp, mem_pools, mem_pools->pmc_pool);
+    Parrot_gc_sweep_pool(interp, mem_pools, mem_pools->constant_pmc_pool);
 }
 
 
@@ -266,7 +266,7 @@ gc_ms_trace_active_PMCs(PARROT_INTERP, Parrot_gc_trace_type trace)
 {
     ASSERT_ARGS(gc_ms_trace_active_PMCs)
 
-    if (!Parrot_gc_trace_root(interp, trace))
+    if (!Parrot_gc_trace_root(interp, interp->mem_pools, trace))
         return 0;
 
     pt_gc_mark_root_finished(interp);
@@ -297,7 +297,7 @@ gc_ms_sweep_cb(PARROT_INTERP,
     ASSERT_ARGS(gc_ms_sweep_cb)
     int * const total_free = (int *) arg;
 
-    Parrot_gc_sweep_pool(interp, pool);
+    Parrot_gc_sweep_pool(interp, mem_pools, pool);
 
     *total_free += pool->num_free_objects;
 
@@ -495,7 +495,7 @@ gc_ms_alloc_objects(PARROT_INTERP,
     /* could be mem_internal_allocate too, but calloc is fast */
     new_arena->start_objects = mem_internal_allocate_zeroed(size);
 
-    Parrot_append_arena_in_pool(interp, pool, new_arena, size);
+    Parrot_append_arena_in_pool(interp, mem_pools, pool, new_arena, size);
 
     PARROT_ASSERT(pool->last_Arena);
 
