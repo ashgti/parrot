@@ -280,10 +280,6 @@ void Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
-int Parrot_gc_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 void Parrot_gc_reallocate_buffer_storage(PARROT_INTERP,
     ARGMOD(Buffer *buffer),
     size_t newsize)
@@ -422,9 +418,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
-#define ASSERT_ARGS_Parrot_gc_ptr_is_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ptr))
 #define ASSERT_ARGS_Parrot_gc_reallocate_buffer_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \

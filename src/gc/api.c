@@ -1206,26 +1206,6 @@ Parrot_gc_destroy_memory_pools(PARROT_INTERP)
     }
 }
 
-
-/*
-
-=item C<int Parrot_gc_ptr_is_pmc(PARROT_INTERP, void *ptr)>
-
-Determines if a given pointer is a PMC or not. It is a PMC if it is properly
-contained in one of this interpreters PMC pools.
-
-=cut
-
-*/
-
-int
-Parrot_gc_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
-{
-    ASSERT_ARGS(Parrot_gc_ptr_is_pmc)
-        return contained_in_pool(interp, interp->mem_pools->pmc_pool, ptr) ||
-        contained_in_pool(interp, interp->mem_pools->constant_pmc_pool, ptr);
-}
-
 /*
 
 =item C<int Parrot_gc_get_pmc_index(PARROT_INTERP, PMC* pmc)>
