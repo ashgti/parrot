@@ -317,7 +317,9 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
     interp->gc_sys->do_gc_mark              = gc_ms_mark_and_sweep;
     interp->gc_sys->compact_string_pool     = gc_ms_compact_memory_pool;
-    interp->gc_sys->mark_special            = gc_ms_mark_special;
+
+    interp->gc_sys->mark_special                = gc_ms_mark_special;
+    interp->gc_sys->pmc_needs_early_collection  = gc_ms_pmc_needs_early_collection;
 
     interp->gc_sys->allocate_pmc_header     = gc_ms_allocate_pmc_header;
     interp->gc_sys->free_pmc_header         = gc_ms_free_pmc_header;
@@ -503,6 +505,24 @@ static void
 gc_ms_mark_special(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     mark_special(interp, interp->mem_pools, pmc);
+}
+
+/*
+
+=item C<void gc_ms_pmc_needs_early_collection(PARROT_INTERP, PMC *pmc)>
+
+Mark a PMC as needing timely destruction
+
+=cut
+
+*/
+
+void
+gc_ms_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    ASSERT_ARGS(gc_ms_pmc_needs_early_collection)
+    PObj_needs_early_gc_SET(pmc);
+    ++interp->mem_pools->num_early_gc_PMCs;
 }
 
 /*

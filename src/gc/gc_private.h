@@ -105,7 +105,9 @@ typedef struct GC_Subsystem {
 
     void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
     void (*compact_string_pool)(PARROT_INTERP);
+
     void (*mark_special)(PARROT_INTERP, PMC *);
+    void (*pmc_needs_early_collection)(PARROT_INTERP, PMC *);
 
     void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 
@@ -631,6 +633,11 @@ void gc_ms_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
+void gc_ms_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pmc);
+
 void Parrot_gc_ms_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -649,6 +656,10 @@ void Parrot_gc_ms_init(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(data))
 #define ASSERT_ARGS_gc_ms_free_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_gc_ms_pmc_needs_early_collection \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_ms_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
