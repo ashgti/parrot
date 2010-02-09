@@ -354,7 +354,8 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
     initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp, interp->mem_pools);
-    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
+    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools,
+                                          GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
@@ -557,7 +558,7 @@ gc_ms_finalize_memory_pools(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools)
 }
 
 /*
- 
+
 =item C<static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)>
 
 Allocate new PMC header from pool.
@@ -602,7 +603,7 @@ gc_ms_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
 }
 
 /*
- 
+
 =item C<static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL
 flags)>
 
@@ -1401,7 +1402,7 @@ gc_ms_is_blocked_GC_sweep(PARROT_INTERP)
 }
 
 /*
- 
+
 =item C<static size_t gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)>
 
 Get information about MS GC.
