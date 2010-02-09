@@ -505,6 +505,7 @@ Mark PMC special.
 static void
 gc_ms_mark_special(PARROT_INTERP, ARGIN(PMC *pmc))
 {
+    ASSERT_ARGS(gc_ms_mark_special)
     mark_special(interp, interp->mem_pools, pmc);
 }
 
@@ -689,7 +690,7 @@ static void
 gc_ms_free_bufferlike_header(PARROT_INTERP, ARGMOD(Buffer *obj),
     size_t size)
 {
-    ASSERT_ARGS(Parrot_gc_free_bufferlike_header)
+    ASSERT_ARGS(gc_ms_free_bufferlike_header)
     Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
     pool->add_free_object(interp, interp->mem_pools, pool, obj);
 }
@@ -831,7 +832,7 @@ static void
 gc_ms_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer),
     size_t newsize)
 {
-    ASSERT_ARGS(Parrot_gc_reallocate_buffer_storage)
+    ASSERT_ARGS(gc_ms_reallocate_buffer_storage)
     size_t copysize;
     char  *mem;
     Variable_Size_Pool * const pool = interp->mem_pools->memory_pool;
@@ -1397,7 +1398,7 @@ gc_ms_is_blocked_GC_mark(PARROT_INTERP)
 static unsigned int
 gc_ms_is_blocked_GC_sweep(PARROT_INTERP)
 {
-    ASSERT_ARGS(Parrot_is_blocked_GC_sweep)
+    ASSERT_ARGS(gc_ms_is_blocked_GC_sweep)
     return interp->mem_pools->gc_sweep_block_level;
 }
 
