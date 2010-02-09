@@ -727,16 +727,7 @@ int
 Parrot_gc_active_sized_buffers(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_active_sized_buffers)
-    int j, ret = 0;
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    for (j = 0; j < (INTVAL)mem_pools->num_sized; j++) {
-        Fixed_Size_Pool * const header_pool =
-            mem_pools->sized_header_pools[j];
-        if (header_pool)
-            ret += header_pool->total_objects -
-                header_pool->num_free_objects;
-    }
-    return ret;
+    return interp->gc_sys->get_gc_info(interp, ACTIVE_BUFFERS);
 }
 
 /*
@@ -753,15 +744,7 @@ int
 Parrot_gc_total_sized_buffers(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_total_sized_buffers)
-    int j, ret = 0;
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    for (j = 0; j < (INTVAL)mem_pools->num_sized; j++) {
-        Fixed_Size_Pool * const header_pool =
-            mem_pools->sized_header_pools[j];
-        if (header_pool)
-            ret += header_pool->total_objects;
-    }
-    return ret;
+    return interp->gc_sys->get_gc_info(interp, TOTAL_BUFFERS);
 }
 
 /*

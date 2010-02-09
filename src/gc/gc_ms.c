@@ -22,6 +22,11 @@ This code implements the default mark and sweep garbage collector.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+static int gc_ms_active_sized_buffers(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 static void gc_ms_add_free_object(SHIM_INTERP,
     ARGIN(Memory_Pools *mem_pools),
     ARGMOD(Fixed_Size_Pool *pool),
@@ -157,6 +162,11 @@ static int gc_ms_sweep_cb(PARROT_INTERP,
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*arg);
 
+static int gc_ms_total_sized_buffers(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 static int gc_ms_trace_active_PMCs(PARROT_INTERP,
     Parrot_gc_trace_type trace)
         __attribute__nonnull__(1);
@@ -176,6 +186,9 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
         FUNC_MODIFIES(*pool)
         FUNC_MODIFIES(*data);
 
+#define ASSERT_ARGS_gc_ms_active_sized_buffers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools))
 #define ASSERT_ARGS_gc_ms_add_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool) \
@@ -246,6 +259,9 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool) \
     , PARROT_ASSERT_ARG(arg))
+#define ASSERT_ARGS_gc_ms_total_sized_buffers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools))
 #define ASSERT_ARGS_gc_ms_trace_active_PMCs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_unblock_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -1369,9 +1385,11 @@ gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
             return mem_pools->pmc_pool->total_objects -
                    mem_pools->pmc_pool->num_free_objects;
         case ACTIVE_BUFFERS:
+            return gc_ms_active_sized_buffers(interp, mem_pools);
         case TOTAL_PMCS:
             return mem_pools->pmc_pool->total_objects;
         case TOTAL_BUFFERS:
+            return gc_ms_total_sized_buffers(interp, mem_pools);
         case HEADER_ALLOCS_SINCE_COLLECT:
             return mem_pools->header_allocs_since_last_collect;
         case MEM_ALLOCS_SINCE_COLLECT:
@@ -1387,6 +1405,59 @@ gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
             break;
     }
     return 0;
+}
+
+/*
+
+=item C<static int gc_ms_active_sized_buffers(PARROT_INTERP, Memory_Pools *
+const mem_pools)>
+
+Returns the number of actively used sized buffers.
+
+=cut
+
+*/
+
+static int
+gc_ms_active_sized_buffers(PARROT_INTERP,
+        ARGIN(Memory_Pools * const mem_pools))
+{
+    ASSERT_ARGS(gc_ms_active_sized_buffers)
+    int j, ret = 0;
+    for (j = 0; j < (INTVAL)mem_pools->num_sized; j++) {
+        Fixed_Size_Pool * const header_pool =
+            mem_pools->sized_header_pools[j];
+        if (header_pool)
+            ret += header_pool->total_objects -
+                header_pool->num_free_objects;
+    }
+    return ret;
+}
+
+/*
+
+=item C<static int gc_ms_total_sized_buffers(PARROT_INTERP, Memory_Pools * const
+mem_pools)>
+
+Returns the total number of sized buffers that we are managing.
+
+=cut
+
+*/
+
+static int
+gc_ms_total_sized_buffers(PARROT_INTERP,
+        ARGIN(Memory_Pools * const mem_pools))
+{
+    ASSERT_ARGS(gc_ms_total_sized_buffers)
+    int j, ret = 0;
+    for (j = 0; j < (INTVAL)mem_pools->num_sized; j++) {
+        Fixed_Size_Pool * const header_pool =
+            mem_pools->sized_header_pools[j];
+        if (header_pool)
+            ret += header_pool->total_objects;
+    }
+    return ret;
 }
 
 /*
