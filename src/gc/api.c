@@ -485,10 +485,7 @@ Parrot_gc_new_string_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_gc_new_string_header)
 
-    STRING * const string = (STRING *)get_free_buffer(interp,
-        (flags & PObj_constant_FLAG)
-            ? interp->mem_pools->constant_string_header_pool
-            : interp->mem_pools->string_header_pool);
+    STRING * const string = interp->gc_sys->allocate_string_header(interp, flags);
     if (!string)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
             "Parrot VM: STRING allocation failed!\n");
@@ -514,10 +511,7 @@ void
 Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_gc_free_string_header)
-    if (!PObj_constant_TEST(s)) {
-        Fixed_Size_Pool * const pool = interp->mem_pools->string_header_pool;
-        pool->add_free_object(interp, interp->mem_pools, pool, s);
-    }
+    interp->gc_sys->free_string_header(interp, s);
 }
 
 /*
