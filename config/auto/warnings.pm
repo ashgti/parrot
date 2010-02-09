@@ -80,7 +80,7 @@ sub _init {
         -Wtrigraphs
         -Wundef
         -Wunknown-pragmas
-        -Wno-unused
+        -Wunused
         -Wvariadic-macros
         -Wwrite-strings
         -Wnot-a-real-warning
