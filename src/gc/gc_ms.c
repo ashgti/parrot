@@ -47,7 +47,7 @@ PARROT_CAN_RETURN_NULL
 static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
-static void gc_ms_finalize(PARROT_INTERP,
+static void gc_ms_finalize_memory_pools(PARROT_INTERP,
     ARGIN(Memory_Pools * const mem_pools))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -236,7 +236,7 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
     }
 
     if (flags & GC_finish_FLAG) {
-        gc_ms_finalize(interp, mem_pools);
+        gc_ms_finalize_memory_pools(interp, mem_pools);
         return;
     }
 
@@ -281,19 +281,19 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
 /*
 
-=item C<static void gc_ms_finalize(PARROT_INTERP, Memory_Pools * const
+=item C<static void gc_ms_finalize_memory_pools(PARROT_INTERP, Memory_Pools * const
 mem_pools)>
 
-Perform the finalization run, freeing all PMCs.
+Perform the finalization run, freeing all PMCs in Memory_Pools.
 
 =cut
 
 */
 
 static void
-gc_ms_finalize(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools))
+gc_ms_finalize_memory_pools(PARROT_INTERP, ARGIN(Memory_Pools * const mem_pools))
 {
-    ASSERT_ARGS(gc_ms_finalize)
+    ASSERT_ARGS(gc_ms_finalize_memory_pools)
     Parrot_gc_clear_live_bits(interp, mem_pools->pmc_pool);
     Parrot_gc_clear_live_bits(interp, mem_pools->constant_pmc_pool);
 
