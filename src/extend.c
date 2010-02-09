@@ -1152,9 +1152,7 @@ Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub_pmc,
     va_list     args;
     PMC        *sig_object;
     Parrot_Int  result;
-    char        return_sig  = signature[0];
     const char *arg_sig     = signature;
-    Parrot_sub *sub;
 
     arg_sig++;
     va_start(args, signature);

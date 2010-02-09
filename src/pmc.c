@@ -252,7 +252,7 @@ pmc_reuse_no_init(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
 
     ASSERT_ARGS(pmc_reuse_no_init)
     VTABLE *new_vtable;
-    INTVAL  has_ext, new_flags = 0;
+    INTVAL  new_flags = 0;
 
     if (pmc->vtable->base_type == new_type)
         return pmc;
