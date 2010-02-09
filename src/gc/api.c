@@ -778,9 +778,7 @@ int
 Parrot_gc_active_pmcs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_active_pmcs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->pmc_pool->total_objects -
-           mem_pools->pmc_pool->num_free_objects;
+    return interp->gc_sys->get_gc_info(interp, ACTIVE_PMCS);
 }
 
 /*
@@ -797,8 +795,7 @@ int
 Parrot_gc_total_pmcs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_total_pmcs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->pmc_pool->total_objects;
+    return interp->gc_sys->get_gc_info(interp, TOTAL_PMCS);
 }
 
 /*
@@ -839,64 +836,56 @@ size_t
 Parrot_gc_count_mark_runs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_count_mark_runs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->gc_mark_runs;
+    return interp->gc_sys->get_gc_info(interp, GC_MARK_RUNS);
 }
 
 size_t
 Parrot_gc_count_collect_runs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_count_collect_runs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->gc_collect_runs;
+    return interp->gc_sys->get_gc_info(interp, GC_COLLECT_RUNS);
 }
 
 size_t
 Parrot_gc_count_lazy_mark_runs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_count_lazy_mark_runs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->gc_lazy_mark_runs;;
+    return interp->gc_sys->get_gc_info(interp, GC_LAZY_MARK_RUNS);
 }
 
 size_t
 Parrot_gc_total_memory_allocated(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_total_memory_allocated)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->memory_allocated;
+    return interp->gc_sys->get_gc_info(interp, TOTAL_MEM_ALLOC);
 }
 
 size_t
 Parrot_gc_headers_alloc_since_last_collect(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_headers_alloc_since_last_collect)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->header_allocs_since_last_collect;
+    return interp->gc_sys->get_gc_info(interp, HEADER_ALLOCS_SINCE_COLLECT);
 }
 
 size_t
 Parrot_gc_mem_alloc_since_last_collect(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_mem_alloc_since_last_collect)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->mem_allocs_since_last_collect;
+    return interp->gc_sys->get_gc_info(interp, MEM_ALLOCS_SINCE_COLLECT);
 }
 
 UINTVAL
 Parrot_gc_total_copied(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_total_copied)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->memory_collected;
+    return interp->gc_sys->get_gc_info(interp, TOTAL_COPIED);
 }
 
 UINTVAL
 Parrot_gc_impatient_pmcs(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_impatient_pmcs)
-    const Memory_Pools * const mem_pools = interp->mem_pools;
-    return mem_pools->num_early_gc_PMCs;
+    return interp->gc_sys->get_gc_info(interp, IMPATIENT_PMCS);
 }
 
 /*

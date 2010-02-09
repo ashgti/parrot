@@ -137,6 +137,10 @@ typedef struct GC_Subsystem {
     void (*unblock_sweep)(PARROT_INTERP);
     unsigned int (*is_blocked_sweep)(PARROT_INTERP);
 
+    /* Introspection. Each GC must provide this function. Even with fake data */
+    /* Return by value to simplify memory management */
+    size_t (*get_gc_info)(PARROT_INTERP, Interpinfo_enum);
+
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/

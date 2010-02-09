@@ -107,6 +107,9 @@ static void * gc_ms_get_free_object(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
 
+static size_t gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
+        __attribute__nonnull__(1);
+
 static unsigned int gc_ms_is_blocked_GC_mark(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -216,6 +219,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_ms_get_gc_info __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_is_blocked_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_is_blocked_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -318,6 +323,8 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->gc_sys->block_sweep      = gc_ms_block_GC_sweep;
     interp->gc_sys->unblock_sweep    = gc_ms_unblock_GC_sweep;
     interp->gc_sys->is_blocked_sweep = gc_ms_is_blocked_GC_sweep;
+
+    interp->gc_sys->get_gc_info      = gc_ms_get_gc_info;
 
     initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp, interp->mem_pools);
@@ -1333,6 +1340,53 @@ gc_ms_is_blocked_GC_sweep(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_is_blocked_GC_sweep)
     return interp->mem_pools->gc_sweep_block_level;
+}
+
+/*
+ 
+=item C<static size_t gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)>
+
+Get information about MS GC.
+
+=cut
+
+*/
+
+static size_t
+gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
+{
+    ASSERT_ARGS(gc_ms_get_gc_info)
+
+    Memory_Pools * const mem_pools = interp->mem_pools;
+    switch(which) {
+        case TOTAL_MEM_ALLOC:
+            return mem_pools->memory_allocated;
+        case GC_MARK_RUNS:
+            return mem_pools->gc_mark_runs;
+        case GC_COLLECT_RUNS:
+            return mem_pools->gc_collect_runs;
+        case ACTIVE_PMCS:
+            return mem_pools->pmc_pool->total_objects -
+                   mem_pools->pmc_pool->num_free_objects;
+        case ACTIVE_BUFFERS:
+        case TOTAL_PMCS:
+            return mem_pools->pmc_pool->total_objects;
+        case TOTAL_BUFFERS:
+        case HEADER_ALLOCS_SINCE_COLLECT:
+            return mem_pools->header_allocs_since_last_collect;
+        case MEM_ALLOCS_SINCE_COLLECT:
+            return mem_pools->mem_allocs_since_last_collect;
+        case TOTAL_COPIED:
+            return mem_pools->memory_collected;
+        case IMPATIENT_PMCS:
+            return mem_pools->num_early_gc_PMCs;
+        case GC_LAZY_MARK_RUNS:
+            return mem_pools->gc_lazy_mark_runs;
+        case EXTENDED_PMCS:
+        default:
+            break;
+    }
+    return 0;
 }
 
 /*
