@@ -568,20 +568,13 @@ MAKE = @make_c@
 
 .SUFFIXES : .c .S .s .pmc .dump $(O) .str .pir .pbc
 
-# Passing an empty argument in @ARGV to cc_flags.pl to indicate where extra -Is
-# (etc) should go. Otherwise it will insert them after the first space, which
-# makes life go horribly wrong if $(CC) contains spaces but can't have -I
-# arguments (etc) injected in the middle.
-# There is probably a better way to do this, but I can't work it out right now.
 .c$(O) : # suffix rule (limited support)
-	@$(PERL) tools/build/cc_flags.pl ./CFLAGS $(CC) "" $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
-
-# XXX probably should detect assembler, but right now this is only used on Sparc
+	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
 
 .s$(O) : # suffix rule (limited support)
-	@$(PERL) tools/build/cc_flags.pl ./CFLAGS $(CC) "" $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
 #UNLESS(win32).S$(O) : # suffix rule (limited support)
-#UNLESS(win32)	@$(PERL) tools/build/cc_flags.pl ./CFLAGS $(CC) "" $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+#UNLESS(win32)	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
 
 .pir.pbc : # suffix rule (limited support)
 	$(PARROT) -o $@ $<
@@ -612,7 +605,6 @@ all : \
     $(NQP_LIB_PBCS)
 
 corevm : \
-    flags_dummy \
 	$(GEN_PM_INCLUDES) \
     PARROT_LIBS \
     $(PARROT) \
@@ -800,10 +792,6 @@ parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBC_MERGE) $(PBC_TO_EXE) $(PARROT_CONFIG
 
 installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBC_MERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG) $(INSTALLABLENQP)
 
-
-flags_dummy :
-	@echo "Compiling with:"
-	@$(PERL) tools/build/cc_flags.pl ./CFLAGS echo $(CC) $(CFLAGS) -I$(@D) @cc_o_out@ xx$(O) -c xx.c
 
 runtime/parrot/include/parrotlib.pbc: runtime/parrot/library/parrotlib.pir $(PARROT) $(GEN_PASM_INCLUDES)
 	$(PARROT) -o $@ runtime/parrot/library/parrotlib.pir
