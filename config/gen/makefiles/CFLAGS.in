@@ -5,7 +5,7 @@
 #
 # Note, empty regex/options are just ignored.
 #
-src/platform.c      -{-Wcast-qual}          # noisy
+
 src/spf_render.c    -{-Wformat-nonliteral}  # noisy
 src/tsq.c           -{@optimize@}           # never optimize tsq.c!
 
