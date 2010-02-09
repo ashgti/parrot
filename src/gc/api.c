@@ -522,19 +522,7 @@ Parrot_gc_allocate_buffer_storage_aligned(PARROT_INTERP,
     ARGOUT(Buffer *buffer), size_t size)
 {
     ASSERT_ARGS(Parrot_gc_allocate_buffer_storage_aligned)
-    size_t new_size;
-    char *mem;
-
-    Buffer_buflen(buffer) = 0;
-    Buffer_bufstart(buffer) = NULL;
-    new_size = aligned_size(buffer, size);
-    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size,
-        interp->mem_pools->memory_pool);
-    mem = aligned_mem(buffer, mem);
-    Buffer_bufstart(buffer) = mem;
-    if (PObj_is_COWable_TEST(buffer))
-        new_size -= sizeof (void*);
-    Buffer_buflen(buffer) = new_size;
+    interp->gc_sys->allocate_buffer_storage(interp, buffer, size);
 }
 
 /*
@@ -557,58 +545,7 @@ Parrot_gc_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer),
     size_t newsize)
 {
     ASSERT_ARGS(Parrot_gc_reallocate_buffer_storage)
-    size_t copysize;
-    char  *mem;
-    Variable_Size_Pool * const pool = interp->mem_pools->memory_pool;
-    size_t new_size, needed, old_size;
-
-    /*
-     * we don't shrink buffers
-     */
-    if (newsize <= Buffer_buflen(buffer))
-        return;
-
-    /*
-     * same as below but barely used and tested - only 3 list related
-     * tests do use true reallocation
-     *
-     * list.c, which does _reallocate, has 2 reallocations
-     * normally, which play ping pong with buffers.
-     * The normal case is therefore always to allocate a new block
-     */
-    new_size = aligned_size(buffer, newsize);
-    old_size = aligned_size(buffer, Buffer_buflen(buffer));
-    needed   = new_size - old_size;
-
-    if ((pool->top_block->free >= needed)
-    &&  (pool->top_block->top  == (char *)Buffer_bufstart(buffer) + old_size)) {
-        pool->top_block->free -= needed;
-        pool->top_block->top  += needed;
-        Buffer_buflen(buffer) = newsize;
-        return;
-    }
-
-    copysize = Buffer_buflen(buffer);
-
-    if (!PObj_COW_TEST(buffer))
-        pool->guaranteed_reclaimable += copysize;
-    else
-        pool->possibly_reclaimable   += copysize;
-
-    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
-    mem = aligned_mem(buffer, mem);
-
-    /* We shouldn't ever have a 0 from size, but we do. If we can track down
-     * those bugs, this can be removed which would make things cheaper */
-    if (copysize)
-        memcpy(mem, Buffer_bufstart(buffer), copysize);
-
-    Buffer_bufstart(buffer) = mem;
-
-    if (PObj_is_COWable_TEST(buffer))
-        new_size -= sizeof (void *);
-
-    Buffer_buflen(buffer) = new_size;
+    interp->gc_sys->reallocate_buffer_storage(interp, buffer, newsize);
 }
 
 /*
@@ -630,26 +567,7 @@ Parrot_gc_allocate_string_storage(PARROT_INTERP, ARGOUT(STRING *str),
     size_t size)
 {
     ASSERT_ARGS(Parrot_gc_allocate_string_storage)
-    size_t       new_size;
-    Variable_Size_Pool *pool;
-    char        *mem;
-
-    Buffer_buflen(str)   = 0;
-    Buffer_bufstart(str) = NULL;
-
-    if (size == 0)
-        return;
-
-    pool     = PObj_constant_TEST(str)
-                ? interp->mem_pools->constant_string_pool
-                : interp->mem_pools->memory_pool;
-
-    new_size = aligned_string_size(size);
-    mem      = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
-    mem     += sizeof (void*);
-
-    Buffer_bufstart(str) = str->strstart = mem;
-    Buffer_buflen(str)   = new_size - sizeof (void*);
+    interp->gc_sys->allocate_string_storage(interp, str, size);
 }
 
 /*
@@ -670,59 +588,7 @@ Parrot_gc_reallocate_string_storage(PARROT_INTERP, ARGMOD(STRING *str),
     size_t newsize)
 {
     ASSERT_ARGS(Parrot_gc_reallocate_string_storage)
-    size_t copysize;
-    char *mem, *oldmem;
-    size_t new_size, needed, old_size;
-
-    Variable_Size_Pool * const pool =
-        PObj_constant_TEST(str)
-            ? interp->mem_pools->constant_string_pool
-            : interp->mem_pools->memory_pool;
-
-    /* if the requested size is smaller then buflen, we are done */
-    if (newsize <= Buffer_buflen(str))
-        return;
-
-    /*
-     * first check, if we can reallocate:
-     * - if the passed strings buffer is the last string in the pool and
-     * - if there is enough size, we can just move the pool's top pointer
-     */
-    new_size = aligned_string_size(newsize);
-    old_size = aligned_string_size(Buffer_buflen(str));
-    needed   = new_size - old_size;
-
-    if (pool->top_block->free >= needed
-    &&  pool->top_block->top  == (char *)Buffer_bufstart(str) + old_size) {
-        pool->top_block->free -= needed;
-        pool->top_block->top  += needed;
-        Buffer_buflen(str) = new_size - sizeof (void*);
-        return;
-    }
-
-    PARROT_ASSERT(str->bufused <= newsize);
-
-    /* only copy used memory, not total string buffer */
-    copysize = str->bufused;
-
-    if (!PObj_COW_TEST(str))
-        pool->guaranteed_reclaimable += Buffer_buflen(str);
-    else
-        pool->possibly_reclaimable   += Buffer_buflen(str);
-
-    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
-    mem += sizeof (void *);
-
-    /* copy mem from strstart, *not* bufstart */
-    oldmem             = str->strstart;
-    Buffer_bufstart(str) = (void *)mem;
-    str->strstart      = mem;
-    Buffer_buflen(str)   = new_size - sizeof (void*);
-
-    /* We shouldn't ever have a 0 from size, but we do. If we can track down
-     * those bugs, this can be removed which would make things cheaper */
-    if (copysize)
-        memcpy(mem, oldmem, copysize);
+    interp->gc_sys->reallocate_string_storage(interp, str, newsize);
 }
 
 /*

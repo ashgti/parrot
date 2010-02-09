@@ -114,9 +114,14 @@ typedef struct GC_Subsystem {
     void* (*allocate_pmc_attributes)(PARROT_INTERP, PMC *);
     void (*free_pmc_attributes)(PARROT_INTERP, PMC *);
 
+    void (*allocate_string_storage)(PARROT_INTERP, STRING *str, size_t size);
+    void (*reallocate_string_storage)(PARROT_INTERP, STRING *str, size_t size);
+
+    void (*allocate_buffer_storage)(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t nsize);
+    void (*reallocate_buffer_storage)(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t newsize);
+
     void* (*allocate_fixed_size_storage)(PARROT_INTERP, size_t size);
     void (*free_fixed_size_storage)(PARROT_INTERP, size_t size, void *);
-
 
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
@@ -572,6 +577,13 @@ void * gc_ms_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
+void gc_ms_allocate_string_storage(PARROT_INTERP,
+    ARGOUT(STRING *str),
+    size_t size)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*str);
+
 void gc_ms_free_fixed_size_storage(PARROT_INTERP,
     size_t size,
     ARGMOD(void *data))
@@ -593,6 +605,9 @@ void Parrot_gc_ms_init(PARROT_INTERP)
 #define ASSERT_ARGS_gc_ms_allocate_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_gc_ms_allocate_string_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(str))
 #define ASSERT_ARGS_gc_ms_free_fixed_size_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(data))
