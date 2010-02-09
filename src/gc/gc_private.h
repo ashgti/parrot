@@ -529,6 +529,15 @@ void Parrot_gc_destroy_memory_pools(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+void Parrot_gc_merge_memory_pools(
+    ARGMOD(Interp *dest_interp),
+    ARGIN(Memory_Pools * const dest_arena),
+    ARGIN(Memory_Pools * const source_arena))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*dest_interp);
+
 #define ASSERT_ARGS_aligned_mem __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(buffer) \
     , PARROT_ASSERT_ARG(mem))
@@ -560,6 +569,10 @@ void Parrot_gc_destroy_memory_pools(PARROT_INTERP,
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
+#define ASSERT_ARGS_Parrot_gc_merge_memory_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(dest_interp) \
+    , PARROT_ASSERT_ARG(dest_arena) \
+    , PARROT_ASSERT_ARG(source_arena))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/alloc_resources.c */
 
