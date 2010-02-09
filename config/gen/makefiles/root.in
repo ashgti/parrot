@@ -579,15 +579,6 @@ MAKE = @make_c@
 .pir.pbc : # suffix rule (limited support)
 	$(PARROT) -o $@ $<
 
-## Overrides of basic suffix rules:
-
-## files which make their way into dynamically loaded files should be compiled
-## with shared library options
-src/extend$(O) : src/extend.c
-	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c $<
-src/nci_test$(O) : src/nci_test.c
-	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c $<
-
 ###############################################################################
 #
 # USER TARGETS:
@@ -1237,8 +1228,10 @@ src/thread$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/atomic.h \
         include/pmc/pmc_sub.h \
 	include/pmc/pmc_parrotinterpreter.h
 
+## SUFFIX OVERRIDE - dynloaded files need cc_shared
 src/extend$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/extend.h \
-	include/pmc/pmc_sub.h $(INC_DIR)/extend_vtable.h
+    include/pmc/pmc_sub.h $(INC_DIR)/extend_vtable.h src/extend.c
+	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/extend.c
 
 src/runcore/main$(O) : \
 	src/runcore/main.str \
@@ -2386,7 +2379,9 @@ exec : src/parrot_config$(O) $(LIBPARROT)
 ###### OS depend targets ##########
 
 # for use by t/pmc/nci.t
-src/nci_test$(O): $(PARROT_H_HEADERS)
+## SUFFIX OVERRIDE - dynloaded files need cc_shared
+src/nci_test$(O): $(PARROT_H_HEADERS) src/nci_test.c
+	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/nci_test.c
 
 $(LIBNCI_TEST_SO): src/nci_test$(O) $(LIBPARROT)
 	$(LD) $(LD_LOAD_FLAGS) @ncilib_link_extra@ $(LDFLAGS) \
