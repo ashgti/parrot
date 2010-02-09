@@ -252,7 +252,7 @@ size_t Parrot_gc_mem_alloc_since_last_collect(PARROT_INTERP)
 
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-void * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
+Buffer * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT

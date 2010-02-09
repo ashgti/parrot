@@ -46,6 +46,11 @@ static void gc_ms_allocate_buffer_storage(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*buffer);
 
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+static Buffer * gc_ms_allocate_bufferlike_header(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
 PARROT_CAN_RETURN_NULL
 static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
@@ -68,6 +73,13 @@ static void gc_ms_finalize_memory_pools(PARROT_INTERP,
     ARGIN(Memory_Pools * const mem_pools))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
+
+static void gc_ms_free_bufferlike_header(PARROT_INTERP,
+    ARGMOD(Buffer *obj),
+    size_t size)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*obj);
 
 static void gc_ms_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
@@ -154,6 +166,9 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_allocate_buffer_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(buffer))
+#define ASSERT_ARGS_gc_ms_allocate_bufferlike_header \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -166,6 +181,9 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_finalize_memory_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
+#define ASSERT_ARGS_gc_ms_free_bufferlike_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(obj))
 #define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
@@ -240,12 +258,16 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->gc_sys->init_pool               = gc_ms_pool_init;
 
     interp->gc_sys->do_gc_mark              = gc_ms_mark_and_sweep;
+    interp->gc_sys->compact_string_pool     = gc_ms_compact_memory_pool;
 
     interp->gc_sys->allocate_pmc_header     = gc_ms_allocate_pmc_header;
     interp->gc_sys->free_pmc_header         = gc_ms_free_pmc_header;
 
     interp->gc_sys->allocate_string_header  = gc_ms_allocate_string_header;
     interp->gc_sys->free_string_header      = gc_ms_free_string_header;
+
+    interp->gc_sys->allocate_bufferlike_header  = gc_ms_allocate_bufferlike_header;
+    interp->gc_sys->free_bufferlike_header      = gc_ms_free_bufferlike_header;
 
     interp->gc_sys->allocate_pmc_attributes = gc_ms_allocate_pmc_attributes;
     interp->gc_sys->free_pmc_attributes     = gc_ms_free_pmc_attributes;
@@ -383,6 +405,25 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
 /*
 
+=item C<void gc_ms_compact_memory_pool(PARROT_INTERP)>
+
+Scan the string pools and compact them. This does not perform a GC mark or
+sweep run, and does not check whether string buffers are still alive.
+Redirects to C<compact_pool>.
+
+=cut
+
+*/
+
+void
+gc_ms_compact_memory_pool(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_compact_memory_pool)
+    compact_pool(interp, interp->mem_pools, interp->mem_pools->memory_pool);
+}
+
+/*
+
 =item C<static void gc_ms_finalize_memory_pools(PARROT_INTERP, Memory_Pools *
 const mem_pools)>
 
@@ -502,6 +543,52 @@ gc_ms_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
     }
 }
 
+/*
+
+=item C<static Buffer * gc_ms_allocate_bufferlike_header(PARROT_INTERP, size_t
+size)>
+
+Returns a new buffer-like header from the appropriate sized pool.
+A "bufferlike object" is an object that is considered to be isomorphic to the
+PObj, so it will participate in normal GC. At the moment these are only used
+to create ListChunk objects in src/list.c.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+static Buffer *
+gc_ms_allocate_bufferlike_header(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_ms_allocate_bufferlike_header)
+
+    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
+
+    return (Buffer *)pool->get_free_object(interp, interp->mem_pools, pool);
+}
+
+/*
+
+=item C<static void gc_ms_free_bufferlike_header(PARROT_INTERP, Buffer *obj,
+size_t size)>
+
+Free a bufferlike header that is not being used, so that Parrot can recycle
+it and use it again.
+
+=cut
+
+*/
+
+static void
+gc_ms_free_bufferlike_header(PARROT_INTERP, ARGMOD(Buffer *obj),
+    size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_free_bufferlike_header)
+    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
+    pool->add_free_object(interp, interp->mem_pools, pool, obj);
+}
 
 /*
 

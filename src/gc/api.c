@@ -460,7 +460,7 @@ Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
 
 /*
 
-=item C<void * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)>
+=item C<Buffer * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)>
 
 Returns a new buffer-like header from the appropriate sized pool.
 A "bufferlike object" is an object that is considered to be isomorphic to the
@@ -473,14 +473,11 @@ to create ListChunk objects in src/list.c.
 
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-void *
+Buffer *
 Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(Parrot_gc_new_bufferlike_header)
-
-    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
-
-    return pool->get_free_object(interp, interp->mem_pools, pool);
+    return interp->gc_sys->allocate_bufferlike_header(interp, size);
 }
 
 /*
@@ -500,8 +497,7 @@ Parrot_gc_free_bufferlike_header(PARROT_INTERP, ARGMOD(Buffer *obj),
     size_t size)
 {
     ASSERT_ARGS(Parrot_gc_free_bufferlike_header)
-    Fixed_Size_Pool * const pool = get_bufferlike_pool(interp, interp->mem_pools, size);
-    pool->add_free_object(interp, interp->mem_pools, pool, obj);
+    interp->gc_sys->free_bufferlike_header(interp, obj, size);
 }
 
 /*
@@ -684,9 +680,7 @@ Parrot_gc_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
 =item C<void Parrot_gc_compact_memory_pool(PARROT_INTERP)>
 
-Scan the string pools and compact them. This does not perform a GC mark or
-sweep run, and does not check whether string buffers are still alive.
-Redirects to C<compact_pool>.
+Compact string pool if supported by GC.
 
 =cut
 
@@ -696,7 +690,7 @@ void
 Parrot_gc_compact_memory_pool(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_compact_memory_pool)
-    compact_pool(interp, interp->mem_pools, interp->mem_pools->memory_pool);
+    interp->gc_sys->compact_string_pool(interp);
 }
 
 /*

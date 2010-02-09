@@ -102,15 +102,20 @@ typedef struct GC_Subsystem {
     /** Function hooks that each subsystem MUST provide */
     void (*finalize_gc_system) (PARROT_INTERP);
     void (*destroy_child_interp)(Interp *dest_interp, Interp *child_interp);
-    void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
-    void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 
+    void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
+    void (*compact_string_pool)(PARROT_INTERP);
+
+    void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 
     PMC* (*allocate_pmc_header)(PARROT_INTERP, UINTVAL flags);
     void (*free_pmc_header)(PARROT_INTERP, PMC *);
 
     STRING* (*allocate_string_header)(PARROT_INTERP, UINTVAL flags);
     void    (*free_string_header)(PARROT_INTERP, STRING*);
+
+    Buffer* (*allocate_bufferlike_header)(PARROT_INTERP, size_t size);
+    void    (*free_bufferlike_header)(PARROT_INTERP, Buffer*, size_t size);
 
     void* (*allocate_pmc_attributes)(PARROT_INTERP, PMC *);
     void (*free_pmc_attributes)(PARROT_INTERP, PMC *);
@@ -598,6 +603,9 @@ void gc_ms_allocate_string_storage(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*str);
 
+void gc_ms_compact_memory_pool(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 void gc_ms_free_fixed_size_storage(PARROT_INTERP,
     size_t size,
     ARGMOD(void *data))
@@ -622,6 +630,8 @@ void Parrot_gc_ms_init(PARROT_INTERP)
 #define ASSERT_ARGS_gc_ms_allocate_string_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_gc_ms_compact_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_free_fixed_size_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(data))
