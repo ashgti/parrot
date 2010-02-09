@@ -958,10 +958,10 @@ void
 Parrot_gc_completely_unblock(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_completely_unblock)
-    while(Parrot_is_blocked_GC_mark(interp))
-        Parrot_unblock_GC_mark(interp);
-    while(Parrot_is_blocked_GC_sweep(interp))
-        Parrot_unblock_GC_sweep(interp);
+    while (Parrot_is_blocked_GC_mark(interp))
+           Parrot_unblock_GC_mark(interp);
+    while (Parrot_is_blocked_GC_sweep(interp))
+           Parrot_unblock_GC_sweep(interp);
 }
 
 /*
