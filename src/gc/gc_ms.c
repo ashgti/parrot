@@ -125,6 +125,8 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_finalize_memory_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
 #define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -188,8 +190,9 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->mem_pools->attrib_pools       = NULL;
     interp->mem_pools->sized_header_pools = NULL;
 
+    interp->gc_sys->finalize_gc_system = gc_ms_finalize;
+
     interp->gc_sys->do_gc_mark         = gc_ms_mark_and_sweep;
-    interp->gc_sys->finalize_gc_system = NULL;
     interp->gc_sys->init_pool          = gc_ms_pool_init;
 
     interp->gc_sys->allocate_pmc_header     = gc_ms_allocate_pmc_header;
