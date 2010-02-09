@@ -379,11 +379,7 @@ PMC *
 Parrot_gc_new_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_gc_new_pmc_header)
-    Fixed_Size_Pool * const pool = flags & PObj_constant_FLAG
-            ? interp->mem_pools->constant_pmc_pool
-            : interp->mem_pools->pmc_pool;
-    PMC * const pmc = (PMC *)pool->get_free_object(interp, interp->mem_pools,
-            pool);
+    PMC * const pmc = interp->gc_sys->allocate_pmc_header(interp, flags);
 
     if (!pmc)
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,

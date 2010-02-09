@@ -104,6 +104,9 @@ typedef struct GC_Subsystem {
     void (*finalize_gc_system) (PARROT_INTERP);
     void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 
+
+    PMC* (*allocate_pmc_header)(PARROT_INTERP, UINTVAL flags);
+
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/
