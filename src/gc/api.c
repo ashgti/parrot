@@ -318,16 +318,8 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 {
     ASSERT_ARGS(Parrot_gc_initialize)
 
-    interp->mem_pools = mem_allocate_zeroed_typed(Memory_Pools);
     interp->gc_sys    = mem_allocate_zeroed_typed(GC_Subsystem);
-
-    interp->mem_pools->num_sized          = 0;
-    interp->mem_pools->num_attribs        = 0;
-    interp->mem_pools->attrib_pools       = NULL;
-    interp->mem_pools->sized_header_pools = NULL;
-
     interp->lo_var_ptr                    = stacktop;
-
 
     /*TODO: add ability to specify GC core at command line w/ --gc= */
     if (0) /*If they chose sys_type with the --gc command line switch,*/
@@ -347,11 +339,6 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
         /*die horribly because of invalid GC core specified*/
         break;
     }
-
-    initialize_var_size_pools(interp, interp->mem_pools);
-    initialize_fixed_size_pools(interp, interp->mem_pools);
-    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools,
-                                          GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*

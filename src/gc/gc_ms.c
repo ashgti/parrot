@@ -140,10 +140,19 @@ Parrot_gc_ms_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_ms_init)
 
+    interp->mem_pools = mem_allocate_zeroed_typed(Memory_Pools);
+    interp->mem_pools->num_sized          = 0;
+    interp->mem_pools->num_attribs        = 0;
+    interp->mem_pools->attrib_pools       = NULL;
+    interp->mem_pools->sized_header_pools = NULL;
+
     interp->gc_sys->do_gc_mark         = gc_ms_mark_and_sweep;
     interp->gc_sys->finalize_gc_system = NULL;
     interp->gc_sys->init_pool          = gc_ms_pool_init;
 
+    initialize_var_size_pools(interp, interp->mem_pools);
+    initialize_fixed_size_pools(interp, interp->mem_pools);
+    Parrot_gc_initialize_fixed_size_pools(interp, interp->mem_pools, GC_NUM_INITIAL_FIXED_SIZE_POOLS);
 }
 
 /*
