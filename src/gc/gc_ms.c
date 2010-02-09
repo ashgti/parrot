@@ -59,6 +59,12 @@ PARROT_CAN_RETURN_NULL
 static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
+static void gc_ms_block_GC_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static void gc_ms_block_GC_sweep(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void gc_ms_destroy_child_interp(
     ARGMOD(Interp *dest_interp),
     ARGIN(Interp *source_interp))
@@ -100,6 +106,12 @@ static void * gc_ms_get_free_object(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*pool);
+
+static unsigned int gc_ms_is_blocked_GC_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static unsigned int gc_ms_is_blocked_GC_sweep(PARROT_INTERP)
+        __attribute__nonnull__(1);
 
 static void gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
@@ -146,6 +158,12 @@ static int gc_ms_trace_active_PMCs(PARROT_INTERP,
     Parrot_gc_trace_type trace)
         __attribute__nonnull__(1);
 
+static void gc_ms_unblock_GC_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+static void gc_ms_unblock_GC_sweep(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     ARGMOD(PMC_Attribute_Pool *pool),
     ARGMOD(void *data))
@@ -173,6 +191,10 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_block_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_block_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_destroy_child_interp __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(dest_interp) \
     , PARROT_ASSERT_ARG(source_interp))
@@ -194,6 +216,10 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(pool))
+#define ASSERT_ARGS_gc_ms_is_blocked_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_is_blocked_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_mark_and_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_more_traceable_objects __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -216,6 +242,10 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
     , PARROT_ASSERT_ARG(pool) \
     , PARROT_ASSERT_ARG(arg))
 #define ASSERT_ARGS_gc_ms_trace_active_PMCs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_unblock_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_unblock_GC_sweep __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_free_attributes_from_pool \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -280,6 +310,14 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
     interp->gc_sys->allocate_fixed_size_storage = gc_ms_allocate_fixed_size_storage;
     interp->gc_sys->free_fixed_size_storage     = gc_ms_free_fixed_size_storage;
+
+    interp->gc_sys->block_mark      = gc_ms_block_GC_mark;
+    interp->gc_sys->unblock_mark    = gc_ms_unblock_GC_mark;
+    interp->gc_sys->is_blocked_mark = gc_ms_is_blocked_GC_mark;
+
+    interp->gc_sys->block_sweep      = gc_ms_block_GC_sweep;
+    interp->gc_sys->unblock_sweep    = gc_ms_unblock_GC_sweep;
+    interp->gc_sys->is_blocked_sweep = gc_ms_is_blocked_GC_sweep;
 
     initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp, interp->mem_pools);
@@ -1218,6 +1256,83 @@ gc_ms_alloc_objects(PARROT_INTERP,
 
     if (alloc_size > POOL_MAX_BYTES)
         pool->objects_per_alloc = POOL_MAX_BYTES / pool->object_size;
+}
+
+/*
+
+=item C<static void gc_ms_block_GC_mark(PARROT_INTERP)>
+
+Blocks the GC from performing it's mark phase.
+
+=item C<static void gc_ms_unblock_GC_mark(PARROT_INTERP)>
+
+Unblocks the GC mark.
+
+=item C<static void gc_ms_block_GC_sweep(PARROT_INTERP)>
+
+Blocks the GC from performing it's sweep phase.
+
+=item C<static void gc_ms_unblock_GC_sweep(PARROT_INTERP)>
+
+Unblocks GC sweep.
+
+=item C<static unsigned int gc_ms_is_blocked_GC_mark(PARROT_INTERP)>
+
+Determines if the GC mark is currently blocked.
+
+=item C<static unsigned int gc_ms_is_blocked_GC_sweep(PARROT_INTERP)>
+
+Determines if the GC sweep is currently blocked.
+
+=cut
+
+*/
+
+static void
+gc_ms_block_GC_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_block_GC_mark)
+    interp->mem_pools->gc_mark_block_level++;
+    Parrot_shared_gc_block(interp);
+}
+
+static void
+gc_ms_unblock_GC_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_unblock_GC_mark)
+    if (interp->mem_pools->gc_mark_block_level) {
+        interp->mem_pools->gc_mark_block_level--;
+        Parrot_shared_gc_unblock(interp);
+    }
+}
+
+static void
+gc_ms_block_GC_sweep(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_block_GC_sweep)
+    interp->mem_pools->gc_sweep_block_level++;
+}
+
+static void
+gc_ms_unblock_GC_sweep(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_unblock_GC_sweep)
+    if (interp->mem_pools->gc_sweep_block_level)
+        interp->mem_pools->gc_sweep_block_level--;
+}
+
+static unsigned int
+gc_ms_is_blocked_GC_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_is_blocked_GC_mark)
+    return interp->mem_pools->gc_mark_block_level;
+}
+
+static unsigned int
+gc_ms_is_blocked_GC_sweep(PARROT_INTERP)
+{
+    ASSERT_ARGS(Parrot_is_blocked_GC_sweep)
+    return interp->mem_pools->gc_sweep_block_level;
 }
 
 /*

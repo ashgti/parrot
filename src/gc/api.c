@@ -939,8 +939,7 @@ void
 Parrot_block_GC_mark(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_block_GC_mark)
-    interp->mem_pools->gc_mark_block_level++;
-    Parrot_shared_gc_block(interp);
+    interp->gc_sys->block_mark(interp);
 }
 
 PARROT_EXPORT
@@ -948,10 +947,7 @@ void
 Parrot_unblock_GC_mark(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_unblock_GC_mark)
-    if (interp->mem_pools->gc_mark_block_level) {
-        interp->mem_pools->gc_mark_block_level--;
-        Parrot_shared_gc_unblock(interp);
-    }
+    interp->gc_sys->unblock_mark(interp);
 }
 
 PARROT_EXPORT
@@ -959,7 +955,7 @@ void
 Parrot_block_GC_sweep(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_block_GC_sweep)
-    interp->mem_pools->gc_sweep_block_level++;
+    interp->gc_sys->block_sweep(interp);
 }
 
 PARROT_EXPORT
@@ -967,8 +963,7 @@ void
 Parrot_unblock_GC_sweep(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_unblock_GC_sweep)
-    if (interp->mem_pools->gc_sweep_block_level)
-        interp->mem_pools->gc_sweep_block_level--;
+    interp->gc_sys->unblock_sweep(interp);
 }
 
 PARROT_EXPORT
@@ -976,7 +971,7 @@ unsigned int
 Parrot_is_blocked_GC_mark(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_is_blocked_GC_mark)
-    return interp->mem_pools->gc_mark_block_level;
+    return interp->gc_sys->is_blocked_mark(interp);
 }
 
 PARROT_EXPORT
@@ -984,15 +979,17 @@ unsigned int
 Parrot_is_blocked_GC_sweep(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_is_blocked_GC_sweep)
-    return interp->mem_pools->gc_sweep_block_level;
+    return interp->gc_sys->is_blocked_mark(interp);
 }
 
 void
 Parrot_gc_completely_unblock(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_completely_unblock)
-    interp->mem_pools->gc_mark_block_level  = 0;
-    interp->mem_pools->gc_sweep_block_level = 0;
+    while(Parrot_is_blocked_GC_mark(interp))
+        Parrot_unblock_GC_mark(interp);
+    while(Parrot_is_blocked_GC_sweep(interp))
+        Parrot_unblock_GC_sweep(interp);
 }
 
 /*

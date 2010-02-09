@@ -129,6 +129,14 @@ typedef struct GC_Subsystem {
     void* (*allocate_fixed_size_storage)(PARROT_INTERP, size_t size);
     void (*free_fixed_size_storage)(PARROT_INTERP, size_t size, void *);
 
+    void (*block_mark)(PARROT_INTERP);
+    void (*unblock_mark)(PARROT_INTERP);
+    unsigned int (*is_blocked_mark)(PARROT_INTERP);
+
+    void (*block_sweep)(PARROT_INTERP);
+    void (*unblock_sweep)(PARROT_INTERP);
+    unsigned int (*is_blocked_sweep)(PARROT_INTERP);
+
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/
