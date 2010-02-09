@@ -299,6 +299,9 @@ Parrot_gc_finalize(PARROT_INTERP)
     ASSERT_ARGS(Parrot_gc_finalize)
     if (interp->gc_sys->finalize_gc_system)
         interp->gc_sys->finalize_gc_system(interp);
+
+    mem_sys_free(interp->gc_sys);
+    interp->gc_sys = NULL;
 }
 
 

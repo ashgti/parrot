@@ -47,6 +47,9 @@ PARROT_CAN_RETURN_NULL
 static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
+static void gc_ms_finalize(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 static void gc_ms_finalize_memory_pools(PARROT_INTERP,
     ARGIN(Memory_Pools * const mem_pools))
         __attribute__nonnull__(1)
@@ -214,6 +217,31 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
 /*
 
+=item C<static void gc_ms_finalize(PARROT_INTERP)>
+
+Finalyze MS GC subsystem. Destroy everything.
+
+=cut
+
+*/
+static void
+gc_ms_finalize(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_ms_finalize)
+
+    /* buffer headers, PMCs */
+    Parrot_gc_destroy_header_pools(interp, interp->mem_pools);
+
+    /* memory pools in resources */
+    Parrot_gc_destroy_memory_pools(interp, interp->mem_pools);
+
+    /* mem subsystem is dead now */
+    mem_sys_free(interp->mem_pools);
+    interp->mem_pools = NULL;
+}
+
+/*
+
 =item C<static void gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)>
 
 Runs the stop-the-world mark & sweep (MS) collector.
@@ -284,8 +312,8 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
 /*
 
-=item C<static void gc_ms_finalize_memory_pools(PARROT_INTERP, Memory_Pools * const
-mem_pools)>
+=item C<static void gc_ms_finalize_memory_pools(PARROT_INTERP, Memory_Pools *
+const mem_pools)>
 
 Perform the finalization run, freeing all PMCs in Memory_Pools.
 
