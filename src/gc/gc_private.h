@@ -111,6 +111,13 @@ typedef struct GC_Subsystem {
     STRING* (*allocate_string_header)(PARROT_INTERP, UINTVAL flags);
     void    (*free_string_header)(PARROT_INTERP, STRING*);
 
+    void* (*allocate_pmc_attributes)(PARROT_INTERP, PMC *);
+    void (*free_pmc_attributes)(PARROT_INTERP, PMC *);
+
+    void* (*allocate_fixed_size_storage)(PARROT_INTERP, size_t size);
+    void (*free_fixed_size_storage)(PARROT_INTERP, size_t size, void *);
+
+
     /*Function hooks that GC systems can CHOOSE to provide if they need them
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/
@@ -537,9 +544,43 @@ void merge_pools(
 /* HEADERIZER BEGIN: src/gc/gc_ms.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_CANNOT_RETURN_NULL
+void * gc_ms_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
+PARROT_CANNOT_RETURN_NULL
+void * gc_ms_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pmc);
+
+void gc_ms_free_fixed_size_storage(PARROT_INTERP,
+    size_t size,
+    ARGMOD(void *data))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*data);
+
+void gc_ms_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pmc);
+
 void Parrot_gc_ms_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+#define ASSERT_ARGS_gc_ms_allocate_fixed_size_storage \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pmc))
+#define ASSERT_ARGS_gc_ms_free_fixed_size_storage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(data))
+#define ASSERT_ARGS_gc_ms_free_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_ms_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
