@@ -105,6 +105,7 @@ typedef struct GC_Subsystem {
 
     void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
     void (*compact_string_pool)(PARROT_INTERP);
+    void (*mark_special)(PARROT_INTERP, PMC *);
 
     void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 

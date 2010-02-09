@@ -166,7 +166,7 @@ Parrot_gc_mark_PObj_alive(PARROT_INTERP, ARGMOD(PObj *obj))
         PMC * const p = (PMC *)obj;
 
         if (PObj_is_special_PMC_TEST(obj))
-            mark_special(interp, interp->mem_pools, p);
+            interp->gc_sys->mark_special(interp, p);
 
         else if (PMC_metadata(p))
             Parrot_gc_mark_PMC_alive(interp, PMC_metadata(p));
