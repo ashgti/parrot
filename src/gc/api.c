@@ -701,7 +701,7 @@ Parrot_gc_compact_memory_pool(PARROT_INTERP)
 
 /*
 
-=item C<void Parrot_gc_merge_header_pools(Interp *dest_interp, Interp
+=item C<void Parrot_gc_destroy_child_interp(Interp *dest_interp, Interp
 *source_interp)>
 
 Merges the header pools of C<source_interp> into those of C<dest_interp>.
@@ -712,14 +712,11 @@ Merges the header pools of C<source_interp> into those of C<dest_interp>.
 */
 
 void
-Parrot_gc_merge_header_pools(ARGMOD(Interp *dest_interp),
+Parrot_gc_destroy_child_interp(ARGMOD(Interp *dest_interp),
     ARGIN(Interp *source_interp))
 {
-    ASSERT_ARGS(Parrot_gc_merge_header_pools)
-
-    Memory_Pools * const dest_arena   = dest_interp->mem_pools;
-    Memory_Pools * const source_arena = source_interp->mem_pools;
-    Parrot_gc_merge_memory_pools(dest_interp, dest_arena, source_arena);
+    ASSERT_ARGS(Parrot_gc_destroy_child_interp)
+    dest_interp->gc_sys->destroy_child_interp(dest_interp, source_interp);
 }
 
 /*

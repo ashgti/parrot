@@ -91,11 +91,13 @@ static Variable_Size_Pool * new_memory_pool(
     NULLOK(compact_f compact));
 
 static void Parrot_gc_merge_buffer_pools(PARROT_INTERP,
+    ARGIN(Memory_Pools * const mem_pools),
     ARGMOD(Fixed_Size_Pool *dest),
     ARGMOD(Fixed_Size_Pool *source))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
+        __attribute__nonnull__(4)
         FUNC_MODIFIES(*dest)
         FUNC_MODIFIES(*source);
 
@@ -146,6 +148,7 @@ static int sweep_cb_pmc(PARROT_INTERP,
 #define ASSERT_ARGS_new_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_Parrot_gc_merge_buffer_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(mem_pools) \
     , PARROT_ASSERT_ARG(dest) \
     , PARROT_ASSERT_ARG(source))
 #define ASSERT_ARGS_sweep_cb_buf __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -1216,14 +1219,14 @@ Parrot_gc_merge_memory_pools(ARGMOD(Interp *dest_interp),
 
     /* heavily borrowed from forall_header_pools */
     fix_pmc_syncs(dest_interp, source_arena->constant_pmc_pool);
-    Parrot_gc_merge_buffer_pools(dest_interp, dest_arena->constant_pmc_pool,
-            source_arena->constant_pmc_pool);
+    Parrot_gc_merge_buffer_pools(dest_interp, dest_arena,
+            dest_arena->constant_pmc_pool, source_arena->constant_pmc_pool);
 
     fix_pmc_syncs(dest_interp, source_arena->pmc_pool);
-    Parrot_gc_merge_buffer_pools(dest_interp, dest_arena->pmc_pool,
-            source_arena->pmc_pool);
+    Parrot_gc_merge_buffer_pools(dest_interp, dest_arena,
+            dest_arena->pmc_pool, source_arena->pmc_pool);
 
-    Parrot_gc_merge_buffer_pools(dest_interp,
+    Parrot_gc_merge_buffer_pools(dest_interp, dest_arena,
             dest_arena->constant_string_header_pool,
             source_arena->constant_string_header_pool);
 
@@ -1239,7 +1242,7 @@ Parrot_gc_merge_memory_pools(ARGMOD(Interp *dest_interp),
             PARROT_ASSERT(dest_arena->sized_header_pools[i]);
         }
 
-        Parrot_gc_merge_buffer_pools(dest_interp,
+        Parrot_gc_merge_buffer_pools(dest_interp, dest_arena,
             dest_arena->sized_header_pools[i],
             source_arena->sized_header_pools[i]);
     }
@@ -1247,8 +1250,8 @@ Parrot_gc_merge_memory_pools(ARGMOD(Interp *dest_interp),
 
 /*
 
-=item C<static void Parrot_gc_merge_buffer_pools(PARROT_INTERP, Fixed_Size_Pool
-*dest, Fixed_Size_Pool *source)>
+=item C<static void Parrot_gc_merge_buffer_pools(PARROT_INTERP, Memory_Pools *
+const mem_pools, Fixed_Size_Pool *dest, Fixed_Size_Pool *source)>
 
 Merge pool C<source> into pool C<dest>. Combines the free lists directly,
 moves all arenas to the new pool, and remove the old pool. To merge, the
@@ -1261,6 +1264,7 @@ names).
 
 static void
 Parrot_gc_merge_buffer_pools(PARROT_INTERP,
+        ARGIN(Memory_Pools * const mem_pools),
         ARGMOD(Fixed_Size_Pool *dest), ARGMOD(Fixed_Size_Pool *source))
 {
     ASSERT_ARGS(Parrot_gc_merge_buffer_pools)
@@ -1297,7 +1301,7 @@ Parrot_gc_merge_buffer_pools(PARROT_INTERP,
 
         total_objects   = cur_arena->total_objects;
 
-        Parrot_append_arena_in_pool(interp, dest_arena, dest, cur_arena,
+        Parrot_append_arena_in_pool(interp, mem_pools, dest, cur_arena,
             cur_arena->total_objects);
 
         /* XXX needed? */

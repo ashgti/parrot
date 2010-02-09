@@ -373,8 +373,7 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     if (interp->parent_interpreter
     &&  interp->thread_data
     && (interp->thread_data->state & THREAD_STATE_JOINED)) {
-        Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
-        Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
+        Parrot_gc_destroy_child_interp(interp->parent_interpreter, interp);
     }
 
     /* MMD cache */

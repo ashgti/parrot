@@ -54,6 +54,13 @@ PARROT_CAN_RETURN_NULL
 static STRING* gc_ms_allocate_string_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
 
+static void gc_ms_destroy_child_interp(
+    ARGMOD(Interp *dest_interp),
+    ARGIN(Interp *source_interp))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*dest_interp);
+
 static void gc_ms_finalize(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -151,6 +158,9 @@ static void Parrot_gc_free_attributes_from_pool(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_destroy_child_interp __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(dest_interp) \
+    , PARROT_ASSERT_ARG(source_interp))
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_finalize_memory_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -225,10 +235,11 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->mem_pools->attrib_pools       = NULL;
     interp->mem_pools->sized_header_pools = NULL;
 
-    interp->gc_sys->finalize_gc_system = gc_ms_finalize;
+    interp->gc_sys->finalize_gc_system      = gc_ms_finalize;
+    interp->gc_sys->destroy_child_interp    = gc_ms_destroy_child_interp;
+    interp->gc_sys->init_pool               = gc_ms_pool_init;
 
-    interp->gc_sys->do_gc_mark         = gc_ms_mark_and_sweep;
-    interp->gc_sys->init_pool          = gc_ms_pool_init;
+    interp->gc_sys->do_gc_mark              = gc_ms_mark_and_sweep;
 
     interp->gc_sys->allocate_pmc_header     = gc_ms_allocate_pmc_header;
     interp->gc_sys->free_pmc_header         = gc_ms_free_pmc_header;
@@ -278,6 +289,28 @@ gc_ms_finalize(PARROT_INTERP)
     interp->mem_pools = NULL;
 }
 
+/*
+
+=item C<static void gc_ms_destroy_child_interp(Interp *dest_interp, Interp
+*source_interp)>
+
+Merges the header pools of C<source_interp> into those of C<dest_interp>.
+(Used to deal with shared objects left after interpreter destruction.)
+
+=cut
+
+*/
+
+static void
+gc_ms_destroy_child_interp(ARGMOD(Interp *dest_interp),
+    ARGIN(Interp *source_interp))
+{
+    ASSERT_ARGS(gc_ms_destroy_child_interp)
+
+    Memory_Pools * const dest_arena   = dest_interp->mem_pools;
+    Memory_Pools * const source_arena = source_interp->mem_pools;
+    Parrot_gc_merge_memory_pools(dest_interp, dest_arena, source_arena);
+}
 /*
 
 =item C<static void gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)>

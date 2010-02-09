@@ -100,8 +100,9 @@ typedef struct GC_Subsystem {
     gc_sys_type_enum sys_type;
 
     /** Function hooks that each subsystem MUST provide */
-    void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
     void (*finalize_gc_system) (PARROT_INTERP);
+    void (*destroy_child_interp)(Interp *dest_interp, Interp *child_interp);
+    void (*do_gc_mark)(PARROT_INTERP, UINTVAL flags);
     void (*init_pool)(PARROT_INTERP, struct Fixed_Size_Pool *);
 
 
