@@ -1417,7 +1417,7 @@ gc_ms_get_gc_info(PARROT_INTERP, Interpinfo_enum which)
     ASSERT_ARGS(gc_ms_get_gc_info)
 
     Memory_Pools * const mem_pools = interp->mem_pools;
-    switch(which) {
+    switch (which) {
         case TOTAL_MEM_ALLOC:
             return mem_pools->memory_allocated;
         case GC_MARK_RUNS:
