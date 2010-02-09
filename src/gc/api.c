@@ -409,14 +409,7 @@ void
 Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_gc_free_pmc_header)
-    Fixed_Size_Pool * const pool = (PObj_constant_TEST(pmc)) ?
-        interp->mem_pools->constant_pmc_pool : interp->mem_pools->pmc_pool;
-
-    Parrot_pmc_destroy(interp, pmc);
-
-    PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
-    pool->add_free_object(interp, interp->mem_pools, pool, (PObj *)pmc);
-    pool->num_free_objects++;
+    interp->gc_sys->free_pmc_header(interp, pmc);
 }
 
 /*

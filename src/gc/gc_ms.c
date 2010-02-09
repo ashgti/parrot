@@ -48,6 +48,11 @@ static void gc_ms_finalize(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
+static void gc_ms_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*pmc);
+
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 static void * gc_ms_get_free_object(PARROT_INTERP,
@@ -102,6 +107,9 @@ static int gc_ms_trace_active_PMCs(PARROT_INTERP,
 #define ASSERT_ARGS_gc_ms_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools))
+#define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_gc_ms_get_free_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mem_pools) \
@@ -157,6 +165,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->gc_sys->init_pool          = gc_ms_pool_init;
 
     interp->gc_sys->allocate_pmc_header = gc_ms_allocate_pmc_header;
+    interp->gc_sys->free_pmc_header     = gc_ms_free_pmc_header;
 
     initialize_var_size_pools(interp, interp->mem_pools);
     initialize_fixed_size_pools(interp, interp->mem_pools);
@@ -284,6 +293,29 @@ gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
             : interp->mem_pools->pmc_pool;
 
     return (PMC*)pool->get_free_object(interp, interp->mem_pools, pool);
+}
+
+/*
+
+=item C<static void gc_ms_free_pmc_header(PARROT_INTERP, PMC *pmc)>
+
+Return PMC header into pool.
+
+=cut
+
+*/
+static void
+gc_ms_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
+{
+    ASSERT_ARGS(gc_ms_free_pmc_header)
+    Fixed_Size_Pool * const pool = (PObj_constant_TEST(pmc)) ?
+        interp->mem_pools->constant_pmc_pool : interp->mem_pools->pmc_pool;
+
+    Parrot_pmc_destroy(interp, pmc);
+
+    PObj_flags_SETTO((PObj *)pmc, PObj_on_free_list_FLAG);
+    pool->add_free_object(interp, interp->mem_pools, pool, (PObj *)pmc);
+    pool->num_free_objects++;
 }
 
 /*
