@@ -1391,7 +1391,9 @@ src/misc$(O) : $(PARROT_H_HEADERS)
 
 src/utils$(O) : $(PARROT_H_HEADERS) include/pmc/pmc_nci.h
 
+## SUFFIX OVERRIDE - Warnings
 src/spf_render$(O) : $(PARROT_H_HEADERS) src/spf_render.str
+	$(CC) $(CFLAGS) -Wno-format-nonliteral @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/spf_render.c
 
 src/spf_vtable$(O) : $(PARROT_H_HEADERS) src/spf_vtable.str
 

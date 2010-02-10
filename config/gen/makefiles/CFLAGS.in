@@ -6,7 +6,6 @@
 # Note, empty regex/options are just ignored.
 #
 
-src/spf_render.c    -{-Wformat-nonliteral}  # noisy
 src/tsq.c           -{@optimize@}           # never optimize tsq.c!
 
 # The src/ops/core_ops*.c files are challenging to optimize.
