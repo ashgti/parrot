@@ -36,6 +36,9 @@ sub _init {
 
     # Please keep these sorted by flag name, such that "-Wno-foo" is
     # sorted as "-Wfoo", so we can turn off/on as needed.
+
+    # Note that these warnings may be turned off for individual files
+    # in the Makefile.
     my @potential_warnings = qw(
         -falign-functions=16
         -fvisibility=hidden
@@ -49,6 +52,7 @@ sub _init {
         -Wchar-subscripts
         -Wcomment
         -Wdisabled-optimization
+        -Wdiv-by-zero
         -Wendif-labels
         -Wextra
         -Wformat
@@ -109,7 +113,6 @@ sub _init {
         -Wlong-long
         -Wmissing-format-attribute
         -Wdeprecated-declarations
-        -Wdiv-by-zero
         -Wno-format-extra-args
         -Wno-import
         -Wno-multichar
