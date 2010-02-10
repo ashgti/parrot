@@ -710,7 +710,7 @@ PARROT_CANNOT_RETURN_NULL
 void *
 gc_ms_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
 {
-    ASSERT_ARGS(gc_ms__allocate_pmc_attributes)
+    ASSERT_ARGS(gc_ms_allocate_pmc_attributes)
     const size_t attr_size = pmc->vtable->attr_size;
 #if GC_USE_FIXED_SIZE_ALLOCATOR
     PMC_Attribute_Pool * const pool = Parrot_gc_get_attribute_pool(interp,
@@ -1014,7 +1014,7 @@ PARROT_CANNOT_RETURN_NULL
 void *
 gc_ms_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
 {
-    ASSERT_ARGS(gc__ms_allocate_fixed_size_storage)
+    ASSERT_ARGS(gc_ms_allocate_fixed_size_storage)
     PMC_Attribute_Pool *pool = NULL;
     const size_t idx = (size < sizeof (void *)) ? 0 : (size - sizeof (void *));
 
@@ -1042,7 +1042,7 @@ C<gc_ms_allocate_fixed_size_storage>
 void
 gc_ms_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data))
 {
-    ASSERT_ARGS(gc_ms__free_fixed_size_storage)
+    ASSERT_ARGS(gc_ms_free_fixed_size_storage)
 
     const size_t item_size = size < sizeof (void *) ? sizeof (void *) : size;
     const size_t idx   = size - sizeof (void *);
