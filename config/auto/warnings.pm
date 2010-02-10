@@ -87,7 +87,6 @@ sub _init {
         -Wunused
         -Wvariadic-macros
         -Wwrite-strings
-        -Wnot-a-real-warning
     );
     my @potential_warnings_no_cpp = qw(
         -Wbad-function-cast
