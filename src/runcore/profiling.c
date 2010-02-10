@@ -252,7 +252,6 @@ ARGIN(opcode_t *pc))
 
     PMC                *preop_sub, *argv;
     opcode_t           *preop_pc;
-    STRING             *unknown_file = CONST_STRING(interp, "<unknown file>");
     UHUGEINTVAL         op_time;
 
     runcore->runcore_start = Parrot_hires_get_time();
