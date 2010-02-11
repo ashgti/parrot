@@ -6,7 +6,6 @@
 .sub 'onload' :load :init
     # opsc_core.pir don't load NQP to avoid clash in nqp-based tests.
     load_bytecode 'PCT.pbc'
-    load_bytecode 'compilers/nqp/nqp.pbc'
 .end
 
 .sub 'main' :main

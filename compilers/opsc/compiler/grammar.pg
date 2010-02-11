@@ -2,7 +2,7 @@
 # $Id$
 
 
-grammar Ops::Grammar is HLL::Grammar;
+grammar Ops::Grammar is PCT::Grammar;
 
 rule TOP {
     <body> 

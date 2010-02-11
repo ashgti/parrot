@@ -7,7 +7,7 @@
     .local pmc p6meta
     p6meta = new 'P6metaclass'
 
-    p6meta.'new_class'('Ops::Compiler', 'parent'=>'HLL::Compiler')
+    p6meta.'new_class'('Ops::Compiler', 'parent'=>'PCT::HLLCompiler')
 
     # Register grammar and action
     $P0 = new [ 'Ops';'Compiler' ]
@@ -53,7 +53,6 @@
 .include 'compilers/opsc/builtins.pir'
 .include 'compilers/opsc/compiler/gen_grammar.pir'
 .include 'compilers/opsc/compiler/gen_actions.pir'
-.include 'compilers/opsc/ops/oplib.pir'
 .include 'compilers/opsc/ops/gen_oplib.pir'
 
 .include 'compilers/opsc/runcore/gen_base.pir'

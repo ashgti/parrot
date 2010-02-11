@@ -10,7 +10,6 @@ OPSC_SOURCES = \
 	compilers/opsc/opsc.pir \
 	compilers/opsc/opsc_core.pir \
 	compilers/opsc/builtins.pir \
-	compilers/opsc/ops/oplib.pir \
 	compilers/opsc/ops/gen_oplib.pir \
 	compilers/opsc/compiler/gen_grammar.pir \
 	compilers/opsc/compiler/gen_actions.pir \

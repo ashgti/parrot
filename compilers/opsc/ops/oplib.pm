@@ -1,7 +1,7 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
-class Ops::OpLib;
+class Ops::OpLib is Hash;
 
 =begin NAME
 
