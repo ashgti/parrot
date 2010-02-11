@@ -407,6 +407,8 @@ parseflags(PARROT_INTERP,
                 interp->gc_sys->sys_type = MS;
             else if (STREQ(opt.opt_arg, "inf"))
                 interp->gc_sys->sys_type = INF;
+            else if (STREQ(opt.opt_arg, "boehm"))
+                interp->gc_sys->sys_type = BOEHM;
             else
                 Parrot_ex_throw_from_c_args(interp, NULL, 1,
                         "main: Unrecognized GC '%s' specified."
