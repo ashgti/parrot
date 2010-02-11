@@ -49,18 +49,6 @@ typedef struct Pcc_cell
 #define STRINGCELL 2
 #define PMCCELL    3
 
-#define SET_CELL_INT(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | INTCELL)
-
-#define SET_CELL_FLOAT(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | FLOATCELL)
-
-#define SET_CELL_STRING(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | STRINGCELL)
-
-#define SET_CELL_PMC(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | PMCCELL)
-
 #define ALLOC_CELL(i) \
     (Pcc_cell *)Parrot_gc_allocate_fixed_size_storage((i), sizeof (Pcc_cell))
 
@@ -1134,8 +1122,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_INT(cell);
 
         CELL_INT(cell) = value;
     }
@@ -1149,8 +1135,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_FLOAT(cell);
 
         CELL_FLOAT(cell) = value;
     }
@@ -1164,8 +1148,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_STRING(cell);
 
         CELL_STRING(cell) = value;
     }
@@ -1179,8 +1161,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_PMC(cell);
 
         CELL_PMC(cell) = value;
     }
@@ -1195,8 +1175,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, k, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_INT(cell);
 
         CELL_INT(cell) = value;
     }
@@ -1211,8 +1189,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, k, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_FLOAT(cell);
 
         CELL_FLOAT(cell) = value;
     }
@@ -1227,8 +1203,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, k, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_STRING(cell);
 
         CELL_STRING(cell) = value;
     }
@@ -1243,8 +1217,6 @@ return current Namespace
             parrot_hash_put(INTERP, hash, k, (void *)cell);
             NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_PMC(cell);
 
         CELL_PMC(cell) = value;
     }
