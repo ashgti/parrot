@@ -453,6 +453,7 @@ INTERP_O_FILES = \
     src/extend_vtable$(O) \
     src/gc/alloc_memory$(O) \
     src/gc/api$(O) \
+    src/gc/gc_boehm$(O) \
     src/gc/gc_ms$(O) \
     src/gc/gc_inf$(O) \
     src/gc/mark_sweep$(O) \
@@ -1187,6 +1188,8 @@ src/key$(O) : $(PARROT_H_HEADERS) src/key.str \
         include/pmc/pmc_key.h
 
 src/gc/mark_sweep$(O) : $(PARROT_H_HEADERS) src/gc/gc_private.h
+
+src/gc/gc_boehm$(O) : $(PARROT_H_HEADERS) src/gc/gc_private.h
 
 src/gc/gc_ms$(O) : $(PARROT_H_HEADERS) src/gc/gc_private.h
 
