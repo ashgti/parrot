@@ -19,6 +19,8 @@ TODO
 
 #ifdef PARROT_HAS_BOEHM_GC
 
+#include <gc.h>
+
 /* HEADERIZER HFILE: src/gc/gc_private.h */
 
 /* HEADERIZER BEGIN: static */
@@ -228,42 +230,42 @@ Functions for allocating/deallocating various objects.
 static PMC*
 gc_boehm_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
-    return (PMC*)calloc(sizeof(PMC), 1);
+    return (PMC*)GC_MALLOC(sizeof(PMC));
 }
 
 static void
 gc_boehm_free_pmc_header(PARROT_INTERP, PMC *pmc)
 {
     if (pmc)
-        free(pmc);
+        GC_FREE(pmc);
 }
 
 
 static STRING*
 gc_boehm_allocate_string_header(PARROT_INTERP, UINTVAL flags)
 {
-    return (STRING*)calloc(sizeof(STRING), 1);
+    return (STRING*)GC_MALLOC(sizeof(STRING));
 }
 
 static void
 gc_boehm_free_string_header(PARROT_INTERP, STRING *s)
 {
     if (s)
-        free(s);
+        GC_FREE(s);
 }
 
 
 static Buffer*
 gc_boehm_allocate_bufferlike_header(PARROT_INTERP, size_t size)
 {
-    return (Buffer*)calloc(sizeof(Buffer), 1);
+    return (Buffer*)GC_MALLOC(sizeof(Buffer));
 }
 
 static void
 gc_boehm_free_bufferlike_header(PARROT_INTERP, Buffer *b, size_t size)
 {
     if (b)
-        free(b);
+        GC_FREE(b);
 }
 
 
@@ -271,7 +273,7 @@ static void*
 gc_boehm_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)
 {
     const size_t attr_size = pmc->vtable->attr_size;
-    PMC_data(pmc) = calloc(attr_size, 1);
+    PMC_data(pmc) = GC_MALLOC(attr_size);
     return PMC_data(pmc);
 }
 
@@ -279,7 +281,7 @@ static void
 gc_boehm_free_pmc_attributes(PARROT_INTERP, PMC *pmc)
 {
     if (PMC_data(pmc))
-        free(PMC_data(pmc));
+        GC_FREE(PMC_data(pmc));
 }
 
 
@@ -294,7 +296,7 @@ gc_boehm_allocate_string_storage(PARROT_INTERP, STRING *str, size_t size)
     if (size == 0)
         return;
 
-    mem      = (char *)mem_sys_allocate(size);
+    mem      = (char *)GC_MALLOC_ATOMIC(size);
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = size;
@@ -305,7 +307,7 @@ gc_boehm_reallocate_string_storage(PARROT_INTERP, STRING *str, size_t size)
 {
     char *mem;
 
-    mem      = (char *)mem_sys_realloc(Buffer_bufstart(str), size);
+    mem      = (char *)GC_REALLOC(Buffer_bufstart(str), size);
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = size;
@@ -322,7 +324,7 @@ gc_boehm_allocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t s
     if (size == 0)
         return;
 
-    mem      = (char *)mem_sys_allocate(size);
+    mem      = (char *)GC_MALLOC_ATOMIC(size);
 
     Buffer_bufstart(buffer) = mem;
     Buffer_buflen(buffer)   = size;
@@ -333,7 +335,7 @@ gc_boehm_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t
 {
     char *mem;
 
-    mem = (char *)mem_sys_realloc(Buffer_bufstart(buffer), size);
+    mem = (char *)GC_REALLOC(Buffer_bufstart(buffer), size);
 
     Buffer_bufstart(buffer) = mem;
     Buffer_buflen(buffer)   = size;
@@ -343,14 +345,14 @@ gc_boehm_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t
 static void*
 gc_boehm_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
 {
-    return calloc(size, 1);
+    return GC_MALLOC(size);
 }
 
 static void
 gc_boehm_free_fixed_size_storage(PARROT_INTERP, size_t size, void *data)
 {
     if (data)
-        free(data);
+        GC_FREE(data);
 }
 
 /*
