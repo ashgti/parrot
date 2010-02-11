@@ -269,6 +269,9 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
       case INF:
         Parrot_gc_inf_init(interp);
         break;
+      case BOEHM:
+        Parrot_gc_boehm_init(interp);
+        break;
       default:
         /*die horribly because of invalid GC core specified*/
         break;
