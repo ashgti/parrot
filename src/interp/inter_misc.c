@@ -360,8 +360,7 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
         case RUNTIME_PREFIX:
             return Parrot_get_runtime_path(interp);
         case GC_SYS_NAME: {
-            const char * const name = Parrot_gc_sys_name(interp);
-            STRING *const newstr = Parrot_str_new(interp, name, strlen(name));
+            STRING * name = Parrot_gc_sys_name(interp);
             return name;
         }
       default:
