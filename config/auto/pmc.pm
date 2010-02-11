@@ -90,6 +90,8 @@ END
             }
         }
         my $include_headers = get_includes($pmc_fname);
+        my $cc_shared = $conf->data->get('cc_shared');
+        my $cc_o_out  = $conf->data->get('cc_o_out');
 
         $TEMP_pmc_build .= <<END
 src/pmc/$pmc.c : src/pmc/$pmc.dump
@@ -100,14 +102,16 @@ src/pmc/$pmc.dump : vtable.dump $parent_dumps src/pmc/$pmc.pmc \$(PMC2C_FILES) $
 
 include/pmc/pmc_$pmc.h: src/pmc/$pmc.c
 
-src/pmc/$pmc\$(O): include/pmc/pmc_${pmc}.h src/pmc/$pmc.str \$(NONGEN_HEADERS) \\
+## SUFFIX OVERRIDE
+src/pmc/$pmc\$(O): include/pmc/pmc_$pmc.h src/pmc/$pmc.str \$(NONGEN_HEADERS) \\
     $parent_headers $include_headers include/pmc/pmc_continuation.h \\
-    include/pmc/pmc_callcontext.h include/pmc/pmc_fixedintegerarray.h
+    include/pmc/pmc_callcontext.h include/pmc/pmc_fixedintegerarray.h \\
+    src/pmc/$pmc.c
+\t\$(CC) \$(CFLAGS) $cc_shared -I\$(\@D) $cc_o_out \$@ -c src/pmc/$pmc.c
 
 END
     }
 
-    # src/pmc/$pmc\$(O): \$(NONGEN_HEADERS) $parent_headers include/pmc/pmc_$pmc.h
 
     # build list of libraries for link line in Makefile
     my $slash = $conf->data->get('slash');
