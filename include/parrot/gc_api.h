@@ -51,11 +51,11 @@ typedef enum {
     GC_TRACE_SYSTEM_ONLY = 3
 } Parrot_gc_trace_type;
 
-typedef int (*pool_iter_fn)(PARROT_INTERP, struct Fixed_Size_Pool *, int, void*);
-typedef void (*add_free_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *, void *);
-typedef void * (*get_free_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *);
-typedef void (*alloc_objects_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *);
-typedef void (*gc_object_fn_type)(PARROT_INTERP, struct Fixed_Size_Pool *, PObj *);
+typedef int (*pool_iter_fn)(PARROT_INTERP, struct Memory_Pools *, struct Fixed_Size_Pool *, int, void*);
+typedef void (*add_free_object_fn_type)(PARROT_INTERP, struct Memory_Pools *, struct Fixed_Size_Pool *, void *);
+typedef void * (*get_free_object_fn_type)(PARROT_INTERP, struct Memory_Pools *, struct Fixed_Size_Pool *);
+typedef void (*alloc_objects_fn_type)(PARROT_INTERP, struct Memory_Pools *, struct Fixed_Size_Pool *);
+typedef void (*gc_object_fn_type)(PARROT_INTERP, struct Memory_Pools *, struct Fixed_Size_Pool *, PObj *);
 
 
 /* &gen_from_enum(interpinfo.pasm) prefix(INTERPINFO_) */
@@ -85,7 +85,8 @@ typedef enum {
     /* interpinfo_s constants */
     EXECUTABLE_FULLNAME,
     EXECUTABLE_BASENAME,
-    RUNTIME_PREFIX
+    RUNTIME_PREFIX,
+    GC_SYS_NAME
 } Interpinfo_enum;
 
 /* &end_gen */
@@ -190,11 +191,12 @@ size_t Parrot_gc_count_lazy_mark_runs(PARROT_INTERP)
 size_t Parrot_gc_count_mark_runs(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void Parrot_gc_destroy_header_pools(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
-void Parrot_gc_destroy_memory_pools(PARROT_INTERP)
-        __attribute__nonnull__(1);
+void Parrot_gc_destroy_child_interp(
+    ARGMOD(Interp *dest_interp),
+    ARGIN(Interp *source_interp))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*dest_interp);
 
 void Parrot_gc_finalize(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -233,10 +235,6 @@ void Parrot_gc_free_string_header(PARROT_INTERP, ARGMOD(STRING *s))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
 
-int Parrot_gc_get_pmc_index(PARROT_INTERP, ARGIN(PMC* pmc))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 size_t Parrot_gc_headers_alloc_since_last_collect(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -253,16 +251,9 @@ void Parrot_gc_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 size_t Parrot_gc_mem_alloc_since_last_collect(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void Parrot_gc_merge_header_pools(
-    ARGMOD(Interp *dest_interp),
-    ARGIN(Interp *source_interp))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*dest_interp);
-
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-void * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
+Buffer * Parrot_gc_new_bufferlike_header(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
@@ -280,15 +271,6 @@ void Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
-PARROT_WARN_UNUSED_RESULT
-int Parrot_gc_ptr_in_memory_pool(PARROT_INTERP, ARGIN(void *bufstart))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-int Parrot_gc_ptr_is_pmc(PARROT_INTERP, ARGIN(void *ptr))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 void Parrot_gc_reallocate_buffer_storage(PARROT_INTERP,
     ARGMOD(Buffer *buffer),
     size_t newsize)
@@ -303,6 +285,10 @@ void Parrot_gc_reallocate_string_storage(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*str);
 
+PARROT_CANNOT_RETURN_NULL
+STRING * Parrot_gc_sys_name(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 UINTVAL Parrot_gc_total_copied(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -314,6 +300,8 @@ int Parrot_gc_total_pmcs(PARROT_INTERP)
 
 int Parrot_gc_total_sized_buffers(PARROT_INTERP)
         __attribute__nonnull__(1);
+
+STRING *Parrot_gc_sys_name(PARROT_INTERP);
 
 #define ASSERT_ARGS_Parrot_block_GC_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -369,12 +357,10 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_count_mark_runs __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_Parrot_gc_destroy_header_pools \
+#define ASSERT_ARGS_Parrot_gc_destroy_child_interp \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_Parrot_gc_destroy_memory_pools \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+       PARROT_ASSERT_ARG(dest_interp) \
+    , PARROT_ASSERT_ARG(source_interp))
 #define ASSERT_ARGS_Parrot_gc_finalize __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_free_bufferlike_header \
@@ -397,9 +383,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
 #define ASSERT_ARGS_Parrot_gc_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(s))
-#define ASSERT_ARGS_Parrot_gc_get_pmc_index __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_headers_alloc_since_last_collect \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -413,9 +396,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
 #define ASSERT_ARGS_Parrot_gc_mem_alloc_since_last_collect \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_Parrot_gc_merge_header_pools __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(dest_interp) \
-    , PARROT_ASSERT_ARG(source_interp))
 #define ASSERT_ARGS_Parrot_gc_new_bufferlike_header \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -427,12 +407,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
-#define ASSERT_ARGS_Parrot_gc_ptr_in_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(bufstart))
-#define ASSERT_ARGS_Parrot_gc_ptr_is_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(ptr))
 #define ASSERT_ARGS_Parrot_gc_reallocate_buffer_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -441,6 +415,8 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_Parrot_gc_sys_name __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_total_copied __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_total_memory_allocated \

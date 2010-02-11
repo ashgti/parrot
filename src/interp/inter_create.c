@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -24,6 +24,7 @@ Create or destroy a Parrot interpreter
 #include "parrot/oplib/core_ops.h"
 #include "../compilers/imcc/imc.h"
 #include "pmc/pmc_callcontext.h"
+#include "../gc/gc_private.h"
 #include "inter_create.str"
 
 /* HEADERIZER HFILE: include/parrot/interpreter.h */
@@ -114,6 +115,37 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     int stacktop;
     Interp *interp;
 
+    interp = allocate_interpreter(parent, flags);
+    initialize_interpreter(interp, (void*)&stacktop);
+    return interp;
+}
+
+/*
+
+=item C<Parrot_Interp allocate_interpreter(Interp *parent, INTVAL flags)>
+
+Allocate new interpreter from system memory. Everything is preallocated but not
+initialized. Used in next cycle:
+
+    allocate_interpreter
+    parseflags
+    initialize_interpreter
+
+for overriding subsystems (e.g. GC) which require early initialization.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Parrot_Interp
+allocate_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
+{
+    ASSERT_ARGS(allocate_interpreter)
+    int stacktop;
+    Interp *interp;
+
     /* Get an empty interpreter from system memory */
     interp = mem_allocate_zeroed_typed(Interp);
 
@@ -135,8 +167,50 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     /* Must initialize flags before Parrot_gc_initialize() is called
      * so the GC_DEBUG stuff is available. */
     interp->flags = flags;
+
+    interp->ctx         = PMCNULL;
+    interp->resume_flag = RESUME_INITIAL;
+
+    interp->recursion_limit = RECURSION_LIMIT;
+
+    /* PANIC will fail until this is done */
+    interp->piodata = NULL;
+
+    /* create exceptions list */
+    interp->current_runloop_id    = 0;
+    interp->current_runloop_level = 0;
+
+    /* Allocate IMCC info */
+    IMCC_INFO(interp) = mem_allocate_zeroed_typed(imc_info_t);
+
+    interp->gc_sys           = mem_allocate_zeroed_typed(GC_Subsystem);
+    interp->gc_sys->sys_type = parent
+                                    ? parent->gc_sys->sys_type
+                                    : PARROT_GC_DEFAULT_TYPE;
+
+    /* Done. Return and be done with it */
+    return interp;
+}
+
+/*
+
+=item C<Parrot_Interp initialize_interpreter(PARROT_INTERP, void *stacktop)>
+
+Initialize previously allocated interpreter.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Parrot_Interp
+initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
+{
+    ASSERT_ARGS(initialize_interpreter)
+
     /* Set up the memory allocation system */
-    Parrot_gc_initialize(interp, (void*)&stacktop);
+    Parrot_gc_initialize(interp, stacktop);
     Parrot_block_GC_mark(interp);
     Parrot_block_GC_sweep(interp);
 
@@ -155,15 +229,6 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
      */
     Parrot_str_init(interp);
 
-    if (is_env_var_set(interp, CONST_STRING(interp, "PARROT_GC_DEBUG"))) {
-#if ! DISABLE_GC_DEBUG
-        Interp_flags_SET(interp, PARROT_GC_DEBUG_FLAG);
-#else
-        fprintf(stderr, "PARROT_GC_DEBUG is set but the binary was compiled "
-                "with DISABLE_GC_DEBUG.\n");
-#endif
-    }
-
     Parrot_initialize_core_vtables(interp);
 
     /* Set up MMD; MMD cache for builtins. */
@@ -177,6 +242,15 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     init_world_once(interp);
 
     /* context data */
+    if (is_env_var_set(interp, CONST_STRING(interp, "PARROT_GC_DEBUG"))) {
+#if ! DISABLE_GC_DEBUG
+        Interp_flags_SET(interp, PARROT_GC_DEBUG_FLAG);
+#else
+        fprintf(stderr, "PARROT_GC_DEBUG is set but the binary was compiled "
+                "with DISABLE_GC_DEBUG.\n");
+#endif
+    }
+
     /* Initialize interpreter's flags */
     PARROT_WARNINGS_off(interp, PARROT_WARNINGS_ALL_FLAG);
 
@@ -263,6 +337,7 @@ make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
 
     return interp;
 }
+
 
 /*
 
@@ -373,11 +448,8 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     if (interp->parent_interpreter
     &&  interp->thread_data
     && (interp->thread_data->state & THREAD_STATE_JOINED)) {
-        Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
-        Parrot_gc_merge_header_pools(interp->parent_interpreter, interp);
+        Parrot_gc_destroy_child_interp(interp->parent_interpreter, interp);
     }
-
-    Parrot_gc_finalize(interp);
 
     /* MMD cache */
     Parrot_mmd_cache_destroy(interp, interp->op_mmd_cache);
@@ -390,19 +462,6 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     /* packfile */
     if (interp->initial_pf)
         PackFile_destroy(interp, interp->initial_pf);
-
-    /* buffer headers, PMCs */
-    Parrot_gc_destroy_header_pools(interp);
-
-    /* memory pools in resources */
-    Parrot_gc_destroy_memory_pools(interp);
-
-    /* mem subsystem is dead now */
-    mem_sys_free(interp->mem_pools);
-    interp->mem_pools = NULL;
-    mem_sys_free(interp->gc_sys);
-    interp->gc_sys = NULL;
-
     /* cache structure */
     destroy_object_cache(interp);
 
@@ -423,6 +482,9 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         /* free vtables */
         parrot_free_vtables(interp);
 
+        /* Finalyze GC */
+        Parrot_gc_finalize(interp);
+
         MUTEX_DESTROY(interpreter_array_mutex);
         mem_sys_free(interp);
 
@@ -440,6 +502,9 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
                 mem_sys_free(interp->thread_data);
                 interp->thread_data = NULL;
             }
+
+            /* Finalyze GC */
+            Parrot_gc_finalize(interp);
 
             parrot_free_vtables(interp);
             mem_sys_free(interp);
