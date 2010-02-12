@@ -210,8 +210,8 @@ replacement syntax assumes the source text is on a single line.)
 
 If set to a C<makefile>, C<c> or C<perl> value, C<comment_type> will be set
 to corresponding value.
-Moreover, when set to a C<makefile> value, it will set C<replace_slashes> to
-enabled, and C<conditioned_lines> to enabled.
+Moreover, when set to a C<makefile> value, it will enable
+C<conditioned_lines>.
 
 Its value will be detected automatically by target file name unless you set
 it to a special value C<none>.
@@ -294,12 +294,6 @@ forces the remaining lines of the file to be evaluated as perl code. Before
 this evaluation occurs, any substitution of @@ values is performed on the
 original text.
 
-=item replace_slashes
-
-If set to a true value, this causes any C</>s in the file to automatically
-be replaced with an architecture appropriate slash. C</> or C<\>. This is
-a very helpful option when writing Makefiles.
-
 =item expand_gmake_syntax
 
 If set to a true value, then certain types of I<gmake> syntax will be expanded
@@ -378,7 +372,6 @@ sub genfile {
                 $file_types_info{$options{file_type}}{comment_type};
         }
         if ( $options{file_type} eq 'makefile' ) {
-            $options{replace_slashes}   = 1;
             $options{conditioned_lines} = 1;
         }
     }
@@ -547,21 +540,6 @@ sub genfile {
                 '';
             }
         }egx;
-
-        if ( $options{replace_slashes} ) {
-            if ( $line =~ m{/$} ) {
-                croak "$source:$.: line ends in a slash\n";
-            }
-
-            $line =~ s{(/+)}{
-                my $len = length $1;
-                my $slash = $conf->data->get('slash');
-                '/' x ($len/2) . ($len%2 ? $slash : '');
-            }eg;
-
-            # replace \* with \\*, so make will not eat the \
-            $line =~ s{(\\\*)}{\\$1}g;
-        }
 
         print $out $line;
     }

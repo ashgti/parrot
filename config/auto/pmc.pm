@@ -115,10 +115,9 @@ END
 
 
     # build list of libraries for link line in Makefile
-    my $slash = $conf->data->get('slash');
-    ( my $TEMP_pmc_classes_o   = $TEMP_pmc_o )   =~ s/^| / src${slash}pmc${slash}/g;
-    ( my $TEMP_pmc_classes_str = $TEMP_pmc_str ) =~ s/^| / src${slash}pmc${slash}/g;
-    ( my $TEMP_pmc_classes_pmc = $pmc_list )     =~ s/^| / src${slash}pmc${slash}/g;
+    ( my $TEMP_pmc_classes_o   = $TEMP_pmc_o )   =~ s{^| }{ src/pmc/}g;
+    ( my $TEMP_pmc_classes_str = $TEMP_pmc_str ) =~ s{^| }{ src/pmc/}g;
+    ( my $TEMP_pmc_classes_pmc = $pmc_list )     =~ s{^| }{ src/pmc/}g;
 
     # Gather the actual names (with MixedCase) of all of the non-abstract
     # built-in PMCs in rough hierarchical order.

@@ -27,12 +27,13 @@ sub _init {
     $data{description} = q{Generate makefiles and other build files};
     $data{result}      = q{};
     $data{makefiles}   = {
-        'Makefile' => { SOURCE => 'config/gen/makefiles/root.in' },
-        'ext/Makefile' => { SOURCE => 'config/gen/makefiles/ext.in', },
+        'Makefile' => { SOURCE => 'config/gen/makefiles/root.in',
+        },
+        'ext/Makefile' => { SOURCE => 'config/gen/makefiles/ext.in',
+        },
 
         'ext/Parrot-Embed/Makefile.PL' => {
             SOURCE            => 'config/gen/makefiles/parrot_embed_pl.in',
-            replace_slashes   => 0,
             conditioned_lines => 1,
         },
 
@@ -96,7 +97,6 @@ sub makefiles {
         : keys %{ $self->{makefiles} };
 
     foreach my $target (@targets) {
-        $target =~ s/\\/\//g if $^O eq 'MSWin32';
         my $args   = $self->{makefiles}->{$target};
         my $source = delete $args->{SOURCE};
 

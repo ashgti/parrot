@@ -514,26 +514,26 @@ OPS_FILES = @ops@ $(GEN_OPSFILES)
 ###############################################################################
 
 # Executables
-PARROT              = ./@test_prog@$(EXE)
-MINIPARROT          = ./miniparrot$(EXE)
-DIS                 = ./pbc_disassemble$(EXE)
-PDUMP               = ./pbc_dump$(EXE)
-PBC_MERGE           = ./pbc_merge$(EXE)
-PDB                 = ./parrot_debugger$(EXE)
-PBC_TO_EXE          = ./pbc_to_exe$(EXE)
-PARROT_CONFIG       = ./parrot_config$(EXE)
-PIRC                = ./pirc$(EXE)
-NQP_RX              = ./parrot-nqp$(EXE)
+PARROT              = .@slash@@test_prog@$(EXE)
+MINIPARROT          = .@slash@miniparrot$(EXE)
+DIS                 = .@slash@pbc_disassemble$(EXE)
+PDUMP               = .@slash@pbc_dump$(EXE)
+PBC_MERGE           = .@slash@pbc_merge$(EXE)
+PDB                 = .@slash@parrot_debugger$(EXE)
+PBC_TO_EXE          = .@slash@pbc_to_exe$(EXE)
+PARROT_CONFIG       = .@slash@parrot_config$(EXE)
+PIRC                = .@slash@pirc$(EXE)
+NQP_RX              = .@slash@parrot-nqp$(EXE)
 
 # Installable executables
-INSTALLABLEPARROT    = ./installable_parrot$(EXE)
-INSTALLABLEDIS       = ./installable_pbc_disassemble$(EXE)
-INSTALLABLEPDUMP     = ./installable_pbc_dump$(EXE)
-INSTALLABLEPBC_MERGE = ./installable_pbc_merge$(EXE)
-INSTALLABLEPBCTOEXE  = ./installable_pbc_to_exe$(EXE)
-INSTALLABLEPDB       = ./installable_parrot_debugger$(EXE)
-INSTALLABLECONFIG    = ./installable_parrot_config$(EXE)
-INSTALLABLENQP       = ./installable_parrot-nqp$(EXE)
+INSTALLABLEPARROT    = .@slash@installable_parrot$(EXE)
+INSTALLABLEDIS       = .@slash@installable_pbc_disassemble$(EXE)
+INSTALLABLEPDUMP     = .@slash@installable_pbc_dump$(EXE)
+INSTALLABLEPBC_MERGE = .@slash@installable_pbc_merge$(EXE)
+INSTALLABLEPBCTOEXE  = .@slash@installable_pbc_to_exe$(EXE)
+INSTALLABLEPDB       = .@slash@installable_parrot_debugger$(EXE)
+INSTALLABLECONFIG    = .@slash@installable_parrot_config$(EXE)
+INSTALLABLENQP       = .@slash@installable_parrot-nqp$(EXE)
 
 # Libraries
 LIBPARROT_STATIC    = @blib_dir@/@libparrot_static@
@@ -1128,7 +1128,7 @@ examples-clean:
 
 # hello
 hello: test_prep examples/pasm/hello$(EXE)
-	./examples/pasm/hello$(EXE) "from your friendly makefile"
+	.@slash@examples@slash@pasm@slash@hello$(EXE) "from your friendly makefile"
 
 examples/pasm/hello.pbc: examples/pasm/hello.pasm
 	$(PARROT) -o examples/pasm/hello.pbc examples/pasm/hello.pasm
