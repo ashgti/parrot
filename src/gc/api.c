@@ -990,6 +990,36 @@ Parrot_gc_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
 
 /*
 
+=item C<STRING * Parrot_gc_sys_name(PARROT_INTERP)>
+
+Retrieve the name of the currently active GC system.
+
+=cut
+
+*/
+
+PARROT_CANNOT_RETURN_NULL
+STRING *
+Parrot_gc_sys_name(PARROT_INTERP) {
+    ASSERT_ARGS(Parrot_gc_sys_name)
+    STRING *name = NULL;
+    switch (interp->gc_sys->sys_type) {
+        case MS:
+            name = Parrot_str_new(interp, "ms", 2);
+            break;
+        case INF:
+            name = Parrot_str_new(interp, "inf", 3);
+            break;
+        default:
+            name = Parrot_str_new(interp, "unknown", 7);
+            break;
+    }
+    PARROT_ASSERT(name != NULL);
+    return name;
+}
+
+/*
+
 =back
 
 =head1 SEE ALSO

@@ -322,16 +322,14 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
 {
     ASSERT_ARGS(interpinfo_s)
     switch (what) {
-      case EXECUTABLE_FULLNAME:
-        {
+        case EXECUTABLE_FULLNAME: {
             PMC *exe_name = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
                     IGLOBALS_EXECUTABLE);
             if (PMC_IS_NULL(exe_name))
                 return string_from_literal(interp, "");
             return VTABLE_get_string(interp, exe_name);
         }
-      case EXECUTABLE_BASENAME:
-        {
+        case EXECUTABLE_BASENAME: {
             STRING *basename;
             PMC    *exe_name = VTABLE_get_pmc_keyed_int(interp,
                                 interp->iglobals, IGLOBALS_EXECUTABLE);
@@ -359,8 +357,12 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
                 return basename;
             }
         }
-      case RUNTIME_PREFIX:
-        return Parrot_get_runtime_path(interp);
+        case RUNTIME_PREFIX:
+            return Parrot_get_runtime_path(interp);
+        case GC_SYS_NAME: {
+            STRING * name = Parrot_gc_sys_name(interp);
+            return name;
+        }
       default:
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");
