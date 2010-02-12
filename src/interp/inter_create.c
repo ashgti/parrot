@@ -165,7 +165,7 @@ allocate_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     }
 
     /* Must initialize flags before Parrot_gc_initialize() is called
-     * so the GC_DEBUG stuff is available. */
+     * so the PARROT_GC_DEBUG stuff is available. */
     interp->flags = flags;
 
     interp->ctx         = PMCNULL;

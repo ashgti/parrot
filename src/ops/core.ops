@@ -981,7 +981,7 @@ inline op trace(in INT) :flow {
 
 =item B<gc_debug>(in INT)
 
-If $1 is zero, turn off GC_DEBUG. Otherwise turn it on.
+If $1 is zero, turn off PARROT_GC_DEBUG. Otherwise turn it on.
 
 =cut
 

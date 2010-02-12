@@ -1711,7 +1711,7 @@ Parrot_str_bitwise_and(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
 
 #if ! DISABLE_GC_DEBUG
     /* trigger GC for debug */
-    if (interp && GC_DEBUG(interp))
+    if (interp && PARROT_GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
@@ -1864,7 +1864,7 @@ Parrot_str_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
 
 #if ! DISABLE_GC_DEBUG
     /* trigger GC for debug */
-    if (interp && GC_DEBUG(interp))
+    if (interp && PARROT_GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
@@ -1940,7 +1940,7 @@ Parrot_str_bitwise_xor(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
 
 #if ! DISABLE_GC_DEBUG
     /* trigger GC for debug */
-    if (interp && GC_DEBUG(interp))
+    if (interp && PARROT_GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
@@ -2019,7 +2019,7 @@ Parrot_str_bitwise_not(PARROT_INTERP, ARGIN_NULLOK(const STRING *s),
 
 #if ! DISABLE_GC_DEBUG
     /* trigger GC for debug */
-    if (interp && GC_DEBUG(interp))
+    if (interp && PARROT_GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
