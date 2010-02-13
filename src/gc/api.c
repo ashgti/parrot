@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -259,9 +259,9 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
 {
     ASSERT_ARGS(Parrot_gc_initialize)
 
-    interp->lo_var_ptr                    = stacktop;
+    interp->lo_var_ptr = stacktop;
 
-    /*Call appropriate initialization function for GC subsystem*/
+    /* Call appropriate initialization function for GC subsystem */
     switch (interp->gc_sys->sys_type) {
       case MS:
         Parrot_gc_ms_init(interp);
@@ -269,11 +269,15 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
       case INF:
         Parrot_gc_inf_init(interp);
         break;
+
+#ifdef PARROT_HAS_BOEHM_GC
       case BOEHM:
         Parrot_gc_boehm_init(interp);
         break;
+#endif
+
       default:
-        /*die horribly because of invalid GC core specified*/
+        /* die horribly because of invalid GC core specified */
         break;
     }
 }

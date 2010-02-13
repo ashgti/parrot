@@ -1,5 +1,5 @@
 /* settings.h
- *  Copyright (C) 2001-2004, Parrot Foundation.
+ *  Copyright (C) 2001-2010, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -38,7 +38,11 @@
  * MS  -- stop-the-world mark & sweep
  * INF -- infinite memory "collector"
  */
-#define PARROT_GC_DEFAULT_TYPE BOEHM
+#ifdef PARROT_HAS_BOEHM_GC
+#  define PARROT_GC_DEFAULT_TYPE BOEHM
+#else
+#  define PARROT_GC_DEFAULT_TYPE MS
+#endif
 
 /*
  * JIT/i386 can use the CGP run core for external functions instead
