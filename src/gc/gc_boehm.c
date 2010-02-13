@@ -184,6 +184,7 @@ gc_boehm_mark_and_sweep(SHIM_INTERP, UINTVAL flags)
 {
     ASSERT_ARGS(gc_boehm_mark_and_sweep)
     UNUSED(flags);
+    GC_gcollect();
 }
 
 /*
