@@ -58,6 +58,10 @@ static void gc_boehm_allocate_string_storage(PARROT_INTERP,
 static void gc_boehm_compact_memory_pool(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+static void gc_boehm_finalize_cb(ARGIN(void *obj), ARGIN(void *user_data))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 static void gc_boehm_free_bufferlike_header(PARROT_INTERP,
     Buffer *b,
     size_t size)
@@ -116,6 +120,9 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_compact_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(obj) \
+    , PARROT_ASSERT_ARG(user_data))
 #define ASSERT_ARGS_gc_boehm_free_bufferlike_header \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -230,14 +237,22 @@ Functions for allocating/deallocating various objects.
 static PMC*
 gc_boehm_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
-    return (PMC*)GC_MALLOC(sizeof(PMC));
+    PMC *pmc = (PMC*)GC_MALLOC(sizeof(PMC));
+    //GC_REGISTER_FINALIZER_NO_ORDER(pmc, gc_boehm_finalize_cb, interp, NULL, NULL);
+    return pmc;
 }
 
 static void
 gc_boehm_free_pmc_header(PARROT_INTERP, PMC *pmc)
 {
-    if (pmc)
-        GC_FREE(pmc);
+    if (pmc) {
+        /* Unregister finalizer */
+        //GC_REGISTER_FINALIZER_NO_ORDER(pmc, NULL, interp, NULL, NULL);
+        /* If PMC was destroyed manually - do nothing */
+        if (!PObj_on_free_list_TEST(pmc))
+            Parrot_pmc_destroy(interp, pmc);
+        //GC_FREE(pmc);
+    }
 }
 
 
@@ -369,6 +384,28 @@ gc_boehm_get_gc_info(PARROT_INTERP, Interpinfo_enum what)
 {
     return 0;
 }
+
+/*
+
+=item C<static void gc_boehm_finalize_cb(void *obj, void *user_data)>
+
+this function is passed to the finalizer
+
+=cut
+
+*/
+static void
+gc_boehm_finalize_cb(ARGIN(void *obj), ARGIN(void *user_data))
+{
+    ASSERT_ARGS(gc_boehm_finalize_cb)
+    PMC           *pmc    = (PMC*)obj;
+    Parrot_Interp  interp = (Parrot_Interp)user_data;
+
+    /* If PMC was destroyed manually - do nothing */
+    if (!PObj_on_free_list_TEST(pmc))
+        Parrot_pmc_destroy(interp, pmc);
+}
+
 
 
 /*
