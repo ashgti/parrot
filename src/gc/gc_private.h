@@ -149,11 +149,9 @@ typedef struct GC_Subsystem {
      *These will be called via the GC API functions Parrot_gc_func_name
      *e.g. read barrier && write barrier hooks can go here later ...*/
 
-    /* Holds system-specific data structures
-     * unused right now, but this is where it should go if we need them ...
-      union {
-      } gc_private;
-     */
+    /* Holds system-specific data structures */
+    void *gc_private;
+
 } GC_Subsystem;
 
 typedef struct Memory_Block {
