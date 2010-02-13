@@ -23,6 +23,12 @@ GC related bugs.
     .include 'test_more.pir'
     plan(140)
 
+    $S0 = interpinfo .INTERPINFO_GC_SYS_NAME
+    if $S0 == 'ms' goto do_test
+    skip(10, 'Unsupported GC type')
+    goto after_skip
+
+  do_test:
     sweep_1()
     sweep_0()
     sweep_0_need_destroy_obj()
@@ -30,6 +36,8 @@ GC related bugs.
     collect_count()
     collect_toggle()
     collect_toggle_nested()
+
+  after_skip:
     vanishing_singleton_PMC()
     vanishing_ret_continuation()
     regsave_marked()
