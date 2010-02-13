@@ -438,6 +438,9 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     //GC_enable_incremental();
     //GC_time_limit = GC_TIME_UNLIMITED;
 
+    /* Alias for gc_sys */
+    GC_Subsystem *gc_sys = interp->gc_sys;
+
     boehm_gc_data *gc_private = (boehm_gc_data*)GC_MALLOC_ATOMIC(sizeof(boehm_gc_data));
     /* PMC layout */
     /* 11110 -> 0x1F */
@@ -448,36 +451,36 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     gc_private->string_layout = 0x2;
     gc_private->string_descriptor = GC_make_descriptor(&gc_private->string_layout, 9);
 
-    interp->gc_sys->gc_private = gc_private;
+    gc_sys->gc_private = gc_private;
 
-    interp->gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
-    interp->gc_sys->finalize_gc_system = NULL;
+    gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
+    gc_sys->finalize_gc_system = NULL;
 
-    interp->gc_sys->do_gc_mark              = gc_boehm_mark_and_sweep;
-    interp->gc_sys->compact_string_pool     = gc_boehm_compact_memory_pool;
+    gc_sys->do_gc_mark              = gc_boehm_mark_and_sweep;
+    gc_sys->compact_string_pool     = gc_boehm_compact_memory_pool;
 
-    interp->gc_sys->allocate_pmc_header     = gc_boehm_allocate_pmc_header;
-    interp->gc_sys->free_pmc_header         = gc_boehm_free_pmc_header;
+    gc_sys->allocate_pmc_header     = gc_boehm_allocate_pmc_header;
+    gc_sys->free_pmc_header         = gc_boehm_free_pmc_header;
 
-    interp->gc_sys->allocate_string_header  = gc_boehm_allocate_string_header;
-    interp->gc_sys->free_string_header      = gc_boehm_free_string_header;
+    gc_sys->allocate_string_header  = gc_boehm_allocate_string_header;
+    gc_sys->free_string_header      = gc_boehm_free_string_header;
 
-    interp->gc_sys->allocate_bufferlike_header  = gc_boehm_allocate_bufferlike_header;
-    interp->gc_sys->free_bufferlike_header      = gc_boehm_free_bufferlike_header;
+    gc_sys->allocate_bufferlike_header  = gc_boehm_allocate_bufferlike_header;
+    gc_sys->free_bufferlike_header      = gc_boehm_free_bufferlike_header;
 
-    interp->gc_sys->allocate_pmc_attributes = gc_boehm_allocate_pmc_attributes;
-    interp->gc_sys->free_pmc_attributes     = gc_boehm_free_pmc_attributes;
+    gc_sys->allocate_pmc_attributes = gc_boehm_allocate_pmc_attributes;
+    gc_sys->free_pmc_attributes     = gc_boehm_free_pmc_attributes;
 
-    interp->gc_sys->allocate_string_storage = gc_boehm_allocate_string_storage;
-    interp->gc_sys->reallocate_string_storage = gc_boehm_reallocate_string_storage;
+    gc_sys->allocate_string_storage = gc_boehm_allocate_string_storage;
+    gc_sys->reallocate_string_storage = gc_boehm_reallocate_string_storage;
 
-    interp->gc_sys->allocate_buffer_storage = gc_boehm_allocate_buffer_storage;
-    interp->gc_sys->reallocate_buffer_storage = gc_boehm_reallocate_buffer_storage;
+    gc_sys->allocate_buffer_storage = gc_boehm_allocate_buffer_storage;
+    gc_sys->reallocate_buffer_storage = gc_boehm_reallocate_buffer_storage;
 
-    interp->gc_sys->allocate_fixed_size_storage = gc_boehm_allocate_fixed_size_storage;
-    interp->gc_sys->free_fixed_size_storage     = gc_boehm_free_fixed_size_storage;
+    gc_sys->allocate_fixed_size_storage = gc_boehm_allocate_fixed_size_storage;
+    gc_sys->free_fixed_size_storage     = gc_boehm_free_fixed_size_storage;
 
-    interp->gc_sys->get_gc_info      = gc_boehm_get_gc_info;
+    gc_sys->get_gc_info      = gc_boehm_get_gc_info;
 
 }
 
