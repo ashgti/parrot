@@ -79,6 +79,12 @@ pin/unpin
 
     .local int init, before, after
 
+    $S0 = interpinfo .INTERPINFO_GC_SYS_NAME
+    if $S0 == 'ms' goto do_test
+    skip(2, 'Unsupported GC type')
+    .return()
+
+  do_test:
     $S0 = 'life'
     $S1 = 'life'
     $S2 = 'life'
