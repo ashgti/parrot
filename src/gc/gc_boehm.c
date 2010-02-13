@@ -20,6 +20,15 @@ TODO
 #ifdef PARROT_HAS_BOEHM_GC
 
 #include <gc.h>
+#include <gc_typed.h>
+
+typedef struct boehm_gc_data {
+    GC_word pmc_layout;
+    GC_word pmc_descriptor;
+
+    GC_word string_layout;
+    GC_word string_descriptor;
+} boehm_gc_data;
 
 /* HEADERIZER HFILE: src/gc/gc_private.h */
 
@@ -237,7 +246,9 @@ Functions for allocating/deallocating various objects.
 static PMC*
 gc_boehm_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
-    PMC *pmc = (PMC*)GC_MALLOC(sizeof(PMC));
+    boehm_gc_data *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    PMC *pmc = (PMC*)GC_malloc_explicitly_typed(sizeof(PMC), d->pmc_descriptor);
+    //PMC *pmc = (PMC*)GC_MALLOC(sizeof(PMC));
     //GC_REGISTER_FINALIZER_NO_ORDER(pmc, gc_boehm_finalize_cb, interp, NULL, NULL);
     return pmc;
 }
@@ -259,7 +270,8 @@ gc_boehm_free_pmc_header(PARROT_INTERP, PMC *pmc)
 static STRING*
 gc_boehm_allocate_string_header(PARROT_INTERP, UINTVAL flags)
 {
-    return (STRING*)GC_MALLOC(sizeof(STRING));
+    boehm_gc_data *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    return (STRING*)GC_malloc_explicitly_typed(sizeof(STRING), d->string_descriptor);
 }
 
 static void
@@ -423,6 +435,18 @@ Parrot_gc_boehm_init(PARROT_INTERP)
 
     //GC_enable_incremental();
     //GC_time_limit = GC_TIME_UNLIMITED;
+
+    boehm_gc_data *gc_private = (boehm_gc_data*)GC_MALLOC_ATOMIC(sizeof(boehm_gc_data));
+    /* PMC layout */
+    /* 11110 -> 0x1F */
+    gc_private->pmc_layout = 0x1F;
+    gc_private->pmc_descriptor = GC_make_descriptor(&gc_private->pmc_layout, 5);
+    /* STRING layout */
+    /* 000000010 -> 0x2 */
+    gc_private->string_layout = 0x2;
+    gc_private->string_descriptor = GC_make_descriptor(&gc_private->string_layout, 9);
+
+    interp->gc_sys->gc_private = gc_private;
 
     interp->gc_sys->do_gc_mark         = gc_boehm_mark_and_sweep;
     interp->gc_sys->finalize_gc_system = NULL;
