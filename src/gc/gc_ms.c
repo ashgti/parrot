@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -1156,12 +1156,9 @@ gc_ms_more_traceable_objects(PARROT_INTERP,
 
     if (pool->skip == GC_ONE_SKIP)
         pool->skip = GC_NO_SKIP;
-    else if (pool->skip == GC_NO_SKIP) {
-        Fixed_Size_Arena * const arena = pool->last_Arena;
-        if (arena
-        &&  arena->used == arena->total_objects)
-                Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
-    }
+    else if (pool->skip == GC_NO_SKIP
+         &&  interp->mem_pools->header_allocs_since_last_collect >= 1024*1024)
+            Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 
     /* requires that num_free_objects be updated in Parrot_gc_mark_and_sweep.
        If gc is disabled, then we must check the free list directly. */
@@ -1325,11 +1322,12 @@ gc_ms_alloc_objects(PARROT_INTERP,
         pool->objects_per_alloc = POOL_MAX_BYTES / pool->object_size;
 }
 
+
 /*
 
 =item C<static void gc_ms_block_GC_mark(PARROT_INTERP)>
 
-Blocks the GC from performing it's mark phase.
+Blocks the GC from performing its mark phase.
 
 =item C<static void gc_ms_unblock_GC_mark(PARROT_INTERP)>
 
@@ -1337,7 +1335,7 @@ Unblocks the GC mark.
 
 =item C<static void gc_ms_block_GC_sweep(PARROT_INTERP)>
 
-Blocks the GC from performing it's sweep phase.
+Blocks the GC from performing its sweep phase.
 
 =item C<static void gc_ms_unblock_GC_sweep(PARROT_INTERP)>
 
