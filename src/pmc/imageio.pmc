@@ -165,7 +165,7 @@ visit_todo_list_thaw(PARROT_INTERP, SHIM(PMC* pmc_not_used), ARGIN(PMC* info))
         break;
     }
 
-    *(PARROT_IMAGEIO(info)->thaw_ptr) = pmc;
+    PARROT_IMAGEIO(info)->pmc_result = pmc;
 }
 
 static void
@@ -260,7 +260,7 @@ pmclass ImageIO auto_attrs {
     ATTR size_t           pos;            /* current read/write position in buffer */
     ATTR size_t           input_length;
     ATTR INTVAL           what;
-    ATTR PMC            **thaw_ptr;       /* where to thaw a new PMC */
+    ATTR PMC             *pmc_result;     /* where to thaw a new PMC */
     ATTR PMC             *seen;           /* seen hash */
     ATTR PMC             *todo;           /* todo list */
     ATTR PMC             *id_list;        /* seen list used by thaw */
@@ -288,7 +288,7 @@ Initializes the PMC.
 
 */
     VTABLE void init() {
-        PARROT_IMAGEIO(SELF)->thaw_ptr    = NULL;
+        PARROT_IMAGEIO(SELF)->pmc_result  = PMCNULL;
         PARROT_IMAGEIO(SELF)->buffer      = NULL;
         PARROT_IMAGEIO(SELF)->todo        = pmc_new(INTERP, enum_class_ResizablePMCArray);
         PARROT_IMAGEIO(SELF)->seen        = PMCNULL;
@@ -347,20 +347,19 @@ Returns the content of the image as a string.
                                           PARROT_IMAGEIO(SELF)->buffer,
                                           PARROT_IMAGEIO(SELF)->pos);
     }
-/*
 
 /*
 
-=item C<VTABLE void set_pointer()>
+=item C<VTABLE PMC *get_pmc()>
 
-Sets the location where to thaw a new PMC.
+Gets the result PMC after a thaw.
 
 =cut
 
 */
 
-    VTABLE void set_pointer(void* value) {
-        PARROT_IMAGEIO(SELF)->thaw_ptr = (PMC**)value;
+    VTABLE PMC *get_pmc() {
+        return VTABLE_get_pmc_keyed_int(INTERP, (PARROT_IMAGEIO(SELF))->id_list, 1);
     }
 
 /*
@@ -441,7 +440,6 @@ hasn't been seen yet, it is also pushed onto the todo list.
 */
 
     VTABLE void push_pmc(PMC *v) {
-        VTABLE_set_pointer(interp, SELF, &v);
         (PARROT_IMAGEIO(SELF)->visit_pmc_now)(INTERP, v, SELF);
     }
 
@@ -516,8 +514,8 @@ Removes and returns a reference to a pmc from the start of the image.
 
     VTABLE PMC *shift_pmc() {
         PMC *result;
-        VTABLE_set_pointer(interp, SELF, &result);
         (PARROT_IMAGEIO(SELF)->visit_pmc_now)(interp, NULL, SELF);
+        result = PARROT_IMAGEIO(SELF)->pmc_result;
         return result;
     }
 

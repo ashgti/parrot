@@ -103,8 +103,8 @@ Parrot_thaw(PARROT_INTERP, ARGIN(STRING *image))
         gc_block = 1;
     }
 
-    VTABLE_set_pointer(interp, info, &result);
     VTABLE_set_string_native(interp, info, image);
+    result = VTABLE_get_pmc(interp, info);
 
     if (gc_block) {
         Parrot_unblock_GC_mark(interp);
