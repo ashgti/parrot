@@ -10,6 +10,8 @@ src/pmc/imageio.pmc - ImageIO PMC
 
 Freezes and thaws other PMCs.
 
+=cut
+
 */
 
 #define GROW_TO_16_BYTE_BOUNDARY(size) ((size) + ((size) % 16 ? 16 - (size) % 16 : 0))
@@ -127,7 +129,7 @@ id_list_get(PARROT_INTERP, PMC *io, UINTVAL id) {
 }
 
 PARROT_INLINE
-static void
+static PMC *
 visit_todo_list_thaw(PARROT_INTERP, ARGIN(PMC* info))
 {
     UINTVAL  n            = VTABLE_shift_integer(interp, info);
@@ -162,7 +164,7 @@ visit_todo_list_thaw(PARROT_INTERP, ARGIN(PMC* info))
         break;
     }
 
-    PARROT_IMAGEIO(info)->pmc_result = pmc;
+    return pmc;
 }
 
 static void
@@ -209,11 +211,9 @@ pmclass ImageIO auto_attrs {
     ATTR size_t           pos;            /* current read/write position in buffer */
     ATTR size_t           input_length;
     ATTR INTVAL           what;
-    ATTR PMC             *pmc_result;     /* where to thaw a new PMC */
     ATTR PMC             *seen;           /* seen hash */
     ATTR PMC             *todo;           /* todo list */
     ATTR UINTVAL          id;             /* freze ID of PMC */
-    ATTR INTVAL           extra_flags;    /* concerning to extra */
     ATTR struct PackFile *pf;
 
 /*
@@ -236,12 +236,10 @@ Initializes the PMC.
 
 */
     VTABLE void init() {
-        PARROT_IMAGEIO(SELF)->pmc_result  = PMCNULL;
         PARROT_IMAGEIO(SELF)->buffer      = NULL;
         PARROT_IMAGEIO(SELF)->todo        = pmc_new(INTERP, enum_class_ResizablePMCArray);
         PARROT_IMAGEIO(SELF)->seen        = PMCNULL;
         PARROT_IMAGEIO(SELF)->id          = 0;
-        PARROT_IMAGEIO(SELF)->extra_flags = EXTRA_IS_NULL;
         PARROT_IMAGEIO(SELF)->pf          = PackFile_new(INTERP, 0);
 
         PObj_custom_mark_destroy_SETALL(SELF);
@@ -473,10 +471,7 @@ Removes and returns a reference to a pmc from the start of the image.
 */
 
     VTABLE PMC *shift_pmc() {
-        PMC *result;
-        visit_todo_list_thaw(INTERP, SELF);
-        result = PARROT_IMAGEIO(SELF)->pmc_result;
-        return result;
+        return visit_todo_list_thaw(INTERP, SELF);
     }
 
     VTABLE void set_pmc(PMC *p)
