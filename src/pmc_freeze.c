@@ -31,6 +31,8 @@ individual action vtable (freeze/thaw) is then called for all todo-PMCs.
 
 #define THAW_BLOCK_GC_SIZE 100000
 
+/* HEADERIZER HFILE: include/parrot/pmc_freeze.h */
+
 /*
 
 =head2 Public Interface
@@ -55,6 +57,32 @@ Parrot_freeze(PARROT_INTERP, ARGIN(PMC *pmc))
     PMC *image = pmc_new(interp, enum_class_ImageIO);
     VTABLE_set_pmc(interp, image, pmc);
     return VTABLE_get_string(interp, image);
+}
+
+/*
+
+=item C<INTVAL Parrot_freeze_size(PARROT_INTERP, PMC *pmc)>
+
+Get the size of an image to be frozen without allocating a large buffer.
+
+Used in C<Packfile_Constant_pack_size>.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+INTVAL
+Parrot_freeze_size(PARROT_INTERP, ARGIN(PMC *pmc))
+{
+    ASSERT_ARGS(Parrot_freeze_size)
+    PMC *result;
+    PMC *visitor = pmc_new(interp, enum_class_ImageIOSize);
+    VTABLE_set_pmc(interp, visitor, pmc);
+    result = VTABLE_get_pmc(interp, visitor);
+    return VTABLE_get_integer(interp, result);
 }
 
 
@@ -169,7 +197,9 @@ Iterate a visitor PMC visiting each encountered target PMC.
 */
 
 void
-Parrot_visit_loop_visit(PARROT_INTERP, PMC *info) {
+Parrot_visit_loop_visit(PARROT_INTERP, ARGIN(PMC *info)) {
+    ASSERT_ARGS(Parrot_visit_loop_visit)
+
     INTVAL      i;
     PMC * const todo    = VTABLE_get_iter(interp, info);
 
@@ -199,7 +229,9 @@ Iterate a visitor PMC thawfinishing each encountered target PMC.
 */
 
 void
-Parrot_visit_loop_thawfinish(PARROT_INTERP, PMC *info) {
+Parrot_visit_loop_thawfinish(PARROT_INTERP, ARGIN(PMC *info)) {
+    ASSERT_ARGS(Parrot_visit_loop_thawfinish)
+
     /* call thawfinish for each processed PMC */
     /*
      * Thaw in reverse order. We have to fully thaw younger PMCs
