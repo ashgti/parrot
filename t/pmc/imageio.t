@@ -33,6 +33,7 @@ Tests the ImageIO PMC.
     $S1 = freeze test_pmc
     is($S0, $S1, 'freeze gives same image as ImageIO (simple)')
 
+    imageio = new ['ImageIO']
     imageio = $S0
     $P0 = deref imageio
     ok($P0, 'thawed PMC is true (simple)')
@@ -48,6 +49,7 @@ Tests the ImageIO PMC.
     $S1 = freeze test_pmc
     is($S0, $S1, 'freeze gives same image as ImageIO (aggregate)')
 
+    imageio = new ['ImageIO']
     imageio = $S0
     $P0 = deref imageio
     ok($P0, 'thawed PMC is true (aggregate)')
