@@ -204,52 +204,6 @@ visit_todo_list_freeze(PARROT_INTERP, PMC* pmc, PMC* info)
     }
 }
 
-static void
-visit_loop_todo_list(PARROT_INTERP, PMC *info)
-{
-    INTVAL      i;
-    PMC * const todo    = PARROT_IMAGEIO(info)->todo;
-    const int   thawing = VTABLE_get_integer(interp, info) == VISIT_THAW_NORMAL;
-
-    /* can't cache upper limit, visit may append items */
-    for (i = 0; i < VTABLE_elements(interp, todo); i++) {
-        PMC *current = VTABLE_get_pmc_keyed_int(interp, todo, i);
-        if (!current)
-            Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                    "NULL current PMC in visit_loop_todo_list");
-
-        PARROT_ASSERT(current->vtable);
-
-        VTABLE_visit(interp, current, info);
-
-        VISIT_PMC(interp, info, PMC_metadata(current));
-    }
-
-    if (thawing)
-        /* we're done reading the image */
-        PARROT_ASSERT(!INFO_HAS_DATA(info));
-
-    if (thawing) {
-        /* on thawing call thawfinish for each processed PMC */
-        const INTVAL n = VTABLE_elements(interp, todo);
-        int          i;
-
-        /*
-         * Thaw in reverse order. We have to fully thaw younger PMCs
-         * before use them in older.
-         *
-         * XXX There are no younger or older pmcs in a directed graph
-         *     that allows cycles. Any code that requires a specific
-         *      order here is likely broken.
-         */
-        for (i = n-1; i >= 0; --i) {
-            PMC *current = VTABLE_get_pmc_keyed_int(interp, todo, i);
-            if (!PMC_IS_NULL(current))
-                VTABLE_thawfinish(interp, current, info);
-        }
-    }
-}
-
 pmclass ImageIO auto_attrs {
     ATTR Buffer          *buffer;         /* buffer to store the image */
     ATTR size_t           pos;            /* current read/write position in buffer */
@@ -352,6 +306,20 @@ Gets the result PMC after a thaw.
 
     VTABLE PMC *get_pmc() {
         return VTABLE_get_pmc_keyed_int(INTERP, (PARROT_IMAGEIO(SELF))->todo, 0);
+    }
+
+/*
+
+=item C<VTABLE PMC *get_iter()>
+
+Get the C<todo> list for this freeze/thaw for iterating over.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_iter() {
+        return PARROT_IMAGEIO(SELF)->todo;
     }
 
 /*
@@ -527,7 +495,7 @@ Removes and returns a reference to a pmc from the start of the image.
             parrot_new_intval_hash(INTERP));
 
         visit_todo_list_freeze(INTERP, p, SELF);
-        visit_loop_todo_list(INTERP, SELF);
+        Parrot_visit_loop_visit(INTERP, SELF);
     }
 
     VTABLE void set_string_native(STRING *image) {
@@ -556,7 +524,11 @@ Removes and returns a reference to a pmc from the start of the image.
         }
 
         visit_todo_list_thaw(INTERP, SELF);
-        visit_loop_todo_list(INTERP, SELF);
+        Parrot_visit_loop_visit(INTERP, SELF);
+
+        /* we're done reading the image */
+        PARROT_ASSERT(!INFO_HAS_DATA(SELF));
+        Parrot_visit_loop_thawfinish(INTERP, SELF);
     }
 
 /*

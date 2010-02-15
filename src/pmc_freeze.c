@@ -158,6 +158,68 @@ Parrot_clone(PARROT_INTERP, ARGIN(PMC *pmc))
     return VTABLE_clone(interp, pmc);
 }
 
+/*
+
+=item C<void Parrot_visit_loop_visit(PARROT_INTERP, PMC *info)>
+
+Iterate a visitor PMC visiting each encountered target PMC.
+
+=cut
+
+*/
+
+void
+Parrot_visit_loop_visit(PARROT_INTERP, PMC *info) {
+    INTVAL      i;
+    PMC * const todo    = VTABLE_get_iter(interp, info);
+
+    /* can't cache upper limit, visit may append items */
+    for (i = 0; i < VTABLE_elements(interp, todo); i++) {
+        PMC *current = VTABLE_get_pmc_keyed_int(interp, todo, i);
+        if (!current)
+            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+                    "NULL current PMC in visit_loop_todo_list");
+
+        PARROT_ASSERT(current->vtable);
+
+        VTABLE_visit(interp, current, info);
+
+        VISIT_PMC(interp, info, PMC_metadata(current));
+    }
+}
+
+/*
+
+=item C<void Parrot_visit_loop_thawfinish(PARROT_INTERP, PMC *info)>
+
+Iterate a visitor PMC thawfinishing each encountered target PMC.
+
+=cut
+
+*/
+
+void
+Parrot_visit_loop_thawfinish(PARROT_INTERP, PMC *info) {
+    /* call thawfinish for each processed PMC */
+    /*
+     * Thaw in reverse order. We have to fully thaw younger PMCs
+     * before use them in older.
+     *
+     * XXX There are no younger or older pmcs in a directed graph
+     *     that allows cycles. Any code that requires a specific
+     *      order here is likely broken.
+     */
+
+    PMC * const todo    = VTABLE_get_iter(interp, info);
+    const INTVAL n = VTABLE_elements(interp, todo);
+    int          i;
+
+    for (i = n-1; i >= 0; --i) {
+        PMC *current = VTABLE_get_pmc_keyed_int(interp, todo, i);
+        if (!PMC_IS_NULL(current))
+            VTABLE_thawfinish(interp, current, info);
+    }
+}
 
 /*
 
