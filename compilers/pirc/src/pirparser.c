@@ -405,6 +405,111 @@ int yypirlex(YYSTYPE *yylval, yyscan_t yyscanner);
 
 #endif
 
+/* HEADERIZER HFILE: none */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void check_first_arg_direction(
+    lexer_state * const lexer,
+    NOTNULL(char const * const opname))
+        __attribute__nonnull__(2);
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+static char * concat_strings(
+    NOTNULL(lexer_state * const lexer),
+    NOTNULL(char const * a),
+    NOTNULL(char const * b))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+static void create_if_instr(
+    NOTNULL(lexer_state * const lexer),
+    int invert,
+    int hasnull,
+    NOTNULL(char const * const name),
+    NOTNULL(char const * const label))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5);
+
+static void do_strength_reduction(lexer_state * const lexer);
+PARROT_WARN_UNUSED_RESULT
+static int evaluate_i_i(int a, pir_rel_operator op, int b);
+
+PARROT_WARN_UNUSED_RESULT
+static int evaluate_i_n(int a, pir_rel_operator op, double b);
+
+PARROT_WARN_UNUSED_RESULT
+static int evaluate_n_i(double a, pir_rel_operator op, int b);
+
+static void undeclared_symbol(
+    lexer_state * const lexer,
+    char const * const symbol);
+
+static void yy_reduce_print (
+    YYSTYPE *yyvsp,
+    int yyrule,
+    yyscan_t yyscanner,
+    struct lexer_state * const lexer);
+
+static void yy_stack_print (yytype_int16 *bottom, yytype_int16 *top);
+static void yy_symbol_print (
+    FILE *yyoutput,
+    int yytype,
+    YYSTYPE const * const yyvaluep,
+    yyscan_t yyscanner,
+    struct lexer_state * const lexer);
+
+static void yy_symbol_value_print (
+    FILE *yyoutput,
+    int yytype,
+    YYSTYPE const * const yyvaluep,
+    yyscan_t yyscanner,
+    struct lexer_state * const lexer);
+
+static void yydestruct (
+    const char *yymsg,
+    int yytype,
+    YYSTYPE *yyvaluep,
+    yyscan_t yyscanner,
+    struct lexer_state * const lexer);
+
+static int YYID (int i);
+static char * yystpcpy (char *yydest, const char *yysrc);
+static YYSIZE_T yystrlen (const char *yystr);
+static YYSIZE_T yysyntax_error (char *yyresult, int yystate, int yychar);
+static YYSIZE_T yytnamerr (char *yyres, const char *yystr);
+#define ASSERT_ARGS_check_first_arg_direction __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(opname))
+#define ASSERT_ARGS_concat_strings __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(a) \
+    , PARROT_ASSERT_ARG(b))
+#define ASSERT_ARGS_create_if_instr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(name) \
+    , PARROT_ASSERT_ARG(label))
+#define ASSERT_ARGS_do_strength_reduction __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_evaluate_i_i __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_evaluate_i_n __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_evaluate_n_i __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_undeclared_symbol __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yy_reduce_print  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yy_stack_print  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yy_symbol_print  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yy_symbol_value_print  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yydestruct  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_YYID  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yystpcpy  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yystrlen  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yysyntax_error  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_yytnamerr  __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 char *expand_macro(yyscan_t yyscanner, macro_def * const macro, macro_param * args);
 
 /* Enumeration of mathematical operator types; these are used to index the opnames array. */
@@ -5450,8 +5555,7 @@ fold_s_s(yyscan_t yyscanner, NOTNULL(char const *a), pir_math_operator op, NOTNU
 
 /*
 
-=item C<static int
-evaluate_i_i(int a, pir_rel_operator op, double b)>
+=item C<static int evaluate_i_i(int a, pir_rel_operator op, int b)>
 
 Compare C<a> with C<b> according to the relational operator C<op>.
 Wrapper for C<evaluate_n_n>, which takes arguments of type double.
@@ -5467,8 +5571,7 @@ evaluate_i_i(int a, pir_rel_operator op, int b) {
 
 /*
 
-=item C<static int
-evaluate_n_i(int a, pir_rel_operator op, double b)>
+=item C<static int evaluate_n_i(double a, pir_rel_operator op, int b)>
 
 Compare C<a> with C<b> according to the relational operator C<op>.
 Wrapper for C<evaluate_n_n>, which takes arguments of type double.
@@ -5484,8 +5587,7 @@ evaluate_n_i(double a, pir_rel_operator op, int b) {
 
 /*
 
-=item C<static int
-evaluate_i_n(int a, pir_rel_operator op, double b)>
+=item C<static int evaluate_i_n(int a, pir_rel_operator op, double b)>
 
 Compare C<a> with C<b> according to the relational operator C<op>.
 Wrapper for C<evaluate_n_n>, which takes arguments of type double.
@@ -5633,8 +5735,8 @@ evaluate_c(NOTNULL(lexer_state * const lexer), NOTNULL(constant * const c)) {
 
 /*
 
-=item C<static char *
-concat_strings(lexer_state * const lexer, char const *a, char const *b)>
+=item C<static char * concat_strings(lexer_state * const lexer, char const * a,
+char const * b)>
 
 Concatenates two strings into a new buffer. The new string is returned.
 
@@ -5659,9 +5761,8 @@ concat_strings(NOTNULL(lexer_state * const lexer), NOTNULL(char const * a),
 
 /*
 
-=item C<static void
-create_if_instr(lexer_state *lexer, int invert, int hasnull,
-                char * const name, char * const label)>
+=item C<static void create_if_instr(lexer_state * const lexer, int invert, int
+hasnull, char const * const name, char const * const label)>
 
 Create an C<if> or C<unless> instruction; if C<invert> is non-zero (true), the
 C<if> instruction is inverted, effectively becoming C<unless>.
@@ -5908,8 +6009,7 @@ convert_3_to_2_args(int opcode, NOTNULL(int *second_op_index)) {
 
 /*
 
-=item C<static void
-do_strength_reduction(lexer_state * const lexer)>
+=item C<static void do_strength_reduction(lexer_state * const lexer)>
 
 Implement strength reduction for the math operators C<add>, C<sub>, C<mul>, C<div> and C<fdiv>.
 If the current instruction is any of these, then the first two operands are checked; if both
@@ -6043,8 +6143,8 @@ do_strength_reduction(lexer_state * const lexer) {
 
 /*
 
-=item C<static void
-check_first_arg_direction(lexer_state * const lexer, char * const opname)>
+=item C<static void check_first_arg_direction(lexer_state * const lexer, char
+const * const opname)>
 
 This function checks the first argument's  direction of the op C<opname>.
 If the direction is not C<OUT>, a syntax error is emitted. This function assumes
@@ -6217,8 +6317,8 @@ check_op_args_for_symbols(lexer_state * const lexer) {
 
 /*
 
-=item C<static void
-undeclared_symbol(lexer_state * const lexer, char * const symbol)>
+=item C<static void undeclared_symbol(lexer_state * const lexer, char const *
+const symbol)>
 
 Report an error message saying that C<symbol> was not declared. Then test
 whether the symbol is perhaps a PASM register identifier. The user may have
