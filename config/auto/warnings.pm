@@ -222,7 +222,8 @@ sub try_warning {
     $conf->cc_gen('config/auto/warnings/test_c.in');
 
     my $ccflags  = $conf->data->get('ccflags');
-    my $tryflags = "$ccflags $warning";
+    my $warnings = $conf->data->get('ccwarn'). ' ' . $warning;
+    my $tryflags = "$ccflags $warnings";
 
     my $command_line = Parrot::Configure::Utils::_build_compile_command( $cc, $tryflags );
     $verbose and print "  ", $command_line, "\n";
@@ -242,7 +243,7 @@ sub try_warning {
 
     my $output = Parrot::BuildUtil::slurp_file($output_file);
     unlink $output_file or die "Unable to unlink $output_file: $!";
-    return _set_ccflags($conf, $output, $tryflags, $verbose);
+    return _set_ccwarn($conf, $output, $warnings, $verbose);
 }
 
 sub _set_warning {
@@ -251,13 +252,13 @@ sub _set_warning {
     $conf->data->set( $warning => !$exit_code || 0 );
 }
 
-sub _set_ccflags {
-    my ($conf, $output, $tryflags, $verbose) = @_;
+sub _set_ccwarn {
+    my ($conf, $output, $warnings, $verbose) = @_;
     $verbose and print "  output: $output\n";
 
     if ( $output !~ /error|warning|not supported/i ) {
-        $conf->data->set( ccflags => $tryflags );
-        $verbose and print "  ccflags: ", $conf->data->get("ccflags"), "\n";
+        $conf->data->set( ccwarn => $warnings );
+        $verbose and print "  ccwarn: ", $conf->data->get("ccwarn"), "\n";
         return 1;
     }
     else {
