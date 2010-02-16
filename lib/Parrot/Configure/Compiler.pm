@@ -197,9 +197,14 @@ sub cc_clean {    ## no critic Subroutines::RequireFinalReturn
 
     $conf->genfile($source, $target, %options);
 
-Takes the specified source file, replacing entries like C<@FOO@> with
-C<FOO>'s value from the configuration system's data, and writes the results
+Takes the specified source file, replacing entries like C<@key@> with
+C<key>'s value from the configuration system's data, and writes the results
 to specified target file.
+
+If a C<?> is present in the C<@key@>, the replaced value will first try to
+use the full key, but if that is not present, the key up to the C<?> is used.
+For example, if C<@cc_warnings?src/embed.c@> is used, and that key doesn't
+exist, the fallback key would be C<@cc_warnings@>.
 
 Respects the following options when manipulating files (Note: most of the
 replacement syntax assumes the source text is on a single line.)
@@ -532,11 +537,26 @@ sub genfile {
         # interpolate @foo@ values
         $line =~ s{ \@ (\w+) \@ }{
             if(defined(my $val=$conf->data->get($1))) {
-                #use Data::Dumper;warn Dumper("val for $1 is ",$val);
                 $val;
             }
             else {
-                warn "value for '$1' in $source is undef";
+                warn "value for '\@$1\@' in $source is undef";
+                '';
+            }
+        }egx;
+
+        # interpolate @foo?bar@ values
+        $line =~ s{ \@ (\w+) \? (\w+) \@ }{
+            my $full = $1 . '?' . $2;
+            my $base = $1;
+            if(defined(my $val=$conf->data->get($full))) {
+                $val;
+            }
+            elsif(defined($val=$conf->data->get($base))) {
+                $val;
+            }
+            else {
+                warn "value for '\@$full\@' in $source is undef, no fallback";
                 '';
             }
         }egx;
