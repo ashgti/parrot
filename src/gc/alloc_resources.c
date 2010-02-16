@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -627,33 +627,6 @@ compact_pool(PARROT_INTERP,
 
 /*
 
-=item C<size_t aligned_size(const Buffer *buffer, size_t len)>
-
-Determines the size of Buffer C<buffer> which has nominal length C<len>.
-The actual size in RAM of the Buffer might be different because of
-alignment issues.
-
-=cut
-
-*/
-
-PARROT_PURE_FUNCTION
-PARROT_WARN_UNUSED_RESULT
-size_t
-aligned_size(ARGIN(const Buffer *buffer), size_t len)
-{
-    ASSERT_ARGS(aligned_size)
-    if (PObj_is_COWable_TEST(buffer))
-        len += sizeof (void*);
-    if (PObj_aligned_TEST(buffer))
-        len = (len + BUFFER_ALIGN_1) & BUFFER_ALIGN_MASK;
-    else
-        len = (len + WORD_ALIGN_1) & WORD_ALIGN_MASK;
-    return len;
-}
-
-/*
-
 =item C<char * aligned_mem(const Buffer *buffer, char *mem)>
 
 Returns a pointer to the aligned allocated storage for Buffer C<buffer>,
@@ -670,6 +643,10 @@ char *
 aligned_mem(ARGIN(const Buffer *buffer), ARGIN(char *mem))
 {
     ASSERT_ARGS(aligned_mem)
+#if 0
+    This code causing assert in compact_pool. Looks like STRINGs have
+    aligned flag set, but allocated less memory.
+    See C<aligned_string_size>.
     if (PObj_is_COWable_TEST(buffer))
         mem += sizeof (void*);
     if (PObj_aligned_TEST(buffer))
@@ -677,6 +654,9 @@ aligned_mem(ARGIN(const Buffer *buffer), ARGIN(char *mem))
                 BUFFER_ALIGN_MASK);
     else
         mem = (char*)(((unsigned long)(mem + WORD_ALIGN_1)) & WORD_ALIGN_MASK);
+#endif
+    mem += sizeof (void*);
+    mem = (char*)(((unsigned long)(mem + WORD_ALIGN_1)) & WORD_ALIGN_MASK);
 
     return mem;
 }
@@ -1160,6 +1140,31 @@ free_pool(ARGMOD(Fixed_Size_Pool *pool))
 
 /*
 
+=item C<static void free_memory_pool(Variable_Size_Pool *pool)>
+
+Frees a memory pool; helper function for C<Parrot_gc_destroy_memory_pools>.
+
+=cut
+
+*/
+
+static void
+free_memory_pool(Variable_Size_Pool *pool)
+{
+    Memory_Block *cur_block = pool->top_block;
+
+    while (cur_block) {
+        Memory_Block * const next_block = cur_block->prev;
+        mem_internal_free(cur_block);
+        cur_block = next_block;
+    }
+
+    mem_internal_free(pool);
+}
+
+
+/*
+
 =item C<void Parrot_gc_destroy_memory_pools(PARROT_INTERP, Memory_Pools * const
 mem_pools)>
 
@@ -1176,24 +1181,9 @@ Parrot_gc_destroy_memory_pools(PARROT_INTERP,
         ARGIN(Memory_Pools * const mem_pools))
 {
     ASSERT_ARGS(Parrot_gc_destroy_memory_pools)
-    int i;
 
-    for (i = 0; i < 2; i++) {
-        Variable_Size_Pool * const pool = i ?
-                mem_pools->constant_string_pool :
-                mem_pools->memory_pool;
-        Memory_Block *cur_block;
-
-        cur_block = pool->top_block;
-
-        while (cur_block) {
-            Memory_Block * const next_block = cur_block->prev;
-            mem_internal_free(cur_block);
-            cur_block = next_block;
-        }
-
-        mem_internal_free(pool);
-    }
+    free_memory_pool(mem_pools->constant_string_pool);
+    free_memory_pool(mem_pools->memory_pool);
 }
 
 /*

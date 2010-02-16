@@ -49,13 +49,17 @@ PARROT_CAN_RETURN_NULL
 static const char * parseflags(PARROT_INTERP,
     ARGIN(int *argc),
     ARGIN(char **argv[]),
-    ARGIN(INTVAL *core),
+    ARGIN(Parrot_Run_core_t *core),
     ARGIN(Parrot_trace_flags *trace))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
+
+static void parseflags_minimal(PARROT_INTERP, int argc, ARGIN(char *argv[]))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3);
 
 static void usage(ARGMOD(FILE *fp))
         __attribute__nonnull__(1)
@@ -73,6 +77,9 @@ static void usage(ARGMOD(FILE *fp))
     , PARROT_ASSERT_ARG(argv) \
     , PARROT_ASSERT_ARG(core) \
     , PARROT_ASSERT_ARG(trace))
+#define ASSERT_ARGS_parseflags_minimal __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(argv))
 #define ASSERT_ARGS_usage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(fp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -97,7 +104,7 @@ main(int argc, char * argv[])
     Interp     *interp;
     int         status;
 
-    INTVAL             core  = 0;
+    Parrot_Run_core_t  core  = PARROT_SLOW_CORE;
     Parrot_trace_flags trace = PARROT_NO_TRACE;
 
     /* internationalization setup */
@@ -114,12 +121,15 @@ main(int argc, char * argv[])
        available. */
     execname = argv[0];
 
-    /* Parse flags */
-    sourcefile = parseflags(interp, &argc, &argv, &core, &trace);
+    /* Parse minimal subset of flags */
+    parseflags_minimal(interp, argc, argv);
 
     /* Now initialize interpreter */
     initialize_interpreter(interp, (void*)&stacktop);
     imcc_initialize(interp);
+
+    /* Parse flags */
+    sourcefile = parseflags(interp, &argc, &argv, &core, &trace);
 
     Parrot_set_trace(interp, trace);
     Parrot_set_run_core(interp, (Parrot_Run_core_t) core);
@@ -148,6 +158,7 @@ static struct longopt_opt_decl options[] = {
     { 'D', 'D', OPTION_optional_FLAG, { "--parrot-debug" } },
     { 'E', 'E', (OPTION_flags)0, { "--pre-process-only" } },
     { 'G', 'G', (OPTION_flags)0, { "--no-gc" } },
+    { 'H', 'H', OPTION_required_FLAG, { "--hash-seed" } },
     { 'I', 'I', OPTION_required_FLAG, { "--include" } },
     { 'L', 'L', OPTION_required_FLAG, { "--library" } },
     { 'O', 'O', OPTION_optional_FLAG, { "--optimize" } },
@@ -283,6 +294,7 @@ help(void)
     "    -V --version\n"
     "    -I --include add path to include search\n"
     "    -L --library add path to library search\n"
+    "    -H --hash-seed F00F  specify hex value to use as hash seed\n"
     "    -X --dynext add path to dynamic extension search\n"
     "   <Run core options>\n"
     "    -R --runcore slow|bounds|fast|cgoto|cgp\n"
@@ -341,6 +353,50 @@ included in the Parrot source tree.\n\n");
 
     exit(EXIT_SUCCESS);
 }
+
+/*
+
+=item C<static void parseflags_minimal(PARROT_INTERP, int argc, char *argv[])>
+
+Parse minimal subset of args required for initializing interpreter.
+
+=cut
+
+*/
+static void
+parseflags_minimal(PARROT_INTERP, int argc, ARGIN(char *argv[]))
+{
+    ASSERT_ARGS(parseflags_minimal)
+
+    int pos = 0;
+    const char *arg;
+    while (pos < argc) {
+        arg = argv[pos];
+        if (STREQ(arg, "--gc")) {
+            ++pos;
+            if (pos == argc) {
+                fprintf(stderr,
+                        "main: No GC specified."
+                        "\n\nhelp: parrot -h\n");
+                exit(EXIT_FAILURE);
+            }
+            arg = argv[pos];
+            if (STREQ(arg, "ms"))
+                interp->gc_sys->sys_type = MS;
+            else if (STREQ(arg, "inf"))
+                interp->gc_sys->sys_type = INF;
+            else {
+                fprintf(stderr,
+                        "main: Unrecognized GC '%s' specified."
+                        "\n\nhelp: parrot -h\n", arg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        }
+        ++pos;
+    }
+}
+
 /*
 
 =item C<static const char * parseflags(PARROT_INTERP, int *argc, char **argv[],
@@ -356,7 +412,7 @@ PARROT_CAN_RETURN_NULL
 static const char *
 parseflags(PARROT_INTERP,
         ARGIN(int *argc), ARGIN(char **argv[]),
-        ARGIN(INTVAL *core), ARGIN(Parrot_trace_flags *trace))
+        ARGIN(Parrot_Run_core_t *core), ARGIN(Parrot_trace_flags *trace))
 {
     ASSERT_ARGS(parseflags)
     struct longopt_opt_info opt  = LONGOPT_OPT_INFO_INIT;
@@ -397,20 +453,15 @@ parseflags(PARROT_INTERP,
                 *core = PARROT_PROFILING_CORE;
             else if (STREQ(opt.opt_arg, "gcdebug"))
                 *core = PARROT_GC_DEBUG_CORE;
-            else
-                Parrot_ex_throw_from_c_args(interp, NULL, 1,
+            else {
+                fprintf(stderr,
                         "main: Unrecognized runcore '%s' specified."
                         "\n\nhelp: parrot -h\n", opt.opt_arg);
+                exit(EXIT_FAILURE);
+            }
             break;
           case 'g':
-            if (STREQ(opt.opt_arg, "ms"))
-                interp->gc_sys->sys_type = MS;
-            else if (STREQ(opt.opt_arg, "inf"))
-                interp->gc_sys->sys_type = INF;
-            else
-                Parrot_ex_throw_from_c_args(interp, NULL, 1,
-                        "main: Unrecognized GC '%s' specified."
-                        "\n\nhelp: parrot -h\n", opt.opt_arg);
+            /* Handled in parseflags_minimal */
             break;
           case 't':
             if (opt.opt_arg && is_all_hex_digits(opt.opt_arg))
@@ -425,6 +476,12 @@ parseflags(PARROT_INTERP,
             else
                 SET_DEBUG(PARROT_MEM_STAT_DEBUG_FLAG);
             break;
+          case 'H':
+            if (opt.opt_arg && is_all_hex_digits(opt.opt_arg)) {
+                interp->hash_seed = strtoul(opt.opt_arg, NULL, 16);
+            }
+            break;
+
           case '.':  /* Give Windows Parrot hackers an opportunity to
                       * attach a debuggger. */
             fgetc(stdin);
@@ -447,10 +504,9 @@ parseflags(PARROT_INTERP,
 
           case OPT_GC_DEBUG:
 #if DISABLE_GC_DEBUG
-            if (!PMC_IS_NULL(CURRENT_CONTEXT(interp)))
-                Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
-                    "PARROT_GC_DEBUG is set but the binary was compiled "
-                    "with DISABLE_GC_DEBUG.");
+            Parrot_warn(interp, PARROT_WARNINGS_ALL_FLAG,
+                "PARROT_GC_DEBUG is set but the binary was compiled "
+                "with DISABLE_GC_DEBUG.");
 #endif
             SET_FLAG(PARROT_GC_DEBUG_FLAG);
             break;
@@ -475,9 +531,10 @@ parseflags(PARROT_INTERP,
                 break;
 
             /* PIRC flags handling goes here */
-            Parrot_ex_throw_from_c_args(interp, NULL, 1,
+            fprintf(stderr,
                     "main: Invalid flag '%s' used.\n\nhelp: parrot -h\n",
                     (*argv)[0]);
+            exit(EXIT_FAILURE);
         }
     }
 

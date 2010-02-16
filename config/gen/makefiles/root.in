@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2009, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 ###############################################################################
@@ -292,6 +292,8 @@ GEN_LIBRARY = \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL.pbc \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL_funcs.pbc \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL/Math.pbc \
+#IF(has_opengl):    runtime/parrot/include/opengl_defines.pasm \
+#IF(has_opengl):    runtime/parrot/library/OpenGL_funcs.pir \
     $(LIBRARY_DIR)/P6object.pbc \
     $(LIBRARY_DIR)/parrotlib.pbc \
     $(LIBRARY_DIR)/pcore.pbc \
@@ -1133,11 +1135,16 @@ hello: test_prep examples/pasm/hello$(EXE)
 examples/pasm/hello.pbc: examples/pasm/hello.pasm
 	$(PARROT) -o examples/pasm/hello.pbc examples/pasm/hello.pasm
 
-examples/pasm/hello$(O): examples/pasm/hello.pbc
-	$(PARROT) -o examples/pasm/hello$(O) examples/pasm/hello.pbc
-
-examples/pasm/hello$(EXE): examples/pasm/hello$(O)
-	$(MAKE) . EXEC=examples/pasm/hello exec
+# The -o option of parrot did not work with the object file extension ".o"
+# so as work around pbc_to_exe is used and the original commands are only
+# commented out so it can easily switched back.
+#examples/pasm/hello$(O): examples/pasm/hello.pbc
+#	$(PARROT) -o examples/pasm/hello$(O) examples/pasm/hello.pbc
+#
+#examples/pasm/hello$(EXE): examples/pasm/hello$(O)
+#	$(MAKE) . EXEC=examples/pasm/hello exec
+examples/pasm/hello$(EXE): examples/pasm/hello.pbc $(PBC_TO_EXE)
+	$(PBC_TO_EXE) examples/pasm/hello.pbc
 
 
 
@@ -1797,7 +1804,7 @@ clean : \
 	$(RM_F) $(FLUID_FILES_2)
 	$(RM_RF) lib/Parrot/OpLib
 	$(RM_F) $(NQP_CLEANUPS) $(PGE_CLEANUPS) $(TGE_CLEANUPS) $(JSON_CLEANUPS)
-	$(RM_F) $(PIRC_CLEANUPS) $(PCT_CLEANUPS)
+	$(RM_F) $(PIRC_CLEANUPS) $(PCT_CLEANUPS) $(DATA_JSON_CLEANUPS)
 	$(RM_F) $(GEN_PASM_INCLUDES) $(GEN_PM_INCLUDES)
 
 prog-clean :

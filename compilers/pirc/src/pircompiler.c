@@ -15,6 +15,47 @@
 #include "pirregalloc.h"
 #include "pirerr.h"
 
+/* HEADERIZER HFILE: compilers/pirc/src/pircompiler.h */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+static char const * find_string(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(char const * const str))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_MALLOC
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+static allocated_mem_ptrs * new_mem_ptrs_block(void);
+
+static void register_ptr(ARGIN(lexer_state *lexer), ARGIN(void *ptr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void store_string(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(char const * const str))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+#define ASSERT_ARGS_find_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_new_mem_ptrs_block __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_register_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(ptr))
+#define ASSERT_ARGS_store_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(str))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /* XXX count memory, so we can check out mem. savings of string reuse
  * Only temporarily used, so no need to "fix" this.
  */
@@ -26,8 +67,7 @@ static int totalmem = 0;
 
 =over 4
 
-=item C<static allocated_mem_ptrs *
-new_mem_ptrs_block(void)>
+=item C<static allocated_mem_ptrs * new_mem_ptrs_block(void)>
 
 Create a new C<allocated_mem_ptrs> block; all pointers to allocated memory
 within pirc are stored in such blocks. One block has space for a number of
@@ -41,14 +81,15 @@ PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 static allocated_mem_ptrs *
-new_mem_ptrs_block(void) {
+new_mem_ptrs_block(void)
+{
+    ASSERT_ARGS(new_mem_ptrs_block)
     return mem_allocate_zeroed_typed(allocated_mem_ptrs);
 }
 
 /*
 
-=item C<static void
-register_ptr(lexer_state *lexer, void *ptr)>
+=item C<static void register_ptr(lexer_state *lexer, void *ptr)>
 
 Store the pointer C<ptr> in a datastructure; whenever C<release_resources()>
 is invoked, C<ptr> will be freed through C<mem_sys_free()>.
@@ -57,7 +98,9 @@ is invoked, C<ptr> will be freed through C<mem_sys_free()>.
 
 */
 static void
-register_ptr(NOTNULL(lexer_state *lexer), ARGIN(void *ptr)) {
+register_ptr(ARGIN(lexer_state *lexer), ARGIN(void *ptr))
+{
+    ASSERT_ARGS(register_ptr)
     allocated_mem_ptrs *ptrs = lexer->mem_allocations;
 
     PARROT_ASSERT(ptrs);
@@ -75,8 +118,8 @@ register_ptr(NOTNULL(lexer_state *lexer), ARGIN(void *ptr)) {
 
 /*
 
-=item C<void *
-pir_mem_allocate_zeroed(lexer_state * const lexer, size_t numbytes)>
+=item C<void * pir_mem_allocate_zeroed(lexer_state * const lexer, size_t
+numbytes)>
 
 Memory allocation function for all PIR internal functions. Memory is allocated
 through Parrot's allocation functions, but the pointer to the allocated memory
@@ -92,7 +135,8 @@ PARROT_MALLOC
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 void *
-pir_mem_allocate_zeroed(NOTNULL(lexer_state * const lexer), size_t numbytes) {
+pir_mem_allocate_zeroed(ARGIN(lexer_state * const lexer), size_t numbytes)
+{
     void *ptr = mem_sys_allocate_zeroed(numbytes);
 
     totalmem += numbytes;
@@ -103,8 +147,7 @@ pir_mem_allocate_zeroed(NOTNULL(lexer_state * const lexer), size_t numbytes) {
 
 /*
 
-=item C<void *
-pir_mem_allocate(NOTNULL(lexer_state * const lexer), size_t numbytes)>
+=item C<void * pir_mem_allocate(lexer_state * const lexer, size_t numbytes)>
 
 See C<pir_mem_allocate_zeroed()>. Memory is C<not> guaranteed to be zeroed.
 (It might, it might not, depending on what your system finds appropriate.
@@ -117,7 +160,8 @@ PARROT_MALLOC
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 void *
-pir_mem_allocate(NOTNULL(lexer_state * const lexer), size_t numbytes) {
+pir_mem_allocate(ARGIN(lexer_state * const lexer), size_t numbytes)
+{
     void *ptr = mem_sys_allocate(numbytes);
 
     totalmem += numbytes;
@@ -129,8 +173,8 @@ pir_mem_allocate(NOTNULL(lexer_state * const lexer), size_t numbytes) {
 
 /*
 
-=item C<void
-init_hashtable(lexer_state * const lexer, hashtable * const table, unsigned size)>
+=item C<void init_hashtable(lexer_state * const lexer, hashtable * const table,
+unsigned size)>
 
 Initialize the hashtable C<table> with space for C<size> buckets.
 
@@ -138,7 +182,7 @@ Initialize the hashtable C<table> with space for C<size> buckets.
 
 */
 void
-init_hashtable(NOTNULL(lexer_state * const lexer), NOTNULL(hashtable * const table),
+init_hashtable(ARGIN(lexer_state * const lexer), ARGIN(hashtable * const table),
                unsigned size)
 {
     table->contents  = (bucket **)pir_mem_allocate_zeroed(lexer, size * sizeof (bucket *));
@@ -148,8 +192,8 @@ init_hashtable(NOTNULL(lexer_state * const lexer), NOTNULL(hashtable * const tab
 
 /*
 
-=item C<lexer_state *
-new_lexer(char * const filename, int flags)>
+=item C<lexer_state * new_lexer(PARROT_INTERP, char * const filename, int
+flags)>
 
 Constructor for a lexer structure. Initializes all fields, creates
 a Parrot interpreter structure.
@@ -161,7 +205,8 @@ PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 lexer_state *
-new_lexer(PARROT_INTERP, NULLOK(char * const filename), int flags) {
+new_lexer(PARROT_INTERP, ARGIN_NULLOK(char * const filename), int flags)
+{
     lexer_state *lexer       = mem_allocate_zeroed_typed(lexer_state);
     lexer->filename          = filename;
     lexer->interp            = interp;
@@ -207,8 +252,7 @@ new_lexer(PARROT_INTERP, NULLOK(char * const filename), int flags) {
 
 /*
 
-=item C<bucket *
-new_bucket(lexer_state * const lexer)>
+=item C<bucket * new_bucket(lexer_state * const lexer)>
 
 Constructor for a bucket object.
 
@@ -218,14 +262,15 @@ Constructor for a bucket object.
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 bucket *
-new_bucket(NOTNULL(lexer_state * const lexer)) {
+new_bucket(ARGIN(lexer_state * const lexer))
+{
     return pir_mem_allocate_zeroed_typed(lexer, bucket);
 }
 
 /*
 
-=item C<static void
-store_string(lexer_state * const lexer, char const * const str)>
+=item C<static void store_string(lexer_state * const lexer, char const * const
+str)>
 
 Store the string C<str> in a hashtable; whenever this string is needed, a pointer
 to the same physical string is returned, preventing allocating different buffers
@@ -236,7 +281,9 @@ program will be used many times.
 
 */
 static void
-store_string(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const str)) {
+store_string(ARGIN(lexer_state * const lexer), ARGIN(char const * const str))
+{
+    ASSERT_ARGS(store_string)
     hashtable    *table = &lexer->strings;
     unsigned long hash  = get_hashcode(str, table->size);
     bucket *b           = new_bucket(lexer);
@@ -246,8 +293,8 @@ store_string(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const str)
 
 /*
 
-=item C<static char const *
-find_string(lexer_state * const lexer, char const * const str)>
+=item C<static char const * find_string(lexer_state * const lexer, char const *
+const str)>
 
 Find the string C<str> in the lexer's string hashtable. If the string was found,
 then a pointer to that buffer is returned. So, whenever for instance the string
@@ -260,7 +307,9 @@ that buffer will be returned.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static char const *
-find_string(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const str)) {
+find_string(ARGIN(lexer_state * const lexer), ARGIN(char const * const str))
+{
+    ASSERT_ARGS(find_string)
     hashtable    *table = &lexer->strings;
     unsigned long hash  = get_hashcode(str, table->size);
     bucket *b           = get_bucket(table, hash);
@@ -278,8 +327,8 @@ find_string(NOTNULL(lexer_state * const lexer), NOTNULL(char const * const str))
 
 /*
 
-=item C<char *
-dupstrn(lexer_state * const lexer, char const * const source, size_t slen)>
+=item C<char const * dupstrn(lexer_state * const lexer, char * const source,
+size_t slen)>
 
 See dupstr, except that this version takes the number of characters to be
 copied. Easy for copying a string except the quotes, for instance.
@@ -293,7 +342,8 @@ XXX Otherwise maybe a build option using #defines.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 char const *
-dupstrn(NOTNULL(lexer_state * const lexer), NOTNULL(char * const source), size_t slen) {
+dupstrn(ARGIN(lexer_state * const lexer), ARGIN(char * const source), size_t slen)
+{
     char const * result = find_string(lexer, source);
     /* make sure the string is terminated in time */
     source[slen] = '\0';
@@ -313,8 +363,7 @@ dupstrn(NOTNULL(lexer_state * const lexer), NOTNULL(char * const source), size_t
 
 /*
 
-=item C<char *
-dupstr(lexer_state * const lexer, char const * const source)>
+=item C<char const * dupstr(lexer_state * const lexer, char * const source)>
 
 The C89 standard does not define a strdup() in the C library,
 so define our own strdup. Function names beginning with "str"
@@ -327,14 +376,14 @@ does: duplicate a string.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 char const *
-dupstr(NOTNULL(lexer_state * const lexer), NOTNULL(char * const source)) {
+dupstr(ARGIN(lexer_state * const lexer), ARGIN(char * const source))
+{
     return dupstrn(lexer, source, strlen(source));
 }
 
 /*
 
-=item C<void
-release_resources(lexer_state *lexer)>
+=item C<void release_resources(lexer_state *lexer)>
 
 Release all resources pointed to by C<lexer>.
 Free all memory that was allocated through C<pir_mem_allocate_zeroed()>.
@@ -344,7 +393,8 @@ Free C<lexer> itself.
 
 */
 void
-release_resources(NOTNULL(lexer_state *lexer)) {
+release_resources(ARGIN(lexer_state *lexer))
+{
     allocated_mem_ptrs *iter;
 
     if (TEST_FLAG(lexer->flags, LEXER_FLAG_VERBOSE))
@@ -375,8 +425,8 @@ release_resources(NOTNULL(lexer_state *lexer)) {
 
 /*
 
-=item C<void
-pirwarning(lexer_state * const lexer, int lineno, char const * const message, ...)>
+=item C<void pirwarning(lexer_state * const lexer, int lineno, char const *
+const message, ...)>
 
 Emit a warning message to C<stderr>. The line number (passed in C<lineno>) is reported,
 together with the message. The message can be formatted, meaning it can contain
@@ -387,7 +437,11 @@ C<vfprintf()>.
 
 */
 void
-pirwarning(lexer_state * const lexer, int lineno, char const * const message, ...) {
+pirwarning(ARGIN(lexer_state * const lexer),
+        int lineno,
+        ARGIN(char const * const message),
+        ...)
+{
     va_list arg_ptr;
     fprintf(stderr, "warning (line %d): ", lineno);
     va_start(arg_ptr, message);

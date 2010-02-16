@@ -25,14 +25,163 @@ Conventions.
 
 #include "parrot/oplib/ops.h"
 
+/* HEADERIZER HFILE: compilers/pirc/src/pirpcc.h */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void add_alias_operand(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(PMC *array),
+    int index,
+    ARGIN(char const * const alias))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4);
+
+static void arguments_to_operands(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(argument * const args),
+    unsigned num_arguments)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int calculate_pcc_argument_flags(ARGIN(argument * const arg))
+        __attribute__nonnull__(1);
+
+static int calculate_pcc_target_flags(ARGIN(target * const result))
+        __attribute__nonnull__(1);
+
+static void convert_nci_call(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_call(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_methodcall(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_methodtailcall(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_return(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_tailcall(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void convert_pcc_yield(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(invocation * const inv))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static int generate_signature_pmc(
+    ARGIN(lexer_state * const lexer),
+    unsigned size)
+        __attribute__nonnull__(1);
+
+PARROT_CANNOT_RETURN_NULL
+static target * generate_unique_pir_reg(
+    ARGIN(lexer_state * const lexer),
+    pir_type type)
+        __attribute__nonnull__(1);
+
+PARROT_CANNOT_RETURN_NULL
+static target * get_invoked_sub(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(target * const sub))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void save_global_reference(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(instruction * const instr),
+    ARGIN(char const * const label))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+static void targets_to_operands(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(target * const targets),
+    unsigned num_targets)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+#define ASSERT_ARGS_add_alias_operand __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(array) \
+    , PARROT_ASSERT_ARG(alias))
+#define ASSERT_ARGS_arguments_to_operands __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(args))
+#define ASSERT_ARGS_calculate_pcc_argument_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(arg))
+#define ASSERT_ARGS_calculate_pcc_target_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(result))
+#define ASSERT_ARGS_convert_nci_call __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_call __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_methodcall __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_methodtailcall __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_return __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_tailcall __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_convert_pcc_yield __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(inv))
+#define ASSERT_ARGS_generate_signature_pmc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer))
+#define ASSERT_ARGS_generate_unique_pir_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer))
+#define ASSERT_ARGS_get_invoked_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_save_global_reference __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(instr) \
+    , PARROT_ASSERT_ARG(label))
+#define ASSERT_ARGS_targets_to_operands __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(targets))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
 
 
 /*
 
 =over 4
 
-=item C<static int
-calculate_pcc_target_flags(target * const result)>
+=item C<static int calculate_pcc_target_flags(target * const result)>
 
 Calculate Parrot Calling Conventions flags for the target node
 C<result>.
@@ -41,7 +190,9 @@ C<result>.
 
 */
 static int
-calculate_pcc_target_flags(target * const result) {
+calculate_pcc_target_flags(ARGIN(target * const result))
+{
+    ASSERT_ARGS(calculate_pcc_target_flags)
     int flag = 0;
 
 
@@ -66,8 +217,7 @@ calculate_pcc_target_flags(target * const result) {
 
 /*
 
-=item C<static int
-calculate_pcc_argument_flags(argument * const arg)>
+=item C<static int calculate_pcc_argument_flags(argument * const arg)>
 
 Calculate the Parrot Calling Conventions flags for the
 argument C<arg>. An int encoding the flags is returned.
@@ -76,7 +226,9 @@ argument C<arg>. An int encoding the flags is returned.
 
 */
 static int
-calculate_pcc_argument_flags(argument * const arg) {
+calculate_pcc_argument_flags(ARGIN(argument * const arg))
+{
+    ASSERT_ARGS(calculate_pcc_argument_flags)
     int flag = 0;
 
     switch (arg->value->type) {
@@ -110,8 +262,8 @@ calculate_pcc_argument_flags(argument * const arg) {
 
 /*
 
-=item C<static target *
-generate_unique_pir_reg(lexer_state * const lexer, pir_type type)>
+=item C<static target * generate_unique_pir_reg(lexer_state * const lexer,
+pir_type type)>
 
 Generate a unique, temporary PIR register of type C<type>. It uses the C<reg>
 constructor to create a target node, and using C<pir_reg_generator>
@@ -123,16 +275,20 @@ mapped to a PASM register, so using negative PIR register is safe.
 =cut
 
 */
+PARROT_CANNOT_RETURN_NULL
 static target *
-generate_unique_pir_reg(lexer_state * const lexer, pir_type type) {
+generate_unique_pir_reg(ARGIN(lexer_state * const lexer), pir_type type)
+{
+    ASSERT_ARGS(generate_unique_pir_reg)
+
     return new_reg(lexer, type, --lexer->pir_reg_generator);
 }
 
 
 /*
 
-=item C<static int
-generate_signature_pmc(lexer_state * const lexer, unsigned size)>
+=item C<static int generate_signature_pmc(lexer_state * const lexer, unsigned
+size)>
 
 Create a FixedIntegerArray PMC object that encodes the types and flags
 of parameters and add it to the PBC constant table. The index in that
@@ -142,7 +298,10 @@ PBC constant table is returned.
 
 */
 static int
-generate_signature_pmc(lexer_state * const lexer, unsigned size) {
+generate_signature_pmc(ARGIN(lexer_state * const lexer), unsigned size)
+{
+    ASSERT_ARGS(generate_signature_pmc)
+
     PMC *fixed_int_array;
     int  array_index;
 
@@ -161,8 +320,7 @@ generate_signature_pmc(lexer_state * const lexer, unsigned size) {
 
 /*
 
-=item C<void
-emit_sub_epilogue(lexer_state * const lexer)>
+=item C<void emit_sub_epilogue(lexer_state * const lexer)>
 
 Emit final instructions for the current subroutine. In case
 this is a C<:main> sub, the "end" instruction is emitted,
@@ -172,7 +330,9 @@ otherwise it's a standard return sequence.
 
 */
 void
-emit_sub_epilogue(lexer_state * const lexer) {
+emit_sub_epilogue(ARGIN(lexer_state * const lexer))
+{
+    ASSERT_ARGS(emit_sub_epilogue)
 
     if (TEST_FLAG(lexer->subs->flags, PIRC_SUB_FLAG_MAIN))
         new_sub_instr(lexer, PARROT_OP_end, "end", 0);
@@ -188,8 +348,8 @@ emit_sub_epilogue(lexer_state * const lexer) {
 
 /*
 
-=item C<static void
-add_alias_operand(lexer_state * const lexer, PMC *array, int index, char const * const alias)>
+=item C<static void add_alias_operand(lexer_state * const lexer, PMC *array, int
+index, char const * const alias)>
 
 Add an alias operand to current instruction; C<array> is the signature
 array, which must hold the right flags for this new operand (at position C<index>).
@@ -199,8 +359,11 @@ The alias name is passed in C<alias>.
 
 */
 static void
-add_alias_operand(lexer_state * const lexer, PMC *array, int index, char const * const alias) {
-    PARROT_ASSERT(alias);
+add_alias_operand(ARGIN(lexer_state * const lexer),
+        ARGIN(PMC *array), int index,
+        ARGIN(char const * const alias))
+{
+    ASSERT_ARGS(add_alias_operand)
     /* set flags for being a string constant, and being a :named operand. */
     VTABLE_set_integer_keyed_int(lexer->interp, array, index, PARROT_ARG_NAME | PARROT_ARG_SC);
     push_operand(lexer, expr_from_string(lexer, alias));
@@ -209,8 +372,8 @@ add_alias_operand(lexer_state * const lexer, PMC *array, int index, char const *
 
 /*
 
-=item C<static void
-targets_to_operands(lexer_state * const lexer, target * const targets)>
+=item C<static void targets_to_operands(lexer_state * const lexer, target *
+const targets, unsigned num_targets)>
 
 Convert a list of C<target> nodes into operands. Before the operands
 are added to the I<current> instruction, a FixedIntegerArray is created,
@@ -231,7 +394,11 @@ with value "answer".
 
 */
 static void
-targets_to_operands(lexer_state * const lexer, target * const targets, unsigned num_targets) {
+targets_to_operands(ARGIN(lexer_state * const lexer),
+        ARGIN(target * const targets), unsigned num_targets)
+{
+    ASSERT_ARGS(targets_to_operands)
+
     target  *iter;
     int      array_index;
     PMC     *signature_array;
@@ -291,8 +458,8 @@ targets_to_operands(lexer_state * const lexer, target * const targets, unsigned 
 
 /*
 
-=item C<static void
-arguments_to_operands(lexer_state * const lexer, argument * const args)>
+=item C<static void arguments_to_operands(lexer_state * const lexer, argument *
+const args, unsigned num_arguments)>
 
 Convert a list of C<argument> nodes into operands. Before the operands are
 added to the I<current> instruction, a FixedIntegerArray PMC is created
@@ -303,7 +470,11 @@ at index C<i> encodes the type and flags (such as C<:flat>) for operand C<i>.
 
 */
 static void
-arguments_to_operands(lexer_state * const lexer, argument * const args, unsigned num_arguments) {
+arguments_to_operands(ARGIN(lexer_state * const lexer),
+        ARGIN(argument * const args), unsigned num_arguments)
+{
+    ASSERT_ARGS(arguments_to_operands)
+
     argument *argiter;
     int       array_index;
     unsigned  i;
@@ -347,8 +518,8 @@ arguments_to_operands(lexer_state * const lexer, argument * const args, unsigned
 
 /*
 
-=item C<void
-generate_parameters_instr(lexer_state * const lexer, unsigned num_parameters)>
+=item C<void generate_parameters_instr(lexer_state * const lexer, unsigned
+num_parameters)>
 
 Generate the "get_params" instruction, taking <num_parameters> variable arguments;
 this is the number of parameters of this function.
@@ -357,7 +528,9 @@ this is the number of parameters of this function.
 
 */
 void
-generate_parameters_instr(lexer_state * const lexer, unsigned num_parameters) {
+generate_parameters_instr(ARGIN(lexer_state * const lexer), unsigned num_parameters)
+{
+    ASSERT_ARGS(generate_parameters_instr)
     if (TEST_FLAG(CURRENT_SUB(lexer)->flags , (PIRC_SUB_FLAG_METHOD | PIRC_SUB_FLAG_VTABLE))) {
         ++num_parameters; /* didn't count implicit "self" parameter yet. */
     }
@@ -372,8 +545,8 @@ generate_parameters_instr(lexer_state * const lexer, unsigned num_parameters) {
 
 /*
 
-=item C<void
-generate_getresults_instr(lexer_state * const lexer, target * const targetlist)>
+=item C<void generate_getresults_instr(lexer_state * const lexer, target * const
+targetlist)>
 
 Generate instruction for the C<.get_results> statement.
 
@@ -381,7 +554,10 @@ Generate instruction for the C<.get_results> statement.
 
 */
 void
-generate_getresults_instr(lexer_state * const lexer, target * const targetlist) {
+generate_getresults_instr(ARGIN(lexer_state * const lexer),
+        ARGIN(target * const targetlist))
+{
+    ASSERT_ARGS(generate_getresults_instr)
     /* add this point we know that there's only 1 target, as that's the convention for
      * exception handlers:
      *
@@ -397,9 +573,8 @@ generate_getresults_instr(lexer_state * const lexer, target * const targetlist) 
 
 /*
 
-=item C<static void
-save_global_reference(lexer_state * const lexer, instruction * const instr,
-                      char const * const label)>
+=item C<static void save_global_reference(lexer_state * const lexer, instruction
+* const instr, char const * const label)>
 
 Store the instruction C<instr>, which references the global label C<label> in a list.
 After the parse phase, this instruction can be patched, if C<label> can be resolved
@@ -409,10 +584,12 @@ during compile time.
 
 */
 static void
-save_global_reference(lexer_state * const lexer, instruction * const instr,
-                      char const * const label)
-
+save_global_reference(ARGIN(lexer_state * const lexer),
+        ARGIN(instruction * const instr),
+        ARGIN(char const * const label))
 {
+    ASSERT_ARGS(save_global_reference)
+
     global_fixup *ref = pir_mem_allocate_zeroed_typed(lexer, global_fixup);
 
     ref->instr = instr;
@@ -425,8 +602,8 @@ save_global_reference(lexer_state * const lexer, instruction * const instr,
 
 /*
 
-=item C<static target *
-get_invoked_sub(lexer_state * const lexer, target * const sub)>
+=item C<static target * get_invoked_sub(lexer_state * const lexer, target *
+const sub)>
 
 Return a C<target> node that represents the sub to invoke.
 If C<sub> is a register, that is returned. If it's a declared C<.local>,
@@ -439,8 +616,12 @@ instruction is emitted.
 =cut
 
 */
+PARROT_CANNOT_RETURN_NULL
 static target *
-get_invoked_sub(lexer_state * const lexer, target * const sub) {
+get_invoked_sub(ARGIN(lexer_state * const lexer),
+        ARGIN(target * const sub))
+{
+    ASSERT_ARGS(get_invoked_sub)
     target       *subreg = NULL;
     symbol       *sym    = NULL;
     global_label *glob   = NULL;
@@ -494,8 +675,8 @@ get_invoked_sub(lexer_state * const lexer, target * const sub) {
 
 /*
 
-=item C<static void
-convert_pcc_call(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_call(lexer_state * const lexer, invocation *
+const inv)>
 
 Generate instructions for a normal invocation using the Parrot Calling
 Conventions (PCC). This is the sequence of the following instructions:
@@ -517,7 +698,11 @@ For "foo"() and foo():
 
 */
 static void
-convert_pcc_call(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_call(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_call)
+
     target *sub;
 
     new_sub_instr(lexer, PARROT_OP_set_args_pc, "set_args_pc", inv->num_arguments);
@@ -541,8 +726,8 @@ convert_pcc_call(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_pcc_tailcall(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_tailcall(lexer_state * const lexer, invocation *
+const inv)>
 
 Generate instructions for a tailcall using the Parrot Calling Conventions (PCC).
 The sequence of instructions is:
@@ -554,7 +739,11 @@ The sequence of instructions is:
 
 */
 static void
-convert_pcc_tailcall(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_tailcall(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_tailcall)
+
     target *sub;
 
     new_sub_instr(lexer, PARROT_OP_set_args_pc, "set_args_pc", inv->num_arguments);
@@ -568,8 +757,8 @@ convert_pcc_tailcall(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_pcc_return(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_return(lexer_state * const lexer, invocation *
+const inv)>
 
 Generate instructions for a normal return statement using the Parrot Calling
 Conventions (PCC). The sequence of instructions is:
@@ -581,7 +770,11 @@ Conventions (PCC). The sequence of instructions is:
 
 */
 static void
-convert_pcc_return(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_return(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_return)
+
     new_sub_instr(lexer, PARROT_OP_set_returns_pc, "set_returns_pc", inv->num_arguments);
     arguments_to_operands(lexer, inv->arguments, inv->num_arguments);
     new_sub_instr(lexer, PARROT_OP_returncc, "returncc", 0);
@@ -589,8 +782,8 @@ convert_pcc_return(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_nci_call(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_nci_call(lexer_state * const lexer, invocation *
+const inv)>
 
 Generate instructions for a function invocation using the Native Call
 Interface (NCI). The sequence of instructions is:
@@ -603,7 +796,11 @@ Interface (NCI). The sequence of instructions is:
 
 */
 static void
-convert_nci_call(lexer_state * const lexer, invocation * const inv) {
+convert_nci_call(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_nci_call)
+
     target *sub;
 
     new_sub_instr(lexer, PARROT_OP_set_args_pc, "set_args_pc", inv->num_arguments);
@@ -620,8 +817,8 @@ convert_nci_call(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_pcc_yield(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_yield(lexer_state * const lexer, invocation *
+const inv)>
 
 Generate instructions for a yield statement using the Parrot Calling Conventions.
 The sequence of instructions is:
@@ -633,7 +830,11 @@ The sequence of instructions is:
 
 */
 static void
-convert_pcc_yield(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_yield(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_yield)
+
     new_sub_instr(lexer, PARROT_OP_set_returns_pc, "set_returns_pc", inv->num_arguments);
     arguments_to_operands(lexer, inv->arguments, inv->num_arguments);
     new_sub_instr(lexer, PARROT_OP_yield, "yield", 0);
@@ -642,8 +843,8 @@ convert_pcc_yield(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_pcc_methodcall(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_methodcall(lexer_state * const lexer, invocation
+* const inv)>
 
 Generate instructions for a method call using the Parrot Calling Conventions (PCC).
 The sequence of instructions is:
@@ -656,7 +857,11 @@ The sequence of instructions is:
 
 */
 static void
-convert_pcc_methodcall(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_methodcall(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_methodcall)
+
     /* in a methodcall, the invocant object is passed as the first argument */
     unshift_arg(inv, new_argument(lexer, expr_from_target(lexer, inv->sub)));
     new_sub_instr(lexer, PARROT_OP_set_args_pc, "set_args_pc", inv->num_arguments);
@@ -673,8 +878,8 @@ convert_pcc_methodcall(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<static void
-convert_pcc_methodtailcall(lexer_state * const lexer, invocation * const inv)>
+=item C<static void convert_pcc_methodtailcall(lexer_state * const lexer,
+invocation * const inv)>
 
 Generate instructions for a method tailcall, using the Parrot Calling Conventions (PCC).
 The sequence of instructions is:
@@ -686,7 +891,11 @@ The sequence of instructions is:
 
 */
 static void
-convert_pcc_methodtailcall(lexer_state * const lexer, invocation * const inv) {
+convert_pcc_methodtailcall(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_pcc_methodtailcall)
+
     unshift_arg(inv, new_argument(lexer, expr_from_target(lexer, inv->sub)));
     new_sub_instr(lexer, PARROT_OP_set_args_pc, "set_args_pc", inv->num_arguments);
 
@@ -712,8 +921,8 @@ convert_pcc_methodtailcall(lexer_state * const lexer, invocation * const inv) {
 
 /*
 
-=item C<void
-convert_inv_to_instr(lexer_state * const lexer, invocation * const inv)>
+=item C<void convert_inv_to_instr(lexer_state * const lexer, invocation * const
+inv)>
 
 Convert an C<invocation> structure into a series of instructions. This is the
 dispatch function, which calls the appropriate conversion function, based
@@ -723,7 +932,10 @@ on the type of C<inv>.
 
 */
 void
-convert_inv_to_instr(lexer_state * const lexer, invocation * const inv) {
+convert_inv_to_instr(ARGIN(lexer_state * const lexer),
+        ARGIN(invocation * const inv))
+{
+    ASSERT_ARGS(convert_inv_to_instr)
     switch (inv->type) {
       case CALL_PCC:
         convert_pcc_call(lexer, inv);

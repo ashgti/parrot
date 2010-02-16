@@ -99,12 +99,6 @@ compilers/imcc/pcc.c
 compilers/imcc/reg_alloc.c
 compilers/imcc/symreg.c
 compilers/pirc/src/pircapi.c
-compilers/pirc/src/pircompiler.c
-compilers/pirc/src/piremit.c
-compilers/pirc/src/pirmacro.c
-compilers/pirc/src/pirpcc.c
-compilers/pirc/src/pirregalloc.c
-compilers/pirc/src/pirsymbol.c
 config/gen/platform/ansi/dl.c
 config/gen/platform/ansi/exec.c
 config/gen/platform/ansi/time.c
@@ -123,11 +117,9 @@ config/gen/platform/openbsd/math.c
 config/gen/platform/openbsd/memexec.c
 config/gen/platform/solaris/math.c
 config/gen/platform/solaris/time.c
-examples/c/nanoparrot.c
 examples/c/pbc_info.c
 examples/compilers/japhc.c
 src/atomic/gcc_x86.c
-src/debug.c
 src/gc/generational_ms.c
 src/io/io_string.c
 src/string/charset/ascii.c

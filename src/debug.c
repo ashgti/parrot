@@ -555,6 +555,9 @@ DebuggerCmdList DebCmdList [] = {
 
 =item C<static const DebuggerCmd * get_cmd(const char **cmd)>
 
+Parse the debuggger command indicated by C<**cmd>.  Return a pointer to the
+matching function for known commands, or a NULL pointer otherwise.
+
 =cut
 
 */
@@ -610,6 +613,8 @@ get_cmd(ARGIN_NULLOK(const char **cmd))
 
 =item C<static const char * skip_whitespace(const char *cmd)>
 
+Return a pointer to the first non-whitespace character in C<cmd>.
+
 =cut
 
 */
@@ -628,6 +633,8 @@ skip_whitespace(ARGIN(const char *cmd))
 /*
 
 =item C<static unsigned long get_uint(const char **cmd, unsigned int def)>
+
+Get an unsigned int from C<**cmd>.
 
 =cut
 
@@ -651,6 +658,8 @@ get_uint(ARGMOD(const char **cmd), unsigned int def)
 /*
 
 =item C<static unsigned long get_ulong(const char **cmd, unsigned long def)>
+
+Get an unsigned long from C<**cmd>.
 
 =cut
 
@@ -1265,6 +1274,8 @@ PDB_trace(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 
 =item C<static unsigned short condition_regtype(const char *cmd)>
 
+Return the type of the register represented by C<*cmd>.
+
 =cut
 
 */
@@ -1626,6 +1637,8 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 /*
 
 =item C<static void list_breakpoints(PDB_t *pdb)>
+
+Print all breakpoints for this debugger session to C<pdb->debugger>.
 
 =cut
 
