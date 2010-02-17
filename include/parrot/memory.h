@@ -24,6 +24,8 @@
     __FILE__, __LINE__)
 #define mem_internal_allocate_zeroed_typed(type) \
     (type *)mem__internal_allocate_zeroed(sizeof (type), __FILE__, __LINE__)
+#define mem_internal_allocate_n_zeroed_typed(n, type) \
+    (type *)mem__internal_allocate_zeroed((n) * sizeof (type), __FILE__, __LINE__)
 
 #define mem_internal_realloc(x, y) mem__internal_realloc((x), (y), __FILE__, __LINE__)
 #define mem_internal_realloc_zeroed(p, x, y) mem__internal_realloc_zeroed((p), (x), (y), __FILE__, __LINE__)
