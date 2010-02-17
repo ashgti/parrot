@@ -1011,7 +1011,7 @@ Parrot_debugger_init(PARROT_INTERP)
         /* Allocate space for command line buffers, NUL terminated c strings */
         pdb->cur_command = mem_gc_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
         pdb->last_command = mem_gc_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
-        pdb->file = mem_allocate_zeroed_typed(PDB_file_t);
+        pdb->file = mem_gc_allocate_zeroed_typed(interp, PDB_file_t);
     }
 
     /* PDB_disassemble(interp, NULL); */
