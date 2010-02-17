@@ -326,7 +326,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_ms_init)
 
-    interp->mem_pools = mem_internal_allocate_zeroed(Memory_Pools);
+    interp->mem_pools = mem_internal_allocate_zeroed_typed(Memory_Pools);
     interp->mem_pools->num_sized          = 0;
     interp->mem_pools->num_attribs        = 0;
     interp->mem_pools->attrib_pools       = NULL;
@@ -362,6 +362,15 @@ Parrot_gc_ms_init(PARROT_INTERP)
 
     interp->gc_sys->allocate_fixed_size_storage = gc_ms_allocate_fixed_size_storage;
     interp->gc_sys->free_fixed_size_storage     = gc_ms_free_fixed_size_storage;
+
+    /* We don't distinguish between chunk and chunk_with_pointers */
+    interp->gc_sys->allocate_memory_chunk   = gc_ms_allocate_memory_chunk;
+    interp->gc_sys->reallocate_memory_chunk = gc_ms_reallocate_memory_chunk;
+    interp->gc_sys->allocate_memory_chunk_with_interior_pointers
+                = gc_ms_allocate_memory_chunk;
+    interp->gc_sys->reallocate_memory_chunk_with_interior_pointers
+                = gc_ms_reallocate_memory_chunk;
+    interp->gc_sys->free_memory_chunk       = gc_ms_free_memory_chunk;
 
     interp->gc_sys->block_mark      = gc_ms_block_GC_mark;
     interp->gc_sys->unblock_mark    = gc_ms_unblock_GC_mark;
@@ -1088,21 +1097,21 @@ static void *
 gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_allocate(interp, size);
+    return mem_internal_allocate(size);
 }
 
 static void *
 gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_realloc(interp, data, newsize);
+    return mem_internal_realloc(data, newsize);
 }
 
 static void
 gc_ms_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    mem_internal_free(interp, data);
+    mem_internal_free(data);
 }
 
 
