@@ -3498,7 +3498,7 @@ fixup_unpack(PARROT_INTERP, ARGIN(PackFile_Segment *seg), ARGIN(const opcode_t *
     for (i = 0; i < self->fixup_count; i++) {
         PackFile_FixupEntry * const entry           =
                                     self->fixups[i] =
-                                    mem_allocate_typed(PackFile_FixupEntry);
+                                    mem_gc_allocate_zeroed_typed(interp, PackFile_FixupEntry);
 
         entry->type = PF_fetch_opcode(pf, &cursor);
 
@@ -3558,7 +3558,7 @@ PackFile_FixupTable_new_entry(PARROT_INTERP,
     i = self->fixup_count++;
     mem_realloc_n_typed(self->fixups, self->fixup_count, PackFile_FixupEntry *);
 
-    self->fixups[i]         = mem_allocate_typed(PackFile_FixupEntry);
+    self->fixups[i]         = mem_gc_allocate_zeroed_typed(interp, PackFile_FixupEntry);
     self->fixups[i]->type   = type;
     self->fixups[i]->name   = mem_sys_strdup(label);
     self->fixups[i]->offset = offs;
