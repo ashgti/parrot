@@ -133,7 +133,8 @@ sub runstep {
         my $nocpp = ! $conf->data->get('g++');
 
         # add on some extra warnings if requested
-        $self->_add_cage_warnings($conf);
+        push @{ $self->{potential_warnings} }, @{ $self->{cage_warnings} }
+            if $conf->options->get('cage');
 
         # now try out our warnings
         for my $maybe_warning (@{ $self->{potential_warnings} }) {
@@ -158,12 +159,6 @@ sub runstep {
         $self->set_result("skipped");
     }
     return 1;
-}
-
-sub _add_cage_warnings {
-    my ($self, $conf) = @_;
-    push @{ $self->{potential_warnings} }, @{ $self->{cage_warnings} }
-        if $conf->options->get('cage');
 }
 
 =item C<try_warning>
