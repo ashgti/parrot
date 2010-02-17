@@ -29,8 +29,6 @@
 #define mem_internal_realloc_zeroed(p, x, y) mem__internal_realloc_zeroed((p), (x), (y), __FILE__, __LINE__)
 #define mem_internal_free(x) mem__internal_free((x), __FILE__, __LINE__)
 
-#define mem_allocate_new_stash() NULL
-#define mem_allocate_new_stack() NULL
 #define mem_sys_memcopy memcpy
 #define mem_sys_memmove memmove
 
