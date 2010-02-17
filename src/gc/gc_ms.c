@@ -1097,7 +1097,9 @@ static void *
 gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_allocate(size);
+    void * ret = mem_internal_allocate(size);
+    memset(ret, 0, size);
+    return ret;
 }
 
 static void *
