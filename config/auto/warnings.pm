@@ -121,23 +121,6 @@ sub _init {
         -Wunused-variable
     );
 
-    my @may_not_even_be_interesting = qw(
-        -Wpadded
-        -Wredundant-decls
-        -Wswitch-enum
-        -Wsystem-headers
-    );
-
-    my @nice_to_have_but_too_noisy_for_now = qw(
-        -pedantic
-        -Wconversion
-        -Wint-to-pointer-cast
-        -Wmissing-noreturn
-        -Wshadow
-        -Wunused-macros
-        -Wunused-parameter
-    );
-
     $data{potential_warnings}        = \@potential_warnings;
     $data{potential_warnings_no_cpp} = \@potential_warnings_no_cpp;
     $data{cage_warnings}             = \@cage_warnings;
