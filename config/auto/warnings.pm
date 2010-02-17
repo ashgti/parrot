@@ -8,10 +8,7 @@ config/auto/warnings.pm - Warning flags detection
 =head1 DESCRIPTION
 
 Automagically detect what warning flags, like -Wall, -Wextra,
--Wchar-subscripts, etc., that the compiler can support.  Directly hacked
-from F<config/auto/attributes.pm>.
-
-=head1 SUBROUTINES
+-Wchar-subscripts, etc., that the compiler can support.
 
 =over 4
 
@@ -160,7 +157,6 @@ sub runstep {
 
         # add on some extra warnings if requested
         $self->_add_cage_warnings($conf);
-        $self->_add_maintainer_warnings($conf);
 
         # now try out our warnings
         for my $maybe_warning (@{ $self->{potential_warnings} }) {
@@ -191,12 +187,6 @@ sub _add_cage_warnings {
     my ($self, $conf) = @_;
     push @{ $self->{potential_warnings} }, @{ $self->{cage_warnings} }
         if $conf->options->get('cage');
-}
-
-sub _add_maintainer_warnings {
-    my ($self, $conf) = @_;
-    push @{ $self->{potential_warnings} }, '-Wlarger-than-4096'
-        if $conf->options->get('maintainer');
 }
 
 =item C<try_warning>
