@@ -845,9 +845,9 @@ Parrot_register_move(PARROT_INTERP,
 
     /* allocate space for data structures */
     /* NOTA: data structures could be kept allocated somewhere waiting to get reused...*/
-    c.nb_succ      = nb_succ      = mem_allocate_n_zeroed_typed(n_regs, int);
-    c.backup       = backup       = mem_allocate_n_zeroed_typed(n_regs, int);
-    c.reg_to_index = reg_to_index = mem_allocate_n_zeroed_typed(max_reg, int);
+    c.nb_succ      = nb_succ      = mem_gc_allocate_n_zeroed_typed(interp, n_regs, int);
+    c.backup       = backup       = mem_gc_allocate_n_zeroed_typed(interp, n_regs, int);
+    c.reg_to_index = reg_to_index = mem_gc_allocate_n_zeroed_typed(interp, max_reg, int);
 
     /* init backup array */
     for (i = 0; i < n_regs; i++)
