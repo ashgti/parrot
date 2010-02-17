@@ -1443,7 +1443,7 @@ PF_fetch_cstring(PARROT_INTERP, ARGIN(PackFile *pf), ARGIN(const opcode_t **curs
 {
     ASSERT_ARGS(PF_fetch_cstring)
     const size_t str_len = strlen((const char *)(*cursor)) + 1;
-    char * const p = gc_mem_allocate_n_typed(interp, str_len, char);
+    char * const p = mem_gc_allocate_n_typed(interp, str_len, char);
     const int wordsize = pf->header->wordsize;
 
     TRACE_PRINTF(("PF_fetch_cstring(): size is %ld...\n", str_len));

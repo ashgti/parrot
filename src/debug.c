@@ -1001,7 +1001,7 @@ Parrot_debugger_init(PARROT_INTERP)
     TRACEDEB_MSG("Parrot_debugger_init");
 
     if (! interp->pdb) {
-        PDB_t          *pdb      = gc_mem_allocate_zeroed_typed(interp, PDB_t);
+        PDB_t          *pdb      = mem_gc_allocate_zeroed_typed(interp, PDB_t);
         Parrot_Interp   debugger = Parrot_new(interp);
         interp->pdb              = pdb;
         debugger->pdb            = pdb;
@@ -1009,8 +1009,8 @@ Parrot_debugger_init(PARROT_INTERP)
         pdb->debugger            = debugger;
 
         /* Allocate space for command line buffers, NUL terminated c strings */
-        pdb->cur_command = gc_mem_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
-        pdb->last_command = gc_mem_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
+        pdb->cur_command = mem_gc_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
+        pdb->last_command = mem_gc_allocate_n_typed(interp, DEBUG_CMD_BUFFER_LENGTH + 1, char);
         pdb->file = mem_allocate_zeroed_typed(PDB_file_t);
     }
 
@@ -1044,10 +1044,10 @@ Parrot_debugger_destroy(PARROT_INTERP)
     PARROT_ASSERT(pdb);
     PARROT_ASSERT(pdb->debugee == interp);
 
-    gc_mem_free(interp, pdb->last_command);
-    gc_mem_free(interp, pdb->cur_command);
+    mem_gc_free(interp, pdb->last_command);
+    mem_gc_free(interp, pdb->cur_command);
 
-    gc_mem_free(interp, pdb);
+    mem_gc_free(interp, pdb);
     interp->pdb = NULL;
 }
 
@@ -1627,7 +1627,7 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
     }
 
     /* Allocate new condition */
-    condition = gc_mem_allocate_zeroed_typed(interp, PDB_condition_t);
+    condition = mem_gc_allocate_zeroed_typed(interp, PDB_condition_t);
 
     condition->type = cond_argleft | cond_type;
 
@@ -1640,7 +1640,7 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
 
             if (cond_argright != cond_argleft) {
                 Parrot_io_eprintf(interp->pdb->debugger, "Register types don't agree\n");
-                gc_mem_free(interp, condition);
+                mem_gc_free(interp, condition);
                 return NULL;
             }
 
@@ -1649,28 +1649,28 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
             reg_number = (int)get_uint(&command, 0);
             if (auxcmd == command) {
                 Parrot_io_eprintf(interp->pdb->debugger, "Invalid register\n");
-                    gc_mem_free(interp, condition);
+                    mem_gc_free(interp, condition);
                     return NULL;
             }
 
             if (reg_number < 0) {
                 Parrot_io_eprintf(interp->pdb->debugger, "Out-of-bounds register\n");
-                gc_mem_free(interp, condition);
+                mem_gc_free(interp, condition);
                 return NULL;
             }
 
-            condition->value         = gc_mem_allocate_typed(interp, int);
+            condition->value         = mem_gc_allocate_typed(interp, int);
             *(int *)condition->value = reg_number;
         }
         /* If the first argument was an integer */
         else if (condition->type & PDB_cond_int) {
             /* This must be either an integer constant or register */
-            condition->value             = gc_mem_allocate_typed(interp, INTVAL);
+            condition->value             = mem_gc_allocate_typed(interp, INTVAL);
             *(INTVAL *)condition->value  = (INTVAL)atoi(command);
             condition->type             |= PDB_cond_const;
         }
         else if (condition->type & PDB_cond_num) {
-            condition->value               = gc_mem_allocate_typed(interp, FLOATVAL);
+            condition->value               = mem_gc_allocate_typed(interp, FLOATVAL);
             *(FLOATVAL *)condition->value  = (FLOATVAL)atof(command);
             condition->type               |= PDB_cond_const;
         }
@@ -1690,7 +1690,7 @@ PDB_cond(PARROT_INTERP, ARGIN(const char *command))
             /* TT #1259: Need to figure out what to do in this case.
              * For the time being, we just bail. */
             Parrot_io_eprintf(interp->pdb->debugger, "Can't compare PMC with constant\n");
-            gc_mem_free(interp, condition);
+            mem_gc_free(interp, condition);
             return NULL;
         }
 
@@ -1813,7 +1813,7 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 
     TRACEDEB_MSG("PDB_set_break allocate breakpoint");
     /* Allocate the new break point */
-    newbreak = gc_mem_allocate_zeroed_typed(interp, PDB_breakpoint_t);
+    newbreak = mem_gc_allocate_zeroed_typed(interp, PDB_breakpoint_t);
 
     if (command) {
         /*command = skip_command(command);*/
@@ -2104,7 +2104,7 @@ PDB_delete_breakpoint(PARROT_INTERP, ARGIN(const char *command))
         }
         bp_id = breakpoint->id;
         /* Kill the breakpoint */
-        gc_mem_free(interp, breakpoint);
+        mem_gc_free(interp, breakpoint);
 
         Parrot_io_eprintf(interp->pdb->debugger, "Breakpoint %li deleted\n", bp_id);
     }
@@ -2134,12 +2134,12 @@ PDB_delete_condition(PARROT_INTERP, ARGMOD(PDB_breakpoint_t *breakpoint))
         }
         else {
             /* 'value' is a float or an int, so we can just free it */
-            gc_mem_free(interp, breakpoint->condition->value);
+            mem_gc_free(interp, breakpoint->condition->value);
             breakpoint->condition->value = NULL;
         }
     }
 
-    gc_mem_free(interp, breakpoint->condition);
+    mem_gc_free(interp, breakpoint->condition);
     breakpoint->condition = NULL;
 }
 
@@ -2424,7 +2424,7 @@ PDB_escape(PARROT_INTERP, ARGIN(const char *string), UINTVAL length)
     if (!string)
         return NULL;
 
-    fill = _new = gc_mem_allocate_n_typed(interp, length * 2 + 1, char);
+    fill = _new = mem_gc_allocate_n_typed(interp, length * 2 + 1, char);
 
     for (; string < end; string++) {
         switch (*string) {
@@ -2629,7 +2629,7 @@ PDB_disassemble_op(PARROT_INTERP, ARGOUT(char *dest), size_t space,
                 if (escaped) {
                     strcpy(&dest[size], escaped);
                     size += strlen(escaped);
-                    gc_mem_free(interp, escaped);
+                    mem_gc_free(interp, escaped);
                 }
                 Parrot_str_free_cstring(unescaped);
             }
@@ -2855,8 +2855,8 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
 
     TRACEDEB_MSG("PDB_disassemble");
 
-    pfile = gc_mem_allocate_zeroed_typed(interp, PDB_file_t);
-    pline = gc_mem_allocate_zeroed_typed(interp, PDB_line_t);
+    pfile = mem_gc_allocate_zeroed_typed(interp, PDB_file_t);
+    pline = mem_gc_allocate_zeroed_typed(interp, PDB_line_t);
 
     /* If we already got a source, free it */
     if (pdb->file) {
@@ -2866,7 +2866,7 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
 
     pfile->line   = pline;
     pline->number = 1;
-    pfile->source = gc_mem_allocate_n_typed(interp, default_size, char);
+    pfile->source = mem_gc_allocate_n_typed(interp, default_size, char);
 
     alloced       = space = default_size;
     code_end      = pc + interp->code->base.size;
@@ -2876,7 +2876,7 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
         if (space < default_size) {
             alloced += default_size;
             space   += default_size;
-            pfile->source = gc_mem_realloc_n_typed(interp, pfile->source, alloced, char);
+            pfile->source = mem_gc_realloc_n_typed(interp, pfile->source, alloced, char);
         }
 
         size = PDB_disassemble_op(interp, pfile->source + pfile->size,
@@ -2893,7 +2893,7 @@ PDB_disassemble(PARROT_INTERP, SHIM(const char *command))
         pc += n;
 
         /* Prepare for next line */
-        newline              = gc_mem_allocate_zeroed_typed(interp, PDB_line_t);
+        newline              = mem_gc_allocate_zeroed_typed(interp, PDB_line_t);
         newline->label       = NULL;
         newline->next        = NULL;
         newline->number      = pline->number + 1;
@@ -2958,7 +2958,7 @@ PDB_add_label(PARROT_INTERP, ARGMOD(PDB_file_t *file),
 
     /* Allocate a new label */
     label        = file->label;
-    _new         = gc_mem_allocate_zeroed_typed(interp, PDB_label_t);
+    _new         = mem_gc_allocate_zeroed_typed(interp, PDB_label_t);
     _new->opcode = cur_opcode + offset;
     _new->next   = NULL;
 
@@ -2999,7 +2999,7 @@ PDB_free_file(PARROT_INTERP, ARGIN_NULLOK(PDB_file_t *file))
 
         while (line) {
             PDB_line_t * const nline = line->next;
-            gc_mem_free(interp, line);
+            mem_gc_free(interp, line);
             line = nline;
         }
 
@@ -3009,19 +3009,19 @@ PDB_free_file(PARROT_INTERP, ARGIN_NULLOK(PDB_file_t *file))
         while (label) {
             PDB_label_t * const nlabel = label->next;
 
-            gc_mem_free(interp, label);
+            mem_gc_free(interp, label);
             label  = nlabel;
         }
 
         /* Free the remaining allocated portions of the file structure */
         if (file->sourcefilename)
-            gc_mem_free(interp, file->sourcefilename);
+            mem_gc_free(interp, file->sourcefilename);
 
         if (file->source)
-            gc_mem_free(interp, file->source);
+            mem_gc_free(interp, file->source);
 
         nfile = file->next;
-        gc_mem_free(interp, file);
+        mem_gc_free(interp, file);
         file  = nfile;
     }
 }
@@ -3077,10 +3077,10 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
         return;
     }
 
-    pfile = gc_mem_allocate_zeroed_typed(interp, PDB_file_t);
-    pline = gc_mem_allocate_zeroed_typed(interp, PDB_line_t);
+    pfile = mem_gc_allocate_zeroed_typed(interp, PDB_file_t);
+    pline = mem_gc_allocate_zeroed_typed(interp, PDB_line_t);
 
-    pfile->source = gc_mem_allocate_n_typed(interp, 1024, char);
+    pfile->source = mem_gc_allocate_n_typed(interp, 1024, char);
     pfile->line   = pline;
     pline->number = 1;
 
@@ -3090,7 +3090,7 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
     while ((c = fgetc(file)) != EOF) {
         /* Grow it */
         if (++size == 1024) {
-            pfile->source = gc_mem_realloc_n_typed(interp, pfile->source,
+            pfile->source = mem_gc_realloc_n_typed(interp, pfile->source,
                                             (size_t)pfile->size + 1024, char);
             size = 0;
         }
@@ -3101,7 +3101,7 @@ PDB_load_source(PARROT_INTERP, ARGIN(const char *command))
         if (c == '\n') {
             /* If the line has an opcode move to the next one,
                otherwise leave it with NULL to skip it. */
-            PDB_line_t *newline = gc_mem_allocate_zeroed_typed(interp, PDB_line_t);
+            PDB_line_t *newline = mem_gc_allocate_zeroed_typed(interp, PDB_line_t);
 
             if (PDB_hasinstruction(pfile->source + pline->source_offset)) {
                 size_t n      = interp->op_info_table[*pc].op_count;

@@ -92,7 +92,7 @@ Creates and returns a copy of the array.
 
             GET_ATTR_size(INTERP, SELF, size);
 
-            dest_int_array = gc_mem_allocate_n_typed(INTERP, size, INTVAL);
+            dest_int_array = mem_gc_allocate_n_typed(INTERP, size, INTVAL);
             SET_ATTR_size(INTERP, dest, size);
             SET_ATTR_int_array(INTERP, dest, dest_int_array);
 

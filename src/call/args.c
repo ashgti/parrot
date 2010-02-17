@@ -2860,7 +2860,7 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
         if (cur == 8) {
             void * const old_values = values;
 
-            values     = gc_mem_allocate_n_typed(interp, 8, void *);
+            values     = mem_gc_allocate_n_typed(interp, 8, void *);
             memcpy(values, old_values, 8 * sizeof (void *));
             Parrot_gc_free_fixed_size_storage(interp,
                 8 * sizeof (void *), old_values);

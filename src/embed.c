@@ -463,7 +463,7 @@ again:
         INTVAL wanted     = program_size;
         size_t read_result;
 
-        program_code = gc_mem_allocate_n_typed(interp, chunk_size, char);
+        program_code = mem_gc_allocate_n_typed(interp, chunk_size, char);
         cursor       = program_code;
         program_size = 0;
 
@@ -474,7 +474,7 @@ again:
                 break;
 
             chunk_size   = 1024;
-            gc_mem_realloc_n_typed(interp, program_code, program_size + chunk_size, char);
+            mem_gc_realloc_n_typed(interp, program_code, program_size + chunk_size, char);
 
             if (!program_code) {
                 Parrot_io_eprintf(interp,
@@ -492,7 +492,7 @@ again:
              "Parrot VM: Problem reading packfile from PIO:  code %d.\n",
                         ferror(io));
             fclose(io);
-            gc_mem_free(interp, program_code);
+            mem_gc_free(interp, program_code);
             return NULL;
         }
 
@@ -980,7 +980,7 @@ void
 Parrot_disassemble(PARROT_INTERP, SHIM(const char *outfile), Parrot_disassemble_options options)
 {
     PDB_line_t *line;
-    PDB_t * const pdb   = gc_mem_allocate_typed(interp, PDB_t);
+    PDB_t * const pdb   = mem_gc_allocate_typed(interp, PDB_t);
     int num_mappings    = 0;
     int curr_mapping    = 0;
     int op_code_seq_num = 0;

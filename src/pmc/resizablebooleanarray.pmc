@@ -166,7 +166,7 @@ Resizes the array to C<size> elements.
             SET_ATTR_bit_array(INTERP, SELF,
                     (unsigned char *)mem_sys_memmove(
                         new_store, old_store, copy_size));
-            gc_mem_free(INTERP, old_store);
+            mem_gc_free(INTERP, old_store);
         }
     }
 
@@ -261,7 +261,7 @@ beginning.
 
             /* Replace old array with new array, and free old array */
             SET_ATTR_bit_array(INTERP, SELF, new_bit_array);
-            gc_mem_free(INTERP, old_bit_array);
+            mem_gc_free(INTERP, old_bit_array);
 
             /* Added one allocation unit to the head position offset */
             SET_ATTR_size(INTERP, SELF, tail_pos + MIN_ALLOC);
@@ -321,7 +321,7 @@ Removes and returns the first element.
 
             /* Replace old array with new array, and free old array */
             SET_ATTR_bit_array(INTERP, SELF, new_bit_array);
-            gc_mem_free(INTERP, old_bit_array);
+            mem_gc_free(INTERP, old_bit_array);
 
             /* Removed one allocation unit from the head position offset */
             SET_ATTR_size(INTERP, SELF, tail_pos - MIN_ALLOC);
