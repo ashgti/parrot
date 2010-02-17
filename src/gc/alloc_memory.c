@@ -260,8 +260,6 @@ mem__internal_realloc(ARGFREE(void *from), size_t size,
     return ptr;
 }
 
-#if 0
-
 /*
 
 =item C<void * mem__internal_realloc_zeroed(void *from, size_t size, size_t
@@ -300,8 +298,6 @@ mem__internal_realloc_zeroed(ARGFREE(void *from), size_t size, size_t old_size,
 
     return ptr;
 }
-
-#endif
 
 /*
 
