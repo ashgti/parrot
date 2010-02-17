@@ -130,8 +130,7 @@ sub runstep {
     print "\n" if $verbose;
     if ( defined $conf->data->get('gccversion') ) {
 
-        # Dirty way of checking if compiling with c++
-        my $nocpp = index($conf->data->get('cc'), '++') < 0;
+        my $nocpp = ! $conf->data->get('g++');
 
         # add on some extra warnings if requested
         $self->_add_cage_warnings($conf);
