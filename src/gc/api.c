@@ -650,6 +650,73 @@ Parrot_gc_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data)
     interp->gc_sys->free_fixed_size_storage(interp, size, data);
 }
 
+/*
+
+=item C<void * Parrot_gc_allocate_memory_chunk(PARROT_INTERP, size_t size)>
+
+=item C<void * Parrot_gc_reallocate_memory_chunk(PARROT_INTERP, void *data,
+size_t newsize)>
+
+=item C<void Parrot_gc_free_memory_chunk(PARROT_INTERP, void *data)>
+
+=item C<void *
+Parrot_gc_allocate_memory_chunk_with_interior_pointers(PARROT_INTERP, size_t
+size)>
+
+=item C<void *
+Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, void
+*data, size_t newsize)>
+
+TODO Write docu.
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_memory_chunk(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
+    return interp->gc_sys->allocate_memory_chunk(interp, size);
+}
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
+    return interp->gc_sys->reallocate_memory_chunk(interp, data, newsize);
+}
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void
+Parrot_gc_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
+{
+    ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
+    interp->gc_sys->free_memory_chunk(interp, data);
+}
+
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_allocate_memory_chunk_with_interior_pointers(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
+    return interp->gc_sys->allocate_memory_chunk_with_interior_pointers(interp, size);
+}
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+void *
+Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, ARGIN(void *data), size_t newsize)
+{
+    ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
+    return interp->gc_sys->reallocate_memory_chunk_with_interior_pointers(interp, data, newsize);
+}
+
 
 /*
 
