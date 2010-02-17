@@ -47,7 +47,7 @@ bigint_clear(PARROT_INTERP, PMC *self) {
     BIGINT * bi;
     GETATTR_BigInt_bi(interp, self, bi);
     mpz_clear(bi->b);
-    mem_sys_free(bi);
+    gc_mem_free(interp, bi);
 }
 
 static void
@@ -123,7 +123,7 @@ bigint_get_string(PARROT_INTERP, PMC *self, int base) {
 
     GETATTR_BigInt_bi(interp, self, bi);
     n = mpz_sizeinbase(bi->b, base) + 2;
-    s = (char *)mem_sys_allocate(n);
+    s = gc_mem_allocate_n_typed(interp, n, char);
     return mpz_get_str(s, base, bi->b);
 }
 
@@ -679,14 +679,14 @@ appended.
     VTABLE STRING *get_string() {
         char   * const s  = bigint_get_string(INTERP, SELF, 10);
         STRING * const ps = Parrot_str_new(INTERP, s, 0);
-        mem_sys_free(s);
+        gc_mem_free(INTERP, s);
         return ps;
     }
 
     VTABLE STRING *get_string_keyed_int(INTVAL base) {
         char   * const s  = bigint_get_string(INTERP, SELF, base);
         STRING * const ps = Parrot_str_new(INTERP, s, 0);
-        mem_sys_free(s);
+        gc_mem_free(INTERP, s);
         return ps;
     }
 
