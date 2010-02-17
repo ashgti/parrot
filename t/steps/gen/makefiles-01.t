@@ -68,12 +68,6 @@ BEGIN {
        #["IF(value == xx)",                 0], # invalid op error
        #["IF(value = xx)",                  0], # invalid op error
        ["IF(value=xx)",                     0], # also invalid, no warning. checks for key value=xx
-
-       # Legacy syntax                 true or false
-       ["CONDITIONED_LINE(true)",           1],
-       ["INVERSE_CONDITIONED_LINE(true)",   0],
-       ["CONDITIONED_LINE(false)",          0],
-       ["INVERSE_CONDITIONED_LINE(false)",  1],
       );
 }
 

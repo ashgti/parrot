@@ -275,11 +275,6 @@ ste to "i386", will include " src/atomic/sparc_v9.s" instead if
 
 will be used on "win32" and if "glut" is defined, but not on "cygwin".
 
-B<Legacy Syntax:>
-
-The old syntax #CONDITIONED_LINE(var): and
-#INVERSE_CONDITIONED_LINE(var): is still supported, but is deprecated.
-
 =item comment_type
 
 This option takes has two possible values, C<#> or C</*>. If present and
@@ -459,16 +454,6 @@ sub genfile {
                 next LINE if $former_truth;
                 $line = $1;
             }
-            # Legacy, DEPRECATED.
-            elsif (($expr,$rest)=($line =~ m/^#CONDITIONED_LINE\(([^)]+)\):(.*)/s)) {
-                next LINE unless cond_eval($conf, $expr);
-                $line = $rest;
-            }
-            elsif (($expr,$rest)=($line =~ m/^#INVERSE_CONDITIONED_LINE\(([^)]+)\):(.*)/s )) {
-                next LINE if cond_eval($conf, $expr);
-                $line = $rest;
-            }
-
             else { # reset
                 $former_truth = -1; # ELSE must immediately follow a conditional.
             }
