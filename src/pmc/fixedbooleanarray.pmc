@@ -74,7 +74,7 @@ Destroys the array.
         unsigned char *bit_array;
         GET_ATTR_bit_array(INTERP, SELF, bit_array);
         if (bit_array)
-            mem_sys_free(bit_array);
+            gc_mem_free(INTERP, bit_array);
     }
 
 /*
@@ -102,7 +102,7 @@ Creates and returns a copy of the array.
             SET_ATTR_size(INTERP, dest, size);
             SET_ATTR_resize_threshold(INTERP, dest, resize_threshold);
 
-            clone_bit_array = (unsigned char*)mem_sys_allocate(size_in_bytes);
+            clone_bit_array = gc_mem_allocate_n_typed(INTERP, size_in_bytes, unsigned char);
             mem_sys_memcopy(clone_bit_array, my_bit_array, size_in_bytes);
 
             SET_ATTR_bit_array(INTERP, dest, clone_bit_array);
@@ -339,8 +339,9 @@ Resizes the array to C<size> elements.
 
         SET_ATTR_size(INTERP, SELF, size);
         SET_ATTR_resize_threshold(INTERP, SELF, size_in_bytes * BITS_PER_CHAR);
+        // FIXME We should clear allocated memory
         SET_ATTR_bit_array(INTERP, SELF,
-                (unsigned char*)mem_sys_allocate_zeroed(size_in_bytes));
+                gc_mem_allocate_n_typed(INTERP, size_in_bytes, unsigned char));
     }
 
 /*
