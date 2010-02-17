@@ -85,13 +85,10 @@ sub _evaluate_gcc {
     $gccversion .= ".$minor" if defined $minor;
     $self->set_result("yes, $gccversion");
 
-    my $ccwarn = $conf->data->get('ccwarn');
-
     $conf->data->set( sym_export => '__attribute__ ((visibility("default")))' )
         if $gccversion >= 4.0 && !$conf->data->get('sym_export');
 
     $conf->data->set(
-        ccwarn              => "$ccwarn",
         gccversion          => $gccversion,
     );
     return 1;
