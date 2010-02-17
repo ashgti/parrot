@@ -27,105 +27,100 @@ use Parrot::BuildUtil;
 
 sub _init {
     my $self = shift;
-    my %data;
-    $data{description} = q{Detect supported compiler warnings};
-    $data{result}      = q{};
 
-    # Please keep these sorted by flag name, such that "-Wno-foo" is
-    # sorted as "-Wfoo", so we can turn off/on as needed.
+    return {
+        description => 'Detect supported compiler warnings',
+        result      => '',
 
-    # Note that these warnings may be turned off for individual files
-    # in the Makefile.
-    my @potential_warnings = qw(
-        -falign-functions=16
-        -fvisibility=hidden
-        -funit-at-a-time
-        -maccumulate-outgoing-args
-        -W
-        -Wall
-        -Waggregate-return
-        -Wcast-align
-        -Wcast-qual
-        -Wchar-subscripts
-        -Wcomment
-        -Wdisabled-optimization
-        -Wdiv-by-zero
-        -Wendif-labels
-        -Wextra
-        -Wformat
-        -Wformat-extra-args
-        -Wformat-nonliteral
-        -Wformat-security
-        -Wformat-y2k
-        -Wimplicit
-        -Wimport
-        -Winit-self
-        -Winline
-        -Winvalid-pch
-        -Wlogical-op
-        -Wmissing-braces
-        -Wmissing-field-initializers
-        -Wno-missing-format-attribute
-        -Wmissing-include-dirs
-        -Wpacked
-        -Wparentheses
-        -Wpointer-arith
-        -Wreturn-type
-        -Wsequence-point
-        -Wno-shadow
-        -Wsign-compare
-        -Wstrict-aliasing
-        -Wstrict-aliasing=2
-        -Wswitch
-        -Wswitch-default
-        -Wtrigraphs
-        -Wundef
-        -Wunknown-pragmas
-        -Wunused
-        -Wvariadic-macros
-        -Wwrite-strings
-    );
-    my @potential_warnings_no_cpp = qw(
-        -Wbad-function-cast
-        -Wc++-compat
-        -Wdeclaration-after-statement
-        -Werror=declaration-after-statement
-        -Wimplicit-function-declaration
-        -Wimplicit-int
-        -Wmain
-        -Wmissing-declarations
-        -Wmissing-prototypes
-        -Wnested-externs
-        -Wnonnull
-        -Wold-style-definition
-        -Wstrict-prototypes
-    );
+        # Please keep these sorted by flag name, such that "-Wno-foo" is
+        # sorted as "-Wfoo", so we can turn off/on as needed.
 
-    my @cage_warnings = qw(
-        -std=c89
-        -Werror-implicit-function-declaration
-        -Wformat=2
-        -Wlarger-than-4096
-        -Wlong-long
-        -Wmissing-format-attribute
-        -Wdeprecated-declarations
-        -Wno-format-extra-args
-        -Wno-import
-        -Wno-multichar
-        -Wno-pointer-sign
-        -Wold-style-definition
-        -Wunreachable-code
-        -Wunused-function
-        -Wunused-label
-        -Wunused-value
-        -Wunused-variable
-    );
-
-    $data{potential_warnings}        = \@potential_warnings;
-    $data{potential_warnings_no_cpp} = \@potential_warnings_no_cpp;
-    $data{cage_warnings}             = \@cage_warnings;
-
-    return \%data;
+        # Note that these warnings may be turned off for individual files
+        # in the Makefile.
+        potential_warnings => [ qw(
+            -falign-functions=16
+            -fvisibility=hidden
+            -funit-at-a-time
+            -maccumulate-outgoing-args
+            -W
+            -Wall
+            -Waggregate-return
+            -Wcast-align
+            -Wcast-qual
+            -Wchar-subscripts
+            -Wcomment
+            -Wdisabled-optimization
+            -Wdiv-by-zero
+            -Wendif-labels
+            -Wextra
+            -Wformat
+            -Wformat-extra-args
+            -Wformat-nonliteral
+            -Wformat-security
+            -Wformat-y2k
+            -Wimplicit
+            -Wimport
+            -Winit-self
+            -Winline
+            -Winvalid-pch
+            -Wlogical-op
+            -Wmissing-braces
+            -Wmissing-field-initializers
+            -Wno-missing-format-attribute
+            -Wmissing-include-dirs
+            -Wpacked
+            -Wparentheses
+            -Wpointer-arith
+            -Wreturn-type
+            -Wsequence-point
+            -Wno-shadow
+            -Wsign-compare
+            -Wstrict-aliasing
+            -Wstrict-aliasing=2
+            -Wswitch
+            -Wswitch-default
+            -Wtrigraphs
+            -Wundef
+            -Wunknown-pragmas
+            -Wunused
+            -Wvariadic-macros
+            -Wwrite-strings
+        ) ],
+        potential_warnings_no_cpp => [ qw(
+            -Wbad-function-cast
+            -Wc++-compat
+            -Wdeclaration-after-statement
+            -Werror=declaration-after-statement
+            -Wimplicit-function-declaration
+            -Wimplicit-int
+            -Wmain
+            -Wmissing-declarations
+            -Wmissing-prototypes
+            -Wnested-externs
+            -Wnonnull
+            -Wold-style-definition
+            -Wstrict-prototypes
+        ) ],
+        cage_warnings => [ qw(
+            -std=c89
+            -Werror-implicit-function-declaration
+            -Wformat=2
+            -Wlarger-than-4096
+            -Wlong-long
+            -Wmissing-format-attribute
+            -Wdeprecated-declarations
+            -Wno-format-extra-args
+            -Wno-import
+            -Wno-multichar
+            -Wno-pointer-sign
+            -Wold-style-definition
+            -Wunreachable-code
+            -Wunused-function
+            -Wunused-label
+            -Wunused-value
+            -Wunused-variable
+        ) ]
+    }; 
 }
 
 sub runstep {
