@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  41;
+use Test::More tests =>  25;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::auto::warnings');
@@ -35,28 +35,11 @@ my $serialized = $conf->pcfreeze();
 $conf->options->set( %{$args} );
 SKIP: {
     skip 'Tests not yet passing on Sun/Solaris',
-    39
+    23
     if $^O =~ m/sun|solaris/i;
 
 my $step = test_step_constructor_and_description($conf);
 
-my %potential_warnings_seen;
-$conf->options->set(cage => 1);
-$step->_add_cage_warnings($conf);
-%potential_warnings_seen = map { $_, 1 } @{ $step->{potential_warnings} };
-ok($potential_warnings_seen{'-std=c89'}, "Cage warning added");
-
-$conf->replenish($serialized);
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
-$conf->options->set(maintainer => 1);
-$step->_add_maintainer_warnings($conf);
-%potential_warnings_seen = map { $_, 1 } @{ $step->{potential_warnings} };
-ok($potential_warnings_seen{'-Wlarger-than-4096'}, "Maintainer warning added");
-
-$conf->replenish($serialized);
-
-$conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
 my $warning = q{-Wphony_warning};
 auto::warnings::_set_warning($conf, $warning, 1, undef);
@@ -81,32 +64,6 @@ $step = test_step_constructor_and_description($conf);
 
 $conf->replenish($serialized);
 
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
-my $output = q{some string};
-my $tryflags = q{some flag};
-my $rv = auto::warnings::_set_ccflags($conf, $output, $tryflags, undef);
-is($rv, 1, "_set_ccflags() returned 1 as expected");
-is($conf->data->get("ccflags"), $tryflags, "ccflags changed as expected");
-
-$conf->replenish($serialized);
-
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
-{
-    my $output = q{some string};
-    my $tryflags = q{some flag};
-    my ($rv, $stdout);
-    capture(
-        sub { $rv = auto::warnings::_set_ccflags($conf, $output, $tryflags, 1); },
-        \$stdout,
-    );
-    is($rv, 1, "_set_ccflags() returned 1 as expected");
-    is($conf->data->get("ccflags"), $tryflags, "ccflags changed as expected");
-    like($stdout, qr/ccflags:\s+$tryflags/, "Got expected verbose output");
-}
-
-$conf->replenish($serialized);
 
 $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
