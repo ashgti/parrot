@@ -1,5 +1,8 @@
 # $Id$
 
+New in 2.1.1
+- Bugfix to eliminate memory leak identified in TT #1465.
+
 New in 2.1.0
 - Core changes
   + GC performance and encapsulation were greatly improved.
