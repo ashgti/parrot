@@ -502,7 +502,7 @@ gc_inf_allocate_string_storage(PARROT_INTERP, STRING *str, size_t size)
     if (size == 0)
         return;
 
-    mem      = (char *)mem_sys_allocate(size);
+    mem      = (char *)mem_internal_allocate(size);
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = size;
@@ -514,7 +514,7 @@ gc_inf_reallocate_string_storage(PARROT_INTERP, STRING *str, size_t size)
     ASSERT_ARGS(gc_inf_reallocate_string_storage)
     char *mem;
 
-    mem      = (char *)mem_sys_realloc(Buffer_bufstart(str), size);
+    mem      = (char *)mem_internal_realloc(Buffer_bufstart(str), size);
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = size;
@@ -533,7 +533,7 @@ gc_inf_allocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t siz
     if (size == 0)
         return;
 
-    mem      = (char *)mem_sys_allocate(size);
+    mem      = (char *)mem_internal_allocate(size);
 
     Buffer_bufstart(buffer) = mem;
     Buffer_buflen(buffer)   = size;
@@ -545,7 +545,7 @@ gc_inf_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer), size_t s
     ASSERT_ARGS(gc_inf_reallocate_buffer_storage)
     char *mem;
 
-    mem = (char *)mem_sys_realloc(Buffer_bufstart(buffer), size);
+    mem = (char *)mem_internal_realloc(Buffer_bufstart(buffer), size);
 
     Buffer_bufstart(buffer) = mem;
     Buffer_buflen(buffer)   = size;
@@ -564,7 +564,7 @@ gc_inf_free_fixed_size_storage(PARROT_INTERP, size_t size, void *data)
 {
     ASSERT_ARGS(gc_inf_free_fixed_size_storage)
     if (data)
-        free(data);
+        mem_internal_free(data);
 }
 
 /*
