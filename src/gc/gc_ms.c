@@ -59,6 +59,9 @@ static Buffer * gc_ms_allocate_bufferlike_header(PARROT_INTERP, size_t size)
 static void * gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
 
+static void * gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
 PARROT_CAN_RETURN_NULL
 static PMC* gc_ms_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
         __attribute__nonnull__(1);
@@ -229,6 +232,9 @@ static void gc_ms_unblock_GC_sweep(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_memory_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_ms_allocate_memory_chunk_zeroed \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_allocate_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -378,7 +384,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->gc_sys->allocate_memory_chunk   = gc_ms_allocate_memory_chunk;
     interp->gc_sys->reallocate_memory_chunk = gc_ms_reallocate_memory_chunk;
     interp->gc_sys->allocate_memory_chunk_with_interior_pointers
-                = gc_ms_allocate_memory_chunk;
+                = gc_ms_allocate_memory_chunk_zeroed;
     interp->gc_sys->reallocate_memory_chunk_with_interior_pointers
                 = gc_ms_reallocate_memory_chunk_zeroed;
     interp->gc_sys->free_memory_chunk       = gc_ms_free_memory_chunk;
@@ -761,7 +767,7 @@ gc_ms_allocate_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
     PMC_data(pmc) = attrs;
     return attrs;
 #else
-    void * const data =  mem_sys_allocate_zeroed(attr_size);
+    void * const data =  gc_ms_allocate_memory_chunk(attr_size);
     PMC_data(pmc) = data;
     return data;
 #endif
@@ -1098,6 +1104,12 @@ gc_ms_free_fixed_size_storage(PARROT_INTERP, size_t size, ARGMOD(void *data))
 =item C<static void * gc_ms_reallocate_memory_chunk(PARROT_INTERP, void *data,
 size_t newsize)>
 
+=item C<static void * gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t
+size)>
+
+=item C<static void * gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, void
+*data, size_t newsize, size_t oldsize)>
+
 =item C<static void gc_ms_free_memory_chunk(PARROT_INTERP, void *data)>
 
 TODO Write docu.
@@ -1108,9 +1120,7 @@ static void *
 gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    void * ret = mem_internal_allocate(size);
-    memset(ret, 0, size);
-    return ret;
+    return mem_internal_allocate(size);
 }
 
 static void *
@@ -1118,6 +1128,15 @@ gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
     return mem_internal_realloc(data, newsize);
+}
+
+static void *
+gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_ms_allocate_memory_chunk)
+    void * ret = mem_internal_allocate(size);
+    memset(ret, 0, size);
+    return ret;
 }
 
 static void *
