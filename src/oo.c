@@ -958,9 +958,8 @@ Parrot_find_method_with_cache(PARROT_INTERP, ARGIN(PMC *_class), ARGIN(STRING *m
 
     if (type >= mc->mc_size) {
         if (mc->idx) {
-            mc->idx = (Meth_cache_entry ***)mem_sys_realloc_zeroed(mc->idx,
-                sizeof (Meth_cache_entry ***) * (type + 1),
-                sizeof (Meth_cache_entry ***) * mc->mc_size);
+            mc->idx = mem_gc_realloc_n_typed_zeroed(interp, mc->idx,
+                    type + 1, mc->mc_size, Meth_cache_entry**);
         }
         else {
             mc->idx = mem_gc_allocate_n_zeroed_typed(interp, type + 1, Meth_cache_entry**);
