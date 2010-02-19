@@ -812,12 +812,12 @@ invalidate_type_caches(PARROT_INTERP, UINTVAL type)
         Meth_cache_entry *e = mc->idx[type][i];
         while (e) {
             Meth_cache_entry * const next = e->next;
-            mem_sys_free(e);
+            mem_gc_free(interp, e);
             e = next;
         }
     }
 
-    mem_sys_free(mc->idx[type]);
+    mem_gc_free(interp, mc->idx[type]);
     mc->idx[type] = NULL;
 }
 

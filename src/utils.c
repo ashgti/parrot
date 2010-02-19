@@ -883,9 +883,9 @@ Parrot_register_move(PARROT_INTERP,
         }
     }
 
-    mem_sys_free(nb_succ);
-    mem_sys_free(reg_to_index);
-    mem_sys_free(backup);
+    mem_gc_free(interp, nb_succ);
+    mem_gc_free(interp, reg_to_index);
+    mem_gc_free(interp, backup);
 }
 
 typedef INTVAL (*sort_func_t)(PARROT_INTERP, void *, void *);
