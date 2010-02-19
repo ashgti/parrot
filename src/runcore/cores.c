@@ -999,16 +999,8 @@ init_prederef(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
         const size_t N  = interp->code->base.size;
         size_t       i, n_pics;
 
-/* Parrot_memalign_if_possible in OpenBSD allocates 256 if you ask for 312
-   -- Need to verify this, it may have been a bug elsewhere. If it works now,
-   we can remove the mem_sys_allocate_zeroed line below. */
-
-#if 0
-        void **temp = (void **)mem_sys_allocate_zeroed(N * sizeof (void *));
-#else
         void **temp = (void **)Parrot_memalign_if_possible(256,
                 N * sizeof (void *));
-#endif
         /* calc and remember pred_offset */
         CONTEXT(interp)->pred_offset = pc - (opcode_t *)temp;
 
