@@ -153,7 +153,9 @@ INTVAL Parrot_register_encoding(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-void parrot_deinit_encodings(void);
+void parrot_deinit_encodings(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 void Parrot_str_internal_register_encoding_names(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -183,7 +185,8 @@ void Parrot_str_internal_register_encoding_names(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(encodingname) \
     , PARROT_ASSERT_ARG(encoding))
-#define ASSERT_ARGS_parrot_deinit_encodings __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_parrot_deinit_encodings __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_str_internal_register_encoding_names \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))

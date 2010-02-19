@@ -56,7 +56,7 @@ static All_encodings *all_encodings;
 
 /*
 
-=item C<void parrot_deinit_encodings(void)>
+=item C<void parrot_deinit_encodings(PARROT_INTERP)>
 
 Deinitialize encodings and free all memory used by them.
 
@@ -65,17 +65,17 @@ Deinitialize encodings and free all memory used by them.
 */
 
 void
-parrot_deinit_encodings(void)
+parrot_deinit_encodings(PARROT_INTERP)
 {
     ASSERT_ARGS(parrot_deinit_encodings)
     const int n = all_encodings->n_encodings;
     int i;
 
     for (i = 0; i < n; ++i) {
-        mem_sys_free(all_encodings->enc[i].encoding);
+        mem_gc_free(interp, all_encodings->enc[i].encoding);
     }
-    mem_sys_free(all_encodings->enc);
-    mem_sys_free(all_encodings);
+    mem_gc_free(interp, all_encodings->enc);
+    mem_gc_free(interp, all_encodings);
     all_encodings = NULL;
 }
 
@@ -298,7 +298,7 @@ C<encodingname>. Returns 1 if successful, returns 0 otherwise.
 */
 
 static INTVAL
-register_encoding(SHIM_INTERP, ARGIN(const char *encodingname),
+register_encoding(PARROT_INTERP, ARGIN(const char *encodingname),
         ARGIN(ENCODING *encoding))
 {
     ASSERT_ARGS(register_encoding)
@@ -315,10 +315,10 @@ register_encoding(SHIM_INTERP, ARGIN(const char *encodingname),
      * loading of encodings from inside threads
      */
     if (!n)
-        all_encodings->enc = mem_allocate_typed(One_encoding);
+        all_encodings->enc = mem_gc_allocate_zeroed_typed(interp, One_encoding);
     else
-        all_encodings->enc = (One_encoding*)mem_sys_realloc(all_encodings->enc,
-                (n + 1) * sizeof (One_encoding));
+        all_encodings->enc = mem_gc_realloc_n_typed_zeroed(interp,
+                all_encodings->enc, n + 1, n, One_encoding);
     all_encodings->n_encodings++;
     all_encodings->enc[n].encoding = encoding;
 

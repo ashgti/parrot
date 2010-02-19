@@ -293,7 +293,7 @@ Parrot_gc_finalize(PARROT_INTERP)
     if (interp->gc_sys->finalize_gc_system)
         interp->gc_sys->finalize_gc_system(interp);
 
-    mem_sys_free(interp->gc_sys);
+    mem_internal_free(interp->gc_sys);
     interp->gc_sys = NULL;
 }
 
@@ -665,7 +665,7 @@ size)>
 
 =item C<void *
 Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, void
-*data, size_t newsize, size_t oldsize)>
+*data, size_t oldsize, size_t newsize)>
 
 TODO Write docu.
 
