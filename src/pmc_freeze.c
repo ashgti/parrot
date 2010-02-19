@@ -54,7 +54,7 @@ STRING*
 Parrot_freeze(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_freeze)
-    PMC *image = pmc_new(interp, enum_class_ImageIO);
+    PMC *image = Parrot_pmc_new(interp, enum_class_ImageIO);
     VTABLE_set_pmc(interp, image, pmc);
     return VTABLE_get_string(interp, image);
 }
@@ -79,7 +79,7 @@ Parrot_freeze_size(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_freeze_size)
     PMC *result;
-    PMC *visitor = pmc_new(interp, enum_class_ImageIOSize);
+    PMC *visitor = Parrot_pmc_new(interp, enum_class_ImageIOSize);
     VTABLE_set_pmc(interp, visitor, pmc);
     result = VTABLE_get_pmc(interp, visitor);
     return VTABLE_get_integer(interp, result);
@@ -110,7 +110,7 @@ Parrot_thaw(PARROT_INTERP, ARGIN(STRING *image))
 {
     ASSERT_ARGS(Parrot_thaw)
 
-    PMC        *info     = pmc_new(interp, enum_class_ImageIO);
+    PMC        *info     = Parrot_pmc_new(interp, enum_class_ImageIO);
     int         gc_block = 0;
     PMC        *result;
 

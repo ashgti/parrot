@@ -49,7 +49,7 @@ PARROT_CAN_RETURN_NULL
 static const char * parseflags(PARROT_INTERP,
     ARGIN(int *argc),
     ARGIN(char **argv[]),
-    ARGIN(INTVAL *core),
+    ARGIN(Parrot_Run_core_t *core),
     ARGIN(Parrot_trace_flags *trace))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -104,7 +104,7 @@ main(int argc, char * argv[])
     Interp     *interp;
     int         status;
 
-    INTVAL             core  = 0;
+    Parrot_Run_core_t  core  = PARROT_SLOW_CORE;
     Parrot_trace_flags trace = PARROT_NO_TRACE;
 
     /* internationalization setup */
@@ -127,6 +127,18 @@ main(int argc, char * argv[])
     /* Now initialize interpreter */
     initialize_interpreter(interp, (void*)&stacktop);
     imcc_initialize(interp);
+
+    { /* EXPERIMENTAL: add library and include paths from environment */
+        PMC *env = Parrot_pmc_new(interp, enum_class_Env);
+        STRING *path = VTABLE_get_string_keyed_str(interp, env,
+                Parrot_str_new_constant(interp, "PARROT_LIBRARY"));
+        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+            Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_LIBRARY);
+        path = VTABLE_get_string_keyed_str(interp, env,
+                Parrot_str_new_constant(interp, "PARROT_INCLUDE"));
+        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+            Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_INCLUDE);
+    }
 
     /* Parse flags */
     sourcefile = parseflags(interp, &argc, &argv, &core, &trace);
@@ -400,7 +412,7 @@ parseflags_minimal(PARROT_INTERP, int argc, ARGIN(char *argv[]))
 /*
 
 =item C<static const char * parseflags(PARROT_INTERP, int *argc, char **argv[],
-INTVAL *core, Parrot_trace_flags *trace)>
+Parrot_Run_core_t *core, Parrot_trace_flags *trace)>
 
 Parse Parrot's command line for options and set appropriate flags.
 
@@ -412,7 +424,7 @@ PARROT_CAN_RETURN_NULL
 static const char *
 parseflags(PARROT_INTERP,
         ARGIN(int *argc), ARGIN(char **argv[]),
-        ARGIN(INTVAL *core), ARGIN(Parrot_trace_flags *trace))
+        ARGIN(Parrot_Run_core_t *core), ARGIN(Parrot_trace_flags *trace))
 {
     ASSERT_ARGS(parseflags)
     struct longopt_opt_info opt  = LONGOPT_OPT_INFO_INIT;

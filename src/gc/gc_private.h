@@ -45,6 +45,7 @@ extern void *flush_reg_store(void);
 #define UNITS_PER_ALLOC_GROWTH_FACTOR          1.75
 
 #define POOL_MAX_BYTES                         65536 * 128
+#define GC_SIZE_THRESHOLD                      1024  * 1024
 
 #define PMC_HEADERS_PER_ALLOC     4096 * 10 / sizeof (PMC)
 #define BUFFER_HEADERS_PER_ALLOC  4096      / sizeof (Buffer)
@@ -91,7 +92,8 @@ typedef enum _gc_sys_type_enum {
 typedef enum _gc_skip_type_enum {
     GC_NO_SKIP = 0,
     GC_ONE_SKIP,
-    GC_ALWAYS_SKIP
+    GC_ALWAYS_SKIP,
+    GC_NEVER_SKIP
 } gc_skip_type_enum;
 
 typedef struct GC_Subsystem {
@@ -487,11 +489,6 @@ char * aligned_mem(ARGIN(const Buffer *buffer), ARGIN(char *mem))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_PURE_FUNCTION
-PARROT_WARN_UNUSED_RESULT
-size_t aligned_size(ARGIN(const Buffer *buffer), size_t len)
-        __attribute__nonnull__(1);
-
 PARROT_CONST_FUNCTION
 PARROT_WARN_UNUSED_RESULT
 size_t aligned_string_size(size_t len);
@@ -558,8 +555,6 @@ void Parrot_gc_merge_memory_pools(
 #define ASSERT_ARGS_aligned_mem __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(buffer) \
     , PARROT_ASSERT_ARG(mem))
-#define ASSERT_ARGS_aligned_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(buffer))
 #define ASSERT_ARGS_aligned_string_size __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_check_buffer_ptr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pobj) \

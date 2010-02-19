@@ -2,10 +2,10 @@
 # See tools/dev/install_files.pl for documentation on the
 # format of this file.
 # Please re-sort this file after *EVERY* modification
-blib/lib/libparrot.2.0.0.dylib                    [main]lib
+blib/lib/libparrot.2.1.0.dylib                    [main]lib
 blib/lib/libparrot.a                              [main]lib
 blib/lib/libparrot.dylib                          [main]lib
-blib/lib/libparrot.so.2.0.0                       [main]lib
+blib/lib/libparrot.so.2.1.0                       [main]lib
 blib/lib/libparrot.so                             [main]lib
 compilers/data_json/data_json.pbc                 [data_json]
 compilers/json/JSON.pbc                           [json]
@@ -162,7 +162,6 @@ runtime/parrot/library/HTTP/Daemon.pbc            [main]
 runtime/parrot/library/Iter.pbc                   [main]
 runtime/parrot/library/JSON.pbc                   [main]
 runtime/parrot/library/libpcre.pbc                [main]
-runtime/parrot/library/Math/Random/mt19937ar.pbc  [main]
 runtime/parrot/library/Math/Rand.pbc              [main]
 runtime/parrot/library/MIME/Base64.pbc            [main]
 runtime/parrot/library/NCI/call_toolkit_init.pbc  [main]
