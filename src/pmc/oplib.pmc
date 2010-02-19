@@ -1,3 +1,19 @@
+/*
+Copyright (C) 2010, Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/oplib.pmc
+
+=head1 DESCRIPTION
+
+Implements oplib  VTABLEs.
+
+=cut
+
+*/
+
 #include "parrot/parrot.h"
 
 /* TODO: Since Opcode PMCs are essentially read-only after initialization
@@ -29,6 +45,11 @@ pmclass OpLib {
         return num;
     }
 
+    VTABLE INTVAL get_integer_keyed(PMC *key) {
+        STRING *str_key = key_string(INTERP, key);
+        return SELF.get_integer_keyed_str(str_key);
+    }
+
     VTABLE PMC* get_pmc_keyed_str(STRING *name) {
         PMC * const op = pmc_new_noinit(INTERP, enum_class_Opcode);
         VTABLE_set_string_native(INTERP, op, name);
@@ -52,3 +73,10 @@ pmclass OpLib {
         return INTERP->op_lib->op_count;
     }
 }
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */

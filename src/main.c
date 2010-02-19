@@ -128,6 +128,18 @@ main(int argc, char * argv[])
     initialize_interpreter(interp, (void*)&stacktop);
     imcc_initialize(interp);
 
+    { /* EXPERIMENTAL: add library and include paths from environment */
+        PMC *env = pmc_new(interp, enum_class_Env);
+        STRING *path = VTABLE_get_string_keyed_str(interp, env,
+                Parrot_str_new_constant(interp, "PARROT_LIBRARY"));
+        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+            Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_LIBRARY);
+        path = VTABLE_get_string_keyed_str(interp, env,
+                Parrot_str_new_constant(interp, "PARROT_INCLUDE"));
+        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+            Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_INCLUDE);
+    }
+
     /* Parse flags */
     sourcefile = parseflags(interp, &argc, &argv, &core, &trace);
 
@@ -400,7 +412,7 @@ parseflags_minimal(PARROT_INTERP, int argc, ARGIN(char *argv[]))
 /*
 
 =item C<static const char * parseflags(PARROT_INTERP, int *argc, char **argv[],
-INTVAL *core, Parrot_trace_flags *trace)>
+Parrot_Run_core_t *core, Parrot_trace_flags *trace)>
 
 Parse Parrot's command line for options and set appropriate flags.
 

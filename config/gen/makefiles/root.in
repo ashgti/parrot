@@ -159,7 +159,7 @@ GEN_CONFIGS = \
     $(LIBRARY_DIR)/config.pir \
     src/platform.c \
 #IF(platform_asm):    src/platform_asm.s \
-#IF(has_opengl):    config/gen/call_list/opengl.in \
+#IF(has_opengl):    src/glut_nci_thunks.nci \
 #IF(has_glut):    src/glut_callbacks.c \
     src/core_pmcs.c \
 #IF(has_crypto):    src/dynpmc/md2.pmc \
@@ -227,10 +227,11 @@ CONFIGURE_GENERATED_FILES = \
     $(GEN_MAKEFILES) \
     ext/Parrot-Embed/Makefile.PL \
     myconfig  \
-    src/call_list.txt \
     MANIFEST.configure.generated \
     .configure_trace.sto \
     .parrot_current_rev \
+#IF(has_opengl):    runtime/parrot/include/opengl_defines.pasm \
+#IF(has_opengl):    runtime/parrot/library/OpenGL_funcs.pir \
     runtime/parrot/include/signal.pasm
 
 
@@ -257,6 +258,7 @@ GEN_HEADERS = \
 GEN_SOURCES = \
     src/core_ops.c \
     src/nci.c \
+    src/glut_nci_thunks.c \
     src/core_ops_switch.c \
     src/parrot_config.c \
     src/null_config.c \
@@ -283,7 +285,6 @@ GEN_LIBRARY = \
     $(LIBRARY_DIR)/Iter.pbc \
     $(LIBRARY_DIR)/JSON.pbc \
     $(LIBRARY_DIR)/data_json.pbc \
-    $(LIBRARY_DIR)/Math/Random/mt19937ar.pbc \
     $(LIBRARY_DIR)/Math/Rand.pbc \
     $(LIBRARY_DIR)/MIME/Base64.pbc \
     $(LIBRARY_DIR)/NCI/Utils.pbc \
@@ -292,8 +293,6 @@ GEN_LIBRARY = \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL.pbc \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL_funcs.pbc \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL/Math.pbc \
-#IF(has_opengl):    runtime/parrot/include/opengl_defines.pasm \
-#IF(has_opengl):    runtime/parrot/library/OpenGL_funcs.pir \
     $(LIBRARY_DIR)/P6object.pbc \
     $(LIBRARY_DIR)/parrotlib.pbc \
     $(LIBRARY_DIR)/pcore.pbc \
@@ -478,7 +477,9 @@ INTERP_O_FILES = \
     src/misc$(O) \
     src/multidispatch$(O) \
     src/frame_builder$(O) \
-    src/nci$(O) \
+    src/nci/api$(O) \
+    src/nci/core_thunks$(O) \
+    src/nci/extra_thunks$(O) \
     src/oo$(O) \
     src/packfile$(O) \
     src/packout$(O) \
@@ -643,7 +644,9 @@ STR_FILES = \
     src/library.str \
     src/multidispatch.str \
     src/frame_builder.str \
-    src/nci.str \
+    src/nci/api.str \
+    src/nci/core_thunks.str \
+    src/nci/extra_thunks.str \
     src/packfile.str \
     src/pmc.str \
     src/pmc_freeze.str \
@@ -1372,12 +1375,20 @@ src/dataypes$(O) : $(GENERAL_H_FILES) src/dataypes.c
 
 src/exit$(O) : $(PARROT_H_HEADERS)
 
-src/nci$(O) : src/nci.str \
-        $(INC_DIR)/oplib/ops.h $(PARROT_H_HEADERS) \
-        src/frame_builder.h \
-        include/pmc/pmc_managedstruct.h \
-        include/pmc/pmc_nci.h \
-        include/pmc/pmc_pointer.h
+src/nci/api$(O) : src/nci/api.str \
+        $(PARROT_H_HEADERS) \
+        include/pmc/pmc_unmanagedstruct.h \
+        include/pmc/pmc_nci.h
+
+src/nci/core_thunks$(O) : src/nci/core_thunks.str \
+        $(PARROT_H_HEADERS) \
+        include/pmc/pmc_unmanagedstruct.h \
+        include/pmc/pmc_nci.h
+
+src/nci/extra_thunks$(O) : src/nci/extra_thunks.str \
+        $(PARROT_H_HEADERS) \
+        include/pmc/pmc_unmanagedstruct.h \
+        include/pmc/pmc_nci.h
 
 src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
         include/pmc/pmc_fixedintegerarray.h \
@@ -1389,10 +1400,6 @@ src/vtables$(O) : $(PARROT_H_HEADERS)
 
 src/gc/system$(O) : $(PARROT_H_HEADERS)  src/gc/gc_private.h
 src/gc/gc_private.h : $(INC_DIR)/settings.h
-
-src/nci.c : src/call_list.txt $(BUILD_TOOLS_DIR)/nativecall.pl \
-	include/pmc/pmc_nci.h
-	$(PERL) $(BUILD_TOOLS_DIR)/nativecall.pl src/call_list.txt
 
 src/warnings$(O) : $(PARROT_H_HEADERS)
 
@@ -1836,6 +1843,7 @@ prog-clean :
     src/nci_test$(O) \
     $(LIBNCI_TEST_SO) \
     src/glut_callbacks$(O) \
+    src/glut_nci_thunks$(O) \
     $(LIBGLUTCB_SO) \
     install_config.fpmc
 	$(PERL) $(BUILD_TOOLS_DIR)/c2str.pl --init
@@ -2403,9 +2411,18 @@ $(LIBNCI_TEST_SO): src/nci_test$(O) $(LIBPARROT)
 # for use by runtime/parrot/library/OpenGL.pir
 src/glut_callbacks$(O): $(GENERAL_H_FILES)
 
-$(LIBGLUTCB_SO): $(LIBPARROT) src/glut_callbacks$(O)
+src/glut_nci_thunks.c: $(PARROT) runtime/parrot/library/data_json.pbc tools/build/nativecall.pir
+	$(PARROT) tools/build/nativecall.pir \
+	    --loader-name=Parrot_glut_nci_loader \
+	    --loader-storage-class=PARROT_DYNEXT_EXPORT \
+	    --output=src/glut_nci_thunks.c \
+	    <src/glut_nci_thunks.nci
+
+src/glut_nci_thunks$(O): $(GENERAL_H_FILES)
+
+$(LIBGLUTCB_SO): $(LIBPARROT) src/glut_callbacks$(O) src/glut_nci_thunks$(O)
 	$(LD) $(LD_LOAD_FLAGS) $(LDFLAGS) \
-    @ld_out@$@ src/glut_callbacks$(O) \
+    @ld_out@$@ src/glut_callbacks$(O) src/glut_nci_thunks$(O) \
     $(ALL_PARROT_LIBS) @opengl_lib@
 
 # emacs etags

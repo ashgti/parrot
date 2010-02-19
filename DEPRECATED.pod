@@ -52,16 +52,6 @@ L<https://trac.parrot.org/parrot/ticket/452>
 
 L<https://trac.parrot.org/parrot/ticket/264>
 
-=item Use of undocumented variables in class_init [eligible in 2.1]
-
-The current implementation allows the class_init vtable function body to
-use local symbols from the generated part. For example, some PMC used
-to use the pass counter. In the future, the class_init body from the PMC
-file may not be inserted directly in the body of the generated one,
-so this usage will not be allowed.
-
-L<https://trac.parrot.org/parrot/ticket/918>
-
 =item Overriding vtable invoke in PIR objects [experimental]
 
 The VTABLE invoke in object.pmc puts SELF at the start of the
@@ -75,6 +65,22 @@ L<https://trac.parrot.org/parrot/ticket/103>
 And all uses in the Parrot calling conventions.
 
 L<https://trac.parrot.org/parrot/ticket/1407>
+
+=item Digest dynpmcs [eligible in 2.4]
+
+The digest dynpmcs are, since the posting of this notice, available on
+http://gitorious.org/digest-dynpmcs and will no longer be distributed
+with parrot after 2.3.
+
+L<https://trac.parrot.org/parrot/ticket/1467>
+
+=item gdbmhash dynpmc [eligible in 2.4]
+
+The gdbmhash dynpmc is, since the posting of this notice, available on
+http://gitorious.org/dbm-dynpmcs and will no longer be distributed
+with parrot after 2.3.
+
+L<https://trac.parrot.org/parrot/ticket/1469>
 
 =back
 
@@ -154,27 +160,6 @@ Assigning to registers [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/906>
 
-=item named class/pmc lookup in pir syntax such as new, isa, subclass,
-    get_class, etc [eligible in 1.1]
-
-Class PMC name resolution will be the following.
-
-if the arg is a STRING
-  Relative to the current Namespace
-
-if the arg is a Array (of any sort) or Key
-  Relative to the current HLL Namespace
-
-if the arg is a Namespace or Class PMC
-  The passed in class or the class attached to the passed in namespace.
-
-L<https://trac.parrot.org/parrot/ticket/159>
-
-=item load or include paths prefixed with 'library/' or 'include/'
-[eligible in 1.5]
-
-L<https://trac.parrot.org/parrot/ticket/511>
-
 =item continuation-based ExceptionHandlers [eligible in 2.1]
 
 L<https://trac.parrot.org/parrot/ticket/1091>
@@ -204,9 +189,8 @@ L<https://trac.parrot.org/parrot/ticket/389>
 =item C API coding standards cleanup [eligible in 1.1]
 
 All C API functions that aren't currently named according to the
-'Parrot_<system>_*' scheme will be renamed. If you depend on these
-functions in an extending/embedding interface or C-level custom PMCs,
-check in 1.4 or 2.0 for the new names.
+'Parrot_<system>_*' scheme will be renamed. A list of renamed
+functions will be kept in the ticket at:
 
 L<https://trac.parrot.org/parrot/ticket/443>
 
@@ -223,25 +207,7 @@ L<https://trac.parrot.org/parrot/ticket/1145>
  Parrot_gc_free_pmc_attributes
 
 These items and related helper functions are added as experimental support
-for TT #895
-
-=item PDB_compile and PDB_eval [eligible in 2.1]
-
-The function PDB_compile doesn't work since some time, and his implementation
-was a hack. His functionality may be reimplemented in another way. Until the
-end of deprecation cycle it just throws an exception.
-
-The PDB_eval function, that used in the debugger to support the eval
-command, was using PDB_compile. His functionality must be reimplemented
-in another way and with a name that follows current conventions, in the
-meantime and until the end of the deprecation cycle it just shows a
-diagnostic message.
-
-L<https://trac.parrot.org/parrot/ticket/872>
-
-=item Parrot_oo_get_namespace [eligible in 2.1]
-
-L<https://trac.parrot.org/parrot/ticket/1069>
+for L<https://trac.parrot.org/parrot/ticket/895>
 
 =item STRING Out parameters in Parrot_str_* functions [eligible in 2.1]
 
@@ -251,17 +217,6 @@ this rather than relying on in-place modification of an existing pointer.
 =back
 
 =head1 Compiler tools
-
-=head2 PASM1 compiler
-
-=over 4
-
-=item C<PASM1 compiler> [eligible in 2.1]
-
-See PDB_compile. Note that the current version of the C<PASM1> compiler
-issues a warning and is not functional. (However, it used to segfault.)
-
-=back
 
 =head2 Parrot Grammar Engine (PGE)
 
@@ -311,35 +266,20 @@ L<https://trac.parrot.org/parrot/ticket/868>
 
 =back
 
-=head2 Not Quite Perl (NQP)
+=head1 Compilers
 
 =over 4
 
-=item C< $(...) > syntax  [eligible in 1.5]
+=item json [eligible in 2.4]
 
-The C< $(...) > syntax for obtaining a result object from a Match
-object will no longer work.  The new syntax is to invoke the
-C<.ast> method on the Match object.
+The json compiler was dupicated into data_json some time ago. If you're
+using json, just use data_json instead, it's the same code. See TT #1461.
 
-L<https://trac.parrot.org/parrot/ticket/459>
+=item nqp [eligible in 2.4]
 
-=item Quoted items [eligible in 1.5]
+Replaced by ext/nqp-rx and parrot-nqp.
 
-Double-quoted strings will interpret unescaped $-names
-as interpolated variables in the string.  Bare slashes
-will introduce regular expressions.  The C<< <foo bar> >>
-syntax will produce an array of strings instead of a single
-string.
-
-L<https://trac.parrot.org/parrot/ticket/837>
-
-=item C<< PIR q:to:<xyz> >> inline PIR [eligible in 1.5]
-
-The C<< PIR q:to:<xyz> >> form of inline PIR in NQP scripts is
-deprecated.  Use C< Q:PIR { ... } >  or C< Q:PIR {{ ... }} >
-instead.
-
-L<https://trac.parrot.org/parrot/ticket/842>
+L<http://trac.parrot.org/parrot/ticket/1462>
 
 =back
 
@@ -347,11 +287,12 @@ L<https://trac.parrot.org/parrot/ticket/842>
 
 =over 4
 
-=item MT19937 [eligible in 2.1]
+=item PARROT_LIBRARY and PARROT_INCLUDE environment variables [experimental]
 
-L<https://trac.parrot.org/parrot/ticket/1278> - latest version now hosted
-at L<http://github.com/fperrad/parrot-MT19937>. After 2.0, users will have
-to install via C<plumage>.
+L<https://trac.parrot.org/parrot/ticket/1429>
+
+A way to provide an equivalent of -L and -I parrot command line options
+to language that doesn't support it.
 
 =item JSON, JSON, and Config;JSON [eligible in 1.5]
 
