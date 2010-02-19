@@ -335,7 +335,7 @@ Parrot_str_finish(PARROT_INTERP)
     ASSERT_ARGS(Parrot_str_finish)
     /* all are shared between interpreters */
     if (!interp->parent_interpreter) {
-        mem_sys_free(interp->const_cstring_table);
+        mem_internal_free(interp->const_cstring_table);
         interp->const_cstring_table = NULL;
         Parrot_charsets_encodings_deinit(interp);
         parrot_hash_destroy(interp, interp->const_cstring_hash);
@@ -2495,7 +2495,7 @@ string_to_cstring_nullable(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
     if (!s)
         return NULL;
     else {
-        char * const p = (char *)mem_sys_allocate(s->bufused + 1);
+        char * const p = (char*)mem_internal_allocate(s->bufused + 1);
         memcpy(p, s->strstart, s->bufused);
         p[s->bufused] = '\0';
         return p;
@@ -2521,7 +2521,7 @@ void
 Parrot_str_free_cstring(ARGIN_NULLOK(char *p))
 {
     ASSERT_ARGS(Parrot_str_free_cstring)
-    mem_sys_free((void *)p);
+    mem_internal_free((void *)p);
 }
 
 
@@ -2550,7 +2550,7 @@ Parrot_str_pin(PARROT_INTERP, ARGMOD(STRING *s))
     Parrot_str_write_COW(interp, s);
 
     size   = Buffer_buflen(s);
-    memory = (char *)mem_sys_allocate(size);
+    memory = (char *)mem_internal_allocate(size);
 
     mem_sys_memcopy(memory, Buffer_bufstart(s), size);
     Buffer_bufstart(s) = memory;
@@ -2606,7 +2606,7 @@ Parrot_str_unpin(PARROT_INTERP, ARGMOD(STRING *s))
     PObj_sysmem_CLEAR(s);
 
     /* Free up the memory */
-    mem_sys_free(memory);
+    mem_internal_free(memory);
 }
 
 
