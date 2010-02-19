@@ -426,7 +426,7 @@ gc_ms_finalize(PARROT_INTERP)
     Parrot_gc_destroy_memory_pools(interp, interp->mem_pools);
 
     /* mem subsystem is dead now */
-    mem_sys_free(interp->mem_pools);
+    mem_internal_free(interp->mem_pools);
     interp->mem_pools = NULL;
 }
 
@@ -797,7 +797,7 @@ gc_ms_free_pmc_attributes(PARROT_INTERP, ARGMOD(PMC *pmc))
         const size_t idx = item_size - sizeof (void *);
         gc_ms_free_attributes_from_pool(interp, pools[idx], data);
 #else
-        mem_sys_free(PMC_data(pmc));
+        gc_ms_free_memory_chunk(PMC_data(pmc));
         PMC_data(pmc) = NULL;
 #endif
     }
