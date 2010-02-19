@@ -414,7 +414,7 @@ pbc_merge_constants(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
 
         /* Allocate space for the constant list, provided we have some. */
         if (in_seg->const_count > 0)
-            contants = mem_gc_realloc_n_typed(interp, constants,
+            constants = mem_gc_realloc_n_typed(interp, constants,
                     cursor + in_seg->const_count, PackFile_Constant*);
 
         /* Loop over the constants and copy them to the output PBC. */

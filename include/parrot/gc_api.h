@@ -154,7 +154,8 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void * Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP,
     ARGIN(void *data),
-    size_t newsize)
+    size_t newsize,
+    size_t oldsize)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

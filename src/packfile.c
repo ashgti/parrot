@@ -4454,7 +4454,7 @@ PackFile_Annotations_add_group(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
     if (self->groups)
         self->groups =
             self->groups = mem_gc_realloc_n_typed_zeroed(interp, self->groups,
-                1 + self->num_groups, PackFile_Annotations_Group *);
+                1 + self->num_groups, self->num_groups, PackFile_Annotations_Group *);
     else
         self->groups = mem_gc_allocate_n_typed(interp,
                 1 + self->num_groups, PackFile_Annotations_Group *);
@@ -4510,7 +4510,7 @@ PackFile_Annotations_add_entry(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
         /* We do have it. Add key entry. */
         if (self->keys)
             self->keys = mem_gc_realloc_n_typed_zeroed(interp, self->keys,
-                    1 + self->num_keys, PackFile_Annotations_Key *);
+                    1 + self->num_keys, self->num_keys, PackFile_Annotations_Key *);
         else
             self->keys = mem_gc_allocate_n_typed(interp,
                     1 + self->num_keys, PackFile_Annotations_Key *);

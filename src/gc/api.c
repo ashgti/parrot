@@ -665,7 +665,7 @@ size)>
 
 =item C<void *
 Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, void
-*data, size_t newsize)>
+*data, size_t newsize, size_t oldsize)>
 
 TODO Write docu.
 
@@ -711,10 +711,12 @@ Parrot_gc_allocate_memory_chunk_with_interior_pointers(PARROT_INTERP, size_t siz
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void *
-Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, ARGIN(void *data), size_t newsize)
+Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP,
+        ARGIN(void *data), size_t newsize, size_t oldsize)
 {
     ASSERT_ARGS(Parrot_gc_allocate_memory_chunk)
-    return interp->gc_sys->reallocate_memory_chunk_with_interior_pointers(interp, data, newsize);
+    return interp->gc_sys->reallocate_memory_chunk_with_interior_pointers(interp,
+            data, newsize, oldsize);
 }
 
 

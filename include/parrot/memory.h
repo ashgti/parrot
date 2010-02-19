@@ -45,13 +45,13 @@
 #define mem_gc_allocate_n_typed(i, n, type) \
         (type *)Parrot_gc_allocate_memory_chunk((i), (n) * sizeof(type))
 #define mem_gc_realloc_n_typed(i, p, n, type) \
-        (p) = (type *)Parrot_gc_reallocate_memory_chunk((i), (p), (n)*sizeof(type))
+        (type *)Parrot_gc_reallocate_memory_chunk((i), (p), (n)*sizeof(type))
 #define mem_gc_allocate_zeroed_typed(i, type) \
         (type *)Parrot_gc_allocate_memory_chunk_with_interior_pointers((i), sizeof (type))
 #define mem_gc_allocate_n_zeroed_typed(i, n, type) \
         (type *)Parrot_gc_allocate_memory_chunk_with_interior_pointers((i), (n) * sizeof(type))
-#define mem_gc_realloc_n_typed_zeroed(i, p, n, type) \
-        (p) = (type *)Parrot_gc_reallocate_memory_chunk_with_interior_pointers((i), (p), (n)*sizeof(type))
+#define mem_gc_realloc_n_typed_zeroed(i, p, n, o, type) \
+        (type *)Parrot_gc_reallocate_memory_chunk_with_interior_pointers((i), (p), (n)*sizeof(type), (o)*sizeof(type))
 #define mem_gc_free(i, p) \
         Parrot_gc_free_memory_chunk((i), (p))
 

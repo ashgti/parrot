@@ -135,7 +135,8 @@ typedef struct GC_Subsystem {
     void* (*allocate_memory_chunk)(PARROT_INTERP, size_t size);
     void* (*reallocate_memory_chunk)(PARROT_INTERP, void *data, size_t newsize);
     void* (*allocate_memory_chunk_with_interior_pointers)(PARROT_INTERP, size_t size);
-    void* (*reallocate_memory_chunk_with_interior_pointers)(PARROT_INTERP, void *data, size_t newsize);
+    void* (*reallocate_memory_chunk_with_interior_pointers)(PARROT_INTERP, void *data,
+            size_t oldsize, size_t newsize);
     void  (*free_memory_chunk)(PARROT_INTERP, void *data);
 
     void (*block_mark)(PARROT_INTERP);
