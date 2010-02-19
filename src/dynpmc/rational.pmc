@@ -266,7 +266,7 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
       #ifdef PARROT_HAS_GMP
         Parrot_Rational_attributes *attrs =
             PARROT_RATIONAL(SELF);
-        attrs->rational = gc_mem_allocate_zeroed_typed(INTERP, RATIONAL);
+        attrs->rational = mem_gc_allocate_zeroed_typed(INTERP, RATIONAL);
         mpq_init(RT(SELF));
         PObj_custom_destroy_SET(SELF);
       #endif
@@ -299,7 +299,7 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
     VTABLE void destroy() {
       #ifdef PARROT_HAS_GMP
         mpq_clear(RT(SELF));
-        gc_mem_free(INTERP, RT(SELF));
+        mem_gc_free(INTERP, RT(SELF));
       #else
         RAISE_EXCEPTION
       #endif

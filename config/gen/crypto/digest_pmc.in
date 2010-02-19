@@ -34,7 +34,7 @@ pmclass @TEMP_md_name@
 */
     VTABLE void init() {
 @TEMP_md_guard@
-        @TEMP_md_ctx@ *c    = gc_mem_allocate_zeroed_typed(INTERP, @TEMP_md_ctx@);
+        @TEMP_md_ctx@ *c    = mem_gc_allocate_zeroed_typed(INTERP, @TEMP_md_ctx@);
         PMC_data(SELF) = c;
         PObj_custom_destroy_SET(SELF);
 #else
@@ -54,7 +54,7 @@ pmclass @TEMP_md_name@
 @TEMP_md_guard@
         @TEMP_md_ctx@ *c = PMC_data_typed(SELF, @TEMP_md_ctx@ *);
         if (c) {
-            gc_mem_free(INTERP, c);
+            mem_gc_free(INTERP, c);
             PMC_data(SELF) = NULL;
         }
 #endif
@@ -70,7 +70,7 @@ pmclass @TEMP_md_name@
     VTABLE PMC* clone() {
 @TEMP_md_guard@
         PMC     *retval  = pmc_new_noinit(INTERP, SELF->vtable->base_type);
-        @TEMP_md_ctx@ *c       = gc_mem_allocate_zeroed_typed(INTERP, @TEMP_md_ctx@);
+        @TEMP_md_ctx@ *c       = mem_gc_allocate_zeroed_typed(INTERP, @TEMP_md_ctx@);
 
         memcpy(c, PMC_data(SELF), sizeof (@TEMP_md_ctx@));
         PMC_data(retval) = c;

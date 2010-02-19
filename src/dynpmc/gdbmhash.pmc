@@ -101,13 +101,13 @@ So we do a bit of cheating here, and load it during class initialization.
 
     VTABLE void init() {
         Parrot_GDBMHash_attributes *attrs = PARROT_GDBMHASH(SELF);
-        attrs->db_handle = gc_mem_allocate_zeroed_typed(INTERP, GDBM_FH);
+        attrs->db_handle = mem_gc_allocate_zeroed_typed(INTERP, GDBM_FH);
         PObj_custom_destroy_SET(SELF);
     }
 
     VTABLE void destroy() {
         Parrot_GDBMHash_attributes *attrs = PARROT_GDBMHASH(SELF);
-        gc_mem_free(INTERP, attrs->db_handle);
+        mem_gc_free(INTERP, attrs->db_handle);
         PMC_data(SELF) = NULL;
     }
 
