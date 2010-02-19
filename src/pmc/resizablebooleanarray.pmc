@@ -148,9 +148,9 @@ Resizes the array to C<size> elements.
         /* Nothing allocated yet */
         GET_ATTR_bit_array(INTERP, SELF, bit_array);
         if (!bit_array) {
-            // FIXME Clear allocated memory
-            SET_ATTR_bit_array(INTERP, SELF,
-                    (unsigned char *)Parrot_gc_allocate_memory_chunk(INTERP, new_size_in_bytes));
+            void *new_bit_array = Parrot_gc_allocate_memory_chunk(INTERP, new_size_in_bytes);
+            memset(new_bit_array, 0, new_size_in_bytes);
+            SET_ATTR_bit_array(INTERP, SELF, (unsigned char *)new_bit_array);
 
         /* The size is different, and doesn't fit within the current
          * allocation */
@@ -161,6 +161,7 @@ Resizes the array to C<size> elements.
                 (unsigned char *)Parrot_gc_allocate_memory_chunk(INTERP, new_tail_pos);
             size_t          copy_size =
                 new_size_in_bytes < old_size_in_bytes ? new_size_in_bytes : old_size_in_bytes;
+            memset(new_store, 0, new_tail_pos);
 
             /* Replace old array with new array, and free old array */
             SET_ATTR_bit_array(INTERP, SELF,
@@ -250,8 +251,8 @@ beginning.
 
             /* Allocate an extra allocation unit of space in new array */
             new_mem_size  = ROUND_BYTES(tail_pos+ MIN_ALLOC);
-            // FIXME Clear allocated memory
             new_bit_array = (unsigned char *)Parrot_gc_allocate_memory_chunk(INTERP, new_mem_size);
+            memset(new_bit_array, 0, new_mem_size);
 
             /* Copy contents of old array to new array, moving the head
              * position forward by one allocation unit (in bytes). */
@@ -312,6 +313,7 @@ Removes and returns the first element.
             new_mem_size  = ROUND_BYTES(tail_pos - MIN_ALLOC);
             new_bit_array =
                 (unsigned char *)Parrot_gc_allocate_memory_chunk(INTERP, new_mem_size);
+            memset(new_bit_array, 0, new_mem_size);
 
             /* Copy contents of old array to new array, move the head position
              * offset back by one allocation unit (in bytes) */
