@@ -267,7 +267,7 @@ pbc_merge_loadpbc(PARROT_INTERP, ARGIN(const char *fullname))
         if (program_size == wanted)
             break;
         chunk_size   = 1024;
-        mem_gc_realloc_n_typed(interp, program_code,
+        program_code = mem_gc_realloc_n_typed(interp, program_code,
                 program_size + chunk_size, char);
 
         cursor = (char *)program_code + program_size;
@@ -414,7 +414,7 @@ pbc_merge_constants(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
 
         /* Allocate space for the constant list, provided we have some. */
         if (in_seg->const_count > 0)
-            mem_gc_realloc_n_typed(interp, constants,
+            contants = mem_gc_realloc_n_typed(interp, constants,
                     cursor + in_seg->const_count, PackFile_Constant*);
 
         /* Loop over the constants and copy them to the output PBC. */
@@ -505,7 +505,7 @@ pbc_merge_fixups(PARROT_INTERP, ARGIN(pbc_merge_input **inputs),
 
         /* Allocate space for these fixups, provided we have some. */
         if (in_seg->fixup_count > 0) {
-            mem_gc_realloc_n_typed(interp, fixups,
+            fixups = mem_gc_realloc_n_typed(interp, fixups,
                     cursor + in_seg->fixup_count, PackFile_FixupEntry*);
         }
 
@@ -583,14 +583,14 @@ pbc_merge_debugs(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
         PackFile_Debug *in_seg = inputs[i]->pf->cur_cs->debugs;
 
         /* Concatenate line numbers. */
-        mem_gc_realloc_n_typed(interp, lines,
+        lines = mem_gc_realloc_n_typed(interp, lines,
                 num_lines + in_seg->base.size, opcode_t);
 
         memcpy(lines + num_lines, in_seg->base.data,
             in_seg->base.size * sizeof (opcode_t));
 
         /* Concatenate mappings. */
-        mem_gc_realloc_n_typed(interp, mappings,
+        mappings = mem_gc_realloc_n_typed(interp, mappings,
                 num_mappings + in_seg->num_mappings,
                 PackFile_DebugFilenameMapping*);
 
