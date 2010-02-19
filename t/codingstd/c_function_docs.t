@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2006-2009, Parrot Foundation.
+# Copyright (C) 2006-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -105,16 +105,13 @@ config/gen/platform/ansi/time.c
 config/gen/platform/darwin/dl.c
 config/gen/platform/darwin/memalign.c
 config/gen/platform/generic/dl.c
-config/gen/platform/generic/env.c
 config/gen/platform/generic/exec.c
 config/gen/platform/generic/math.c
 config/gen/platform/generic/memalign.c
-config/gen/platform/generic/memexec.c
 config/gen/platform/generic/stat.c
 config/gen/platform/generic/time.c
 config/gen/platform/netbsd/math.c
 config/gen/platform/openbsd/math.c
-config/gen/platform/openbsd/memexec.c
 config/gen/platform/solaris/math.c
 config/gen/platform/solaris/time.c
 examples/c/pbc_info.c
