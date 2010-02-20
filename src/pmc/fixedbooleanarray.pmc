@@ -339,7 +339,6 @@ Resizes the array to C<size> elements.
 
         SET_ATTR_size(INTERP, SELF, size);
         SET_ATTR_resize_threshold(INTERP, SELF, size_in_bytes * BITS_PER_CHAR);
-        // FIXME We should clear allocated memory
         SET_ATTR_bit_array(INTERP, SELF,
                 mem_gc_allocate_n_typed(INTERP, size_in_bytes, unsigned char));
     }
