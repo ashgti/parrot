@@ -451,9 +451,10 @@ void do_sub_pragmas(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
-void PackFile_add_segment(SHIM_INTERP,
+void PackFile_add_segment(PARROT_INTERP,
     ARGMOD(PackFile_Directory *dir),
     ARGIN(PackFile_Segment *seg))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*dir);
@@ -836,7 +837,8 @@ void Parrot_trace_eprintf(ARGIN(const char *s), ...)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_PackFile_add_segment __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(dir) \
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(dir) \
     , PARROT_ASSERT_ARG(seg))
 #define ASSERT_ARGS_PackFile_Annotations_add_entry \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\

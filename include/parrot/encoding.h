@@ -143,7 +143,8 @@ INTVAL Parrot_make_default_encoding(SHIM_INTERP,
 PARROT_EXPORT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-ENCODING * Parrot_new_encoding(SHIM_INTERP);
+ENCODING * Parrot_new_encoding(PARROT_INTERP)
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 INTVAL Parrot_register_encoding(PARROT_INTERP,
@@ -180,7 +181,8 @@ void Parrot_str_internal_register_encoding_names(PARROT_INTERP)
     , PARROT_ASSERT_ARG(encodingname))
 #define ASSERT_ARGS_Parrot_make_default_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(encoding))
-#define ASSERT_ARGS_Parrot_new_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_Parrot_new_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_register_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(encodingname) \
