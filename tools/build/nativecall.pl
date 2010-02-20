@@ -474,8 +474,7 @@ SHIM(PMC *pmc_nci), NOTNULL(STRING *signature), SHIM(int *jitted))
             temp_pmc = pmc_new(interp, enum_class_ManagedStruct);
             VTABLE_set_pointer(interp, temp_pmc, (void *)result);
 #ifdef PARROT_HAS_EXEC_PROTECT
-            priv = (struct jit_buffer_private_data *)
-                mem_sys_allocate(sizeof(struct jit_buffer_private_data));
+            priv = mem_gc_allocate_zeroed_typed(interp, struct jit_buffer_private_data);
             priv->size = jit_size;
             SETATTR_ManagedStruct_custom_free_func(interp, temp_pmc, Parrot_jit_free_buffer);
             SETATTR_ManagedStruct_custom_free_priv(interp, temp_pmc, priv);
