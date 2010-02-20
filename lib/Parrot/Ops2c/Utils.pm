@@ -197,7 +197,7 @@ sub new {
 
     my ( $op_info, $op_func, $getop );
     $op_info = $op_func = 'NULL';
-    $getop = '( int (*)(const char *, int) )NULL';
+    $getop = '( int (*)(PARROT_INTERP, const char *, int) )NULL';
 
     if ($self->{suffix} eq '') {
         $op_func = $self->{bs} . "op_func_table";
