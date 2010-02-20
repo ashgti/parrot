@@ -103,7 +103,7 @@ Parrot_runcore_profiling_init(PARROT_INTERP)
     ASSERT_ARGS(Parrot_runcore_profiling_init)
 
     Parrot_profiling_runcore_t *coredata =
-                                 mem_allocate_typed(Parrot_profiling_runcore_t);
+            mem_gc_allocate_zeroed_typed(interp, Parrot_profiling_runcore_t);
 
     coredata->name        = CONST_STRING(interp, "profiling");
     coredata->id          = PARROT_PROFILING_CORE;
@@ -148,7 +148,7 @@ init_profiling_core(PARROT_INTERP, ARGIN(Parrot_profiling_runcore_t *runcore), A
     runcore->level           = 0;
     runcore->time_size       = 32;
     runcore->line_cache      = parrot_new_pointer_hash(interp);
-    runcore->time            = mem_allocate_n_typed(runcore->time_size,
+    runcore->time            = mem_gc_allocate_n_typed(interp, runcore->time_size,
                                                     UHUGEINTVAL);
 
     /* figure out what format the output should be in */
@@ -262,9 +262,8 @@ ARGIN(opcode_t *pc))
 
         if (runcore->level >= runcore->time_size) {
             runcore->time_size *= 2;
-            runcore->time =
-                mem_realloc_n_typed(runcore->time, runcore->time_size + 1,
-                                    UHUGEINTVAL);
+            runcore->time = mem_gc_realloc_n_typed(interp,
+                    runcore->time, runcore->time_size + 1, UHUGEINTVAL);
         }
 
         /* store the time between DO_OP and the start of this runcore in this

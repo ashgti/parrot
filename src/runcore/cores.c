@@ -1049,7 +1049,7 @@ load_prederef(PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
     ASSERT_ARGS(load_prederef)
     const oplib_init_f init_func = get_core_op_lib_init(interp, runcore);
 
-    int (*get_op)(const char * name, int full);
+    int (*get_op)(PARROT_INTERP, const char * name, int full);
 
     get_op          = interp->op_lib->op_code;
     interp->op_lib  = init_func(1);

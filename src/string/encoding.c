@@ -93,10 +93,10 @@ PARROT_EXPORT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 ENCODING *
-Parrot_new_encoding(SHIM_INTERP)
+Parrot_new_encoding(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_new_encoding)
-    return mem_allocate_typed(ENCODING);
+    return mem_gc_allocate_typed(interp, ENCODING);
 }
 
 /*
@@ -367,7 +367,7 @@ Parrot_register_encoding(PARROT_INTERP, ARGIN(const char *encodingname),
 {
     ASSERT_ARGS(Parrot_register_encoding)
     if (!all_encodings) {
-        all_encodings = mem_allocate_typed(All_encodings);
+        all_encodings = mem_gc_allocate_zeroed_typed(interp, All_encodings);
         all_encodings->n_encodings = 0;
         all_encodings->enc = NULL;
     }

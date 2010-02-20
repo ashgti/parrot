@@ -166,11 +166,12 @@ INTVAL
 Parrot_runcore_register(PARROT_INTERP, ARGIN(Parrot_runcore_t *coredata))
 {
     ASSERT_ARGS(Parrot_runcore_register)
-    size_t num_cores = ++interp->num_cores;
+    size_t i = interp->num_cores++;
 
-    mem_realloc_n_typed(interp->cores, num_cores, Parrot_runcore_t *);
+    interp->cores = mem_gc_realloc_n_typed_zeroed(interp, interp->cores,
+            interp->num_cores, i, Parrot_runcore_t *);
 
-    interp->cores[num_cores - 1] = coredata;
+    interp->cores[i] = coredata;
 
     return 1;
 }
@@ -388,8 +389,10 @@ do_prederef(ARGIN(void **pc_prederef), PARROT_INTERP, ARGIN(Parrot_runcore_t *ru
             pi->n_branches  = 0;
         }
         else if (pi->n_branches >= pi->n_allocated) {
+            size_t old = pi->n_allocated;
             pi->n_allocated = (size_t) (pi->n_allocated * 1.5);
-            mem_realloc_n_typed(pi->branches, pi->n_allocated, Prederef_branch);
+            pi->branches = mem_gc_realloc_n_typed_zeroed(interp,
+                    pi->branches, pi->n_allocated, old, Prederef_branch);
         }
 
         pi->branches[pi->n_branches].offs = offset;

@@ -2874,7 +2874,8 @@ csr_reallocate_return_values(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
             cur          &= ~0xfff;
         }
 
-        mem_realloc_n_typed(values, cur, void *);
+        values = mem_gc_realloc_n_typed_zeroed(interp, values,
+                cur, resize_threshold, void *);
 
         SETATTR_CallContext_returns_values(interp, self, values);
         SETATTR_CallContext_returns_size(interp, self, size);

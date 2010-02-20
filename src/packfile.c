@@ -1199,11 +1199,12 @@ owner of the segment; it gets destroyed when the PackFile does.
 
 PARROT_EXPORT
 void
-PackFile_add_segment(SHIM_INTERP, ARGMOD(PackFile_Directory *dir),
+PackFile_add_segment(PARROT_INTERP, ARGMOD(PackFile_Directory *dir),
         ARGIN(PackFile_Segment *seg))
 {
     ASSERT_ARGS(PackFile_add_segment)
-    mem_realloc_n_typed(dir->segments, dir->num_segments+1, PackFile_Segment *);
+    dir->segments = mem_gc_realloc_n_typed_zeroed(interp, dir->segments,
+            dir->num_segments+1, dir->num_segments, PackFile_Segment *);
     dir->segments[dir->num_segments] = seg;
     dir->num_segments++;
     seg->dir = dir;
@@ -2071,7 +2072,8 @@ directory_unpack(PARROT_INTERP, ARGMOD(PackFile_Segment *segp), ARGIN(const opco
     PARROT_ASSERT(pf);
     dir->num_segments = PF_fetch_opcode(pf, &cursor);
     TRACE_PRINTF(("directory_unpack: %ld num_segments\n", dir->num_segments));
-    mem_realloc_n_typed(dir->segments, dir->num_segments, PackFile_Segment *);
+    dir->segments = mem_gc_allocate_n_zeroed_typed(interp,
+            dir->num_segments, PackFile_Segment *);
 
     for (i = 0; i < dir->num_segments; i++) {
         PackFile_Segment *seg;
@@ -2777,8 +2779,8 @@ pf_debug_unpack(PARROT_INTERP, ARGOUT(PackFile_Segment *self), ARGIN(const opcod
     debug->num_mappings = PF_fetch_opcode(self->pf, &cursor);
 
     /* Allocate space for mappings vector. */
-    mem_realloc_n_typed(debug->mappings, debug->num_mappings + 1,
-        PackFile_DebugFilenameMapping *);
+    debug->mappings = mem_gc_allocate_n_zeroed_typed(interp,
+            debug->num_mappings + 1, PackFile_DebugFilenameMapping *);
 
     /* Read in each mapping. */
     for (i = 0; i < debug->num_mappings; i++) {
@@ -2866,7 +2868,7 @@ Parrot_new_debug_seg(PARROT_INTERP, ARGMOD(PackFile_ByteCode *cs), size_t size)
     /* it exists already, resize it */
     if (cs->debugs) {
         debug = cs->debugs;
-        mem_realloc_n_typed(debug->base.data, size, opcode_t);
+        debug->base.data = mem_gc_realloc_n_typed(interp, debug->base.data, size, opcode_t);
     }
     /* create one */
     else {
@@ -2927,8 +2929,9 @@ Parrot_debug_add_mapping(PARROT_INTERP, ARGMOD(PackFile_Debug *debug),
     }
 
     /* Allocate space for the extra entry. */
-    mem_realloc_n_typed(debug->mappings, debug->num_mappings + 1,
-        PackFile_DebugFilenameMapping *);
+    debug->mappings = mem_gc_realloc_n_typed(interp,
+            debug->mappings, debug->num_mappings + 1,
+            PackFile_DebugFilenameMapping *);
 
     /* Can it just go on the end? */
     if (debug->num_mappings == 0
@@ -2974,7 +2977,8 @@ Parrot_debug_add_mapping(PARROT_INTERP, ARGMOD(PackFile_Debug *debug),
             /* Not found, create a new one */
             PackFile_Constant             *fnconst;
             ct->const_count   = ct->const_count + 1;
-            mem_realloc_n_typed(ct->constants, ct->const_count, PackFile_Constant *);
+            ct->constants = mem_gc_realloc_n_typed_zeroed(interp, ct->constants,
+                    ct->const_count, ct->const_count - 1, PackFile_Constant *);
 
             fnconst           = PackFile_Constant_new(interp);
             fnconst->type     = PFC_STRING;
@@ -3556,7 +3560,8 @@ PackFile_FixupTable_new_entry(PARROT_INTERP,
     }
 
     i = self->fixup_count++;
-    mem_realloc_n_typed(self->fixups, self->fixup_count, PackFile_FixupEntry *);
+    self->fixups = mem_gc_realloc_n_typed_zeroed(interp,
+            self->fixups, self->fixup_count, i, PackFile_FixupEntry *);
 
     self->fixups[i]         = mem_gc_allocate_zeroed_typed(interp, PackFile_FixupEntry);
     self->fixups[i]->type   = type;

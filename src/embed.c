@@ -1077,7 +1077,7 @@ Parrot_run_native(PARROT_INTERP, native_func_t func)
     PackFile * const pf = PackFile_new(interp, 0);
     static opcode_t program_code[2];
 
-    program_code[0] = interp->op_lib->op_code("enternative", 0);
+    program_code[0] = interp->op_lib->op_code(interp, "enternative", 0);
     program_code[1] = 0; /* end */
 
     pf->cur_cs = (PackFile_ByteCode *)

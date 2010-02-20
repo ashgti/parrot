@@ -302,7 +302,7 @@ Parrot_str_init(PARROT_INTERP)
                        PObj_constant_FLAG);
 
     interp->const_cstring_table =
-        mem_allocate_n_zeroed_typed(n_parrot_cstrings, STRING *);
+        mem_gc_allocate_n_zeroed_typed(interp, n_parrot_cstrings, STRING *);
 
     for (i = 0; i < n_parrot_cstrings; ++i) {
         DECL_CONST_CAST;

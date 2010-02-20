@@ -392,7 +392,7 @@ Parrot_gc_add_pmc_sync(PARROT_INTERP, ARGMOD(PMC *pmc))
     if (PMC_sync(pmc))
         return;
 
-    PMC_sync(pmc) = mem_allocate_typed(Sync);
+    PMC_sync(pmc) = mem_gc_allocate_zeroed_typed(interp, Sync);
 
     if (!PMC_sync(pmc))
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ALLOCATION_ERROR,
