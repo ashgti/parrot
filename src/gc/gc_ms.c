@@ -1120,32 +1120,22 @@ static void *
 gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_allocate(size);
+    return mem_sys_allocate(size);
 }
 
 static void *
-gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
+gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGFREE(void *data), size_t newsize)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    /* FIXME Apparently many parts of Parrot depends on initial initialization
-     * of "re"allocated chunk with zeroes. E.g. PackFiles and FIA. */
-    if (!data) {
-        data = mem_internal_allocate(newsize);
-        memset(data, 0, newsize);
-        return data;
-    }
-    else {
-        return mem_internal_realloc(data, newsize);
-    }
+    return mem_sys_realloc(data, newsize);
 }
 
 static void *
 gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    void * ret = mem_internal_allocate(size);
-    memset(ret, 0, size);
-    return ret;
+    /* FIXME UB of realloc to clear allocated memory */
+    return mem_sys_realloc(NULL, size);
 }
 
 static void *
@@ -1153,14 +1143,17 @@ gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGIN(void *data),
         size_t newsize, size_t oldsize)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_realloc_zeroed(data, newsize, oldsize);
+    void * const ptr = realloc(data, newsize);
+    if (newsize > oldsize)
+        memset((char*)ptr + oldsize, 0, newsize - oldsize);
+    return ptr;
 }
 
 static void
 gc_ms_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    mem_internal_free(data);
+    mem_sys_free(data);
 }
 
 
