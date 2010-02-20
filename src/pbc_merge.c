@@ -340,7 +340,7 @@ pbc_merge_bytecode(PARROT_INTERP, ARGMOD(pbc_merge_input **inputs),
         }
 
         /* Re-allocate the current buffer. */
-        mem_realloc_n_typed(bc, cursor + in_seg->base.size, opcode_t);
+        bc = mem_gc_realloc_n_typed(interp, bc, cursor + in_seg->base.size, opcode_t);
 
         /* Copy data and store cursor. */
         memcpy(bc + cursor, in_seg->base.data,
