@@ -154,7 +154,7 @@ typedef struct BIGNUM {
 static void
 bignum_init(PARROT_INTERP, PMC *self) {
 #ifdef PARROT_HAS_GMP
-    BIGNUM * const bn = mem_allocate_zeroed_typed(BIGNUM);
+    BIGNUM * const bn = mem_gc_allocate_zeroed_typed(interp, BIGNUM);
     SETATTR_BigNum_bn(interp, self, bn);
     mpf_clear(bn->b);
     mpf_init(bn->b);

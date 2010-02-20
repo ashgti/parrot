@@ -289,7 +289,7 @@ Resizes the array to C<size> elements.
 
         SET_ATTR_size(INTERP, SELF, new_size);
         SET_ATTR_float_array(INTERP, SELF,
-                mem_allocate_n_typed(new_size, FLOATVAL));
+                mem_gc_allocate_n_typed(INTERP, new_size, FLOATVAL));
         PObj_custom_destroy_SET(SELF);
     }
 

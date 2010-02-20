@@ -37,7 +37,7 @@ typedef struct BIGINT {
 
 static void
 bigint_init(PARROT_INTERP, PMC *self) {
-    BIGINT * const bi = mem_allocate_zeroed_typed(BIGINT);
+    BIGINT * const bi = mem_gc_allocate_zeroed_typed(interp, BIGINT);
     SETATTR_BigInt_bi(interp, self, bi);
     mpz_init(bi->b);
 }
