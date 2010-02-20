@@ -1126,14 +1126,14 @@ gc_ms_allocate_memory_chunk(PARROT_INTERP, size_t size)
 static void *
 gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGFREE(void *data), size_t newsize)
 {
-    ASSERT_ARGS(gc_ms_allocate_memory_chunk)
+    ASSERT_ARGS(gc_ms_reallocate_memory_chunk)
     return mem_sys_realloc(data, newsize);
 }
 
 static void *
 gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
 {
-    ASSERT_ARGS(gc_ms_allocate_memory_chunk)
+    ASSERT_ARGS(gc_ms_allocate_memory_chunk_zeroed)
     /* FIXME UB of realloc to clear allocated memory */
     return mem_sys_realloc(NULL, size);
 }
@@ -1142,7 +1142,7 @@ static void *
 gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGIN(void *data),
         size_t newsize, size_t oldsize)
 {
-    ASSERT_ARGS(gc_ms_allocate_memory_chunk)
+    ASSERT_ARGS(gc_ms_reallocate_memory_chunk_zeroed)
     void * const ptr = realloc(data, newsize);
     if (newsize > oldsize)
         memset((char*)ptr + oldsize, 0, newsize - oldsize);
@@ -1152,7 +1152,7 @@ gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGIN(void *data),
 static void
 gc_ms_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
 {
-    ASSERT_ARGS(gc_ms_allocate_memory_chunk)
+    ASSERT_ARGS(gc_ms_free_memory_chunk)
     mem_sys_free(data);
 }
 
