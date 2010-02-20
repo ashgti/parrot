@@ -1127,7 +1127,16 @@ static void *
 gc_ms_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
 {
     ASSERT_ARGS(gc_ms_allocate_memory_chunk)
-    return mem_internal_realloc(data, newsize);
+    /* FIXME Apparently many parts of Parrot depends on initial initialization
+     * of "re"allocated chunk with zeroes. E.g. PackFiles and FIA. */
+    if (!data) {
+        data = mem_internal_allocate(newsize);
+        memset(data, 0, newsize);
+        return data;
+    }
+    else {
+        return mem_internal_realloc(data, newsize);
+    }
 }
 
 static void *
