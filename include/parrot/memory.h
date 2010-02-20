@@ -29,6 +29,7 @@
 
 #define mem_internal_realloc(x, y) mem__internal_realloc((x), (y), __FILE__, __LINE__)
 #define mem_internal_realloc_zeroed(p, x, y) mem__internal_realloc_zeroed((p), (x), (y), __FILE__, __LINE__)
+#define mem_internal_realloc_n_zeroed_typed(p, x, y, type) (type*)mem__internal_realloc_zeroed((p), (x) * sizeof(type), (y) * sizeof(type), __FILE__, __LINE__)
 #define mem_internal_free(x) mem__internal_free((x), __FILE__, __LINE__)
 
 #define mem_sys_memcopy memcpy
