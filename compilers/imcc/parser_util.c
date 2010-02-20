@@ -285,7 +285,7 @@ check_op(PARROT_INTERP, ARGOUT(char *fullname), ARGIN(const char *name),
     ASSERT_ARGS(check_op)
     op_fullname(fullname, name, r, narg, keyvec);
 
-    return interp->op_lib->op_code(fullname, 1);
+    return interp->op_lib->op_code(interp, fullname, 1);
 }
 
 /*
@@ -303,8 +303,8 @@ int
 is_op(PARROT_INTERP, ARGIN(const char *name))
 {
     ASSERT_ARGS(is_op)
-    return interp->op_lib->op_code(name, 0) >= 0
-        || interp->op_lib->op_code(name, 1) >= 0;
+    return interp->op_lib->op_code(interp, name, 0) >= 0
+        || interp->op_lib->op_code(interp, name, 1) >= 0;
 }
 
 /*
@@ -341,7 +341,7 @@ var_arg_ins(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     r[0]->pmc_type = enum_class_FixedIntegerArray;
 
     op_fullname(fullname, name, r, 1, 0);
-    op = interp->op_lib->op_code(fullname, 1);
+    op = interp->op_lib->op_code(interp, fullname, 1);
 
     PARROT_ASSERT(op >= 0);
 
@@ -404,11 +404,11 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
         return var_arg_ins(interp, unit, name, r, n, emit);
 
     op_fullname(fullname, name, r, n, keyvec);
-    op = interp->op_lib->op_code(fullname, 1);
+    op = interp->op_lib->op_code(interp, fullname, 1);
 
     /* maybe we have a fullname */
     if (op < 0)
-        op = interp->op_lib->op_code(name, 1);
+        op = interp->op_lib->op_code(interp, name, 1);
 
     /* still wrong, try reverse compare */
     if (op < 0) {
@@ -416,7 +416,7 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
         if (n_name) {
             name = n_name;
             op_fullname(fullname, name, r, n, keyvec);
-            op   = interp->op_lib->op_code(fullname, 1);
+            op   = interp->op_lib->op_code(interp, fullname, 1);
         }
     }
 
@@ -1193,7 +1193,7 @@ try_find_op(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
 
     if (changed) {
         op_fullname(fullname, name, r, n, keyvec);
-        return interp->op_lib->op_code(fullname, 1);
+        return interp->op_lib->op_code(interp, fullname, 1);
     }
 
     return -1;
