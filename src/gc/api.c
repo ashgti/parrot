@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -665,7 +665,7 @@ size)>
 
 =item C<void *
 Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP, void
-*data, size_t oldsize, size_t newsize)>
+*data, size_t newsize, size_t oldsize)>
 
 TODO Write docu.
 
