@@ -107,9 +107,8 @@ static void gc_ms_free_bufferlike_header(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*obj);
 
-static void gc_ms_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+static void gc_ms_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
+        __attribute__nonnull__(1);
 
 static void gc_ms_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(1)
@@ -167,17 +166,15 @@ static void gc_ms_reallocate_buffer_storage(PARROT_INTERP,
         FUNC_MODIFIES(*buffer);
 
 static void * gc_ms_reallocate_memory_chunk(PARROT_INTERP,
-    ARGIN(void *data),
+    ARGFREE(void *data),
     size_t newsize)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+        __attribute__nonnull__(1);
 
 static void * gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP,
-    ARGIN(void *data),
+    ARGFREE(void *data),
     size_t newsize,
     size_t oldsize)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
+        __attribute__nonnull__(1);
 
 static void gc_ms_reallocate_string_storage(PARROT_INTERP,
     ARGMOD(STRING *str),
@@ -260,8 +257,7 @@ static void gc_ms_unblock_GC_sweep(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(obj))
 #define ASSERT_ARGS_gc_ms_free_memory_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(data))
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_free_pmc_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
@@ -294,12 +290,10 @@ static void gc_ms_unblock_GC_sweep(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(buffer))
 #define ASSERT_ARGS_gc_ms_reallocate_memory_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(data))
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_reallocate_memory_chunk_zeroed \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(data))
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_ms_reallocate_string_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -1138,7 +1132,7 @@ gc_ms_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
 }
 
 static void *
-gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGIN(void *data),
+gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGFREE(void *data),
         size_t newsize, size_t oldsize)
 {
     ASSERT_ARGS(gc_ms_reallocate_memory_chunk_zeroed)
@@ -1149,7 +1143,7 @@ gc_ms_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGIN(void *data),
 }
 
 static void
-gc_ms_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
+gc_ms_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
 {
     ASSERT_ARGS(gc_ms_free_memory_chunk)
     mem_sys_free(data);

@@ -683,7 +683,7 @@ Parrot_gc_allocate_memory_chunk(PARROT_INTERP, size_t size)
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void *
-Parrot_gc_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsize)
+Parrot_gc_reallocate_memory_chunk(PARROT_INTERP, ARGFREE(void *data), size_t newsize)
 {
     ASSERT_ARGS(Parrot_gc_reallocate_memory_chunk)
     return interp->gc_sys->reallocate_memory_chunk(interp, data, newsize);
@@ -692,7 +692,7 @@ Parrot_gc_reallocate_memory_chunk(PARROT_INTERP, ARGIN(void *data), size_t newsi
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void
-Parrot_gc_free_memory_chunk(PARROT_INTERP, ARGIN(void *data))
+Parrot_gc_free_memory_chunk(PARROT_INTERP, ARGIN_NULLOK(void *data))
 {
     ASSERT_ARGS(Parrot_gc_free_memory_chunk)
     interp->gc_sys->free_memory_chunk(interp, data);
@@ -712,7 +712,7 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 void *
 Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP,
-        ARGIN(void *data), size_t newsize, size_t oldsize)
+        ARGFREE(void *data), size_t newsize, size_t oldsize)
 {
     ASSERT_ARGS(Parrot_gc_reallocate_memory_chunk_with_interior_pointers)
     return interp->gc_sys->reallocate_memory_chunk_with_interior_pointers(interp,
