@@ -1,4 +1,4 @@
-# Copyright (C) 2009, Parrot Foundation.
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -194,6 +194,8 @@ L<http://github.com/Whiteknight/parrot-linear-algebra/blob/master/setup.pir>
 
 L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
 
+L<http://gitorious.org/kakapo/kakapo/blobs/master/setup.nqp>
+
 =cut
 
 .sub '__onload' :load :init :anon
@@ -212,6 +214,8 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step_after('build', _build_pir_nqp)
     .const 'Sub' _build_pir_nqp_rx = '_build_pir_nqp_rx'
     register_step_after('build', _build_pir_nqp_rx)
+    .const 'Sub' _build_pir_pir = '_build_pir_pir'
+    register_step_after('build', _build_pir_pir)
     .const 'Sub' _build_pbc_pir = '_build_pbc_pir'
     register_step_after('build', _build_pbc_pir)
     .const 'Sub' _build_pbc_pbc = '_build_pbc_pbc'
@@ -235,6 +239,8 @@ L<http://bitbucket.org/riffraff/shakespeare-parrot/src/tip/setup.pir>
     register_step_after('clean', _clean_pir_nqp)
     .const 'Sub' _clean_pir_nqp_rx = '_clean_pir_nqp_rx'
     register_step_after('clean', _clean_pir_nqp_rx)
+    .const 'Sub' _clean_pir_pir = '_clean_pir_pir'
+    register_step_after('clean', _clean_pir_pir)
     .const 'Sub' _clean_pbc_pir = '_clean_pbc_pir'
     register_step_after('clean', _clean_pbc_pir)
     .const 'Sub' _clean_pbc_pbc = '_clean_pbc_pbc'
@@ -695,7 +701,7 @@ the value is the NQP pathname
   L2:
 .end
 
-=item pir_nqp-rx
+=item pir_nqp-rx / pir_nqprx
 
 hash
 
@@ -712,6 +718,11 @@ the value is the NQP pathname
     $P0 = kv['pir_nqp-rx']
     build_pir_nqp_rx($P0)
   L1:
+    $I0 = exists kv['pir_nqprx']
+    unless $I0 goto L2
+    $P0 = kv['pir_nqprx']
+    build_pir_nqp_rx($P0)
+  L2:
 .end
 
 .sub 'build_pir_nqp_rx'
@@ -731,6 +742,50 @@ the value is the NQP pathname
     cmd .= " "
     cmd .= nqp
     system(cmd, 1 :named('verbose'))
+    goto L1
+  L2:
+.end
+
+=item pir_pir (concat)
+
+hash
+
+the key is the PIR pathname
+
+the value is an array of PIR pathname
+
+=cut
+
+.sub '_build_pir_pir' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pir_pir']
+    unless $I0 goto L1
+    $P0 = kv['pir_pir']
+    build_pir_pir($P0)
+  L1:
+.end
+
+.sub 'build_pir_pir'
+    .param pmc hash
+    $P0 = iter hash
+  L1:
+    unless $P0 goto L2
+    .local string pir, src
+    pir = shift $P0
+    .local pmc srcs
+    srcs = hash[pir]
+    $I0 = newer(pir, srcs)
+    if $I0 goto L1
+    spew(pir, '', 1 :named('verbose'))
+    $P1 = iter srcs
+  L3:
+    unless $P1 goto L4
+    .local string src
+    src = shift $P1
+    $S0 = slurp(src)
+    append(pir, $S0)
+    goto L3
+  L4:
     goto L1
   L2:
 .end
@@ -1075,9 +1130,11 @@ the value is the OPS pathname
 
 hash
 
-the key is the group name
+the key is the PMC name
 
-the value is an array of PMC pathname
+the value is an array of PMC pathname or a single PPC pathname
+
+an array creates a PMC group
 
 =item dynpmc_cflags
 
@@ -1108,10 +1165,12 @@ the value is an array of PMC pathname
     $P0 = iter hash
   L1:
     unless $P0 goto L2
-    .local string group
-    group = shift $P0
+    .local string name
+    name = shift $P0
     .local pmc srcs
-    srcs = hash[group]
+    srcs = hash[name]
+    $I0 = does srcs, 'array'
+    unless $I0 goto L5
     $P1 = iter srcs
   L3:
     unless $P1 goto L4
@@ -1123,11 +1182,18 @@ the value is an array of PMC pathname
     __build_dynpmc(src, cflags)
     goto L3
   L4:
-    if group == '' goto L1
-    $S0 = _mk_path_dynpmc(group, load_ext)
+    $S0 = _mk_path_dynpmc(name, load_ext)
     $I0 = newer($S0, srcs)
     if $I0 goto L1
-    __build_dynpmc_group(srcs, group, cflags, ldflags)
+    __build_dynpmc_group(srcs, name, cflags, ldflags)
+    goto L1
+  L5:
+    src = srcs
+    $S0 = _mk_path_dynpmc(name, load_ext)
+    $I0 = newer($S0, src)
+    if $I0 goto L1
+    __build_dynpmc(src, cflags)
+    __build_dynpmc_alone(src, name, cflags, ldflags)
     goto L1
   L2:
 .end
@@ -1269,6 +1335,50 @@ the value is an array of PMC pathname
   L6:
 .end
 
+.sub '__build_dynpmc_alone' :anon
+    .param string src
+    .param string name
+    .param string cflags
+    .param string ldflags
+    .local pmc config
+    config = get_config()
+
+    .local string dynext
+    $S0 = config['load_ext']
+    dynext = _mk_path_dynpmc(name, $S0)
+    .local string cmd
+    cmd = config['ld']
+    cmd .= " "
+    $S0 = config['ld_out']
+    cmd .= $S0
+    cmd .= dynext
+    cmd .= " "
+    $S0 = config['o']
+    $S0 = _mk_path_gen_dynpmc(src, $S0)
+    cmd .= $S0
+    cmd .= " "
+    $S0 = get_ldflags()
+    cmd .= $S0
+    cmd .= " "
+    $S0 = config['ld_load_flags']
+    cmd .= $S0
+    cmd .= " "
+    $I0 = config['parrot_is_shared']
+    unless $I0 goto L5
+    $S0 = config['inst_libparrot_ldflags']
+    cmd .= $S0
+    cmd .= " "
+  L5:
+    cmd .= ldflags
+    system(cmd, 1 :named('verbose'))
+
+    $I0 = _has_strip(cflags)
+    unless $I0 goto L6
+    cmd = "strip " . dynext
+    system(cmd, 1 :named('verbose'))
+  L6:
+.end
+
 .sub '_mk_path_dynpmc' :anon
     .param string group
     .param string load_ext
@@ -1375,6 +1485,19 @@ the value is the POD pathname
   L2:
 .end
 
+=item pir_pir
+
+=cut
+
+.sub '_clean_pir_pir' :anon
+    .param pmc kv :slurpy :named
+    $I0 = exists kv['pir_pir']
+    unless $I0 goto L1
+    $P0 = kv['pir_pir']
+    clean_key($P0)
+  L1:
+.end
+
 =item pir_pge
 
 =cut
@@ -1414,7 +1537,7 @@ the value is the POD pathname
   L1:
 .end
 
-=item pir_nqp-rx
+=item pir_nqp-rx / pir_nqprx
 
 =cut
 
@@ -1425,6 +1548,11 @@ the value is the POD pathname
     $P0 = kv['pir_nqp-rx']
     clean_key($P0)
   L1:
+    $I0 = exists kv['pir_nqprx']
+    unless $I0 goto L2
+    $P0 = kv['pir_nqprx']
+    clean_key($P0)
+  L2:
 .end
 
 =item pbc_pbc
@@ -1580,12 +1708,14 @@ the value is the POD pathname
     $P0 = iter hash
   L1:
     unless $P0 goto L2
-    .local string group
-    group = shift $P0
+    .local string name
+    name = shift $P0
     .local pmc srcs
-    srcs = hash[group]
-    $S0 = _mk_path_dynpmc(group, load_ext)
+    srcs = hash[name]
+    $S0 = _mk_path_dynpmc(name, load_ext)
     unlink($S0, 1 :named('verbose'))
+    $I0 = does srcs, 'array'
+    unless $I0 goto L5
     $P1 = iter srcs
   L3:
     unless $P1 goto L4
@@ -1602,11 +1732,22 @@ the value is the POD pathname
     goto L3
   L4:
     src = srcs[0]
-    $S0 = _mk_path_gen_dynpmc_group(src, group, '.c')
+    $S0 = _mk_path_gen_dynpmc_group(src, name, '.c')
     unlink($S0, 1 :named('verbose'))
-    $S0 = _mk_path_gen_dynpmc_group(src, group, '.h')
+    $S0 = _mk_path_gen_dynpmc_group(src, name, '.h')
     unlink($S0, 1 :named('verbose'))
-    $S0 = _mk_path_gen_dynpmc_group(src, group, obj)
+    $S0 = _mk_path_gen_dynpmc_group(src, name, obj)
+    unlink($S0, 1 :named('verbose'))
+    goto L1
+  L5:
+    src = srcs
+    $S0 = _mk_path_gen_dynpmc(src, '.c')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, '.h')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, '.dump')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, obj)
     unlink($S0, 1 :named('verbose'))
     goto L1
   L2:
@@ -2547,8 +2688,8 @@ array of pathname or a single pathname
 
 array of pathname or a single pathname
 
-=item pbc_pir, pir_pge, pir_tge, pir_nqp, pir_nqp-rx, pbc_pbc, exe_pbc,
-installable_pbc, dynops, dynpmc, html_pod
+=item pbc_pir, pir_pge, pir_tge, pir_nqp, pir_nqp-rx, pir_nqprx, pir_pir
+pbc_pbc, exe_pbc, installable_pbc, dynops, dynpmc, html_pod
 
 =item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
 
@@ -2579,7 +2720,7 @@ installable_pbc, dynops, dynpmc, html_pod
     needed = new 'Hash'
     generated = new 'Hash'
 
-    $P0 = split ' ', 'pbc_pir pir_pge pir_tge pir_nqp pir_nqp-rx pbc_pbc exe_pbc installable_pbc dynops dynpmc html_pod'
+    $P0 = split ' ', 'pbc_pir pir_pge pir_tge pir_nqp pir_nqp-rx pir_nqprx pir_pir pbc_pbc exe_pbc installable_pbc dynops dynpmc html_pod'
   L1:
     unless $P0 goto L2
     $S0 = shift $P0
@@ -4410,6 +4551,13 @@ SOURCE_C
     $I2 = stat depend, .STAT_MODIFYTIME
     $I0 = $I1 > $I2
     .return ($I0)
+.end
+
+.sub 'newer' :multi(pmc, pmc)
+    .param pmc target
+    .param pmc depend
+    $S0 = target
+    .tailcall newer($S0, depend)
 .end
 
 =item mkpath

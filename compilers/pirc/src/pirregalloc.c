@@ -47,8 +47,7 @@ the algorithm is modified in some places.
 
 /*
 
-=item C<static void
-reset_register_count(lsr_allocator * const lsr)>
+=item C<static void reset_register_count(lsr_allocator * const lsr)>
 
 Reset the register counters; there's one counter for each register
 type (string, num, int, pmc).
@@ -57,7 +56,9 @@ type (string, num, int, pmc).
 
 */
 static void
-reset_register_count(lsr_allocator * const lsr) {
+reset_register_count(ARGIN(lsr_allocator * const lsr))
+{
+    ASSERT_ARGS(reset_register_count)
     int i;
     /* the "r" field keeps track of the number of registers that must be allocated by
      * parrot. In the original implementation, "r" is constant, and indicates the number
@@ -70,10 +71,85 @@ reset_register_count(lsr_allocator * const lsr) {
         lsr->r[i] = 1;
 }
 
+/* HEADERIZER HFILE: compilers/pirc/src/pirregalloc.h */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void add_free_reg(
+    ARGIN(lsr_allocator * const lsr),
+    unsigned regno,
+    pir_type type)
+        __attribute__nonnull__(1);
+
+static void add_interval_to_active(
+    ARGIN(lsr_allocator *lsr),
+    ARGIN(live_interval * const i),
+    pir_type type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void add_live_interval(
+    ARGIN(lsr_allocator * const lsr),
+    ARGIN(live_interval * const i),
+    pir_type type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void cache_interval_object(
+    ARGIN(lsr_allocator * const lsr),
+    ARGIN(live_interval * interval))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void expire_old_intervals(
+    ARGIN(lsr_allocator * const lsr),
+    ARGIN(live_interval * const i),
+    pir_type type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static unsigned get_free_reg(
+    ARGIN(lsr_allocator * const lsr),
+    pir_type type)
+        __attribute__nonnull__(1);
+
+static unsigned lengthi(ARGIN_NULLOK(live_interval *list));
+static void remove_from_active(ARGMOD(live_interval *i))
+        __attribute__nonnull__(1)
+        FUNC_MODIFIES(*i);
+
+static void reset_register_count(ARGIN(lsr_allocator * const lsr))
+        __attribute__nonnull__(1);
+
+#define ASSERT_ARGS_add_free_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr))
+#define ASSERT_ARGS_add_interval_to_active __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr) \
+    , PARROT_ASSERT_ARG(i))
+#define ASSERT_ARGS_add_live_interval __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr) \
+    , PARROT_ASSERT_ARG(i))
+#define ASSERT_ARGS_cache_interval_object __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr) \
+    , PARROT_ASSERT_ARG(interval))
+#define ASSERT_ARGS_expire_old_intervals __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr) \
+    , PARROT_ASSERT_ARG(i))
+#define ASSERT_ARGS_get_free_reg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr))
+#define ASSERT_ARGS_lengthi __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_remove_from_active __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(i))
+#define ASSERT_ARGS_reset_register_count __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lsr))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 
-=item C<lsr_allocator *
-new_linear_scan_register_allocator(struct lexer_state * lexer)>
+=item C<lsr_allocator * new_linear_scan_register_allocator(struct lexer_state
+*lexer)>
 
 Constructor for a linear scan register allocator.
 Initializes the allocator, and returns it.
@@ -81,8 +157,11 @@ Initializes the allocator, and returns it.
 =cut
 
 */
+PARROT_CAN_RETURN_NULL
 lsr_allocator *
-new_linear_scan_register_allocator(struct lexer_state *lexer) {
+new_linear_scan_register_allocator(ARGIN_NULLOK(struct lexer_state *lexer))
+{
+    ASSERT_ARGS(new_linear_scan_register_allocator)
     lsr_allocator *lsr = (lsr_allocator *)mem_sys_allocate_zeroed(sizeof (lsr_allocator));
 
     lsr->lexer = lexer;
@@ -97,7 +176,8 @@ XXX debug function only
 */
 void print_list(char *msg, live_interval *i);
 void
-print_list(char *msg, live_interval *i) {
+print_list(ARGIN(char *msg), ARGIN(live_interval *i))
+{
     fprintf(stderr, "%s: ", msg);
     while (i) {
         fprintf(stderr, "[%d] ", i->endpoint);
@@ -108,8 +188,7 @@ print_list(char *msg, live_interval *i) {
 
 /*
 
-=item C<void
-destroy_linear_scan_register_allocator(lsr_allocator *lsr)>
+=item C<void destroy_linear_scan_register_allocator(lsr_allocator *lsr)>
 
 Destructor for linear scan register allocator. All live_interval
 objects are destroyed as well.
@@ -118,7 +197,9 @@ objects are destroyed as well.
 
 */
 void
-destroy_linear_scan_register_allocator(lsr_allocator *lsr) {
+destroy_linear_scan_register_allocator(ARGMOD(lsr_allocator *lsr))
+{
+    ASSERT_ARGS(destroy_linear_scan_register_allocator)
     pir_type type;
     live_interval *i;
 
@@ -143,12 +224,18 @@ destroy_linear_scan_register_allocator(lsr_allocator *lsr) {
 
 /*
 
+=item C<static unsigned lengthi(live_interval *list)>
+
 XXX debug function only.
 Return length of list C<list>
 
+=cut
+
 */
 static unsigned
-lengthi(live_interval *list) {
+lengthi(ARGIN_NULLOK(live_interval *list))
+{
+    ASSERT_ARGS(lengthi)
     unsigned len = 0;
 
     while (list) {
@@ -160,8 +247,8 @@ lengthi(live_interval *list) {
 
 /*
 
-=item C<static void
-add_live_interval(lsr_allocator * const lsr, live_interval * const i, pir_type type)>
+=item C<static void add_live_interval(lsr_allocator * const lsr, live_interval *
+const i, pir_type type)>
 
 Add live_interval C<i> to the list; this list is sorted on increasing
 start point.
@@ -170,7 +257,10 @@ start point.
 
 */
 static void
-add_live_interval(lsr_allocator * const lsr, live_interval * const i, pir_type type) {
+add_live_interval(ARGIN(lsr_allocator * const lsr),
+    ARGIN(live_interval * const i), pir_type type)
+{
+    ASSERT_ARGS(add_live_interval)
     live_interval *iter = lsr->intervals[type];
 
     /* if there's no interval for the specified type, insert i as the first one and return */
@@ -234,8 +324,8 @@ add_live_interval(lsr_allocator * const lsr, live_interval * const i, pir_type t
 
 /*
 
-=item C<live_interval *
-new_live_interval(lsr_allocator * const lsr, unsigned firstuse_location, pir_type type)>
+=item C<live_interval * new_live_interval(lsr_allocator * const lsr, unsigned
+firstuse_location, pir_type type)>
 
 Constructor for a live_interval struct object. After creating the new interval object,
 its startpoint and endpoint are initialized to the value in C<firstuse_location>. Note
@@ -247,10 +337,14 @@ The newly created interval is added to the list of intervals.
 =cut
 
 */
+PARROT_CAN_RETURN_NULL
 PARROT_MALLOC
 PARROT_WARN_UNUSED_RESULT
 live_interval *
-new_live_interval(lsr_allocator * const lsr, unsigned firstuse_location, pir_type type) {
+new_live_interval(ARGIN(lsr_allocator * const lsr),
+        unsigned firstuse_location, pir_type type)
+{
+    ASSERT_ARGS(new_live_interval)
     live_interval *i;
     /* check whether there's an interval object that we can re-use, to prevent
      * memory malloc() and free()s.
@@ -283,8 +377,8 @@ new_live_interval(lsr_allocator * const lsr, unsigned firstuse_location, pir_typ
 
 /*
 
-=item C<static void
-add_interval_to_active(lsr_allocator *lsr, live_interval * i, pir_type type)>
+=item C<static void add_interval_to_active(lsr_allocator *lsr, live_interval *
+const i, pir_type type)>
 
 Add interval C<i> to the list of active intervals; the list is sorted
 on increasing endpoint.
@@ -293,7 +387,10 @@ on increasing endpoint.
 
 */
 static void
-add_interval_to_active(lsr_allocator *lsr, live_interval * const i, pir_type type) {
+add_interval_to_active(ARGIN(lsr_allocator *lsr),
+        ARGIN(live_interval * const i), pir_type type)
+{
+    ASSERT_ARGS(add_interval_to_active)
     live_interval *iter = lsr->active[type];
 
     /* if there's no active intervals, set i as first */
@@ -351,8 +448,7 @@ add_interval_to_active(lsr_allocator *lsr, live_interval * const i, pir_type typ
 
 /*
 
-=item C<static unsigned
-get_free_reg(lsr_allocator * const lsr, pir_type type)>
+=item C<static unsigned get_free_reg(lsr_allocator * const lsr, pir_type type)>
 
 Allocate a new register; if there's any old registers to be reused, return
 such a second-hand register; otherwise, allocate a brand new one.
@@ -361,7 +457,9 @@ such a second-hand register; otherwise, allocate a brand new one.
 
 */
 static unsigned
-get_free_reg(lsr_allocator * const lsr, pir_type type) {
+get_free_reg(ARGIN(lsr_allocator * const lsr), pir_type type)
+{
+    ASSERT_ARGS(get_free_reg)
     /* if there's any second hand register for the requested type, return that. */
     if (lsr->free_regs[type]) {
         free_reg *available  = lsr->free_regs[type];
@@ -388,8 +486,8 @@ get_free_reg(lsr_allocator * const lsr, pir_type type) {
 
 /*
 
-=item C<static void
-add_free_reg(lsr_allocator * const lsr, unsigned regno, pir_type type)>
+=item C<static void add_free_reg(lsr_allocator * const lsr, unsigned regno,
+pir_type type)>
 
 Add register C<regno> to the list of free regs that can be reuse.
 
@@ -397,7 +495,10 @@ Add register C<regno> to the list of free regs that can be reuse.
 
 */
 static void
-add_free_reg(lsr_allocator * const lsr, unsigned regno, pir_type type) {
+add_free_reg(ARGIN(lsr_allocator * const lsr), unsigned regno, pir_type type)
+{
+    ASSERT_ARGS(add_free_reg)
+
     free_reg *reg;
 
     /* fprintf(stderr, "add_free_reg(): %u\n", regno); */
@@ -422,8 +523,7 @@ add_free_reg(lsr_allocator * const lsr, unsigned regno, pir_type type) {
 
 /*
 
-=item C<static void
-remove_from_active(live_interval *i)>
+=item C<static void remove_from_active(live_interval *i)>
 
 Remove interval C<i> from the list of active intervals.
 
@@ -431,7 +531,9 @@ Remove interval C<i> from the list of active intervals.
 
 */
 static void
-remove_from_active(live_interval *i) {
+remove_from_active(ARGMOD(live_interval *i))
+{
+    ASSERT_ARGS(remove_from_active)
     /* if it has a previous node, that previous node's next is set
      * to i's next.
      */
@@ -448,8 +550,8 @@ remove_from_active(live_interval *i) {
 
 /*
 
-=item C<static void
-expire_old_intervals(lsr_allocator * const lsr, live_interval * i, pir_type type)>
+=item C<static void expire_old_intervals(lsr_allocator * const lsr,
+live_interval * const i, pir_type type)>
 
 Go over all active intervals; if the endpoint of one of them is >= than
 C<i>'s start point, the action is aborted. This is why the C<active> list must be
@@ -460,7 +562,11 @@ active, as it has expired. (the variable is no longer needed).
 
 */
 static void
-expire_old_intervals(lsr_allocator * const lsr, live_interval * const i, pir_type type) {
+expire_old_intervals(ARGIN(lsr_allocator * const lsr),
+        ARGIN(live_interval * const i), pir_type type)
+{
+    ASSERT_ARGS(expire_old_intervals)
+
     live_interval *j;
 
     for (j = lsr->active[type]; j != NULL; j = j->nexta) {
@@ -479,8 +585,8 @@ expire_old_intervals(lsr_allocator * const lsr, live_interval * const i, pir_typ
 
 /*
 
-=item C<static void
-cache_interval_objects(lsr_allocator * const lsr, live_interval * interval)>
+=item C<static void cache_interval_object(lsr_allocator * const lsr,
+live_interval * interval)>
 
 Store the interval C<interval> on a caching list; whenever a new C<live_interval>
 object is requested, these interval objects can be re-used, instead of malloc()ing
@@ -490,15 +596,17 @@ a new one.
 
 */
 static void
-cache_interval_object(lsr_allocator * const lsr, live_interval * interval) {
+cache_interval_object(ARGIN(lsr_allocator * const lsr),
+        ARGIN(live_interval * interval))
+{
+    ASSERT_ARGS(cache_interval_object)
     interval->nextc = lsr->cached_intervals;
     lsr->cached_intervals = interval;
 }
 
 /*
 
-=item C<void
-linear_scan_register_allocation(lsr_allocator * const lsr)>
+=item C<void linear_scan_register_allocation(lsr_allocator * const lsr)>
 
 Go over all live intervals; before handling any interval, expire all old ones;
 they might have expired (see expire_old_intervals()). Then, allocate a new
@@ -508,7 +616,9 @@ register; this can be one that was just expired.
 
 */
 void
-linear_scan_register_allocation(lsr_allocator * const lsr) {
+linear_scan_register_allocation(ARGIN(lsr_allocator * const lsr))
+{
+    ASSERT_ARGS(linear_scan_register_allocation)
     live_interval * i;
     pir_type type = 0; /* types run from 0 to 4; see pircompunit.h */
 

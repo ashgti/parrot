@@ -603,6 +603,9 @@ DebuggerCmdList DebCmdList [] = {
 
 =item C<static const DebuggerCmd * get_cmd(const char **cmd)>
 
+Parse the debuggger command indicated by C<**cmd>.  Return a pointer to the
+matching function for known commands, or a NULL pointer otherwise.
+
 =cut
 
 */
@@ -658,6 +661,8 @@ get_cmd(ARGIN_NULLOK(const char **cmd))
 
 =item C<static const char * skip_whitespace(const char *cmd)>
 
+Return a pointer to the first non-whitespace character in C<cmd>.
+
 =cut
 
 */
@@ -676,6 +681,8 @@ skip_whitespace(ARGIN(const char *cmd))
 /*
 
 =item C<static unsigned long get_uint(const char **cmd, unsigned int def)>
+
+Get an unsigned int from C<**cmd>.
 
 =cut
 
@@ -699,6 +706,8 @@ get_uint(ARGMOD(const char **cmd), unsigned int def)
 /*
 
 =item C<static unsigned long get_ulong(const char **cmd, unsigned long def)>
+
+Get an unsigned long from C<**cmd>.
 
 =cut
 
@@ -1500,6 +1509,8 @@ PDB_trace(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 
 =item C<static unsigned short condition_regtype(const char *cmd)>
 
+Return the type of the register represented by C<*cmd>.
+
 =cut
 
 */
@@ -1864,6 +1875,8 @@ PDB_set_break(PARROT_INTERP, ARGIN_NULLOK(const char *command))
 /*
 
 =item C<static void list_breakpoints(PDB_t *pdb)>
+
+Print all breakpoints for this debugger session to C<pdb->debugger>.
 
 =cut
 
@@ -3347,33 +3360,6 @@ PDB_eval(PARROT_INTERP, ARGIN(const char *command))
     TRACEDEB_MSG("PDB_eval");
     UNUSED(command);
     Parrot_io_eprintf(warninterp, "The eval command is currently unimplemeneted\n");
-}
-
-/*
-
-=item C<opcode_t * PDB_compile(PARROT_INTERP, const char *command)>
-
-Compiles instructions with the PASM compiler.
-
-Appends an C<end> op.
-
-This may be called from C<PDB_eval> above or from the compile opcode
-which generates a malloced string.
-
-=cut
-
-*/
-
-PARROT_CAN_RETURN_NULL
-opcode_t *
-PDB_compile(PARROT_INTERP, ARGIN(const char *command))
-{
-    ASSERT_ARGS(PDB_compile)
-
-    UNUSED(command);
-    Parrot_ex_throw_from_c_args(interp, NULL,
-        EXCEPTION_UNIMPLEMENTED,
-        "PDB_compile ('PASM1' compiler) has been deprecated");
 }
 
 /*

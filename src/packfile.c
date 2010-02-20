@@ -3893,7 +3893,6 @@ PackFile_Constant_pack_size(PARROT_INTERP, ARGIN(const PackFile_Constant *self))
 {
     ASSERT_ARGS(PackFile_Constant_pack_size)
     PMC    *component;
-    STRING *image;
     size_t  packed_size;
 
     switch (self->type) {
@@ -3917,13 +3916,8 @@ PackFile_Constant_pack_size(PARROT_INTERP, ARGIN(const PackFile_Constant *self))
       case PFC_PMC:
         component = self->u.key; /* the pmc (Sub, ...) */
 
-        /*
-         * TODO create either
-         * a) a frozen_size freeze entry or
-         * b) change packout.c so that component size isn't needed
-         */
-        image       = Parrot_freeze(interp, component);
-        packed_size = PF_size_string(image);
+        packed_size =
+            PF_size_string(STRINGNULL) + Parrot_freeze_size(interp, component) / sizeof (opcode_t);
         break;
 
       default:
@@ -4086,11 +4080,11 @@ PackFile_Constant_unpack_key(PARROT_INTERP, ARGIN(PackFile_ConstTable *constt),
         opcode_t        op;
 
         if (tail) {
-            SETATTR_Key_next_key(interp, tail, constant_pmc_new(interp, pmc_enum));
+            SETATTR_Key_next_key(interp, tail, Parrot_pmc_new_constant(interp, pmc_enum));
             GETATTR_Key_next_key(interp, tail, tail);
         }
         else
-            head = tail = constant_pmc_new(interp, pmc_enum);
+            head = tail = Parrot_pmc_new_constant(interp, pmc_enum);
 
         op = PF_fetch_opcode(pf, &cursor);
 
@@ -4577,16 +4571,16 @@ make_annotation_value_pmc(PARROT_INTERP, ARGIN(PackFile_Annotations *self),
 
     switch (type) {
       case PF_ANNOTATION_KEY_TYPE_INT:
-        result = pmc_new(interp, enum_class_Integer);
+        result = Parrot_pmc_new(interp, enum_class_Integer);
         VTABLE_set_integer_native(interp, result, value);
         break;
       case PF_ANNOTATION_KEY_TYPE_NUM:
-        result = pmc_new(interp, enum_class_Float);
+        result = Parrot_pmc_new(interp, enum_class_Float);
         VTABLE_set_number_native(interp, result,
                     PF_CONST(self->code, value)->u.number);
         break;
       default:
-        result = pmc_new(interp, enum_class_String);
+        result = Parrot_pmc_new(interp, enum_class_String);
         VTABLE_set_string_native(interp, result,
                     PF_CONST(self->code, value)->u.string);
     }
@@ -4660,7 +4654,7 @@ PackFile_Annotations_lookup(PARROT_INTERP, ARGIN(PackFile_Annotations *self),
         }
 
         /* Create hash of values we have. */
-        result = pmc_new(interp, enum_class_Hash);
+        result = Parrot_pmc_new(interp, enum_class_Hash);
 
         for (i = 0; i < self->num_keys; i++) {
             if (have_values[i]) {

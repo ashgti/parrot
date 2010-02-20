@@ -14,6 +14,109 @@
 
 #include "parrot/oplib/ops.h"
 
+/* HEADERIZER HFILE: compilers/pirc/src/piremit.h */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void emit_pbc_annotations(ARGIN(lexer_state * const lexer))
+        __attribute__nonnull__(1);
+
+static void emit_pbc_const_arg(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(constant * const c))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pbc_expr(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(expression * const operand))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pbc_instr(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(instruction * const instr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pbc_label_arg(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(label * const l))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pbc_sub(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(subroutine * const sub))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pbc_target_arg(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(target * const t))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pir_instruction(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(instruction * const instr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void emit_pir_statement(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(subroutine * const sub))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void optimize_instr(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(instruction * const instr))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+static void print_sub_flags(
+    ARGIN(lexer_state * const lexer),
+    ARGIN(subroutine * const subiter))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+#define ASSERT_ARGS_emit_pbc_annotations __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer))
+#define ASSERT_ARGS_emit_pbc_const_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(c))
+#define ASSERT_ARGS_emit_pbc_expr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(operand))
+#define ASSERT_ARGS_emit_pbc_instr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(instr))
+#define ASSERT_ARGS_emit_pbc_label_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(l))
+#define ASSERT_ARGS_emit_pbc_sub __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_emit_pbc_target_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(t))
+#define ASSERT_ARGS_emit_pir_instruction __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(instr))
+#define ASSERT_ARGS_emit_pir_statement __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(sub))
+#define ASSERT_ARGS_optimize_instr __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(instr))
+#define ASSERT_ARGS_print_sub_flags __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(lexer) \
+    , PARROT_ASSERT_ARG(subiter))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 
 =head1 DESCRIPTION
@@ -44,25 +147,24 @@ their operands are emitted through the C<bcgen> module.
  */
 char const pir_register_types[5] = {'I', 'S', 'P', 'N', '?'};
 
-static void emit_pir_statement(lexer_state * const lexer, subroutine * const sub);
-static void emit_pir_instruction(lexer_state * const lexer, instruction * const instr);
-static void emit_pbc_expr(lexer_state * const lexer, expression * const operand);
+static void emit_pir_statement(ARGIN(lexer_state * const lexer), subroutine * const sub);
+static void emit_pir_instruction(ARGIN(lexer_state * const lexer), instruction * const instr);
+static void emit_pbc_expr(ARGIN(lexer_state * const lexer), expression * const operand);
 
-static void print_sub_flags(lexer_state * const lexer, subroutine * const subiter);
+static void print_sub_flags(ARGIN(lexer_state * const lexer), subroutine * const subiter);
 
 /* prototype declaration */
-void print_expr(lexer_state * const lexer, expression * const expr);
-void print_key(lexer_state * const lexer, key * const k);
-void print_target(lexer_state * const lexer, target * const t);
-void print_constant(lexer_state * const lexer, constant * const c);
-void print_expressions(lexer_state * const lexer, expression * const expr);
-void print_instruction(lexer_state * const lexer, instruction * const ins);
-void print_statement(lexer_state * const lexer, subroutine * const sub);
+void print_expr(ARGIN(lexer_state * const lexer), expression * const expr);
+void print_key(ARGIN(lexer_state * const lexer), key * const k);
+void print_target(ARGIN(lexer_state * const lexer), target * const t);
+void print_constant(ARGIN(lexer_state * const lexer), constant * const c);
+void print_expressions(ARGIN(lexer_state * const lexer), expression * const expr);
+void print_instruction(ARGIN(lexer_state * const lexer), instruction * const ins);
+void print_statement(ARGIN(lexer_state * const lexer), subroutine * const sub);
 
 /*
 
-=item C<void
-print_key(lexer_state * const lexer, key * const k)>
+=item C<void print_key(lexer_state * const lexer, key * const k)>
 
 Print the key C<k>. The total key is enclosed in square brackets,
 and different key elements are separated by semicolons. Example:
@@ -75,7 +177,9 @@ has two elements: C<"hi"> and C<42>.
 
 */
 void
-print_key(lexer_state * const lexer, key * const k) {
+print_key(ARGIN(lexer_state * const lexer), ARGIN(key * const k))
+{
+    ASSERT_ARGS(print_key)
     key_entry *iter;
 
     fprintf(out, "[");
@@ -95,8 +199,7 @@ print_key(lexer_state * const lexer, key * const k) {
 
 /*
 
-=item C<void
-print_target(lexer_state * const lexer, target * const t)>
+=item C<void print_target(lexer_state * const lexer, target * const t)>
 
 Print the target C<t>; if C<t> has a key, that key is
 printed as well. Examples:
@@ -107,7 +210,9 @@ printed as well. Examples:
 
 */
 void
-print_target(lexer_state * const lexer, target * const t) {
+print_target(ARGIN(lexer_state * const lexer),  ARGIN(target * const t))
+{
+    ASSERT_ARGS(print_target)
     PARROT_ASSERT(t->info);
     fprintf(out, "%c%d", pir_register_types[t->info->type], t->info->color);
 
@@ -118,8 +223,7 @@ print_target(lexer_state * const lexer, target * const t) {
 
 /*
 
-=item C<void
-print_constant(lexer_state * const lexer, constant * const c)>
+=item C<void print_constant(lexer_state * const lexer, constant * const c)>
 
 Print the value of constant C<c>. Based on C<c>'s type, the appropriate
 value is printed.
@@ -128,7 +232,10 @@ value is printed.
 
 */
 void
-print_constant(lexer_state * const lexer, constant * const c) {
+print_constant(ARGIN(lexer_state * const lexer),
+        ARGIN(constant * const c))
+{
+    ASSERT_ARGS(print_constant)
     switch (c->type) {
       case INT_VAL:
         fprintf(out, "%d", c->val.ival);
@@ -153,8 +260,7 @@ print_constant(lexer_state * const lexer, constant * const c) {
 
 /*
 
-=item C<void
-print_expr(lexer_state * const lexer, expression * const expr)>
+=item C<void print_expr(lexer_state * const lexer, expression * const expr)>
 
 Print the expression C<expr>. This is a dispatch function, calling
 a specialized function based on C<expr>'s type.
@@ -163,7 +269,10 @@ a specialized function based on C<expr>'s type.
 
 */
 void
-print_expr(lexer_state * const lexer, expression * const expr) {
+print_expr(ARGIN(lexer_state * const lexer),
+        ARGIN(expression * const expr))
+{
+    ASSERT_ARGS(print_expr)
     switch (expr->type) {
       case EXPR_TARGET:
         print_target(lexer, expr->expr.t);
@@ -187,8 +296,8 @@ print_expr(lexer_state * const lexer, expression * const expr) {
 
 /*
 
-=item C<void
-print_expressions(expression * const expr)>
+=item C<void print_expressions(lexer_state * const lexer, expression * const
+expr)>
 
 Print the list of expressions pointed to by C<expr>,
 if C<expr> is not NULL. If C<expr> is NULL, the
@@ -199,7 +308,10 @@ separated by commas.
 
 */
 void
-print_expressions(lexer_state * const lexer, expression * const expr) {
+print_expressions(ARGIN(lexer_state * const lexer),
+        ARGIN(expression * const expr))
+{
+    ASSERT_ARGS(print_expressions)
     expression *iter;
 
     if (expr == NULL)
@@ -218,8 +330,8 @@ print_expressions(lexer_state * const lexer, expression * const expr) {
 
 /*
 
-=item C<void
-print_instruction(lexer_state * const lexer, instruction * const ins)>
+=item C<void print_instruction(lexer_state * const lexer, instruction * const
+ins)>
 
 Print the instruction C<ins>.
 
@@ -227,8 +339,10 @@ Print the instruction C<ins>.
 
 */
 void
-print_instruction(lexer_state * const lexer, instruction * const ins) {
-    PARROT_ASSERT(ins != NULL);
+print_instruction(ARGIN(lexer_state * const lexer),
+        ARGIN(instruction * const ins))
+{
+    ASSERT_ARGS(print_instruction)
 
     if (ins->label) {
         if (TEST_FLAG(lexer->flags, LEXER_FLAG_EMIT_PASM))
@@ -254,8 +368,7 @@ print_instruction(lexer_state * const lexer, instruction * const ins) {
 
 /*
 
-=item C<void
-print_statement(lexer_state * const lexer, subroutine * const sub)>
+=item C<void print_statement(lexer_state * const lexer, subroutine * const sub)>
 
 XXX
 
@@ -263,7 +376,10 @@ XXX
 
 */
 void
-print_statement(lexer_state * const lexer, subroutine * const sub) {
+print_statement(ARGIN(lexer_state * const lexer),
+        ARGIN(subroutine * const sub))
+{
+    ASSERT_ARGS(print_statement)
     instruction *statiter;
 
     if (sub->statements == NULL)
@@ -280,8 +396,8 @@ print_statement(lexer_state * const lexer, subroutine * const sub) {
 
 /*
 
-=item C<static void
-print_sub_flags(lexer_state * const lexer, subroutine * const subiter)>
+=item C<static void print_sub_flags(lexer_state * const lexer, subroutine *
+const subiter)>
 
 Print the appropriate subflags.
 
@@ -289,7 +405,11 @@ Print the appropriate subflags.
 
 */
 static void
-print_sub_flags(lexer_state * const lexer, subroutine * const subiter) {
+print_sub_flags(ARGIN(lexer_state * const lexer),
+        ARGIN(subroutine * const subiter))
+{
+    ASSERT_ARGS(print_sub_flags)
+
     if (TEST_FLAG(subiter->flags, PIRC_SUB_FLAG_INIT))
         fprintf(out, ":init ");
     if (TEST_FLAG(subiter->flags, PIRC_SUB_FLAG_LOAD))
@@ -320,8 +440,7 @@ print_sub_flags(lexer_state * const lexer, subroutine * const subiter) {
 
 /*
 
-=item C<void
-print_subs(struct lexer_state * const lexer)>
+=item C<void print_subs(struct lexer_state * const lexer)>
 
 Top-level function to print all generated code. This function
 iterates over all subs and prints their instructions.
@@ -330,7 +449,9 @@ iterates over all subs and prints their instructions.
 
 */
 void
-print_subs(struct lexer_state * const lexer) {
+print_subs(struct ARGIN(lexer_state * const lexer))
+{
+    ASSERT_ARGS(print_subs)
     subroutine *subiter;
 
     if (lexer->subs == NULL)
@@ -371,8 +492,8 @@ print_subs(struct lexer_state * const lexer) {
 
 /*
 
-=item C<static void
-emit_pir_instruction(lexer_state * const lexer, instruction * const instr)>
+=item C<static void emit_pir_instruction(lexer_state * const lexer, instruction
+* const instr)>
 
 Print the PIR representation of C<instr>. If C<instr> has a label, that
 is printed first.
@@ -381,7 +502,10 @@ is printed first.
 
 */
 static void
-emit_pir_instruction(lexer_state * const lexer, instruction * const instr) {
+emit_pir_instruction(ARGIN(lexer_state * const lexer),
+        ARGIN(instruction * const instr))
+{
+    ASSERT_ARGS(emit_pir_instruction)
 
     if (instr->label)
         fprintf(out, "  %s:\n", instr->label);
@@ -395,8 +519,8 @@ emit_pir_instruction(lexer_state * const lexer, instruction * const instr) {
 
 /*
 
-=item C<static void
-emit_pir_statement(lexer_state * const lexer, subroutine * const sub)>
+=item C<static void emit_pir_statement(lexer_state * const lexer, subroutine *
+const sub)>
 
 Emit all statements of the subroutine C<sub>. The statements
 are emitted in PIR format. If there are no statements in C<sub>,
@@ -406,7 +530,11 @@ this function returns.
 
 */
 static void
-emit_pir_statement(lexer_state * const lexer, subroutine * const sub) {
+emit_pir_statement(ARGIN(lexer_state * const lexer),
+        ARGIN(subroutine * const sub))
+{
+    ASSERT_ARGS(emit_pir_statement)
+
     instruction *statiter;
 
     if (sub->statements == NULL)
@@ -424,8 +552,8 @@ emit_pir_statement(lexer_state * const lexer, subroutine * const sub) {
 
 /*
 
-=item C<void
-emit_pir_subs(lexer_state * const lexer)>
+=item C<void emit_pir_subs(lexer_state * const lexer, char const * const
+outfile)>
 
 Print the PIR representation of all subroutines stored
 in the C<lexer>. If there are no subroutines, thre function
@@ -435,7 +563,10 @@ does nothing and returns.
 
 */
 void
-emit_pir_subs(lexer_state * const lexer, char const * const outfile) {
+emit_pir_subs(ARGIN(lexer_state * const lexer),
+        ARGIN(char const * const outfile))
+{
+    ASSERT_ARGS(emit_pir_subs)
     subroutine *subiter;
 
     if (lexer->subs == NULL)
@@ -474,8 +605,8 @@ emit_pir_subs(lexer_state * const lexer, char const * const outfile) {
 
 /*
 
-=item C<static void
-emit_pbc_const_arg(lexer_state * const lexer, constant * const c)>
+=item C<static void emit_pbc_const_arg(lexer_state * const lexer, constant *
+const c)>
 
 Emit a constant argument into the bytecode. An integer is emitted
 inline in the bytecode; other types are stored in the constant table,
@@ -485,7 +616,10 @@ and their index in the constant table is emitted into the bytecode.
 
 */
 static void
-emit_pbc_const_arg(lexer_state * const lexer, constant * const c) {
+emit_pbc_const_arg(ARGIN(lexer_state * const lexer),
+        ARGIN(constant * const c))
+{
+    ASSERT_ARGS(emit_pbc_const_arg)
 
     switch (c->type) {
         case INT_VAL:
@@ -538,8 +672,8 @@ emit_pbc_const_arg(lexer_state * const lexer, constant * const c) {
 
 /*
 
-=item C<static void
-emit_pbc_label_arg(lexer_state * const lexer, label * const l)>
+=item C<static void emit_pbc_label_arg(lexer_state * const lexer, label * const
+l)>
 
 Emit the value of the label offset of label C<l>.
 
@@ -547,7 +681,11 @@ Emit the value of the label offset of label C<l>.
 
 */
 static void
-emit_pbc_label_arg(lexer_state * const lexer, label * const l) {
+emit_pbc_label_arg(ARGIN(lexer_state * const lexer),
+        ARGIN(label * const l))
+{
+    ASSERT_ARGS(emit_pbc_label_arg)
+
     emit_int_arg(lexer->bc, l->offset);
 }
 
@@ -558,8 +696,8 @@ emit_pbc_label_arg(lexer_state * const lexer, label * const l) {
 
 /*
 
-=item C<static void
-emit_pbc_target_arg(lexer_state * const lexer, target * const t)>
+=item C<static void emit_pbc_target_arg(lexer_state * const lexer, target *
+const t)>
 
 Emit the assigned register of target C<t>. The assigned register is
 stored in the C<color> field, of either the C<pir_reg> or C<symbol>
@@ -570,7 +708,11 @@ respectively. If C<t> has a key, the key is emitted as well.
 
 */
 static void
-emit_pbc_target_arg(lexer_state * const lexer, target * const t) {
+emit_pbc_target_arg(ARGIN(lexer_state * const lexer),
+        ARGIN(target * const t))
+{
+    ASSERT_ARGS(emit_pbc_target_arg)
+
     emit_int_arg(lexer->bc, t->info->color);
 
     /* if t has a key, emit that as well */
@@ -581,8 +723,8 @@ emit_pbc_target_arg(lexer_state * const lexer, target * const t) {
 
 /*
 
-=item C<static void
-emit_pbc_expr(lexer_state * const lexer, expression * const operand)>
+=item C<static void emit_pbc_expr(lexer_state * const lexer, expression * const
+operand)>
 
 Emit bytecode for the expression C<operand>. This is a dispatch
 function, invoking the appropriate function depending on C<operand>'s
@@ -592,7 +734,11 @@ type.
 
 */
 static void
-emit_pbc_expr(lexer_state * const lexer, expression * const operand) {
+emit_pbc_expr(ARGIN(lexer_state * const lexer),
+        ARGIN(expression * const operand))
+{
+    ASSERT_ARGS(emit_pbc_expr)
+
     switch (operand->type) {
       case EXPR_CONSTANT:
         emit_pbc_const_arg(lexer, operand->expr.c);
@@ -620,8 +766,8 @@ emit_pbc_expr(lexer_state * const lexer, expression * const operand) {
 
 /*
 
-=item C<static void
-optimize_instr(lexer_state * const lexer, instruction * const instr)>
+=item C<static void optimize_instr(lexer_state * const lexer, instruction *
+const instr)>
 
 Optimize the instruction C<instr>. Currently, these instructions are optimized:
 
@@ -633,7 +779,10 @@ Optimize the instruction C<instr>. Currently, these instructions are optimized:
 
 */
 static void
-optimize_instr(lexer_state * const lexer, instruction * const instr) {
+optimize_instr(ARGIN(lexer_state * const lexer),
+        ARGIN(instruction * const instr))
+{
+    ASSERT_ARGS(optimize_instr)
 
     switch (instr->opcode) {
         case PARROT_OP_box_p_ic: {
@@ -641,7 +790,7 @@ optimize_instr(lexer_state * const lexer, instruction * const instr) {
 
             /* the last operand, which is the second in this case */
             expression *second_operand = instr->operands;
-            PMC *intconst = pmc_new(lexer->interp,
+            PMC *intconst = Parrot_pmc_new(lexer->interp,
                                     Parrot_get_ctx_HLL_type(lexer->interp, enum_class_Integer));
             int index     = add_pmc_const(lexer->bc, intconst);
             VTABLE_set_integer_native(lexer->interp, intconst, second_operand->expr.c->val.ival);
@@ -658,7 +807,7 @@ optimize_instr(lexer_state * const lexer, instruction * const instr) {
 
             /* the last operand, which is the second in this case */
             expression *second_operand = instr->operands;
-            PMC *numconst = pmc_new(lexer->interp,
+            PMC *numconst = Parrot_pmc_new(lexer->interp,
                                     Parrot_get_ctx_HLL_type(lexer->interp, enum_class_Float));
             int index     = add_pmc_const(lexer->bc, numconst);
             VTABLE_set_number_native(lexer->interp, numconst, second_operand->expr.c->val.nval);
@@ -676,7 +825,7 @@ optimize_instr(lexer_state * const lexer, instruction * const instr) {
 
             /* the last operand, which is the second in this case */
             expression *second_operand = instr->operands;
-            PMC *strconst = pmc_new(lexer->interp,
+            PMC *strconst = Parrot_pmc_new(lexer->interp,
                                     Parrot_get_ctx_HLL_type(lexer->interp, enum_class_String));
             int index     = add_pmc_const(lexer->bc, strconst);
 
@@ -700,8 +849,8 @@ optimize_instr(lexer_state * const lexer, instruction * const instr) {
 
 /*
 
-=item C<static void
-emit_pbc_instr(lexer_state * const lexer, instruction * const instr)>
+=item C<static void emit_pbc_instr(lexer_state * const lexer, instruction *
+const instr)>
 
 Emit PBC for one instruction. If the C<opinfo> attribute of C<instr>
 is NULL, the function does nothing and returns.
@@ -710,7 +859,11 @@ is NULL, the function does nothing and returns.
 
 */
 static void
-emit_pbc_instr(lexer_state * const lexer, instruction * const instr) {
+emit_pbc_instr(ARGIN(lexer_state * const lexer),
+        ARGIN(instruction * const instr))
+{
+    ASSERT_ARGS(emit_pbc_instr)
+
     int         i;
     expression *operand;
     opcode_t offset;
@@ -766,8 +919,8 @@ emit_pbc_instr(lexer_state * const lexer, instruction * const instr) {
 
 /*
 
-=item C<static void
-emit_pbc_sub(lexer_state * const lexer, subroutine * const sub)>
+=item C<static void emit_pbc_sub(lexer_state * const lexer, subroutine * const
+sub)>
 
 Emit bytecode for the subroutine C<sub>.
 
@@ -775,7 +928,11 @@ Emit bytecode for the subroutine C<sub>.
 
 */
 static void
-emit_pbc_sub(lexer_state * const lexer, subroutine * const sub) {
+emit_pbc_sub(ARGIN(lexer_state * const lexer),
+        ARGIN(subroutine * const sub))
+{
+    ASSERT_ARGS(emit_pbc_sub)
+
     instruction *iter;
 
     if (sub->statements == NULL)
@@ -803,8 +960,7 @@ emit_pbc_sub(lexer_state * const lexer, subroutine * const sub) {
 
 /*
 
-=item C<static void
-emit_pbc_annotations(lexer_state * const lexer)>
+=item C<static void emit_pbc_annotations(lexer_state * const lexer)>
 
 Emit all annotations into the PackFile. First a new annotations
 segment is created. Then, for each annotation, its value is stored
@@ -814,7 +970,10 @@ in the constants table.
 
 */
 static void
-emit_pbc_annotations(lexer_state * const lexer) {
+emit_pbc_annotations(ARGIN(lexer_state * const lexer))
+{
+    ASSERT_ARGS(emit_pbc_annotations)
+
     annotation *iter;
 
     if (lexer->annotations == NULL)
@@ -866,8 +1025,7 @@ emit_pbc_annotations(lexer_state * const lexer) {
 
 /*
 
-=item C<void
-emit_pbc(lexer_state * const lexer, const char *outfile)>
+=item C<void emit_pbc(lexer_state * const lexer, const char *outfile)>
 
 Generate Parrot Byte Code from the abstract syntax tree.
 This is the top-level function. After all instructions
@@ -878,7 +1036,10 @@ file (or "a.pbc" if outfile is NULL).
 
 */
 void
-emit_pbc(lexer_state * const lexer, const char *outfile) {
+emit_pbc(ARGIN(lexer_state * const lexer),
+        ARGIN(const char *outfile))
+{
+    ASSERT_ARGS(emit_pbc)
     subroutine *subiter;
 
     if (!outfile)
