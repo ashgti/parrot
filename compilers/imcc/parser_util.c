@@ -638,7 +638,7 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
 
     if (IMCC_INFO(interp)->last_unit) {
         /* a reentrant compile */
-        imc_info          = mem_allocate_zeroed_typed(imc_info_t);
+        imc_info          = mem_gc_allocate_zeroed_typed(interp, imc_info_t);
         imc_info->ghash   = IMCC_INFO(interp)->ghash;
         imc_info->prev    = IMCC_INFO(interp);
         IMCC_INFO(interp) = imc_info;
@@ -907,7 +907,7 @@ imcc_compile_file(PARROT_INTERP, ARGIN(const char *fullname),
 
     if (IMCC_INFO(interp)->last_unit) {
         /* a reentrant compile */
-        imc_info          = mem_allocate_zeroed_typed(imc_info_t);
+        imc_info          = mem_gc_allocate_zeroed_typed(interp, imc_info_t);
         imc_info->prev    = IMCC_INFO(interp);
         imc_info->ghash   = IMCC_INFO(interp)->ghash;
         IMCC_INFO(interp) = imc_info;
