@@ -187,7 +187,11 @@ EOF
     }
 
     $struct .= <<'EOF';
+
     UINTVAL attr_size;      /* Size of the attributes struct */
+    UINTVAL attr_layout;    /* Bitmap of pointer attributes in PMC. */
+                            /* See Boehm GC for GC_bitmap description */
+                            /* Can be used by any GC implementation actually */
 EOF
 
     $struct .= "} _vtable;\n";

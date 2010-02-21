@@ -460,7 +460,8 @@ sub vtable_decl {
         NULL,       /* attribute_defs */
         NULL,       /* ro_variant_vtable */
         $methlist,
-	0           /* attr size */
+	    0,          /* attr size */
+        -1,         /* attr layout */
     };
 ENDOFCODE
     return $cout;
@@ -802,6 +803,9 @@ sub update_vtable_func {
 
     $vtable_updates .= $set_attr_size;
 
+    # Calculate attr_layout
+    $vtable_updates .= '    vt->attr_layout = ' . $self->calculate_attr_layout . ";\n";
+
     $cout .= <<"EOC";
 
 $export
@@ -828,6 +832,10 @@ EOC
     }
 
     $vtable_updates .= $set_attr_size;
+
+    # Calculate attr_layout
+    $vtable_updates .= '    vt->attr_layout = ' . $self->calculate_attr_layout . ";\n";
+
 
     $cout .= <<"EOC";
 
@@ -1147,6 +1155,25 @@ sub gen_defaul_case_wrapping {
     else {
         die "Can't handle signature $ssig!";
     }
+}
+
+# Calculate bitmap of attrs layout.
+sub calculate_attr_layout {
+    my ($self) = @_;
+
+    my $result = 0;
+    my $bit = 1;
+    use Data::Dumper;
+    for my $attr (@{$self->attributes}) {
+        $result |= $bit if ($attr->{type} =~ m{\*$});
+        $bit *= 2;
+    }
+    #warn sprintf("%b %s\n", $result, Dumper($self->attributes));
+
+    # We can't handle more than 32 bits on 32 bits plaform ATM.
+    return -1 if $result >= 2**32;
+
+    return $result;
 }
 
 
