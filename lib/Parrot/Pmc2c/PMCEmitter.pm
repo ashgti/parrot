@@ -1165,8 +1165,18 @@ sub calculate_attr_layout {
     my $bit = 1;
     use Data::Dumper;
     for my $attr (@{$self->attributes}) {
-        $result |= $bit if ($attr->{type} =~ m{\*$});
-        $bit *= 2;
+        $result |= $bit if $attr->{type} =~ m{\*$};
+
+        # CallContext struct.
+        $result |= $bit if $attr->{type} =~ m{^Regs};
+
+        if ($attr->{array_size}) {
+            my ($as) = $attr->{array_size} =~ m{ (\d+) }x;
+            $bit *= (2 ** $as);
+        }
+        else {
+            $bit *= 2;
+        }
     }
     #warn sprintf("%b %s\n", $result, Dumper($self->attributes));
 
