@@ -27,7 +27,10 @@ typedef struct boehm_gc_data {
     GC_descr pmc_descriptor;
 
     GC_word string_layout[GC_BITMAP_SIZE(STRING)];
-    GC_word string_descriptor;
+    GC_descr string_descriptor;
+
+    /* Descriptors for particular ATTRibutes */
+    GC_descr attr_descriptor[enum_class_core_max];
 } boehm_gc_data;
 
 /* HEADERIZER HFILE: src/gc/gc_private.h */
@@ -300,8 +303,24 @@ gc_boehm_free_bufferlike_header(PARROT_INTERP, Buffer *b, size_t size)
 static void*
 gc_boehm_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)
 {
-    const size_t attr_size = pmc->vtable->attr_size;
-    PMC_data(pmc) = GC_MALLOC(attr_size);
+    boehm_gc_data  *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    INTVAL          base_type = pmc->vtable->base_type;
+    const size_t    attr_size = pmc->vtable->attr_size;
+    void           *attrs;
+
+    /* Lazy initialize bitmap for core PMCs */
+    if (base_type >= enum_class_core_max || attr_size / sizeof (GC_word)) {
+        attrs = GC_MALLOC(attr_size);
+    }
+    else {
+        if (d->attr_descriptor[base_type] == (UINTVAL)-1) {
+            d->attr_descriptor[base_type] = GC_make_descriptor(
+                    &pmc->vtable->attr_layout, attr_size / sizeof (GC_word));
+        }
+        attrs = GC_MALLOC_EXPLICITLY_TYPED(attr_size, d->attr_descriptor[base_type]);
+    }
+
+    PMC_data(pmc) = attrs;
     return PMC_data(pmc);
 }
 
@@ -434,6 +453,7 @@ void
 Parrot_gc_boehm_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_gc_boehm_init)
+    int i;
 
     //GC_enable_incremental();
     //GC_time_limit = GC_TIME_UNLIMITED;
@@ -457,6 +477,9 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     GC_set_bit(gc_private->string_layout, GC_WORD_OFFSET(STRING, _bufstart));
     gc_private->string_descriptor = GC_make_descriptor(gc_private->string_layout, 9);
 
+    /* For ATTRibutes fill it with -1. VTABLEs aren't initialized yet */
+    for (i=0; i < enum_class_core_max; ++i)
+        gc_private->attr_descriptor[i] = -1;
 
     gc_sys->gc_private = gc_private;
 
