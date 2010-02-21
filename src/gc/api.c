@@ -272,7 +272,54 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
       default:
         /*die horribly because of invalid GC core specified*/
         break;
-    }
+    };
+
+    /* Assertions that GC subsystem has complete API */
+    PARROT_ASSERT(interp->gc_sys->finalize_gc_system);
+    PARROT_ASSERT(interp->gc_sys->destroy_child_interp);
+
+    PARROT_ASSERT(interp->gc_sys->do_gc_mark);
+    PARROT_ASSERT(interp->gc_sys->compact_string_pool);
+
+    PARROT_ASSERT(interp->gc_sys->mark_special);
+    PARROT_ASSERT(interp->gc_sys->pmc_needs_early_collection);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_pmc_header);
+    PARROT_ASSERT(interp->gc_sys->free_pmc_header);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_string_header);
+    PARROT_ASSERT(interp->gc_sys->free_string_header);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_bufferlike_header);
+    PARROT_ASSERT(interp->gc_sys->free_bufferlike_header);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_pmc_attributes);
+    PARROT_ASSERT(interp->gc_sys->free_pmc_attributes);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_string_storage);
+    PARROT_ASSERT(interp->gc_sys->reallocate_string_storage);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_buffer_storage);
+    PARROT_ASSERT(interp->gc_sys->reallocate_buffer_storage);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_fixed_size_storage);
+    PARROT_ASSERT(interp->gc_sys->free_fixed_size_storage);
+
+    PARROT_ASSERT(interp->gc_sys->allocate_memory_chunk);
+    PARROT_ASSERT(interp->gc_sys->reallocate_memory_chunk);
+    PARROT_ASSERT(interp->gc_sys->allocate_memory_chunk_with_interior_pointers);
+    PARROT_ASSERT(interp->gc_sys->reallocate_memory_chunk_with_interior_pointers);
+    PARROT_ASSERT(interp->gc_sys->free_memory_chunk);
+
+    PARROT_ASSERT(interp->gc_sys->block_mark);
+    PARROT_ASSERT(interp->gc_sys->unblock_mark);
+    PARROT_ASSERT(interp->gc_sys->is_blocked_mark);
+
+    PARROT_ASSERT(interp->gc_sys->block_sweep);
+    PARROT_ASSERT(interp->gc_sys->unblock_sweep);
+    PARROT_ASSERT(interp->gc_sys->is_blocked_sweep);
+
+    PARROT_ASSERT(interp->gc_sys->get_gc_info);
 }
 
 /*
