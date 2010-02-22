@@ -14,7 +14,7 @@ Its goal is to make Parrot modules and extensions easily available
 to a wider audience with very little overhead for build/release/install mechanics.
 
 All the rules needed (dynops, dynpmc, pbc_to_exe, nqp, ...) are coded in this module distutils.
-A module author just must write a script C<setup.pir> (or C<setup.nqp> in future).
+A module author just must write a script C<setup.pir> or C<setup.nqp>.
 
 A setup script can be as simple as this:
 
@@ -456,15 +456,27 @@ Display a helpful message
 
 Overload the default message
 
+=item setup
+
+the default value is setup.pir
+
 =back
 
 =cut
 
 .sub '_usage' :anon
     .param pmc kv :slurpy :named
-    .local string msg
-    msg = <<'USAGE'
-usage: parrot setup.pir [target|--key value]*
+    .local string setup
+    setup = get_value('setup', "setup.pir" :named('default'), kv :flat :named)
+    .local string command
+    command = _command_setup(setup)
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 1
+    $P0[0] = command
+
+    $S0 = <<'USAGE'
+usage: %s [target|--key value]*
 
     Default targets are :
 
@@ -488,7 +500,8 @@ usage: parrot setup.pir [target|--key value]*
 
         help:           Print this help message.
 USAGE
-    $S0 = get_value('usage', msg :named('default'), kv :flat :named)
+    $S0 = sprintf $S0, $P0
+    $S0 = get_value('usage', $S0 :named('default'), kv :flat :named)
     say $S0
 .end
 
@@ -1130,9 +1143,11 @@ the value is the OPS pathname
 
 hash
 
-the key is the group name
+the key is the PMC name
 
-the value is an array of PMC pathname
+the value is an array of PMC pathname or a single PPC pathname
+
+an array creates a PMC group
 
 =item dynpmc_cflags
 
@@ -1163,10 +1178,12 @@ the value is an array of PMC pathname
     $P0 = iter hash
   L1:
     unless $P0 goto L2
-    .local string group
-    group = shift $P0
+    .local string name
+    name = shift $P0
     .local pmc srcs
-    srcs = hash[group]
+    srcs = hash[name]
+    $I0 = does srcs, 'array'
+    unless $I0 goto L5
     $P1 = iter srcs
   L3:
     unless $P1 goto L4
@@ -1178,11 +1195,18 @@ the value is an array of PMC pathname
     __build_dynpmc(src, cflags)
     goto L3
   L4:
-    if group == '' goto L1
-    $S0 = _mk_path_dynpmc(group, load_ext)
+    $S0 = _mk_path_dynpmc(name, load_ext)
     $I0 = newer($S0, srcs)
     if $I0 goto L1
-    __build_dynpmc_group(srcs, group, cflags, ldflags)
+    __build_dynpmc_group(srcs, name, cflags, ldflags)
+    goto L1
+  L5:
+    src = srcs
+    $S0 = _mk_path_dynpmc(name, load_ext)
+    $I0 = newer($S0, src)
+    if $I0 goto L1
+    __build_dynpmc(src, cflags)
+    __build_dynpmc_alone(src, name, cflags, ldflags)
     goto L1
   L2:
 .end
@@ -1302,6 +1326,50 @@ the value is an array of PMC pathname
     cmd .= " "
     goto L3
   L4:
+    $S0 = get_ldflags()
+    cmd .= $S0
+    cmd .= " "
+    $S0 = config['ld_load_flags']
+    cmd .= $S0
+    cmd .= " "
+    $I0 = config['parrot_is_shared']
+    unless $I0 goto L5
+    $S0 = config['inst_libparrot_ldflags']
+    cmd .= $S0
+    cmd .= " "
+  L5:
+    cmd .= ldflags
+    system(cmd, 1 :named('verbose'))
+
+    $I0 = _has_strip(cflags)
+    unless $I0 goto L6
+    cmd = "strip " . dynext
+    system(cmd, 1 :named('verbose'))
+  L6:
+.end
+
+.sub '__build_dynpmc_alone' :anon
+    .param string src
+    .param string name
+    .param string cflags
+    .param string ldflags
+    .local pmc config
+    config = get_config()
+
+    .local string dynext
+    $S0 = config['load_ext']
+    dynext = _mk_path_dynpmc(name, $S0)
+    .local string cmd
+    cmd = config['ld']
+    cmd .= " "
+    $S0 = config['ld_out']
+    cmd .= $S0
+    cmd .= dynext
+    cmd .= " "
+    $S0 = config['o']
+    $S0 = _mk_path_gen_dynpmc(src, $S0)
+    cmd .= $S0
+    cmd .= " "
     $S0 = get_ldflags()
     cmd .= $S0
     cmd .= " "
@@ -1653,12 +1721,14 @@ the value is the POD pathname
     $P0 = iter hash
   L1:
     unless $P0 goto L2
-    .local string group
-    group = shift $P0
+    .local string name
+    name = shift $P0
     .local pmc srcs
-    srcs = hash[group]
-    $S0 = _mk_path_dynpmc(group, load_ext)
+    srcs = hash[name]
+    $S0 = _mk_path_dynpmc(name, load_ext)
     unlink($S0, 1 :named('verbose'))
+    $I0 = does srcs, 'array'
+    unless $I0 goto L5
     $P1 = iter srcs
   L3:
     unless $P1 goto L4
@@ -1675,11 +1745,22 @@ the value is the POD pathname
     goto L3
   L4:
     src = srcs[0]
-    $S0 = _mk_path_gen_dynpmc_group(src, group, '.c')
+    $S0 = _mk_path_gen_dynpmc_group(src, name, '.c')
     unlink($S0, 1 :named('verbose'))
-    $S0 = _mk_path_gen_dynpmc_group(src, group, '.h')
+    $S0 = _mk_path_gen_dynpmc_group(src, name, '.h')
     unlink($S0, 1 :named('verbose'))
-    $S0 = _mk_path_gen_dynpmc_group(src, group, obj)
+    $S0 = _mk_path_gen_dynpmc_group(src, name, obj)
+    unlink($S0, 1 :named('verbose'))
+    goto L1
+  L5:
+    src = srcs
+    $S0 = _mk_path_gen_dynpmc(src, '.c')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, '.h')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, '.dump')
+    unlink($S0, 1 :named('verbose'))
+    $S0 = _mk_path_gen_dynpmc(src, obj)
     unlink($S0, 1 :named('verbose'))
     goto L1
   L2:
@@ -2421,6 +2502,10 @@ Same options as install.
 
 =item project_uri
 
+=item setup
+
+the default value is setup.pir
+
 =back
 
 =cut
@@ -2494,6 +2579,11 @@ Same options as install.
     keywords .= "\""
   L10:
 
+    .local string setup
+    setup = get_value('setup', "setup.pir" :named('default'), kv :flat :named)
+    .local string instruction
+    instruction = _plumage_instruction(setup)
+
     .local string vcs
     vcs = get_vcs()
 
@@ -2507,7 +2597,7 @@ Same options as install.
     project_uri =get_value('project_uri', kv :flat :named)
 
     $P0 = new 'FixedStringArray'
-    set $P0, 16
+    set $P0, 23
     $P0[0] = name
     $P0[1] = abstract
     $P0[2] = authority
@@ -2518,12 +2608,19 @@ Same options as install.
     $P0[7] = packager
     $P0[8] = keywords
     $P0[9] = description
-    $P0[10] = name
-    $P0[11] = vcs
-    $P0[12] = vcs
-    $P0[13] = checkout_uri
-    $P0[14] = browser_uri
-    $P0[15] = project_uri
+    $P0[10] = instruction
+    $P0[11] = instruction
+    $P0[12] = instruction
+    $P0[13] = instruction
+    $P0[14] = instruction
+    $P0[15] = instruction
+    $P0[16] = instruction
+    $P0[17] = name
+    $P0[18] = vcs
+    $P0[19] = vcs
+    $P0[20] = checkout_uri
+    $P0[21] = browser_uri
+    $P0[22] = project_uri
 
     $S0 = <<'TEMPLATE'
 {
@@ -2550,25 +2647,25 @@ Same options as install.
             "type" : "repository"
         },
         "update"   : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "build"    : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "test"     : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "smoke"    : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "install"  : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "uninstall": {
-            "type" : "parrot_setup"
+            "type" : "%s"
         },
         "clean"    : {
-            "type" : "parrot_setup"
+            "type" : "%s"
         }
     },
     "dependency-info"  : {
@@ -2604,6 +2701,18 @@ TEMPLATE
     .return (str)
 .end
 
+.sub '_plumage_instruction' :anon
+    .param string setup
+    .local string instruction
+    instruction = "parrot_setup"
+    $I0 = index setup, "."
+    $S0 = substr setup, $I0
+    unless $S0 == '.nqp' goto L1
+    instruction = "nqp_setup"
+  L1:
+    .return (instruction)
+.end
+
 =head3 Step manifest
 
 =over 4
@@ -2626,6 +2735,10 @@ pbc_pbc, exe_pbc, installable_pbc, dynops, dynpmc, html_pod
 =item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
 
 =item harness_files, prove_files
+
+=item setup
+
+the default value is setup.pir
 
 =back
 
@@ -2690,7 +2803,9 @@ pbc_pbc, exe_pbc, installable_pbc, dynops, dynpmc, html_pod
     _manifest_add_glob(needed, 't/*.t')
   L7:
 
-    $P0 = split ' ', 'setup.pir setup.nqp t/harness'
+    $P0 = split ' ', 't/harness'
+    $S0 = get_value('setup', 'setup.pir' :named('default'), kv :flat :named)
+    push $P0, $S0
   L8:
     unless $P0 goto L9
     $S0 = shift $P0
@@ -3057,7 +3172,11 @@ the default value is ports/rpm
 
 =item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
 
-=back
+=item setup
+
+the default value is setup.pir
+
+back
 
 =cut
 
@@ -3132,8 +3251,13 @@ the default value is ports/rpm
     .local string packager
     packager = get_value('packager', "you <you@you.org>" :named('default'), kv :flat :named)
 
+    .local string setup
+    setup = get_value('setup', "setup.pir" :named('default'), kv :flat :named)
+    .local string command
+    command = _command_setup(setup)
+
     $P0 = new 'FixedStringArray'
-    set $P0, 9
+    set $P0, 12
     $P0[0] = parrot_version
     $P0[1] = name
     $P0[2] = version
@@ -3143,6 +3267,9 @@ the default value is ports/rpm
     $P0[6] = project_uri
     $P0[7] = tarball
     $P0[8] = description
+    $P0[9] = command
+    $P0[10] = command
+    $P0[11] = command
 
     $S0 = <<'TEMPLATE'
 %%define parrot_version %s
@@ -3166,14 +3293,14 @@ BuildRoot:      %%{_tmppath}/%%{name}-%%{version}-%%{release}
 %%setup -n %%{name}-%%{version}
 
 %%build
-parrot setup.pir
+%s
 
 %%install
 rm -rf $RPM_BUILD_ROOT
-parrot setup.pir --root $RPM_BUILD_ROOT install
+%s --root $RPM_BUILD_ROOT install
 
 %%check
-parrot setup.pir test
+%s test
 
 %%clean
 rm -rf $RPM_BUILD_ROOT
@@ -3213,6 +3340,18 @@ TEMPLATE
     spec .= packager
     spec .= "\n- created by distutils\n"
     .return (spec)
+.end
+
+.sub '_command_setup' :anon
+    .param string setup
+    .local string command
+    command = "parrot setup.pir"
+    $I0 = index setup, "."
+    $S0 = substr setup, $I0
+    unless $S0 == '.nqp' goto L1
+    command = "parrot-nqp setup.nqp"
+  L1:
+    .return (command)
 .end
 
 =head3 Step bdist_rpm
@@ -3274,6 +3413,10 @@ the default value is ports/debian
 =item installable_pbc, dynops, dynpmc
 
 =item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+
+=item setup
+
+the default value is setup.pir
 
 =back
 
@@ -3490,6 +3633,17 @@ TEMPLATE
 .sub 'mk_deb_rules' :anon
     .param pmc kv :slurpy :named
 
+    .local string setup
+    setup = get_value('setup', "setup.pir" :named('default'), kv :flat :named)
+    .local string command
+    command = _command_setup(setup)
+
+    $P0 = new 'FixedStringArray'
+    set $P0, 3
+    $P0[0] = command
+    $P0[1] = command
+    $P0[2] = command
+
     $S0 = <<'TEMPLATE'
 #!/usr/bin/make -f
 # -*- makefile -*-
@@ -3504,14 +3658,14 @@ configure-stamp:
 build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
-	parrot setup.pir build
+	%s build
 	touch $@
 
 clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
-	parrot setup.pir clean
+	%s clean
 	dh_clean
 
 install: build
@@ -3519,7 +3673,7 @@ install: build
 	dh_testroot
 	dh_prep
 	dh_installdirs
-	parrot setup.pir --root $(CURDIR)/debian/tmp install
+	%s --root $(CURDIR)/debian/tmp install
 	dh_install --sourcedir=$(CURDIR)/debian/tmp --list-missing
 
 # Build architecture-independent files here.
@@ -3548,6 +3702,7 @@ binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install configure
 
 TEMPLATE
+    $S0 = sprintf $S0, $P0
     .return ($S0)
 .end
 
@@ -3617,6 +3772,10 @@ See L<http://devmanual.gentoo.org/>.
 
 =item doc_files
 
+=item setup
+
+the default value is setup.pir
+
 =back
 
 =cut
@@ -3663,6 +3822,11 @@ See L<http://devmanual.gentoo.org/>.
     .local string license_type
     license_type = get_value('license_type', kv :flat :named)
 
+    .local string setup
+    setup = get_value('setup', "setup.pir" :named('default'), kv :flat :named)
+    .local string command
+    command = _command_setup(setup)
+
     .local string doc
     doc = ''
     $I0 = exists kv['doc_files']
@@ -3681,11 +3845,14 @@ See L<http://devmanual.gentoo.org/>.
   L1:
 
     $P0 = new 'FixedStringArray'
-    set $P0, 4
+    set $P0, 7
     $P0[0] = description
     $P0[1] = project_uri
     $P0[2] = license_type
-    $P0[3] = doc
+    $P0[3] = command
+    $P0[4] = command
+    $P0[5] = doc
+    $P0[6] = command
 
     $S0 = <<'TEMPLATE'
 
@@ -3702,16 +3869,16 @@ IUSE=""
 #RDEPEND=""
 
 src_compile() {
-    parrot setup.pir build || die "build failed"
+    %s build || die "build failed"
 }
 
 src_install() {
-    parrot setup.pir --root ${D} install || die "install failed"
+    %s --root ${D} install || die "install failed"
 %s
 }
 
 src_test() {
-    parrot setup.pir test || die "test failed"
+    %s test || die "test failed"
 }
 TEMPLATE
     $S0 = sprintf $S0, $P0
@@ -4337,37 +4504,22 @@ Return the whole config
     .return ($S0)
 .end
 
-=item probe_include
+=item cc_run
 
 =cut
 
-.sub 'probe_include'
-    .param string include
-    .param int verbose          :named('verbose') :optional
+.sub 'cc_run'
+    .param string source
     .param string cflags        :named('cflags') :optional
     .param int has_cflags       :opt_flag
-
-    $S0 = <<'SOURCE_C'
-#include <%s>
-#include <stdio.h>
-
-int
-main(int argc, char* argv[])
-{
-    printf("%s OK\n");
-    return 0;
-}
-SOURCE_C
-    $P0 = new 'FixedStringArray'
-    set $P0, 2
-    $P0[0] = include
-    $P0[1] = include
-    $S0 = sprintf $S0, $P0
-    spew('probe.c', $S0)
-
-    .local string probe
+    .param string ldflags       :named('ldflags') :optional
+    .param int has_ldflags      :opt_flag
+    .param int verbose          :named('verbose') :optional
+    .const string srcname = 'tmp.c'
+    spew(srcname, source)
+    .local string exename
     $S0 = get_exe()
-    probe = "probe" . $S0
+    exename = 'tmp' . $S0
     .local pmc config
     config = get_config()
     .local string cmd
@@ -4379,15 +4531,55 @@ SOURCE_C
     cmd .= " "
     cmd .= cflags
   L1:
-    cmd .= " probe.c -o "
-    cmd .= probe
+    cmd .= " "
+    $S0 = get_ldflags()
+    cmd .= $S0
+    unless has_ldflags goto L2
+    cmd .= " "
+    cmd .= ldflags
+  L2:
+    cmd .= " "
+    cmd .= srcname
+    cmd .= " -o "
+    cmd .= exename
     system(cmd, verbose :named('verbose'), 1 :named('ignore_error'))
+    unlink(srcname, verbose :named('verbose'))
 
-    cmd = "./" . probe
-    $I0 = system(cmd, verbose :named('verbose'), 1 :named('ignore_error'))
+    cmd = "./" . exename
+    $P0 = open cmd, 'rp'
+    $S0 = $P0.'readall'()
+    $P0.'close'()
 
-    unlink('probe.c', verbose :named('verbose'))
-    unlink(probe, verbose :named('verbose'))
+    unlink(exename, verbose :named('verbose'))
+    .return ($S0)
+.end
+
+
+=item probe_include
+
+=cut
+
+.sub 'probe_include'
+    .param string include
+    .param string cflags        :named('cflags') :optional
+    .param int verbose          :named('verbose') :optional
+    $P0 = new 'FixedStringArray'
+    set $P0, 2
+    $P0[0] = include
+    $P0[1] = include
+    $S0 = sprintf <<'SOURCE_C', $P0
+#include <%s>
+#include <stdio.h>
+
+int
+main(int argc, char* argv[])
+{
+    printf("OK %s\n");
+    return 0;
+}
+SOURCE_C
+    $S0 = cc_run($S0, cflags :named('cflags'), verbose :named('verbose'))
+    $I0 = index $S0, 'OK '
     .return ($I0)
 .end
 
@@ -4483,6 +4675,13 @@ SOURCE_C
     $I2 = stat depend, .STAT_MODIFYTIME
     $I0 = $I1 > $I2
     .return ($I0)
+.end
+
+.sub 'newer' :multi(pmc, pmc)
+    .param pmc target
+    .param pmc depend
+    $S0 = target
+    .tailcall newer($S0, depend)
 .end
 
 =item mkpath

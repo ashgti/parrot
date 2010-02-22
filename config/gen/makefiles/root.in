@@ -284,7 +284,6 @@ GEN_LIBRARY = \
     $(LIBRARY_DIR)/Getopt/Obj.pbc \
     $(LIBRARY_DIR)/Iter.pbc \
     $(LIBRARY_DIR)/JSON.pbc \
-    $(LIBRARY_DIR)/data_json.pbc \
     $(LIBRARY_DIR)/Math/Rand.pbc \
     $(LIBRARY_DIR)/MIME/Base64.pbc \
     $(LIBRARY_DIR)/NCI/Utils.pbc \
@@ -527,6 +526,7 @@ PBC_TO_EXE          = .@slash@pbc_to_exe$(EXE)
 PARROT_CONFIG       = .@slash@parrot_config$(EXE)
 PIRC                = .@slash@pirc$(EXE)
 NQP_RX              = .@slash@parrot-nqp$(EXE)
+NCI_THUNK_GEN	    = ./parrot_nci_thunk_gen$(EXE)
 
 # Installable executables
 INSTALLABLEPARROT    = .@slash@installable_parrot$(EXE)
@@ -537,6 +537,7 @@ INSTALLABLEPBCTOEXE  = .@slash@installable_pbc_to_exe$(EXE)
 INSTALLABLEPDB       = .@slash@installable_parrot_debugger$(EXE)
 INSTALLABLECONFIG    = .@slash@installable_parrot_config$(EXE)
 INSTALLABLENQP       = .@slash@installable_parrot-nqp$(EXE)
+INSTALLABLENCITHUNKGEN = ./installable_parrot_nci_thunk_gen$(EXE)
 
 # Libraries
 LIBPARROT_STATIC    = @blib_dir@/@libparrot_static@
@@ -556,6 +557,7 @@ ALL_PARROT_LIBS     = @libparrot_linkflags@ $(ICU_SHARED) $(C_LIBS)
 DYNEXT_DIR          = runtime/parrot/dynext
 LIBNCI_TEST_SO      = $(DYNEXT_DIR)/libnci_test$(LOAD_EXT)
 LIBGLUTCB_SO        = $(DYNEXT_DIR)/libglutcb$(LOAD_EXT)
+EXTRANCITHUNKS_SO   = $(DYNEXT_DIR)/extra_nci_thunks$(LOAD_EXT)
 
 ###############################################################################
 #
@@ -596,6 +598,7 @@ all : \
     corevm \
     docs \
 #IF(has_glut):    $(LIBGLUTCB_SO) \
+    $(EXTRANCITHUNKS_SO) \
     $(DIS) \
     $(PARROT_CONFIG) \
     $(PBC_TO_EXE) \
@@ -607,6 +610,7 @@ all : \
     $(PGE_LIB_PBCS) \
     $(PCT_LIB_PBCS) \
     $(JSON_LIB_PBCS) \
+    $(DATA_JSON_LIB_PBCS) \
     $(NQP_LIB_PBCS)
 
 corevm : \
@@ -797,7 +801,7 @@ world : all parrot_utils
 
 parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBC_MERGE) $(PBC_TO_EXE) $(PARROT_CONFIG) src/install_config$(O)
 
-installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBC_MERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG) $(INSTALLABLENQP)
+installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBC_MERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG) $(INSTALLABLENQP) $(INSTALLABLENCITHUNKGEN)
 
 
 runtime/parrot/include/parrotlib.pbc: runtime/parrot/library/parrotlib.pir $(PARROT) $(GEN_PASM_INCLUDES)
@@ -817,6 +821,12 @@ $(PARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) CFLAGS \
 $(PBC_TO_EXE) : tools/dev/pbc_to_exe.pir runtime/parrot/library/config.pir $(PARROT)
 	$(PARROT) -o pbc_to_exe.pbc tools/dev/pbc_to_exe.pir
 	$(PARROT) pbc_to_exe.pbc pbc_to_exe.pbc
+
+parrot_nci_thunk_gen.pbc : tools/dev/nci_thunk_gen.pir $(DATA_JSON_LIB_PBCS) $(PARROT)
+	$(PARROT) -o parrot_nci_thunk_gen.pbc tools/dev/nci_thunk_gen.pir
+
+$(NCI_THUNK_GEN) : parrot_nci_thunk_gen.pbc $(PBC_TO_EXE)
+	$(PBC_TO_EXE) parrot_nci_thunk_gen.pbc
 
 $(PARROT_CONFIG) : tools/util/parrot-config.pir $(PARROT) $(PBC_TO_EXE)
 	$(PARROT) -o parrot_config.pbc tools/util/parrot-config.pir
@@ -929,6 +939,9 @@ $(INSTALLABLECONFIG) : src/install_config$(O) $(PARROT_CONFIG) $(PBC_TO_EXE)
 
 $(INSTALLABLEPBCTOEXE) : $(PBC_TO_EXE) src/install_config$(O)
 	$(PBC_TO_EXE) pbc_to_exe.pbc --install
+
+$(INSTALLABLENCITHUNKGEN) : parrot_nci_thunk_gen.pbc $(PBC_TO_EXE) src/install_config$(O)
+	$(PBC_TO_EXE) parrot_nci_thunk_gen.pbc --install
 
 #
 # Parrot Debugger
@@ -1828,7 +1841,9 @@ prog-clean :
     $(INSTALLABLEPDB) \
     $(INSTALLABLECONFIG) \
     $(INSTALLABLENQP) \
+    $(INSTALLABLENCITHUNKGEN) \
     pbc_to_exe.pbc pbc_to_exe.c pbc_to_exe$(O) pbc_to_exe$(EXE) \
+    $(NCI_THUNK_GEN) parrot_nci_thunk_gen.c parrot_nci_thunk_gen$(O) parrot_nci_thunk_gen.pbc \
     parrot_config$(EXE) parrot_config.c parrot_config$(O) parrot_config.pbc \
     compilers/imcc/main$(O) \
     $(PDUMP) src/pbc_dump$(O) src/packdump$(O) \
@@ -1845,6 +1860,8 @@ prog-clean :
     src/glut_callbacks$(O) \
     src/glut_nci_thunks$(O) \
     $(LIBGLUTCB_SO) \
+    src/extra_nci_thunks$(O) \
+    $(EXTRANCITHUNKS_SO) \
     install_config.fpmc
 	$(PERL) $(BUILD_TOOLS_DIR)/c2str.pl --init
 	$(RM_F) \
@@ -1882,6 +1899,8 @@ archclean: dynoplibs-clean dynpmc-clean dynext-clean
     $(LIBNCI_TEST_SO) \
     src/glut_callbacks$(O) \
     $(LIBGLUTCB_SO) \
+    src/extra_nci_thunks$(O) \
+    $(EXTRANCITHUNKS_SO) \
     $(LIBPARROT_STATIC) \
     $(LIBPARROT_SHARED)
 
@@ -2411,8 +2430,8 @@ $(LIBNCI_TEST_SO): src/nci_test$(O) $(LIBPARROT)
 # for use by runtime/parrot/library/OpenGL.pir
 src/glut_callbacks$(O): $(GENERAL_H_FILES)
 
-src/glut_nci_thunks.c: $(PARROT) runtime/parrot/library/data_json.pbc tools/build/nativecall.pir
-	$(PARROT) tools/build/nativecall.pir \
+src/glut_nci_thunks.c: $(NCI_THUNK_GEN)
+	$(NCI_THUNK_GEN) \
 	    --loader-name=Parrot_glut_nci_loader \
 	    --loader-storage-class=PARROT_DYNEXT_EXPORT \
 	    --output=src/glut_nci_thunks.c \
@@ -2424,6 +2443,16 @@ $(LIBGLUTCB_SO): $(LIBPARROT) src/glut_callbacks$(O) src/glut_nci_thunks$(O)
 	$(LD) $(LD_LOAD_FLAGS) $(LDFLAGS) \
     @ld_out@$@ src/glut_callbacks$(O) src/glut_nci_thunks$(O) \
     $(ALL_PARROT_LIBS) @opengl_lib@
+
+src/extra_nci_thunks.c : src/nci/extra_thunks.nci $(NCI_THUNK_GEN)
+	$(NCI_THUNK_GEN) --dynext --output=src/extra_nci_thunks.c <src/nci/extra_thunks.nci
+
+src/extra_nci_thunks$(O) : $(GENERAL_H_FILES)
+
+$(EXTRANCITHUNKS_SO) : $(LIBPARROT) src/extra_nci_thunks$(O)
+	$(LD) $(LD_LOAD_FLAGS) $(LDFLAGS) \
+    @ld_out@$@ src/extra_nci_thunks$(O) \
+    $(ALL_PARROT_LIBS)
 
 # emacs etags
 # this needs exuberant-ctags

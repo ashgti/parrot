@@ -84,21 +84,7 @@ Not documented yet.
 
 =head2 Type signatures
 
-These are used with the Parrot_call_sub family of functions.
-
-=over 4
-
-=item v - void (return only)
-
-=item I - integer (return or argument)
-
-=item N - float (return or argument)
-
-=item S - string (return or argument)
-
-=item P - PMC (return or argument)
-
-=back
+    TODO: Write about signature strings
 
 =head2 Interpreter initialization and destruction
 
@@ -1717,7 +1703,7 @@ The list may also be augmented if additional functionality is required.
 
 =item C<Parrot_warn>
 
-=item C<PMC_is_null>
+=item C<Parrot_pmc_is_null>
 
 =item C<pmc_new>
 

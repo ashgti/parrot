@@ -45,8 +45,8 @@ Create empty PackfileConstantTable.
         Parrot_PackfileConstantTable_attributes * attrs =
                 PMC_data_typed(SELF, Parrot_PackfileConstantTable_attributes*);
 
-        attrs->constants = pmc_new(interp, enum_class_ResizablePMCArray);
-        attrs->types     = pmc_new(interp, enum_class_ResizableIntegerArray);
+        attrs->constants = Parrot_pmc_new(interp, enum_class_ResizablePMCArray);
+        attrs->types     = Parrot_pmc_new(interp, enum_class_ResizableIntegerArray);
 
         PObj_custom_mark_SET(SELF);
         PMC_data(SELF) = attrs;
@@ -319,6 +319,29 @@ Get the type of the specified constant.  Possible type IDs:
         INTVAL rv = VTABLE_get_integer_keyed_int(interp,
                 PARROT_PACKFILECONSTANTTABLE(SELF)->types, index);
         RETURN(INTVAL rv);
+    }
+
+/*
+
+=item C<void set_main(INTVAL index)>
+
+Set the :main flag in a Sub in the constant table.
+
+Experimental. Use with care. There is no way to set the
+private flags from PIR, so we need something like this.
+
+If something goes wrong, blame NotFound.
+
+=cut
+
+*/
+    METHOD set_main(INTVAL index) {
+        PMC *mainsub = SELF.get_pmc_keyed_int(index);
+        if (mainsub->vtable->base_type != enum_class_Sub)
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_INVALID_OPERATION,
+                "Attempt to set main flag in a non Sub");
+        SUB_FLAG_flag_SET(PF_MAIN, mainsub);
     }
 
 /*
