@@ -251,7 +251,7 @@ pt_free_pool(PARROT_INTERP)
     if (shared_gc_info) {
         COND_DESTROY(shared_gc_info->gc_cond);
         PARROT_ATOMIC_INT_DESTROY(shared_gc_info->gc_block_level);
-        mem_sys_free(shared_gc_info);
+        mem_internal_free(shared_gc_info);
         shared_gc_info = NULL;
     }
 }
@@ -1498,18 +1498,18 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
         PARROT_ASSERT(!interpreter_array);
         PARROT_ASSERT(n_interpreters == 0);
 
-        interpreter_array    = mem_allocate_typed(Interp *);
+        interpreter_array    = mem_internal_allocate_typed(Interp *);
         interpreter_array[0] = interp;
         n_interpreters       = 1;
 
-        shared_gc_info = (Shared_gc_info *)mem_sys_allocate_zeroed(sizeof (*shared_gc_info));
+        shared_gc_info = (Shared_gc_info *)mem_internal_allocate_zeroed(sizeof (*shared_gc_info));
         COND_INIT(shared_gc_info->gc_cond);
         PARROT_ATOMIC_INT_INIT(shared_gc_info->gc_block_level);
         PARROT_ATOMIC_INT_SET(shared_gc_info->gc_block_level, 0);
 
         /* XXX try to defer this until later */
         PARROT_ASSERT(interp == interpreter_array[0]);
-        interp->thread_data      = mem_allocate_zeroed_typed(Thread_data);
+        interp->thread_data      = mem_internal_allocate_zeroed_typed(Thread_data);
         INTERPRETER_LOCK_INIT(interp);
         interp->thread_data->tid = 0;
 
@@ -1517,7 +1517,7 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
     }
 
 
-    new_interp->thread_data = mem_allocate_zeroed_typed(Thread_data);
+    new_interp->thread_data = mem_internal_allocate_zeroed_typed(Thread_data);
     INTERPRETER_LOCK_INIT(new_interp);
     running_threads++;
     if (Interp_debug_TEST(interp, PARROT_THREAD_DEBUG_FLAG))
@@ -1534,7 +1534,7 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
     }
 
     /* need to resize */
-    interpreter_array = (Interp **)mem_sys_realloc(interpreter_array,
+    interpreter_array = (Interp **)mem_internal_realloc(interpreter_array,
             (n_interpreters + 1) * sizeof (Interp *));
 
     interpreter_array[n_interpreters] = new_interp;
