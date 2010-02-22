@@ -23,6 +23,8 @@ TODO
 #include <gc_typed.h>
 
 typedef struct boehm_gc_data {
+    size_t   block_level;                   /* GC disable counter */
+
     GC_word  pmc_layout[GC_BITMAP_SIZE(PMC)];
     GC_descr pmc_descriptor;
 
@@ -53,6 +55,13 @@ static void* gc_boehm_allocate_fixed_size_storage(PARROT_INTERP,
     size_t size)
         __attribute__nonnull__(1);
 
+static void * gc_boehm_allocate_memory_chunk(PARROT_INTERP, size_t size)
+        __attribute__nonnull__(1);
+
+static void * gc_boehm_allocate_memory_chunk_zeroed(PARROT_INTERP,
+    size_t size)
+        __attribute__nonnull__(1);
+
 static void* gc_boehm_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)
         __attribute__nonnull__(1);
 
@@ -65,6 +74,9 @@ static STRING* gc_boehm_allocate_string_header(PARROT_INTERP, UINTVAL flags)
 static void gc_boehm_allocate_string_storage(PARROT_INTERP,
     STRING *str,
     size_t size)
+        __attribute__nonnull__(1);
+
+static void gc_boehm_block_mark(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void gc_boehm_compact_memory_pool(PARROT_INTERP)
@@ -82,6 +94,9 @@ static void gc_boehm_free_bufferlike_header(PARROT_INTERP,
 static void gc_boehm_free_fixed_size_storage(PARROT_INTERP,
     size_t size,
     void *data)
+        __attribute__nonnull__(1);
+
+static void gc_boehm_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
         __attribute__nonnull__(1);
 
 static void gc_boehm_free_pmc_attributes(PARROT_INTERP, PMC *pmc)
@@ -104,9 +119,23 @@ static void gc_boehm_reallocate_buffer_storage(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*buffer);
 
+static void * gc_boehm_reallocate_memory_chunk(PARROT_INTERP,
+    ARGFREE(void *data),
+    size_t newsize)
+        __attribute__nonnull__(1);
+
+static void * gc_boehm_reallocate_memory_chunk_zeroed(PARROT_INTERP,
+    ARGFREE(void *data),
+    size_t newsize,
+    size_t oldsize)
+        __attribute__nonnull__(1);
+
 static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
     STRING *str,
     size_t size)
+        __attribute__nonnull__(1);
+
+static void gc_boehm_unblock_mark(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_gc_boehm_allocate_buffer_storage \
@@ -117,6 +146,12 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_allocate_fixed_size_storage \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_allocate_memory_chunk \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_allocate_memory_chunk_zeroed \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_allocate_pmc_attributes \
@@ -130,6 +165,8 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
 #define ASSERT_ARGS_gc_boehm_allocate_string_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_block_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_compact_memory_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_finalize_cb __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -140,6 +177,8 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_free_fixed_size_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_free_memory_chunk __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_free_pmc_attributes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -154,8 +193,16 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(buffer))
+#define ASSERT_ARGS_gc_boehm_reallocate_memory_chunk \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_reallocate_memory_chunk_zeroed \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_reallocate_string_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_unblock_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -405,6 +452,66 @@ gc_boehm_free_fixed_size_storage(PARROT_INTERP, size_t size, void *data)
 
 /*
 
+=item C<static void * gc_boehm_allocate_memory_chunk(PARROT_INTERP, size_t
+size)>
+
+=item C<static void * gc_boehm_reallocate_memory_chunk(PARROT_INTERP, void
+*data, size_t newsize)>
+
+=item C<static void * gc_boehm_allocate_memory_chunk_zeroed(PARROT_INTERP,
+size_t size)>
+
+=item C<static void * gc_boehm_reallocate_memory_chunk_zeroed(PARROT_INTERP,
+void *data, size_t newsize, size_t oldsize)>
+
+=item C<static void gc_boehm_free_memory_chunk(PARROT_INTERP, void *data)>
+
+TODO Write docu.
+
+*/
+
+static void *
+gc_boehm_allocate_memory_chunk(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_boehm_allocate_memory_chunk)
+    return GC_MALLOC_ATOMIC(size);
+}
+
+static void *
+gc_boehm_reallocate_memory_chunk(PARROT_INTERP, ARGFREE(void *data), size_t newsize)
+{
+    ASSERT_ARGS(gc_boehm_reallocate_memory_chunk)
+    return GC_REALLOC(data, newsize);
+}
+
+static void *
+gc_boehm_allocate_memory_chunk_zeroed(PARROT_INTERP, size_t size)
+{
+    ASSERT_ARGS(gc_boehm_allocate_memory_chunk_zeroed)
+    return GC_MALLOC(size);
+}
+
+static void *
+gc_boehm_reallocate_memory_chunk_zeroed(PARROT_INTERP, ARGFREE(void *data),
+        size_t newsize, size_t oldsize)
+{
+    ASSERT_ARGS(gc_boehm_reallocate_memory_chunk_zeroed)
+    void * const ptr = GC_REALLOC(data, newsize);
+    if (newsize > oldsize)
+        memset((char*)ptr + oldsize, 0, newsize - oldsize);
+    return ptr;
+}
+
+static void
+gc_boehm_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
+{
+    ASSERT_ARGS(gc_boehm_free_memory_chunk)
+    if (data)
+        GC_FREE(data);
+}
+
+/*
+
 =item C<static size_t gc_boehm_get_gc_info(PARROT_INTERP, Interpinfo_enum what)>
 
 Stub for GC introspection function.
@@ -439,7 +546,33 @@ gc_boehm_finalize_cb(ARGIN(void *obj), ARGIN(void *user_data))
         Parrot_pmc_destroy(interp, pmc);
 }
 
+static void
+gc_boehm_block_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_boehm_block_mark)
+    boehm_gc_data  *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    GC_disable();
+    d->block_level++;
+}
 
+static void
+gc_boehm_unblock_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_boehm_unblock_mark)
+    boehm_gc_data  *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    if (d->block_level) {
+        GC_enable();
+        --d->block_level;
+    }
+}
+
+unsigned int
+gc_boehm_is_blocked_mark(PARROT_INTERP)
+{
+    ASSERT_ARGS(gc_boehm_is_blocked_mark)
+    boehm_gc_data  *d = (boehm_gc_data*)interp->gc_sys->gc_private;
+    return d->block_level;
+}
 
 /*
 
@@ -462,6 +595,8 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     GC_Subsystem *gc_sys = interp->gc_sys;
 
     boehm_gc_data *gc_private = (boehm_gc_data*)GC_MALLOC_ATOMIC(sizeof(boehm_gc_data));
+
+    gc_private->block_level = 0;
 
     /* Generate bitmaps for allocatable objects */
 
@@ -509,6 +644,18 @@ Parrot_gc_boehm_init(PARROT_INTERP)
 
     gc_sys->allocate_fixed_size_storage = gc_boehm_allocate_fixed_size_storage;
     gc_sys->free_fixed_size_storage     = gc_boehm_free_fixed_size_storage;
+
+    gc_sys->allocate_memory_chunk   = gc_boehm_allocate_memory_chunk;
+    gc_sys->reallocate_memory_chunk = gc_boehm_reallocate_memory_chunk;
+    gc_sys->allocate_memory_chunk_with_interior_pointers
+                = gc_boehm_allocate_memory_chunk_zeroed;
+    gc_sys->reallocate_memory_chunk_with_interior_pointers
+                = gc_boehm_reallocate_memory_chunk_zeroed;
+    gc_sys->free_memory_chunk       = gc_boehm_free_memory_chunk;
+
+    gc_sys->block_mark      = gc_boehm_block_mark;
+    gc_sys->unblock_mark    = gc_boehm_unblock_mark;
+    gc_sys->is_blocked_mark = gc_boehm_is_blocked_mark;
 
     gc_sys->get_gc_info      = gc_boehm_get_gc_info;
 

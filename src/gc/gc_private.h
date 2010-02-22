@@ -678,9 +678,14 @@ void Parrot_gc_inf_init(PARROT_INTERP)
 /* HEADERIZER BEGIN: src/gc/gc_boehm.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+unsigned int gc_boehm_is_blocked_mark(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
 void Parrot_gc_boehm_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+#define ASSERT_ARGS_gc_boehm_is_blocked_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_gc_boehm_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
