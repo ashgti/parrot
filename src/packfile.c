@@ -4455,7 +4455,7 @@ PackFile_Annotations_add_group(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
             self->groups = mem_gc_realloc_n_typed_zeroed(interp, self->groups,
                 1 + self->num_groups, self->num_groups, PackFile_Annotations_Group *);
     else
-        self->groups = mem_gc_allocate_n_typed(interp,
+        self->groups = mem_gc_allocate_n_zeroed_typed(interp,
                 1 + self->num_groups, PackFile_Annotations_Group *);
 
     /* Store details. */
@@ -4511,11 +4511,12 @@ PackFile_Annotations_add_entry(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
             self->keys = mem_gc_realloc_n_typed_zeroed(interp, self->keys,
                     1 + self->num_keys, self->num_keys, PackFile_Annotations_Key *);
         else
-            self->keys = mem_gc_allocate_n_typed(interp,
+            self->keys = mem_gc_allocate_n_zeroed_typed(interp,
                     1 + self->num_keys, PackFile_Annotations_Key *);
 
         key_id             = self->num_keys;
-        self->keys[key_id] = mem_gc_allocate_typed(interp, PackFile_Annotations_Key);
+        self->keys[key_id] = mem_gc_allocate_zeroed_typed(interp,
+                    PackFile_Annotations_Key);
         self->num_keys++;
 
         /* Populate it. */
@@ -4533,14 +4534,14 @@ PackFile_Annotations_add_entry(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
 
     /* Add annotations entry. */
     if (self->entries)
-            self->entries = mem_gc_realloc_n_typed(interp, self->entries,
-                    1 + self->num_entries, PackFile_Annotations_Entry *);
+            self->entries = mem_gc_realloc_n_typed_zeroed(interp, self->entries,
+                    1 + self->num_entries, self->num_entries, PackFile_Annotations_Entry *);
         else
-            self->entries = mem_gc_allocate_n_typed(interp,
+            self->entries = mem_gc_allocate_n_zeroed_typed(interp,
                     1 + self->num_entries, PackFile_Annotations_Entry *);
 
     self->entries[self->num_entries]                  =
-                        mem_gc_allocate_typed(interp, PackFile_Annotations_Entry);
+                        mem_gc_allocate_zeroed_typed(interp, PackFile_Annotations_Entry);
     self->entries[self->num_entries]->bytecode_offset = offset;
     self->entries[self->num_entries]->key             = key_id;
     self->entries[self->num_entries]->value           = value;
