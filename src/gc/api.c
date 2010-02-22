@@ -282,8 +282,6 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     };
 
     /* Assertions that GC subsystem has complete API */
-    PARROT_ASSERT(interp->gc_sys->destroy_child_interp);
-
     PARROT_ASSERT(interp->gc_sys->do_gc_mark);
     PARROT_ASSERT(interp->gc_sys->compact_string_pool);
 
@@ -825,7 +823,8 @@ Parrot_gc_destroy_child_interp(ARGMOD(Interp *dest_interp),
     ARGIN(Interp *source_interp))
 {
     ASSERT_ARGS(Parrot_gc_destroy_child_interp)
-    dest_interp->gc_sys->destroy_child_interp(dest_interp, source_interp);
+    if (dest_interp->gc_sys->destroy_child_interp)
+        dest_interp->gc_sys->destroy_child_interp(dest_interp, source_interp);
 }
 
 /*
