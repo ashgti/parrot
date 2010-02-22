@@ -25,102 +25,115 @@ use base qw(Parrot::Configure::Step);
 use Parrot::Configure::Utils ();
 use Parrot::BuildUtil;
 
+# Declare potential warnings for various compilers.
+#
+# Please keep these sorted by flag name, such that "-Wno-foo" is
+# sorted as "-Wfoo", so we can turn off/on as needed.
+#
+# Note that these warnings may be turned off for individual files
+# in the Makefile.
+
 sub _init {
     my $self = shift;
 
-    return {
+    my $data = {
         description => 'Detect supported compiler warnings',
         result      => '',
+    };
 
-        # Please keep these sorted by flag name, such that "-Wno-foo" is
-        # sorted as "-Wfoo", so we can turn off/on as needed.
+    my $gcc_or_gpp = [ qw(
+        -falign-functions=16
+        -fvisibility=hidden
+        -funit-at-a-time
+        -maccumulate-outgoing-args
+        -W
+        -Wall
+        -Waggregate-return
+        -Wcast-align
+        -Wcast-qual
+        -Wchar-subscripts
+        -Wcomment
+        -Wdisabled-optimization
+        -Wdiv-by-zero
+        -Wendif-labels
+        -Wextra
+        -Wformat
+        -Wformat-extra-args
+        -Wformat-nonliteral
+        -Wformat-security
+        -Wformat-y2k
+        -Wimplicit
+        -Wimport
+        -Winit-self
+        -Winline
+        -Winvalid-pch
+        -Wlogical-op
+        -Wmissing-braces
+        -Wmissing-field-initializers
+        -Wno-missing-format-attribute
+        -Wmissing-include-dirs
+        -Wpacked
+        -Wparentheses
+        -Wpointer-arith
+        -Wreturn-type
+        -Wsequence-point
+        -Wno-shadow
+        -Wsign-compare
+        -Wstrict-aliasing
+        -Wstrict-aliasing=2
+        -Wswitch
+        -Wswitch-default
+        -Wtrigraphs
+        -Wundef
+        -Wunknown-pragmas
+        -Wunused
+        -Wvariadic-macros
+        -Wwrite-strings
+    ) ];
 
-        # Note that these warnings may be turned off for individual files
-        # in the Makefile.
-        potential_warnings => [ qw(
-            -falign-functions=16
-            -fvisibility=hidden
-            -funit-at-a-time
-            -maccumulate-outgoing-args
-            -W
-            -Wall
-            -Waggregate-return
-            -Wcast-align
-            -Wcast-qual
-            -Wchar-subscripts
-            -Wcomment
-            -Wdisabled-optimization
-            -Wdiv-by-zero
-            -Wendif-labels
-            -Wextra
-            -Wformat
-            -Wformat-extra-args
-            -Wformat-nonliteral
-            -Wformat-security
-            -Wformat-y2k
-            -Wimplicit
-            -Wimport
-            -Winit-self
-            -Winline
-            -Winvalid-pch
-            -Wlogical-op
-            -Wmissing-braces
-            -Wmissing-field-initializers
-            -Wno-missing-format-attribute
-            -Wmissing-include-dirs
-            -Wpacked
-            -Wparentheses
-            -Wpointer-arith
-            -Wreturn-type
-            -Wsequence-point
-            -Wno-shadow
-            -Wsign-compare
-            -Wstrict-aliasing
-            -Wstrict-aliasing=2
-            -Wswitch
-            -Wswitch-default
-            -Wtrigraphs
-            -Wundef
-            -Wunknown-pragmas
-            -Wunused
-            -Wvariadic-macros
-            -Wwrite-strings
-        ) ],
-        potential_warnings_no_cpp => [ qw(
-            -Wbad-function-cast
-            -Wc++-compat
-            -Wdeclaration-after-statement
-            -Werror=declaration-after-statement
-            -Wimplicit-function-declaration
-            -Wimplicit-int
-            -Wmain
-            -Wmissing-declarations
-            -Wmissing-prototypes
-            -Wnested-externs
-            -Wnonnull
-            -Wold-style-definition
-            -Wstrict-prototypes
-        ) ],
-        cage_warnings => [ qw(
-            -std=c89
-            -Werror-implicit-function-declaration
-            -Wformat=2
-            -Wlarger-than-4096
-            -Wlong-long
-            -Wmissing-format-attribute
-            -Wdeprecated-declarations
-            -Wno-format-extra-args
-            -Wno-import
-            -Wno-multichar
-            -Wno-pointer-sign
-            -Wold-style-definition
-            -Wunreachable-code
-            -Wunused-function
-            -Wunused-label
-            -Wunused-value
-            -Wunused-variable
-        ) ]
-    }; 
+    $data->{'gcc'}{'potential'} = $gcc_or_gpp;
+    $data->{'g++'}{'potential'} = $gcc_or_gpp;
+
+    push @{$data->{'gcc'}{'potential'}}, [qw(
+        -Wbad-function-cast
+        -Wc++-compat
+        -Wdeclaration-after-statement
+        -Werror=declaration-after-statement
+        -Wimplicit-function-declaration
+        -Wimplicit-int
+        -Wmain
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wnested-externs
+        -Wnonnull
+        -Wold-style-definition
+        -Wstrict-prototypes
+    ) ],
+
+    my $gcc_or_gpp_cage = [ qw(
+        -std=c89
+        -Werror-implicit-function-declaration
+        -Wformat=2
+        -Wlarger-than-4096
+        -Wlong-long
+        -Wmissing-format-attribute
+        -Wdeprecated-declarations
+        -Wno-format-extra-args
+        -Wno-import
+        -Wno-multichar
+        -Wno-pointer-sign
+        -Wold-style-definition
+        -Wunreachable-code
+        -Wunused-function
+        -Wunused-label
+        -Wunused-value
+        -Wunused-variable
+    ) ];
+
+    $data->{'gcc'}{'cage'} = $gcc_or_gpp;
+    $data->{'g++'}{'cage'} = $gcc_or_gpp;
+
+    return $data;
 }
 
 sub runstep {
@@ -128,36 +141,32 @@ sub runstep {
 
     my $verbose = $conf->options->get('verbose');
     print "\n" if $verbose;
+
+    my $compiler = '';
     if ( defined $conf->data->get('gccversion') ) {
-
-        my $nocpp = ! $conf->data->get('g++');
-
-        # add on some extra warnings if requested
-        push @{ $self->{potential_warnings} }, @{ $self->{cage_warnings} }
-            if $conf->options->get('cage');
-
-        # now try out our warnings
-        for my $maybe_warning (@{ $self->{potential_warnings} }) {
-            $self->try_warning( $conf, $maybe_warning, $verbose );
-        }
-        if ($nocpp) {
-            for my $maybe_warning (@{ $self->{potential_warnings_no_cpp} }) {
-                $self->try_warning( $conf, $maybe_warning, $verbose );
-            }
-        }
-
-        if ($nocpp) {
-           $self->set_result("set for gcc");
-        }
-        else {
-           $self->set_result("set for g++");
-        }
+        $compiler = $conf->data->get('g++') ? 'g++' : 'gcc';
     }
-    else {
-        print "Currently we only set warnings if using gcc as C compiler\n"
+
+    if ($compiler eq '') {
+        print "We do not (yet) probe for warnings for your compiler\n"
             if $verbose;
         $self->set_result("skipped");
+        return;
     }
+
+    my @warnings = @{$self->{$compiler}{potential}};
+
+    # add on some extra warnings if requested
+    push @warnings, @{$self->{$compiler}{cage}}
+        if $conf->options->get('cage');
+
+    # now try out our warnings
+    for my $maybe_warning (@warnings) {
+        $self->try_warning( $conf, $maybe_warning, $verbose );
+    }
+
+    $self->set_result("set for $compiler");
+
     return 1;
 }
 
