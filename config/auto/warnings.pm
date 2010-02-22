@@ -150,7 +150,7 @@ sub runstep {
         print "We do not (yet) probe for warnings for your compiler\n"
             if $verbose;
         $self->set_result("skipped");
-        return;
+        return 1;
     }
 
     my @warnings = @{$self->{warnings}{$compiler}{potential}};
