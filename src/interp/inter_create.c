@@ -37,14 +37,9 @@ static int is_env_var_set(PARROT_INTERP, ARGIN(STRING* var))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void setup_default_compreg(PARROT_INTERP)
-        __attribute__nonnull__(1);
-
 #define ASSERT_ARGS_is_env_var_set __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(var))
-#define ASSERT_ARGS_setup_default_compreg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
@@ -74,26 +69,6 @@ is_env_var_set(PARROT_INTERP, ARGIN(STRING* var))
     else
         retval = !STREQ(value, "0");
     return retval;
-}
-
-/*
-
-=item C<static void setup_default_compreg(PARROT_INTERP)>
-
-Setup default compiler for PASM.
-
-=cut
-
-*/
-
-static void
-setup_default_compreg(PARROT_INTERP)
-{
-    ASSERT_ARGS(setup_default_compreg)
-    STRING * const pasm1 = CONST_STRING(interp, "PASM1");
-
-    /* register the nci compiler object */
-    Parrot_compreg(interp, pasm1, (Parrot_compiler_func_t)PDB_compile);
 }
 
 /*
@@ -147,7 +122,7 @@ allocate_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     Interp *interp;
 
     /* Get an empty interpreter from system memory */
-    interp = mem_allocate_zeroed_typed(Interp);
+    interp = mem_internal_allocate_zeroed_typed(Interp);
 
     interp->lo_var_ptr = NULL;
 
@@ -181,9 +156,9 @@ allocate_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags)
     interp->current_runloop_level = 0;
 
     /* Allocate IMCC info */
-    IMCC_INFO(interp) = mem_allocate_zeroed_typed(imc_info_t);
+    IMCC_INFO(interp) = mem_internal_allocate_zeroed_typed(imc_info_t);
 
-    interp->gc_sys           = mem_allocate_zeroed_typed(GC_Subsystem);
+    interp->gc_sys           = mem_internal_allocate_zeroed_typed(GC_Subsystem);
     interp->gc_sys->sys_type = parent
                                     ? parent->gc_sys->sys_type
                                     : PARROT_GC_DEFAULT_TYPE;
@@ -229,8 +204,6 @@ initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
      */
     Parrot_str_init(interp);
 
-    Parrot_initialize_core_vtables(interp);
-
     /* Set up MMD; MMD cache for builtins. */
     interp->op_mmd_cache = Parrot_mmd_cache_create(interp);
 
@@ -239,6 +212,8 @@ initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
 
     /* initialize classes - this needs mmd func table */
     interp->HLL_info = NULL;
+
+    Parrot_initialize_core_vtables(interp);
     init_world_once(interp);
 
     /* context data */
@@ -289,18 +264,15 @@ initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
     interp->code            = NULL;
 
     /* create the root set registry */
-    interp->gc_registry     = pmc_new(interp, enum_class_AddrRegistry);
+    interp->gc_registry     = Parrot_pmc_new(interp, enum_class_AddrRegistry);
 
     /* And a dynamic environment stack */
     /* TODO: We should really consider removing this (TT #876) */
-    interp->dynamic_env = pmc_new(interp, enum_class_ResizablePMCArray);
+    interp->dynamic_env = Parrot_pmc_new(interp, enum_class_ResizablePMCArray);
 
     /* create exceptions list */
     interp->current_runloop_id    = 0;
     interp->current_runloop_level = 0;
-
-    /* register assembler/compilers */
-    setup_default_compreg(interp);
 
     /* setup stdio PMCs */
     Parrot_io_init(interp);

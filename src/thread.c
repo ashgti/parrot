@@ -188,7 +188,7 @@ make_local_copy(PARROT_INTERP, ARGIN(Parrot_Interp from), ARGIN(PMC *arg))
     else if (VTABLE_isa(from, arg, _multi_sub)) {
         INTVAL i = 0;
         const INTVAL n = VTABLE_elements(from, arg);
-        ret_val  = pmc_new(interp, enum_class_MultiSub);
+        ret_val  = Parrot_pmc_new(interp, enum_class_MultiSub);
 
         for (i = 0; i < n; ++i) {
             PMC *const orig = VTABLE_get_pmc_keyed_int(from, arg, i);
@@ -257,7 +257,7 @@ pt_free_pool(PARROT_INTERP)
     if (shared_gc_info) {
         COND_DESTROY(shared_gc_info->gc_cond);
         PARROT_ATOMIC_INT_DESTROY(shared_gc_info->gc_block_level);
-        mem_sys_free(shared_gc_info);
+        mem_internal_free(shared_gc_info);
         shared_gc_info = NULL;
     }
 }
@@ -288,7 +288,7 @@ make_local_args_copy(PARROT_INTERP, ARGIN(Parrot_Interp old_interp), ARGIN_NULLO
     old_size = VTABLE_get_integer(old_interp, args);
 
     /* XXX should this be a different type? */
-    ret_val = pmc_new(interp, enum_class_FixedPMCArray);
+    ret_val = Parrot_pmc_new(interp, enum_class_FixedPMCArray);
     VTABLE_set_integer_native(interp, ret_val, old_size);
 
     for (i = 0; i < old_size; ++i) {
@@ -620,7 +620,7 @@ pt_ns_clone(PARROT_INTERP, ARGOUT(Parrot_Interp d), ARGOUT(PMC *dest_ns),
             PMC *sub_ns = VTABLE_get_pmc_keyed_str(d, dest_ns, key);
             if (PMC_IS_NULL(sub_ns) || sub_ns->vtable->base_type !=
                     enum_class_NameSpace) {
-                sub_ns = pmc_new(d, enum_class_NameSpace);
+                sub_ns = Parrot_pmc_new(d, enum_class_NameSpace);
                 VTABLE_set_pmc_keyed_str(d, dest_ns, key, sub_ns);
             }
             pt_ns_clone(s, d, sub_ns, s, val);
@@ -752,7 +752,7 @@ pt_thread_run(PARROT_INTERP, ARGOUT(PMC *dest_interp), ARGIN(PMC *sub), ARGIN_NU
      * XXX FIXME move this elsewhere? at least the set_pmc_keyed_int
      */
     old_dest_interp = dest_interp;
-    dest_interp     = pmc_new_noinit(interpreter, enum_class_ParrotThread);
+    dest_interp     = Parrot_pmc_new_noinit(interpreter, enum_class_ParrotThread);
 
     /* so it's not accidentally deleted */
     VTABLE_set_pointer(interp, old_dest_interp, NULL);
@@ -1007,8 +1007,8 @@ remove_queued_suspend_gc(PARROT_INTERP)
         if (cur == queue->head)
             queue->head = cur->next;
 
-        mem_sys_free(ev);
-        mem_sys_free(cur);
+        mem_internal_free(ev);
+        mem_internal_free(cur);
         cur = NULL;
         DEBUG_ONLY(fprintf(stderr, "%p: remove_queued_suspend_gc: got one\n", interp));
     }
@@ -1364,7 +1364,7 @@ pt_thread_join(NOTNULL(Parrot_Interp parent), UINTVAL tid)
              * dying interpreter, so register it in parent's GC registry
              * XXX is this still needed?
              */
-            gc_register_pmc(parent, parent_ret);
+            Parrot_pmc_gc_register(parent, parent_ret);
             Parrot_unblock_GC_mark(parent);
             retval = parent_ret;
         }
@@ -1388,7 +1388,7 @@ pt_thread_join(NOTNULL(Parrot_Interp parent), UINTVAL tid)
          * value, caller gets it now
          */
         if (retval)
-            gc_unregister_pmc(parent, retval);
+            Parrot_pmc_gc_unregister(parent, retval);
 
         return retval;
     }
@@ -1560,18 +1560,18 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
         PARROT_ASSERT(!interpreter_array);
         PARROT_ASSERT(n_interpreters == 0);
 
-        interpreter_array    = mem_allocate_typed(Interp *);
+        interpreter_array    = mem_internal_allocate_typed(Interp *);
         interpreter_array[0] = interp;
         n_interpreters       = 1;
 
-        shared_gc_info = (Shared_gc_info *)mem_sys_allocate_zeroed(sizeof (*shared_gc_info));
+        shared_gc_info = (Shared_gc_info *)mem_internal_allocate_zeroed(sizeof (*shared_gc_info));
         COND_INIT(shared_gc_info->gc_cond);
         PARROT_ATOMIC_INT_INIT(shared_gc_info->gc_block_level);
         PARROT_ATOMIC_INT_SET(shared_gc_info->gc_block_level, 0);
 
         /* XXX try to defer this until later */
         PARROT_ASSERT(interp == interpreter_array[0]);
-        interp->thread_data      = mem_allocate_zeroed_typed(Thread_data);
+        interp->thread_data      = mem_internal_allocate_zeroed_typed(Thread_data);
         INTERPRETER_LOCK_INIT(interp);
         interp->thread_data->tid = 0;
 
@@ -1579,7 +1579,7 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
     }
 
 
-    new_interp->thread_data = mem_allocate_zeroed_typed(Thread_data);
+    new_interp->thread_data = mem_internal_allocate_zeroed_typed(Thread_data);
     INTERPRETER_LOCK_INIT(new_interp);
     running_threads++;
     if (Interp_debug_TEST(interp, PARROT_THREAD_DEBUG_FLAG))
@@ -1596,7 +1596,7 @@ pt_add_to_interpreters(PARROT_INTERP, ARGIN_NULLOK(Parrot_Interp new_interp))
     }
 
     /* need to resize */
-    interpreter_array = (Interp **)mem_sys_realloc(interpreter_array,
+    interpreter_array = (Interp **)mem_internal_realloc(interpreter_array,
             (n_interpreters + 1) * sizeof (Interp *));
 
     interpreter_array[n_interpreters] = new_interp;

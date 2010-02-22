@@ -3,39 +3,37 @@
 
 =head1 NAME
 
-tools/build/nativecall.pir - Build up the native call routines
+tools/dev/nci_thunk_gen.pir - Build up native call thunk routines
 
 =head1 SYNOPSIS
 
-    % ./parrot tools/build/nativecall.pir <src/call_list.txt >src/nci.c
+    % ./parrot tools/dev/nci_thunk_gen.pir -o src/nci/extra_thunks.c <src/nci/extra_thunks.nci
 
 =head1 DESCRIPTION
 
-This script creates the Native Call Interface file F<src/nci.c>. It
-parses a file of function signatures of the form:
+This script creates Native Call Interface files. It parses a file of function
+signatures of the form:
 
  <return-type-specifier><ws><parameter-type-specifiers>[<ws>][#<comment>]
     ...
 Empty lines and lines containing only whitespace or comment are ignored.
-The types specifiers are documented in F<src/call_list.txt>.
+The types specifiers are documented in F<src/nci/extra_thunks.nci>.
 
 =head1 SEE ALSO
 
-F<src/call_list.txt>.
+F<src/nci/extra_thunks.nci>.
 F<docs/pdds/pdd16_native_call.pod>.
 
 =cut
 
 .macro_const VERSION 0.01
 
-.macro_const SIG_TABLE_GLOBAL_NAME  'signature_table'
 .macro_const OPTS_GLOBAL_NAME       'options'
 
 .sub 'main' :main
     .param pmc argv
 
     # initialize global variables
-    'gen_sigtable'()
     'get_options'(argv)
 
     .local string targ
@@ -44,13 +42,19 @@ F<docs/pdds/pdd16_native_call.pod>.
     .local pmc sigs
     sigs = 'read_sigs'()
 
-    if targ == 'head'   goto get_targ
-    if targ == 'thunks' goto get_targ
-    if targ == 'loader' goto get_targ
-    if targ == 'coda'   goto get_targ
-    if targ == 'all'    goto all
-    if targ == 'names'  goto names
-    if targ == 'signatures'   goto signatures
+    $S0 = 'read_from_opts'('output')
+    $P0 = open $S0, 'w'
+    setstdout $P0
+
+    if targ == 'head'          goto get_targ
+    if targ == 'thunks'        goto get_targ
+    if targ == 'loader'        goto get_targ
+    if targ == 'loader-dynext' goto get_dynext_loader
+    if targ == 'coda'          goto get_targ
+    if targ == 'all'           goto all
+    if targ == 'all-dynext'    goto all_dynext
+    if targ == 'names'         goto names
+    if targ == 'signatures'    goto signatures
 
     # unknown target
     $S0 = 'sprintf'("Unknown target type '%s'", targ)
@@ -64,6 +68,22 @@ F<docs/pdds/pdd16_native_call.pod>.
     $S0 = 'get_loader'(sigs)
     say $S0
     $S0 = 'get_coda'(sigs)
+    say $S0
+    exit 0
+
+  all_dynext:
+    $S0 = 'get_head'(sigs)
+    say $S0
+    $S0 = 'get_thunks'(sigs)
+    say $S0
+    $S0 = 'get_dynext_loader'(sigs)
+    say $S0
+    $S0 = 'get_coda'(sigs)
+    say $S0
+    exit 0
+
+  get_dynext_loader:
+    $S0 = 'get_dynext_loader'(sigs)
     say $S0
     exit 0
 
@@ -82,11 +102,12 @@ F<docs/pdds/pdd16_native_call.pod>.
 
 # getopt stuff {{{
 
+.macro_const OUTPUT                 'output'
 .macro_const THUNK_STORAGE_CLASS    'thunk-storage-class'
 .macro_const THUNK_NAME_PROTO       'thunk-name-proto'
 .macro_const LOADER_STORAGE_CLASS   'loader-storage-class'
 .macro_const LOADER_NAME            'loader-name'
-
+.macro_const CORE                   'core'
 
 .sub 'get_options'
     .param pmc argv
@@ -97,6 +118,9 @@ F<docs/pdds/pdd16_native_call.pod>.
     getopt = new ['Getopt';'Obj']
     push getopt, 'help|h'
     push getopt, 'version|v'
+    push getopt, 'core'
+    push getopt, 'dynext'
+    push getopt, 'output|o=s'
     push getopt, 'target=s'
     push getopt, 'thunk-storage-class=s'
     push getopt, 'thunk-name-proto=s'
@@ -134,11 +158,13 @@ F<docs/pdds/pdd16_native_call.pod>.
 
 Creates a C file of routines suitable for use as Parrot NCI thunks.
 
-Usage ./parrot nativecall.pir [options] <input_signature_list.nci >output_c_file.c
+Usage ./parrot nci_thunk_gen.pir [options] -o output_c_file.c <input_signature_list.nci
 
 Options
     --help              print this message and exit
     --version           print the version number of this utility
+    --core              output a thunks file suitable for inclusion in Parrot core. Default is no.
+    -o --output <file>  specify output file to use.
     --target <target>   select what to output (valid options are 'head', 'thunks',
                         'loader', 'coda', 'all', 'names', and 'signatures'). Default value is 'all'
     --thunk-storage-class <storage class>
@@ -163,6 +189,38 @@ USAGE
 
 .sub 'fixup_opts'
     .param pmc opts
+
+    $I0 = defined opts['core']
+    if $I0 goto in_core
+        opts['core'] = ''
+        goto end_core
+    in_core:
+        opts['core'] = 'true'
+    end_core:
+
+    $I0 = defined opts['dynext']
+    if $I0 goto is_dynext
+        opts['dynext'] = ''
+        goto end_dynext
+    is_dynext:
+        $I0 = defined opts['target']
+        if $I0 goto end_dynext_target
+            opts['target'] = 'all-dynext'
+        end_dynext_target:
+
+        $I0 = defined opts['loader-storage-class']
+        if $I0 goto end_dynext_loader_storage_class
+            opts['loader-storage-class'] = 'PARROT_DYNEXT_EXPORT'
+        end_dynext_loader_storage_class:
+
+        $I0 = defined opts['loader-name']
+        if $I0 goto end_dynext_loader_name
+            $S0 = opts['output']
+            ($S0, $S1, $S0) = 'file_basename'($S0, '.c')
+            $S0 = 'sprintf'('Parrot_lib_%s_init', $S1)
+            opts['loader-name'] = $S0
+        end_dynext_loader_name:
+    end_dynext:
 
     $I0 = defined opts['target']
     if $I0 goto end_target
@@ -216,22 +274,40 @@ USAGE
 
 # }}}
 
-# get_{head,thunks,loader,coda} {{{
+# get_{head,thunks,loader,dynext_loader,coda} {{{
 
 .sub 'get_head'
     .param pmc ignored :slurpy
-    .return (<<'HEAD')
+
+    .local string in_core
+    in_core = 'read_from_opts'(.CORE)
+
+    .local string ext_defn
+    ext_defn = ''
+    if in_core goto end_ext_defn
+        ext_defn = '#define PARROT_IN_EXTENSION'
+    end_ext_defn:
+
+    .local string c_file
+    c_file = 'read_from_opts'(.OUTPUT)
+
+    .local string str_file
+    ($S0, str_file, $S0) = 'file_basename'(c_file, '.c')
+    str_file = concat str_file, '.str'
+
+    .local string head
+    head = 'sprintf'(<<'HEAD', c_file, ext_defn, str_file)
 /* ex: set ro ft=c:
  * !!!!!!!   DO NOT EDIT THIS FILE   !!!!!!!
  *
- * This file is generated automatically by tools/build/nativecall.pir
+ * This file is generated automatically by tools/dev/nci_thunk_gen.pir
  *
  * Any changes made here will be lost!
  *
  */
 
-/* nci.c
- *  Copyright (C) 2001-2009, Parrot Foundation.
+/* %s
+ *  Copyright (C) 2010, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -242,35 +318,29 @@ USAGE
  *  Notes:
  *  References:
  */
-#include "parrot/parrot.h"
-#include "parrot/hash.h"
-#include "parrot/oplib/ops.h"
-#include "pmc/pmc_managedstruct.h"
-#include "pmc/pmc_nci.h"
-#include "pmc/pmc_pointer.h"
-#include "pmc/pmc_callcontext.h"
 
-#ifdef PARROT_IN_CORE
-/* external libraries don't have to care about string subsystem */
-#  include "nci.str"
+%s
+#include "parrot/parrot.h"
+#include "pmc/pmc_nci.h"
+
+
+#ifdef PARROT_IN_EXTENSION
+/* external libraries can't have strings statically compiled into parrot */
+#  define CONST_STRING(i, s) Parrot_str_new_constant((i), (s))
+#else
+#  include "%s"
 #endif
 
 /* HEADERIZER HFILE: none */
 /* HEADERIZER STOP */
 
-/*
- * if the architecture can build some or all of these signatures
- * enable the define below
- * - the JITed function will be called first
- * - if it returns NULL, the hardcoded version will do the job
- */
-
-#include "frame_builder.h"
-
 /* All our static functions that call in various ways. Yes, terribly
    hackish, but that is just fine */
 
+PARROT_DYNEXT_EXPORT void Parrot_glut_nci_loader(PARROT_INTERP);
+
 HEAD
+    .return (head)
 .end
 
 .sub 'get_thunks'
@@ -305,19 +375,16 @@ HEAD
 %s void
 %s(PARROT_INTERP)
 {
-    PMC        *iglobals;
-    PMC        *temp_pmc;
-
-    PMC        *HashPointer   = NULL;
+    PMC *iglobals;
+    PMC *nci_funcs;
+    PMC *temp_pmc;
 
     iglobals = interp->iglobals;
-    if (PMC_IS_NULL(iglobals))
-        PANIC(interp, "iglobals isn't created yet");
+    PARROT_ASSERT(!(PMC_IS_NULL(iglobals)));
 
-    HashPointer = VTABLE_get_pmc_keyed_int(interp, iglobals,
+    nci_funcs = VTABLE_get_pmc_keyed_int(interp, iglobals,
             IGLOBALS_NCI_FUNCS);
-    if (PMC_IS_NULL(HashPointer))
-        PANIC(interp, "iglobals.nci_funcs isn't created yet");
+    PARROT_ASSERT(!(PMC_IS_NULL(nci_funcs)));
 
 FN_HEADER
 
@@ -337,9 +404,67 @@ FN_HEADER
         key = join '', sig
 
         $S0 = 'sprintf'(<<'TEMPLATE', fn_name, key)
-    temp_pmc = pmc_new(interp, enum_class_UnManagedStruct);
+    temp_pmc = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
     VTABLE_set_pointer(interp, temp_pmc, (void *)%s);
-    VTABLE_set_pmc_keyed_str(interp, HashPointer, CONST_STRING(interp, "%s"), temp_pmc);
+    VTABLE_set_pmc_keyed_str(interp, nci_funcs, CONST_STRING(interp, "%s"), temp_pmc);
+
+TEMPLATE
+        code = concat code, $S0
+
+        inc i
+        goto loop
+    end_loop:
+
+    code = concat code, <<'FN_FOOTER'
+}
+FN_FOOTER
+
+    .return (code)
+.end
+
+.sub 'get_dynext_loader'
+    .param pmc sigs
+
+    $S0 = 'read_from_opts'(.LOADER_STORAGE_CLASS)
+    $S1 = 'read_from_opts'(.LOADER_NAME)
+    .local string code
+    code = 'sprintf'(<<'FN_HEADER', $S0, $S1)
+
+%s void
+%s(PARROT_INTERP, SHIM(PMC *lib))
+{
+    PMC *iglobals;
+    PMC *nci_funcs;
+    PMC *temp_pmc;
+
+    iglobals = interp->iglobals;
+    PARROT_ASSERT(!(PMC_IS_NULL(iglobals)));
+
+    nci_funcs = VTABLE_get_pmc_keyed_int(interp, iglobals,
+            IGLOBALS_NCI_FUNCS);
+    PARROT_ASSERT(!(PMC_IS_NULL(nci_funcs)));
+
+FN_HEADER
+
+    .local int i, n
+    i = 0
+    n = sigs
+    loop:
+        if i >= n goto end_loop
+
+        .local pmc sig
+        sig = shift sigs
+
+        .local string fn_name
+        fn_name = 'sig_to_fn_name'(sig :flat)
+
+        .local string key
+        key = join '', sig
+
+        $S0 = 'sprintf'(<<'TEMPLATE', fn_name, key)
+    temp_pmc = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
+    VTABLE_set_pointer(interp, temp_pmc, (void *)%s);
+    VTABLE_set_pmc_keyed_str(interp, nci_funcs, CONST_STRING(interp, "%s"), temp_pmc);
 
 TEMPLATE
         code = concat code, $S0
@@ -471,7 +596,7 @@ TEMPLATE
 
     .local string preamble
     preamble = 'sprintf'(<<'TEMPLATE', sig, fill_params, extra_preamble)
-    Parrot_pcc_fill_params_from_c_args(interp, call_object, "%s" %s);
+    Parrot_pcc_fill_params_from_c_args(interp, call_object, "%s"%s);
     %s
 TEMPLATE
 
@@ -559,7 +684,7 @@ TEMPLATE
     .param string field_name
 
     .local pmc sig_table
-    sig_table = get_global .SIG_TABLE_GLOBAL_NAME
+    .const 'Sub' sig_table = 'get_sigtable'
 
     $P0 = split '', sig
 
@@ -689,101 +814,10 @@ TEMPLATE
 
 #}}}
 
-# gen_sigtable {{{
+# get_sigtable {{{
 
-.sub 'gen_sigtable'
-    $S0 = 'sigtable_json'()
-    $P0 = 'decode_table'($S0)
-    'fixup_table'($P0)
-    set_global .SIG_TABLE_GLOBAL_NAME, $P0
-.end
-
-.sub 'decode_table'
-    .param string json
-
-    .local pmc compiler
-    load_bytecode 'data_json.pbc'
-    compiler = compreg 'data_json'
-
-    .local pmc table
-    $P0 = compiler.'compile'(json)
-    table = $P0()
-
-    .return (table)
-.end
-
-.sub 'fixup_table'
-    .param pmc table
-
-    .local pmc table_iter
-    table_iter = iter table
-  iter_loop:
-    unless table_iter goto iter_end
-
-    .local string k
-    .local pmc v
-    k = shift table_iter
-    v = table[k]
-
-    $I0 = exists v['cname']
-    if $I0 goto has_cname
-        v['cname'] = k
-    has_cname:
-
-    $I0 = exists v['as_return']
-    if $I0 goto has_as_return
-        $S0 = v['as_proto']
-        v['as_return'] = $S0
-    has_as_return:
-
-    $I0 = exists v['return_type']
-    if $I0 goto has_return_type
-        $S0 = v['as_proto']
-        v['return_type'] = $S0
-    has_return_type:
-
-    $I0 = exists v['ret_assign']
-    $I1 = exists v['sig_char']
-    $I1 = !$I1
-    $I0 = $I0 || $I1 # not (not exists v[ret_assign] and exists v[sig_char])
-    if $I0 goto has_ret_assign
-        $S0 = 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "'
-        $S1 = v['sig_char']
-        $S0 = concat $S0, $S1
-        $S0 = concat $S0, '", return_data);'
-        v['ret_assign'] = $S0
-    has_ret_assign:
-
-    $I0 = exists v['func_call_assign']
-    if $I0 goto has_func_call_assign
-        v['func_call_assign'] = 'return_data = '
-    has_func_call_assign:
-
-    $I0 = exists v['temp_tmpl']
-    if $I0 goto has_temp_tmpl
-        $S0 = v['return_type']
-        $S0 = concat $S0, " t_%i"
-        v['temp_tmpl'] = $S0
-    has_temp_tmpl:
-
-    $I0 = exists v['fill_params_tmpl']
-    if $I0 goto has_fill_params_tmpl
-        v['fill_params_tmpl'] = ', &t_%i'
-    has_fill_params_tmpl:
-
-    $I0 = exists v['call_param_tmpl']
-    if $I0 goto has_call_param_tmpl
-        v['call_param_tmpl'] = 't_%i'
-    has_call_param_tmpl:
-
-    goto iter_loop
-  iter_end:
-
-    .return ()
-.end
-
-.sub 'sigtable_json'
-    .const string retv = <<'JSON'
+.sub 'get_sigtable' :anon :immediate
+    .const string json_table = <<'JSON'
 {
     "p": { "as_proto":   "void *",
            "final_dest": "PMC * final_destination = PMCNULL;",
@@ -791,7 +825,7 @@ TEMPLATE
            "sig_char":   "P",
            "call_param_tmpl": "PMC_IS_NULL((PMC*)t_%i) ? (void *)NULL : VTABLE_get_pointer(interp, t_%i)",
            "ret_assign": "if (return_data != NULL) {
-                             final_destination = pmc_new(interp, enum_class_UnManagedStruct);
+                             final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
                              VTABLE_set_pointer(interp, final_destination, return_data);
                           }
                           Parrot_pcc_fill_returns_from_c_args(interp, call_object, \"P\", final_destination);" },
@@ -876,7 +910,82 @@ TEMPLATE
     "@": { "as_proto": "PMC *", "as_return": "", "cname": "xAT_", "sig_char": "Ps" }
 }
 JSON
-    .return (retv)
+
+    # decode table
+    .local pmc compiler
+    load_bytecode 'data_json.pbc'
+    compiler = compreg 'data_json'
+
+    .local pmc table
+    $P0 = compiler.'compile'(json_table)
+    table = $P0()
+
+    # fixup table
+    .local pmc table_iter
+    table_iter = iter table
+  iter_loop:
+    unless table_iter goto iter_end
+
+    .local string k
+    .local pmc v
+    k = shift table_iter
+    v = table[k]
+
+    $I0 = exists v['cname']
+    if $I0 goto has_cname
+        v['cname'] = k
+    has_cname:
+
+    $I0 = exists v['as_return']
+    if $I0 goto has_as_return
+        $S0 = v['as_proto']
+        v['as_return'] = $S0
+    has_as_return:
+
+    $I0 = exists v['return_type']
+    if $I0 goto has_return_type
+        $S0 = v['as_proto']
+        v['return_type'] = $S0
+    has_return_type:
+
+    $I0 = exists v['ret_assign']
+    $I1 = exists v['sig_char']
+    $I1 = !$I1
+    $I0 = $I0 || $I1 # not (not exists v[ret_assign] and exists v[sig_char])
+    if $I0 goto has_ret_assign
+        $S0 = 'Parrot_pcc_fill_returns_from_c_args(interp, call_object, "'
+        $S1 = v['sig_char']
+        $S0 = concat $S0, $S1
+        $S0 = concat $S0, '", return_data);'
+        v['ret_assign'] = $S0
+    has_ret_assign:
+
+    $I0 = exists v['func_call_assign']
+    if $I0 goto has_func_call_assign
+        v['func_call_assign'] = 'return_data = '
+    has_func_call_assign:
+
+    $I0 = exists v['temp_tmpl']
+    if $I0 goto has_temp_tmpl
+        $S0 = v['return_type']
+        $S0 = concat $S0, " t_%i"
+        v['temp_tmpl'] = $S0
+    has_temp_tmpl:
+
+    $I0 = exists v['fill_params_tmpl']
+    if $I0 goto has_fill_params_tmpl
+        v['fill_params_tmpl'] = ', &t_%i'
+    has_fill_params_tmpl:
+
+    $I0 = exists v['call_param_tmpl']
+    if $I0 goto has_call_param_tmpl
+        v['call_param_tmpl'] = 't_%i'
+    has_call_param_tmpl:
+
+    goto iter_loop
+  iter_end:
+
+    .return (table)
 .end
 
 # }}}
@@ -970,7 +1079,42 @@ JSON
         inc i
         goto loop
     end_loop:
+
     .return (output)
+.end
+
+.sub 'file_basename'
+    .param string full_path
+    .param pmc extns :slurpy
+
+    .local string dir, file, extn
+    file = clone full_path
+
+    extn_loop:
+        unless extns goto end_extn_loop
+        $S0 = shift extns
+        $I0 = length $S0
+        $I1 = -$I0
+        $S1 = substr file, $I1, $I0
+        unless $S1 == $S0 goto extn_loop
+        extn = $S1
+        substr file, $I1, $I0, ''
+    end_extn_loop:
+
+    # TODO: make this portable
+    .const string file_sep = '/'
+
+    strip_dir_loop:
+        $I0 = index file, file_sep
+        if $I0 < 0 goto end_strip_dir_loop
+        inc $I0
+        $S0 = substr file, 0, $I0
+        dir = concat dir, $S0
+        file = substr file, $I0
+        goto strip_dir_loop
+    end_strip_dir_loop:
+
+    .return (dir, file, extn)
 .end
 
 # }}}

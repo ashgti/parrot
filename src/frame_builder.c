@@ -62,7 +62,7 @@ It is called by the ManagedStruct PMC's clone() function.
 PMC *
 Parrot_jit_clone_buffer(PARROT_INTERP, PMC *pmc, void *priv)
 {
-    PMC * const rv = pmc_new(interp, pmc->vtable->base_type);
+    PMC * const rv = Parrot_pmc_new(interp, pmc->vtable->base_type);
 
     VTABLE_init(interp, rv);
     /* copy the attributes */
@@ -82,7 +82,7 @@ Parrot_jit_clone_buffer(PARROT_INTERP, PMC *pmc, void *priv)
         GETATTR_ManagedStruct_custom_free_priv(interp , pmc, freepriv);
         GETATTR_ManagedStruct_custom_clone_priv(interp, pmc, clonepriv);
         if (freepriv) {
-            void *tmp = mem_sys_allocate(sizeof (struct jit_buffer_private_data));
+            void *tmp = mem_gc_allocate_zeroed_typed(interp, struct jit_buffer_private_data);
             memcpy(tmp, freepriv, sizeof (struct jit_buffer_private_data));
             SETATTR_ManagedStruct_custom_free_priv(interp, rv , tmp);
             if (clonepriv == freepriv) {
@@ -92,7 +92,7 @@ Parrot_jit_clone_buffer(PARROT_INTERP, PMC *pmc, void *priv)
             }
         }
         if (clonepriv) {
-            void *tmp = mem_sys_allocate(sizeof (struct jit_buffer_private_data));
+            void *tmp = mem_gc_allocate_zeroed_typed(interp, struct jit_buffer_private_data);
             memcpy(tmp, clonepriv, sizeof (struct jit_buffer_private_data));
             SETATTR_ManagedStruct_custom_clone_priv(interp, rv , tmp);
         }
@@ -550,7 +550,7 @@ Parrot_jit_build_call_func(PARROT_INTERP, PMC *pmc_nci, STRING *signature, int *
 
         /* make new pmc */
         emitm_movl_i_m(pc, enum_class_UnManagedStruct, emit_EBP, 0, 1, temp_calls_offset + 4);
-        emitm_call_cfunc(pc, pmc_new);
+        emitm_call_cfunc(pc, Parrot_pmc_new);
 
         /* restore pointer p to EDX */
         emitm_movl_m_r(interp, pc, emit_EDX, emit_EBP, 0, 1, temp_calls_offset + 12);

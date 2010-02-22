@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2004-2009, Parrot Foundation.
+Copyright (C) 2004-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -154,7 +154,7 @@ typedef struct BIGNUM {
 static void
 bignum_init(PARROT_INTERP, PMC *self) {
 #ifdef PARROT_HAS_GMP
-    BIGNUM * const bn = mem_allocate_zeroed_typed(BIGNUM);
+    BIGNUM * const bn = mem_gc_allocate_zeroed_typed(interp, BIGNUM);
     SETATTR_BigNum_bn(interp, self, bn);
     mpf_clear(bn->b);
     mpf_init(bn->b);
@@ -170,7 +170,7 @@ bignum_clear(PARROT_INTERP, PMC *self) {
     BIGNUM *bn;
     GETATTR_BigNum_bn(interp, self, bn);
     mpf_clear(bn->b);
-    mem_sys_free(bn);
+    mem_gc_free(interp, bn);
 #endif
 }
 
@@ -282,7 +282,7 @@ bignum_get_string(PARROT_INTERP, PMC *self, int base) {
 
     GETATTR_BigNum_bn(interp, self, bn);
     n = (mpf_get_prec(bn->b)) / log(base) * log(2);
-    s = (char *)mem_sys_allocate(n + 5);
+    s = mem_gc_allocate_n_typed(interp, n + 5, char);
     return mpf_get_str(s, &exponent, base, 0, bn->b);
 }
 
@@ -294,7 +294,7 @@ bignum_get_string_size(PARROT_INTERP, PMC *self, int base, int digits) {
     mp_exp_t exponent;
 
     GETATTR_BigNum_bn(interp, self, bn);
-    s = (char *)mem_sys_allocate(digits + 5);
+    s = mem_gc_allocate_n_typed(interp, digits + 5, char);
     return mpf_get_str(s, &exponent, base, digits, bn->b);
 }
 
@@ -810,7 +810,7 @@ Return GMP version string "x.y.z".
     }
 
     VTABLE PMC *clone() {
-        PMC *res = pmc_new(INTERP, SELF->vtable->base_type);
+        PMC *res = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         bignum_set(INTERP, res, SELF);
         return res;
     }
@@ -929,20 +929,6 @@ Returns the unsigned long conversion of the BigNum.
 
 /*
 
-=item C<PMC *get_bignum()>
-
-Returns SELF, keeping floating point precision.
-
-=cut
-
-*/
-
-    VTABLE PMC *get_bignum() {
-        return SELF;
-    }
-
-/*
-
 =item C<FLOATVAL get_bigint()>
 
 Trunc the BigNum to an BigInt.
@@ -1001,21 +987,21 @@ appended.
     VTABLE STRING *get_string() {
         char   *s  = bignum_get_string(INTERP, SELF, 10);
         STRING *ps = Parrot_str_new(INTERP, s, 0);
-        mem_sys_free(s);
+        mem_gc_free(interp, s);
         return ps;
     }
 
     VTABLE STRING *get_string_keyed_int(INTVAL base) {
         char   *s  = bignum_get_string(INTERP, SELF, base);
         STRING *ps = Parrot_str_new(INTERP, s, 0);
-        mem_sys_free(s);
+        mem_gc_free(interp, s);
         return ps;
     }
 
     VTABLE STRING *get_string_keyed_int_int(INTVAL base, INTVAL digits) {
         char   *s  = bignum_get_string_size(INTERP, SELF, base, digits);
         STRING *ps = Parrot_str_new(INTERP, s, 0);
-        mem_sys_free(s);
+        mem_gc_free(interp, s);
         return ps;
     }
 
@@ -1060,14 +1046,14 @@ Decrement the BigNum by 1.0.
 */
 
     MULTI PMC *add(BigNum value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_add_bignum(INTERP, SELF, value, dest);
         return dest;
     }
 
     MULTI PMC *add(Integer value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_add_bignum_int(INTERP, SELF, VTABLE_get_integer(interp, value), dest);
         return dest;
@@ -1081,7 +1067,7 @@ Decrement the BigNum by 1.0.
     }
 
     VTABLE PMC *add_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_add_bignum_int(INTERP, SELF, value, dest);
         return dest;
@@ -1123,14 +1109,14 @@ Decrement the BigNum by 1.0.
 */
 
     MULTI PMC *subtract(BigNum value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_sub_bignum(INTERP, SELF, value, dest);
         return dest;
     }
 
     MULTI PMC *subtract(Integer value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_sub_bignum_int(INTERP, SELF, VTABLE_get_integer(interp, value), dest);
         return dest;
@@ -1144,7 +1130,7 @@ Decrement the BigNum by 1.0.
     }
 
     VTABLE PMC *subtract_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_sub_bignum_int(INTERP, SELF, value, dest);
         return dest;
@@ -1186,14 +1172,14 @@ Decrement the BigNum by 1.0.
 */
 
     MULTI PMC *multiply(BigNum value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_mul_bignum(INTERP, SELF, value, dest);
         return dest;
     }
 
     MULTI PMC *multiply(Integer value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_mul_bignum_int(INTERP, SELF, VTABLE_get_integer(interp, value), dest);
         return dest;
@@ -1207,7 +1193,7 @@ Decrement the BigNum by 1.0.
     }
 
     VTABLE PMC *multiply_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_mul_bignum_int(INTERP, SELF, value, dest);
         return dest;
@@ -1242,26 +1228,25 @@ Decrement the BigNum by 1.0.
 
 /*
 
-=item C<void pow()>
+=item C<METHOD PMC *pow()>
+
+Raises self to the power of value. Replacement method added when the pow()
+vtable was removed
+
+TODO: Needs testing.
+TODO: Only supports Integer values for now.
 
 =cut
 
 */
 
-    VTABLE PMC *pow_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
-
-        bignum_pow_bignum_int(INTERP, SELF, value, dest);
-        return dest;
-    }
-
-    MULTI PMC *pow(PMC *value, PMC *dest) {
+    METHOD PMC *pow(PMC *value) {
         /* only Integer RHS currently. TODO: check number and bignum types */
         INTVAL r = VTABLE_get_integer(INTERP, value);
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        PMC *dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_pow_bignum_int(INTERP, SELF, r, dest);
-        return dest;
+        RETURN(PMC *dest);
     }
 
 /*
@@ -1274,7 +1259,7 @@ Decrement the BigNum by 1.0.
 
     MULTI PMC *divide(BigNum value, PMC *dest) {
         BIGNUM *bn;
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_div_bignum(INTERP, SELF, value, dest);
 #if 0
@@ -1290,7 +1275,7 @@ Decrement the BigNum by 1.0.
     }
 
     MULTI PMC *divide(Integer value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_div_bignum_int(INTERP, SELF, VTABLE_get_integer(interp, value), dest);
         return dest;
@@ -1304,14 +1289,14 @@ Decrement the BigNum by 1.0.
     }
 
     VTABLE PMC *divide_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_div_bignum_int(INTERP, SELF, value, dest);
         return dest;
     }
 
     VTABLE PMC *divide_float(FLOATVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_div_bignum_float(INTERP, SELF, value, dest);
         return dest;
@@ -1346,14 +1331,14 @@ Decrement the BigNum by 1.0.
 */
 
     MULTI PMC *floor_divide(BigNum value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_fdiv_bignum(INTERP, SELF, value, dest);
         return dest;
     }
 
     MULTI PMC *floor_divide(Integer value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_fdiv_bignum_int(INTERP, SELF, VTABLE_get_integer(interp, value), dest);
         return dest;
@@ -1367,7 +1352,7 @@ Decrement the BigNum by 1.0.
     }
 
     VTABLE PMC *floor_divide_int(INTVAL value, PMC *dest) {
-        dest = pmc_new(INTERP, VTABLE_type(INTERP, SELF));
+        dest = Parrot_pmc_new(INTERP, VTABLE_type(INTERP, SELF));
 
         bignum_fdiv_bignum_int(INTERP, SELF, value, dest);
         return dest;
@@ -1451,7 +1436,7 @@ Sets C<dest> to the absolute value of SELF.
 */
 
     VTABLE PMC *absolute(PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_abs(INTERP, SELF, dest);
         return dest;
@@ -1475,7 +1460,7 @@ Set C<dest> to the negated value of C<SELF>.
 */
 
     VTABLE PMC *neg(PMC *dest) {
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         bignum_neg(INTERP, SELF, dest);
         return dest;
