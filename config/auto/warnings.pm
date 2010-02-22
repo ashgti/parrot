@@ -19,7 +19,6 @@ package auto::warnings;
 use strict;
 use warnings;
 
-
 use base qw(Parrot::Configure::Step);
 
 use Parrot::Configure::Utils ();
@@ -91,10 +90,10 @@ sub _init {
         -Wwrite-strings
     ) ];
 
-    $data->{'gcc'}{'potential'} = $gcc_or_gpp;
-    $data->{'g++'}{'potential'} = $gcc_or_gpp;
+    $data->{warnings}{'gcc'}{'potential'} = $gcc_or_gpp;
+    $data->{warnings}{'g++'}{'potential'} = $gcc_or_gpp;
 
-    push @{$data->{'gcc'}{'potential'}}, [qw(
+    push @{$data->{warnings}{'gcc'}{'potential'}}, [qw(
         -Wbad-function-cast
         -Wc++-compat
         -Wdeclaration-after-statement
@@ -130,8 +129,8 @@ sub _init {
         -Wunused-variable
     ) ];
 
-    $data->{'gcc'}{'cage'} = $gcc_or_gpp;
-    $data->{'g++'}{'cage'} = $gcc_or_gpp;
+    $data->{warnings}{'gcc'}{'cage'} = $gcc_or_gpp;
+    $data->{warnings}{'g++'}{'cage'} = $gcc_or_gpp;
 
     return $data;
 }
@@ -154,10 +153,10 @@ sub runstep {
         return;
     }
 
-    my @warnings = @{$self->{$compiler}{potential}};
+    my @warnings = @{$self->{warnings}{$compiler}{potential}};
 
     # add on some extra warnings if requested
-    push @warnings, @{$self->{$compiler}{cage}}
+    push @warnings, @{$self->{warnings}{$compiler}{cage}}
         if $conf->options->get('cage');
 
     # now try out our warnings
