@@ -78,7 +78,7 @@ struct _hash {
     hash_hash_key_fn hash_val;  /* generate a hash value for key */
 };
 
-typedef void (*value_free)(void *);
+typedef void (*value_free)(PARROT_INTERP, void *);
 
 /* To avoid creating OrderedHashItem PMC we reuse FixedPMCArray PMC */
 /* So, there is indexes to avoid using of "magick constants" */
