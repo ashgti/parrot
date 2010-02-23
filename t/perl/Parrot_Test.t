@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2008, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -286,11 +286,12 @@ OUTPUT
 test_test($desc);
 
 $desc = 'pir_error_output_like: todo';
-$line = line_num(+21);
+$line = line_num(+22);
 my $location;
 if ($Test::Builder::VERSION <= eval '0.33') {
     $location = "in $0 at line $line";
-} else {
+}
+else {
     $location = "at $0 line $line";
 }
 test_out("not ok 1 - $desc # TODO foo");
@@ -316,7 +317,8 @@ CODE
 OUTPUT
 if($Test::Builder::VERSION == 0.84) {
     test_test(title => $desc, skip_err => 1);
-} else {
+}
+else {
     test_test($desc);
 }
 

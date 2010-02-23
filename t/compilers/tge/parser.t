@@ -1,5 +1,5 @@
 #!parrot
-# Copyright (C) 2005-2009, Parrot Foundation.
+# Copyright (C) 2005-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -59,7 +59,7 @@ GRAMMAR
 .sub test_parse_failure
     $S0 = "Syntax error at line 4, near \"transform \"\n"
     throws_substring(<<'CODE', $S0, 'parse failure')
-.sub main 
+.sub main
     load_bytecode 'TGE.pbc'
     .local string source
     source = <<'GRAMMAR'
@@ -79,8 +79,7 @@ CODE
 .end
 
 # Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
+#   mode: pir
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4 filetype=pir:
+# vim: expandtab shiftwidth=4 ft=pir:

@@ -1,5 +1,5 @@
 #! parrot
-# Copyright (C) 2009, Parrot Foundation.
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -23,7 +23,7 @@ Tests the Foo PMC.
     test_dynpmcs_can_use_super()
 .end
 
-.sub test_dynpmcs_can_use_super 
+.sub test_dynpmcs_can_use_super
     $P0 = loadlib 'foo_group'
     $P1 = new "Foo2"
 
@@ -32,8 +32,7 @@ Tests the Foo PMC.
 .end
 
 # Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
+#   mode: pir
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4: filetype=pir:
+# vim: expandtab shiftwidth=4 ft=pir:

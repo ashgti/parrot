@@ -28,7 +28,7 @@ F<docs/pdds/pdd16_native_call.pod>.
 
 .macro_const VERSION 0.01
 
-.macro_const OPTS_GLOBAL_NAME       'options'
+.macro_const OPTS_GLOBAL_NAME 'options'
 
 .sub 'main' :main
     .param pmc argv
@@ -108,6 +108,7 @@ F<docs/pdds/pdd16_native_call.pod>.
 .macro_const LOADER_STORAGE_CLASS   'loader-storage-class'
 .macro_const LOADER_NAME            'loader-name'
 .macro_const CORE                   'core'
+.macro_const NO_WARN_DUPS           'no-warn-dups'
 
 .sub 'get_options'
     .param pmc argv
@@ -118,6 +119,7 @@ F<docs/pdds/pdd16_native_call.pod>.
     getopt = new ['Getopt';'Obj']
     push getopt, 'help|h'
     push getopt, 'version|v'
+    push getopt, 'no-warn-dups|f'
     push getopt, 'core'
     push getopt, 'dynext'
     push getopt, 'output|o=s'
@@ -163,10 +165,14 @@ Usage ./parrot nci_thunk_gen.pir [options] -o output_c_file.c <input_signature_l
 Options
     --help              print this message and exit
     --version           print the version number of this utility
+    -f --no-warn-dups   don't complain about duplicated signatures. Default is to warn.
     --core              output a thunks file suitable for inclusion in Parrot core. Default is no.
+    --dynext            use default values for loader-name, loader-storage-class, and target
+                        suitable for use in a Parrot dynext library.
     -o --output <file>  specify output file to use.
     --target <target>   select what to output (valid options are 'head', 'thunks',
-                        'loader', 'coda', 'all', 'names', and 'signatures'). Default value is 'all'
+                        'loader', 'loader-dynext', 'coda', 'all', 'all-dynext', 'names', and
+                        'signatures'). Default value is 'all'
     --thunk-storage-class <storage class>
                         set the storage class used for the thunks. Default value is 'static'.
     --thunk-name-proto <printf prototype>
@@ -174,7 +180,8 @@ Options
                         format with arity 1. Default value is 'pcf_%s'
     --loader-storage-class
                         set the storage class used for the loader function. Default value is none.
-    --loader-name       set the name used for the loader function. Default value is 'Parrot_load_nci_thunks'.
+    --loader-name       set the name used for the loader function. Default value is
+                        'Parrot_load_nci_thunks'.
 USAGE
     exit 0
 .end
@@ -189,6 +196,11 @@ USAGE
 
 .sub 'fixup_opts'
     .param pmc opts
+
+    $I0 = defined opts['no-warn-dups']
+    if $I0 goto end_no_warn_dups
+        opts['no-warn-dups'] = ''
+    end_no_warn_dups:
 
     $I0 = defined opts['core']
     if $I0 goto in_core
@@ -337,8 +349,6 @@ USAGE
 /* All our static functions that call in various ways. Yes, terribly
    hackish, but that is just fine */
 
-PARROT_DYNEXT_EXPORT void Parrot_glut_nci_loader(PARROT_INTERP);
-
 HEAD
     .return (head)
 .end
@@ -367,72 +377,58 @@ HEAD
 .sub 'get_loader'
     .param pmc sigs
 
+    $S0 = 'get_loader_decl'(sigs)
+    $S1 = 'get_loader_body'(sigs)
+    $S2 = 'sprintf'(<<'LOADER', $S0, $S0, $S1)
+%s;
+%s {
+%s
+}
+LOADER
+    .return ($S2)
+.end
+
+.sub 'get_loader_decl'
+    .param pmc sigs
     $S0 = 'read_from_opts'(.LOADER_STORAGE_CLASS)
     $S1 = 'read_from_opts'(.LOADER_NAME)
-    .local string code
-    code = 'sprintf'(<<'FN_HEADER', $S0, $S1)
-
+    $S2 = 'sprintf'(<<'DECL', $S0, $S1)
 %s void
 %s(PARROT_INTERP)
-{
-    PMC *iglobals;
-    PMC *nci_funcs;
-    PMC *temp_pmc;
-
-    iglobals = interp->iglobals;
-    PARROT_ASSERT(!(PMC_IS_NULL(iglobals)));
-
-    nci_funcs = VTABLE_get_pmc_keyed_int(interp, iglobals,
-            IGLOBALS_NCI_FUNCS);
-    PARROT_ASSERT(!(PMC_IS_NULL(nci_funcs)));
-
-FN_HEADER
-
-    .local int i, n
-    i = 0
-    n = sigs
-    loop:
-        if i >= n goto end_loop
-
-        .local pmc sig
-        sig = shift sigs
-
-        .local string fn_name
-        fn_name = 'sig_to_fn_name'(sig :flat)
-
-        .local string key
-        key = join '', sig
-
-        $S0 = 'sprintf'(<<'TEMPLATE', fn_name, key)
-    temp_pmc = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
-    VTABLE_set_pointer(interp, temp_pmc, (void *)%s);
-    VTABLE_set_pmc_keyed_str(interp, nci_funcs, CONST_STRING(interp, "%s"), temp_pmc);
-
-TEMPLATE
-        code = concat code, $S0
-
-        inc i
-        goto loop
-    end_loop:
-
-    code = concat code, <<'FN_FOOTER'
-}
-FN_FOOTER
-
-    .return (code)
+DECL
+    .return ($S2)
 .end
 
 .sub 'get_dynext_loader'
     .param pmc sigs
 
+    $S0 = 'get_dynext_loader_decl'(sigs)
+    $S1 = 'get_loader_body'(sigs)
+    $S2 = 'sprintf'(<<'LOADER', $S0, $S0, $S1)
+%s;
+%s {
+%s
+}
+LOADER
+    .return ($S2)
+.end
+
+.sub 'get_dynext_loader_decl'
+    .param pmc sigs
+
     $S0 = 'read_from_opts'(.LOADER_STORAGE_CLASS)
     $S1 = 'read_from_opts'(.LOADER_NAME)
-    .local string code
-    code = 'sprintf'(<<'FN_HEADER', $S0, $S1)
-
+    $S2 = 'sprintf'(<<'DECL', $S0, $S1)
 %s void
 %s(PARROT_INTERP, SHIM(PMC *lib))
-{
+DECL
+    .return ($S2)
+.end
+
+.sub 'get_loader_body'
+    .param pmc sigs
+    .local string code
+    code = 'sprintf'(<<'HEADER', $S0, $S1)
     PMC *iglobals;
     PMC *nci_funcs;
     PMC *temp_pmc;
@@ -444,7 +440,7 @@ FN_FOOTER
             IGLOBALS_NCI_FUNCS);
     PARROT_ASSERT(!(PMC_IS_NULL(nci_funcs)));
 
-FN_HEADER
+HEADER
 
     .local int i, n
     i = 0
@@ -472,10 +468,6 @@ TEMPLATE
         inc i
         goto loop
     end_loop:
-
-    code = concat code, <<'FN_FOOTER'
-}
-FN_FOOTER
 
     .return (code)
 .end
@@ -717,6 +709,9 @@ TEMPLATE
     seen  = new ['Hash']
     sigs  = new ['ResizablePMCArray']
 
+    .local int no_warn_dups
+    no_warn_dups = 'read_from_opts'(.NO_WARN_DUPS)
+
     .local int lineno
     lineno = 0
     read_loop:
@@ -733,8 +728,12 @@ TEMPLATE
         # de-dup sigs
         $I0 = seen[full_sig]
         unless $I0 goto unseen
-            $S0 = 'sprintf'("Ignored signature '%s' on line %d (previously seen on line %d)\n", full_sig, lineno, $I0)
-            printerr $S0
+            if no_warn_dups goto end_dup_warn
+                $S0 = 'sprintf'(<<'ERROR', full_sig, lineno, $I0)
+Ignored signature '%s' on line %d (previously seen on line %d)
+ERROR
+                printerr $S0
+            end_dup_warn:
             goto read_loop
         unseen:
         seen[full_sig] = lineno
@@ -765,18 +764,21 @@ TEMPLATE
     end_comment:
 
     # convert whitespace into spaces
-    $S0 = '\t'
-    whitespace_loop:
-        $I0 = index line, $S0
-        if $I0 < 0 goto end_whitespace_loop
-        substr line, $I0, 1, ' '
-        goto whitespace_loop
-    end_whitespace_loop:
+    .const 'Sub' $P0 = 'alternate_whitespaces'
+    $P1 = iter $P0
+    outer_whitespace_loop:
+        unless $P1 goto end_outer_whitespace_loop
+        $S0 = shift $P1
 
-    if $S0 == "\n" goto end_whitespace
-        $S0 = "\n"
-        goto whitespace_loop
-    end_whitespace:
+        inner_whitespace_loop:
+            $I0 = index line, $S0
+            if $I0 < 0 goto end_inner_whitespace_loop
+            substr line, $I0, 1, ' '
+            goto inner_whitespace_loop
+        end_inner_whitespace_loop:
+
+        goto outer_whitespace_loop
+    end_outer_whitespace_loop:
 
     # turn multiple spaces into a single space
     multispace_loop:
@@ -1088,7 +1090,15 @@ JSON
     .param pmc extns :slurpy
 
     .local string dir, file, extn
-    file = clone full_path
+
+    # replace native file separator with '/'
+    $S0 = 'native_file_separator'()
+    $P0 = split $S0, full_path
+    file = join "/", $P0
+
+    $P0 = split '/', file
+    file = pop $P0
+    dir = join '/', $P0
 
     extn_loop:
         unless extns goto end_extn_loop
@@ -1101,20 +1111,22 @@ JSON
         substr file, $I1, $I0, ''
     end_extn_loop:
 
-    # TODO: make this portable
-    .const string file_sep = '/'
-
-    strip_dir_loop:
-        $I0 = index file, file_sep
-        if $I0 < 0 goto end_strip_dir_loop
-        inc $I0
-        $S0 = substr file, 0, $I0
-        dir = concat dir, $S0
-        file = substr file, $I0
-        goto strip_dir_loop
-    end_strip_dir_loop:
-
     .return (dir, file, extn)
+.end
+
+.sub 'native_file_separator'
+    load_bytecode 'config.pbc'
+    $P0 = '_config'()
+    $S0 = $P0['slash']
+    .return ($S0)
+.end
+
+.sub 'alternate_whitespaces' :anon :immediate
+    $P0 = new ['ResizableStringArray']
+    push $P0, "\t"
+    push $P0, "\n"
+    push $P0, "\r"
+    .return ($P0)
 .end
 
 # }}}
