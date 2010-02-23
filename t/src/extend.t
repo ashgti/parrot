@@ -875,7 +875,7 @@ void interp_cleanup(PARROT_INTERP, int status)
     while (node) {
         handler_node_t * const next = node->next;
         (node->function)(interp, status, node->arg);
-        mem_sys_free(node);
+        mem_gc_free(interp, node);
         node = next;
     }
 }
