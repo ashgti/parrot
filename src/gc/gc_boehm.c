@@ -407,7 +407,8 @@ gc_boehm_reallocate_string_storage(PARROT_INTERP, STRING *str, size_t size)
     char *mem;
 
     mem      = (char *)GC_MALLOC_ATOMIC(size);
-    strncpy(mem, str->strstart, str->strlen);
+    if (str->strstart)
+        strncpy(mem, str->strstart, str->strlen);
 
     Buffer_bufstart(str) = str->strstart = mem;
     Buffer_buflen(str)   = size;
