@@ -139,9 +139,6 @@ void new_runloop_jump_point(PARROT_INTERP)
 void destroy_runloop_jump_points(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void really_destroy_runloop_jump_points(
-    ARGIN_NULLOK(Parrot_runloop *jump_point));
-
 void runops(PARROT_INTERP, size_t offs)
         __attribute__nonnull__(1);
 
@@ -151,8 +148,6 @@ void runops(PARROT_INTERP, size_t offs)
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_destroy_runloop_jump_points __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_really_destroy_runloop_jump_points \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_runops __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
