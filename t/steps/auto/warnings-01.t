@@ -5,7 +5,7 @@
 
 use strict;
 use warnings;
-use Test::More tests =>  25;
+use Test::More tests =>  26;
 use Carp;
 use lib qw( lib t/configure/testlib );
 use_ok('config::auto::warnings');
@@ -64,7 +64,6 @@ $step = test_step_constructor_and_description($conf);
 
 $conf->replenish($serialized);
 
-
 $conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
 # Mock case where C compiler is not gcc.
@@ -72,26 +71,46 @@ $conf->data->set( gccversion => undef );
 ok($step->runstep($conf), "runstep() returned true value");
 is($step->result(), q{skipped}, "Got expected result");
 
-$conf->replenish($serialized);
+##### _set_ccwarn() #####
 
-$conf->options->set( %{$args} );
-$step = test_step_constructor_and_description($conf);
+my ($output, $warnings, $verbose);
+
+$output = 'some output';
+$warnings = '-Wsome_warning';
+$verbose = undef;
+$conf->data->set( ccwarn => undef );
+ok( auto::warnings::_set_ccwarn($conf, $output, $warnings, $verbose),
+    "_set_ccwarn returned true as expected" );
+is( $conf->data->get( 'ccwarn' ), $warnings,
+    "Warnings set as expected" );
+
 {
-    my ($stdout, $rv);
-    # Mock case where C compiler is not gcc.
-    $conf->data->set( gccversion => undef );
-    $conf->options->set( verbose => 1 );
+    $output = 'some output';
+    $warnings = '-Wsome_warning';
+    $verbose = 1;
+    $conf->data->set( ccwarn => undef );
+    my ($stdout, $stderr, $rv);
     capture(
-        sub { $rv = $step->runstep($conf); },
+        sub { $rv = auto::warnings::_set_ccwarn(
+                $conf, $output, $warnings, $verbose); },
         \$stdout,
+        \$stderr,
     );
-    ok($rv, "runstep() returned true value");
-    is($step->result(), q{skipped}, "Got expected result");
-    like($stdout,
-        qr/Currently we only set warnings/,
-        "Got expected verbose output"
-    );
+    ok( $rv, "_set_ccwarn returned true as expected" );
+    like($stdout, qr/output:\s+$output/s,
+        "Got expected verbose output from _set_ccwarn()" );
+    like($stdout, qr/ccwarn:\s+$warnings/s,
+        "Got expected verbose output from _set_ccwarn()" );
 }
+
+$output = 'error';
+$warnings = '-Wsome_warning';
+$verbose = undef;
+$conf->data->set( ccwarn => undef );
+ok( ! auto::warnings::_set_ccwarn($conf, $output, $warnings, $verbose),
+    "_set_ccwarn returned false as expected" );
+ok( ! defined $conf->data->get( 'ccwarn' ), 
+    "Warnings set as expected" );
 
 } # End SKIP block for Sun/Solaris
 
