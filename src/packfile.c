@@ -3565,7 +3565,7 @@ PackFile_FixupTable_new_entry(PARROT_INTERP,
 
     self->fixups[i]         = mem_gc_allocate_zeroed_typed(interp, PackFile_FixupEntry);
     self->fixups[i]->type   = type;
-    self->fixups[i]->name   = mem_sys_strdup(label);
+    self->fixups[i]->name   = Parrot_gc_strdup(interp, label);
     self->fixups[i]->offset = offs;
 }
 
