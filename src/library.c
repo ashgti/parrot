@@ -813,7 +813,7 @@ Parrot_get_runtime_prefix(PARROT_INTERP)
             return Parrot_str_to_cstring(interp, s);
         }
         else
-            return mem_sys_strdup(".");
+            return Parrot_gc_strdup(interp, ".");
     }
 }
 
