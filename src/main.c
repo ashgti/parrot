@@ -30,6 +30,10 @@ Start Parrot
 /* For gc_sys_type_enum */
 #include "gc/gc_private.h"
 
+#ifdef PARROT_HAS_BOEHM_GC
+#  include <gc.h>
+#endif
+
 /* HEADERIZER HFILE: none */
 
 /* HEADERIZER BEGIN: static */
@@ -103,6 +107,12 @@ main(int argc, char * argv[])
     const char *execname;
     Interp     *interp;
     int         status;
+
+#ifdef PARROT_HAS_BOEHM_GC
+    GC_init();
+    /* To stop affecting other GC */
+    GC_disable();
+#endif
 
     Parrot_Run_core_t  core  = PARROT_SLOW_CORE;
     Parrot_trace_flags trace = PARROT_NO_TRACE;

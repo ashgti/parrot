@@ -603,6 +603,9 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     //GC_enable_incremental();
     //GC_time_limit = GC_TIME_UNLIMITED;
 
+    /* GC is disabled in src/main.c. So reenable it */
+    GC_enable();
+
     /* Alias for gc_sys */
     GC_Subsystem *gc_sys = interp->gc_sys;
 
