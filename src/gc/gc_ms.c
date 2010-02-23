@@ -391,6 +391,7 @@ Parrot_gc_ms_init(PARROT_INTERP)
     interp->gc_sys->reallocate_memory_chunk_with_interior_pointers
                 = gc_ms_reallocate_memory_chunk_zeroed;
     interp->gc_sys->free_memory_chunk       = gc_ms_free_memory_chunk;
+    interp->gc_sys->gc_strdup               = gc_ms_strdup;
 
     interp->gc_sys->block_mark      = gc_ms_block_GC_mark;
     interp->gc_sys->unblock_mark    = gc_ms_unblock_GC_mark;
@@ -1184,6 +1185,32 @@ gc_ms_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
 #endif
     if (data)
         free(data);
+}
+
+/*
+
+=item C<char * gc_ms_strdup(PARROT_INTERP, const char * const src)>
+
+Copy a C string to a new block of memory allocated with mem_sys_allocate,
+that can be later deallocated with mem_sys_free.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_MALLOC
+PARROT_CANNOT_RETURN_NULL
+char *
+gc_ms_strdup(PARROT_INTERP, ARGIN(const char * const src))
+{
+    ASSERT_ARGS(gc_ms_strdup)
+
+    const size_t l = strlen(src);
+    char * const result = (char *)gc_ms_allocate_memory_chunk(interp, l + 1);
+    memcpy(result, src, l);
+    result[l] = '\0';
+    return result;
 }
 
 

@@ -142,6 +142,8 @@ typedef struct GC_Subsystem {
             size_t oldsize, size_t newsize);
     void (*free_memory_chunk)(PARROT_INTERP, void *data);
 
+    char* (*gc_strdup)(PARROT_INTERP, const char * const str);
+
     void (*block_mark)(PARROT_INTERP);
     void (*unblock_mark)(PARROT_INTERP);
     unsigned int (*is_blocked_mark)(PARROT_INTERP);
@@ -598,6 +600,13 @@ void Parrot_gc_merge_memory_pools(
 /* HEADERIZER BEGIN: src/gc/gc_ms.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
+PARROT_EXPORT
+PARROT_MALLOC
+PARROT_CANNOT_RETURN_NULL
+char * gc_ms_strdup(PARROT_INTERP, ARGIN(const char * const src))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 void * gc_ms_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
         __attribute__nonnull__(1);
@@ -638,6 +647,9 @@ void gc_ms_pmc_needs_early_collection(PARROT_INTERP, ARGMOD(PMC *pmc))
 void Parrot_gc_ms_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+#define ASSERT_ARGS_gc_ms_strdup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_gc_ms_allocate_fixed_size_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))

@@ -135,6 +135,9 @@ static void gc_boehm_reallocate_string_storage(PARROT_INTERP,
     size_t size)
         __attribute__nonnull__(1);
 
+static char* gc_boehm_strdup(PARROT_INTERP, const char * const str)
+        __attribute__nonnull__(1);
+
 static void gc_boehm_unblock_mark(PARROT_INTERP)
         __attribute__nonnull__(1);
 
@@ -201,6 +204,8 @@ static void gc_boehm_unblock_mark(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_reallocate_string_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_gc_boehm_strdup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_gc_boehm_unblock_mark __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -510,6 +515,13 @@ gc_boehm_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
         GC_FREE(data);
 }
 
+static char*
+gc_boehm_strdup(PARROT_INTERP, const char * const str)
+{
+    ASSERT_ARGS(gc_boehm_strdup)
+    return GC_STRDUP(str);
+}
+
 /*
 
 =item C<static size_t gc_boehm_get_gc_info(PARROT_INTERP, Interpinfo_enum what)>
@@ -652,6 +664,7 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     gc_sys->reallocate_memory_chunk_with_interior_pointers
                 = gc_boehm_reallocate_memory_chunk_zeroed;
     gc_sys->free_memory_chunk       = gc_boehm_free_memory_chunk;
+    gc_sys->gc_strdup               = gc_boehm_strdup;
 
     gc_sys->block_mark      = gc_boehm_block_mark;
     gc_sys->unblock_mark    = gc_boehm_unblock_mark;

@@ -313,6 +313,7 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     PARROT_ASSERT(interp->gc_sys->allocate_memory_chunk_with_interior_pointers);
     PARROT_ASSERT(interp->gc_sys->reallocate_memory_chunk_with_interior_pointers);
     PARROT_ASSERT(interp->gc_sys->free_memory_chunk);
+    PARROT_ASSERT(interp->gc_sys->gc_strdup);
 
     PARROT_ASSERT(interp->gc_sys->get_gc_info);
 }
@@ -761,6 +762,21 @@ Parrot_gc_reallocate_memory_chunk_with_interior_pointers(PARROT_INTERP,
             data, newsize, oldsize);
 }
 
+/*
+
+=item C<char* Parrot_gc_strdup(PARROT_INTERP, const char * const str)>
+
+Strdup using GC Subsystem.
+
+=cut
+
+*/
+char*
+Parrot_gc_strdup(PARROT_INTERP, ARGIN(const char * const str))
+{
+    ASSERT_ARGS(Parrot_gc_strdup)
+    return interp->gc_sys->gc_strdup(interp, str);
+}
 
 /*
 

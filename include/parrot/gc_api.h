@@ -316,6 +316,10 @@ void Parrot_gc_reallocate_string_storage(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*str);
 
+char* Parrot_gc_strdup(PARROT_INTERP, ARGIN(const char * const str))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_gc_sys_name(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -456,6 +460,9 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
     , PARROT_ASSERT_ARG(buffer))
 #define ASSERT_ARGS_Parrot_gc_reallocate_string_storage \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(str))
+#define ASSERT_ARGS_Parrot_gc_strdup __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(str))
 #define ASSERT_ARGS_Parrot_gc_sys_name __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
