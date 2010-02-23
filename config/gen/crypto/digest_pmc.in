@@ -70,7 +70,7 @@ pmclass @TEMP_md_name@
     VTABLE PMC* clone() {
 @TEMP_md_guard@
         PMC     *retval  = Parrot_pmc_new_noinit(INTERP, SELF->vtable->base_type);
-        @TEMP_md_ctx@ *c       = mem_allocate_zeroed_typed(@TEMP_md_ctx@);
+        @TEMP_md_ctx@ *c       = mem_gc_allocate_zeroed_typed(INTERP, @TEMP_md_ctx@);
 
         memcpy(c, PMC_data(SELF), sizeof (@TEMP_md_ctx@));
         PMC_data(retval) = c;
