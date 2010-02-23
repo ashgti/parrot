@@ -771,6 +771,7 @@ Strdup using GC Subsystem.
 =cut
 
 */
+PARROT_EXPORT
 char*
 Parrot_gc_strdup(PARROT_INTERP, ARGIN(const char * const str))
 {
