@@ -85,7 +85,8 @@ static unsigned int first_avail(PARROT_INTERP,
 PARROT_WARN_UNUSED_RESULT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-static unsigned int* ig_allocate(int N);
+static unsigned int* ig_allocate(PARROT_INTERP, int N)
+        __attribute__nonnull__(1);
 
 PARROT_WARN_UNUSED_RESULT
 static int ig_find_color(
@@ -192,7 +193,8 @@ static void vanilla_reg_alloc(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 #define ASSERT_ARGS_first_avail __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
-#define ASSERT_ARGS_ig_allocate __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_ig_allocate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_ig_find_color __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(avail))
@@ -291,7 +293,7 @@ ig_test(int i, int j, int N, ARGIN(unsigned int *graph))
 
 /*
 
-=item C<static unsigned int* ig_allocate(int N)>
+=item C<static unsigned int* ig_allocate(PARROT_INTERP, int N)>
 
 =cut
 
@@ -301,7 +303,7 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 static unsigned int*
-ig_allocate(int N)
+ig_allocate(PARROT_INTERP, int N)
 {
     ASSERT_ARGS(ig_allocate)
     /* size is N*N bits, but we want don't want to allocate a partial
@@ -309,7 +311,7 @@ ig_allocate(int N)
      */
     const int need_bits = N * N;
     const int num_words = (need_bits + sizeof (int) - 1) / sizeof (int);
-    return (unsigned int *)mem_sys_allocate_zeroed(num_words * sizeof (int));
+    return mem_gc_allocate_n_zeroed_typed(interp, num_words, unsigned int);
 }
 
 /*
@@ -421,21 +423,21 @@ imc_reg_alloc(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
 
 /*
 
-=item C<void free_reglist(IMC_Unit *unit)>
+=item C<void free_reglist(PARROT_INTERP, IMC_Unit *unit)>
 
 =cut
 
 */
 
 void
-free_reglist(ARGMOD(IMC_Unit *unit))
+free_reglist(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(free_reglist)
 #if IMC_TRACE
     fprintf(stderr, "reg_alloc.c: free_reglist\n");
 #endif
     if (unit->interference_graph) {
-        mem_sys_free(unit->interference_graph);
+        mem_gc_free(interp, unit->interference_graph);
         unit->interference_graph = NULL;
     }
 
@@ -443,9 +445,9 @@ free_reglist(ARGMOD(IMC_Unit *unit))
         unsigned int i;
 
         for (i = 0; i < unit->n_symbols; i++)
-            free_life_info(unit, unit->reglist[i]);
+            free_life_info(interp, unit, unit->reglist[i]);
 
-        mem_sys_free(unit->reglist);
+        mem_gc_free(interp, unit->reglist);
         unit->reglist   = NULL;
         unit->n_symbols = 0;
     }
@@ -670,7 +672,7 @@ build_reglist(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
     /* count symbols */
     if (unit->reglist)
-        free_reglist(unit);
+        free_reglist(interp, unit);
 
     count = unit->hash.entries;
     if (count == 0)
@@ -788,7 +790,7 @@ build_interference_graph(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
     /* Construct a graph N x N where N = number of symbolics.
      * This piece can be rewritten without the N x N array */
-    interference_graph       = ig_allocate(n_symbols);
+    interference_graph       = ig_allocate(interp, n_symbols);
     unit->interference_graph = interference_graph;
 
     /* Calculate interferences between each chain and populate the the Y-axis */
@@ -1078,7 +1080,7 @@ try_allocate(PARROT_INTERP, ARGIN(IMC_Unit *unit))
         color = ig_find_color(unit, avail);
 
         if (color == -1) {
-            mem_sys_free(avail);
+            mem_gc_free(interp, avail);
             IMCC_fatal(interp, DEBUG_IMC,
                     "# no more colors - this should not happen\n");
         }
@@ -1090,7 +1092,7 @@ try_allocate(PARROT_INTERP, ARGIN(IMC_Unit *unit))
             r->name, color);
     }
 
-    mem_sys_free(avail);
+    mem_gc_free(interp, avail);
     /* we are totally finished */
 }
 
@@ -1160,7 +1162,7 @@ first_avail(PARROT_INTERP,
             if (r->set == reg_set)
                 if (REG_NEEDS_ALLOC(r))
                     if (r->color >= (int)0)
-                        set_add(allocated, (unsigned int)r->color);
+                        set_add(interp, allocated, (unsigned int)r->color);
         }
     }
 
@@ -1169,7 +1171,7 @@ first_avail(PARROT_INTERP,
     if (avail)
         *avail = allocated;
     else
-        set_free(allocated);
+        set_free(interp, allocated);
 
     return first;
 }
@@ -1214,7 +1216,7 @@ allocate_uniq(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int usage)
                 unsigned int first_reg = avail
                                        ? set_first_zero(avail)
                                        : first_avail(interp, unit, (int)r->set, &avail);
-                set_add(avail, first_reg);
+                set_add(interp, avail, first_reg);
                 r->color = first_reg++;
 
                 IMCC_debug(interp, DEBUG_IMC,
@@ -1233,7 +1235,7 @@ allocate_uniq(PARROT_INTERP, ARGMOD(IMC_Unit *unit), int usage)
 
     for (i = 0; i < 4; ++i) {
         if (sets[i])
-            set_free(sets[i]);
+            set_free(interp, sets[i]);
     }
 
     /*
@@ -1286,13 +1288,13 @@ vanilla_reg_alloc(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
                     if (set_contains(avail, first_reg))
                         first_reg = first_avail(interp, unit, reg_set, NULL);
 
-                    set_add(avail, first_reg);
+                    set_add(interp, avail, first_reg);
                     r->color = first_reg++;
                 }
             }
         }
 
-        set_free(avail);
+        set_free(interp, avail);
         unit->first_avail[j] = first_reg;
     }
 }

@@ -89,7 +89,7 @@ imc_compile_all_units(PARROT_INTERP)
 
         for (ins = unit->instructions; ins;) {
             Instruction * const ins_next = ins->next;
-            free_ins(ins);
+            free_ins(interp, ins);
             ins = ins_next;
         }
 
@@ -143,11 +143,11 @@ imc_cleanup(PARROT_INTERP, ARGIN_NULLOK(void *yyscanner))
     ASSERT_ARGS(imc_cleanup)
     IMCC_pop_parser_state(interp, yyscanner);
     clear_globals(interp);
-    mem_sys_free(IMCC_INFO(interp)->ghash.data);
+    mem_gc_free(interp, IMCC_INFO(interp)->ghash.data);
     IMCC_INFO(interp)->ghash.data = NULL;
 
     if (IMCC_INFO(interp)->state) {
-        mem_sys_free(IMCC_INFO(interp)->state->file);
+        mem_gc_free(interp, IMCC_INFO(interp)->state->file);
         IMCC_INFO(interp)->state->file = NULL;
     }
 }
@@ -261,27 +261,27 @@ imc_free_unit(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     fprintf(stderr, "imc_free_unit()\n");
 #endif
 
-    free_reglist(unit);
+    free_reglist(interp, unit);
 
     /* and cfg ... */
-    clear_basic_blocks(unit);
+    clear_basic_blocks(interp, unit);
 
     if (!imc->n_comp_units)
         IMCC_fatal(interp, 1, "imc_free_unit: non existent unit\n");
 
     imc->n_comp_units--;
 
-    clear_locals(unit);
+    clear_locals(interp, unit);
 
     if (unit->_namespace && unit->owns_namespace)
-        free_sym(unit->_namespace);
+        free_sym(interp, unit->_namespace);
     if (unit->vtable_name)
-        mem_sys_free(unit->vtable_name);
+        mem_gc_free(interp, unit->vtable_name);
     if (unit->instance_of)
-        mem_sys_free(unit->instance_of);
+        mem_gc_free(interp, unit->instance_of);
 
-    mem_sys_free(unit->hash.data);
-    mem_sys_free(unit);
+    mem_gc_free(interp, unit->hash.data);
+    mem_gc_free(interp, unit);
 }
 
 /*

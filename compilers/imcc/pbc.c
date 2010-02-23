@@ -319,13 +319,13 @@ imcc_globals_destroy(PARROT_INTERP, SHIM(int ex), SHIM(void *param))
 
             while (s) {
                 subs_t * const prev_s = s->prev;
-                clear_sym_hash(&s->fixup);
-                mem_sys_free(s);
+                clear_sym_hash(interp, &s->fixup);
+                mem_gc_free(interp, s);
                 s = prev_s;
             }
 
-            clear_sym_hash(&cs->key_consts);
-            mem_sys_free(cs);
+            clear_sym_hash(interp, &cs->key_consts);
+            mem_gc_free(interp, cs);
             cs = prev_cs;
         }
         IMCC_INFO(interp)->globals->cs = NULL;
@@ -438,7 +438,7 @@ e_pbc_open(PARROT_INTERP, SHIM(void *param))
         IMCC_INFO(interp)->globals = mem_gc_allocate_zeroed_typed(interp, imcc_globals);
 
     if (IMCC_INFO(interp)->globals->cs)
-        clear_sym_hash(&IMCC_INFO(interp)->globals->cs->key_consts);
+        clear_sym_hash(interp, &IMCC_INFO(interp)->globals->cs->key_consts);
     else {
         /* register cleanup code */
         Parrot_on_exit(interp, imcc_globals_destroy, NULL);
@@ -1236,7 +1236,7 @@ end positions.
 
 #define UNIT_FREE_CHAR(x) \
   do { \
-    mem_sys_free((x)); \
+    mem_gc_free(interp, (x)); \
     (x) = NULL; \
   } while (0);
 
@@ -1276,7 +1276,7 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
 
         if (real_name) {
             char * const p = Parrot_gc_strdup(interp, real_name + 1);
-            mem_sys_free(r->name);
+            mem_gc_free(interp, r->name);
             r->name = p;
         }
     }
@@ -1483,7 +1483,7 @@ add_const_key(PARROT_INTERP, ARGIN(const opcode_t *key), int size, ARGIN(const c
             interp->code->const_table, pfc, key);
 
     if (!rc) {
-        mem_sys_free(pfc);
+        mem_gc_free(interp, pfc);
         IMCC_fatal(interp, 1,
             "add_const_key: PackFile_Constant error\n");
     }
@@ -1498,7 +1498,7 @@ add_const_key(PARROT_INTERP, ARGIN(const opcode_t *key), int size, ARGIN(const c
     IMCC_debug(interp, DEBUG_PBC_CONST, "\t %x /%x %x/ /%x %x/\n",
                key[0], key[1], key[2], key[3], key[4]);
 
-    mem_sys_free(pfc);
+    mem_gc_free(interp, pfc);
 
     return k;
 }
@@ -2147,7 +2147,7 @@ e_pbc_emit(PARROT_INTERP, SHIM(void *param), ARGIN(const IMC_Unit *unit),
 
         /* allocate code */
         interp->code->base.data       = (opcode_t *)
-            mem_sys_realloc(interp->code->base.data, bytes);
+            Parrot_gc_reallocate_memory_chunk(interp, interp->code->base.data, bytes);
 
         /* reallocating this removes its mmaped-ness; needs encapsulation */
         interp->code->base.pf->is_mmap_ped = 0;

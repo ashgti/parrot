@@ -357,8 +357,8 @@ pcc_get_args(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins),
     ins     = insINS(interp, unit, ins, op_name, regs, n + 1);
 
     if (n >= PCC_GET_ARGS_LIMIT) {
-        mem_sys_free(regs);
-        mem_sys_free(buf);
+        mem_gc_free(interp, regs);
+        mem_gc_free(interp, buf);
     }
     return ins;
     #undef PCC_GET_ARGS_LIMIT
@@ -614,7 +614,7 @@ move_regs(PARROT_INTERP, ARGIN(IMC_Unit *unit), ARGIN(Instruction *ins),
     if (!n)
         return ins;
 
-    move_list      = (unsigned char *)mem_sys_allocate(2 * n);
+    move_list      = mem_gc_allocate_n_typed(interp, 2 * n, unsigned char);
     move_info.unit = unit;
     move_info.ins  = ins;
     move_info.n    = n;
@@ -644,7 +644,7 @@ done:
     Parrot_register_move(interp, n, move_list, move_list + n, 255,
         pcc_reg_mov, NULL, &move_info);
 
-    mem_sys_free(move_list);
+    mem_gc_free(interp, move_list);
     return move_info.ins;
 }
 

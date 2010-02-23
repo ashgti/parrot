@@ -67,8 +67,9 @@ static void * imcc_compile_file(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*error_message);
 
-static void imcc_destroy_macro_values(ARGMOD(void *value))
+static void imcc_destroy_macro_values(PARROT_INTERP, ARGMOD(void *value))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*value);
 
 PARROT_WARN_UNUSED_RESULT
@@ -103,7 +104,8 @@ static Instruction * var_arg_ins(PARROT_INTERP,
     , PARROT_ASSERT_ARG(fullname) \
     , PARROT_ASSERT_ARG(error_message))
 #define ASSERT_ARGS_imcc_destroy_macro_values __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(value))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(value))
 #define ASSERT_ARGS_try_rev_cmp __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(name) \
     , PARROT_ASSERT_ARG(r))
@@ -719,12 +721,12 @@ imcc_compile(PARROT_INTERP, ARGIN(const char *s), int pasm_file,
     if (imc_info) {
         SymReg *ns                  = IMCC_INFO(interp)->cur_namespace;
         IMCC_INFO(interp)           = imc_info->prev;
-        mem_sys_free(imc_info);
+        mem_gc_free(interp, imc_info);
         imc_info                    = IMCC_INFO(interp);
         IMCC_INFO(interp)->cur_unit = imc_info->last_unit;
 
         if (ns && ns != imc_info->cur_namespace)
-            free_sym(ns);
+            free_sym(interp, ns);
 
         IMCC_INFO(interp)->cur_namespace = imc_info->cur_namespace;
     }
@@ -985,9 +987,9 @@ imcc_compile_file(PARROT_INTERP, ARGIN(const char *fullname),
     if (imc_info) {
         IMCC_INFO(interp) = imc_info->prev;
         if (imc_info->globals)
-            mem_sys_free(imc_info->globals);
+            mem_gc_free(interp, imc_info->globals);
 
-        mem_sys_free(imc_info);
+        mem_gc_free(interp, imc_info);
     }
 
     return cs;
@@ -1289,7 +1291,7 @@ imcc_init(PARROT_INTERP)
 
 /*
 
-=item C<static void imcc_destroy_macro_values(void *value)>
+=item C<static void imcc_destroy_macro_values(PARROT_INTERP, void *value)>
 
 A callback for parrot_chash_destroy_values() to free all macro-allocated memory.
 
@@ -1298,7 +1300,7 @@ A callback for parrot_chash_destroy_values() to free all macro-allocated memory.
 */
 
 static void
-imcc_destroy_macro_values(ARGMOD(void *value))
+imcc_destroy_macro_values(PARROT_INTERP, ARGMOD(void *value))
 {
     ASSERT_ARGS(imcc_destroy_macro_values)
     macro_t *  const m      = (macro_t *)value;
@@ -1309,11 +1311,11 @@ imcc_destroy_macro_values(ARGMOD(void *value))
     for (i = 0; i < params->num_param; ++i) {
         char * const name = params->name[i];
         if (name)
-            mem_sys_free(name);
+            mem_gc_free(interp, name);
     }
 
-    mem_sys_free(m->expansion);
-    mem_sys_free(m);
+    mem_gc_free(interp, m->expansion);
+    mem_gc_free(interp, m);
 }
 
 
@@ -1336,9 +1338,9 @@ imcc_destroy(PARROT_INTERP)
         parrot_chash_destroy_values(interp, macros, imcc_destroy_macro_values);
 
     if (IMCC_INFO(interp)->globals)
-        mem_sys_free(IMCC_INFO(interp)->globals);
+        mem_gc_free(interp, IMCC_INFO(interp)->globals);
 
-    mem_sys_free(IMCC_INFO(interp));
+    mem_gc_free(interp, IMCC_INFO(interp));
     IMCC_INFO(interp) = NULL;
 
     if (eval_nr != 0)

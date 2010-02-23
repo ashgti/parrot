@@ -14,8 +14,9 @@ typedef struct _Set {
 /* HEADERIZER BEGIN: compilers/imcc/sets.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-void set_add(ARGMOD(Set *s), unsigned int element)
+void set_add(PARROT_INTERP, ARGMOD(Set *s), unsigned int element)
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
 
 void set_clear(ARGMOD(Set *s))
@@ -42,8 +43,9 @@ PARROT_PURE_FUNCTION
 unsigned int set_first_zero(ARGIN(const Set *s))
         __attribute__nonnull__(1);
 
-void set_free(ARGMOD(Set *s))
+void set_free(PARROT_INTERP, ARGMOD(Set *s))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*s);
 
 PARROT_MALLOC
@@ -78,7 +80,8 @@ Set * set_union(PARROT_INTERP, ARGIN(const Set *s1), ARGIN(const Set *s2))
         __attribute__nonnull__(3);
 
 #define ASSERT_ARGS_set_add __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(s))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_set_clear __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_set_contains __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -92,7 +95,8 @@ Set * set_union(PARROT_INTERP, ARGIN(const Set *s1), ARGIN(const Set *s2))
 #define ASSERT_ARGS_set_first_zero __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_set_free __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(s))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_set_intersec __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(s1) \

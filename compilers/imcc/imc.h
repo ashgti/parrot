@@ -141,8 +141,9 @@ IMC_Unit * imc_open_unit(PARROT_INTERP, IMC_Unit_Type t)
 /* HEADERIZER BEGIN: compilers/imcc/reg_alloc.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-void free_reglist(ARGMOD(IMC_Unit *unit))
+void free_reglist(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
 void graph_coloring_reg_alloc(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
@@ -158,7 +159,8 @@ void imc_reg_alloc(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_free_reglist __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_graph_coloring_reg_alloc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))

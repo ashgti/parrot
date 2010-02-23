@@ -102,7 +102,7 @@ _mk_instruction(PARROT_INTERP, ARGIN(const char *op),
     ASSERT_ARGS(_mk_instruction)
     const size_t reg_space  = (n > 1) ? (sizeof (SymReg *) * (n - 1)) : 0;
     Instruction * const ins =
-        (Instruction*)mem_sys_allocate_zeroed(sizeof (Instruction) + reg_space);
+        (Instruction*)Parrot_gc_allocate_memory_chunk_with_interior_pointers(interp, sizeof (Instruction) + reg_space);
     int i;
 
     ins->opname       = Parrot_gc_strdup(interp, op);
@@ -431,7 +431,8 @@ _delete_ins(ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins))
 
 /*
 
-=item C<Instruction * delete_ins(IMC_Unit *unit, Instruction *ins)>
+=item C<Instruction * delete_ins(PARROT_INTERP, IMC_Unit *unit, Instruction
+*ins)>
 
 Delete instruction ins, and then free it.
 
@@ -444,13 +445,13 @@ The instruction following ins is returned.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 Instruction *
-delete_ins(ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins))
+delete_ins(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins))
 {
     ASSERT_ARGS(delete_ins)
     Instruction * next = _delete_ins(unit, ins);
 
 
-    free_ins(ins);
+    free_ins(interp, ins);
 
     return next;
 }
@@ -543,8 +544,8 @@ prepend_ins(ARGMOD(IMC_Unit *unit), ARGMOD_NULLOK(Instruction *ins),
 
 /*
 
-=item C<void subst_ins(IMC_Unit *unit, Instruction *ins, Instruction *tmp, int
-needs_freeing)>
+=item C<void subst_ins(PARROT_INTERP, IMC_Unit *unit, Instruction *ins,
+Instruction *tmp, int needs_freeing)>
 
 Substitute Instruction C<tmp> for Instruction C<ins>.
 Free C<ins> if C<needs_freeing> is true.
@@ -554,7 +555,7 @@ Free C<ins> if C<needs_freeing> is true.
 */
 
 void
-subst_ins(ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins),
+subst_ins(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins),
           ARGMOD(Instruction *tmp), int needs_freeing)
 {
     ASSERT_ARGS(subst_ins)
@@ -578,7 +579,7 @@ subst_ins(ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins),
         tmp->line = ins->line;
 
     if (needs_freeing)
-        free_ins(ins);
+        free_ins(interp, ins);
 }
 
 /*
@@ -639,7 +640,7 @@ emitb(PARROT_INTERP, ARGMOD_NULLOK(IMC_Unit *unit), ARGIN_NULLOK(Instruction *i)
 
 /*
 
-=item C<void free_ins(Instruction *ins)>
+=item C<void free_ins(PARROT_INTERP, Instruction *ins)>
 
 Free the Instruction structure ins.
 
@@ -648,12 +649,12 @@ Free the Instruction structure ins.
 */
 
 void
-free_ins(ARGMOD(Instruction *ins))
+free_ins(PARROT_INTERP, ARGMOD(Instruction *ins))
 {
     ASSERT_ARGS(free_ins)
-    mem_sys_free(ins->format);
-    mem_sys_free(ins->opname);
-    mem_sys_free(ins);
+    mem_gc_free(interp, ins->format);
+    mem_gc_free(interp, ins->opname);
+    mem_gc_free(interp, ins);
 }
 
 /*

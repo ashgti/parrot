@@ -89,7 +89,7 @@ set_make_full(PARROT_INTERP, unsigned int length)
 
 /*
 
-=item C<void set_free(Set *s)>
+=item C<void set_free(PARROT_INTERP, Set *s)>
 
 Frees the given Set and its allocated memory.
 
@@ -98,13 +98,13 @@ Frees the given Set and its allocated memory.
 */
 
 void
-set_free(ARGMOD(Set *s))
+set_free(PARROT_INTERP, ARGMOD(Set *s))
 {
     ASSERT_ARGS(set_free)
     if (s->bmp)
-        mem_sys_free(s->bmp);
+        mem_gc_free(interp, s->bmp);
 
-    mem_sys_free(s);
+    mem_gc_free(interp, s);
 }
 
 
@@ -190,7 +190,7 @@ set_equal(ARGIN(const Set *s1), ARGIN(const Set *s2))
 
 /*
 
-=item C<void set_add(Set *s, unsigned int element)>
+=item C<void set_add(PARROT_INTERP, Set *s, unsigned int element)>
 
 Adds to set C<s> the element C<element>.
 
@@ -199,14 +199,15 @@ Adds to set C<s> the element C<element>.
 */
 
 void
-set_add(ARGMOD(Set *s), unsigned int element)
+set_add(PARROT_INTERP, ARGMOD(Set *s), unsigned int element)
 {
     ASSERT_ARGS(set_add)
     const int elem_byte_in_set = BYTE_IN_SET(element);
     const int bytes_in_set     = BYTE_IN_SET(s->length);
 
     if (bytes_in_set < elem_byte_in_set) {
-        s->bmp = (unsigned char *)mem_sys_realloc_zeroed(s->bmp,
+        s->bmp = (unsigned char *)Parrot_gc_reallocate_memory_chunk_with_interior_pointers(
+            interp, s->bmp,
             NUM_BYTES(element), NUM_BYTES(s->length));
         s->length += 8;
     }

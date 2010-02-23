@@ -61,8 +61,9 @@ void build_cfg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
-void clear_basic_blocks(ARGMOD(IMC_Unit *unit))
+void clear_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
 void compute_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
@@ -89,9 +90,12 @@ void find_loops(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
-void free_life_info(ARGIN(const IMC_Unit *unit), ARGMOD(SymReg *r))
+void free_life_info(PARROT_INTERP,
+    ARGIN(const IMC_Unit *unit),
+    ARGMOD(SymReg *r))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
         FUNC_MODIFIES(*r);
 
 void life_analysis(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
@@ -112,11 +116,12 @@ int natural_preheader(
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-void search_predecessors_not_in(
+void search_predecessors_not_in(PARROT_INTERP,
     ARGIN(const Basic_block *node),
     ARGMOD(Set *s))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
         FUNC_MODIFIES(*s);
 
 #define ASSERT_ARGS_blocks_are_connected __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -126,7 +131,8 @@ void search_predecessors_not_in(
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_clear_basic_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_compute_dominance_frontiers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
@@ -142,7 +148,8 @@ void search_predecessors_not_in(
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_free_life_info __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit) \
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_life_analysis __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -154,7 +161,8 @@ void search_predecessors_not_in(
        PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(loop_info))
 #define ASSERT_ARGS_search_predecessors_not_in __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(node) \
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(node) \
     , PARROT_ASSERT_ARG(s))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: compilers/imcc/cfg.c */

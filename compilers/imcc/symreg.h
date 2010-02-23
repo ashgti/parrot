@@ -193,9 +193,12 @@ void add_pcc_sub(ARGMOD(SymReg *r), ARGIN(SymReg *arg))
 void clear_globals(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-void clear_locals(ARGIN_NULLOK(IMC_Unit *unit));
-void clear_sym_hash(ARGMOD(SymHash *hsh))
+void clear_locals(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
+        __attribute__nonnull__(1);
+
+void clear_sym_hash(PARROT_INTERP, ARGMOD(SymHash *hsh))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*hsh);
 
 void create_symhash(PARROT_INTERP, ARGOUT(SymHash *hash))
@@ -218,8 +221,9 @@ SymReg * find_sym(PARROT_INTERP, ARGIN(const char *name))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-void free_sym(ARGMOD(SymReg *r))
+void free_sym(PARROT_INTERP, ARGMOD(SymReg *r))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*r);
 
 PARROT_CAN_RETURN_NULL
@@ -335,8 +339,9 @@ void store_symreg(PARROT_INTERP, ARGMOD(SymReg *r))
 PARROT_MALLOC
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-char * symreg_to_str(ARGIN(const SymReg *s))
-        __attribute__nonnull__(1);
+char * symreg_to_str(PARROT_INTERP, ARGIN(const SymReg *s))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 #define ASSERT_ARGS__find_sym __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -379,9 +384,11 @@ char * symreg_to_str(ARGIN(const SymReg *s))
     , PARROT_ASSERT_ARG(arg))
 #define ASSERT_ARGS_clear_globals __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_clear_locals __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_clear_locals __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_clear_sym_hash __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(hsh))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(hsh))
 #define ASSERT_ARGS_create_symhash __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(hash))
@@ -394,7 +401,8 @@ char * symreg_to_str(ARGIN(const SymReg *s))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(name))
 #define ASSERT_ARGS_free_sym __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(r))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_get_sym __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(name))
@@ -449,7 +457,8 @@ char * symreg_to_str(ARGIN(const SymReg *s))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_symreg_to_str __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(s))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(s))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: compilers/imcc/symreg.c */
 

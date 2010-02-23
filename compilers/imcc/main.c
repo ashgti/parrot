@@ -521,7 +521,7 @@ imcc_write_pbc(PARROT_INTERP, ARGIN(const char *output_file))
     size = PackFile_pack_size(interp, interp->code->base.pf) *
         sizeof (opcode_t);
     IMCC_info(interp, 1, "packed code %d bytes\n", size);
-    packed = (opcode_t*) mem_sys_allocate(size);
+    packed = (opcode_t*) Parrot_gc_allocate_memory_chunk(interp, size);
     PackFile_pack(interp, interp->code->base.pf, packed);
     if (STREQ(output_file, "-"))
         fp = stdout;
@@ -534,7 +534,7 @@ imcc_write_pbc(PARROT_INTERP, ARGIN(const char *output_file))
             "Couldn't write %s\n", output_file);
     fclose(fp);
     IMCC_info(interp, 1, "%s written.\n", output_file);
-    mem_sys_free(packed);
+    mem_gc_free(interp, packed);
 }
 
 /*

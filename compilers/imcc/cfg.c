@@ -83,9 +83,12 @@ static void bb_findadd_edge(PARROT_INTERP,
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*unit);
 
-static void bb_remove_edge(ARGMOD(IMC_Unit *unit), ARGMOD(Edge *edge))
+static void bb_remove_edge(PARROT_INTERP,
+    ARGMOD(IMC_Unit *unit),
+    ARGMOD(Edge *edge))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
         FUNC_MODIFIES(*unit)
         FUNC_MODIFIES(*edge);
 
@@ -97,20 +100,24 @@ static int check_invoke_type(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-static void free_dominance_frontiers(ARGMOD(IMC_Unit *unit))
+static void free_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
-static void free_dominators(ARGMOD(IMC_Unit *unit))
+static void free_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
-static void free_edge(ARGMOD(IMC_Unit *unit))
+static void free_edge(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
-static void free_loops(ARGMOD(IMC_Unit *unit))
+static void free_loops(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
         FUNC_MODIFIES(*unit);
 
 static void init_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
@@ -173,20 +180,25 @@ static void sort_loops(PARROT_INTERP, ARGIN(IMC_Unit *unit))
     , PARROT_ASSERT_ARG(from) \
     , PARROT_ASSERT_ARG(label))
 #define ASSERT_ARGS_bb_remove_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit) \
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(edge))
 #define ASSERT_ARGS_check_invoke_type __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(ins))
 #define ASSERT_ARGS_free_dominance_frontiers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_free_dominators __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_free_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_free_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(unit))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(unit))
 #define ASSERT_ARGS_init_basic_blocks __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
@@ -461,7 +473,7 @@ build_cfg(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
             if (!bb->pred_list) {
                 /* Remove all successor edges of block bb */
                 while (bb->succ_list) {
-                    bb_remove_edge(unit, bb->succ_list);
+                    bb_remove_edge(interp, unit, bb->succ_list);
                     IMCC_debug(interp, DEBUG_CFG,
                             "remove edge from bb: %d\n", bb->index);
                     changes = 1;
@@ -594,7 +606,7 @@ bb_add_edge(PARROT_INTERP,
 
 /*
 
-=item C<static void bb_remove_edge(IMC_Unit *unit, Edge *edge)>
+=item C<static void bb_remove_edge(PARROT_INTERP, IMC_Unit *unit, Edge *edge)>
 
 Removes the given edge from the graph.
 
@@ -603,7 +615,7 @@ Removes the given edge from the graph.
 */
 
 static void
-bb_remove_edge(ARGMOD(IMC_Unit *unit), ARGMOD(Edge *edge))
+bb_remove_edge(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Edge *edge))
 {
     ASSERT_ARGS(bb_remove_edge)
     if (edge->from->succ_list == edge) {
@@ -632,14 +644,14 @@ bb_remove_edge(ARGMOD(IMC_Unit *unit), ARGMOD(Edge *edge))
 
     if (unit->edge_list == edge) {
         unit->edge_list = edge->next;
-        mem_sys_free(edge);
+        mem_gc_free(interp, edge);
     }
     else {
         Edge *prev;
         for (prev = unit->edge_list; prev; prev = prev->next) {
             if (prev->next == edge) {
                 prev->next = edge->next;
-                mem_sys_free(edge);
+                mem_gc_free(interp, edge);
                 break;
             }
         }
@@ -649,7 +661,7 @@ bb_remove_edge(ARGMOD(IMC_Unit *unit), ARGMOD(Edge *edge))
 
 /*
 
-=item C<static void free_edge(IMC_Unit *unit)>
+=item C<static void free_edge(PARROT_INTERP, IMC_Unit *unit)>
 
 Frees the memory of an IMC_Unit's edge list.
 
@@ -658,14 +670,14 @@ Frees the memory of an IMC_Unit's edge list.
 */
 
 static void
-free_edge(ARGMOD(IMC_Unit *unit))
+free_edge(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(free_edge)
     Edge *e;
 
     for (e = unit->edge_list; e;) {
         Edge * const next = e->next;
-        mem_sys_free(e);
+        mem_gc_free(interp, e);
         e = next;
     }
 
@@ -747,7 +759,7 @@ analyse_life_symbol(PARROT_INTERP,
 #endif
 
     if (r->life_info)
-        free_life_info(unit, r);
+        free_life_info(interp, unit, r);
 
     r->life_info = mem_gc_allocate_n_zeroed_typed(interp, unit->n_basic_blocks,
                                                Life_range *);
@@ -791,7 +803,7 @@ analyse_life_symbol(PARROT_INTERP,
 
 /*
 
-=item C<void free_life_info(const IMC_Unit *unit, SymReg *r)>
+=item C<void free_life_info(PARROT_INTERP, const IMC_Unit *unit, SymReg *r)>
 
 Frees memory of the life analysis info structures.
 
@@ -800,7 +812,7 @@ Frees memory of the life analysis info structures.
 */
 
 void
-free_life_info(ARGIN(const IMC_Unit *unit), ARGMOD(SymReg *r))
+free_life_info(PARROT_INTERP, ARGIN(const IMC_Unit *unit), ARGMOD(SymReg *r))
 {
     ASSERT_ARGS(free_life_info)
 #if IMC_TRACE_HIGH
@@ -810,10 +822,10 @@ free_life_info(ARGIN(const IMC_Unit *unit), ARGMOD(SymReg *r))
         unsigned int i;
 
         for (i = 0; i < unit->n_basic_blocks; i++) {
-            mem_sys_free(r->life_info[i]);
+            mem_gc_free(interp, r->life_info[i]);
         }
 
-        mem_sys_free(r->life_info);
+        mem_gc_free(interp, r->life_info);
         r->life_info = NULL;
     }
 }
@@ -1005,7 +1017,7 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     unit->dominators     = dominators;
 
     dominators[0]        = set_make(interp, n);
-    set_add(dominators[0], 0);
+    set_add(interp, dominators[0], 0);
 
     for (i = n - 1; i; --i) {
         if (unit->bb_list[i]->pred_list) {
@@ -1013,7 +1025,7 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
         }
         else {
             dominators[i] = set_make(interp, n);
-            set_add(dominators[i], i);
+            set_add(interp, dominators[i], i);
         }
     }
 
@@ -1059,15 +1071,15 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
                 set_intersec_inplace(s, dominators[pred_index]);
             }
 
-            set_add(s, i);
+            set_add(interp, s, i);
 
             if (! set_equal(dominators[i], s)) {
                 change = 1;
-                set_free(dominators[i]);
+                set_free(interp, dominators[i]);
                 dominators[i] = s;
             }
             else
-                set_free(s);
+                set_free(interp, s);
         }
     }
 #endif
@@ -1103,7 +1115,7 @@ compute_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     if (IMCC_INFO(interp)->debug & DEBUG_CFG)
         dump_dominators(unit);
 #if USE_BFS
-    mem_sys_free(q);
+    mem_gc_free(interp, q);
     set_free(visited);
 #endif
 }
@@ -1155,7 +1167,7 @@ compute_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
                         runner = 0;
                     else
                         /* add b to runner's dominance frontier set */
-                        set_add(unit->dominance_frontiers[runner], b);
+                        set_add(interp, unit->dominance_frontiers[runner], b);
 
                     /* runner = idoms[runner] */
                     if (runner == 0)
@@ -1174,7 +1186,7 @@ compute_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
 /*
 
-=item C<static void free_dominators(IMC_Unit *unit)>
+=item C<static void free_dominators(PARROT_INTERP, IMC_Unit *unit)>
 
 Frees the memory in the given unit related to all dominators.
 
@@ -1183,26 +1195,26 @@ Frees the memory in the given unit related to all dominators.
 */
 
 static void
-free_dominators(ARGMOD(IMC_Unit *unit))
+free_dominators(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(free_dominators)
     if (unit->dominators) {
         unsigned int i;
 
         for (i = 0; i < unit->n_basic_blocks; i++) {
-            set_free(unit->dominators[i]);
+            set_free(interp, unit->dominators[i]);
         }
 
-        mem_sys_free(unit->dominators);
+        mem_gc_free(interp, unit->dominators);
         unit->dominators = NULL;
-        mem_sys_free(unit->idoms);
+        mem_gc_free(interp, unit->idoms);
     }
 }
 
 
 /*
 
-=item C<static void free_dominance_frontiers(IMC_Unit *unit)>
+=item C<static void free_dominance_frontiers(PARROT_INTERP, IMC_Unit *unit)>
 
 Frees the memory in the given unit related to all dominance frontiers.
 
@@ -1211,17 +1223,17 @@ Frees the memory in the given unit related to all dominance frontiers.
 */
 
 static void
-free_dominance_frontiers(ARGMOD(IMC_Unit *unit))
+free_dominance_frontiers(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(free_dominance_frontiers)
     if (unit->dominance_frontiers) {
         unsigned int i;
 
         for (i = 0; i < unit->n_basic_blocks; i++) {
-            set_free(unit->dominance_frontiers[i]);
+            set_free(interp, unit->dominance_frontiers[i]);
         }
 
-        mem_sys_free(unit->dominance_frontiers);
+        mem_gc_free(interp, unit->dominance_frontiers);
         unit->dominance_frontiers = NULL;
     }
 }
@@ -1432,14 +1444,14 @@ mark_loop(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const Edge *e))
     }
 
     loop = set_make(interp, unit->n_basic_blocks);
-    set_add(loop, footer->index);
-    set_add(loop, header->index);
+    set_add(interp, loop, footer->index);
+    set_add(interp, loop, header->index);
 
     footer->loop_depth++;
 
     if (header != footer) {
         header->loop_depth++;
-        search_predecessors_not_in(footer, loop);
+        search_predecessors_not_in(interp, footer, loop);
     }
 
     exits = set_make(interp, unit->n_basic_blocks);
@@ -1451,7 +1463,7 @@ mark_loop(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const Edge *e))
                  edge = edge->succ_next)
             {
                 if (!set_contains(loop, edge->to->index))
-                    set_add(exits, i);
+                    set_add(interp, exits, i);
             }
         }
     }
@@ -1477,7 +1489,7 @@ mark_loop(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const Edge *e))
 
 /*
 
-=item C<static void free_loops(IMC_Unit *unit)>
+=item C<static void free_loops(PARROT_INTERP, IMC_Unit *unit)>
 
 Frees the memory associated with the loops in this unit.
 
@@ -1486,18 +1498,18 @@ Frees the memory associated with the loops in this unit.
 */
 
 static void
-free_loops(ARGMOD(IMC_Unit *unit))
+free_loops(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(free_loops)
     int i;
 
     for (i = 0; i < unit->n_loops; i++) {
-        set_free(unit->loop_info[i]->loop);
-        set_free(unit->loop_info[i]->exits);
-        mem_sys_free(unit->loop_info[i]);
+        set_free(interp, unit->loop_info[i]->loop);
+        set_free(interp, unit->loop_info[i]->exits);
+        mem_gc_free(interp, unit->loop_info[i]);
     }
 
-    mem_sys_free(unit->loop_info);
+    mem_gc_free(interp, unit->loop_info);
 
     unit->n_loops   = 0;
     unit->loop_info = NULL;
@@ -1506,7 +1518,8 @@ free_loops(ARGMOD(IMC_Unit *unit))
 
 /*
 
-=item C<void search_predecessors_not_in(const Basic_block *node, Set *s)>
+=item C<void search_predecessors_not_in(PARROT_INTERP, const Basic_block *node,
+Set *s)>
 
 Searches for predecessor edges for this node not in the given set (and adds
 them).
@@ -1516,7 +1529,7 @@ them).
 */
 
 void
-search_predecessors_not_in(ARGIN(const Basic_block *node), ARGMOD(Set *s))
+search_predecessors_not_in(PARROT_INTERP, ARGIN(const Basic_block *node), ARGMOD(Set *s))
 {
     ASSERT_ARGS(search_predecessors_not_in)
     Edge *edge;
@@ -1525,9 +1538,9 @@ search_predecessors_not_in(ARGIN(const Basic_block *node), ARGMOD(Set *s))
         Basic_block * const pred = edge->from;
 
         if (!set_contains(s, pred->index)) {
-           set_add(s, pred->index);
+           set_add(interp, s, pred->index);
            pred->loop_depth++;
-           search_predecessors_not_in(pred, s);
+           search_predecessors_not_in(interp, pred, s);
         }
     }
 }
@@ -1550,7 +1563,7 @@ init_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
     ASSERT_ARGS(init_basic_blocks)
 
     if (!unit->bb_list)
-        clear_basic_blocks(unit);
+        clear_basic_blocks(interp, unit);
 
     unit->n_basic_blocks = 0;
     unit->edge_list      = NULL;
@@ -1562,7 +1575,7 @@ init_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 
 /*
 
-=item C<void clear_basic_blocks(IMC_Unit *unit)>
+=item C<void clear_basic_blocks(PARROT_INTERP, IMC_Unit *unit)>
 
 Frees all of the blocks and CFG memory allocated for this unit.
 
@@ -1571,7 +1584,7 @@ Frees all of the blocks and CFG memory allocated for this unit.
 */
 
 void
-clear_basic_blocks(ARGMOD(IMC_Unit *unit))
+clear_basic_blocks(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
 {
     ASSERT_ARGS(clear_basic_blocks)
 
@@ -1579,16 +1592,16 @@ clear_basic_blocks(ARGMOD(IMC_Unit *unit))
         unsigned int i;
 
         for (i = 0; i < unit->n_basic_blocks; i++)
-            mem_sys_free(unit->bb_list[i]);
+            mem_gc_free(interp, unit->bb_list[i]);
 
-        mem_sys_free(unit->bb_list);
+        mem_gc_free(interp, unit->bb_list);
         unit->bb_list = NULL;
     }
 
-    free_edge(unit);
-    free_dominators(unit);
-    free_dominance_frontiers(unit);
-    free_loops(unit);
+    free_edge(interp, unit);
+    free_dominators(interp, unit);
+    free_dominance_frontiers(interp, unit);
+    free_loops(interp, unit);
 }
 
 

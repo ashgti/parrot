@@ -180,11 +180,11 @@ pop_namespace(PARROT_INTERP, ARGIN(const char *name))
     while (ns->idents) {
         Identifier * const ident = ns->idents;
         ns->idents               = ident->next;
-        mem_sys_free(ident);
+        mem_gc_free(interp, ident);
     }
 
     IMCC_INFO(interp)->namespace_stack = ns->parent;
-    mem_sys_free(ns);
+    mem_gc_free(interp, ns);
 }
 
 
@@ -309,7 +309,7 @@ mk_symreg(PARROT_INTERP, ARGIN(const char *name), int t)
 
 /*
 
-=item C<char * symreg_to_str(const SymReg *s)>
+=item C<char * symreg_to_str(PARROT_INTERP, const SymReg *s)>
 
 Dumps a SymReg to a printable format.
 
@@ -321,12 +321,12 @@ PARROT_MALLOC
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 char *
-symreg_to_str(ARGIN(const SymReg *s))
+symreg_to_str(PARROT_INTERP, ARGIN(const SymReg *s))
 {
     ASSERT_ARGS(symreg_to_str)
     /* NOTE: the below magic number encompasses all the quoted strings which
      * may be included in the sprintf output (for now) */
-    char * const buf = (char *)mem_sys_allocate(250 + strlen(s->name));
+    char * const buf = mem_gc_allocate_n_typed(interp, 250 + strlen(s->name), char);
     const int    t   = s->type;
 
     sprintf(buf, "symbol [%s]  set [%c]  color [" INTVAL_FMT "]  type [",
@@ -663,7 +663,7 @@ mk_ident(PARROT_INTERP, ARGIN(const char *name), int t)
         IMCC_INFO(interp)->namespace_stack->idents = ident;
     }
     else
-        mem_sys_free(fullname);
+        mem_gc_free(interp, fullname);
 
     if (t == 'P') {
         r->pmc_type                     = IMCC_INFO(interp)->cur_pmc_type;
@@ -731,7 +731,7 @@ mk_pmc_const_2(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(SymReg *left),
     len           = strlen(name);
     name[len - 1] = '\0';
 
-    mem_sys_free(rhs->name);
+    mem_gc_free(interp, rhs->name);
 
     rhs->name     = name;
     rhs->set      = 'P';
@@ -943,7 +943,7 @@ add_ns(PARROT_INTERP, ARGIN(const char *name))
 
     /* TODO keyed syntax */
     len     = strlen(name) + l  + 4;
-    ns_name = (char*)mem_sys_allocate(len);
+    ns_name = mem_gc_allocate_n_typed(interp, len, char);
 
     strcpy(ns_name, IMCC_INFO(interp)->cur_namespace->name);
     *ns_name       = '_';
@@ -1014,7 +1014,7 @@ _mk_address(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGIN(const char *name), int un
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                     "Label '%s' already defined\n", sub_name);
             else if (uniq == U_add_uniq_sub) {
-                mem_sys_free(aux_name);
+                mem_gc_free(interp, aux_name);
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                         "Subroutine '%s' already defined\n", name);
             }
@@ -1026,7 +1026,7 @@ _mk_address(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGIN(const char *name), int un
         if (uniq) {
             r->lhs_use_count++;
             if (uniq == U_add_uniq_sub)
-                mem_sys_free(aux_name);
+                mem_gc_free(interp, aux_name);
         }
     }
 
@@ -1228,7 +1228,7 @@ link_keys(PARROT_INTERP, int nargs, ARGMOD(SymReg **keys), int force)
         len += 1 + strlen(keys[i]->name);
     }
 
-    key_str  = (char *)mem_sys_allocate(len);
+    key_str  = mem_gc_allocate_n_typed(interp, len, char);
     *key_str = '\0';
 
     /* first look, if we already have this exact key chain */
@@ -1240,7 +1240,7 @@ link_keys(PARROT_INTERP, int nargs, ARGMOD(SymReg **keys), int force)
     }
 
     if ((keychain = _get_sym(h, key_str)) != NULL) {
-        mem_sys_free(key_str);
+        mem_gc_free(interp, key_str);
         return keychain;
     }
 
@@ -1279,7 +1279,7 @@ link_keys(PARROT_INTERP, int nargs, ARGMOD(SymReg **keys), int force)
 
 /*
 
-=item C<void free_sym(SymReg *r)>
+=item C<void free_sym(PARROT_INTERP, SymReg *r)>
 
 Frees all memory of the specified SymReg.  If it has a pcc_sub_t entry, frees
 all memory of that structure as well.
@@ -1289,32 +1289,32 @@ all memory of that structure as well.
 */
 
 void
-free_sym(ARGMOD(SymReg *r))
+free_sym(PARROT_INTERP, ARGMOD(SymReg *r))
 {
     ASSERT_ARGS(free_sym)
     pcc_sub_t * const sub = r->pcc_sub;
 
     if (sub) {
-        mem_sys_free(sub->multi);
-        mem_sys_free(sub->args);
-        mem_sys_free(sub->arg_flags);
-        mem_sys_free(sub->ret);
-        mem_sys_free(sub->ret_flags);
-        mem_sys_free(sub);
+        mem_gc_free(interp, sub->multi);
+        mem_gc_free(interp, sub->args);
+        mem_gc_free(interp, sub->arg_flags);
+        mem_gc_free(interp, sub->ret);
+        mem_gc_free(interp, sub->ret_flags);
+        mem_gc_free(interp, sub);
     }
 
     if (r->set == 'K') {
         SymReg *key     = r->nextkey;
         while (key) {
             SymReg *nextkey = key->nextkey;
-            free_sym(key);
+            free_sym(interp, key);
             key = nextkey;
         }
     }
 
-    mem_sys_free(r->subid);
-    mem_sys_free(r->name);
-    mem_sys_free(r);
+    mem_gc_free(interp, r->subid);
+    mem_gc_free(interp, r->name);
+    mem_gc_free(interp, r);
 }
 
 /*
@@ -1394,8 +1394,8 @@ resize_symhash(PARROT_INTERP, ARGMOD(SymHash *hsh))
     }
 
     /* free memory of old hash table */
-    mem_sys_free(hsh->data);
-    mem_sys_free(next_r);
+    mem_gc_free(interp, hsh->data);
+    mem_gc_free(interp, next_r);
 
     /* let the hashtable's data pointers point to the new data */
     hsh->data = nh.data;
@@ -1524,7 +1524,7 @@ _find_sym(PARROT_INTERP, ARGIN_NULLOK(const Namespace *nspace),
         char * const fullname = _mk_fullname(interp, ns, name);
         p                     = _get_sym(hsh, fullname);
 
-        mem_sys_free(fullname);
+        mem_gc_free(interp, fullname);
 
         if (p)
             return p;
@@ -1571,7 +1571,7 @@ find_sym(PARROT_INTERP, ARGIN(const char *name))
 
 /*
 
-=item C<void clear_sym_hash(SymHash *hsh)>
+=item C<void clear_sym_hash(PARROT_INTERP, SymHash *hsh)>
 
 Frees all memory of the symbols in the specified hash table.
 
@@ -1580,7 +1580,7 @@ Frees all memory of the symbols in the specified hash table.
 */
 
 void
-clear_sym_hash(ARGMOD(SymHash *hsh))
+clear_sym_hash(PARROT_INTERP, ARGMOD(SymHash *hsh))
 {
     ASSERT_ARGS(clear_sym_hash)
     unsigned int i;
@@ -1592,14 +1592,14 @@ clear_sym_hash(ARGMOD(SymHash *hsh))
         SymReg *p;
         for (p = hsh->data[i]; p;) {
             SymReg * const next = p->next;
-            free_sym(p);
+            free_sym(interp, p);
             p = next;
         }
 
         hsh->data[i] = NULL;
     }
 
-    mem_sys_free(hsh->data);
+    mem_gc_free(interp, hsh->data);
 
     hsh->data    = NULL;
     hsh->entries = 0;
@@ -1635,7 +1635,7 @@ debug_dump_sym_hash(ARGIN(const SymHash *hsh))
 
 /*
 
-=item C<void clear_locals(IMC_Unit *unit)>
+=item C<void clear_locals(PARROT_INTERP, IMC_Unit *unit)>
 
 Deletes all local symbols and clears life info from the given IMC_Unit.
 
@@ -1644,7 +1644,7 @@ Deletes all local symbols and clears life info from the given IMC_Unit.
 */
 
 void
-clear_locals(ARGIN_NULLOK(IMC_Unit *unit))
+clear_locals(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
 {
     ASSERT_ARGS(clear_locals)
     SymHash * const hsh = &unit->hash;
@@ -1657,9 +1657,9 @@ clear_locals(ARGIN_NULLOK(IMC_Unit *unit))
             SymReg * const next = p->next;
 
             if (unit && p->life_info)
-                free_life_info(unit, p);
+                free_life_info(interp, unit, p);
 
-            free_sym(p);
+            free_sym(interp, p);
             p = next;
         }
 
@@ -1687,7 +1687,7 @@ clear_globals(PARROT_INTERP)
     SymHash * const hsh = &IMCC_INFO(interp)->ghash;
 
     if (hsh->data)
-        clear_sym_hash(hsh);
+        clear_sym_hash(interp, hsh);
 }
 
 

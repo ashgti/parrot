@@ -479,7 +479,7 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
     r[1]          = rhs;
     rhs->pmc_type = type_enum;
 
-    mem_sys_free(name);
+    mem_gc_free(interp, name);
 
     return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
 }
@@ -545,8 +545,8 @@ mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
     rhs->pmc_type = Parrot_pmc_get_type_str(interp,
         Parrot_str_new(interp, unquoted_name, name_length));
 
-    mem_sys_free(unquoted_name);
-    mem_sys_free(const_name);
+    mem_gc_free(interp, unquoted_name);
+    mem_gc_free(interp, const_name);
 
     return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
 }
@@ -795,7 +795,7 @@ mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
     }
 
     r = mk_sub_address(interp, name_copy + 1);
-    mem_sys_free(name_copy);
+    mem_gc_free(interp, name_copy);
 
     return r;
 }
@@ -1202,7 +1202,7 @@ pragma:
          {
            $$ = 0;
            do_loadlib(interp, $2);
-           mem_sys_free($2);
+           mem_gc_free(interp, $2);
          }
    ;
 
@@ -1227,7 +1227,7 @@ annotate_directive:
            * store annotation like it's an instruction. */
           SymReg * const key = mk_const(interp, $2, 'S');
           $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, ".annotate", 2, key, $4);
-          mem_sys_free($2);
+          mem_gc_free(interp, $2);
         }
     ;
 
@@ -1240,7 +1240,7 @@ hll_def:
                 Parrot_register_HLL(interp, hll_name));
 
             IMCC_INFO(interp)->cur_namespace = NULL;
-            mem_sys_free($2);
+            mem_gc_free(interp, $2);
             $$ = 0;
          }
    ;
@@ -1249,7 +1249,7 @@ constdef:
      CONST { IMCC_INFO(interp)->is_def = 1; } type IDENTIFIER '=' const
          {
              mk_const_ident(interp, $4, $3, $6, 1);
-             mem_sys_free($4);
+             mem_gc_free(interp, $4);
              IMCC_INFO(interp)->is_def = 0;
          }
    ;
@@ -1258,15 +1258,15 @@ pmc_const:
      CONST { IMCC_INFO(interp)->is_def = 1; } INTC var_or_i '=' any_string
          {
            $$ = mk_pmc_const(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
-           mem_sys_free($6);
+           mem_gc_free(interp, $6);
            IMCC_INFO(interp)->is_def = 0;
          }
 
      | CONST { IMCC_INFO(interp)->is_def = 1; } STRINGC var_or_i '=' any_string
          {
            $$ = mk_pmc_const_named(interp, IMCC_INFO(interp)->cur_unit, $3, $4, $6);
-           mem_sys_free($3);
-           mem_sys_free($6);
+           mem_gc_free(interp, $3);
+           mem_gc_free(interp, $6);
            IMCC_INFO(interp)->is_def = 0;
          }
    ;
@@ -1296,7 +1296,7 @@ pasm_inst:                     { clear_state(interp); }
            $$ = INS(interp, IMCC_INFO(interp)->cur_unit,
                     $2, 0, IMCC_INFO(interp)->regs,
                     IMCC_INFO(interp)->nargs, IMCC_INFO(interp) -> keyvec, 1);
-            mem_sys_free($2);
+            mem_gc_free(interp, $2);
          }
    | PCC_SUB
          {
@@ -1309,7 +1309,7 @@ pasm_inst:                     { clear_state(interp); }
                     IMCC_INFO(interp)->cur_unit,
                     mk_sub_label(interp, $4));
            IMCC_INFO(interp)->cur_call->pcc_sub->pragma = $3;
-           mem_sys_free($4);
+           mem_gc_free(interp, $4);
          }
    | PNULL var
          {
@@ -1324,9 +1324,9 @@ pasm_inst:                     { clear_state(interp); }
            n = mk_const(interp, name, 'S');
            set_lexical(interp, r, n);
            $$ = 0;
-           mem_sys_free(name);
-           mem_sys_free($2);
-           mem_sys_free($4);
+           mem_gc_free(interp, name);
+           mem_gc_free(interp, $2);
+           mem_gc_free(interp, $4);
          }
    | /* none */                { $$ = 0;}
    ;
@@ -1436,7 +1436,7 @@ sub_param_type_def:
            else
                $$ = mk_ident(interp, $2, $1);
            $$->type |= $3;
-           mem_sys_free($2);
+           mem_gc_free(interp, $2);
           }
    ;
 
@@ -1451,13 +1451,13 @@ outer:
          {
            $$ = 0;
            IMCC_INFO(interp)->cur_unit->outer = mk_sub_address_fromc(interp, $3);
-           mem_sys_free($3);
+           mem_gc_free(interp, $3);
          }
     | OUTER '(' IDENTIFIER ')'
          {
            $$ = 0;
            IMCC_INFO(interp)->cur_unit->outer = mk_const(interp, $3, 'S');
-           mem_sys_free($3);
+           mem_gc_free(interp, $3);
          }
    ;
 
@@ -1525,7 +1525,7 @@ subid:
            $$ = 0;
            IMCC_INFO(interp)->cur_unit->subid = mk_const(interp, $3, 'S');
            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = str_dup_remove_quotes($3);
-           mem_sys_free($3);
+           mem_gc_free(interp, $3);
          }
    ;
 
@@ -1559,7 +1559,7 @@ multi_type:
            else {
                r = mk_const(interp, "PMC", 'S');
            }
-           mem_sys_free($1);
+           mem_gc_free(interp, $1);
            $$ = r;
          }
    | STRINGC
@@ -1570,7 +1570,7 @@ multi_type:
            else {
                r = mk_const(interp, "PMC", 'S');
            }
-           mem_sys_free($1);
+           mem_gc_free(interp, $1);
            $$ = r;
          }
    | '[' keylist ']'           { $$ = $2; }
@@ -1732,8 +1732,8 @@ paramtype:
    | ADV_OPTIONAL               { $$ = VT_OPTIONAL; }
    | ADV_OPT_FLAG               { $$ = VT_OPT_FLAG; }
    | ADV_NAMED                  { $$ = VT_NAMED; }
-   | ADV_NAMED '(' STRINGC ')'  { adv_named_set(interp, $3);   $$ = 0; mem_sys_free($3); }
-   | ADV_NAMED '(' USTRINGC ')' { adv_named_set_u(interp, $3); $$ = 0; mem_sys_free($3); }
+   | ADV_NAMED '(' STRINGC ')'  { adv_named_set(interp, $3);   $$ = 0; mem_gc_free(interp, $3); }
+   | ADV_NAMED '(' USTRINGC ')' { adv_named_set_u(interp, $3); $$ = 0; mem_gc_free(interp, $3); }
    | UNIQUE_REG                 { $$ = VT_UNIQUE_REG; }
    | ADV_CALL_SIG               { $$ = VT_CALL_SIG; }
    ;
@@ -1886,7 +1886,7 @@ label:
      LABEL
          {
              Instruction * const i = iLABEL(interp, IMCC_INFO(interp)->cur_unit, mk_local_label(interp, $1));
-             mem_sys_free($1);
+             mem_gc_free(interp, $1);
              $$ = i;
          }
    ;
@@ -1951,15 +1951,15 @@ labeled_inst:
                    mk_ident(interp, l->id, $3);
                l1 = l;
                l  = l->next;
-               mem_sys_free(l1->id);
-               mem_sys_free(l1);
+               mem_gc_free(interp, l1->id);
+               mem_gc_free(interp, l1);
            }
            IMCC_INFO(interp)->is_def = 0; $$ = 0;
          }
    | LEXICAL STRINGC COMMA target
          {
             if ($4->set != 'P') {
-                mem_sys_free($2);
+                mem_gc_free(interp, $2);
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                     "Cannot use %c register with .lex", $4->set);
             }
@@ -1969,28 +1969,28 @@ labeled_inst:
                name[strlen(name) - 1] = 0;
                n = mk_const(interp, name, 'S');
                set_lexical(interp, $4, n); $$ = 0;
-               mem_sys_free($2);
-               mem_sys_free(name);
+               mem_gc_free(interp, $2);
+               mem_gc_free(interp, name);
             }
          }
    | LEXICAL USTRINGC COMMA target
          {
             if ($4->set != 'P') {
-                mem_sys_free($2);
+                mem_gc_free(interp, $2);
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                     "Cannot use %c register with .lex", $4->set);
             }
             else {
                SymReg *n = mk_const(interp, $2, 'U');
                set_lexical(interp, $4, n); $$ = 0;
-               mem_sys_free($2);
+               mem_gc_free(interp, $2);
             }
          }
    | CONST { IMCC_INFO(interp)->is_def = 1; } type IDENTIFIER '=' const
          {
            mk_const_ident(interp, $4, $3, $6, 0);
            IMCC_INFO(interp)->is_def = 0;
-           mem_sys_free($4);
+           mem_gc_free(interp, $4);
          }
 
    | pmc_const
@@ -1998,7 +1998,7 @@ labeled_inst:
          {
            mk_const_ident(interp, $4, $3, $6, 1);
            IMCC_INFO(interp)->is_def = 0;
-           mem_sys_free($4);
+           mem_gc_free(interp, $4);
          }
    | TAILCALL sub_call
          {
@@ -2020,7 +2020,7 @@ labeled_inst:
                     IMCC_INFO(interp)->nargs,
                     IMCC_INFO(interp)->keyvec,
                     1);
-           mem_sys_free($1);
+           mem_gc_free(interp, $1);
          }
    | PNULL var                 { $$ = MK_I(interp, IMCC_INFO(interp)->cur_unit, "null", 1, $2); }
    | sub_call                  { $$ = 0; IMCC_INFO(interp)->cur_call = NULL; }
@@ -2166,14 +2166,14 @@ func_assign:
                       IMCC_INFO(interp) -> regs,
                       IMCC_INFO(interp) -> nargs,
                       IMCC_INFO(interp) -> keyvec, 1);
-         mem_sys_free($3);
+         mem_gc_free(interp, $3);
        }
    ;
 
 the_sub:
-     IDENTIFIER     { $$ = mk_sub_address(interp, $1);       mem_sys_free($1); }
-     | STRINGC      { $$ = mk_sub_address_fromc(interp, $1); mem_sys_free($1); }
-     | USTRINGC     { $$ = mk_sub_address_u(interp, $1);     mem_sys_free($1); }
+     IDENTIFIER     { $$ = mk_sub_address(interp, $1);       mem_gc_free(interp, $1); }
+     | STRINGC      { $$ = mk_sub_address_fromc(interp, $1); mem_gc_free(interp, $1); }
+     | USTRINGC     { $$ = mk_sub_address_u(interp, $1);     mem_gc_free(interp, $1); }
    | target
          {
            $$ = $1;
@@ -2198,13 +2198,13 @@ the_sub:
          {
             IMCC_INFO(interp)->cur_obj = $1;
             $$                         = mk_const(interp, $3, 'U');
-            mem_sys_free($3);
+            mem_gc_free(interp, $3);
          }
    | target DOT STRINGC
          {
             IMCC_INFO(interp)->cur_obj = $1;
             $$                         = mk_const(interp, $3, 'S');
-            mem_sys_free($3);
+            mem_gc_free(interp, $3);
          }
    | target DOT target         { IMCC_INFO(interp)->cur_obj = $1; $$ = $3; }
    ;
@@ -2246,7 +2246,7 @@ arglist:
            $$ = 0;
            add_pcc_named_arg(interp, IMCC_INFO(interp)->cur_call,
                 mk_const(interp, $3, 'S'), $5);
-           mem_sys_free($3);
+           mem_gc_free(interp, $3);
          }
    | var ADV_ARROW var
          {
@@ -2258,7 +2258,7 @@ arglist:
            $$ = 0;
            add_pcc_named_arg(interp, IMCC_INFO(interp)->cur_call,
                 mk_const(interp, $1, 'S'), $3);
-           mem_sys_free($1);
+           mem_gc_free(interp, $1);
          }
    ;
 
@@ -2300,7 +2300,7 @@ targetlist:
          {
             add_pcc_named_result(interp, IMCC_INFO(interp)->cur_call,
                     mk_const(interp, $3, 'S'), $5);
-            mem_sys_free($3);
+            mem_gc_free(interp, $3);
          }
    | result
          {
@@ -2315,7 +2315,7 @@ targetlist:
    | STRINGC ADV_ARROW target
          {
            add_pcc_named_result(interp, IMCC_INFO(interp)->cur_call, mk_const(interp, $1, 'S'), $3);
-           mem_sys_free($1);
+           mem_gc_free(interp, $1);
          }
    | /* empty */                { $$ = 0; }
    ;
@@ -2401,18 +2401,18 @@ _var_or_i:
    ;
 sub_label_op_c:
      sub_label_op
-   | STRINGC                   { $$ = mk_sub_address_fromc(interp, $1); mem_sys_free($1); }
-   | USTRINGC                  { $$ = mk_sub_address_u(interp, $1);  mem_sys_free($1); }
+   | STRINGC                   { $$ = mk_sub_address_fromc(interp, $1); mem_gc_free(interp, $1); }
+   | USTRINGC                  { $$ = mk_sub_address_u(interp, $1);  mem_gc_free(interp, $1); }
    ;
 
 sub_label_op:
-     IDENTIFIER                { $$ = mk_sub_address(interp, $1); mem_sys_free($1); }
-   | PARROT_OP                 { $$ = mk_sub_address(interp, $1); mem_sys_free($1); }
+     IDENTIFIER                { $$ = mk_sub_address(interp, $1); mem_gc_free(interp, $1); }
+   | PARROT_OP                 { $$ = mk_sub_address(interp, $1); mem_gc_free(interp, $1); }
    ;
 
 label_op:
-     IDENTIFIER                { $$ = mk_label_address(interp, $1); mem_sys_free($1); }
-   | PARROT_OP                 { $$ = mk_label_address(interp, $1); mem_sys_free($1); }
+     IDENTIFIER                { $$ = mk_label_address(interp, $1); mem_gc_free(interp, $1); }
+   | PARROT_OP                 { $$ = mk_label_address(interp, $1); mem_gc_free(interp, $1); }
    ;
 
 var_or_i:
@@ -2470,14 +2470,14 @@ reg:
    | NREG                      { $$ = mk_symreg(interp, $1, 'N'); }
    | SREG                      { $$ = mk_symreg(interp, $1, 'S'); }
    | PREG                      { $$ = mk_symreg(interp, $1, 'P'); }
-   | REG                       { $$ = mk_pasm_reg(interp, $1); mem_sys_free($1); }
+   | REG                       { $$ = mk_pasm_reg(interp, $1); mem_gc_free(interp, $1); }
    ;
 
 const:
-     INTC                      { $$ = mk_const(interp, $1, 'I'); mem_sys_free($1); }
-   | FLOATC                    { $$ = mk_const(interp, $1, 'N'); mem_sys_free($1); }
-   | STRINGC                   { $$ = mk_const(interp, $1, 'S'); mem_sys_free($1); }
-   | USTRINGC                  { $$ = mk_const(interp, $1, 'U'); mem_sys_free($1); }
+     INTC                      { $$ = mk_const(interp, $1, 'I'); mem_gc_free(interp, $1); }
+   | FLOATC                    { $$ = mk_const(interp, $1, 'N'); mem_gc_free(interp, $1); }
+   | STRINGC                   { $$ = mk_const(interp, $1, 'S'); mem_gc_free(interp, $1); }
+   | USTRINGC                  { $$ = mk_const(interp, $1, 'U'); mem_gc_free(interp, $1); }
    ;
 
 

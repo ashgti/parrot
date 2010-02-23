@@ -805,7 +805,7 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
     r[1]          = rhs;
     rhs->pmc_type = type_enum;
 
-    mem_sys_free(name);
+    mem_gc_free(interp, name);
 
     return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
 }
@@ -871,8 +871,8 @@ mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
     rhs->pmc_type = Parrot_pmc_get_type_str(interp,
         Parrot_str_new(interp, unquoted_name, name_length));
 
-    mem_sys_free(unquoted_name);
-    mem_sys_free(const_name);
+    mem_gc_free(interp, unquoted_name);
+    mem_gc_free(interp, const_name);
 
     return INS(interp, unit, "set_p_pc", "", r, 2, 0, 1);
 }
@@ -1121,7 +1121,7 @@ mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
     }
 
     r = mk_sub_address(interp, name_copy + 1);
-    mem_sys_free(name_copy);
+    mem_gc_free(interp, name_copy);
 
     return r;
 }
@@ -3304,7 +3304,7 @@ yyreduce:
     {
            (yyval.i) = 0;
            do_loadlib(interp, (yyvsp[(2) - (3)].s));
-           mem_sys_free((yyvsp[(2) - (3)].s));
+           mem_gc_free(interp, (yyvsp[(2) - (3)].s));
          }
     break;
 
@@ -3332,7 +3332,7 @@ yyreduce:
            * store annotation like it's an instruction. */
           SymReg * const key = mk_const(interp, (yyvsp[(2) - (4)].s), 'S');
           (yyval.i) = MK_I(interp, IMCC_INFO(interp)->cur_unit, ".annotate", 2, key, (yyvsp[(4) - (4)].sr));
-          mem_sys_free((yyvsp[(2) - (4)].s));
+          mem_gc_free(interp, (yyvsp[(2) - (4)].s));
         }
     break;
 
@@ -3344,7 +3344,7 @@ yyreduce:
                 Parrot_register_HLL(interp, hll_name));
 
             IMCC_INFO(interp)->cur_namespace = NULL;
-            mem_sys_free((yyvsp[(2) - (2)].s));
+            mem_gc_free(interp, (yyvsp[(2) - (2)].s));
             (yyval.t) = 0;
          }
     break;
@@ -3358,7 +3358,7 @@ yyreduce:
 #line 1250 "compilers/imcc/imcc.y"
     {
              mk_const_ident(interp, (yyvsp[(4) - (6)].s), (yyvsp[(3) - (6)].t), (yyvsp[(6) - (6)].sr), 1);
-             mem_sys_free((yyvsp[(4) - (6)].s));
+             mem_gc_free(interp, (yyvsp[(4) - (6)].s));
              IMCC_INFO(interp)->is_def = 0;
          }
     break;
@@ -3372,7 +3372,7 @@ yyreduce:
 #line 1259 "compilers/imcc/imcc.y"
     {
            (yyval.i) = mk_pmc_const(interp, IMCC_INFO(interp)->cur_unit, (yyvsp[(3) - (6)].s), (yyvsp[(4) - (6)].sr), (yyvsp[(6) - (6)].s));
-           mem_sys_free((yyvsp[(6) - (6)].s));
+           mem_gc_free(interp, (yyvsp[(6) - (6)].s));
            IMCC_INFO(interp)->is_def = 0;
          }
     break;
@@ -3386,8 +3386,8 @@ yyreduce:
 #line 1266 "compilers/imcc/imcc.y"
     {
            (yyval.i) = mk_pmc_const_named(interp, IMCC_INFO(interp)->cur_unit, (yyvsp[(3) - (6)].s), (yyvsp[(4) - (6)].sr), (yyvsp[(6) - (6)].s));
-           mem_sys_free((yyvsp[(3) - (6)].s));
-           mem_sys_free((yyvsp[(6) - (6)].s));
+           mem_gc_free(interp, (yyvsp[(3) - (6)].s));
+           mem_gc_free(interp, (yyvsp[(6) - (6)].s));
            IMCC_INFO(interp)->is_def = 0;
          }
     break;
@@ -3428,7 +3428,7 @@ yyreduce:
            (yyval.i) = INS(interp, IMCC_INFO(interp)->cur_unit,
                     (yyvsp[(2) - (3)].s), 0, IMCC_INFO(interp)->regs,
                     IMCC_INFO(interp)->nargs, IMCC_INFO(interp) -> keyvec, 1);
-            mem_sys_free((yyvsp[(2) - (3)].s));
+            mem_gc_free(interp, (yyvsp[(2) - (3)].s));
          }
     break;
 
@@ -3447,7 +3447,7 @@ yyreduce:
                     IMCC_INFO(interp)->cur_unit,
                     mk_sub_label(interp, (yyvsp[(4) - (4)].s)));
            IMCC_INFO(interp)->cur_call->pcc_sub->pragma = (yyvsp[(3) - (4)].t);
-           mem_sys_free((yyvsp[(4) - (4)].s));
+           mem_gc_free(interp, (yyvsp[(4) - (4)].s));
          }
     break;
 
@@ -3468,9 +3468,9 @@ yyreduce:
            n = mk_const(interp, name, 'S');
            set_lexical(interp, r, n);
            (yyval.i) = 0;
-           mem_sys_free(name);
-           mem_sys_free((yyvsp[(2) - (4)].s));
-           mem_sys_free((yyvsp[(4) - (4)].s));
+           mem_gc_free(interp, name);
+           mem_gc_free(interp, (yyvsp[(2) - (4)].s));
+           mem_gc_free(interp, (yyvsp[(4) - (4)].s));
          }
     break;
 
@@ -3605,7 +3605,7 @@ yyreduce:
            else
                (yyval.sr) = mk_ident(interp, (yyvsp[(2) - (3)].s), (yyvsp[(1) - (3)].t));
            (yyval.sr)->type |= (yyvsp[(3) - (3)].t);
-           mem_sys_free((yyvsp[(2) - (3)].s));
+           mem_gc_free(interp, (yyvsp[(2) - (3)].s));
           }
     break;
 
@@ -3619,7 +3619,7 @@ yyreduce:
     {
            (yyval.t) = 0;
            IMCC_INFO(interp)->cur_unit->outer = mk_sub_address_fromc(interp, (yyvsp[(3) - (4)].s));
-           mem_sys_free((yyvsp[(3) - (4)].s));
+           mem_gc_free(interp, (yyvsp[(3) - (4)].s));
          }
     break;
 
@@ -3628,7 +3628,7 @@ yyreduce:
     {
            (yyval.t) = 0;
            IMCC_INFO(interp)->cur_unit->outer = mk_const(interp, (yyvsp[(3) - (4)].s), 'S');
-           mem_sys_free((yyvsp[(3) - (4)].s));
+           mem_gc_free(interp, (yyvsp[(3) - (4)].s));
          }
     break;
 
@@ -3708,7 +3708,7 @@ yyreduce:
            (yyval.t) = 0;
            IMCC_INFO(interp)->cur_unit->subid = mk_const(interp, (yyvsp[(3) - (4)].s), 'S');
            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = str_dup_remove_quotes((yyvsp[(3) - (4)].s));
-           mem_sys_free((yyvsp[(3) - (4)].s));
+           mem_gc_free(interp, (yyvsp[(3) - (4)].s));
          }
     break;
 
@@ -3764,7 +3764,7 @@ yyreduce:
            else {
                r = mk_const(interp, "PMC", 'S');
            }
-           mem_sys_free((yyvsp[(1) - (1)].s));
+           mem_gc_free(interp, (yyvsp[(1) - (1)].s));
            (yyval.sr) = r;
          }
     break;
@@ -3778,7 +3778,7 @@ yyreduce:
            else {
                r = mk_const(interp, "PMC", 'S');
            }
-           mem_sys_free((yyvsp[(1) - (1)].s));
+           mem_gc_free(interp, (yyvsp[(1) - (1)].s));
            (yyval.sr) = r;
          }
     break;
@@ -4028,12 +4028,12 @@ yyreduce:
 
   case 130:
 #line 1735 "compilers/imcc/imcc.y"
-    { adv_named_set(interp, (yyvsp[(3) - (4)].s));   (yyval.t) = 0; mem_sys_free((yyvsp[(3) - (4)].s)); }
+    { adv_named_set(interp, (yyvsp[(3) - (4)].s));   (yyval.t) = 0; mem_gc_free(interp, (yyvsp[(3) - (4)].s)); }
     break;
 
   case 131:
 #line 1736 "compilers/imcc/imcc.y"
-    { adv_named_set_u(interp, (yyvsp[(3) - (4)].s)); (yyval.t) = 0; mem_sys_free((yyvsp[(3) - (4)].s)); }
+    { adv_named_set_u(interp, (yyvsp[(3) - (4)].s)); (yyval.t) = 0; mem_gc_free(interp, (yyvsp[(3) - (4)].s)); }
     break;
 
   case 132:
@@ -4243,7 +4243,7 @@ yyreduce:
 #line 1887 "compilers/imcc/imcc.y"
     {
              Instruction * const i = iLABEL(interp, IMCC_INFO(interp)->cur_unit, mk_local_label(interp, (yyvsp[(1) - (1)].s)));
-             mem_sys_free((yyvsp[(1) - (1)].s));
+             mem_gc_free(interp, (yyvsp[(1) - (1)].s));
              (yyval.i) = i;
          }
     break;
@@ -4319,8 +4319,8 @@ yyreduce:
                    mk_ident(interp, l->id, (yyvsp[(3) - (4)].t));
                l1 = l;
                l  = l->next;
-               mem_sys_free(l1->id);
-               mem_sys_free(l1);
+               mem_gc_free(interp, l1->id);
+               mem_gc_free(interp, l1);
            }
            IMCC_INFO(interp)->is_def = 0; (yyval.i) = 0;
          }
@@ -4330,7 +4330,7 @@ yyreduce:
 #line 1960 "compilers/imcc/imcc.y"
     {
             if ((yyvsp[(4) - (4)].sr)->set != 'P') {
-                mem_sys_free((yyvsp[(2) - (4)].s));
+                mem_gc_free(interp, (yyvsp[(2) - (4)].s));
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                     "Cannot use %c register with .lex", (yyvsp[(4) - (4)].sr)->set);
             }
@@ -4340,8 +4340,8 @@ yyreduce:
                name[strlen(name) - 1] = 0;
                n = mk_const(interp, name, 'S');
                set_lexical(interp, (yyvsp[(4) - (4)].sr), n); (yyval.i) = 0;
-               mem_sys_free((yyvsp[(2) - (4)].s));
-               mem_sys_free(name);
+               mem_gc_free(interp, (yyvsp[(2) - (4)].s));
+               mem_gc_free(interp, name);
             }
          }
     break;
@@ -4350,14 +4350,14 @@ yyreduce:
 #line 1977 "compilers/imcc/imcc.y"
     {
             if ((yyvsp[(4) - (4)].sr)->set != 'P') {
-                mem_sys_free((yyvsp[(2) - (4)].s));
+                mem_gc_free(interp, (yyvsp[(2) - (4)].s));
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                     "Cannot use %c register with .lex", (yyvsp[(4) - (4)].sr)->set);
             }
             else {
                SymReg *n = mk_const(interp, (yyvsp[(2) - (4)].s), 'U');
                set_lexical(interp, (yyvsp[(4) - (4)].sr), n); (yyval.i) = 0;
-               mem_sys_free((yyvsp[(2) - (4)].s));
+               mem_gc_free(interp, (yyvsp[(2) - (4)].s));
             }
          }
     break;
@@ -4372,7 +4372,7 @@ yyreduce:
     {
            mk_const_ident(interp, (yyvsp[(4) - (6)].s), (yyvsp[(3) - (6)].t), (yyvsp[(6) - (6)].sr), 0);
            IMCC_INFO(interp)->is_def = 0;
-           mem_sys_free((yyvsp[(4) - (6)].s));
+           mem_gc_free(interp, (yyvsp[(4) - (6)].s));
          }
     break;
 
@@ -4386,7 +4386,7 @@ yyreduce:
     {
            mk_const_ident(interp, (yyvsp[(4) - (6)].s), (yyvsp[(3) - (6)].t), (yyvsp[(6) - (6)].sr), 1);
            IMCC_INFO(interp)->is_def = 0;
-           mem_sys_free((yyvsp[(4) - (6)].s));
+           mem_gc_free(interp, (yyvsp[(4) - (6)].s));
          }
     break;
 
@@ -4417,7 +4417,7 @@ yyreduce:
                     IMCC_INFO(interp)->nargs,
                     IMCC_INFO(interp)->keyvec,
                     1);
-           mem_sys_free((yyvsp[(1) - (2)].s));
+           mem_gc_free(interp, (yyvsp[(1) - (2)].s));
          }
     break;
 
@@ -4756,23 +4756,23 @@ yyreduce:
                       IMCC_INFO(interp) -> regs,
                       IMCC_INFO(interp) -> nargs,
                       IMCC_INFO(interp) -> keyvec, 1);
-         mem_sys_free((yyvsp[(3) - (4)].s));
+         mem_gc_free(interp, (yyvsp[(3) - (4)].s));
        }
     break;
 
   case 258:
 #line 2174 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s));       mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s));       mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 259:
 #line 2175 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address_fromc(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address_fromc(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 260:
 #line 2176 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address_u(interp, (yyvsp[(1) - (1)].s));     mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address_u(interp, (yyvsp[(1) - (1)].s));     mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 261:
@@ -4806,7 +4806,7 @@ yyreduce:
     {
             IMCC_INFO(interp)->cur_obj = (yyvsp[(1) - (3)].sr);
             (yyval.sr)                         = mk_const(interp, (yyvsp[(3) - (3)].s), 'U');
-            mem_sys_free((yyvsp[(3) - (3)].s));
+            mem_gc_free(interp, (yyvsp[(3) - (3)].s));
          }
     break;
 
@@ -4815,7 +4815,7 @@ yyreduce:
     {
             IMCC_INFO(interp)->cur_obj = (yyvsp[(1) - (3)].sr);
             (yyval.sr)                         = mk_const(interp, (yyvsp[(3) - (3)].s), 'S');
-            mem_sys_free((yyvsp[(3) - (3)].s));
+            mem_gc_free(interp, (yyvsp[(3) - (3)].s));
          }
     break;
 
@@ -4874,7 +4874,7 @@ yyreduce:
            (yyval.sr) = 0;
            add_pcc_named_arg(interp, IMCC_INFO(interp)->cur_call,
                 mk_const(interp, (yyvsp[(3) - (5)].s), 'S'), (yyvsp[(5) - (5)].sr));
-           mem_sys_free((yyvsp[(3) - (5)].s));
+           mem_gc_free(interp, (yyvsp[(3) - (5)].s));
          }
     break;
 
@@ -4892,7 +4892,7 @@ yyreduce:
            (yyval.sr) = 0;
            add_pcc_named_arg(interp, IMCC_INFO(interp)->cur_call,
                 mk_const(interp, (yyvsp[(1) - (3)].s), 'S'), (yyvsp[(3) - (3)].sr));
-           mem_sys_free((yyvsp[(1) - (3)].s));
+           mem_gc_free(interp, (yyvsp[(1) - (3)].s));
          }
     break;
 
@@ -4959,7 +4959,7 @@ yyreduce:
     {
             add_pcc_named_result(interp, IMCC_INFO(interp)->cur_call,
                     mk_const(interp, (yyvsp[(3) - (5)].s), 'S'), (yyvsp[(5) - (5)].sr));
-            mem_sys_free((yyvsp[(3) - (5)].s));
+            mem_gc_free(interp, (yyvsp[(3) - (5)].s));
          }
     break;
 
@@ -4980,7 +4980,7 @@ yyreduce:
 #line 2316 "compilers/imcc/imcc.y"
     {
            add_pcc_named_result(interp, IMCC_INFO(interp)->cur_call, mk_const(interp, (yyvsp[(1) - (3)].s), 'S'), (yyvsp[(3) - (3)].sr));
-           mem_sys_free((yyvsp[(1) - (3)].s));
+           mem_gc_free(interp, (yyvsp[(1) - (3)].s));
          }
     break;
 
@@ -5121,32 +5121,32 @@ yyreduce:
 
   case 314:
 #line 2404 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address_fromc(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address_fromc(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 315:
 #line 2405 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address_u(interp, (yyvsp[(1) - (1)].s));  mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address_u(interp, (yyvsp[(1) - (1)].s));  mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 316:
 #line 2409 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 317:
 #line 2410 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_sub_address(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 318:
 #line 2414 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_label_address(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_label_address(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 319:
 #line 2415 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_label_address(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_label_address(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 324:
@@ -5223,27 +5223,27 @@ yyreduce:
 
   case 335:
 #line 2473 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_pasm_reg(interp, (yyvsp[(1) - (1)].s)); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_pasm_reg(interp, (yyvsp[(1) - (1)].s)); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 336:
 #line 2477 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'I'); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'I'); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 337:
 #line 2478 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'N'); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'N'); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 338:
 #line 2479 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'S'); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'S'); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
   case 339:
 #line 2480 "compilers/imcc/imcc.y"
-    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'U'); mem_sys_free((yyvsp[(1) - (1)].s)); }
+    { (yyval.sr) = mk_const(interp, (yyvsp[(1) - (1)].s), 'U'); mem_gc_free(interp, (yyvsp[(1) - (1)].s)); }
     break;
 
 

@@ -76,7 +76,7 @@ static void scan_string(macro_frame_t *frame, ARGIN(const char *expansion),
 static void scan_file(PARROT_INTERP, ARGIN(struct macro_frame_t *frame), ARGMOD(FILE *file),
         ARGMOD(void *yyscanner));
 
-static int destroy_frame(macro_frame_t *frame, ARGMOD(void *yyscanner));
+static int destroy_frame(PARROT_INTERP, macro_frame_t *frame, ARGMOD(void *yyscanner));
 
 static int yylex_skip(YYSTYPE *valp, PARROT_INTERP, ARGIN(const char *skip),
         ARGMOD(void *yyscanner));
@@ -100,7 +100,7 @@ static void include_file(PARROT_INTERP, char *file_name, ARGMOD(void *yyscanner)
 #define DUP_AND_RET_FREE(valp, token)        \
   do {                                       \
       if (valp) {                            \
-          mem_sys_free((valp)->s);           \
+          mem_gc_free(interp, (valp)->s);           \
           (valp)->s = Parrot_gc_strdup(interp, yytext);       \
           return (token);                    \
       }                                      \
@@ -179,9 +179,10 @@ SP              [ ]
         /* Newline in the heredoc. Realloc and cat on. */
         IMCC_INFO(interp)->line++;
         IMCC_INFO(interp)->heredoc_content =
-            (char*)mem_sys_realloc(IMCC_INFO(interp)->heredoc_content,
-                            strlen(IMCC_INFO(interp)->heredoc_content) +
-                            strlen(yytext) + 2);
+            (char*)Parrot_gc_reallocate_memory_chunk(interp,
+                        IMCC_INFO(interp)->heredoc_content,
+                        strlen(IMCC_INFO(interp)->heredoc_content) +
+                        strlen(yytext) + 2);
         strcpy(IMCC_INFO(interp)->heredoc_content +
                strlen(IMCC_INFO(interp)->heredoc_content), yytext);
     }
@@ -199,7 +200,7 @@ SP              [ ]
 
             IMCC_INFO(interp)->heredoc_content[len + 1] = 0;
 
-            mem_sys_free(IMCC_INFO(interp)->heredoc_end);
+            mem_gc_free(interp, IMCC_INFO(interp)->heredoc_end);
             IMCC_INFO(interp)->heredoc_end = NULL;
 
             IMCC_INFO(interp)->frames->buffer = YY_CURRENT_BUFFER;
@@ -216,9 +217,10 @@ SP              [ ]
         else {
             /* Part of the heredoc. Realloc and cat the line on. */
             IMCC_INFO(interp)->heredoc_content =
-                (char *)mem_sys_realloc(IMCC_INFO(interp)->heredoc_content,
-                                strlen(IMCC_INFO(interp)->heredoc_content) +
-                                strlen(yytext) + 2);
+                (char *)Parrot_gc_reallocate_memory_chunk(interp,
+                            IMCC_INFO(interp)->heredoc_content,
+                            strlen(IMCC_INFO(interp)->heredoc_content) +
+                            strlen(yytext) + 2);
             strcpy(IMCC_INFO(interp)->heredoc_content +
                    strlen(IMCC_INFO(interp)->heredoc_content), yytext);
         }
@@ -434,11 +436,11 @@ SP              [ ]
             macro_exists = 1;
 
         define_macro(interp, macro_name, NULL, valp->s, start_line);
-        mem_sys_free(valp->s);
+        mem_gc_free(interp, valp->s);
 
         /* don't leak these */
         if (macro_exists)
-            mem_sys_free(macro_name);
+            mem_gc_free(interp, macro_name);
 
         IMCC_INFO(interp)->cur_macro_name = NULL;
 
@@ -474,7 +476,7 @@ SP              [ ]
                     IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "missing space?");
 
             len = yyleng + 10;
-            label = (char *)mem_sys_allocate(len);
+            label = mem_gc_allocate_n_typed(interp, len, char);
             snprintf(label, len, "%s%d", yytext, IMCC_INFO(interp)->frames->label);
 
             /* XXX: free valp->s if it exists? */
@@ -495,7 +497,7 @@ SP              [ ]
                 IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "missing space?");
 
             len = yyleng + 10;
-            label = (char *)mem_sys_allocate(len);
+            label = mem_gc_allocate_n_typed(interp, len, char);
             snprintf(label, len, "%s%d", yytext, IMCC_INFO(interp)->frames->label);
 
             /* XXX: free valp->s if it exists? */
@@ -520,7 +522,7 @@ SP              [ ]
 <emit,INITIAL>{DOT}{LETTER}{LETTERDIGIT}* {
         char   * const macro_name = Parrot_gc_strdup(interp, yytext + 1);
         int failed = expand_macro(interp, macro_name, yyscanner);
-        mem_sys_free(macro_name);
+        mem_gc_free(interp, macro_name);
         if (!failed) {
             yyless(1);
             return DOT;
@@ -569,7 +571,7 @@ SP              [ ]
         IMCC_INFO(interp)->frames = frame;
 
         /* Start slurping up the heredoc. */
-        IMCC_INFO(interp)->heredoc_content    = (char *)mem_sys_allocate(2);
+        IMCC_INFO(interp)->heredoc_content    = mem_gc_allocate_n_typed(interp, 2, char);
 
         /* preserve delim */
         IMCC_INFO(interp)->heredoc_content[0] = yytext[2];
@@ -704,13 +706,13 @@ SP              [ ]
             YYCHOP();
 
             len = strlen(IMCC_INFO(interp)->cur_macro_name) + yyleng + 15;
-            label = (char *)mem_sys_allocate(len);
+            label = mem_gc_allocate_n_typed(interp, len, char);
 
             snprintf(label, len, "local__%s__%s__$:",
                 IMCC_INFO(interp)->cur_macro_name, yytext+1);
 
             if (valp->s)
-                mem_sys_free(valp->s);
+                mem_gc_free(interp, valp->s);
             valp->s = label;
         }
 
@@ -721,7 +723,7 @@ SP              [ ]
     if (valp) {
         if (!IMCC_INFO(interp)->cur_macro_name) {
             if (valp->s)
-                mem_sys_free(valp->s);
+                mem_gc_free(interp, valp->s);
             IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                 "Invalid LABEL outside of macro");
         }
@@ -730,14 +732,14 @@ SP              [ ]
             const size_t fmtlen = strlen(fmt) - (2 * strlen("%s"));
             const size_t len    = strlen(IMCC_INFO(interp)->cur_macro_name)
                                 + yyleng + fmtlen;
-            char * const label  = (char *)mem_sys_allocate(len);
+            char * const label  = mem_gc_allocate_n_typed(interp, len, char);
 
             /* skip over ".$" prefix with the +2 */
             snprintf(label, len, fmt,
                 IMCC_INFO(interp)->cur_macro_name, yytext + 2);
 
             if (valp->s)
-                mem_sys_free(valp->s);
+                mem_gc_free(interp, valp->s);
             valp->s = label;
         }
     }
@@ -818,25 +820,25 @@ scan_string(macro_frame_t *frame, ARGIN(const char *expansion), void *yyscanner)
 }
 
 static int
-destroy_frame(struct macro_frame_t *frame, void *yyscanner)
+destroy_frame(PARROT_INTERP, struct macro_frame_t *frame, void *yyscanner)
 {
     YY_BUFFER_STATE buffer = frame->buffer;
     int             ret    = 0;
     int             i;
 
     for (i = 0; i < frame->expansion.num_param; i++) {
-        mem_sys_free(frame->expansion.name[i]);
+        mem_gc_free(interp, frame->expansion.name[i]);
         frame->expansion.name[i] = NULL;
     }
 
     if (frame->heredoc_rest) {
-        mem_sys_free(frame->heredoc_rest);
+        mem_gc_free(interp, frame->heredoc_rest);
         frame->heredoc_rest = NULL;
     } else
         ret = frame->s.line;
 
-    mem_sys_free(frame->s.file);
-    mem_sys_free(frame);
+    mem_gc_free(interp, frame->s.file);
+    mem_gc_free(interp, frame);
 
     if (buffer != NULL)
         yy_switch_to_buffer(buffer, yyscanner);
@@ -895,21 +897,21 @@ read_braced(YYSTYPE *valp, PARROT_INTERP, const char *macro_name,
                         macro_name);
 
         len     += strlen(val.s);
-        current  = (char *)mem_sys_realloc(current, len + 1);
+        current  = mem_gc_realloc_n_typed(interp, current, len + 1, char);
         strcat(current,val.s);
 
-        mem_sys_free(val.s);
+        mem_gc_free(interp, val.s);
         val.s = NULL;
         c = yylex(&val, yyscanner, interp);
     }
 
     if (valp) {
         if (valp->s)
-            mem_sys_free(valp->s);
+            mem_gc_free(interp, valp->s);
         *valp = val;
     }
     else
-        mem_sys_free(val.s);
+        mem_gc_free(interp, val.s);
 
     return current;
 }
@@ -946,7 +948,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
             len                               = 0;
 
             if (val.s)
-                mem_sys_free(val.s);
+                mem_gc_free(interp, val.s);
             c = yylex_skip(&val, interp, " \n", yyscanner);
         }
         else if (need_id && (*current || c != IDENTIFIER) && c != ' ') {
@@ -956,18 +958,18 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
         }
         else if (c == '{') {
             current = read_braced(&val, interp, macro_name, current, yyscanner);
-            mem_sys_free(val.s);
+            mem_gc_free(interp, val.s);
             c       = yylex_skip(&val, interp, " \n", yyscanner);
             len     = strlen(current);
         }
         else {
             if (!need_id || c != ' ') {
                 len     += strlen(val.s);
-                current  = (char *)mem_sys_realloc(current, len + 1);
+                current  = mem_gc_realloc_n_typed(interp, current, len + 1, char);
                 strcat(current, val.s);
             }
 
-            mem_sys_free(val.s);
+            mem_gc_free(interp, val.s);
             val.s = NULL;
             c = yylex(&val, yyscanner, interp);
         }
@@ -978,7 +980,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
     if (valp)
         *valp = val;
     else
-        mem_sys_free(val.s);
+        mem_gc_free(interp, val.s);
 
     return c;
 }
@@ -1009,7 +1011,7 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
     c = yylex_skip(valp, interp, " ", yyscanner);
 
     if (c == '(') {
-        mem_sys_free(valp->s);
+        mem_gc_free(interp, valp->s);
         valp->s = NULL;
 
         c = read_params(NULL, interp, &params,
@@ -1023,7 +1025,7 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
         int   elem_len;
 
         if (c <= 0) {
-            mem_sys_free(valp->s);
+            mem_gc_free(interp, valp->s);
             IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR,
                         "File ended before macro '%s' was complete",
                         IMCC_INFO(interp)->cur_macro_name);
@@ -1038,27 +1040,27 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
                     buffer_size <<= 1;
 
                     IMCC_INFO(interp)->macro_buffer =
-                        (char *)mem_sys_realloc(IMCC_INFO(interp)->macro_buffer,
-                            buffer_size);
+                        mem_gc_realloc_n_typed(interp, IMCC_INFO(interp)->macro_buffer,
+                            buffer_size, char);
                 }
             }
             else {
                 buffer_size = (elem_len << 1) > 1024 ? elem_len << 1 : 1024;
 
                 IMCC_INFO(interp)->macro_buffer =
-                    (char *)mem_sys_allocate_zeroed(buffer_size);
+                    mem_gc_allocate_n_zeroed_typed(interp, buffer_size, char);
             }
 
             strcat(IMCC_INFO(interp)->macro_buffer, valp->s);
             buffer_used += elem_len;
 
-            mem_sys_free(valp->s);
+            mem_gc_free(interp, valp->s);
             valp->s = NULL;
         }
         c = yylex(valp, yyscanner, interp);
     }
 
-    mem_sys_free(valp->s);
+    mem_gc_free(interp, valp->s);
     valp->s = NULL;
 
     BEGIN(start_cond);
@@ -1066,7 +1068,7 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
     define_macro(interp, IMCC_INFO(interp)->cur_macro_name,
                  &params, IMCC_INFO(interp)->macro_buffer, start_line);
 
-    mem_sys_free(IMCC_INFO(interp)->macro_buffer);
+    mem_gc_free(interp, IMCC_INFO(interp)->macro_buffer);
     IMCC_INFO(interp)->macro_buffer   = NULL;
     IMCC_INFO(interp)->cur_macro_name = NULL;
 
@@ -1103,7 +1105,7 @@ define_macro(PARROT_INTERP, ARGIN(const char *name), ARGIN(const params_t *param
     macro_t *m = find_macro(interp, name);
 
     if (m) {
-        mem_sys_free(m->expansion);
+        mem_gc_free(interp, m->expansion);
         m->expansion = NULL;
     }
     else {
@@ -1162,7 +1164,7 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
         /* remember macro name for error reporting
          * first free any filename allocated in new_frame() */
         if (frame->s.file)
-            mem_sys_free(frame->s.file);
+            mem_gc_free(interp, frame->s.file);
 
         frame->s.file            = Parrot_gc_strdup(interp, name);
 
@@ -1213,7 +1215,7 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
 
                 if (s) {
                     frame->expansion.name[i] = Parrot_gc_strdup(interp, s);
-                    mem_sys_free(current);
+                    mem_gc_free(interp, current);
                 }
 
             }
@@ -1221,14 +1223,14 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
                 const size_t len = strlen(current);
                 if (len && (current[len - 1] == '$')) { /* local label */
                     const size_t slen = len + 10;
-                    char * const s    = (char *)mem_sys_allocate(slen);
+                    char * const s    = mem_gc_allocate_n_typed(interp, slen, char);
 
                     current[len - 1] = '\0';
 
                     snprintf(s, slen, "%s%d", current, IMCC_INFO(interp)->frames->label);
 
                     frame->expansion.name[i] = s;
-                    mem_sys_free(current);
+                    mem_gc_free(interp, current);
                 }
             }
         }
@@ -1255,13 +1257,13 @@ include_file(PARROT_INTERP, char *file_name, void *yyscanner)
 
     if (!s || !(file = fopen(s, "r"))) {
         if (frame->s.file)
-            mem_sys_free(frame->s.file);
+            mem_gc_free(interp, frame->s.file);
         IMCC_fataly(interp, EXCEPTION_EXTERNAL_ERROR, strerror(errno));
     }
 
     if (frame->s.file)
-        mem_sys_free(frame->s.file);
-    mem_sys_free(s);
+        mem_gc_free(interp, frame->s.file);
+    mem_gc_free(interp, s);
     frame->s.file            = Parrot_gc_strdup(interp, file_name);
     frame->s.handle          = file;
     ext                      = strrchr(file_name, '.');
@@ -1318,7 +1320,7 @@ pop_parser_state(PARROT_INTERP, void *yyscanner)
         IMCC_INFO(interp)->frames =
             (macro_frame_t *)IMCC_INFO(interp)->frames->s.next;
 
-        l = destroy_frame(tmp, yyscanner);
+        l = destroy_frame(interp, tmp, yyscanner);
 
         if (l)
             IMCC_INFO(interp)->line = l;
