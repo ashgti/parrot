@@ -83,8 +83,8 @@ static const Emitter emitters[] = {
 
 /*
 
-=item C<Instruction * _mk_instruction(const char *op, const char *fmt, int n,
-SymReg * const *r, int flags)>
+=item C<Instruction * _mk_instruction(PARROT_INTERP, const char *op, const char
+*fmt, int n, SymReg * const *r, int flags)>
 
 Creates a new instruction
 
@@ -95,7 +95,8 @@ Creates a new instruction
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 Instruction *
-_mk_instruction(ARGIN(const char *op), ARGIN(const char *fmt), int n,
+_mk_instruction(PARROT_INTERP, ARGIN(const char *op),
+        ARGIN(const char *fmt), int n,
         ARGIN(SymReg * const *r), int flags)
 {
     ASSERT_ARGS(_mk_instruction)
@@ -104,8 +105,8 @@ _mk_instruction(ARGIN(const char *op), ARGIN(const char *fmt), int n,
         (Instruction*)mem_sys_allocate_zeroed(sizeof (Instruction) + reg_space);
     int i;
 
-    ins->opname       = mem_sys_strdup(op);
-    ins->format       = mem_sys_strdup(fmt);
+    ins->opname       = Parrot_gc_strdup(interp, op);
+    ins->format       = Parrot_gc_strdup(interp, fmt);
     ins->symreg_count = n;
 
     for (i = 0; i < n; i++)

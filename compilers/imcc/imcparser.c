@@ -780,11 +780,11 @@ mk_pmc_const(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *type),
     r[0] = left;
     if (ascii) {
         /* strip delimiters */
-        name                   = mem_sys_strdup(constant + 1);
+        name                   = Parrot_gc_strdup(interp,constant + 1);
         name[strlen(name) - 1] = 0;
     }
     else {
-        name = mem_sys_strdup(constant);
+        name = Parrot_gc_strdup(interp,constant);
     }
 
     switch (type_enum) {
@@ -830,7 +830,7 @@ mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
     SymReg *r[3];
     char   *const_name;
     const int ascii       = (*constant == '\'' || *constant == '"');
-    char   *unquoted_name = mem_sys_strdup(name + 1);
+    char   *unquoted_name = Parrot_gc_strdup(interp,name + 1);
     size_t  name_length   = strlen(unquoted_name) - 1;
 
     unquoted_name[name_length] = 0;
@@ -847,11 +847,11 @@ mk_pmc_const_named(PARROT_INTERP, ARGMOD(IMC_Unit *unit),
     r[0] = left;
     if (ascii) {
         /* strip delimiters */
-        const_name                         = mem_sys_strdup(constant + 1);
+        const_name                         = Parrot_gc_strdup(interp,constant + 1);
         const_name[strlen(const_name) - 1] = 0;
     }
     else {
-        const_name = mem_sys_strdup(constant);
+        const_name = Parrot_gc_strdup(interp,constant);
     }
 
     if ((strncmp(unquoted_name, "Sub",       name_length) == 0)
@@ -935,7 +935,7 @@ INS_LABEL(PARROT_INTERP, ARGMOD_NULLOK(IMC_Unit *unit), ARGMOD(SymReg *r0), int 
 {
     ASSERT_ARGS(INS_LABEL)
 
-    Instruction * const ins = _mk_instruction("", "%s:", 1, &r0, 0);
+    Instruction * const ins = _mk_instruction(interp, "", "%s:", 1, &r0, 0);
     ins->type               = ITLABEL;
     r0->first_ins           = ins;
 
@@ -1116,7 +1116,7 @@ mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
         name_copy         = Parrot_str_to_cstring(interp, unescaped);
     }
     else {
-        name_copy = mem_sys_strdup(name);
+        name_copy = Parrot_gc_strdup(interp,name);
         name_copy[ strlen(name) - 1 ] = 0;
     }
 
@@ -3461,7 +3461,7 @@ yyreduce:
   case 41:
 #line 1319 "compilers/imcc/imcc.y"
     {
-           char   *name = mem_sys_strdup((yyvsp[(2) - (4)].s) + 1);
+           char   *name = Parrot_gc_strdup(interp,(yyvsp[(2) - (4)].s) + 1);
            SymReg *r    = mk_pasm_reg(interp, (yyvsp[(4) - (4)].s));
            SymReg *n;
            name[strlen(name) - 1] = 0;
@@ -3541,7 +3541,7 @@ yyreduce:
     {
           IMCC_INFO(interp)->cur_call->pcc_sub->pragma = (yyvsp[(5) - (6)].t);
           if (!IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid) {
-            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = mem_sys_strdup(
+            IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->subid = Parrot_gc_strdup(interp,
             IMCC_INFO(interp)->cur_unit->instructions->symregs[0]->name);
           }
         }
@@ -4336,7 +4336,7 @@ yyreduce:
             }
             else {
                SymReg *n;
-               char   *name = mem_sys_strdup((yyvsp[(2) - (4)].s) + 1);
+               char   *name = Parrot_gc_strdup(interp,(yyvsp[(2) - (4)].s) + 1);
                name[strlen(name) - 1] = 0;
                n = mk_const(interp, name, 'S');
                set_lexical(interp, (yyvsp[(4) - (4)].sr), n); (yyval.i) = 0;

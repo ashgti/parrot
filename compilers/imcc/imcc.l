@@ -93,7 +93,7 @@ static void include_file(PARROT_INTERP, char *file_name, ARGMOD(void *yyscanner)
 
 #define DUP_AND_RET(valp, token)             \
   do {                                       \
-      if (valp) (valp)->s = mem_sys_strdup(yytext); \
+      if (valp) (valp)->s = Parrot_gc_strdup(interp, yytext); \
       return (token);                        \
   } while (0)
 
@@ -101,7 +101,7 @@ static void include_file(PARROT_INTERP, char *file_name, ARGMOD(void *yyscanner)
   do {                                       \
       if (valp) {                            \
           mem_sys_free((valp)->s);           \
-          (valp)->s = mem_sys_strdup(yytext);       \
+          (valp)->s = Parrot_gc_strdup(interp, yytext);       \
           return (token);                    \
       }                                      \
   } while (0)
@@ -168,7 +168,7 @@ SP              [ ]
         }
 
 <heredoc1>.*{EOL} {
-            IMCC_INFO(interp)->frames->heredoc_rest = mem_sys_strdup(yytext);
+            IMCC_INFO(interp)->frames->heredoc_rest = Parrot_gc_strdup(interp, yytext);
             BEGIN(heredoc2);
     }
 
@@ -228,8 +228,8 @@ SP              [ ]
         yy_pop_state(yyscanner);
         yy_push_state(cmt3, yyscanner);
 
-        IMCC_INFO(interp)->frames->s.file = mem_sys_strdup(yytext);
-        IMCC_INFO(interp)->cur_unit->file = mem_sys_strdup(yytext);
+        IMCC_INFO(interp)->frames->s.file = Parrot_gc_strdup(interp, yytext);
+        IMCC_INFO(interp)->cur_unit->file = Parrot_gc_strdup(interp, yytext);
 
         return FILECOMMENT;
     }
@@ -457,7 +457,7 @@ SP              [ ]
             return c;
 
         /* STRINGCs have a mem_sys_strdup()ed valp->s */
-        mem_sys_free(valp->s);
+        mem_gc_free(interp, valp->s);
         YYCHOP();
         include_file(interp, yytext + 1, yyscanner);
     }
@@ -512,13 +512,13 @@ SP              [ ]
         YYCHOP();
 
         if (valp)
-            valp->s = mem_sys_strdup(yytext);
+            valp->s = Parrot_gc_strdup(interp, yytext);
 
         return LABEL;
     }
 
 <emit,INITIAL>{DOT}{LETTER}{LETTERDIGIT}* {
-        char   * const macro_name = mem_sys_strdup(yytext + 1);
+        char   * const macro_name = Parrot_gc_strdup(interp, yytext + 1);
         int failed = expand_macro(interp, macro_name, yyscanner);
         mem_sys_free(macro_name);
         if (!failed) {
@@ -536,7 +536,7 @@ SP              [ ]
 <*>{OCT}              DUP_AND_RET(valp, INTC);
 
 <*>{BIGINT} {
-        valp->s = mem_sys_strdup(yytext);
+        valp->s = Parrot_gc_strdup(interp, yytext);
 
         /* trailing 'L' */
         valp->s[strlen(valp->s) - 1] = '\0';
@@ -546,7 +546,7 @@ SP              [ ]
     }
 
 <*>{STRINGCONSTANT} {
-        valp->s = mem_sys_strdup(yytext);
+        valp->s = Parrot_gc_strdup(interp, yytext);
 
         return STRINGC;
     }
@@ -558,7 +558,7 @@ SP              [ ]
            off newline and quote. */
         if (IMCC_INFO(interp)->frames->heredoc_rest)
             IMCC_fataly(interp, EXCEPTION_SYNTAX_ERROR, "nested heredoc not supported");
-        IMCC_INFO(interp)->heredoc_end = mem_sys_strdup(yytext + 3);
+        IMCC_INFO(interp)->heredoc_end = Parrot_gc_strdup(interp, yytext + 3);
         IMCC_INFO(interp)->heredoc_end[strlen(IMCC_INFO(interp)->heredoc_end) - 1] = 0;
 
         if (!strlen(IMCC_INFO(interp)->heredoc_end))
@@ -581,7 +581,7 @@ SP              [ ]
 
 <*>{UNICODE} {
         /* charset:"..." */
-        valp->s = mem_sys_strdup(yytext);
+        valp->s = Parrot_gc_strdup(interp, yytext);
 
         /* this is actually not unicode but a string with a charset */
         return USTRINGC;
@@ -630,7 +630,7 @@ SP              [ ]
             "'%s' is only a valid register name in PASM mode", yytext);
 
         if (valp)
-            valp->s = mem_sys_strdup(yytext);
+            valp->s = Parrot_gc_strdup(interp, yytext);
 
         return REG;
     }
@@ -659,7 +659,7 @@ SP              [ ]
             }
         }
 
-        valp->s = mem_sys_strdup(yytext);
+        valp->s = Parrot_gc_strdup(interp, yytext);
         return (!IMCC_INFO(interp)->is_def && is_op(interp, valp->s) ? PARROT_OP : IDENTIFIER);
     }
 
@@ -796,7 +796,7 @@ new_frame(PARROT_INTERP) {
     if (IMCC_INFO(interp)->frames) {
         tmp->s.pasm_file = IMCC_INFO(interp)->frames->s.pasm_file;
         if (IMCC_INFO(interp)->frames->s.file)
-            tmp->s.file = mem_sys_strdup(IMCC_INFO(interp)->frames->s.file);
+            tmp->s.file = Parrot_gc_strdup(interp, IMCC_INFO(interp)->frames->s.file);
     }
 
     tmp->s.interp = interp;
@@ -864,7 +864,7 @@ yylex_skip(YYSTYPE *valp, PARROT_INTERP, const char *skip, void *yyscanner)
 
         /* free any mem_sys_strdup()ed strings */
         if (yytext)
-            mem_sys_free(valp->s);
+            mem_gc_free(interp, valp->s);
     } while (*p != '\0');
 
     if (c)
@@ -920,7 +920,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
 {
     YYSTYPE  val;
     size_t   len      = 0;
-    char    *current  = mem_sys_strdup("");
+    char    *current  = Parrot_gc_strdup(interp, "");
     yyguts_t *yyg     = (yyguts_t *)yyscanner;
     int      c        = yylex_skip(&val, interp, " \n", yyscanner);
 
@@ -942,7 +942,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
                             MAX_PARAM, macro_name);
 
             params->name[params->num_param++] = current;
-            current                           = mem_sys_strdup("");
+            current                           = Parrot_gc_strdup(interp, "");
             len                               = 0;
 
             if (val.s)
@@ -1120,7 +1120,7 @@ define_macro(PARROT_INTERP, ARGIN(const char *name), ARGIN(const params_t *param
     else
         memset(&m->params, 0, sizeof (params_t));
 
-    m->expansion = mem_sys_strdup(expansion);
+    m->expansion = Parrot_gc_strdup(interp, expansion);
     m->line      = start_line;
 }
 
@@ -1164,7 +1164,7 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
         if (frame->s.file)
             mem_sys_free(frame->s.file);
 
-        frame->s.file            = mem_sys_strdup(name);
+        frame->s.file            = Parrot_gc_strdup(interp, name);
 
         /* whitespace can be safely ignored */
         do {
@@ -1193,7 +1193,7 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
         BEGIN(start_cond);
 
         if (frame->expansion.num_param == 0 && m->params.num_param == 1) {
-            frame->expansion.name[0] = mem_sys_strdup("");
+            frame->expansion.name[0] = Parrot_gc_strdup(interp, "");
             frame->expansion.num_param = 1;
         }
 
@@ -1212,7 +1212,7 @@ expand_macro(PARROT_INTERP, ARGIN(const char *name), void *yyscanner)
                 const char * const s = find_macro_param(interp, current + 1);
 
                 if (s) {
-                    frame->expansion.name[i] = mem_sys_strdup(s);
+                    frame->expansion.name[i] = Parrot_gc_strdup(interp, s);
                     mem_sys_free(current);
                 }
 
@@ -1262,7 +1262,7 @@ include_file(PARROT_INTERP, char *file_name, void *yyscanner)
     if (frame->s.file)
         mem_sys_free(frame->s.file);
     mem_sys_free(s);
-    frame->s.file            = mem_sys_strdup(file_name);
+    frame->s.file            = Parrot_gc_strdup(interp, file_name);
     frame->s.handle          = file;
     ext                      = strrchr(file_name, '.');
 
@@ -1444,7 +1444,7 @@ set_filename(PARROT_INTERP, char * const filename)
      * During the parse, the STRINGC is already mem_sys_strdup()ed once.
      */
     if (IMCC_INFO(interp)->cur_unit)
-        IMCC_INFO(interp)->cur_unit->file = mem_sys_strdup(filename);
+        IMCC_INFO(interp)->cur_unit->file = Parrot_gc_strdup(interp, filename);
 }
 
 /* Functions to set and get yyin, as we can't decorate it for export

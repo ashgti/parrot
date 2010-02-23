@@ -148,7 +148,7 @@ push_namespace(PARROT_INTERP, ARGIN(const char *name))
     Namespace * const ns = mem_gc_allocate_zeroed_typed(interp, Namespace);
 
     ns->parent = IMCC_INFO(interp)->namespace_stack;
-    ns->name   = mem_sys_strdup(name);
+    ns->name   = Parrot_gc_strdup(interp, name);
     IMCC_INFO(interp)->namespace_stack = ns;
 }
 
@@ -271,7 +271,7 @@ _mk_symreg(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGIN(const char *name), int t)
         r             = mem_gc_allocate_zeroed_typed(interp, SymReg);
         r->set        = t;
         r->type       = VTREG;
-        r->name       = mem_sys_strdup(name);
+        r->name       = Parrot_gc_strdup(interp, name);
         r->color      = -1;
         r->want_regno = -1;
 
@@ -625,7 +625,7 @@ _mk_fullname(PARROT_INTERP, ARGIN_NULLOK(const Namespace *ns), ARGIN(const char 
         return result;
     }
 
-    return mem_sys_strdup(name);
+    return Parrot_gc_strdup(interp, name);
 }
 
 
@@ -727,7 +727,7 @@ mk_pmc_const_2(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(SymReg *left),
     r[0] = left;
 
     /* strip delimiters */
-    name          = mem_sys_strdup(rhs->name + 1);
+    name          = Parrot_gc_strdup(interp, rhs->name + 1);
     len           = strlen(name);
     name[len - 1] = '\0';
 
@@ -939,7 +939,7 @@ add_ns(PARROT_INTERP, ARGIN(const char *name))
 
     if (!IMCC_INFO(interp)->cur_namespace
     || (l = strlen(IMCC_INFO(interp)->cur_namespace->name)) <= 2)
-        return mem_sys_strdup(name);
+        return Parrot_gc_strdup(interp, name);
 
     /* TODO keyed syntax */
     len     = strlen(name) + l  + 4;
@@ -992,7 +992,7 @@ _mk_address(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGIN(const char *name), int un
 
         r       = mem_gc_allocate_zeroed_typed(interp, SymReg);
         r->type = VTADDRESS;
-        r->name = mem_sys_strdup(name);
+        r->name = Parrot_gc_strdup(interp, name);
         _store_symreg(interp, hsh, r);
 
         if (is_lexical)
@@ -1178,7 +1178,7 @@ dup_sym(PARROT_INTERP, ARGIN(const SymReg *r))
     ASSERT_ARGS(dup_sym)
     SymReg * const new_sym = mem_gc_allocate_zeroed_typed(interp, SymReg);
     STRUCT_COPY(new_sym, r);
-    new_sym->name = mem_sys_strdup(r->name);
+    new_sym->name = Parrot_gc_strdup(interp, r->name);
 
     if (r->nextkey)
         new_sym->nextkey = dup_sym(interp, r->nextkey);

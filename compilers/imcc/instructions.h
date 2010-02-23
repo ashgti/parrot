@@ -115,7 +115,7 @@ Instruction * _delete_ins(ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins))
 
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
-Instruction * _mk_instruction(
+Instruction * _mk_instruction(PARROT_INTERP,
     ARGIN(const char *op),
     ARGIN(const char *fmt),
     int n,
@@ -123,7 +123,8 @@ Instruction * _mk_instruction(
     int flags)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(4);
+        __attribute__nonnull__(3)
+        __attribute__nonnull__(5);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
@@ -232,7 +233,8 @@ void subst_ins(
        PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(ins))
 #define ASSERT_ARGS__mk_instruction __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(op) \
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(op) \
     , PARROT_ASSERT_ARG(fmt) \
     , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_delete_ins __attribute__unused__ int _ASSERT_ARGS_CHECK = (\

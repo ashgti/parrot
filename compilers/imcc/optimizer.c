@@ -367,7 +367,7 @@ if_branch(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
                     last->opnum = tmp->opnum;
                     last->opsize = tmp->opsize;
                     mem_sys_free(last->opname);
-                    last->opname = mem_sys_strdup(tmp->opname);
+                    last->opname = Parrot_gc_strdup(interp, tmp->opname);
                     free_ins(tmp);
 
                     /* delete branch */

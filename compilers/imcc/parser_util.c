@@ -345,7 +345,7 @@ var_arg_ins(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
 
     PARROT_ASSERT(op >= 0);
 
-    ins         = _mk_instruction(name, "", n, r, dirs);
+    ins         = _mk_instruction(interp, name, "", n, r, dirs);
     ins->opnum  = op;
     ins->opsize = n + 1;
 
@@ -390,7 +390,7 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     char fullname[64] = "", format[128] = "";
 
     if (STREQ(name, ".annotate")) {
-        ins = _mk_instruction(name, "", n, r, 0);
+        ins = _mk_instruction(interp, name, "", n, r, 0);
         if (emit)
             return emitb(interp, unit, ins);
         else
@@ -507,7 +507,7 @@ INS(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(const char *name),
     IMCC_debug(interp, DEBUG_PARSER, "%s %s\t%s\n", name, format, fullname);
 
     /* make the instruction */
-    ins         = _mk_instruction(name, format, n, r, dirs);
+    ins         = _mk_instruction(interp, name, format, n, r, dirs);
     ins->keys  |= keyvec;
 
     /* fill in oplib's info */
@@ -934,7 +934,7 @@ imcc_compile_file(PARROT_INTERP, ARGIN(const char *fullname),
     IMCC_push_parser_state(interp);
     {
         /* Store a copy, in order to know how to free it later */
-        char *copyname = mem_sys_strdup(fullname);
+        char *copyname = Parrot_gc_strdup(interp, fullname);
         IMCC_INFO(interp)->state->file = copyname;
         ext                            = strrchr(copyname, '.');
     }

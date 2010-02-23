@@ -1275,7 +1275,7 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         ns_const  = ns->color;
 
         if (real_name) {
-            char * const p = mem_sys_strdup(real_name + 1);
+            char * const p = Parrot_gc_strdup(interp, real_name + 1);
             mem_sys_free(r->name);
             r->name = p;
         }
@@ -1321,7 +1321,7 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         unit->subid = r;
     else {
         /* trim the quotes  */
-        unit->subid->name = mem_sys_strdup(unit->subid->name + 1);
+        unit->subid->name = Parrot_gc_strdup(interp, unit->subid->name + 1);
         unit->subid->name[strlen(unit->subid->name) - 1] = 0;
 
         /* create string constant for it. */
