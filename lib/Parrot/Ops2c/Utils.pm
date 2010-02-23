@@ -968,7 +968,7 @@ static void hop_deinit(PARROT_INTERP)
                 p = next;
             }
         }
-        mem_sys_free(hop);
+        mem_gc_free(interp, hop);
         hop = NULL;
     }
 }
