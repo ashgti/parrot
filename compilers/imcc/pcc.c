@@ -692,7 +692,7 @@ recursive_tail_call(PARROT_INTERP, ARGIN(IMC_Unit *unit),
     if (get_params->opnum != PARROT_OP_get_params_pc)
         return 0;
 
-    buf = (char *)malloc(strlen(this_sub->name) + 3);
+    buf = mem_gc_allocate_n_typed(interp, strlen(this_sub->name) + 3, char);
     sprintf(buf, "%s@0", this_sub->name);
 
     if (!(label = find_sym(interp, buf))) {
