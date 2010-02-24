@@ -108,14 +108,13 @@ main(int argc, char * argv[])
     Interp     *interp;
     int         status;
 
+    Parrot_Run_core_t  core  = PARROT_SLOW_CORE;
+    Parrot_trace_flags trace = PARROT_NO_TRACE;
+
 #ifdef PARROT_HAS_BOEHM_GC
-    GC_init();
     /* To stop affecting other GC */
     GC_disable();
 #endif
-
-    Parrot_Run_core_t  core  = PARROT_SLOW_CORE;
-    Parrot_trace_flags trace = PARROT_NO_TRACE;
 
     /* internationalization setup */
     /* setlocale(LC_ALL, ""); */
