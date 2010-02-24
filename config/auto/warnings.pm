@@ -1,14 +1,14 @@
-# Copyright (C) 2007-2008, Parrot Foundation.
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
 
-config/auto/warnings.pm - Warning flags detection
+config/auto/warnings.pm - Warning flags probing.
 
 =head1 DESCRIPTION
 
-Automagically detect what warning flags, like -Wall, -Wextra,
--Wchar-subscripts, etc., that the compiler can support.
+Given a list of potential warnings available for a certain type of
+compiler, probe to see which of those are valid for this particular version.
 
 =over 4
 
@@ -21,16 +21,67 @@ use warnings;
 
 use base qw(Parrot::Configure::Step);
 
+use Memoize;
+memoize('valid_warning');
+
 use Parrot::Configure::Utils ();
 use Parrot::BuildUtil;
 
-# Declare potential warnings for various compilers.
-#
-# Please keep these sorted by flag name, such that "-Wno-foo" is
-# sorted as "-Wfoo", so we can turn off/on as needed.
-#
-# Note that these warnings may be turned off for individual files
-# in the Makefile.
+=item C<_init>
+
+Declare potential warnings for various compilers.  Note that the compiler
+key used here doesn't really exist in a unified way in Configure - would
+be nice if it did so we could simplify our checks in runstep().
+
+We create a data structure here that breaks out the warnings by compiler,
+using this structure:
+
+warnings:
+  gcc:
+    basic:
+      - -Warning1
+      - -Warning2
+    cage:
+      - -Warning3
+      - -Warning4
+    only:
+      - -Warning5:
+        - foo.c
+        - bar.c
+    never:
+      - -Warning6:
+        - baz.c
+        - frob.c
+    todo:
+      - -Warning7:
+        - cow.c
+        - pig.c
+  g++:
+    ... 
+
+'basic' warnings are always used.
+
+'cage' warnings are added only if --cage is specified during Configure. This
+can be used to hold warnings that aren't ready to be added to the default run
+yet.
+
+'only' should be used as we add new warnings to the build, it will 
+let us insure that files we know are clean for a new warning stay clean.
+
+'never' should be used when a particular file contains generated
+code (e.g. imcc) and we cannot update it to conform to the standards.
+
+'todo' functions just like never does, but it indicates that these
+files are expected to eventually be free of this warning. 
+
+It is tempting to put this into a config file, but having it in
+perl gives us the ability to dynamically setup certain warnings based
+on any criteria already discovered via Config.
+
+Order is important - some warnings are invalid unless they are specified
+after other warnings.
+
+=cut
 
 sub _init {
     my $self = shift;
@@ -38,9 +89,10 @@ sub _init {
     my $data = {
         description => 'Detect supported compiler warnings',
         result      => '',
+        validated   => [],
     };
 
-    my $gcc_or_gpp = [ qw(
+    my @gcc_or_gpp = qw(
         -falign-functions=16
         -fvisibility=hidden
         -funit-at-a-time
@@ -88,12 +140,13 @@ sub _init {
         -Wunused
         -Wvariadic-macros
         -Wwrite-strings
-    ) ];
+    );
 
-    $data->{warnings}{'gcc'}{'potential'} = $gcc_or_gpp;
-    $data->{warnings}{'g++'}{'potential'} = $gcc_or_gpp;
+    $data->{'warnings'}{'gcc'}{'basic'} = [ @gcc_or_gpp ];
+    $data->{'warnings'}{'g++'}{'basic'} = [ @gcc_or_gpp ];
 
-    push @{$data->{warnings}{'gcc'}{'potential'}}, [qw(
+    # Add some gcc only warnings that would break g++
+    push @{$data->{'warnings'}{'gcc'}{'basic'}}, qw(
         -Wbad-function-cast
         -Wc++-compat
         -Wdeclaration-after-statement
@@ -107,7 +160,7 @@ sub _init {
         -Wnonnull
         -Wold-style-definition
         -Wstrict-prototypes
-    ) ],
+    );
 
     my $gcc_or_gpp_cage = [ qw(
         -std=c89
@@ -121,7 +174,6 @@ sub _init {
         -Wno-import
         -Wno-multichar
         -Wno-pointer-sign
-        -Wold-style-definition
         -Wunreachable-code
         -Wunused-function
         -Wunused-label
@@ -129,8 +181,8 @@ sub _init {
         -Wunused-variable
     ) ];
 
-    $data->{warnings}{'gcc'}{'cage'} = $gcc_or_gpp;
-    $data->{warnings}{'g++'}{'cage'} = $gcc_or_gpp;
+    $data->{'warnings'}{'gcc'}{'cage'} = $gcc_or_gpp_cage;
+    $data->{'warnings'}{'g++'}{'cage'} = $gcc_or_gpp_cage;
 
     return $data;
 }
@@ -149,27 +201,57 @@ sub runstep {
     if ($compiler eq '') {
         print "We do not (yet) probe for warnings for your compiler\n"
             if $verbose;
-        $self->set_result("skipped");
+        $self->set_result('skipped');
         return 1;
     }
 
-    my @warnings = @{$self->{warnings}{$compiler}{potential}};
+    # standard warnings.
+    my @warnings = grep {$self->valid_warning($conf, $_)}
+        @{$self->{'warnings'}{$compiler}{'basic'}};
 
-    # add on some extra warnings if requested
-    push @warnings, @{$self->{warnings}{$compiler}{cage}}
-        if $conf->options->get('cage');
-
-    # now try out our warnings
-    for my $maybe_warning (@warnings) {
-        $self->try_warning( $conf, $maybe_warning, $verbose );
+    # --cage?
+    if ($conf->options->get('cage')) {
+        push @warnings, grep {$self->valid_warning($conf, $_)}
+            @{$self->{'warnings'}{$compiler}{'cage'}}
     }
 
-    $self->set_result("set for $compiler");
+    # -- only?
+    my %per_file;
+    if (exists $self->{'warnings'}{$compiler}{'only'}) {
+        my %only = %{$self->{'warnings'}{$compiler}{'only'}};
+        foreach my $warning (keys %only) {
+            next unless $self->valid_warning($conf, $warning); 
+            foreach my $file (@{$only{$warning}}) {
+                $per_file{$file} = [ @warnings ] unless exists $per_file{$file};
+      
+                push @{$per_file{$file}}, $warning;
+            }
+        }
+    }
 
+    foreach my $key (qw/todo never/) {
+        if (exists $self->{'warnings'}{$compiler}{$key}) {
+            my %dont = %{$self->{'warnings'}{$compiler}{$key}};
+            foreach my $warning (keys %dont) {
+                foreach my $file (@{$dont{$warning}}) {
+                    $per_file{$file} = [ @warnings ] unless exists $per_file{$file};
+          
+                    @{$per_file{$file}} = grep {$warning ne $_} @{$per_file{$file}};
+                }
+            }
+        }
+    }
+
+    $conf->data->set('ccwarn', join(' ', @warnings));
+    foreach my $file (keys %per_file) {
+        $conf->data->set("ccwarn?$file", join(' ', @{$per_file{$file}}));
+    } 
+
+    $self->set_result('done');
     return 1;
 }
 
-=item C<try_warning>
+=item C<valid_warning>
 
 Try a given warning to see if it is supported by the compiler.  The compiler
 is determined by the C<cc> value of the C<Parrot::Configure> object passed
@@ -179,11 +261,17 @@ to be checked is passed in as the second argument to the method.
 Returns true if the warning flag is recognized by the compiler and undef
 otherwise.
 
+Use the running set of known valid options, since some options may depend
+on previous options.
+
 =cut
 
-sub try_warning {
-    my ( $self, $conf, $warning, $verbose ) = @_;
+sub valid_warning {
+    my ( $self, $conf, $warning ) = @_;
 
+    my $verbose = $conf->options->get('verbose');
+
+    # This should be using a temp file name.
     my $output_file = 'test.cco';
 
     $verbose and print "trying attribute '$warning'\n";
@@ -192,19 +280,19 @@ sub try_warning {
     $conf->cc_gen('config/auto/warnings/test_c.in');
 
     my $ccflags  = $conf->data->get('ccflags');
-    my $warnings = $conf->data->get('ccwarn'). ' ' . $warning;
+    my $warnings = join(' ', @{$self->{'validated'}});
     my $tryflags = "$ccflags $warnings";
 
     my $command_line = Parrot::Configure::Utils::_build_compile_command( $cc, $tryflags );
-    $verbose and print "  ", $command_line, "\n";
+    $verbose and print '  ', $command_line, "\n";
 
     # Don't use cc_build, because failure is expected.
     my $exit_code = Parrot::Configure::Utils::_run_command(
         $command_line, $output_file, $output_file
     );
-    _set_warning($conf, $warning, $exit_code, $verbose);
 
-    $conf->cc_clean();
+    # Cleanup any remnants of the test compilation
+    $conf->cc_clean(); 
 
     if ($exit_code) {
         unlink $output_file or die "Unable to unlink $output_file: $!";
@@ -213,34 +301,21 @@ sub try_warning {
 
     my $output = Parrot::BuildUtil::slurp_file($output_file);
     unlink $output_file or die "Unable to unlink $output_file: $!";
-    return _set_ccwarn($conf, $output, $warnings, $verbose);
-}
 
-sub _set_warning {
-    my ($conf, $warning, $exit_code, $verbose) = @_;
-    $verbose and print "  exit code: $exit_code\n";
-    $conf->data->set( $warning => !$exit_code || 0 );
-}
-
-sub _set_ccwarn {
-    my ($conf, $output, $warnings, $verbose) = @_;
     $verbose and print "  output: $output\n";
 
     if ( $output !~ /error|warning|not supported/i ) {
-        $conf->data->set( ccwarn => $warnings );
-        $verbose and print "  ccwarn: ", $conf->data->get("ccwarn"), "\n";
+        push @{$self->{'validated'}}, $warning;
+        $verbose and print "    valid warning: '$warning'\n";
         return 1;
     }
     else {
+        $verbose and print "  invalid warning: '$warning'\n";
         return 0;
     }
 }
 
 =back
-
-=head1 AUTHOR
-
-Paul Cochrane <paultcochrane at gmail dot com>
 
 =cut
 
