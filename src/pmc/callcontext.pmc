@@ -410,18 +410,6 @@ pmclass CallContext provides array provides hash auto_attrs {
     /* deref the constants - we need it all the time */
     ATTR struct PackFile_Constant **constants;
 
-    ATTR INTVAL                 current_HLL;     /* see also src/hll.c */
-
-    ATTR UINTVAL                warns;           /* Keeps track of what warnings
-                                             * have been activated */
-    ATTR UINTVAL                errors;          /* fatals that can be turned off */
-    ATTR UINTVAL                trace_flags;
-    ATTR UINTVAL                recursion_depth; /* Sub call recursion depth */
-
-    /* code->prederefed.code - code->base.data in opcodes
-     * to simplify conversion between code ptrs in e.g. invoke */
-    ATTR size_t pred_offset;
-
     /* Storage for arguments */
     ATTR struct Pcc_cell *positionals; /* linked list of positionals */
     ATTR PMC    *type_tuple;           /* Cached argument types for MDD */
@@ -435,6 +423,19 @@ pmclass CallContext provides array provides hash auto_attrs {
     ATTR void     **returns_values;             /* stored pointers */
     ATTR INTVAL     returns_size;               /* number of stored elements */
     ATTR INTVAL     returns_resize_threshold;   /* max size before resizing array */
+
+    /* code->prederefed.code - code->base.data in opcodes
+     * to simplify conversion between code ptrs in e.g. invoke */
+    ATTR size_t pred_offset;
+
+    ATTR INTVAL                 current_HLL;     /* see also src/hll.c */
+
+    ATTR UINTVAL                warns;           /* Keeps track of what warnings
+                                             * have been activated */
+    ATTR UINTVAL                errors;          /* fatals that can be turned off */
+    ATTR UINTVAL                trace_flags;
+    ATTR UINTVAL                recursion_depth; /* Sub call recursion depth */
+
 /*
 
 =item C<void init()>
