@@ -1133,7 +1133,7 @@ sub calculate_attr_layout {
     #warn sprintf("%b %s\n", $result, Dumper($self->attributes));
 
     # We can't handle more than 32 bits on 32 bits plaform ATM.
-    return -1 if $result >= 2**32;
+    return '(UINTVAL)-1' if $result >= 2**32;
 
     return $result;
 }

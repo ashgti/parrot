@@ -303,7 +303,7 @@ static PMC*
 gc_boehm_allocate_pmc_header(PARROT_INTERP, UINTVAL flags)
 {
     boehm_gc_data *d = (boehm_gc_data*)interp->gc_sys->gc_private;
-    PMC *pmc = (PMC*)GC_malloc_explicitly_typed(sizeof(PMC), d->pmc_descriptor);
+    PMC *pmc = (PMC*)GC_MALLOC_EXPLICITLY_TYPED(sizeof(PMC), d->pmc_descriptor);
     //PMC *pmc = (PMC*)GC_MALLOC(sizeof(PMC));
     //GC_REGISTER_FINALIZER_NO_ORDER(pmc, gc_boehm_finalize_cb, interp, NULL, NULL);
     return pmc;
@@ -361,7 +361,7 @@ gc_boehm_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)
     void           *attrs;
 
     /* Lazy initialize bitmap for core PMCs */
-    if (base_type >= enum_class_core_max || attr_size / sizeof (GC_word)) {
+    if (base_type >= enum_class_core_max || pmc->vtable->attr_layout == (UINTVAL)-1) {
         attrs = GC_MALLOC(attr_size);
     }
     else {
