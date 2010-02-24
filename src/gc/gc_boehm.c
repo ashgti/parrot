@@ -327,14 +327,14 @@ static STRING*
 gc_boehm_allocate_string_header(PARROT_INTERP, UINTVAL flags)
 {
     boehm_gc_data *d = (boehm_gc_data*)interp->gc_sys->gc_private;
-    return (STRING*)GC_malloc_explicitly_typed(sizeof(STRING), d->string_descriptor);
+    return (STRING*)GC_MALLOC_EXPLICITLY_TYPED(sizeof(STRING), d->string_descriptor);
 }
 
 static void
 gc_boehm_free_string_header(PARROT_INTERP, STRING *s)
 {
-    if (s)
-        GC_FREE(s);
+    //if (s)
+        //GC_FREE(s);
 }
 
 
@@ -347,8 +347,8 @@ gc_boehm_allocate_bufferlike_header(PARROT_INTERP, size_t size)
 static void
 gc_boehm_free_bufferlike_header(PARROT_INTERP, Buffer *b, size_t size)
 {
-    if (b)
-        GC_FREE(b);
+//    if (b)
+//        GC_FREE(b);
 }
 
 
@@ -379,8 +379,8 @@ gc_boehm_allocate_pmc_attributes(PARROT_INTERP, PMC *pmc)
 static void
 gc_boehm_free_pmc_attributes(PARROT_INTERP, PMC *pmc)
 {
-    if (PMC_data(pmc))
-        GC_FREE(PMC_data(pmc));
+//    if (PMC_data(pmc))
+//        GC_FREE(PMC_data(pmc));
 }
 
 
@@ -452,8 +452,8 @@ gc_boehm_allocate_fixed_size_storage(PARROT_INTERP, size_t size)
 static void
 gc_boehm_free_fixed_size_storage(PARROT_INTERP, size_t size, void *data)
 {
-    if (data)
-        GC_FREE(data);
+//    if (data)
+//        GC_FREE(data);
 }
 
 /*
@@ -512,8 +512,8 @@ static void
 gc_boehm_free_memory_chunk(PARROT_INTERP, ARGFREE(void *data))
 {
     ASSERT_ARGS(gc_boehm_free_memory_chunk)
-    if (data)
-        GC_FREE(data);
+//    if (data)
+//        GC_FREE(data);
 }
 
 static char*
@@ -601,14 +601,14 @@ Parrot_gc_boehm_init(PARROT_INTERP)
     ASSERT_ARGS(Parrot_gc_boehm_init)
     int i;
 
-    //GC_enable_incremental();
-    //GC_time_limit = GC_TIME_UNLIMITED;
+    /* Alias for gc_sys */
+    GC_Subsystem *gc_sys = interp->gc_sys;
+
 
     /* GC is disabled in src/main.c. So reenable it */
     GC_enable();
-
-    /* Alias for gc_sys */
-    GC_Subsystem *gc_sys = interp->gc_sys;
+    //GC_enable_incremental();
+    //GC_time_limit = GC_TIME_UNLIMITED;
 
     boehm_gc_data *gc_private = (boehm_gc_data*)GC_MALLOC_ATOMIC(sizeof(boehm_gc_data));
 
