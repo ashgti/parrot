@@ -2,6 +2,9 @@
 # Copyright (C) 2008-2010, Parrot Foundation.
 # $Id$
 
+use strict;
+use warnings;
+
 use lib ('./lib', '../../lib');
 use Parrot::Test::NCIGENAST;
 
@@ -122,7 +125,7 @@ int b = 12;
 int a = 10 * sizeof(int) * 13;
 CODE
 
-parse_success(<<'CODE', 'times_04.c').c;
+parse_success(<<'CODE', 'times_04.c');
 int a = 8 * 3;
 CODE
 
