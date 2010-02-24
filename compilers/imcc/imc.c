@@ -142,7 +142,7 @@ imc_cleanup(PARROT_INTERP, ARGIN_NULLOK(void *yyscanner))
 {
     ASSERT_ARGS(imc_cleanup)
     IMCC_pop_parser_state(interp, yyscanner);
-    clear_globals(interp);
+    //clear_globals(interp);
     mem_gc_free(interp, IMCC_INFO(interp)->ghash.data);
     IMCC_INFO(interp)->ghash.data = NULL;
 

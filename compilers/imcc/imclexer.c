@@ -5259,8 +5259,8 @@ destroy_frame(PARROT_INTERP, struct macro_frame_t *frame, void *yyscanner)
     } else
         ret = frame->s.line;
 
-    mem_gc_free(interp, frame->s.file);
-    mem_gc_free(interp, frame);
+    //mem_gc_free(interp, frame->s.file);
+    //mem_gc_free(interp, frame);
 
     if (buffer != NULL)
         yy_switch_to_buffer(buffer,yyscanner);
