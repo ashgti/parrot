@@ -5685,7 +5685,7 @@ include_file(PARROT_INTERP, char *file_name, void *yyscanner)
 
     if (frame->s.file)
         mem_gc_free(interp, frame->s.file);
-    mem_gc_free(interp, s);
+    Parrot_str_free_cstring(s);
     frame->s.file            = Parrot_gc_strdup(interp, file_name);
     frame->s.handle          = file;
     ext                      = strrchr(file_name, '.');

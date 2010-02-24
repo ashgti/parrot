@@ -790,12 +790,13 @@ mk_sub_address_fromc(PARROT_INTERP, ARGIN(const char *name))
         name_copy         = Parrot_str_to_cstring(interp, unescaped);
     }
     else {
-        name_copy = Parrot_gc_strdup(interp,name);
+        /* FIXME We should allocate strings consistently */
+        name_copy = mem_sys_strdup(name);
         name_copy[ strlen(name) - 1 ] = 0;
     }
 
     r = mk_sub_address(interp, name_copy + 1);
-    mem_gc_free(interp, name_copy);
+    Parrot_str_free_cstring(name_copy);
 
     return r;
 }

@@ -1340,7 +1340,7 @@ imcc_destroy(PARROT_INTERP)
     if (IMCC_INFO(interp)->globals)
         mem_gc_free(interp, IMCC_INFO(interp)->globals);
 
-    mem_gc_free(interp, IMCC_INFO(interp));
+    mem_internal_free(IMCC_INFO(interp));
     IMCC_INFO(interp) = NULL;
 
     if (eval_nr != 0)
