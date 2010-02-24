@@ -201,10 +201,10 @@ Takes the specified source file, replacing entries like C<@key@> with
 C<key>'s value from the configuration system's data, and writes the results
 to specified target file.
 
-If a C<?> is present in the C<@key@>, the replaced value will first try to
-use the full key, but if that is not present, the key up to the C<?> is used.
-For example, if C<@cc_warnings?src/embed.c@> is used, and that key doesn't
-exist, the fallback key would be C<@cc_warnings@>.
+If a C<::> is present in the C<@key@>, the replaced value will first try to
+use the full key, but if that is not present, the key up to the C<::> is used.
+For example, if C<@cc_warn::src/embed.c@> is used, and that key doesn't
+exist, the fallback key would be C<@cc_warn@>.
 
 Respects the following options when manipulating files (Note: most of the
 replacement syntax assumes the source text is on a single line.)
@@ -530,9 +530,9 @@ sub genfile {
             }
         }egx;
 
-        # interpolate @foo?bar@ values
-        $line =~ s{ \@ (\w+) \? (\w+) \@ }{
-            my $full = $1 . '?' . $2;
+        # interpolate @foo::bar@ values
+        $line =~ s{ \@ (\w+) :: ([^\@]+) \@ }{
+            my $full = $1 . '::' . $2;
             my $base = $1;
             if(defined(my $val=$conf->data->get($full))) {
                 $val;

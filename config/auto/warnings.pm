@@ -188,6 +188,12 @@ sub _init {
     $gcc->{'cage'} = $gcc_or_gpp_cage;
     $gpp->{'cage'} = $gcc_or_gpp_cage;
 
+    $gcc->{'todo'} = $gpp->{'todo'} = {
+        '-Wformat-nonliteral' => [
+            'src/spf_render.c',
+        ] 
+    };
+
     $data->{'warnings'}{'gcc'} = $gcc;
     $data->{'warnings'}{'gpp'} = $gpp;
 
@@ -253,7 +259,7 @@ sub runstep {
 
     $conf->data->set('ccwarn', join(' ', @warnings));
     foreach my $file (keys %per_file) {
-        $conf->data->set("ccwarn?$file", join(' ', @{$per_file{$file}}));
+        $conf->data->set("ccwarn::$file", join(' ', @{$per_file{$file}}));
     } 
 
     $self->set_result('done');

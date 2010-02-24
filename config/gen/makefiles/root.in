@@ -83,7 +83,8 @@ CC_INC           = @cc_inc@
 C_LIBS           = @libs@
 CC_SHARED        = @cc_shared@
 CC_O_OUT         = @cc_o_out@
-CFLAGS           = $(CC_INC) @ccflags@ @cc_build_call_frames@ @cc_debug@ @ccwarn@ @cg_flag@ @gc_flag@ @clock_best@ $(CC_SHARED)
+CC_WARN          = @ccwarn@
+CFLAGS           = $(CC_INC) @ccflags@ @cc_build_call_frames@ @cc_debug@ @cg_flag@ @gc_flag@ @clock_best@ $(CC_SHARED)
 LINK_DYNAMIC     = @link_dynamic@
 LINK             = @link@
 LINKFLAGS        = @linkflags@ @link_debug@ @ld_debug@
@@ -577,12 +578,12 @@ MAKE = @make_c@
 .SUFFIXES : .c .S .s .pmc .dump $(O) .str .pir .pbc
 
 .c$(O) : # suffix rule (limited support)
-	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 
 .s$(O) : # suffix rule (limited support)
-	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 #UNLESS(win32).S$(O) : # suffix rule (limited support)
-#UNLESS(win32)	$(CC) $(CFLAGS) -I$(@D) @cc_o_out@$@ -c $<
+#UNLESS(win32)	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 
 .pir.pbc : # suffix rule (limited support)
 	$(PARROT) -o $@ $<
@@ -1257,7 +1258,7 @@ src/thread$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/atomic.h \
 ## SUFFIX OVERRIDE - dynloaded files need cc_shared
 src/extend$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/extend.h \
     include/pmc/pmc_sub.h $(INC_DIR)/extend_vtable.h src/extend.c
-	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/extend.c
+	$(CC) $(CFLAGS) $(CC_WARN) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/extend.c
 
 src/runcore/main$(O) : \
 	src/runcore/main.str \
@@ -1423,7 +1424,7 @@ src/utils$(O) : $(PARROT_H_HEADERS) include/pmc/pmc_nci.h
 
 ## SUFFIX OVERRIDE - Warnings
 src/spf_render$(O) : $(PARROT_H_HEADERS) src/spf_render.str
-	$(CC) $(CFLAGS) -Wno-format-nonliteral @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/spf_render.c
+	$(CC) $(CFLAGS) @ccwarn::src/spf_render.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/spf_render.c
 
 src/spf_vtable$(O) : $(PARROT_H_HEADERS) src/spf_vtable.str
 
@@ -1465,7 +1466,7 @@ src/ops/core_ops$(O) : src/ops/core_ops.c \
     include/pmc/pmc_parrotlibrary.h \
     src/io/io_private.h $(INC_DIR)/dynext.h $(INC_DIR)/embed.h \
     $(INC_DIR)/oplib/core_ops.h $(INC_DIR)/runcore_api.h
-	$(CC) $(CFLAGS) @cc_shared@ -Wno-unused-parameter -Wno-unused-variable \
+	$(CC) $(CFLAGS) $(CC_WARN) @cc_shared@ -Wno-unused-parameter -Wno-unused-variable \
     -I$(@D) @cc_o_out@$@ -c src/ops/core_ops.c
 
 # .h files are built along with .c
@@ -2422,7 +2423,7 @@ exec : src/parrot_config$(O) $(LIBPARROT)
 # for use by t/pmc/nci.t
 ## SUFFIX OVERRIDE - dynloaded files need cc_shared
 src/nci_test$(O): $(PARROT_H_HEADERS) src/nci_test.c
-	$(CC) $(CFLAGS) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/nci_test.c
+	$(CC) $(CFLAGS) $(CC_WARN) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/nci_test.c
 
 $(LIBNCI_TEST_SO): src/nci_test$(O) $(LIBPARROT)
 	$(LD) $(LD_LOAD_FLAGS) @ncilib_link_extra@ $(LDFLAGS) \
