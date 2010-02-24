@@ -328,7 +328,7 @@ Entry point.
 
 =cut
 
-.sub 'setup'
+.sub 'setup' :multi()
     .param pmc args :slurpy
     .param pmc kv :slurpy :named
     .local pmc steps
@@ -372,6 +372,12 @@ Entry point.
     .local pmc ex
     .get_results (ex)
     rethrow ex
+.end
+
+.sub 'setup' :multi(ResizableStringArray,Hash)
+    .param pmc array
+    .param pmc hash
+    .tailcall setup(array :flat, hash :flat :named)
 .end
 
 =item run_step
@@ -4519,10 +4525,15 @@ Return the whole config
     .const string srcname = 'tmp.c'
     spew(srcname, source)
     .local string exename
-    $S0 = get_exe()
-    exename = 'tmp' . $S0
+    exename = 'tmp'
     .local pmc config
     config = get_config()
+    $S0 = config['osname']
+    if $S0 == 'MSWin32' goto L0
+    exename = './' . exename
+  L0:
+    $S0 = get_exe()
+    exename .= $S0
     .local string cmd
     cmd = config['cc']
     cmd .= " "
@@ -4533,21 +4544,20 @@ Return the whole config
     cmd .= cflags
   L1:
     cmd .= " "
+    cmd .= srcname
+    cmd .= " "
     $S0 = get_ldflags()
     cmd .= $S0
     unless has_ldflags goto L2
     cmd .= " "
     cmd .= ldflags
   L2:
-    cmd .= " "
-    cmd .= srcname
     cmd .= " -o "
     cmd .= exename
     system(cmd, verbose :named('verbose'), 1 :named('ignore_error'))
     unlink(srcname, verbose :named('verbose'))
 
-    cmd = "./" . exename
-    $P0 = open cmd, 'rp'
+    $P0 = open exename, 'rp'
     $S0 = $P0.'readall'()
     $P0.'close'()
 

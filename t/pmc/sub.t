@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2009, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -26,6 +26,8 @@ Tests the creation and invocation of C<Sub>, C<Closure> and
 C<Continuation> PMCs.
 
 =cut
+
+my @todo;
 
 pasm_output_is( <<'CODE', <<'OUTPUT', "PASM subs - invokecc" );
     .const 'Sub' P0 = "func"
@@ -835,9 +837,14 @@ the_sub
 main
 OUTPUT
 
-my @todo = ( todo => 'broken with JIT (TT #983)' )
-    if ( defined $ENV{TEST_PROG_ARGS} and
-        $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/ );
+@todo = (
+    defined $ENV{TEST_PROG_ARGS}
+        and
+    $ENV{TEST_PROG_ARGS} =~ /--runcore=jit/
+)
+    ? ( todo => 'broken with JIT (TT #983)' )
+    : ();
+
 pir_output_is( <<'CODE', <<'OUTPUT', "caller introspection via interp", @todo );
 .sub main :main
 .include "interpinfo.pasm"
@@ -1425,12 +1432,12 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'set_outer and eval' );
 PIR
     $P1 = compreg 'PIR'
     $P1 = $P1($S1)
-    
+
     $P3 = new 'ParrotInterpreter'
     $P3 = $P3['sub']
     $P2 = $P1[0]
     $P2.'set_outer'($P3)
-    
+
     $P1()
 .end
 CODE
@@ -1637,11 +1644,11 @@ OUTPUT
 pir_output_is( <<'CODE', <<'OUTPUT', 'init_pmc' );
 .sub 'main'
     .local pmc init, s, regs, arg_info
-    
+
     init = new ['Hash']
     init['start_offs']  = 42
     init['end_offs']    = 115200
-    
+
     regs = new ['FixedIntegerArray']
     regs = 4
     regs[0] = 1
@@ -1694,7 +1701,7 @@ pir_output_is( <<'CODE', <<'OUTPUT', 'init_pmc' );
     $P0 = inspect s, 'pos_optional'
     print 'pos_optional '
     say $P0
-    
+
     $P0 = inspect s, 'pos_slurpy'
     print 'pos_slurpy '
     say $P0

@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2008, Parrot Foundation.
+# Copyright (C) 2008-2010, Parrot Foundation.
 # $Id$
 
 # initial work by Brad Gilbert b2gills <at> gmail <dot> com
@@ -55,31 +55,31 @@ Tests for basic system information.
 my @setup = (
     { pconfig_key => 'intvalsize',
       pasm_key    => 1,
-      pir_key     => 'SYSINFO_PARROT_INTSIZE',	
+      pir_key     => 'SYSINFO_PARROT_INTSIZE',
       desc        => 'integer size',
       reg_type    => 'I',
     },
     { pconfig_key => 'doublesize',
       pasm_key    => 2,
-      pir_key     => 'SYSINFO_PARROT_FLOATSIZE',	
+      pir_key     => 'SYSINFO_PARROT_FLOATSIZE',
       desc        => 'float size',
       reg_type    => 'I',
     },
     { pconfig_key => 'ptrsize',
       pasm_key    => 3,
-      pir_key     => 'SYSINFO_PARROT_POINTERSIZE',	
+      pir_key     => 'SYSINFO_PARROT_POINTERSIZE',
       desc        => 'pointer size',
       reg_type    => 'I',
     },
     { pconfig_key => 'osname',
       pasm_key    => 4,
-      pir_key     => 'SYSINFO_PARROT_OS',	
+      pir_key     => 'SYSINFO_PARROT_OS',
       desc        => 'osname',
       reg_type    => 'S',
     },
     { pconfig_key => 'cpuarch',
       pasm_key    => 7,
-      pir_key     => 'SYSINFO_CPU_ARCH',	
+      pir_key     => 'SYSINFO_CPU_ARCH',
       desc        => 'CPU Arch Family',
       reg_type    => 'S',
     },
@@ -142,7 +142,7 @@ CODE
     print S1
 end
 CODE
-        } # END TODO block
+        } # END todo block
     } # END inner SKIP block
 } # END outer SKIP block
 
@@ -174,3 +174,10 @@ SKIP:
 .end
 CODE
 }
+
+# Local Variables:
+#   mode: cperl
+#   cperl-indent-level: 4
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4:

@@ -1,5 +1,5 @@
 #!perl
-# Copyright (C) 2007-2008 Parrot Foundation.
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -27,7 +27,7 @@ Test the examples in F<examples/tutorial>.
 my $manifest = maniread('MANIFEST');
 my %files;
 foreach my $file (keys %$manifest) {
-  next unless $file =~ m{examples/tutorial/.*pir$}; 
+  next unless $file =~ m{examples/tutorial/.*pir$};
   $files{$file}=undef;
 }
 
@@ -244,7 +244,8 @@ foreach my $tutorial (sort keys %files) {
             @todo = (todo => $reason) if defined $reason;
         }
         example_output_is( $tutorial, $expected, @todo );
-    } else {
+    }
+    else {
         fail($tutorial);
     }
 }

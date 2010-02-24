@@ -285,7 +285,6 @@ GEN_LIBRARY = \
     $(LIBRARY_DIR)/Getopt/Obj.pbc \
     $(LIBRARY_DIR)/Iter.pbc \
     $(LIBRARY_DIR)/JSON.pbc \
-    $(LIBRARY_DIR)/data_json.pbc \
     $(LIBRARY_DIR)/Math/Rand.pbc \
     $(LIBRARY_DIR)/MIME/Base64.pbc \
     $(LIBRARY_DIR)/NCI/Utils.pbc \
@@ -528,7 +527,7 @@ PBC_TO_EXE          = .@slash@pbc_to_exe$(EXE)
 PARROT_CONFIG       = .@slash@parrot_config$(EXE)
 PIRC                = .@slash@pirc$(EXE)
 NQP_RX              = .@slash@parrot-nqp$(EXE)
-NCI_THUNK_GEN	    = ./parrot_nci_thunk_gen$(EXE)
+NCI_THUNK_GEN       = ./parrot_nci_thunk_gen$(EXE)
 
 # Installable executables
 INSTALLABLEPARROT    = .@slash@installable_parrot$(EXE)
@@ -2444,7 +2443,8 @@ $(LIBGLUTCB_SO): $(LIBPARROT) src/glut_callbacks$(O) src/glut_nci_thunks$(O)
     $(ALL_PARROT_LIBS) @opengl_lib@
 
 src/extra_nci_thunks.c : src/nci/extra_thunks.nci $(NCI_THUNK_GEN)
-	$(NCI_THUNK_GEN) --dynext --output=src/extra_nci_thunks.c <src/nci/extra_thunks.nci
+	$(NCI_THUNK_GEN) --dynext --no-warn-dups \
+	    --output=src/extra_nci_thunks.c <src/nci/extra_thunks.nci
 
 src/extra_nci_thunks$(O) : $(GENERAL_H_FILES)
 

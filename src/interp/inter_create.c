@@ -254,7 +254,7 @@ initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
     Parrot_runcore_init(interp);
 
     /* Load the core op func and info tables */
-    interp->op_lib          = PARROT_CORE_OPLIB_INIT(1);
+    interp->op_lib          = PARROT_CORE_OPLIB_INIT(interp, 1);
     interp->op_count        = interp->op_lib->op_count;
     interp->op_func_table   = interp->op_lib->op_func_table;
     interp->op_info_table   = interp->op_lib->op_info_table;
@@ -438,18 +438,18 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
     destroy_object_cache(interp);
 
     if (interp->evc_func_table) {
-        mem_sys_free(interp->evc_func_table);
+        mem_gc_free(interp, interp->evc_func_table);
         interp->evc_func_table = NULL;
     }
 
     /* strings, charsets, encodings - only once */
     Parrot_str_finish(interp);
 
-    PARROT_CORE_OPLIB_INIT(0);
+    PARROT_CORE_OPLIB_INIT(interp, 0);
 
     if (!interp->parent_interpreter) {
         if (interp->thread_data)
-            mem_sys_free(interp->thread_data);
+            mem_internal_free(interp->thread_data);
 
         /* free vtables */
         parrot_free_vtables(interp);
@@ -458,10 +458,10 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         Parrot_gc_finalize(interp);
 
         MUTEX_DESTROY(interpreter_array_mutex);
-        mem_sys_free(interp);
+        mem_internal_free(interp);
 
         /* finally free other globals */
-        mem_sys_free(interpreter_array);
+        mem_internal_free(interpreter_array);
         interpreter_array = NULL;
     }
 
@@ -471,15 +471,16 @@ Parrot_really_destroy(PARROT_INTERP, SHIM(int exit_code), SHIM(void *arg))
         || (interp->thread_data
         && (interp->thread_data->state & THREAD_STATE_JOINED))) {
             if (interp->thread_data) {
-                mem_sys_free(interp->thread_data);
+                mem_internal_free(interp->thread_data);
                 interp->thread_data = NULL;
             }
+
+            parrot_free_vtables(interp);
 
             /* Finalyze GC */
             Parrot_gc_finalize(interp);
 
-            parrot_free_vtables(interp);
-            mem_sys_free(interp);
+            mem_internal_free(interp);
         }
     }
 }

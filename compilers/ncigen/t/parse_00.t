@@ -1,4 +1,9 @@
-#!/usr/bin/perl
+#!perl
+# Copyright (C) 2008-2010, Parrot Foundation.
+# $Id$
+
+use strict;
+use warnings;
 
 use lib ('./lib', '../../lib');
 use Parrot::Test::NCIGENAST;
@@ -120,7 +125,7 @@ int b = 12;
 int a = 10 * sizeof(int) * 13;
 CODE
 
-parse_success(<<'CODE', 'times_04.c').c;
+parse_success(<<'CODE', 'times_04.c');
 int a = 8 * 3;
 CODE
 
@@ -173,3 +178,10 @@ CODE
 parse_success(<<'CODE', 'void_star.c');
 __extension__ typedef void * __timer_t;
 CODE
+
+# Local Variables:
+#   mode: cperl
+#   cperl-indent-level: 4
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4:
