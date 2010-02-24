@@ -92,6 +92,10 @@ sub _init {
         validated   => [],
     };
 
+    # begin gcc/g++ 
+    my $gcc = {};
+    my $gpp = {};
+
     my @gcc_or_gpp = qw(
         -falign-functions=16
         -fvisibility=hidden
@@ -142,11 +146,11 @@ sub _init {
         -Wwrite-strings
     );
 
-    $data->{'warnings'}{'gcc'}{'basic'} = [ @gcc_or_gpp ];
-    $data->{'warnings'}{'g++'}{'basic'} = [ @gcc_or_gpp ];
+    $gcc->{'basic'} = [ @gcc_or_gpp ];
+    $gpp->{'basic'} = [ @gcc_or_gpp ];
 
     # Add some gcc only warnings that would break g++
-    push @{$data->{'warnings'}{'gcc'}{'basic'}}, qw(
+    push @{$gcc->{'basic'}}, qw(
         -Wbad-function-cast
         -Wc++-compat
         -Wdeclaration-after-statement
@@ -181,8 +185,13 @@ sub _init {
         -Wunused-variable
     ) ];
 
-    $data->{'warnings'}{'gcc'}{'cage'} = $gcc_or_gpp_cage;
-    $data->{'warnings'}{'g++'}{'cage'} = $gcc_or_gpp_cage;
+    $gcc->{'cage'} = $gcc_or_gpp_cage;
+    $gpp->{'cage'} = $gcc_or_gpp_cage;
+
+    $data->{'warnings'}{'gcc'} = $gcc;
+    $data->{'warnings'}{'gpp'} = $gpp;
+
+    ## end gcc/g++
 
     return $data;
 }
