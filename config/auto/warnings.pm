@@ -141,7 +141,6 @@ sub _init {
         -Wtrigraphs
         -Wundef
         -Wunknown-pragmas
-        -Wunused
         -Wvariadic-macros
         -Wwrite-strings
     );
@@ -179,6 +178,7 @@ sub _init {
         -Wno-multichar
         -Wno-pointer-sign
         -Wunreachable-code
+        -Wunused
         -Wunused-function
         -Wunused-label
         -Wunused-value
@@ -190,9 +190,14 @@ sub _init {
 
     $gcc->{'todo'} = $gpp->{'todo'} = {
         '-Wformat-nonliteral' => [
+            'compilers/imcc/imclexer.c',
             'src/spf_render.c',
-        ] 
+        ],
+        '-Wno-switch-default' => [
+            'compilers/imcc/imclexer.c',
+        ],
     };
+
 
     $data->{'warnings'}{'gcc'} = $gcc;
     $data->{'warnings'}{'gpp'} = $gpp;

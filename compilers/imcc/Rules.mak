@@ -91,6 +91,7 @@ compilers/imcc/debug$(O) : \
     $(PARROT_H_HEADERS)
 
 ## SUFFIX OVERRIDE - Warnings (This is generated code)
+## XXX except we can't do that in a raw .mak file; we'd need to generate  it.
 compilers/imcc/imclexer$(O) : \
     compilers/imcc/imclexer.c \
     compilers/imcc/cfg.h \
@@ -104,9 +105,6 @@ compilers/imcc/imclexer$(O) : \
     compilers/imcc/unit.h \
     $(INC_DIR)/oplib/ops.h \
     $(PARROT_H_HEADERS)
-	$(CC) $(CFLAGS) $(CC_SHARED) -Wno-switch-default -Wno-unused \
-    -Wno-format-nonliteral \
-    -I$(@D) $(CC_O_OUT) $@ -c compilers/imcc/imclexer.c
 
 compilers/imcc/imcparser$(O) : \
     compilers/imcc/cfg.h \
