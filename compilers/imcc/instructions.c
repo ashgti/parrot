@@ -1,6 +1,6 @@
 /*
  * $Id$
- * Copyright (C) 2002-2009, Parrot Foundation.
+ * Copyright (C) 2002-2010, Parrot Foundation.
  */
 
 #include <stdlib.h>
@@ -873,7 +873,7 @@ the C<param> to the open function.
 
 PARROT_EXPORT
 int
-emit_open(PARROT_INTERP, int type, ARGIN_NULLOK(void *param))
+emit_open(PARROT_INTERP, int type, ARGIN_NULLOK(const char *param))
 {
     ASSERT_ARGS(emit_open)
     IMCC_INFO(interp)->emitter       = type;
