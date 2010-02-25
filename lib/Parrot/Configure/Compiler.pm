@@ -344,7 +344,7 @@ sub genfile {
     open my $out, '>', "$target.tmp" or die "Can't open $target.tmp: $!";
 
     if ( !exists $options{file_type}) {
-        if ( $target =~ m/makefile$/i ) {
+        if ( $target =~ m/makefile$/i || $target =~ m/\.mak/) {
             $options{file_type} = 'makefile';
         }
         elsif ($target =~ m/\.p[lm]$/i ) {
