@@ -109,8 +109,7 @@ $verbose = undef;
 $conf->data->set( ccwarn => undef );
 ok( ! auto::warnings::_set_ccwarn($conf, $output, $warnings, $verbose),
     "_set_ccwarn returned false as expected" );
-ok( ! defined $conf->data->get( 'ccwarn' ), 
-    "Warnings set as expected" );
+ok( ! defined $conf->data->get( 'ccwarn' ), "Warnings set as expected" );
 
 } # End SKIP block for Sun/Solaris
 

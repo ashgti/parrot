@@ -57,22 +57,22 @@ warnings:
         - cow.c
         - pig.c
   g++:
-    ... 
+    ...
 
 'basic' warnings are always used.
 
-'cage' warnings are added only if --cage is specified during Configure. This
-can be used to hold warnings that aren't ready to be added to the default run
-yet.
+'cage' warnings are added only if --cage is specified during
+Configure. This can be used to hold warnings that aren't ready to be
+added to the default run yet.
 
-'only' should be used as we add new warnings to the build, it will 
-let us insure that files we know are clean for a new warning stay clean.
+'only' should be used as we add new warnings to the build, it will let
+us insure that files we know are clean for a new warning stay clean.
 
-'never' should be used when a particular file contains generated
-code (e.g. imcc) and we cannot update it to conform to the standards.
+'never' should be used when a particular file contains generated code
+(e.g. imcc) and we cannot update it to conform to the standards.
 
 'todo' functions just like never does, but it indicates that these
-files are expected to eventually be free of this warning. 
+files are expected to eventually be free of this warning.
 
 It is tempting to put this into a config file, but having it in
 perl gives us the ability to dynamically setup certain warnings based
@@ -92,7 +92,7 @@ sub _init {
         validated   => [],
     };
 
-    # begin gcc/g++ 
+    # begin gcc/g++
     my $gcc = {};
     my $gpp = {};
 
@@ -240,10 +240,9 @@ sub runstep {
     if (exists $self->{'warnings'}{$compiler}{'only'}) {
         my %only = %{$self->{'warnings'}{$compiler}{'only'}};
         foreach my $warning (keys %only) {
-            next unless $self->valid_warning($conf, $warning); 
+            next unless $self->valid_warning($conf, $warning);
             foreach my $file (@{$only{$warning}}) {
                 $per_file{$file} = [ @warnings ] unless exists $per_file{$file};
-      
                 push @{$per_file{$file}}, $warning;
             }
         }
@@ -255,7 +254,6 @@ sub runstep {
             foreach my $warning (keys %dont) {
                 foreach my $file (@{$dont{$warning}}) {
                     $per_file{$file} = [ @warnings ] unless exists $per_file{$file};
-          
                     @{$per_file{$file}} = grep {$warning ne $_} @{$per_file{$file}};
                 }
             }
@@ -265,7 +263,7 @@ sub runstep {
     $conf->data->set('ccwarn', join(' ', @warnings));
     foreach my $file (keys %per_file) {
         $conf->data->set("ccwarn::$file", join(' ', @{$per_file{$file}}));
-    } 
+    }
 
     $self->set_result('done');
     return 1;
@@ -312,7 +310,7 @@ sub valid_warning {
     );
 
     # Cleanup any remnants of the test compilation
-    $conf->cc_clean(); 
+    $conf->cc_clean();
 
     if ($exit_code) {
         unlink $output_file or die "Unable to unlink $output_file: $!";
