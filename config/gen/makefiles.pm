@@ -27,9 +27,14 @@ sub _init {
     $data{description} = q{Generate makefiles and other build files};
     $data{result}      = q{};
     $data{makefiles}   = {
-        'Makefile' => { SOURCE => 'config/gen/makefiles/root.in',
+        'Makefile' => {
+            SOURCE => 'config/gen/makefiles/root.in',
         },
-        'ext/Makefile' => { SOURCE => 'config/gen/makefiles/ext.in',
+        'ext/Makefile' => {
+            SOURCE => 'config/gen/makefiles/ext.in',
+        },
+        'compilers/imcc/Rules.mak' => {
+             SOURCE => 'compilers/imcc/Rules.in',
         },
 
         'ext/Parrot-Embed/Makefile.PL' => {

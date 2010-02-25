@@ -1399,10 +1399,13 @@ src/nci/core_thunks$(O) : src/nci/core_thunks.str \
         include/pmc/pmc_unmanagedstruct.h \
         include/pmc/pmc_nci.h
 
+## SUFFIX OVERRIDE - Warnings
 src/nci/extra_thunks$(O) : src/nci/extra_thunks.str \
-        $(PARROT_H_HEADERS) \
-        include/pmc/pmc_unmanagedstruct.h \
-        include/pmc/pmc_nci.h
+    $(PARROT_H_HEADERS) \
+    include/pmc/pmc_unmanagedstruct.h \
+    include/pmc/pmc_nci.h \
+    src/nci/extra_thunks.c    
+	$(CC) $(CFLAGS) @ccwarn::src/nci/extra_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/nci/extra_thunks.c
 
 src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
         include/pmc/pmc_fixedintegerarray.h \
@@ -2446,7 +2449,9 @@ src/extra_nci_thunks.c : src/nci/extra_thunks.nci $(NCI_THUNK_GEN)
 	$(NCI_THUNK_GEN) --dynext --no-warn-dups \
 	    --output=src/extra_nci_thunks.c <src/nci/extra_thunks.nci
 
-src/extra_nci_thunks$(O) : $(GENERAL_H_FILES)
+## SUFFIX OVERRIDE - Warnings
+src/extra_nci_thunks$(O) : $(GENERAL_H_FILES) src/extra_nci_thunks.c
+	$(CC) $(CFLAGS) @ccwarn::src/extra_nci_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/extra_nci_thunks.c
 
 $(EXTRANCITHUNKS_SO) : $(LIBPARROT) src/extra_nci_thunks$(O)
 	$(LD) $(LD_LOAD_FLAGS) $(LDFLAGS) \

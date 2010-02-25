@@ -74,6 +74,11 @@ us insure that files we know are clean for a new warning stay clean.
 'todo' functions just like never does, but it indicates that these
 files are expected to eventually be free of this warning.
 
+Note that there is no actual requirement that the 'file' be a full path
+to a .c file; the file could be "PMCS" or "OPS" or some other identifier;
+whatever the value, it will generate a Config entry prefixed with
+C<ccwarn::>, which will probably be used via @@ expansion in a makefile.
+
 It is tempting to put this into a config file, but having it in
 perl gives us the ability to dynamically setup certain warnings based
 on any criteria already discovered via Config.
@@ -140,6 +145,7 @@ sub _init {
         -Wswitch-default
         -Wtrigraphs
         -Wundef
+        -Wno-unused
         -Wunknown-pragmas
         -Wvariadic-macros
         -Wwrite-strings
@@ -190,14 +196,25 @@ sub _init {
 
     $gcc->{'todo'} = $gpp->{'todo'} = {
         '-Wformat-nonliteral' => [
-            'compilers/imcc/imclexer.c',
             'src/spf_render.c',
         ],
-        '-Wno-switch-default' => [
-            'compilers/imcc/imclexer.c',
+        '-Wstrict-prototypes' => [
+            'src/nci/extra_thunks.c',
+            'src/extra_nci_thunks.c',
         ],
     };
 
+    $gcc->{'never'} = $gpp->{'never'} = {
+        '-Wformat-nonliteral' => [
+            'compilers/imcc/imclexer.c',
+        ],
+        '-Wswitch-default' => [
+            'compilers/imcc/imclexer.c',
+        ],
+        '-Wcast-qual' => [
+            'compilers/imcc/imcparser.c',
+        ],
+    };
 
     $data->{'warnings'}{'gcc'} = $gcc;
     $data->{'warnings'}{'gpp'} = $gpp;
