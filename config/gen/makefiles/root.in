@@ -142,7 +142,8 @@ GEN_MAKEFILES = \
     editor/Makefile \
     ext/Makefile \
     src/dynoplibs/Makefile \
-    src/dynpmc/Makefile
+    src/dynpmc/Makefile \
+    compilers/imcc/Rules.mak
 
 GEN_CONFIGS = \
     $(INC_DIR)/config.h \
