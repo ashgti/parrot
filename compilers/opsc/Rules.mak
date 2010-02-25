@@ -5,6 +5,10 @@ compilers/opsc/opsc.pbc: $(NQP_RX) $(OPSC_SOURCES)
 compilers/opsc/opsc_core.pbc: $(NQP_RX) $(OPSC_SOURCES)
 	$(PARROT) -o compilers/opsc/opsc_core.pbc compilers/opsc/opsc_core.pir
 
+compilers/opsc/compiler/gen_compiler.pir: $(NQP_RX) compilers/opsc/compiler/compiler.pm
+	$(NQP_RX) --output=compilers/opsc/compiler/gen_compiler.pir \
+	--target=pir compilers/opsc/compiler/compiler.pm
+
 compilers/opsc/compiler/gen_grammar.pir: $(NQP_RX) compilers/opsc/compiler/grammar.pg
 	$(NQP_RX) --output=compilers/opsc/compiler/gen_grammar.pir \
 	--target=pir compilers/opsc/compiler/grammar.pg

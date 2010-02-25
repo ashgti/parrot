@@ -1,8 +1,9 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
+INIT { pir::load_bytecode('HLL.pbc'); }
 
-grammar Ops::Grammar is PCT::Grammar;
+grammar Ops::Grammar is HLL::Grammar;
 
 rule TOP {
     <body> 
@@ -100,7 +101,6 @@ token ws {
   | '/*' .*? '*/'
   ]*
 }
-
 
 
 # vim: expandtab shiftwidth=4 ft=perl6:

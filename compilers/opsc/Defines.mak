@@ -1,5 +1,6 @@
 OPSC_CLEANUPS = \
 	compilers/opsc/opsc.pbc \
+	compilers/opsc/compiler/gen_compiler.pir \
 	compilers/opsc/compiler/gen_grammar.pir \
 	compilers/opsc/compiler/gen_actions.pir \
 	compilers/opsc/ops/gen_oplib.pir \
@@ -11,6 +12,7 @@ OPSC_SOURCES = \
 	compilers/opsc/opsc_core.pir \
 	compilers/opsc/builtins.pir \
 	compilers/opsc/ops/gen_oplib.pir \
+	compilers/opsc/compiler/gen_compiler.pir \
 	compilers/opsc/compiler/gen_grammar.pir \
 	compilers/opsc/compiler/gen_actions.pir \
 	compilers/opsc/runcore/gen_base.pir \

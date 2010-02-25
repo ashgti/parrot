@@ -3,17 +3,24 @@
 
 .namespace [ 'Ops';'Compiler' ]
 
+.loadlib 'PCT.pbc'
+
+.include 'compilers/opsc/builtins.pir'
+.include 'compilers/opsc/compiler/gen_grammar.pir'
+.include 'compilers/opsc/compiler/gen_actions.pir'
+.include 'compilers/opsc/compiler/gen_compiler.pir'
+.include 'compilers/opsc/ops/gen_oplib.pir'
+
+.include 'compilers/opsc/runcore/gen_base.pir'
+.include 'compilers/opsc/runcore/gen_c.pir'
+.include 'compilers/opsc/runcore/gen_cgoto.pir'
+.include 'compilers/opsc/runcore/gen_cprederef.pir'
+.include 'compilers/opsc/runcore/gen_cgp.pir'
+.include 'compilers/opsc/runcore/gen_cswitch.pir'
+
 .sub 'onload' :load :init
-    .local pmc p6meta
-    p6meta = new 'P6metaclass'
-
-    p6meta.'new_class'('Ops::Compiler', 'parent'=>'PCT::HLLCompiler')
-
     # Register grammar and action
     $P0 = new [ 'Ops';'Compiler' ]
-    $P0.'language'('Ops')
-    $P0.'parsegrammar'('Ops::Grammar')
-    $P0.'parseactions'('Ops::Grammar::Actions')
 
     #these stages aren't currently used, although generate_files exits before
     #they can be called anyway
@@ -49,18 +56,6 @@
     exit 0
 .end
 
-
-.include 'compilers/opsc/builtins.pir'
-.include 'compilers/opsc/compiler/gen_grammar.pir'
-.include 'compilers/opsc/compiler/gen_actions.pir'
-.include 'compilers/opsc/ops/gen_oplib.pir'
-
-.include 'compilers/opsc/runcore/gen_base.pir'
-.include 'compilers/opsc/runcore/gen_c.pir'
-.include 'compilers/opsc/runcore/gen_cgoto.pir'
-.include 'compilers/opsc/runcore/gen_cprederef.pir'
-.include 'compilers/opsc/runcore/gen_cgp.pir'
-.include 'compilers/opsc/runcore/gen_cswitch.pir'
 
 # Local Variables:
 #   mode: pir

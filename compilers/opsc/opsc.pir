@@ -3,15 +3,12 @@
 
 .namespace [ 'Ops';'Compiler' ]
 
-.sub 'onload' :load :init
-    # opsc_core.pir don't load NQP to avoid clash in nqp-based tests.
-    load_bytecode 'PCT.pbc'
-.end
+.loadlib 'PCT.pbc'
 
 .sub 'main' :main
     .param pmc args
     $P0 = compreg 'Ops'
-    .tailcall $P0.'command_line'(args, 'encoding'=>'utf8', 'transcode'=>'ascii')
+    $P1 = $P0.'command_line'(args, 'encoding'=>'utf8', 'transcode'=>'ascii')
 .end
 
 .include 'compilers/opsc/opsc_core.pir'
