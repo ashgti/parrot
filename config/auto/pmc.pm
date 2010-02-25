@@ -92,7 +92,7 @@ END
         my $include_headers = get_includes($pmc_fname);
         my $cc_shared = $conf->data->get('cc_shared');
         my $cc_o_out  = $conf->data->get('cc_o_out');
-        my $warnings  = "-Wno-unused-parameter -Wno-unused-label -Wno-unused-variable";
+        my $warnings  = $conf->data->get('ccwarn');
 
         $TEMP_pmc_build .= <<END
 src/pmc/$pmc.c : src/pmc/$pmc.dump
