@@ -105,8 +105,8 @@ method BUILD(:@files, :$num_file, :$skip_file) {
         die("We need some files!")
     }
     self<files>      := @files;
-    self<num_file>   := $num_file  || '../../src/ops/ops.num';
-    self<skip_file>  := $skip_file || '../../src/ops/ops.skip';
+    self<num_file>   := $num_file  || './src/ops/ops.num';
+    self<skip_file>  := $skip_file || './src/ops/ops.skip';
 
     # Initialize self.
     self<max_op_num> := 0;
