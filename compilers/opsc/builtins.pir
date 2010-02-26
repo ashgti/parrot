@@ -186,6 +186,10 @@ Variour helper builtins.
     .return ($P0)
 .end
 
+.sub 'say'
+    .param pmc what
+    say what
+.end
 
 # Local Variables:
 #   mode: pir
