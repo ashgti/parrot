@@ -182,7 +182,7 @@ Load ops.num and ops.skip files.
 
 method load_op_map_files() {
     self._load_num_file();
-    #self._load_skip_file();
+    self._load_skip_file();
 }
 
 =begin METHODS
@@ -352,16 +352,25 @@ method _load_num_file() {
 
 method _load_skip_file() {
     my $buf     := slurp(self<skip_file>);
-    my @lines   := split("\n", $buf);
+    grammar SKIP {
+        rule TOP { <op>+ }
 
-    for @lines {
-        # XXX Bit ugly. But I don't know how to invoke ~~ in NQP...
-        if /^^ \S+ $$/($_) {
-            if ( exists( self<optable>, $_) ) {
-                die("skipped opcode '$_' is also in num_file");
-            }
-            self<skiptable>{$_} := 1;
+        rule op { $<name>=(\w+) }
+        token ws {
+            [
+            | \s+
+            | '#' \N*
+            ]*
         }
+    }
+
+    my $lines := SKIP.parse($buf);
+
+    for $lines<op> {
+        if ( exists( self<optable>, $_) ) {
+            die("skipped opcode '$_' is also in num_file");
+        }
+        self<skiptable>{$_} := 1;
     }
 }
 
