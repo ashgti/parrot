@@ -1,4 +1,4 @@
-#! ../../parrot
+#! ./parrot
 
 # "Comprehensive" test for creating PAST for op.
 # Parse single op and check various aspects of created PAST.
