@@ -1,18 +1,18 @@
-#!../../parrot ../nqp/nqp.pbc
+#!./parrot-nqp
 
 # Checking for OpLib num and skip files parsing.
 
 # opsc_core contains everything except nqp.pbc
-PIR q<
+Q:PIR<
     load_bytecode "compilers/opsc/opsc_core.pbc"
 >;
 
 plan(6);
 
-my @files := qw{
+my @files := <
     src/ops/core.ops
     src/ops/math.ops
-};
+>;
 
 my $lib := Ops::OpLib.new.BUILD(
     :files(@files),
