@@ -28,12 +28,14 @@ F<docs/pdds/pdd16_native_call.pod>.
 
 .macro_const VERSION 0.01
 
-.macro_const OPTS_GLOBAL_NAME 'options'
+.macro_const SIG_TABLE_GLOBAL_NAME  'signature_table'
+.macro_const OPTS_GLOBAL_NAME       'options'
 
 .sub 'main' :main
     .param pmc argv
 
     # initialize global variables
+    'gen_sigtable'()
     'get_options'(argv)
 
     .local string targ
@@ -607,6 +609,9 @@ TEMPLATE
     .local string params_csig
     $P0 = 'map_from_sig_table'(params, 'as_proto')
     params_csig = join ', ', $P0
+    if params_csig goto end_default_params_csig_to_void
+        params_csig = 'void'
+    end_default_params_csig_to_void:
 
     .local string ret_tdecl
     ret_tdecl = ""
@@ -676,7 +681,7 @@ TEMPLATE
     .param string field_name
 
     .local pmc sig_table
-    .const 'Sub' sig_table = 'get_sigtable'
+    sig_table = get_global .SIG_TABLE_GLOBAL_NAME
 
     $P0 = split '', sig
 
@@ -816,9 +821,9 @@ ERROR
 
 #}}}
 
-# get_sigtable {{{
+# gen_sigtable {{{
 
-.sub 'get_sigtable' :anon :immediate
+.sub 'gen_sigtable'
     .const string json_table = <<'JSON'
 {
     "p": { "as_proto":   "void *",
@@ -987,7 +992,7 @@ JSON
     goto iter_loop
   iter_end:
 
-    .return (table)
+    set_global .SIG_TABLE_GLOBAL_NAME, table
 .end
 
 # }}}

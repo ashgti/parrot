@@ -429,6 +429,11 @@ parseflags(PARROT_INTERP,
     ASSERT_ARGS(parseflags)
     struct longopt_opt_info opt  = LONGOPT_OPT_INFO_INIT;
     int                     status;
+    /* g++ complains if we cast char** to const char** directly. However, nobody
+       ever complains if you const to void* first. Sure we lose a certain
+       amount of compiler-enforced type safety, but this is a rare occasion
+       with a very long explanatory comment. */
+    const char ** const _tempargv = (const char **)((void *)*argv);
 
     if (*argc == 1) {
         usage(stderr);
@@ -437,7 +442,7 @@ parseflags(PARROT_INTERP,
 
     imcc_start_handling_flags(interp);
 
-    while ((status = longopt_get(interp, *argc, (const char **)*argv, options,
+    while ((status = longopt_get(interp, *argc, _tempargv, options,
             &opt)) > 0) {
         switch (opt.opt_id) {
           case 'R':
@@ -476,8 +481,11 @@ parseflags(PARROT_INTERP,
             /* Handled in parseflags_minimal */
             break;
           case 't':
-            if (opt.opt_arg && is_all_hex_digits(opt.opt_arg))
-                *trace = (Parrot_trace_flags)strtoul(opt.opt_arg, NULL, 16);
+            if (opt.opt_arg && is_all_hex_digits(opt.opt_arg)) {
+                const unsigned long _temp = strtoul(opt.opt_arg, NULL, 16);
+                const Parrot_trace_flags _temp_flag = (Parrot_trace_flags)_temp;
+                *trace = _temp_flag;
+            }
             else
                 *trace = PARROT_TRACE_OPS_FLAG;
             break;
