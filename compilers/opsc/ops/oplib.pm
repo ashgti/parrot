@@ -1,6 +1,12 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
+INIT {
+    Q:PIR<
+        load_bytecode "dumper.pbc"
+    >
+};
+
 class Ops::OpLib is Hash;
 
 =begin NAME
@@ -176,7 +182,7 @@ Load ops.num and ops.skip files.
 
 method load_op_map_files() {
     self._load_num_file();
-    self._load_skip_file();
+    #self._load_skip_file();
 }
 
 =begin METHODS
@@ -304,13 +310,26 @@ method get_jump_flags($op) {
 method _load_num_file() {
     # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
     my $buf := slurp(self<num_file>);
-    my @ops := split("\n", $buf);
+    grammar NUM {
+        rule TOP { <op>+ }
+
+        rule op { $<name>=(\w+) $<number>=(\d+) }
+        token ws {
+            [
+            | \s+
+            | '#' \N*
+            ]*
+        }
+    }
+
+    #say("Parsing NUM");
+    my $ops := NUM.parse($buf);
+    #_dumper($ops);
 
     my $prev := -1;
-    for @ops {
-        my @parts   := split( /\s+/, $_ );
-        my $name    := @parts[0];
-        my $number  := @parts[1];
+    for $ops<op> {
+        my $name    := ~$_<name>;
+        my $number  := +$_<number>;
         #say(@parts[0] ~ ' => ' ~@parts[1]);
         if ((+$number) eq $number) {
             if ($prev + 1 != $number) {
@@ -327,6 +346,8 @@ method _load_num_file() {
             }
         }
     }
+
+    #_dumper(self<optable>);
 }
 
 method _load_skip_file() {
