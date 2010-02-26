@@ -182,7 +182,7 @@ PARROT_CAN_RETURN_NULL
 static const char * inv_op(ARGIN(const char *op))
         __attribute__nonnull__(1);
 
-PARROT_WARN_UNUSED_RESULT
+PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
 static Instruction * iSUBROUTINE(PARROT_INTERP,
     ARGMOD_NULLOK(IMC_Unit *unit),
@@ -649,7 +649,7 @@ iLABEL(PARROT_INTERP, ARGMOD_NULLOK(IMC_Unit *unit), ARGMOD(SymReg *r0))
 
 */
 
-PARROT_WARN_UNUSED_RESULT
+PARROT_IGNORABLE_RESULT
 PARROT_CANNOT_RETURN_NULL
 static Instruction *
 iSUBROUTINE(PARROT_INTERP, ARGMOD_NULLOK(IMC_Unit *unit), ARGMOD(SymReg *r))
@@ -1422,7 +1422,7 @@ sub_param_type_def:
            if ($3 & VT_UNIQUE_REG)
                $$ = mk_ident_ur(interp, $2, $1);
            else if ($3 & VT_OPT_FLAG && $1 != 'I') {
-               char *type;
+               const char *type;
                switch ($1) {
                     case 'N': type = "num";     break;
                     case 'S': type = "string";  break;

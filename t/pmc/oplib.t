@@ -14,22 +14,31 @@ t/pmc/oplib.t - OpLib PMC
 
 .sub main :main
     .include 'test_more.pir'
-    plan(2)
-    get_singleton()
+    plan(3)
+    new_oplib()
+    get_end()
+    get_no_opcode()
 .end
 
-.sub get_singleton
+.sub new_oplib
     $P0 = new ['OpLib']
     $I0 = isnull $P0
-    is($I0, 0)
+    nok($I0, "new OpLib")
+.end
 
-    $P1 = new ['OpLib']
-    eq_addr $P0, $P1, ok
-    ok(0, "all OpLibs aren't identical")
-    goto end
-ok:
-    ok(1, "all OpLibs are identical")
-end:
+.sub get_end
+    $P0 = new ['OpLib']
+    # Assumption: we'll always have an end opcode.
+    $I1 = $P0['end']
+    $I0 = isne $I1, -1
+    ok($I0, "got end opcode")
+.end
+
+.sub get_no_opcode
+    $P0 = new ['OpLib']
+    $I1 = $P0['hopeweneverhaveopcodesnamedlikethis']
+    $I0 = iseq $I1, -1
+    ok($I0, "get non existent opcode fails")
 .end
 
 # Local Variables:
