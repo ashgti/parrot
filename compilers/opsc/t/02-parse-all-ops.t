@@ -1,4 +1,4 @@
-#! ../../parrot
+#! ./parrot
 
 .include 'compilers/opsc/t/common.pir'
 
@@ -10,8 +10,8 @@
     .local pmc os, all_files, ops_files, dynops_files
 
     all_files    = new ['ResizablePMCArray']
-    ops_files    = get_ops_from_dir('../../src/ops/')
-    dynops_files = get_ops_from_dir('../../src/dynoplibs/')
+    ops_files    = get_ops_from_dir('./src/ops/')
+    dynops_files = get_ops_from_dir('./src/dynoplibs/')
 
     #prepend the arrays to all_files
     splice all_files, ops_files, 0, 0
