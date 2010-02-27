@@ -108,6 +108,7 @@ compilers/imcc/imclexer$(O) : \
 
 ## SUFFIX OVERRIDE - Warnings (This is generated code)
 compilers/imcc/imcparser$(O) : \
+    compilers/imcc/imcparser.c \
     compilers/imcc/cfg.h \
     compilers/imcc/debug.h \
     compilers/imcc/imc.h \
@@ -141,7 +142,9 @@ compilers/imcc/main$(O) : \
     $(INC_DIR)/runcore_api.h \
     $(PARROT_H_HEADERS)
 
+## SUFFIX OVERRIDE - Warnings (This is generated code)
 compilers/imcc/optimizer$(O) : \
+    compilers/imcc/optimizer.c \
     compilers/imcc/cfg.h \
     compilers/imcc/debug.h \
     compilers/imcc/imc.h \
@@ -153,6 +156,7 @@ compilers/imcc/optimizer$(O) : \
     compilers/imcc/unit.h \
     $(INC_DIR)/oplib/ops.h \
     $(PARROT_H_HEADERS)
+	$(CC) $(CFLAGS) @ccwarn::compilers/imcc/optimizer.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c compilers/imcc/optimizer.c
 
 compilers/imcc/reg_alloc$(O) : \
     compilers/imcc/cfg.h \

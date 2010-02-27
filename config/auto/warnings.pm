@@ -197,6 +197,7 @@ sub _init {
     $gcc->{'todo'} = $gpp->{'todo'} = {
         '-Wformat-nonliteral' => [
             'src/spf_render.c',
+            'compilers/imcc/optimizer.c',
         ],
         '-Wstrict-prototypes' => [
             'src/nci/extra_thunks.c',
