@@ -49,6 +49,19 @@ typedef enum {
 #define CALLSIGNATURE_is_exception_SET(o)   CALLSIGNATURE_flag_SET(is_exception, (o))
 #define CALLSIGNATURE_is_exception_CLEAR(o) CALLSIGNATURE_flag_CLEAR(is_exception, (o))
 
+typedef struct Parrot_pcc_sig_object_callback_funcs {
+    INTVAL (*intval_arg)(PARROT_INTERP, void *call_info, int idx);
+    FLOATVAL (*numval_arg)(PARROT_INTERP, void *call_info, int idx);
+    STRING *(*string_arg)(PARROT_INTERP, void *call_info, int idx);
+    PMC *(*pmc_arg)(PARROT_INTERP, void *call_info, int idx);
+
+    INTVAL *(*intval_ret)(PARROT_INTERP, void *call_info, int idx);
+    FLOATVAL *(*numval_ret)(PARROT_INTERP, void *call_info, int idx);
+    STRING *(*string_ret)(PARROT_INTERP, void *call_info, int idx);
+    PMC *(*pmc_ret)(PARROT_INTERP, void *call_info, int idx);
+} Parrot_pcc_sig_object_callback_funcs;
+
+
 /* HEADERIZER BEGIN: src/call/pcc.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
@@ -169,6 +182,17 @@ void Parrot_pcc_append_result(PARROT_INTERP,
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
+PMC* Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP,
+    ARGIN_NULLOK(PMC *obj),
+    ARGIN(const char *sig),
+    Parrot_pcc_sig_object_callback_funcs *cbs,
+    void *call_info)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3);
+
+PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP,
     ARGIN_NULLOK(PMC *signature),
     ARGIN(PMC * const raw_sig),
@@ -271,6 +295,10 @@ void Parrot_pcc_parse_signature_string(PARROT_INTERP,
     , PARROT_ASSERT_ARG(sig_object) \
     , PARROT_ASSERT_ARG(type) \
     , PARROT_ASSERT_ARG(result))
+#define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_callbacks \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(sig))
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \

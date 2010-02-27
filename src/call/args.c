@@ -862,12 +862,13 @@ Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *sig
 
 /*
 
-=item C<PMC* Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, PMC *obj,
-const char *sig, va_list args)>
+=item C<PMC* Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP, PMC *obj,
+const char *sig, Parrot_pcc_sig_object_callback_funcs *cbs, void *call_info)>
 
-Converts a varargs list into a CallContext PMC. The CallContext stores the
-original short signature string and an array of integer types to pass on to the
-multiple dispatch search.
+Build a CallContext PMC from a signature and a set of callbacks.
+
+The CallContext stores the original short signature string and an array of
+integer types to pass on to the multiple dispatch search.
 
 =cut
 
@@ -877,10 +878,10 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC*
-Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
-        ARGIN(const char *sig), va_list args)
+Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
+        ARGIN(const char *sig), Parrot_pcc_sig_object_callback_funcs *cbs, void *call_info)
 {
-    ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
+    ASSERT_ARGS(Parrot_pcc_build_sig_object_from_callbacks)
     PMC         *type_tuple         = PMCNULL;
     PMC         *arg_flags     = PMCNULL;
     PMC         *return_flags  = PMCNULL;
@@ -908,19 +909,19 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
             switch (type) {
               case 'I':
                 csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, INTVAL *), PARROT_ARG_INTVAL);
+                            (void *)cbs->intval_ret(interp, call_info, i), PARROT_ARG_INTVAL);
                 break;
               case 'N':
                 csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, FLOATVAL *), PARROT_ARG_FLOATVAL);
+                            (void *)cbs->numval_ret(interp, call_info, i), PARROT_ARG_FLOATVAL);
                 break;
               case 'S':
                 csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, STRING **), PARROT_ARG_STRING);
+                            (void *)cbs->string_ret(interp, call_info, i), PARROT_ARG_STRING);
                 break;
               case 'P':
                 csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, PMC **), PARROT_ARG_PMC);
+                            (void *)cbs->pmc_ret(interp, call_info, i), PARROT_ARG_PMC);
                 break;
               default:
                 Parrot_ex_throw_from_c_args(interp, NULL,
@@ -932,18 +933,18 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
             /* Regular arguments just set the value */
             switch (type) {
               case 'I':
-                VTABLE_push_integer(interp, call_object, va_arg(args, INTVAL));
+                VTABLE_push_integer(interp, call_object, cbs->intval_arg(interp, call_info, i));
                 break;
               case 'N':
-                VTABLE_push_float(interp, call_object, va_arg(args, FLOATVAL));
+                VTABLE_push_float(interp, call_object, cbs->numval_arg(interp, call_info, i));
                 break;
               case 'S':
-                VTABLE_push_string(interp, call_object, va_arg(args, STRING *));
+                VTABLE_push_string(interp, call_object, cbs->string_arg(interp, call_info, i));
                 break;
               case 'P':
                 {
                     const INTVAL type_lookahead = sig[i+1];
-                    PMC * const pmc_arg = va_arg(args, PMC *);
+                    PMC * const pmc_arg = cbs->pmc_arg(interp, call_info, i);
                     if (type_lookahead == 'f') {
                          dissect_aggregate_arg(interp, call_object, pmc_arg);
                         i++; /* skip 'f' */
@@ -979,6 +980,43 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     }
 
     return call_object;
+}
+
+/*
+
+=item C<PMC* Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, PMC *obj,
+const char *sig, va_list args)>
+
+Converts a varargs list into a CallContext PMC. The CallContext stores the
+original short signature string and an array of integer types to pass on to the
+multiple dispatch search.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+PMC*
+Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
+        ARGIN(const char *sig), va_list args)
+{
+    ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
+
+    static Parrot_pcc_sig_object_callback_funcs function_pointers = {
+        (intval_func_t)intval_arg_from_c_args,
+        (numval_func_t)numval_arg_from_c_args,
+        (string_func_t)string_arg_from_c_args,
+        (pmc_func_t)pmc_arg_from_c_args,
+
+        (intval_ptr_func_t)intval_param_from_c_args,
+        (numval_ptr_func_t)numval_param_from_c_args,
+        (string_ptr_func_t)string_param_from_c_args,
+        (pmc_ptr_func_t)pmc_param_from_c_args,
+    };
+
+    return Parrot_pcc_build_sig_object_from_callbacks(interp, obj, sig, &function_pointers, args);
 }
 
 /*
