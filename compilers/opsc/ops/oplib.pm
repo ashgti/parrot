@@ -367,10 +367,10 @@ method _load_skip_file() {
     my $lines := SKIP.parse($buf);
 
     for $lines<op> {
-        if ( exists( self<optable>, $_) ) {
+        if ( exists( self<optable>, $_<name>) ) {
             die("skipped opcode '$_' is also in num_file");
         }
-        self<skiptable>{$_} := 1;
+        self<skiptable>{$_<name>} := 1;
     }
 }
 
