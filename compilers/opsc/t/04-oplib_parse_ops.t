@@ -9,10 +9,7 @@ Q:PIR<
 
 plan(6);
 
-my @files := <
-    src/ops/core.ops
-    src/ops/math.ops
->;
+my @files := ('src/ops/core.ops', 'src/ops/math.ops');
 
 my $lib := Ops::OpLib.new.BUILD(
     :files(@files),
