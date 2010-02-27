@@ -118,7 +118,7 @@ method BUILD(:@files, :$num_file, :$skip_file) {
     self<max_op_num> := 0;
     self<optable>    := hash();
     self<skiptable>  := hash();
-    self<ops_past>   := <>;
+    self<ops_past>   := list();
 
     self.load_op_map_files();
 
