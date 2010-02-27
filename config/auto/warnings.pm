@@ -215,6 +215,9 @@ sub _init {
         '-Wcast-qual' => [
             'compilers/imcc/imcparser.c',
         ],
+        '-Wlogical-op' => [
+            'compilers/imcc/imcparser.c',
+        ],
     };
 
     $data->{'warnings'}{'gcc'} = $gcc;
