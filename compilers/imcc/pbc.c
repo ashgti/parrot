@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002-2009, Parrot Foundation.
+ * Copyright (C) 2002-2010, Parrot Foundation.
  * $Id$
  */
 
@@ -420,7 +420,7 @@ add_const_table_key(PARROT_INTERP, ARGIN(PMC *key))
 
 /*
 
-=item C<int e_pbc_open(PARROT_INTERP, void *param)>
+=item C<int e_pbc_open(PARROT_INTERP, const char *param)>
 
 Opens a compilation unit to emit PBC.
 
@@ -429,7 +429,7 @@ Opens a compilation unit to emit PBC.
 */
 
 int
-e_pbc_open(PARROT_INTERP, SHIM(void *param))
+e_pbc_open(PARROT_INTERP, SHIM(const char *param))
 {
     ASSERT_ARGS(e_pbc_open)
     code_segment_t * const cs = mem_gc_allocate_zeroed_typed(interp, code_segment_t);

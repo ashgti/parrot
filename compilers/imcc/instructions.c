@@ -50,7 +50,7 @@ static int e_file_emit(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(4);
 
-static int e_file_open(PARROT_INTERP, ARGIN(void *param))
+static int e_file_open(PARROT_INTERP, ARGIN(const char *file))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -785,7 +785,7 @@ static char *output;
 
 /*
 
-=item C<static int e_file_open(PARROT_INTERP, void *param)>
+=item C<static int e_file_open(PARROT_INTERP, const char *file)>
 
 Prints a message to STDOUT.
 
@@ -794,10 +794,10 @@ Prints a message to STDOUT.
 */
 
 static int
-e_file_open(PARROT_INTERP, ARGIN(void *param))
+e_file_open(PARROT_INTERP, ARGIN(const char *file))
 {
     ASSERT_ARGS(e_file_open)
-    char * const file = (char *) param;
+    DECL_CONST_CAST;
 
     if (!STREQ(file, "-")) {
         FILE *newfile = freopen(file, "w", stdout);
@@ -806,7 +806,7 @@ e_file_open(PARROT_INTERP, ARGIN(void *param))
                 "Cannot reopen stdout: %s'\n", strerror(errno));
     }
 
-    output = file;
+    output = PARROT_const_cast(char *, file);
     Parrot_io_printf(interp, "# IMCC does produce b0rken PASM files\n");
     Parrot_io_printf(interp, "# see http://guest@rt.perl.org/rt3/Ticket/Display.html?id=32392\n");
     return 1;
