@@ -1058,6 +1058,30 @@ Parrot_ext_call(PARROT_INTERP, ARGIN(Parrot_PMC sub_pmc),
 
 /*
 
+=item C<Parrot_ext_call_cb(PARROT_INTERP, Parrot_PMC sub_pmc,
+const char *signature, Parrot_ext_call_cbs *cbs, void *user_data)>
+
+Call a Parrot subroutine or method with the given function signature, similar
+to C<Parrot_ext_call>. However, instead of taking a C<va_list>, a set of
+callbacks will get called as the signature is parsed to get the arguments and
+pointers to the return storage locations.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_ext_call_cb(PARROT_INTERP, ARGIN(Parrot_PMC sub_pmc),
+                    ARGIN(const char *signature), ARGIN(Parrot_ext_call_cbs *cbs),
+                    ARGIN_NULLOK(void *user_data)) {
+    PMC *sig_object =
+        Parrot_pcc_build_sig_object_from_callbacks(interp, PMCNULL, signature, cbs, user_data);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
+}
+
+/*
+
 =item C<Parrot_Int Parrot_get_intreg(PARROT_INTERP, Parrot_Int regnum)>
 
 Return the value of an integer register.

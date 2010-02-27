@@ -56,6 +56,18 @@ typedef const void * Parrot_VTABLE;
 
 #endif
 
+typedef struct Parrot_ext_call_cbs {
+    Parrot_Int       (*intval_arg)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_Float     (*numval_arg)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_String    (*string_arg)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_PMC       (*pmc_arg)(PARROT_INTERP, void *user_data, int idx);
+
+    Parrot_Int      *(*intval_ret)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_Float    *(*numval_ret)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_String   *(*string_ret)(PARROT_INTERP, void *user_data, int idx);
+    Parrot_PMC      *(*pmc_ret)(PARROT_INTERP, void *user_data, int idx);
+} Parrot_ext_call_cbs;
+
 #include "parrot/extend_vtable.h" /* the auto-generated prototypes    */
 
 /* HEADERIZER BEGIN: src/extend.c */

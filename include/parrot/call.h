@@ -50,15 +50,15 @@ typedef enum {
 #define CALLSIGNATURE_is_exception_CLEAR(o) CALLSIGNATURE_flag_CLEAR(is_exception, (o))
 
 typedef struct Parrot_pcc_sig_object_callback_funcs {
-    INTVAL (*intval_arg)(PARROT_INTERP, void *call_info, int idx);
-    FLOATVAL (*numval_arg)(PARROT_INTERP, void *call_info, int idx);
-    STRING *(*string_arg)(PARROT_INTERP, void *call_info, int idx);
-    PMC *(*pmc_arg)(PARROT_INTERP, void *call_info, int idx);
+    INTVAL       (*intval_arg)(PARROT_INTERP, void *call_info, int idx);
+    FLOATVAL     (*numval_arg)(PARROT_INTERP, void *call_info, int idx);
+    STRING      *(*string_arg)(PARROT_INTERP, void *call_info, int idx);
+    PMC         *(*pmc_arg)(PARROT_INTERP, void *call_info, int idx);
 
-    INTVAL *(*intval_ret)(PARROT_INTERP, void *call_info, int idx);
-    FLOATVAL *(*numval_ret)(PARROT_INTERP, void *call_info, int idx);
-    STRING *(*string_ret)(PARROT_INTERP, void *call_info, int idx);
-    PMC *(*pmc_ret)(PARROT_INTERP, void *call_info, int idx);
+    INTVAL      *(*intval_ret)(PARROT_INTERP, void *call_info, int idx);
+    FLOATVAL    *(*numval_ret)(PARROT_INTERP, void *call_info, int idx);
+    STRING     **(*string_ret)(PARROT_INTERP, void *call_info, int idx);
+    PMC        **(*pmc_ret)(PARROT_INTERP, void *call_info, int idx);
 } Parrot_pcc_sig_object_callback_funcs;
 
 
