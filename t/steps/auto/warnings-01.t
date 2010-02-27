@@ -31,16 +31,15 @@ my $pkg = q{auto::warnings};
 $conf->add_steps($pkg);
 
 my $serialized = $conf->pcfreeze();
+my $step;
 
-$conf->options->set( %{$args} );
 SKIP: {
     skip 'Tests not yet passing on Sun/Solaris',
     23
     if $^O =~ m/sun|solaris/i;
 
-my $step = test_step_constructor_and_description($conf);
-
 # Simulate the  case where C compiler is not gcc.
+$conf->options->set( %{$args} );
 $step = test_step_constructor_and_description($conf);
 $conf->data->set( gccversion => undef );
 ok($step->runstep($conf), "runstep() returned true value");
@@ -65,6 +64,21 @@ $conf->data->set( gccversion => undef );
     like($stdout, qr/We do not \(yet\) probe for warnings for your compiler/s,
         "Got expected verbose output: compiler with warnings not yet supported" );
 }
+
+$step->set_result( undef );
+$conf->replenish($serialized);
+
+# Simulate case where --cage warnings are requested
+$conf->options->set( verbose => undef );
+$step = test_step_constructor_and_description($conf);
+$conf->data->set( gccversion => 'defined' );
+$conf->data->set( 'g++' => undef );
+$conf->options->set( cage => 1 );
+ok($step->runstep($conf), "runstep() returned true value");
+like($conf->data->get( 'ccwarn' ),
+    qr/-std=c89/,
+    "'cage' warning set as expected"
+);
 
 } # End SKIP block for Sun/Solaris
 
