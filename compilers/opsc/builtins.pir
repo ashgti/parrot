@@ -186,6 +186,11 @@ Variour helper builtins.
     .return ($P0)
 .end
 
+.sub 'list'
+    $P0 = new ['ResizablePMCArray']
+    .return ($P0)
+.end
+
 .sub 'say'
     .param pmc what
     say what
