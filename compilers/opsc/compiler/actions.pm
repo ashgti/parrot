@@ -1,18 +1,17 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
-class Ops::Grammar::Actions;
+class Ops::Actions is HLL::Actions;
 
 method TOP($/) {
     make $<body>.ast;
 }
 
 method body($/) {
-
     my $past := PAST::Stmts.new(
         :node($/)
     );
-    
+
     $past<preamble> := PAST::Stmts.new(
         :node($/)
     );
@@ -98,4 +97,4 @@ method op_body($/) {
 #   mode: perl6
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4:
+# vim: expandtab ft=perl6 shiftwidth=4:
