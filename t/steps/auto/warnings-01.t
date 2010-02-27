@@ -40,76 +40,31 @@ SKIP: {
 
 my $step = test_step_constructor_and_description($conf);
 
-#$step = test_step_constructor_and_description($conf);
-#my $warning = q{-Wphony_warning};
-#auto::warnings::_set_warning($conf, $warning, 1, undef);
-#ok(! $conf->data->get($warning),
-#    "Got expected setting for warning");
-#
-#$conf->replenish($serialized);
-#
-#$conf->options->set( %{$args} );
-#$step = test_step_constructor_and_description($conf);
-#{
-#    my $warning = q{-Wphony_warning};
-#    my $stdout;
-#    capture(
-#        sub { auto::warnings::_set_warning($conf, $warning, 1, 1); },
-#        \$stdout,
-#    );
-#    ok(! $conf->data->get($warning),
-#        "Got expected setting for warning");
-#    like($stdout, qr/exit code:\s+1/, "Got expected verbose output");
-#}
-
-#$conf->replenish($serialized);
-
-$conf->options->set( %{$args} );
+# Simulate the  case where C compiler is not gcc.
 $step = test_step_constructor_and_description($conf);
-# Mock case where C compiler is not gcc.
 $conf->data->set( gccversion => undef );
 ok($step->runstep($conf), "runstep() returned true value");
 is($step->result(), q{skipped}, "Got expected result");
 
-##### _set_ccwarn() #####
+$step->set_result( undef );
+$conf->replenish($serialized);
 
-my ($output, $warnings, $verbose);
-
-#$output = 'some output';
-#$warnings = '-Wsome_warning';
-#$verbose = undef;
-#$conf->data->set( ccwarn => undef );
-#ok( auto::warnings::_set_ccwarn($conf, $output, $warnings, $verbose),
-#    "_set_ccwarn returned true as expected" );
-#is( $conf->data->get( 'ccwarn' ), $warnings,
-#    "Warnings set as expected" );
-#
-#{
-#    $output = 'some output';
-#    $warnings = '-Wsome_warning';
-#    $verbose = 1;
-#    $conf->data->set( ccwarn => undef );
-#    my ($stdout, $stderr, $rv);
-#    capture(
-#        sub { $rv = auto::warnings::_set_ccwarn(
-#                $conf, $output, $warnings, $verbose); },
-#        \$stdout,
-#        \$stderr,
-#    );
-#    ok( $rv, "_set_ccwarn returned true as expected" );
-#    like($stdout, qr/output:\s+$output/s,
-#        "Got expected verbose output from _set_ccwarn()" );
-#    like($stdout, qr/ccwarn:\s+$warnings/s,
-#        "Got expected verbose output from _set_ccwarn()" );
-#}
-#
-#$output = 'error';
-#$warnings = '-Wsome_warning';
-#$verbose = undef;
-#$conf->data->set( ccwarn => undef );
-#ok( ! auto::warnings::_set_ccwarn($conf, $output, $warnings, $verbose),
-#    "_set_ccwarn returned false as expected" );
-#ok( ! defined $conf->data->get( 'ccwarn' ), "Warnings set as expected" );
+# Simulate the case where C compiler is not gcc:  verbose
+$conf->options->set( verbose => 1 );
+$step = test_step_constructor_and_description($conf);
+$conf->data->set( gccversion => undef );
+{
+    my ($stdout, $stderr, $rv);
+    capture(
+        sub { $rv = $step->runstep($conf); },
+        \$stdout,
+        \$stderr,
+    );
+    ok($rv, "runstep() returned true value");
+    is($step->result(), q{skipped}, "Got expected result");
+    like($stdout, qr/We do not \(yet\) probe for warnings for your compiler/s,
+        "Got expected verbose output: compiler with warnings not yet supported" );
+}
 
 } # End SKIP block for Sun/Solaris
 
