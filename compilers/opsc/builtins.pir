@@ -182,13 +182,13 @@ Variour helper builtins.
 .end
 
 .sub 'hash'
-    $P0 = new ['Hash']
-    .return ($P0)
+    .param pmc h :slurpy :named
+    .return (h)
 .end
 
 .sub 'list'
-    $P0 = new ['ResizablePMCArray']
-    .return ($P0)
+    .param pmc l :slurpy
+    .return (l)
 .end
 
 .sub 'say'
