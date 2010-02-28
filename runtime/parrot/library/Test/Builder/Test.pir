@@ -40,7 +40,7 @@ This class provides the following methods:
     addattribute tbtwr_class, 'reason'
 
     .local pmc tbts_class
-    subclass tbts_class, tbtwr_class, ['Test'; 'Builder'; 'Test'; 'SKIP'] 
+    subclass tbts_class, tbtwr_class, ['Test'; 'Builder'; 'Test'; 'Skip'] 
 
     .local pmc tbtt_class
     subclass tbtt_class, tbtwr_class, ['Test'; 'Builder'; 'Test'; 'TODO'] 
@@ -86,37 +86,32 @@ The returned object is a subclass of Test::Builder::Test.
 .sub create
     .param pmc args
 
-    .local string test_class
+    .local pmc test
     .local int type_flag
 
   CHECK_TODO:
     type_flag = args['todo']
     unless type_flag goto CHECK_SKIP
 
-    test_class = ['Test'; 'Builder'; 'Test'; 'TODO']
-    goto CREATE_TEST
+    test = new ['Test'; 'Builder'; 'Test'; 'TODO'], args
+    .return( test )
 
   CHECK_SKIP:
     type_flag = args['skip']
     unless type_flag goto CHECK_PASS
 
-    test_class = ['Test'; 'Builder'; 'Test'; 'Skip']
-    goto CREATE_TEST
+    test = new ['Test'; 'Builder'; 'Test'; 'Skip'], args
+    .return( test )
 
   CHECK_PASS:
     type_flag = args['passed']
     unless type_flag goto CHECK_FAIL
 
-    test_class = ['Test'; 'Builder'; 'Test'; 'Pass']
-    goto CREATE_TEST
+    test = new ['Test'; 'Builder'; 'Test'; 'Pass'], args
+    .return( test )
 
   CHECK_FAIL:
-    test_class = ['Test'; 'Builder'; 'Test'; 'Fail']
-    goto CREATE_TEST
-
-  CREATE_TEST:
-    .local pmc test
-    test = new test_class, args
+    test = new ['Test'; 'Builder'; 'Test'; 'Fail'], args
     .return( test )
 .end
 
