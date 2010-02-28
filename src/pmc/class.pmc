@@ -446,6 +446,18 @@ calculate_mro(PARROT_INTERP, PMC *SELF, INTVAL num_parents)
         interp->vtables[VTABLE_type(interp, SELF)]->mro = _class->all_parents;
 }
 
+static void
+add_method_to_cache(PARROT_INTERP, PMC * self, STRING *name, PMC *meth)
+{
+    Parrot_Class_attributes * const attrs = PARROT_CLASS(self);
+    PMC * cache = attrs->meth_cache;
+    if (PMC_IS_NULL(cache)) {
+        cache = Parrot_pmc_new(interp, enum_class_Hash);
+        attrs->meth_cache = cache;
+    }
+    VTABLE_set_pmc_keyed_str(interp, cache, name, meth);
+}
+
 /*
 
 =back
@@ -476,7 +488,7 @@ pmclass Class auto_attrs {
     ATTR PMC *resolve_method;   /* List of method names the class provides to resolve
                                  * conflicts with methods from roles. */
     ATTR PMC *parent_overrides;
-    ATTR PMC *meth_cache;
+    ATTR PMC *meth_cache;       /* cache of methods */
 
 /*
 
@@ -1760,27 +1772,61 @@ Walks the MRO of the class and finds the method with the given name.
 
 */
 
-    METHOD find_method(STRING *name) {
+    VTABLE PMC *get_pmc_keyed_str(STRING *name) {
         Parrot_Class_attributes * const  _class    = PARROT_CLASS(SELF);
         int i;
+        PMC * const cache = _class->meth_cache;
 
-        /* Walk and search. One day, we'll use the cache first. */
-        const int num_classes = VTABLE_elements(interp, _class->all_parents);
-
-        for (i = 0; i < num_classes; i++) {
-            /* Get the class and see if it has the method. */
-            PMC * const cur_class =
-                VTABLE_get_pmc_keyed_int(interp, _class->all_parents, i);
-            const Parrot_Class_attributes * const class_info = PARROT_CLASS(cur_class);
-
-            /* Found it! */
-            if (VTABLE_exists_keyed_str(interp, class_info->methods, name)) {
-                PMC * const ret = VTABLE_get_pmc_keyed_str(interp, class_info->methods, name);
-                RETURN(PMC *ret);
-            }
+        if (!PMC_IS_NULL(cache) && VTABLE_exists_keyed_str(INTERP, cache, name)) {
+            PMC * const method = VTABLE_get_pmc_keyed_str(INTERP, cache, name);
+            if (!PMC_IS_NULL(method))
+                return method;
         }
+        else {
+            const int all_in_universe = !CLASS_has_alien_parents_TEST(SELF);
+            const int num_classes = VTABLE_elements(interp, _class->all_parents);
+            STRING * const find_method = CONST_STRING(INTERP, "find_method");
+            PMC * method = PMCNULL;
 
-        RETURN(PMC *PMCNULL);
+            /* We loop over all classes in the MRO to find the method. First
+               we see if a vtable override has been defined for the class. If
+               so, we call the vtable override. If an override has not been
+               defined, we look the method up in the hash of methods that the
+               Class PMC keeps. */
+            for (i = 0; i < num_classes; i++) {
+                /* Get the class and see if it has the method. */
+                PMC * const cur_class = VTABLE_get_pmc_keyed_int(interp, _class->all_parents, i);
+                const Parrot_Class_attributes * const class_info = PARROT_CLASS(cur_class);
+
+                /* See if there is a vtable override for find_method defined.
+                   if so, call that to see if we have a winner */
+                PMC * const vtable = Parrot_oo_find_vtable_override_for_class(interp,
+                    cur_class, find_method);
+                if (!PMC_IS_NULL(vtable)) {
+                    PMC * result = PMCNULL;
+                    Parrot_pcc_invoke_sub_from_c_args(interp, vtable, "PiS->P", SELF, name, &result);
+                    if (!PMC_IS_NULL(result)) {
+                        method = result;
+                        break;
+                    }
+                }
+
+                /* no vtable override in this class, so just look it up in the
+                   hash of method names that the class object contains. */
+                if (VTABLE_exists_keyed_str(interp, class_info->methods, name)) {
+                    method = VTABLE_get_pmc_keyed_str(interp, class_info->methods, name);
+                    break;
+                }
+            }
+            if (!PMC_IS_NULL(method))
+                add_method_to_cache(INTERP, SELF, name, method);
+            return method;
+        }
+    }
+
+    METHOD find_method(STRING *name) {
+        PMC * const method = VTABLE_get_pmc_keyed_str(INTERP, SELF, name);
+        RETURN (PMC *method);
     }
 
 /*
