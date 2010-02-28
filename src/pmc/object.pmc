@@ -107,32 +107,6 @@ get_attrib_index_keyed(PARROT_INTERP, PMC *self, PMC *key, STRING *name)
     return -1;
 }
 
-static PMC *
-find_cached(PARROT_INTERP, PMC *_class, STRING *name)
-{
-    PMC *cache;
-    GETATTR_Class_meth_cache(interp, _class, cache);
-
-    if (PMC_IS_NULL(cache))
-        return PMCNULL;
-
-    return VTABLE_get_pmc_keyed_str(interp, cache, name);
-}
-
-static void
-cache_method(PARROT_INTERP, PMC *_class, STRING *name, PMC *method)
-{
-    PMC *cache;
-    GETATTR_Class_meth_cache(interp, _class, cache);
-
-    if (PMC_IS_NULL(cache)) {
-        cache = Parrot_pmc_new(interp, enum_class_Hash);
-        SETATTR_Class_meth_cache(interp, _class, cache);
-    }
-
-    VTABLE_set_pmc_keyed_str(interp, cache, name, method);
-}
-
 pmclass Object auto_attrs {
     ATTR PMC *_class;       /* The class this is an instance of. */
     ATTR PMC *attrib_store; /* The attributes store - a resizable PMC array. */
