@@ -58,6 +58,8 @@ Join C<@array> using C<$join_string>
 
 sub join($join_string, *@list) { @list.join($join_string) }
 
+sub list(*@list) { @list };
+
 # vim: ft=perl6
 # From src/settings/Hash.pm
 
