@@ -33,8 +33,6 @@ ok(1, "PAST::Node created");
 
 my $preambles := $past<preamble>;
 
-#    $P1 = $P0[0]
-#    $S0 = $P1[0]
 ok($preambles[0][0] ~~ /HEADER/, 'Header parsed');
 
 my @ops := @($past<ops>);
@@ -55,15 +53,18 @@ ok(+@args == 3, "Got 3 parameters");
 my $arg;
 
 $arg := @args[0];
-ok($arg<direction> == 'out', 'First direction is correct');
-ok($arg<type> == 'INT', 'First type is correct');
+ok($arg<direction> eq 'out', 'First direction is correct');
+ok($arg<type> eq 'INT', 'First type is correct');
 
 $arg := @args[1];
-ok($arg<direction> == 'in', 'Second direction is correct');
-ok($arg<type> == 'PMC', 'Second type is correct');
+ok($arg<direction> eq 'in', 'Second direction is correct');
+ok($arg<type> eq 'PMC', 'Second type is correct');
 
-ok($arg<direction> == 'inconst', 'Third direction is correct');
-ok($arg<type> == 'NUM', 'Third type is correct');
+$arg := @args[2];
+ok($arg<direction> eq 'inconst', 'Third direction is correct');
+ok($arg<type> eq 'NUM', 'Third type is correct');
+
+
 
 # Don't forget to update plan!
 
