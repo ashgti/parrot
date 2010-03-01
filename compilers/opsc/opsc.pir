@@ -14,6 +14,7 @@
 .include 'compilers/opsc/gen/Ops/Compiler.pir'
 
 .include 'compilers/opsc/gen/Ops/Op.pir'
+.include 'compilers/opsc/gen/Ops/File.pir'
 
 .sub 'main' :main
     .param pmc args
