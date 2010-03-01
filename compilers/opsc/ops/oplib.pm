@@ -2,9 +2,8 @@
 # $Id$
 
 INIT {
-    Q:PIR<
-        load_bytecode "dumper.pbc"
-    >
+    pir::load_bytecode("dumper.pbc");
+    pir::load_bytecode("nqp-settings.pbc");
 };
 
 class Ops::OpLib is Hash;
@@ -181,8 +180,8 @@ Load ops.num and ops.skip files.
 =end METHODS
 
 method load_op_map_files() {
-    self._load_num_file();
-    self._load_skip_file();
+    self._load_num_file;
+    self._load_skip_file;
 }
 
 =begin METHODS
@@ -307,7 +306,7 @@ method get_jump_flags($op) {
 
 
 
-method _load_num_file() {
+my method _load_num_file() {
     # slurp isn't very efficient. But extending NQP beyond bare minimum is not in scope.
     my $buf := slurp(self<num_file>);
     grammar NUM {
@@ -331,11 +330,11 @@ method _load_num_file() {
         my $name    := ~$_<name>;
         my $number  := +$_<number>;
         #say(@parts[0] ~ ' => ' ~@parts[1]);
-        if ((+$number) eq $number) {
+        if (+$number) eq $number {
             if ($prev + 1 != $number) {
                 die("hole in ops.num before #$number");
             }
-            if ( exists(self<optable>, $name) ) {
+            if self<optable>.exists($name) {
                 die("duplicate opcode $name and $number");
             }
 
@@ -367,7 +366,7 @@ method _load_skip_file() {
     my $lines := SKIP.parse($buf);
 
     for $lines<op> {
-        if ( exists( self<optable>, $_<name>) ) {
+        if self<optable>.exists($_<name>) {
             die("skipped opcode '$_' is also in num_file");
         }
         self<skiptable>{$_<name>} := 1;

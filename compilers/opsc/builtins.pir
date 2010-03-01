@@ -14,26 +14,9 @@ Variour helper builtins.
     .return ($S0)
 .end
 
-.sub 'join'
-    .param string joiner
-    .param pmc args
-
-    unless args goto done
-    $S0 = join joiner, args
-  done:
-    .return ($S0)
-.end
-
 .sub 'defined'
     .param pmc thing
     $I0 = defined thing
-    .return ($I0)
-.end
-
-.sub 'exists'
-    .param pmc where
-    .param pmc what
-    $I0 = exists where[what]
     .return ($I0)
 .end
 
@@ -181,19 +164,9 @@ Variour helper builtins.
     .return(retv)
 .end
 
-.sub 'hash'
-    .param pmc h :slurpy :named
-    .return (h)
-.end
-
 .sub 'list'
     .param pmc l :slurpy
     .return (l)
-.end
-
-.sub 'say'
-    .param pmc what
-    say what
 .end
 
 # Local Variables:

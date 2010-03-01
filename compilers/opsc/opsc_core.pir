@@ -4,6 +4,7 @@
 .namespace [ 'Ops';'Compiler' ]
 
 .loadlib 'PCT.pbc'
+.loadlib 'nqp-settings.pbc'
 
 .include 'compilers/opsc/builtins.pir'
 .include 'compilers/opsc/compiler/gen_grammar.pir'

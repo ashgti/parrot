@@ -2,10 +2,7 @@
 
 # Checking for OpLib num and skip files parsing.
 
-# opsc_core contains everything except nqp.pbc
-Q:PIR<
-    load_bytecode "compilers/opsc/opsc_core.pbc"
->;
+pir::load_bytecode("compilers/opsc/opsc.pbc");
 
 plan(6);
 
