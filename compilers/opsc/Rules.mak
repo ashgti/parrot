@@ -26,7 +26,7 @@ opsc-help:
 	@echo "  help:              Print this help message."
 	@echo ""
 
-opsc: compilers/opsc/opsc.pbc compilers/opsc/opsc_core.pbc
+opsc: compilers/opsc/opsc.pbc
 
 opsc-test: opsc
 	$(PERL) compilers/opsc/t/harness compilers/opsc/t
