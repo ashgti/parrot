@@ -11,4 +11,6 @@ OPSC_SOURCES = \
 	$(OPSC_DIR)/src/builtins.pir \
 	$(OPSC_DIR)/gen/Ops/Compiler.pir \
 	$(OPSC_DIR)/gen/Ops/Compiler/Actions.pir \
-	$(OPSC_DIR)/gen/Ops/Compiler/Grammar.pir
+	$(OPSC_DIR)/gen/Ops/Compiler/Grammar.pir \
+	\
+	$(OPSC_DIR)/gen/Ops/Op.pir

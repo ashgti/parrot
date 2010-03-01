@@ -13,6 +13,8 @@
 .include 'compilers/opsc/gen/Ops/Compiler/Actions.pir'
 .include 'compilers/opsc/gen/Ops/Compiler.pir'
 
+.include 'compilers/opsc/gen/Ops/Op.pir'
+
 .sub 'main' :main
     .param pmc args
     $P0 = compreg 'Ops'
