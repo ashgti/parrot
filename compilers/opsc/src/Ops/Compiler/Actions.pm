@@ -1,7 +1,7 @@
 # Copyright (C) 2009, Parrot Foundation.
 # $Id$
 
-class Ops::Actions is HLL::Actions;
+class Ops::Compiler::Actions is HLL::Actions;
 
 method TOP($/) {
     make $<body>.ast;

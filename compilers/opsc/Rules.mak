@@ -2,48 +2,9 @@
 compilers/opsc/opsc.pbc: $(NQP_RX) $(OPSC_SOURCES)
 	$(PARROT) -o compilers/opsc/opsc.pbc compilers/opsc/opsc.pir
 
-compilers/opsc/opsc_core.pbc: $(NQP_RX) $(OPSC_SOURCES)
-	$(PARROT) -o compilers/opsc/opsc_core.pbc compilers/opsc/opsc_core.pir
+$(OPSC_DIR)/gen/%.pir: $(OPSC_DIR)/src/%.pm $(NQP_RX)
+	$(NQP_RX) --target=pir --output=$@ $<
 
-compilers/opsc/compiler/gen_compiler.pir: $(NQP_RX) compilers/opsc/compiler/compiler.pm
-	$(NQP_RX) --output=compilers/opsc/compiler/gen_compiler.pir \
-	--target=pir compilers/opsc/compiler/compiler.pm
-
-compilers/opsc/compiler/gen_grammar.pir: $(NQP_RX) compilers/opsc/compiler/grammar.pg
-	$(NQP_RX) --output=compilers/opsc/compiler/gen_grammar.pir \
-	--target=pir compilers/opsc/compiler/grammar.pg
-
-compilers/opsc/compiler/gen_actions.pir: $(NQP_RX) compilers/opsc/compiler/actions.pm
-	$(NQP_RX) --output=compilers/opsc/compiler/gen_actions.pir \
-	    --target=pir compilers/opsc/compiler/actions.pm
-
-compilers/opsc/ops/gen_oplib.pir: $(NQP_RX) compilers/opsc/ops/oplib.pm
-	$(NQP_RX) --output=compilers/opsc/ops/gen_oplib.pir \
-	    --target=pir compilers/opsc/ops/oplib.pm
-
-compilers/opsc/runcore/gen_base.pir: $(NQP_RX) compilers/opsc/runcore/base.pm
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_base.pir \
-	    --target=pir compilers/opsc/runcore/base.pm
-
-compilers/opsc/runcore/gen_cswitch.pir: $(NQP_RX) compilers/opsc/runcore/cswitch.pm compilers/opsc/runcore/gen_base.pir
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_cswitch.pir \
-	    --target=pir compilers/opsc/runcore/cswitch.pm
-
-compilers/opsc/runcore/gen_cgoto.pir: $(NQP_RX) compilers/opsc/runcore/cgoto.pm compilers/opsc/runcore/gen_base.pir
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_cgoto.pir \
-	    --target=pir compilers/opsc/runcore/cgoto.pm
-
-compilers/opsc/runcore/gen_cgp.pir: $(NQP_RX) compilers/opsc/runcore/cgp.pm compilers/opsc/runcore/gen_base.pir
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_cgp.pir \
-	    --target=pir compilers/opsc/runcore/cgp.pm
-
-compilers/opsc/runcore/gen_cprederef.pir: $(NQP_RX) compilers/opsc/runcore/cprederef.pm compilers/opsc/runcore/gen_base.pir
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_cprederef.pir \
-	    --target=pir compilers/opsc/runcore/cprederef.pm
-
-compilers/opsc/runcore/gen_c.pir: $(NQP_RX) compilers/opsc/runcore/c.pm compilers/opsc/runcore/gen_base.pir
-	$(NQP_RX) --output=compilers/opsc/runcore/gen_c.pir \
-	    --target=pir compilers/opsc/runcore/c.pm
 
 # This is a listing of all targets, that are meant to be called by users
 opsc-help:

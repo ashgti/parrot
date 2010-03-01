@@ -3,7 +3,7 @@
 
 INIT { pir::load_bytecode('HLL.pbc'); }
 
-grammar Ops::Grammar is HLL::Grammar;
+grammar Ops::Compiler::Grammar is HLL::Grammar;
 
 rule TOP {
     <body> 
