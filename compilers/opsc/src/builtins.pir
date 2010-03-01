@@ -8,6 +8,12 @@ Variour helper builtins.
 =cut
 .namespace []
 
+.sub 'lc'
+    .param string arg
+    $S0 = downcase arg
+    .return ($S0)
+.end
+
 .sub 'uc'
     .param string arg
     $S0 = upcase arg
