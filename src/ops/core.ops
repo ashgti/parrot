@@ -1412,7 +1412,6 @@ inline op annotations(out PMC) {
     else {
         $1 = pmc_new(interp, enum_class_Hash);
     }
-    goto NEXT();
 }
 
 =item B<annotations>(out PMC, in STR)
@@ -1431,7 +1430,6 @@ inline op annotations(out PMC, in STR) {
     else {
         $1 = PMCNULL;
     }
-    goto NEXT();
 }
 
 =back
