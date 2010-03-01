@@ -3,8 +3,15 @@
 
 .namespace [ 'Ops';'Compiler' ]
 
+.loadlib 'P6object.pbc'
+.loadlib 'HLL.pbc'
 .loadlib 'PCT.pbc'
 .loadlib 'nqp-settings.pbc'
+
+.include 'compilers/opsc/src/builtins.pir'
+.include 'compilers/opsc/gen/Ops/Compiler/Grammar.pir'
+.include 'compilers/opsc/gen/Ops/Compiler/Actions.pir'
+.include 'compilers/opsc/gen/Ops/Compiler.pir'
 
 .sub 'main' :main
     .param pmc args
@@ -23,7 +30,6 @@
     $P0.'removestage'('evalpmc')
     $P0.'addstage'('generate_runcores', 'after'=>'past')
 .end
-
 
 .sub 'generate_runcores' :method
     .param pmc past
@@ -49,11 +55,6 @@
 
     exit 0
 .end
-
-.include 'compilers/opsc/src/builtins.pir'
-.include 'compilers/opsc/gen/Ops/Compiler.pir'
-.include 'compilers/opsc/gen/Ops/Compiler/Grammar.pir'
-.include 'compilers/opsc/gen/Ops/Compiler/Actions.pir'
 
 # Local Variables:
 #   mode: pir
