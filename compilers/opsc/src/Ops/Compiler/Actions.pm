@@ -46,13 +46,18 @@ method op($/) {
         %flags{~$_<identifier>} := 1;
     }
 
+    my @args := list();
+    if ($<op_params>) {
+        @args := $<op_params>[0].ast;
+    }
+
     my $past := Ops::Op.new(
         :code(-1),
         :name(~$<op_name>),
         :type(~$<op_type>),
 
         :flags(%flags),
-        :args($<op_params>[0].ast),
+        :args(@args),
 
         $<op_body>.ast
     );

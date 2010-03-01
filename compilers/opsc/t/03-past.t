@@ -18,14 +18,19 @@ THE HEADER
 */
 END_OPS_PREAMBLE
 
+op bar() {
+    # Nothing here
+}
+
 inline op foo(out INT, in PMC, inconst NUM) :flow :deprecated {
     foo # We don't handle anything in C<body> during parse/past.
 }
+
 END
 
     compiler = compreg 'Ops'
     past = compiler.'compile'(buf, 'target'=>'past')
-    is(1, 1, "PAST::Node created")
+    ok(1, "PAST::Node created")
 
     $P0 = past['preamble']
     $P1 = $P0[0]
@@ -35,7 +40,7 @@ END
     $P0 = past['ops']
     $P0 = $P0.'list'()
     $I0 = $P0
-    is($I0, 1, 'We have 1 op')
+    is($I0, 2, 'We have 2 ops')
 
     # Check op
     .local pmc op
