@@ -51,6 +51,10 @@ method op($/) {
         @args := @($<op_params>[0].ast);
     }
 
+    my @norm_args := normalize_args(@args);
+    # We have to clone @norm_args. Otherwise it will be destroyed...
+    my @variants  := expand_args(pir::clone__PP(@norm_args));
+
     my $past := Ops::Op.new(
         :code(-1),
         :name(~$<op_name>),
@@ -58,12 +62,14 @@ method op($/) {
 
         :flags(%flags),
         :args(@args),
-        :normalized_args(normalize_args(@args)),
+        :normalized_args(@norm_args),
+        :variants(@variants),
 
         $<op_body>.ast
     );
 
     make $past;
+
 }
 
 # Normalize args
@@ -131,7 +137,7 @@ combinations.
 =end
 sub expand_args(@args) {
 
-    return list() unless +@args;
+    return list() unless @args;
 
     my $arg := @args.shift;
 

@@ -82,7 +82,7 @@ ok($arg<direction> eq 'i', 'Third direction is correct');
 ok($arg<type> eq 'nc', 'Third type is correct');
 ok(!($arg<variant>), 'Third arg without variant');
 
-my @expanded := Ops::Compiler::Actions::expand_args(@args);
+my @expanded := $op.variants;
 
 #_dumper(@expanded);
 ok( @expanded[0].join('_') eq 'i_p_nc', "First variant correct");

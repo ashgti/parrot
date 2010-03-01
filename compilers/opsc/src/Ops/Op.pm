@@ -86,7 +86,7 @@ I<directives>.
 
 =end
 
-method new(:$code!, :$type!, :$name!, :@args!, :@normalized_args!, :%flags!) {
+method new(:$code!, :$type!, :$name!, :@args!, :@normalized_args!, :@variants!, :%flags!) {
 
     self<CODE> := $code;
     self<TYPE> := $type;
@@ -94,6 +94,7 @@ method new(:$code!, :$type!, :$name!, :@args!, :@normalized_args!, :%flags!) {
     self<NAME>  := $name;
     self<ARGS>  := @args;
     self<NORMARGS>  := @normalized_args;
+    self<VARIANTS>  := @variants;
     self<FLAGS> := %flags;
     self<BODY>  := '';
     self<JUMP>  := 0;
@@ -141,6 +142,8 @@ method name() { self<NAME> }
 
 method arguments() { self<ARGS> }
 
+method variants() { self<VARIANTS> }
+
 method full_name() {
     my $name      := self.name;
     my @arg_types := self.arg_types;
@@ -151,6 +154,7 @@ method full_name() {
 method func_name($trans) {
     return $trans.prefix ~ self.full_name;
 }
+
 
 =begin
 
