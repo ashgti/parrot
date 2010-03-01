@@ -12,6 +12,12 @@ $(LIBRARY_DIR)/P6Regex.pbc: ext/nqp-rx/src/stage0/P6Regex-s0.pir $(PARROT)
 $(LIBRARY_DIR)/nqp-rx.pbc: ext/nqp-rx/src/stage0/NQP-s0.pir $(PARROT)
 	$(PARROT) -o $@ ext/nqp-rx/src/stage0/NQP-s0.pir
 
+ext/nqp-rx/src/gen/settings.pir: ext/nqp-rx/src/gen/settings.pm parrot-nqp.pbc
+	$(PARROT) parrot-nqp.pbc --target=pir -o $@ ext/nqp-rx/src/gen/settings.pm
+
+$(LIBRARY_DIR)/nqp-settings.pbc: ext/nqp-rx/src/gen/settings.pir $(PARROT)
+	$(PARROT) -o $@ ext/nqp-rx/src/gen/settings.pir
+
 ## TT #1398 - pbc_to_exe cannot generate a specified target file
 parrot-nqp.pbc : $(LIBRARY_DIR)/nqp-rx.pbc
 	$(CP) $(LIBRARY_DIR)/nqp-rx.pbc $@

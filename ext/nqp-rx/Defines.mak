@@ -5,4 +5,5 @@ NQPRX_LIB_PBCS = \
     $(LIBRARY_DIR)/nqp-rx.pbc \
     $(LIBRARY_DIR)/P6object.pbc \
     $(LIBRARY_DIR)/PCT/HLLCompiler.pbc \
-    $(LIBRARY_DIR)/PCT/PAST.pbc
+    $(LIBRARY_DIR)/PCT/PAST.pbc \
+	$(LIBRARY_DIR)/nqp-settings.pbc
