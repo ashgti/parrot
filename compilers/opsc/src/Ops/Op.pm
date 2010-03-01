@@ -64,11 +64,11 @@ Op Type:
 
 =end
 
-class Ops::Op is Hash;
+class Ops::Op is PAST::Block;
 
 =begin
 
-=item C<BUILD(:$code, :$type, :$name, :@args, :%flags)>
+=item C<new(:$code, :$type, :$name, :@args, :%flags)>
 
 Allocates a new bodyless op. A body must be provided eventually for the
 op to be usable.
@@ -137,6 +137,8 @@ method code() { self<CODE> }
 method type() { self<TYPE> }
 
 method name() { self<NAME> }
+
+method arguments() { self<ARGS> }
 
 method full_name() {
     my $name      := self.name;

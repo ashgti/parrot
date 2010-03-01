@@ -40,11 +40,11 @@ END
     # Check op
     .local pmc op
     op = $P0[0]
-    $S0 = op['name']
+    $S0 = op.'name'()
     is($S0, 'foo', "Name parsed")
 
     # Check op flags
-    $P1 = op['op_flags']
+    $P1 = op.'flags'()
     $I0 = $P1['flow']
     is(1, $I0, ':flow flag parsed')
     
@@ -55,7 +55,7 @@ END
     is($I0, 2, "And there are only 2 flags")
 
     # Check op params
-    $P1 = op['parameters']
+    $P1 = op.'arguments'()
     $P1 = $P1.'list'()
     $I0 = $P1
     is($I0, 3, "Got 3 parameters")

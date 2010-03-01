@@ -39,22 +39,23 @@ method preamble($/) {
 }
 
 method op($/) {
-    my $past := PAST::Block.new(
+
+    # Handling flags.
+    my %flags := pir::new__Ps('Hash');
+    for $<op_flag> {
+        %flags{~$_<identifier>} := 1;
+    }
+
+    my $past := Ops::Op.new(
+        :code(-1),
         :name(~$<op_name>),
-        :node($/),
+        :type(~$<op_type>),
+
+        :flags(%flags),
+        :args($<op_params>[0].ast),
 
         $<op_body>.ast
     );
-
-    # Handling flags.
-    for $<op_flag> {
-        $past<op_flags>{~$_<identifier>} := 1;
-    }
-
-    # Handling parameters.
-    if $<op_params> {
-        $past<parameters> := $<op_params>[0].ast;
-    }
 
     make $past;
 }
