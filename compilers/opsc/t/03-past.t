@@ -4,6 +4,7 @@
 # Parse single op and check various aspects of created PAST.
 
 pir::load_bytecode('compilers/opsc/opsc.pbc');
+pir::load_bytecode('nqp-settings.pbc');
 pir::load_bytecode('dumper.pbc');
 
 plan(14);
@@ -81,7 +82,11 @@ ok($arg<direction> eq 'i', 'Third direction is correct');
 ok($arg<type> eq 'nc', 'Third type is correct');
 ok(!($arg<variant>), 'Third arg without variant');
 
+my @expanded := Ops::Compiler::expand_args(@args);
 
+#_dumper(@expanded);
+ok( @expanded[0].join('_') eq 'i_p_nc', "First variant correct");
+ok( @expanded[1].join('_') eq 'i_pc_nc', "Second variant correct");
 
 # Don't forget to update plan!
 
