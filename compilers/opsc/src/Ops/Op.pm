@@ -86,13 +86,14 @@ I<directives>.
 
 =end
 
-method new(:$code!, :$type!, :$name!, :@args!, :%flags!) {
+method new(:$code!, :$type!, :$name!, :@args!, :@normalized_args!, :%flags!) {
 
     self<CODE> := $code;
     self<TYPE> := $type;
 
     self<NAME>  := $name;
     self<ARGS>  := @args;
+    self<NORMARGS>  := @normalized_args;
     self<FLAGS> := %flags;
     self<BODY>  := '';
     self<JUMP>  := 0;

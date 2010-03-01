@@ -6,3 +6,4 @@ INIT {
     Ops::Compiler.parsegrammar(Ops::Compiler::Grammar);
     Ops::Compiler.parseactions(Ops::Compiler::Actions);
 }
+

@@ -64,6 +64,23 @@ $arg := @args[2];
 ok($arg<direction> eq 'inconst', 'Third direction is correct');
 ok($arg<type> eq 'NUM', 'Third type is correct');
 
+# Check normalization
+@args := $op<NORMARGS>;
+$arg := @args[0];
+ok($arg<direction> eq 'o', 'First direction is correct');
+ok($arg<type> eq 'i', 'First type is correct');
+ok(!($arg<variant>), 'First arg without variant');
+
+$arg := @args[1];
+ok($arg<direction> eq 'i', 'Second direction is correct');
+ok($arg<type> eq 'p', 'Second type is correct');
+ok($arg<variant> eq 'pc', 'Second variant is correct');
+
+$arg := @args[2];
+ok($arg<direction> eq 'i', 'Third direction is correct');
+ok($arg<type> eq 'nc', 'Third type is correct');
+ok(!($arg<variant>), 'Third arg without variant');
+
 
 
 # Don't forget to update plan!

@@ -20,4 +20,5 @@ $f := Ops::File.new(|@files);
 say( "Parsed " ~ +$f<parsed_ops>);
 ok( $f<parsed_ops> == 84 + 116, "Ops parsed correctly");
 
+
 # vim: expandtab shiftwidth=4 ft=perl6:
