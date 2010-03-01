@@ -1,17 +1,14 @@
-#! ./parrot
+#! ./parrot-nqp
 
 # "Comprehensive" test for creating PAST for op.
 # Parse single op and check various aspects of created PAST.
 
-.sub 'main'
-    .include 'test_more.pir'
-    load_bytecode 'compilers/opsc/opsc.pbc'
+pir::load_bytecode('compilers/opsc/opsc.pbc');
+pir::load_bytecode('dumper.pbc');
 
-    plan(14)
+plan(14);
 
-    .local pmc compiler, past
-    .local string buf
-    buf = <<"END"
+my $buf := q|
 BEGIN_OPS_PREAMBLE    
 /*
 THE HEADER
@@ -26,65 +23,47 @@ inline op foo(out INT, in PMC, inconst NUM) :flow :deprecated {
     foo # We don't handle anything in C<body> during parse/past.
 }
 
-END
+|;
 
-    compiler = compreg 'Ops'
-    past = compiler.'compile'(buf, 'target'=>'past')
-    ok(1, "PAST::Node created")
+my $compiler := pir::compreg__Ps('Ops');
 
-    $P0 = past['preamble']
-    $P1 = $P0[0]
-    $S0 = $P1[0]
-    like($S0, 'HEADER', 'Header parsed')
+my $past := $compiler.compile($buf, target => 'past');
 
-    $P0 = past['ops']
-    $P0 = $P0.'list'()
-    $I0 = $P0
-    is($I0, 2, 'We have 2 ops')
+ok(1, "PAST::Node created");
 
-    # Check op
-    .local pmc op
-    op = $P0[0]
-    $S0 = op.'name'()
-    is($S0, 'foo', "Name parsed")
+my $preambles := $past<preamble>;
 
-    # Check op flags
-    $P1 = op.'flags'()
-    $I0 = $P1['flow']
-    is(1, $I0, ':flow flag parsed')
-    
-    $I0 = $P1['deprecated']
-    is(1, $I0, ':deprecated flag parsed')
+#    $P1 = $P0[0]
+#    $S0 = $P1[0]
+ok($preambles[0][0] ~~ /HEADER/, 'Header parsed');
 
-    $I0 = $P1
-    is($I0, 2, "And there are only 2 flags")
+my @ops := @($past<ops>);
+ok(+@ops == 2, 'We have 2 ops');
 
-    # Check op params
-    $P1 = op.'arguments'()
-    $P1 = $P1.'list'()
-    $I0 = $P1
-    is($I0, 3, "Got 3 parameters")
+my $op := @ops[0];
+ok($op.name == 'foo', "Name parsed");
 
-    $P2 = $P1[0]
-    $S0 = $P2['direction']
-    is($S0, 'out', 'First direction is correct')
-    $S0 = $P2['type']
-    is($S0, 'INT', 'First type is correct')
+my %flags := $op.flags;
+ok(%flags<flow>, ':flow flag parsed');
+ok(%flags<deprecated>, ':deprecated flag parsed');
+ok(%flags == 2, "And there are only 2 flags");
 
-    $P2 = $P1[1]
-    $S0 = $P2['direction']
-    is($S0, 'in', 'Second direction is correct')
-    $S0 = $P2['type']
-    is($S0, 'PMC', 'Second type is correct')
+# Check op params
+my @args := $op.arguments;
+ok(+@args == 3, "Got 3 parameters");
 
-    $P2 = $P1[2]
-    $S0 = $P2['direction']
-    is($S0, 'inconst', 'Third direction is correct')
-    $S0 = $P2['type']
-    is($S0, 'NUM', 'Third type is correct')
+my $arg;
 
+$arg := @args[0];
+ok($arg<direction> == 'out', 'First direction is correct');
+ok($arg<type> == 'INT', 'First type is correct');
 
-.end
+$arg := @args[1];
+ok($arg<direction> == 'in', 'Second direction is correct');
+ok($arg<type> == 'PMC', 'Second type is correct');
+
+ok($arg<direction> == 'inconst', 'Third direction is correct');
+ok($arg<type> == 'NUM', 'Third type is correct');
 
 # Don't forget to update plan!
 
@@ -93,4 +72,4 @@ END
 #   cperl-indent-level: 4
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4 ft=pir:
+# vim: expandtab shiftwidth=4 ft=perl6:
