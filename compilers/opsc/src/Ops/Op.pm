@@ -182,23 +182,6 @@ method jump(*@jumps) {
 
 =begin
 
-=item C<full_body()>
-
-For manual ops, C<full_body()> is the same as C<body()>. For auto ops
-this method adds a final C<goto NEXT()> line to the code to represent
-the auto-computed return value. See the note on op types above.
-
-=end
-
-method full_body() {
-    my $body := self.body;
-
-    # FIXME
-    #$body := $body ~ '_' ~ sprintf( "  {{+=%d}};\n", self.size ) if self.type eq 'auto';
-
-    $body;
-}
-
 =begin
 
 # Called from rewrite_body() to perform the actual substitutions.
