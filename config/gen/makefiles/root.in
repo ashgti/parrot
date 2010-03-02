@@ -1405,8 +1405,8 @@ src/nci/extra_thunks$(O) : src/nci/extra_thunks.str \
     $(PARROT_H_HEADERS) \
     include/pmc/pmc_unmanagedstruct.h \
     include/pmc/pmc_nci.h \
-    src/nci/extra_thunks.c    
-	$(CC) $(CFLAGS) @ccwarn::src/nci/extra_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/nci/extra_thunks.c
+    src/nci/extra_thunks.c
+    $(CC) $(CFLAGS) @ccwarn::src/nci/extra_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/nci/extra_thunks.c
 
 src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
         include/pmc/pmc_fixedintegerarray.h \
