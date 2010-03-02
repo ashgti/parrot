@@ -3,6 +3,12 @@
 
 class Ops::Compiler::Actions is HLL::Actions;
 
+our $CODE;
+
+INIT {
+    $CODE := 0;
+}
+
 method TOP($/) {
     make $<body>.ast;
 }
@@ -26,6 +32,7 @@ method body($/) {
     for $<op> {
         my $ops := $_.ast;
         for @($ops) {
+            $_<code> := $CODE++;
             $past<ops>.push($_);
         }
     }
