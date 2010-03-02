@@ -84,25 +84,6 @@ C<@args> is a reference to an array of argument type descriptors.
 C<$flags> is a hash reference containing zero or more I<hints> or
 I<directives>.
 
-=end
-
-method new(:$code!, :$type!, :$name!, :@args!, :@normalized_args!, :@variants!, :%flags!) {
-
-    self<CODE> := $code;
-    self<TYPE> := $type;
-
-    self<NAME>  := $name;
-    self<ARGS>  := @args;
-    self<NORMARGS>  := @normalized_args;
-    self<VARIANTS>  := @variants;
-    self<FLAGS> := %flags;
-    self<BODY>  := '';
-    self<JUMP>  := 0;
-
-    self;
-}
-
-=begin
 
 =back
 
@@ -134,15 +115,14 @@ The same as C<full_name()>, but with 'C<Parrot_>' prefixed.
 
 =end
 
-method code() { self<CODE> }
+method code($code?) { self.attr('code', $code, defined($code)) }
 
-method type() { self<TYPE> }
+method type($type?) { self.attr('type', $type, defined($type)) }
 
-method name() { self<NAME> }
+method name($name?) { self.attr('name', $name, defined($name)) }
 
-method arguments() { self<ARGS> }
+method args($args?) { self.attr('args', $args, defined($args)) }
 
-method variants() { self<VARIANTS> }
 
 method full_name() {
     my $name      := self.name;
@@ -165,13 +145,7 @@ flags (passed as ":flag") specified for the op.
 
 =end
 
-method flags(*@flags) {
-    if (@flags) {
-        self<FLAGS> := @flags;
-    }
-
-    return self<FLAGS>;
-}
+method flags(%flags?) { self.attr('flags', %flags, defined(%flags)) }
 
 =begin
 
@@ -183,10 +157,7 @@ Sets/gets the op's code body.
 
 =end
 
-method body($body?) {
-    self<BODY> := $body if $body;
-    self<BODY>;
-}
+method body($body?) { self.attr('body', $body, defined($body)) }
 
 =begin
 

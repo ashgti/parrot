@@ -24,7 +24,10 @@ method body($/) {
     }
 
     for $<op> {
-        $past<ops>.push($_.ast);
+        my $ops := $_.ast;
+        for @($ops) {
+            $past<ops>.push($_);
+        }
     }
 
     make $past;
@@ -55,21 +58,33 @@ method op($/) {
     # We have to clone @norm_args. Otherwise it will be destroyed...
     my @variants  := expand_args(pir::clone__PP(@norm_args));
 
-    my $past := Ops::Op.new(
-        :code(-1),
+    my $op := PAST::Block.new(
         :name(~$<op_name>),
-        :type(~$<op_type>),
-
-        :flags(%flags),
-        :args(@args),
-        :normalized_args(@norm_args),
-        :variants(@variants),
 
         $<op_body>.ast
     );
 
-    make $past;
+    $op<flags> := %flags;
+    $op<args>  := @args;
+    $op<type>  := ~$<op_type>;
+    $op<normalized_args> := @norm_args;
 
+    my $past := PAST::Stmts.new(
+        :node($/)
+    );
+
+    if @variants {
+        for @variants {
+            my $new_op := pir::clone__PP($op);
+            $new_op<args_types> := $_;
+            $past.push($new_op);
+        }
+    }
+    else {
+        $past.push($op);
+    }
+
+    make $past;
 }
 
 # Normalize args

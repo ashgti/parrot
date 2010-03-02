@@ -37,18 +37,19 @@ my $preambles := $past<preamble>;
 ok($preambles[0][0] ~~ /HEADER/, 'Header parsed');
 
 my @ops := @($past<ops>);
-ok(+@ops == 2, 'We have 2 ops');
+# One "bar" and two "foo"
+ok(+@ops == 3, 'We have 2 ops');
 
-my $op := @ops[0];
+my $op := @ops[1];
 ok($op.name == 'foo', "Name parsed");
 
-my %flags := $op.flags;
+my %flags := $op<flags>;
 ok(%flags<flow>, ':flow flag parsed');
 ok(%flags<deprecated>, ':deprecated flag parsed');
 ok(%flags == 2, "And there are only 2 flags");
 
 # Check op params
-my @args := $op.arguments;
+my @args := $op<args>;
 ok(+@args == 3, "Got 3 parameters");
 
 my $arg;
@@ -66,7 +67,7 @@ ok($arg<direction> eq 'inconst', 'Third direction is correct');
 ok($arg<type> eq 'NUM', 'Third type is correct');
 
 # Check normalization
-@args := $op<NORMARGS>;
+@args := $op<normalized_args>;
 $arg := @args[0];
 ok($arg<direction> eq 'o', 'First direction is correct');
 ok($arg<type> eq 'i', 'First type is correct');
@@ -82,11 +83,11 @@ ok($arg<direction> eq 'i', 'Third direction is correct');
 ok($arg<type> eq 'nc', 'Third type is correct');
 ok(!($arg<variant>), 'Third arg without variant');
 
-my @expanded := $op.variants;
+ok( ($op<args_types>).join('_') eq 'i_p_nc', "First variant correct");
 
-#_dumper(@expanded);
-ok( @expanded[0].join('_') eq 'i_p_nc', "First variant correct");
-ok( @expanded[1].join('_') eq 'i_pc_nc', "Second variant correct");
+# Second created op should have _pc_
+$op := @ops[2];
+ok( $op<args_types>.join('_') eq 'i_pc_nc', "Second variant correct");
 
 # Don't forget to update plan!
 
