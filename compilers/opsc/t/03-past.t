@@ -7,7 +7,7 @@ pir::load_bytecode('compilers/opsc/opsc.pbc');
 pir::load_bytecode('nqp-settings.pbc');
 pir::load_bytecode('dumper.pbc');
 
-plan(14);
+plan(25);
 
 my $buf := q|
 BEGIN_OPS_PREAMBLE    
