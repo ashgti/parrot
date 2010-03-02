@@ -17,8 +17,9 @@ $f := Ops::File.new(|@files);
 
 # 84 core
 # 116 math
-say( "Parsed " ~ +$f<parsed_ops>);
-ok( $f<parsed_ops> == 84 + 116, "Ops parsed correctly");
+# We can generate more than 1 Ops::Op per op due args expansion.
+say( "# Parsed " ~ +$f<parsed_ops>);
+ok( $f<parsed_ops> > 84 + 116, "Ops parsed correctly");
 
 
 # vim: expandtab shiftwidth=4 ft=perl6:
