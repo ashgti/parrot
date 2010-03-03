@@ -2,24 +2,40 @@
 # $Id$
 
 .sub greet
-	.param pmc    name
+    .param pmc    name
 
-	.local string name_str
-	name_str = name
+    .local string name_str
+    name_str = name
 
-	.local pmc greeting
-	greeting  = new 'String'
-	greeting  = 'Hello, '
-	greeting .= name_str
-	greeting .= '!'
+    .local pmc greeting
+    greeting  = new 'String'
+    greeting  = 'Hello, '
+    greeting .= name_str
+    greeting .= '!'
 
-	.return( greeting )
+    .return( greeting )
+.end
+
+.sub sum
+    .param pmc nums :slurpy
+
+    .local int acc
+    acc = 0
+
+  loop:
+    unless nums goto end_loop
+    $I0 = shift nums
+    acc += $I0
+    goto loop
+  end_loop:
+
+    .return (acc)
 .end
 
 .namespace [ 'Elsewhere' ]
 
 .sub greet
-	.return( 'Hiya!' )
+    .return( 'Hiya!' )
 .end
 
 # Local Variables:

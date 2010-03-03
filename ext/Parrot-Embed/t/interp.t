@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 26;
+use Test::More tests => 27;
 use File::Spec;
 
 my $hello_pbc = File::Spec->catfile( 't', 'greet.pbc' );
@@ -49,6 +49,10 @@ my $pmc = $global_greet->invoke( 'S->P', 'Bob' );
 ok( $pmc, 'invoke() should return a PMC, given that signature' );
 
 is( $pmc->get_string(), 'Hello, Bob!', '... containing a string returned in the PMC' );
+
+my $global_sum = $interp->find_global( 'sum' );
+my $sum = $global_sum->invoke('III->I', 11, 33, 55);
+is( $sum, 99, 'invoke() should handle IntVals' );
 
 can_ok( $module, 'compile' );
 my $eval = $interp->compile( <<END_PIR );
