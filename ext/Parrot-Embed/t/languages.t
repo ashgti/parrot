@@ -9,8 +9,8 @@ use warnings;
 use Test::More;
 use File::Spec;
 
-my $abc_pbc = File::Spec->catfile( '..', '..', 'languages', 'abc', 'abc.pbc' );
-plan skip_all => "Need to first run make in languages/abc" unless -e $abc_pbc;
+my $abc_pbc = File::Spec->catfile( '..', '..', 'examples', 'languages', 'abc', 'abc.pbc' );
+plan skip_all => "Need to first run setup.pir in examples/languages/abc" unless -e $abc_pbc;
 
 plan tests => 8;
 
