@@ -80,6 +80,7 @@ make_pmc( pTHX_ SV *interp, Parrot_PMC pmc )
 
 static Parrot_Int
 invoke_intval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    /* need to PUSHMARK because dXSARGS does POPMARK */
     dXSARGS; PUSHMARK(MARK);
     SV *v = ST(idx + 2);
     return SvIV(v);
@@ -87,6 +88,7 @@ invoke_intval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
 
 static Parrot_Float
 invoke_numval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    /* need to PUSHMARK because dXSARGS does POPMARK */
     dXSARGS; PUSHMARK(MARK);
     SV *v = ST(idx + 2);
     return SvNV(v);
@@ -94,6 +96,7 @@ invoke_numval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
 
 static Parrot_String
 invoke_string_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    /* need to PUSHMARK because dXSARGS does POPMARK */
     dXSARGS; PUSHMARK(MARK);
     SV *v = ST(idx + 2);
     STRLEN len;
@@ -103,13 +106,14 @@ invoke_string_arg_cb(PARROT_INTERP, pTHX_ int idx) {
 
 static Parrot_PMC
 invoke_pmc_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    /* need to PUSHMARK because dXSARGS does POPMARK */
     dXSARGS; PUSHMARK(MARK);
     SV *v = ST(idx + 2);
     Parrot_PMC ret;
 
     /* unpack pmc T_PTROBJ_PARROT style */
     if (sv_derived_from(v, "Parrot::PMC")) {
-	IV tmp = SvIV((SV*)(long)SvRv(v));
+	IV tmp = SvIV((SV*)(size_t)SvRv(v));
 	ret = INT2PTR(Parrot_PMC, tmp);
     } else
 	croak("Argument %i is not of type Parrot::PMC", idx);
@@ -117,16 +121,10 @@ invoke_pmc_arg_cb(PARROT_INTERP, pTHX_ int idx) {
     return ret;
 }
 
-#define RESET_PERL_STACK do { \
-    SP = MARK; \
-    PUTBACK; \
-} while (0)
-
-#define INVOKE_CB(x) do { \
+#define INVOKE_RET_CB(x) do { \
+    /* need to PUSHMARK because dXSARGS does POPMARK */ \
     dXSARGS; PUSHMARK(MARK); \
     Parrot_return_space *v; \
-    if (idx == 0) \
-        RESET_PERL_STACK; \
     Newz(0, v, 1, Parrot_return_space); \
     mXPUSHi( (IV)v ); \
     PUTBACK; \
@@ -136,22 +134,22 @@ invoke_pmc_arg_cb(PARROT_INTERP, pTHX_ int idx) {
 
 static Parrot_Int *
 invoke_intval_ret_cb(PARROT_INTERP, pTHX_ int idx) {
-    INVOKE_CB(intval);
+    INVOKE_RET_CB(intval);
 }
 
 static Parrot_Float *
 invoke_numval_ret_cb(PARROT_INTERP, pTHX_ int idx) {
-    INVOKE_CB(numval);
+    INVOKE_RET_CB(numval);
 }
 
 static Parrot_String *
 invoke_string_ret_cb(PARROT_INTERP, pTHX_ int idx) {
-    INVOKE_CB(string);
+    INVOKE_RET_CB(string);
 }
 
 static Parrot_PMC *
 invoke_pmc_ret_cb(PARROT_INTERP, pTHX_ int idx) {
-    INVOKE_CB(pmc);
+    INVOKE_RET_CB(pmc);
 }
 
 MODULE = Parrot::Embed PACKAGE = Parrot::Interpreter
@@ -323,9 +321,11 @@ PREINIT:
 PPCODE:
     pmc_actual = pmc->pmc;
     interp     = get_interp( pmc->interp );
+    /* reset perl's stack pointer so we can push to it later */
     SP = MARK;
     PUTBACK;
     Parrot_ext_call_cb( interp, pmc_actual, signature, &callback_functions, aTHX );
+    /* callback_functions have pushed to perl's stack, fetch it again */
     SPAGAIN;
     for (s = SP; s > MARK; s--) {
         Parrot_return_space *ret = (Parrot_return_space *)SvIV(*s);
