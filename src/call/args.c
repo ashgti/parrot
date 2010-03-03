@@ -889,6 +889,8 @@ Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP, ARGIN_NULLOK(PMC *obj)
     const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
     INTVAL       i;
+    INTVAL       param_idx          = 0;
+    INTVAL       ret_idx            = 0;
     int          append_pi          = 1;
 
     if (!sig_len)
@@ -909,19 +911,23 @@ Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP, ARGIN_NULLOK(PMC *obj)
             switch (type) {
               case 'I':
                 csr_push_pointer(interp, call_object,
-                            (void *)cbs->intval_ret(interp, call_info, i), PARROT_ARG_INTVAL);
+                            (void *)cbs->intval_ret(interp, call_info, ret_idx++),
+                            PARROT_ARG_INTVAL);
                 break;
               case 'N':
                 csr_push_pointer(interp, call_object,
-                            (void *)cbs->numval_ret(interp, call_info, i), PARROT_ARG_FLOATVAL);
+                            (void *)cbs->numval_ret(interp, call_info, ret_idx++),
+                            PARROT_ARG_FLOATVAL);
                 break;
               case 'S':
                 csr_push_pointer(interp, call_object,
-                            (void *)cbs->string_ret(interp, call_info, i), PARROT_ARG_STRING);
+                            (void *)cbs->string_ret(interp, call_info, ret_idx++),
+                            PARROT_ARG_STRING);
                 break;
               case 'P':
                 csr_push_pointer(interp, call_object,
-                            (void *)cbs->pmc_ret(interp, call_info, i), PARROT_ARG_PMC);
+                            (void *)cbs->pmc_ret(interp, call_info, ret_idx++),
+                            PARROT_ARG_PMC);
                 break;
               default:
                 Parrot_ex_throw_from_c_args(interp, NULL,
@@ -933,18 +939,21 @@ Parrot_pcc_build_sig_object_from_callbacks(PARROT_INTERP, ARGIN_NULLOK(PMC *obj)
             /* Regular arguments just set the value */
             switch (type) {
               case 'I':
-                VTABLE_push_integer(interp, call_object, cbs->intval_arg(interp, call_info, i));
+                VTABLE_push_integer(interp, call_object,
+                    cbs->intval_arg(interp, call_info, param_idx++));
                 break;
               case 'N':
-                VTABLE_push_float(interp, call_object, cbs->numval_arg(interp, call_info, i));
+                VTABLE_push_float(interp, call_object,
+                    cbs->numval_arg(interp, call_info, param_idx++));
                 break;
               case 'S':
-                VTABLE_push_string(interp, call_object, cbs->string_arg(interp, call_info, i));
+                VTABLE_push_string(interp, call_object,
+                    cbs->string_arg(interp, call_info, param_idx++));
                 break;
               case 'P':
                 {
                     const INTVAL type_lookahead = sig[i+1];
-                    PMC * const pmc_arg = cbs->pmc_arg(interp, call_info, i);
+                    PMC * const pmc_arg = cbs->pmc_arg(interp, call_info, param_idx++);
                     if (type_lookahead == 'f') {
                          dissect_aggregate_arg(interp, call_object, pmc_arg);
                         i++; /* skip 'f' */
