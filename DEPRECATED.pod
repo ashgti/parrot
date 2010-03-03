@@ -214,6 +214,11 @@ for L<https://trac.parrot.org/parrot/ticket/895>
 All STRING modification functions will return a STRING pointer; capture and use
 this rather than relying on in-place modification of an existing pointer.
 
+=item Parrot_ext_call_cb [experimental]
+
+A way to call into parrot from C without knowing in advance the number or type
+of the arguments and returns.
+
 =back
 
 =head1 Compiler tools
