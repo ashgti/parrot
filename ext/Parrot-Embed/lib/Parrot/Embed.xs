@@ -372,7 +372,7 @@ PREINIT:
 CODE:
     interp = get_interp( pmc->interp );
 
-    if (interp)
-        SvREFCNT_dec( interp );
+    
+    SvREFCNT_dec( pmc->interp );
 
     Parrot_unregister_pmc( interp, pmc->pmc );
