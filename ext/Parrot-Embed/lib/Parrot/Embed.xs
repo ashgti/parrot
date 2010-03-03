@@ -22,6 +22,23 @@ typedef struct PMC_struct
     Parrot_PMC  pmc;
 } PMC_struct;
 
+typedef enum Parrot_return_type {
+    enum_ret_intval,
+    enum_ret_numval,
+    enum_ret_string,
+    enum_ret_pmc,
+} Parrot_return_type;
+
+typedef struct Parrot_return_space {
+    Parrot_return_type type;
+    union {
+        Parrot_Int      intval;
+        Parrot_Float    numval;
+        Parrot_String   string;
+        Parrot_PMC      pmc;
+    } u;
+} Parrot_return_space;
+
 
 Interpreter_struct*
 make_interp( pTHX_ SV *parent, PARROT_INTERP )
@@ -60,6 +77,82 @@ make_pmc( pTHX_ SV *interp, Parrot_PMC pmc )
     return pmc_struct;
 }
 
+
+static Parrot_Int
+invoke_intval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    dXSARGS; PUSHMARK(MARK);
+    SV *v = ST(idx + 2);
+    return SvIV(v);
+}
+
+static Parrot_Float
+invoke_numval_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    dXSARGS; PUSHMARK(MARK);
+    SV *v = ST(idx + 2);
+    return SvNV(v);
+}
+
+static Parrot_String
+invoke_string_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    dXSARGS; PUSHMARK(MARK);
+    SV *v = ST(idx + 2);
+    STRLEN len;
+    char *s = SvPV(v, len);
+    return Parrot_str_new(interp, s, len);
+}
+
+static Parrot_PMC
+invoke_pmc_arg_cb(PARROT_INTERP, pTHX_ int idx) {
+    dXSARGS; PUSHMARK(MARK);
+    SV *v = ST(idx + 2);
+    Parrot_PMC ret;
+
+    /* unpack pmc T_PTROBJ_PARROT style */
+    if (sv_derived_from(v, "Parrot::PMC")) {
+	IV tmp = SvIV((SV*)(long)SvRv(v));
+	ret = INT2PTR(Parrot_PMC, tmp);
+    } else
+	croak("Argument %i is not of type Parrot::PMC", idx);
+
+    return ret;
+}
+
+#define RESET_PERL_STACK do { \
+    SP = MARK; \
+    PUTBACK; \
+} while (0)
+
+#define INVOKE_CB(x) do { \
+    dXSARGS; PUSHMARK(MARK); \
+    Parrot_return_space *v; \
+    if (idx == 0) \
+        RESET_PERL_STACK; \
+    Newz(0, v, 1, Parrot_return_space); \
+    mXPUSHi( (IV)v ); \
+    PUTBACK; \
+    v->type = enum_ret_ ## x; \
+    return &(v->u.x); \
+} while (0)
+
+static Parrot_Int *
+invoke_intval_ret_cb(PARROT_INTERP, pTHX_ int idx) {
+    INVOKE_CB(intval);
+}
+
+static Parrot_Float *
+invoke_numval_ret_cb(PARROT_INTERP, pTHX_ int idx) {
+    INVOKE_CB(numval);
+}
+
+static Parrot_String *
+invoke_string_ret_cb(PARROT_INTERP, pTHX_ int idx) {
+    INVOKE_CB(string);
+}
+
+static Parrot_PMC *
+invoke_pmc_ret_cb(PARROT_INTERP, pTHX_ int idx) {
+    INVOKE_CB(pmc);
+}
 
 MODULE = Parrot::Embed PACKAGE = Parrot::Interpreter
 
@@ -210,23 +303,57 @@ MODULE = Parrot::Embed PACKAGE = Parrot::PMC
 
 
 PMC_struct*
-invoke( pmc, signature, argument )
+invoke( pmc, signature, ... )
     PMC_struct *pmc
     const char *signature
-    const char *argument
 PREINIT:
     Parrot_PMC    pmc_actual;
-    Parrot_PMC    out_pmc;
     Parrot_Interp interp;
-    Parrot_String arg_string;
-CODE:
+    static Parrot_ext_call_cbs callback_functions = {
+        (void*)invoke_intval_arg_cb,
+        (void*)invoke_numval_arg_cb,
+        (void*)invoke_string_arg_cb,
+        (void*)invoke_pmc_arg_cb,
+        (void*)invoke_intval_ret_cb,
+        (void*)invoke_numval_ret_cb,
+        (void*)invoke_string_ret_cb,
+        (void*)invoke_pmc_ret_cb,
+    };
+    SV **s;
+PPCODE:
     pmc_actual = pmc->pmc;
     interp     = get_interp( pmc->interp );
-    arg_string = Parrot_str_new_constant( interp, argument );
-    Parrot_ext_call( interp, pmc_actual, signature, arg_string, &out_pmc );
-    RETVAL     = make_pmc( aTHX_ pmc->interp, out_pmc );
-OUTPUT:
-    RETVAL
+    SP = MARK;
+    PUTBACK;
+    Parrot_ext_call_cb( interp, pmc_actual, signature, &callback_functions, aTHX );
+    SPAGAIN;
+    for (s = SP; s > MARK; s--) {
+        Parrot_return_space *ret = (Parrot_return_space *)SvIV(*s);
+        switch (ret->type) {
+            case enum_ret_intval:
+                *s = newSViv(ret->u.intval);
+                break;
+            case enum_ret_numval:
+                *s = newSVnv(ret->u.numval);
+                break;
+            case enum_ret_string: {
+		char *cstr = Parrot_str_to_cstring(interp, ret->u.string);
+		STRLEN len = Parrot_str_byte_length(interp, ret->u.string);
+		*s = newSVpvn(cstr, len);
+		Parrot_str_free_cstring(cstr);
+		break;
+	    }
+            case enum_ret_pmc: {
+                /* wrap pmc T_PTROBJ_PARROT style */
+		*s = newSV(0);
+		sv_setref_pv(*s, "Parrot::PMC",
+		    make_pmc(aTHX_ pmc->interp, ret->u.pmc));
+		break;
+	    }
+        }
+	sv_2mortal(*s);
+	Safefree(ret);
+    }
 
 
 char *

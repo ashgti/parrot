@@ -29,7 +29,7 @@ is( $except, '', '... throwing no exception if so' );
 my $abc = $interp->find_global( 'main', 'abc::Compiler' );
 isa_ok( $abc, 'Parrot::PMC' );
 
-my $pmc  = $abc->invoke('PS', '2+3');
+my $pmc  = $abc->invoke('S->P', '2+3');
 ok( $pmc, 'invoke() should return a PMC, given that signature' );
 is( $pmc->get_string(), 1, 'value returned in the PMC' );
 

@@ -52,7 +52,7 @@ END_CODE
 # compile some PHP code
 if (0)
 {
-    my $pmc = $pipp_eval->invoke( 'PS', $code );
+    my $pmc = $pipp_eval->invoke( 'S->P', $code );
     ok( $pmc, 'invoke() should return a PMC, given that signature' );
     is( $pmc->get_string(), 1, 'string returned in the PMC should be true?' );
 }
@@ -61,7 +61,7 @@ if (0)
 # invoke a built-in php function
 if (0)
 {
-    my $pmc = $pipp_eval->invoke( 'PS', 'strlen', 'some string' );
+    my $pmc = $pipp_eval->invoke( 'S->P', 'strlen', 'some string' );
     ok( $pmc, 'invoke() should return a PMC, given that signature' );
     is( $pmc->get_string(), 11, 'value returned in the PMC' );
 }
@@ -69,7 +69,7 @@ if (0)
 # invoke a php function
 if (0)
 {
-    my $pmc = $pipp_eval->invoke( 'PS', 'add', 23, 19 );
+    my $pmc = $pipp_eval->invoke( 'S->P', 'add', 23, 19 );
     ok( $pmc, 'invoke() should return a PMC, given that signature' );
     is( $pmc->get_string(), 42, 'value returned in the PMC' );
 }
