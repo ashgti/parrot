@@ -180,8 +180,6 @@ GEN_CONFIGS = \
 #IF(has_crypto):    t/dynpmc/sha1.t \
 #IF(has_crypto):    t/dynpmc/sha256.t \
 #IF(has_crypto):    t/dynpmc/sha512.t \
-    CFLAGS \
-    compilers/imcc/CFLAGS \
     config_lib.pasm \
     parrot.pc \
     compilers/imcc/imcc.y.flag \
@@ -413,7 +411,9 @@ PARROT_H_HEADERS = \
         include/pmc/pmc_parrotinterpreter.h
 
 # generated list of header files
-GENERAL_H_FILES   = $(NONGEN_HEADERS) $(GEN_HEADERS) @TEMP_cg_h@
+GENERAL_H_FILES   = $(NONGEN_HEADERS) $(GEN_HEADERS) \
+#IF(cg_flag): $(INC_DIR)/oplib/core_ops_cg.h $(INC_DIR)/oplib/core_ops_cgp.h
+
 
 CHARSET_O_FILES   = @TEMP_charset_o@
 CLASS_PMC_FILES   = @TEMP_pmc_classes_pmc@
@@ -501,13 +501,12 @@ INTERP_O_FILES = \
     src/utils$(O) \
     src/vtables$(O) \
     src/warnings$(O) \
-    \
     src/packfile/pf_items$(O) \
-    \
-    @TEMP_cg_o@ \
     @TEMP_atomic_o@ \
     @TEMP_gc_o@ \
 #IF(platform_asm):    src/platform_asm$(O) \
+#IF(cg_flag):     src/ops/core_ops_cg$(O) src/ops/core_ops_cgp$(O) \
+
 
 OPS_FILES = @ops@ $(GEN_OPSFILES)
 
@@ -578,15 +577,25 @@ MAKE = @make_c@
 .SUFFIXES : .c .S .s .pmc .dump $(O) .str .pir .pbc
 
 .c$(O) : # suffix rule (limited support)
-	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
+	$(CC) $(CFLAGS) @optimize@ $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 
 .s$(O) : # suffix rule (limited support)
-	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
+	$(CC) $(CFLAGS) @optimize@ $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 #UNLESS(win32).S$(O) : # suffix rule (limited support)
-#UNLESS(win32)	$(CC) $(CFLAGS) $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
+#UNLESS(win32)	$(CC) $(CFLAGS) @optimize@ $(CC_WARN) -I$(@D) @cc_o_out@$@ -c $<
 
 .pir.pbc : # suffix rule (limited support)
 	$(PARROT) -o $@ $<
+
+# Note: Several rules in this makefile are tagged with a "SUFFIX OVERRIDE"
+# comment; this indicates that we have an explicit compilation rule for
+# that particular C file; this is done so that we override various
+# options for that file - to change optimization levels, or twiddle
+# warnings. Each of those overrides should use the most specific settings
+# possible for that file. When file-specific overrides are added during
+# Configure, the override must be allowed for in this file.
+# These will eventually be automatically generated.
+
 
 ###############################################################################
 #
@@ -812,7 +821,7 @@ runtime/parrot/include/parrotlib.pbc: runtime/parrot/library/parrotlib.pir $(PAR
 runtime/parrot/include/config.fpmc : myconfig config_lib.pasm $(MINIPARROT)
 	$(MINIPARROT) config_lib.pasm > $@
 
-$(PARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) CFLAGS \
+$(PARROT) : src/main$(O) $(GEN_HEADERS) $(LIBPARROT) \
     lib/Parrot/OpLib/core.pm src/parrot_config$(O) \
     $(MINIPARROT)
 	$(LINK) @ld_out@$@ \
@@ -1258,7 +1267,7 @@ src/thread$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/atomic.h \
 ## SUFFIX OVERRIDE - dynloaded files need cc_shared
 src/extend$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/extend.h \
     include/pmc/pmc_sub.h $(INC_DIR)/extend_vtable.h src/extend.c
-	$(CC) $(CFLAGS) $(CC_WARN) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/extend.c
+	$(CC) $(CFLAGS) @optimize::src/extend.c@ @ccwarn::src/extend.c@ @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/extend.c
 
 src/runcore/main$(O) : \
 	src/runcore/main.str \
@@ -1373,7 +1382,9 @@ src/runcore/cores$(O) : src/runcore/cores.str \
         $(INC_DIR)/runcore_api.h $(INC_DIR)/runcore_trace.h \
         $(PARROT_H_HEADERS)
 
-src/tsq$(O) : $(PARROT_H_HEADERS)
+## SUFFIX OVERRIDE
+src/tsq$(O) : $(PARROT_H_HEADERS) src/tsq.c
+	$(CC) $(CFLAGS) @optimize::src/tsq.c@ @ccwarn::src/tsq.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/tsq.c
 
 src/embed$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/embed.h \
         $(INC_DIR)/oplib/ops.h $(INC_DIR)/runcore_api.h \
@@ -1400,13 +1411,13 @@ src/nci/core_thunks$(O) : src/nci/core_thunks.str \
         include/pmc/pmc_unmanagedstruct.h \
         include/pmc/pmc_nci.h
 
-## SUFFIX OVERRIDE - Warnings
+## SUFFIX OVERRIDE
 src/nci/extra_thunks$(O) : src/nci/extra_thunks.str \
     $(PARROT_H_HEADERS) \
     include/pmc/pmc_unmanagedstruct.h \
     include/pmc/pmc_nci.h \
     src/nci/extra_thunks.c
-	$(CC) $(CFLAGS) @ccwarn::src/nci/extra_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/nci/extra_thunks.c
+	$(CC) $(CFLAGS) @optimize::src/nci/extra_thunks.c@ @ccwarn::src/nci/extra_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/nci/extra_thunks.c
 
 src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
         include/pmc/pmc_fixedintegerarray.h \
@@ -1416,7 +1427,10 @@ src/frame_builder$(O) : $(PARROT_H_HEADERS) src/frame_builder.h \
 
 src/vtables$(O) : $(PARROT_H_HEADERS)
 
+## SUFFIX OVERRIDE
 src/gc/system$(O) : $(PARROT_H_HEADERS)  src/gc/gc_private.h
+	$(CC) $(CFLAGS) @optimize::src/gc/system.c@ @ccwarn::src/gc/system.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/gc/system.c
+
 src/gc/gc_private.h : $(INC_DIR)/settings.h
 
 src/warnings$(O) : $(PARROT_H_HEADERS)
@@ -1425,9 +1439,9 @@ src/misc$(O) : $(PARROT_H_HEADERS)
 
 src/utils$(O) : $(PARROT_H_HEADERS) include/pmc/pmc_nci.h
 
-## SUFFIX OVERRIDE - Warnings
+## SUFFIX OVERRIDE
 src/spf_render$(O) : $(PARROT_H_HEADERS) src/spf_render.str
-	$(CC) $(CFLAGS) @ccwarn::src/spf_render.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/spf_render.c
+	$(CC) $(CFLAGS) @optimize::src/spf_render.c@ @ccwarn::src/spf_render.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/spf_render.c
 
 src/spf_vtable$(O) : $(PARROT_H_HEADERS) src/spf_vtable.str
 
@@ -1478,8 +1492,10 @@ src/ops/core_ops.c : $(OPS_FILES) $(BUILD_TOOLS_DIR)/ops2c.pl \
 	include/pmc/pmc_continuation.h
 	$(PERL) $(BUILD_TOOLS_DIR)/ops2c.pl C --core @no_lines_flag@
 
+## SUFFIX OVERRIDE
 src/ops/core_ops_switch$(O) : $(GENERAL_H_FILES) src/ops/core_ops_switch.c \
 	include/pmc/pmc_parrotlibrary.h
+	$(CC) $(CFLAGS) @optimize::src/ops/core_ops_switch.c@ @ccwarn::src/ops/core_ops_switch.c@ @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/ops/core_ops_switch.c
 
 $(INC_DIR)/oplib/core_ops_switch.h : src/ops/core_ops_switch.c
 
@@ -1489,7 +1505,27 @@ src/ops/core_ops_switch.c : $(OPS_FILES) $(BUILD_TOOLS_DIR)/ops2c.pl \
 	lib/Parrot/OpTrans/CPrederef.pm
 	$(PERL) $(BUILD_TOOLS_DIR)/ops2c.pl CSwitch --core @no_lines_flag@
 
-@TEMP_cg_c@
+## SUFFIX OVERRIDE
+src/ops/core_ops_cg$(O): $(GENERAL_H_FILES) src/ops/core_ops_cg.c \
+        include/pmc/pmc_parrotlibrary.h
+	$(CC) $(CFLAGS) @optimize::src/ops/core_ops_cg.c@ @ccwarn::src/ops/core_ops_cg.c@ @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/ops/core_ops_cg.c
+
+## SUFFIX OVERRIDE
+src/ops/core_ops_cgp$(O): $(GENERAL_H_FILES) src/ops/core_ops_cgp.c \
+        include/pmc/pmc_parrotlibrary.h
+	$(CC) $(CFLAGS) @optimize::src/ops/core_ops_cgp.c@ @ccwarn::src/ops/core_ops_cgp.c@ @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/ops/core_ops_cgp.c
+
+src/runcore/cores.c: $(INC_DIR)/oplib/core_ops_cgp.h
+
+$(INC_DIR)/oplib/core_ops_cg.h: src/ops/core_ops_cg.c
+
+src/ops/core_ops_cg.c : $(OPS_FILES) $(BUILD_TOOLS_DIR)/ops2c.pl lib/Parrot/OpsFile.pm lib/Parrot/Op.pm lib/Parrot/OpTrans/CGoto.pm lib/Parrot/OpLib/core.pm
+	$(PERL) $(BUILD_TOOLS_DIR)/ops2c.pl CGoto --core
+
+$(INC_DIR)/oplib/core_ops_cgp.h: src/ops/core_ops_cgp.c
+
+src/ops/core_ops_cgp.c : $(OPS_FILES) $(BUILD_TOOLS_DIR)/ops2c.pl lib/Parrot/OpsFile.pm lib/Parrot/Op.pm lib/Parrot/OpTrans/CGP.pm lib/Parrot/OpLib/core.pm lib/Parrot/OpTrans/CPrederef.pm
+	$(PERL) $(BUILD_TOOLS_DIR)/ops2c.pl CGP --core
 
 @TEMP_gc_c@
 
@@ -1820,7 +1856,8 @@ clean : \
     ext-clean \
 #UNLESS(win32):    cover-clean \
     editor-clean
-	@TEMP_cg_r@
+	$(RM_F) $(INC_DIR)/oplib/core_ops_cg.h src/ops/core_ops_cg.c \
+    $(INC_DIR)/oplib/core_ops_cgp.h src/ops/core_ops_cgp.c
 	$(RM_F) chartypes "*.s" "*~"
 	$(RM_F) $(FLUID_FILES_1)
 	$(RM_F) $(FLUID_FILES_2)
@@ -2423,7 +2460,7 @@ exec : src/parrot_config$(O) $(LIBPARROT)
 # for use by t/pmc/nci.t
 ## SUFFIX OVERRIDE - dynloaded files need cc_shared
 src/nci_test$(O): $(PARROT_H_HEADERS) src/nci_test.c
-	$(CC) $(CFLAGS) $(CC_WARN) @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/nci_test.c
+	$(CC) $(CFLAGS) @optimize::src/nci_test.c@ @ccwarn::src/nci_test.c@ @cc_shared@ -I$(@D) @cc_o_out@$@ -c src/nci_test.c
 
 $(LIBNCI_TEST_SO): src/nci_test$(O) $(LIBPARROT)
 	$(LD) $(LD_LOAD_FLAGS) @ncilib_link_extra@ $(LDFLAGS) \
@@ -2450,9 +2487,9 @@ src/extra_nci_thunks.c : src/nci/extra_thunks.nci $(NCI_THUNK_GEN)
 	$(NCI_THUNK_GEN) --dynext --no-warn-dups \
 	    --output=src/extra_nci_thunks.c <src/nci/extra_thunks.nci
 
-## SUFFIX OVERRIDE - Warnings
+## SUFFIX OVERRIDE
 src/extra_nci_thunks$(O) : $(GENERAL_H_FILES) src/extra_nci_thunks.c
-	$(CC) $(CFLAGS) @ccwarn::src/extra_nci_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/extra_nci_thunks.c
+	$(CC) $(CFLAGS) @optimize::src/extra_nci_thunks.c@ @ccwarn::src/extra_nci_thunks.c@ @cc_shared@ -I$(@D) @cc_o_out@ $@ -c src/extra_nci_thunks.c
 
 $(EXTRANCITHUNKS_SO) : $(LIBPARROT) src/extra_nci_thunks$(O)
 	$(LD) $(LD_LOAD_FLAGS) $(LDFLAGS) \

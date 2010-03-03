@@ -71,7 +71,7 @@ BEGIN {
       );
 }
 
-use Test::More tests => (8 + @cond_tests);
+use Test::More tests => (7 + @cond_tests);
 use Carp;
 use lib qw( . lib );
 
@@ -108,7 +108,6 @@ foreach my $k ( keys %makefiles ) {
 }
 
 is($missing_SOURCE, 0, "No Makefile source file missing");
-ok(-f $step->{CFLAGS_source}, "CFLAGS source file located");
 
 my $index = undef;
 sub result {
