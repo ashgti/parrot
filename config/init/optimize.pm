@@ -76,9 +76,6 @@ sub runstep {
 
     # per file overrides - not every compiler can optimize every file.
 
-    # never optimize this file.
-    $conf->data->set('optimize::src/tsq.c','');
-
     # The src/ops/core_ops*.c files are challenging to optimize.
     # gcc can usually handle it, but don't assume any other compilers can,
     # until there is specific evidence otherwise.
