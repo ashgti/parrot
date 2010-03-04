@@ -21,9 +21,6 @@ use warnings;
 
 use base qw(Parrot::Configure::Step);
 
-use Memoize;
-memoize('valid_warning');
-
 use Parrot::Configure::Utils ();
 use Parrot::BuildUtil;
 
@@ -320,7 +317,7 @@ sub valid_warning {
 
     my $ccflags  = $conf->data->get('ccflags');
     my $warnings = join(' ', @{$self->{'validated'}});
-    my $tryflags = "$ccflags $warnings";
+    my $tryflags = "$ccflags $warnings $warning";
 
     my $command_line = Parrot::Configure::Utils::_build_compile_command( $cc, $tryflags );
     $verbose and print '  ', $command_line, "\n";
@@ -343,7 +340,7 @@ sub valid_warning {
 
     $verbose and print "  output: $output\n";
 
-    if ( $output !~ /error|warning|not supported|unrecognized/i ) {
+    if ( $output !~ /error|warning|not supported/i ) {
         push @{$self->{'validated'}}, $warning;
         $verbose and print "    valid warning: '$warning'\n";
         return 1;
