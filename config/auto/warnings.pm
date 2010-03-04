@@ -343,7 +343,7 @@ sub valid_warning {
 
     $verbose and print "  output: $output\n";
 
-    if ( $output !~ /error|warning|not supported/i ) {
+    if ( $output !~ /error|warning|not supported|unrecognized/i ) {
         push @{$self->{'validated'}}, $warning;
         $verbose and print "    valid warning: '$warning'\n";
         return 1;
