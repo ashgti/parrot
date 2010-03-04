@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2005, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -63,7 +63,7 @@ sub runstep {
     }
     else {
         # use the command line verbatim
-        $options = $optimize; 
+        $options = $optimize;
     }
 
     # save the options, however we got them.
