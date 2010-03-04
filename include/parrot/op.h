@@ -51,13 +51,7 @@ typedef enum {
 
 /* See lib/Parrot/OpsFile.pm if the names of these values change */
 typedef enum {
-    PARROT_JUMP_RELATIVE = 1,
-    PARROT_JUMP_ADDRESS = 2,
-    PARROT_JUMP_POP = 4,
-    PARROT_JUMP_ENEXT = 8,
-    PARROT_JUMP_GNEXT = 16,
-    PARROT_JUMP_UNPREDICTABLE = 32,
-    PARROT_JUMP_RESTART = 64
+    PARROT_JUMP_RELATIVE = 1
 } op_jump_t;
 
 /* NOTE: Sure wish we could put the types here... */
@@ -82,7 +76,6 @@ typedef struct op_info_t {
     arg_type_t     types[PARROT_MAX_ARGS];  /* arg_type_t, 0 = 1st arg */
     arg_dir_t      dirs[PARROT_MAX_ARGS];   /* arg_dir_t   0 = 1st arg */
     char           labels[PARROT_MAX_ARGS]; /* 0/1         0 = 1st arg */
-    unsigned int   flags;
 } op_info_t;
 
 
