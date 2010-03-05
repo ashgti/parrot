@@ -13,6 +13,10 @@
 .include 'compilers/opsc/gen/Ops/Compiler/Actions.pir'
 .include 'compilers/opsc/gen/Ops/Compiler.pir'
 
+.include 'compilers/opsc/gen/Ops/Emitter.pir'
+.include 'compilers/opsc/gen/Ops/Trans.pir'
+.include 'compilers/opsc/gen/Ops/Trans/C.pir'
+
 .include 'compilers/opsc/gen/Ops/Op.pir'
 .include 'compilers/opsc/gen/Ops/File.pir'
 
