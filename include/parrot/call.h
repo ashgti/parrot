@@ -188,17 +188,6 @@ PMC* Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP,
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-PMC* Parrot_pcc_build_sig_object_returns_from_op(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *signature),
-    ARGIN(PMC *raw_sig),
-    ARGIN(opcode_t *raw_args))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4);
-
-PARROT_EXPORT
 void Parrot_pcc_fill_params_from_c_args(PARROT_INTERP,
     ARGMOD(PMC *call_object),
     ARGIN(const char *signature),
