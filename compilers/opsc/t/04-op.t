@@ -5,15 +5,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(7);
-
-my $ok := 1;
-try {
-    Ops::Op.new(code => "BANG");
-    $ok := 0;
-}
-
-ok( $ok, "Can't create Op without mandatory arguments");
+plan(6);
 
 my $op := Ops::Op.new(
     code => 42,
