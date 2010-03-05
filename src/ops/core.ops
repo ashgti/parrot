@@ -539,7 +539,7 @@ op set_returns(inconst PMC) :flow {
     PMC * const signature = $1;
     PMC *call_sig, *old_sig;
     INTVAL argc;
- 
+
     old_sig = CURRENT_CONTEXT(interp);
     call_sig = Parrot_pcc_build_sig_object_from_op(interp,
             old_sig, signature, raw_args);
@@ -1410,7 +1410,7 @@ inline op annotations(out PMC, in STR) {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2001-2008, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 
 =head1 LICENSE
 
