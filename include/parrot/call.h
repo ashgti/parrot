@@ -157,16 +157,6 @@ void runops(PARROT_INTERP, size_t offs)
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_EXPORT
-void Parrot_pcc_append_result(PARROT_INTERP,
-    ARGIN(PMC *sig_object),
-    ARGIN(STRING *type),
-    ARGIN(void *result))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4);
-
-PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC* Parrot_pcc_build_sig_object_from_op(PARROT_INTERP,
