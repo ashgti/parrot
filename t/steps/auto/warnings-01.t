@@ -75,8 +75,12 @@ $conf->data->set( gccversion => 'defined' );
 $conf->data->set( 'g++' => undef );
 $conf->options->set( cage => 1 );
 ok($step->runstep($conf), "runstep() returned true value");
+
+# This test is fragile, as it depends on the current state of --cage,
+# which changes over time, and on the compiler, which may not support
+# this option.
 like($conf->data->get( 'ccwarn' ),
-    qr/-std=c89/,
+    qr/-Wunreachable-code/,
     "'cage' warning set as expected"
 );
 
