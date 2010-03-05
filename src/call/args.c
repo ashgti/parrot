@@ -201,13 +201,6 @@ static INTVAL intval_arg_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static INTVAL intval_arg_from_continuation(PARROT_INTERP,
-    ARGIN(PMC *cs),
-    INTVAL arg_index)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_CANNOT_RETURN_NULL
 static INTVAL intval_arg_from_op(PARROT_INTERP,
     ARGIN(opcode_t *raw_args),
     INTVAL arg_index)
@@ -244,13 +237,6 @@ PARROT_CANNOT_RETURN_NULL
 static FLOATVAL numval_arg_from_c_args(PARROT_INTERP,
     ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_CANNOT_RETURN_NULL
-static FLOATVAL numval_arg_from_continuation(PARROT_INTERP,
-    ARGIN(PMC *cs),
-    INTVAL arg_index)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -307,13 +293,6 @@ static PMC* pmc_arg_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static PMC* pmc_arg_from_continuation(PARROT_INTERP,
-    ARGIN(PMC *cs),
-    INTVAL arg_index)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_CANNOT_RETURN_NULL
 static PMC* pmc_arg_from_op(PARROT_INTERP,
     ARGIN(opcode_t *raw_args),
     INTVAL arg_index)
@@ -352,13 +331,6 @@ PARROT_CANNOT_RETURN_NULL
 static STRING* string_arg_from_c_args(PARROT_INTERP,
     ARGIN(va_list *args),
     SHIM(INTVAL param_index))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_CANNOT_RETURN_NULL
-static STRING* string_arg_from_continuation(PARROT_INTERP,
-    ARGIN(PMC *cs),
-    INTVAL arg_index)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -457,9 +429,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_intval_arg_from_c_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(args))
-#define ASSERT_ARGS_intval_arg_from_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(cs))
 #define ASSERT_ARGS_intval_arg_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_args))
@@ -478,9 +447,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_numval_arg_from_c_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(args))
-#define ASSERT_ARGS_numval_arg_from_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(cs))
 #define ASSERT_ARGS_numval_arg_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_args))
@@ -504,9 +470,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_pmc_arg_from_c_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(args))
-#define ASSERT_ARGS_pmc_arg_from_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(cs))
 #define ASSERT_ARGS_pmc_arg_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_args))
@@ -525,9 +488,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_string_arg_from_c_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(args))
-#define ASSERT_ARGS_string_arg_from_continuation __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(cs))
 #define ASSERT_ARGS_string_arg_from_op __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(raw_args))
@@ -2147,58 +2107,6 @@ Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
 /*
 
-=item C<void Parrot_pcc_fill_returns_from_continuation(PARROT_INTERP, PMC
-*call_object, PMC *raw_sig, PMC *from_call_obj)>
-
-Evil function.  Fill results from arguments passed to a continuation.
-Only works for positional arguments.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_pcc_fill_returns_from_continuation(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
-        ARGIN(PMC *raw_sig), ARGIN(PMC *from_call_obj))
-{
-    ASSERT_ARGS(Parrot_pcc_fill_returns_from_continuation)
-    const INTVAL raw_return_count = VTABLE_elements(interp, raw_sig);
-
-    static pcc_get_funcs function_pointers = {
-        (intval_func_t)intval_arg_from_continuation,
-        (numval_func_t)numval_arg_from_continuation,
-        (string_func_t)string_arg_from_continuation,
-        (pmc_func_t)pmc_arg_from_continuation,
-
-        (intval_func_t)intval_arg_from_continuation,
-        (numval_func_t)numval_arg_from_continuation,
-        (string_func_t)string_arg_from_continuation,
-        (pmc_func_t)pmc_arg_from_continuation,
-    };
-
-    /* A null call object is fine if there are no arguments and no returns. */
-    if (PMC_IS_NULL(call_object)) {
-
-        /* Check if we should be throwing errors. This is configured separately
-         * for parameters and return values. */
-        if (raw_return_count > 0
-        &&  PARROT_ERRORS_test(interp, PARROT_ERRORS_RESULT_COUNT_FLAG))
-                Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_OPERATION,
-                    "too many return values: %d passed, 0 expected",
-                    raw_return_count);
-        return;
-    }
-
-    fill_results(interp, call_object, raw_sig, from_call_obj, &function_pointers);
-
-    return;
-}
-
-
-/*
-
 =item C<void Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, PMC
 *call_object, const char *signature, ...)>
 
@@ -2427,20 +2335,6 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
 
 /*
 
-Get the appropriate argument value from the continuation
-
-=item C<static INTVAL intval_arg_from_continuation(PARROT_INTERP, PMC *cs,
-INTVAL arg_index)>
-
-=item C<static FLOATVAL numval_arg_from_continuation(PARROT_INTERP, PMC *cs,
-INTVAL arg_index)>
-
-=item C<static STRING* string_arg_from_continuation(PARROT_INTERP, PMC *cs,
-INTVAL arg_index)>
-
-=item C<static PMC* pmc_arg_from_continuation(PARROT_INTERP, PMC *cs, INTVAL
-arg_index)>
-
 Get the appropriate argument value from the op.
 
 =item C<static INTVAL intval_arg_from_op(PARROT_INTERP, opcode_t *raw_args,
@@ -2531,42 +2425,6 @@ index)>
 =cut
 
 */
-
-PARROT_CANNOT_RETURN_NULL
-static INTVAL
-intval_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
-{
-    ASSERT_ARGS(intval_arg_from_continuation)
-    const INTVAL ret      = VTABLE_get_integer_keyed_int(interp, cs, arg_index);
-    return ret;
-}
-
-PARROT_CANNOT_RETURN_NULL
-static FLOATVAL
-numval_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
-{
-    ASSERT_ARGS(numval_arg_from_continuation)
-    const FLOATVAL ret      = VTABLE_get_number_keyed_int(interp, cs, arg_index);
-    return ret;
-}
-
-PARROT_CANNOT_RETURN_NULL
-static STRING*
-string_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
-{
-    ASSERT_ARGS(string_arg_from_continuation)
-    STRING * const ret = VTABLE_get_string_keyed_int(interp, cs, arg_index);
-    return ret;
-}
-
-PARROT_CANNOT_RETURN_NULL
-static PMC*
-pmc_arg_from_continuation(PARROT_INTERP, ARGIN(PMC *cs), INTVAL arg_index)
-{
-    ASSERT_ARGS(pmc_arg_from_continuation)
-    PMC * const ret = VTABLE_get_pmc_keyed_int(interp, cs, arg_index);
-    return ret;
-}
 
 PARROT_CANNOT_RETURN_NULL
 static INTVAL
