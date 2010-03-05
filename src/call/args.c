@@ -574,8 +574,10 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
 
     if (PMC_IS_NULL(signature))
         call_object = Parrot_pmc_new(interp, enum_class_CallContext);
-    else
+    else {
         call_object = signature;
+        VTABLE_morph(interp, call_object, PMCNULL);
+    }
 
     /* this macro is much, much faster than the VTABLE STRING comparisons */
     SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);

@@ -509,21 +509,6 @@ op set_args(inconst PMC) :flow {
     goto OFFSET(argc + 2);
 }
 
-op get_results(inconst PMC) :flow {
-    opcode_t * const raw_returns = CUR_OPCODE;
-    PMC * const signature = $1;
-    PMC * call_sig;
-    INTVAL argc;
-
-    call_sig = Parrot_pcc_build_sig_object_returns_from_op(interp,
-            Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp)),
-            signature, raw_returns);
-    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_sig);
-
-    argc = VTABLE_elements(interp, signature);
-    goto OFFSET(argc + 2);
-}
-
 op get_params(inconst PMC) :flow {
     opcode_t * const raw_params = CUR_OPCODE;
     PMC *caller_ctx, *ctx;
@@ -550,17 +535,34 @@ op get_params(inconst PMC) :flow {
 }
 
 op set_returns(inconst PMC) :flow {
-    opcode_t * const raw_returns = CUR_OPCODE;
-    PMC      *signature          = $1;
-    PMC      *ctx                = CURRENT_CONTEXT(interp);
-    PMC      *caller_ctx         = Parrot_pcc_get_caller_ctx(interp, ctx);
-    PMC      *call_object        = Parrot_pcc_get_signature(interp, caller_ctx);
-    INTVAL    argc               = VTABLE_elements(interp, signature);
+    opcode_t * const raw_args = CUR_OPCODE;
+    PMC * const signature = $1;
+    PMC *call_sig, *old_sig;
+    INTVAL argc;
+ 
+    old_sig = CURRENT_CONTEXT(interp);
+    call_sig = Parrot_pcc_build_sig_object_from_op(interp,
+            old_sig, signature, raw_args);
 
-    Parrot_pcc_fill_returns_from_op(interp, call_object, signature, raw_returns);
+    argc = VTABLE_elements(interp, signature);
+    goto OFFSET(argc + 2);
+}
 
-    Parrot_pcc_set_signature(interp, ctx, NULL);
+op get_results(inconst PMC) :flow {
+    opcode_t * const raw_params = CUR_OPCODE;
+    PMC *caller_ctx, *ctx;
+    PMC *ccont, *call_object;
+    PMC * const signature = $1;
+    INTVAL argc;
 
+    ctx     = CURRENT_CONTEXT(interp);
+    ccont   = Parrot_pcc_get_continuation(interp, ctx);
+
+    call_object = Parrot_pcc_get_signature(interp, ctx);
+
+    Parrot_pcc_fill_params_from_op(interp, call_object, signature, raw_params);
+
+    argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
 }
 

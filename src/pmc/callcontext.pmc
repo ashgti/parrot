@@ -549,6 +549,59 @@ Mark any referenced strings and PMCs.
 
     }
 
+/*
+
+=item C<void morph(PMC *type)>
+
+Morph the call signature into a return signature. (Currenly ignores
+the type passed in, and resets the named and positional arguments
+stored.)
+
+=cut
+
+*/
+    VTABLE void morph(PMC *type) {
+        INTVAL  num_positionals;
+        Hash   *hash;
+
+        if (!PMC_data(SELF))
+            return;
+
+        GET_ATTR_hash(INTERP, SELF, hash);
+        GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
+
+        if (num_positionals) {
+            Pcc_cell *c;
+
+            GET_ATTR_positionals(INTERP, SELF, c);
+
+            while (c) {
+                Pcc_cell *to_free = c;
+                c = NEXT_CELL(c);
+                FREE_CELL(INTERP, to_free);
+            }
+            SET_ATTR_num_positionals(INTERP, SELF, 0);
+            SET_ATTR_positionals(interp, SELF, NULL);
+        }
+
+
+        if (hash) {
+            UINTVAL i;
+
+            for (i = 0; i <= hash->mask; i++) {
+                HashBucket *b = hash->bi[i];
+
+                while (b) {
+                    FREE_CELL(INTERP, (Pcc_cell *)b->value);
+                    b = b->next;
+                }
+            }
+
+            parrot_hash_destroy(INTERP, hash);
+            SET_ATTR_hash(interp, SELF, NULL);
+        }
+    }
+
     VTABLE void destroy() {
         INTVAL    num_positionals, returns_resize_threshold;
         Hash     *hash;
