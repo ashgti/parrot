@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(3);
+plan(5);
 
 my $trans := Ops::Trans::C.new();
 
@@ -25,5 +25,16 @@ ok( $emitter<include> eq 'parrot/oplib/core_ops.h', 'Include is correct');
 say('# ' ~ $emitter<include>);
 ok( $emitter<header> ~~ /^tmp/, 'header file in tmp');
 say('# ' ~ $emitter<header>);
+
+#my $header := $emitter.print_c_header_file();
+my $fh := pir::new__Ps('StringHandle');
+$fh.open('header.h', 'w');
+$emitter.emit_c_header_file($fh);
+
+$fh.close();
+my $header := $fh.readall();
+
+ok($header ~~ /define \s PARROT_OPLIB_CORE_OPS_H_GUARD/, 'Guard generated');
+ok($header ~~ /endif/, 'Close guard generated');
 
 # vim: expandtab shiftwidth=4 ft=perl6:

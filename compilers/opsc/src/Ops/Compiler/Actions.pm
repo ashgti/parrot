@@ -52,7 +52,7 @@ method preamble($/) {
 method op($/) {
 
     # Handling flags.
-    my %flags := pir::new__Ps('Hash');
+    my %flags := pir::new__Ps('OrderedHash');
     for $<op_flag> {
         %flags{~$_<identifier>} := 1;
     }
