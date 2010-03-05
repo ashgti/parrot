@@ -218,7 +218,7 @@ sub _init {
     };
 
     $data->{'warnings'}{'gcc'} = $gcc;
-    $data->{'warnings'}{'gpp'} = $gpp;
+    $data->{'warnings'}{'g++'} = $gpp;
 
     ## end gcc/g++
 
