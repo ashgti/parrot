@@ -1,5 +1,5 @@
 /* call.h
- *  Copyright (C) 2001-2008, Parrot Foundation.
+ *  Copyright (C) 2001-2010, Parrot Foundation.
  *  SVN Info
  *  $Id$
  *  Overview:
@@ -207,16 +207,6 @@ void Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP,
         FUNC_MODIFIES(*call_object);
 
 PARROT_EXPORT
-void Parrot_pcc_fill_returns_from_continuation(PARROT_INTERP,
-    ARGMOD_NULLOK(PMC *call_object),
-    ARGIN(PMC *raw_sig),
-    ARGIN(PMC *from_call_obj))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*call_object);
-
-PARROT_EXPORT
 void Parrot_pcc_fill_returns_from_op(PARROT_INTERP,
     ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
@@ -245,11 +235,6 @@ void Parrot_pcc_parse_signature_string(PARROT_INTERP,
         FUNC_MODIFIES(*arg_flags)
         FUNC_MODIFIES(*return_flags);
 
-#define ASSERT_ARGS_Parrot_pcc_append_result __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(sig_object) \
-    , PARROT_ASSERT_ARG(type) \
-    , PARROT_ASSERT_ARG(result))
 #define ASSERT_ARGS_Parrot_pcc_build_sig_object_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -259,11 +244,6 @@ void Parrot_pcc_parse_signature_string(PARROT_INTERP,
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(sig))
-#define ASSERT_ARGS_Parrot_pcc_build_sig_object_returns_from_op \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(raw_sig) \
-    , PARROT_ASSERT_ARG(raw_args))
 #define ASSERT_ARGS_Parrot_pcc_fill_params_from_c_args \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
@@ -278,11 +258,6 @@ void Parrot_pcc_parse_signature_string(PARROT_INTERP,
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(signature))
-#define ASSERT_ARGS_Parrot_pcc_fill_returns_from_continuation \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(raw_sig) \
-    , PARROT_ASSERT_ARG(from_call_obj))
 #define ASSERT_ARGS_Parrot_pcc_fill_returns_from_op \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
