@@ -130,7 +130,10 @@ method full_name() {
     my $name      := self.name;
     my @arg_types := self.arg_types;
 
-    say("# arg_types " ~ @arg_types);
+    # FIXME. We should always have array here.
+    @arg_types := list(@arg_types) if !pir::does__IPS(@arg_types, 'array');
+
+    say("# $name arg_types " ~ @arg_types);
     join('_', $name, |@arg_types);
 }
 
