@@ -26,6 +26,9 @@ method new(:$ops_file!, :$trans!, :$script!, :$file, :%flags!) {
     self<include> := "parrot/oplib/$base_ops_h";
     self<header>  := (~%flags<dir>) ~ "include/" ~ self<include>;
 
+    # Prepare ops
+    $trans.prepare_ops(self, $ops_file);
+
     self;
 };
 
@@ -48,6 +51,9 @@ method emit_c_header_file($fh) {
     self._emit_guard_prefix($fh);
 
     self._emit_preamble($fh);
+
+    # Emit runcore specific part.
+    self.trans.emit_c_header_part($fh);
 
     self._emit_guard_suffix($fh);
 
