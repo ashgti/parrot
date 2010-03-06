@@ -167,6 +167,8 @@ parentheses and add a space around the argument, like so:
 
 class Ops::File is Hash;
 
+pir::load_bytecode('config.pbc');
+
 =begin
 
 =item C<new(@files)>
@@ -179,6 +181,8 @@ the specified op files.
 method new(*@files, :$nolines) {
     self<files>   := @files;
     self<ops>     := list(); # Ops
+
+    self._set_version();
 
     for @files { self.read_ops( $_, $nolines ) }
 
@@ -212,6 +216,21 @@ method read_ops($file, $nolines) {
 }
 
 method ops() { self<ops> };
+
+method version() {
+    self<version>;
+}
+
+method _set_version() {
+    my $config := _config();
+    my $version := $config<VERSION>;
+    #say("# $version");
+    my @bits := split('.', $version);
+    self<version_major> := @bits[0];
+    self<version_minor> := @bits[1];
+    self<version_patch> := @bits[2];
+    self<version>       := @bits;
+}
 
 =begin
 

@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(6);
+plan(7);
 
 my $f := Ops::File.new();
 ok($f, "Empty Ops::File created");
@@ -31,5 +31,10 @@ ok($op<code> == 0,      "... with code 0");
 $op := @ops[(+@ops)-1];
 ok($op.name eq 'fact',  "Last op is fact");
 ok($op<code> == 358,    "... with code 0");
+
+my $version := join(' ', |$f.version);
+ok( $version ~~ /^\d+ \s \d+ \s \d+$/, "Version parsed");
+say("# $version");
+
 
 # vim: expandtab shiftwidth=4 ft=perl6:
