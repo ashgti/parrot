@@ -42,4 +42,13 @@ method op_info($emitter) { 'NULL' }
 method op_func($emitter) { 'NULL' }
 method getop($emitter)   { '( int (*)(PARROT_INTERP, const char *, int) )NULL' };
 
+method restart_address($addr) { die('...'); }
+method restart_offset($addr) { die('...'); }
+
+method goto_address($addr) { die('...'); }
+method goto_offset($addr) { die('...'); }
+
+method expr_address($addr) { die('...'); }
+method expr_offset($addr) { die('...'); }
+
 # vim: expandtab shiftwidth=4 ft=perl6:

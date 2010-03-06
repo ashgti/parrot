@@ -58,6 +58,19 @@ method emit_c_header_part($fh) {
     }
 }
 
+method restart_address($addr) { "interp->resume_offset = $addr; interp->resume_flag = 1"; }
+method restart_offset($offset) {
+    "interp->resume_offset = REL_PC + $offset; interp->resume_flag = 1";
+}
+
+method goto_address($addr) { "return (opcode_t *) $addr"; }
+
+method goto_offset($offset) { "return (opcode_t *) cur_opcode + $offset"; }
+
+method expr_address($addr) { $addr; }
+
+method expr_offset($offset) { "cur_opcode + $offset"; }
+
 =begin
 
 =item C<defines()>
