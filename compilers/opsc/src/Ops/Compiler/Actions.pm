@@ -66,7 +66,7 @@ method op($/) {
     # We have to clone @norm_args. Otherwise it will be destroyed...
     my @variants  := expand_args(pir::clone__PP(@norm_args));
 
-    my $op := PAST::Block.new(
+    my $op := Ops::Op.new(
         :name(~$<op_name>),
 
         $<op_body>.ast
@@ -84,7 +84,7 @@ method op($/) {
     if @variants {
         for @variants {
             my $new_op := pir::clone__PP($op);
-            $new_op<args_types> := $_;
+            $new_op<arg_types> := $_;
             $past.push($new_op);
         }
     }
