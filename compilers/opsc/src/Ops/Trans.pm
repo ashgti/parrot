@@ -38,5 +38,8 @@ method emit_op_lookup($fh) {
 method init_func_init1() { '' }
 method init_func_disaptch() { '' }
 
+method op_info($emitter) { 'NULL' }
+method op_func($emitter) { 'NULL' }
+method getop($emitter)   { '( int (*)(PARROT_INTERP, const char *, int) )NULL' };
 
 # vim: expandtab shiftwidth=4 ft=perl6:

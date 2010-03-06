@@ -227,6 +227,10 @@ method version() {
     self<version>;
 }
 
+method version_major() { self<version_major> }
+method version_minor() { self<version_minor> }
+method version_patch() { self<version_patch> }
+
 method _set_version() {
     my $config := _config();
     my $version := $config<VERSION>;

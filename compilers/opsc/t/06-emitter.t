@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(12);
+plan(13);
 
 my $trans := Ops::Trans::C.new();
 
@@ -56,7 +56,7 @@ ok($source ~~ /io_private.h/, 'Preamble from io.ops preserved');
 
 ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 
-
+ok($source ~~ /PARROT_FUNCTION_CORE/, 'Trans::C core_type preserved');
 ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
 
 #say($source);

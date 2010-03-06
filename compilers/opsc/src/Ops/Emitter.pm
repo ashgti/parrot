@@ -93,9 +93,9 @@ method emit_c_source_file($fh) {
     self._emit_source_preamble($fh);
 
     self.trans.emit_source_part($fh);
-
     self.trans.emit_op_lookup(self, $fh);
 
+    self._emit_op_lib_descriptor($fh);
     self._emit_init_func($fh);
     self._emit_dymanic_lib_load($fh);
     self._emit_coda($fh);
@@ -123,6 +123,30 @@ method _emit_source_preamble($fh) {
     $fh.print(self.trans.source_preamble);
 
     $fh.print(self.ops_file.preamble);
+}
+
+method _emit_op_lib_descriptor($fh) {
+
+    my $core_type := self.trans.core_type;
+    $fh.print(q|
+/*
+** op lib descriptor:
+*/
+
+static op_lib_t | ~ self.bs ~ q|op_lib = {| ~ qq|
+  "{self.base}",               /* name */
+  "{self.suffix}",             /* suffix */
+  $core_type,                       /* core_type = PARROT_XX_CORE */
+  0,                                /* flags */
+  {self.ops_file.version_major},    /* major_version */
+  {self.ops_file.version_minor},    /* minor_version */
+  {self.ops_file.version_patch},    /* patch_version */
+  {+self.ops_file.ops},             /* op_count */
+  {self.trans.op_info(self)},       /* op_info_table */
+  {self.trans.op_func(self)},       /* op_func_table */
+  {self.trans.getop(self)}          /* op_code() */ | ~ q|
+};
+|);
 }
 
 method _emit_init_func($fh) {

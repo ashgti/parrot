@@ -12,6 +12,8 @@ method new() {
 
 method suffix() { '' };
 
+method core_type() { 'PARROT_FUNCTION_CORE' }
+
 method prepare_ops($emitter, $ops_file) {
 
     my $index := 0;
@@ -77,6 +79,10 @@ q/
 static int get_op(PARROT_INTERP, const char * name, int full);
 /
 }
+
+method op_info($emitter) { $emitter.bs ~ 'op_info_table' }
+method op_func($emitter) { $emitter.bs ~ 'op_func_table' }
+method getop($emitter)   { 'get_op' };
 
 method emit_source_part($fh) {
 }
