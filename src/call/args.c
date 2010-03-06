@@ -1517,7 +1517,7 @@ Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD(PMC *call_object),
         (pmc_func_t)pmc_constant_from_varargs,
     };
 
-    if (strlen(signature) == 0)
+    if (strlen(signature) < 1)
         return;
 
     parse_signature_string(interp, signature, &raw_sig);
