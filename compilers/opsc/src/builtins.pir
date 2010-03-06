@@ -175,6 +175,14 @@ Variour helper builtins.
     .return (l)
 .end
 
+.sub 'sprintf'
+    .param string format
+    .param pmc    args :slurpy
+
+    $S0 = sprintf format, args
+    .return($S0)
+.end
+
 # Local Variables:
 #   mode: pir
 #   fill-column: 100
