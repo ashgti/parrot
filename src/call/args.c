@@ -754,9 +754,8 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
         ARGIN(const char *sig), va_list args)
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
-    PMC         *type_tuple         = PMCNULL;
-    PMC         *arg_flags     = PMCNULL;
-    PMC         *return_flags  = PMCNULL;
+    PMC         * type_tuple        = PMCNULL;
+    PMC         * arg_flags         = PMCNULL;
     PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
     const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
@@ -768,88 +767,55 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
 
     parse_signature_string(interp, sig, &arg_flags, &return_flags);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
-    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "return_flags"), return_flags);
 
     /* Process the varargs list */
     for (i = 0; i < sig_len; ++i) {
         const INTVAL type = sig[i];
 
-        if (in_return_sig) {
-            STRING * const signature = CONST_STRING(interp, "signature");
-            /* Returns store the original passed-in pointer so they can pass
-             * the result back to the caller. */
-            switch (type) {
-              case 'I':
-                csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, INTVAL *), PARROT_ARG_INTVAL);
-                break;
-              case 'N':
-                csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, FLOATVAL *), PARROT_ARG_FLOATVAL);
-                break;
-              case 'S':
-                csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, STRING **), PARROT_ARG_STRING);
-                break;
-              case 'P':
-                csr_push_pointer(interp, call_object,
-                            (void *)va_arg(args, PMC **), PARROT_ARG_PMC);
-                break;
-              default:
-                Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "Dispatch: invalid argument type %c!", type);
-             }
-        }
-        else {
-            /* Regular arguments just set the value */
-            switch (type) {
-              case 'I':
-                VTABLE_push_integer(interp, call_object, va_arg(args, INTVAL));
-                break;
-              case 'N':
-                VTABLE_push_float(interp, call_object, va_arg(args, FLOATVAL));
-                break;
-              case 'S':
-                VTABLE_push_string(interp, call_object, va_arg(args, STRING *));
-                break;
-              case 'P':
-                {
-                    const INTVAL type_lookahead = sig[i+1];
-                    PMC * const pmc_arg = va_arg(args, PMC *);
-                    if (type_lookahead == 'f') {
-                         dissect_aggregate_arg(interp, call_object, pmc_arg);
-                        i++; /* skip 'f' */
-                    }
-                    else {
-                        VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
-                        if (type_lookahead == 'i') {
-                            if (i != 0)
-                                Parrot_ex_throw_from_c_args(interp, NULL,
-                                    EXCEPTION_INVALID_OPERATION,
-                                    "Dispatch: only the first argument can be an invocant");
-                            i++; /* skip 'i' */
-                            append_pi = 0; /* Don't append Pi in front of signature */
-                        }
-                    }
-                    break;
+        /* Regular arguments just set the value */
+        switch (type) {
+          case 'I':
+            VTABLE_push_integer(interp, call_object, va_arg(args, INTVAL));
+            break;
+          case 'N':
+            VTABLE_push_float(interp, call_object, va_arg(args, FLOATVAL));
+            break;
+          case 'S':
+            VTABLE_push_string(interp, call_object, va_arg(args, STRING *));
+            break;
+          case 'P':
+            {
+                const INTVAL type_lookahead = sig[i+1];
+                PMC * const pmc_arg = va_arg(args, PMC *);
+                if (type_lookahead == 'f') {
+                     dissect_aggregate_arg(interp, call_object, pmc_arg);
+                    i++; /* skip 'f' */
                 }
-              case '-':
-                i++; /* skip '>' */
-                in_return_sig = 1;
+                else {
+                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
+                    if (type_lookahead == 'i') {
+                        if (i != 0)
+                            Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION,
+                                "Dispatch: only the first argument can be an invocant");
+                        i++; /* skip 'i' */
+                        append_pi = 0; /* Don't append Pi in front of signature */
+                    }
+                }
                 break;
-              default:
-                Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "Dispatch: invalid argument type %c!", type);
             }
+          case '-':
+            break;
+          default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_OPERATION,
+                    "Dispatch: invalid argument type %c!", type);
         }
     }
 
     /* Check if we have an invocant, and add it to the front of the arguments iff needed */
-    if (!PMC_IS_NULL(obj) && append_pi) {
+    if (!PMC_IS_NULL(obj) && append_pi)
         VTABLE_unshift_pmc(interp, call_object, obj);
-    }
 
     return call_object;
 }
