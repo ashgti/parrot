@@ -22,6 +22,7 @@ method emit_c_header_part($fh) { die('...') }
 # Called from Ops::Op.
 method body_prelude() { '' }
 
+method defines() { die('...') }
 
 
 # vim: expandtab shiftwidth=4 ft=perl6:

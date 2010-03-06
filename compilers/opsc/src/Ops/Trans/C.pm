@@ -47,4 +47,29 @@ method emit_c_header_part($fh) {
     }
 }
 
+=begin
+
+=item C<defines()>
+
+Returns the C C<#define> macros for register access etc.
+
+=end
+
+method defines() {
+    return qq|
+#include "pmc/pmc_callcontext.h"
+
+/* defines - Ops::Trans::C */
+#undef CONST
+#define REL_PC     ((size_t)(cur_opcode - (opcode_t *)interp->code->base.data))
+#define CUR_OPCODE cur_opcode
+#define IREG(i) (CUR_CTX->bp.regs_i[cur_opcode[i]])
+#define NREG(i) (CUR_CTX->bp.regs_n[-1L - cur_opcode[i]])
+#define PREG(i) (CUR_CTX->bp_ps.regs_p[-1L - cur_opcode[i]])
+#define SREG(i) (CUR_CTX->bp_ps.regs_s[cur_opcode[i]])
+#define CONST(i) Parrot_pcc_get_constants(interp, interp->ctx)[cur_opcode[i]]
+|;
+
+}
+
 # vim: expandtab shiftwidth=4 ft=perl6:

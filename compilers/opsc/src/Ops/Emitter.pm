@@ -83,8 +83,30 @@ method print_c_source_file() {
 }
 
 method emit_c_source_file($fh) {
+    self._emit_source_preamble($fh);
 }
 
+method _emit_source_preamble($fh) {
+
+    self._emit_preamble($fh);
+    $fh.print(qq|
+#include "{self<include>}"
+#include "pmc/pmc_parrotlibrary.h"
+#include "pmc/pmc_callcontext.h"
+
+{self.trans.defines}
+
+|);
+
+#    if ( $self->{suffix} eq '' && !$self->{flag}->{dynamic} ) {
+#        print $fh <<END_C_2;
+#static int get_op(PARROT_INTERP, const char * name, int full);
+#
+#END_C_2
+#    }
+
+    $fh.print(self.ops_file.preamble);
+}
 
 # given a headerfile name like "include/parrot/oplib/core_ops.h", this
 # returns a string like "PARROT_OPLIB_CORE_OPS_H_GUARD"
