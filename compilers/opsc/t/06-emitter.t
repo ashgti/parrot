@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(6);
+plan(7);
 
 my $trans := Ops::Trans::C.new();
 
@@ -38,5 +38,6 @@ my $header := $fh.readall();
 ok($header ~~ /define \s PARROT_OPLIB_CORE_OPS_H_GUARD/, 'Guard generated');
 ok($header ~~ /endif/, 'Close guard generated');
 ok($header ~~ /DO \s NOT \s EDIT \s THIS \s FILE/, 'Preamble generated');
+ok($header ~~ /Parrot_DynOp_core_ \d+ _ \d+ _ \d+/, '... and contains init_func');
 
 # vim: expandtab shiftwidth=4 ft=perl6:
