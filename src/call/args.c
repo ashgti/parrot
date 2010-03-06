@@ -276,14 +276,11 @@ static FLOATVAL* numval_param_from_op(PARROT_INTERP,
 PARROT_CAN_RETURN_NULL
 static void parse_signature_string(PARROT_INTERP,
     ARGIN(const char *signature),
-    ARGMOD(PMC **arg_flags),
-    ARGMOD(PMC **return_flags))
+    ARGMOD(PMC **arg_flags))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*arg_flags)
-        FUNC_MODIFIES(*return_flags);
+        FUNC_MODIFIES(*arg_flags);
 
 PARROT_CANNOT_RETURN_NULL
 static PMC* pmc_arg_from_c_args(PARROT_INTERP,
@@ -465,8 +462,7 @@ static STRING** string_param_from_op(PARROT_INTERP,
 #define ASSERT_ARGS_parse_signature_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(signature) \
-    , PARROT_ASSERT_ARG(arg_flags) \
-    , PARROT_ASSERT_ARG(return_flags))
+    , PARROT_ASSERT_ARG(arg_flags))
 #define ASSERT_ARGS_pmc_arg_from_c_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(args))
@@ -732,6 +728,98 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
     }
 }
 
+/*
+
+=item C<PMC* Parrot_pcc_build_call_from_varargs(PARROT_INTERP, PMC *obj, const
+char *sig, va_list *args)>
+
+Converts a varargs list into a CallContext PMC. The CallContext stores the
+original short signature string and an array of integer types to pass on to the
+multiple dispatch search.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
+PMC*
+Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
+        ARGIN(const char *sig), ARGMOD(va_list *args))
+{
+    ASSERT_ARGS(Parrot_pcc_build_call_from_varargs)
+    PMC         * type_tuple        = PMCNULL;
+    PMC         * arg_flags         = PMCNULL;
+    PMC         * ignored_flags     = PMCNULL;
+    PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
+    const INTVAL sig_len            = strlen(sig);
+    INTVAL       in_return_sig      = 0;
+    INTVAL       i;
+    int          append_pi          = 1;
+
+    if (!sig_len)
+        return call_object;
+
+    parse_signature_string(interp, sig, &arg_flags);
+    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
+
+    /* Process the varargs list */
+    for (i = 0; i < sig_len; ++i) {
+        const INTVAL type = sig[i];
+
+        /* Don't process returns */
+        if (in_return_sig)
+            break;
+
+        /* Regular arguments just set the value */
+        switch (type) {
+          case 'I':
+            VTABLE_push_integer(interp, call_object, va_arg(*args, INTVAL));
+            break;
+          case 'N':
+            VTABLE_push_float(interp, call_object, va_arg(*args, FLOATVAL));
+            break;
+          case 'S':
+            VTABLE_push_string(interp, call_object, va_arg(*args, STRING *));
+            break;
+          case 'P':
+            {
+                const INTVAL type_lookahead = sig[i+1];
+                PMC * const pmc_arg = va_arg(*args, PMC *);
+                if (type_lookahead == 'f') {
+                     dissect_aggregate_arg(interp, call_object, pmc_arg);
+                    i++; /* skip 'f' */
+                }
+                else {
+                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
+                    if (type_lookahead == 'i') {
+                        if (i != 0)
+                            Parrot_ex_throw_from_c_args(interp, NULL,
+                                EXCEPTION_INVALID_OPERATION,
+                                "Dispatch: only the first argument can be an invocant");
+                        i++; /* skip 'i' */
+                        append_pi = 0; /* Don't append Pi in front of signature */
+                    }
+                }
+                break;
+            }
+          case '-':
+            in_return_sig = 1;
+            break;
+          default:
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                    EXCEPTION_INVALID_OPERATION,
+                    "Dispatch: invalid argument type %c!", type);
+        }
+    }
+
+    /* Check if we have an invocant, and add it to the front of the arguments iff needed */
+    if (!PMC_IS_NULL(obj) && append_pi)
+        VTABLE_unshift_pmc(interp, call_object, obj);
+
+    return call_object;
+}
 
 /*
 
@@ -756,7 +844,6 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
     PMC         * type_tuple        = PMCNULL;
     PMC         * arg_flags         = PMCNULL;
-    PMC         * ignored_flags     = PMCNULL;
     PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
     const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
@@ -766,7 +853,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     if (!sig_len)
         return call_object;
 
-    parse_signature_string(interp, sig, &arg_flags, &ignored_flags);
+    parse_signature_string(interp, sig, &arg_flags);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
     /* Process the varargs list */
@@ -1386,8 +1473,38 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_c_args)
     va_list args;
+
+    va_start(args, signature);
+    Parrot_pcc_fill_params_from_varargs(interp, call_object, signature, &args);
+    va_end(args);
+}
+
+/*
+
+=item C<void Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, PMC
+*call_object, const char *signature, va_list *args)>
+
+Gets args for the current function call and puts them into position.
+First it gets the positional non-slurpy parameters, then the positional
+slurpy parameters, then the named parameters, and finally the named
+slurpy parameters.
+
+The signature is a string in the format used for
+C<Parrot_pcc_invoke_from_sig_object>, but with no return arguments. The
+parameters are passed in as a list of references to the destination
+variables.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+void
+Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD(PMC *call_object),
+        ARGIN(const char *signature), ARGMOD(va_list *args))
+{
+    ASSERT_ARGS(Parrot_pcc_fill_params_from_varargs)
     PMC    *raw_sig  = PMCNULL;
-    PMC    *invalid_sig = PMCNULL;
     static pcc_set_funcs function_pointers = {
         (intval_ptr_func_t)intval_param_from_c_args,
         (numval_ptr_func_t)numval_param_from_c_args,
@@ -1400,14 +1517,12 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
         (pmc_func_t)pmc_constant_from_varargs,
     };
 
-    parse_signature_string(interp, signature, &raw_sig, &invalid_sig);
-    if (!PMC_IS_NULL(invalid_sig))
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                "returns should not be included in the parameter list");
+    if (strlen(signature) == 0)
+        return;
 
-    va_start(args, signature);
-    fill_params(interp, call_object, raw_sig, &args, &function_pointers);
-    va_end(args);
+    parse_signature_string(interp, signature, &raw_sig);
+
+    fill_params(interp, call_object, raw_sig, args, &function_pointers);
 }
 
 /*
@@ -1961,7 +2076,6 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_objec
     va_list args;
     INTVAL raw_return_count = 0;
     PMC    *raw_sig         = PMCNULL;
-    PMC    *invalid_sig     = PMCNULL;
 
     static pcc_get_funcs function_pointers = {
         (intval_func_t)intval_arg_from_c_args,
@@ -1975,11 +2089,7 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_objec
         (pmc_func_t)pmc_constant_from_varargs,
     };
 
-    parse_signature_string(interp, signature, &raw_sig, &invalid_sig);
-
-    if (!PMC_IS_NULL(invalid_sig))
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,
-                "parameters should not be included in the return signature");
+    parse_signature_string(interp, signature, &raw_sig);
 
     raw_return_count = VTABLE_elements(interp, raw_sig);
 
@@ -2002,11 +2112,53 @@ Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_objec
     va_end(args);
 }
 
+/*
+
+=item C<void Parrot_pcc_split_signature_string(PARROT_INTERP, const char
+*signature, char **arg_sig, char **return_sig)>
+
+Splits a full signature string and creates call and return signature strings.
+The two result strings should be passed in as references to a C string.
+
+=cut
+
+*/
+
+PARROT_CAN_RETURN_NULL
+void
+Parrot_pcc_split_signature_string(PARROT_INTERP, ARGIN(const char *signature),
+        ARGMOD(char **arg_sig), ARGMOD(char **return_sig))
+{
+    ASSERT_ARGS(Parrot_pcc_split_signature_string)
+    const char *cur;
+    int arg_len = 0;
+    int ret_len = 0;
+    char *arg_tmp;
+    char *ret_tmp;
+
+    for (cur = signature; *cur != '\0'; cur++) {
+        if (*cur == '-')
+            break;
+        else
+            arg_len++;
+    }
+    ret_len = strlen(signature) - arg_len - 2;
+
+    arg_tmp = (char *) malloc(arg_len + 1);
+    ret_tmp = (char *) malloc(ret_len + 1);
+    strncpy(arg_tmp, signature, arg_len);
+    strncpy(ret_tmp, cur + 2, ret_len);
+    arg_tmp[arg_len] = '\0';
+    ret_tmp[ret_len] = '\0';
+
+    *arg_sig = arg_tmp;
+    *return_sig = ret_tmp;
+}
 
 /*
 
 =item C<static void parse_signature_string(PARROT_INTERP, const char *signature,
-PMC **arg_flags, PMC **return_flags)>
+PMC **arg_flags)>
 
 Parses a signature string and creates call and return signature integer
 arrays. The two integer arrays should be passed in as references to a
@@ -2019,7 +2171,7 @@ PMC.
 PARROT_CAN_RETURN_NULL
 static void
 parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
-        ARGMOD(PMC **arg_flags), ARGMOD(PMC **return_flags))
+        ARGMOD(PMC **arg_flags))
 {
     ASSERT_ARGS(parse_signature_string)
     PMC *current_array;
@@ -2035,20 +2187,7 @@ parse_signature_string(PARROT_INTERP, ARGIN(const char *signature),
 
         /* detect -> separator */
         if (*x == '-') {
-            /* skip '>' */
-            x++;
-
-            /* Starting a new argument, so store the previous argument,
-             * if there was one. */
-            if (set) {
-                VTABLE_push_integer(interp, current_array, flags);
-                set = 0;
-            }
-
-            /* Switch to the return argument flags. */
-            if (PMC_IS_NULL(*return_flags))
-                *return_flags = Parrot_pmc_new(interp, enum_class_ResizableIntegerArray);
-            current_array = *return_flags;
+            break;
         }
         /* parse arg type */
         else if (isupper((unsigned char)*x)) {
@@ -2115,10 +2254,15 @@ Parrot_pcc_parse_signature_string(PARROT_INTERP, ARGIN(STRING *signature),
 {
     ASSERT_ARGS(Parrot_pcc_parse_signature_string)
     char * const s = Parrot_str_to_cstring(interp, signature);
+    char *arg_sig, *ret_sig;
+    Parrot_pcc_split_signature_string(interp, s, &arg_sig, &ret_sig);
     *arg_flags    = PMCNULL;
     *return_flags = PMCNULL;
-    parse_signature_string(interp, s, arg_flags, return_flags);
+    parse_signature_string(interp, arg_sig, arg_flags);
+    parse_signature_string(interp, ret_sig, return_flags);
     Parrot_str_free_cstring(s);
+    Parrot_str_free_cstring(arg_sig);
+    Parrot_str_free_cstring(ret_sig);
 }
 
 /*
