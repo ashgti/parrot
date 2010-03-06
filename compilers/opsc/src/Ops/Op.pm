@@ -188,15 +188,24 @@ method jump(*@jumps) {
 
 =begin
 
-=begin
+=item C<source($trans)>
+
+Returns the L<C<body()>> of the op with substitutions made by
+C<$trans> (a subclass of C<Ops::Trans>).
+
+=end
+
+method source( $trans ) {
+
+    my $prelude := $trans.body_prelude;
+    self.rewrite_body( $prelude ~ self.body, $trans );
+}
+
 
 # Called from rewrite_body() to perform the actual substitutions.
-sub _substitute {
-    my $self           = shift;
-    local $_           = shift;
-    my $trans          = shift;
-    my $preamble_only  = shift;
-
+method _substitute($str, $trans) {
+    $str;
+=begin
     my $rewrote_access =
         s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
 
@@ -217,7 +226,10 @@ sub _substitute {
     s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
 
     return $_;
+=end
 }
+
+=begin
 
 =item C<rewrite_body($body, $trans, [$preamble])>
 
@@ -228,55 +240,29 @@ until no more substitutions can be made.
 C<VTABLE_> macros are enforced by converting C<<< I<< x >>->vtable->I<<
 method >> >>> to C<VTABLE_I<method>>.
 
-=cut
+=end
 
-sub rewrite_body {
-    my ( $self, $body, $trans, $preamble_only ) = @_;
+method rewrite_body( $body, $trans ) {
 
     # use vtable macros
-    $body =~ s!
-        (?:
-            {{\@\d+\}}
-            |
-            \b\w+(?:->\w+)*
-        )->vtable->\s*(\w+)\(
-        !VTABLE_$1(!sgx;
+#    $body =~ s!
+#        (?:
+#            {{\@\d+\}}
+#            |
+#            \b\w+(?:->\w+)*
+#        )->vtable->\s*(\w+)\(
+#        !VTABLE_$1(!sgx;
 
     while (1) {
-        my $new_body = $self->_substitute( $body, $trans, !!$preamble_only );
+        my $new_body := self._substitute( $body, $trans );
 
-        last if $body eq $new_body;
+        return $body if $body eq $new_body;
 
-        $body = $new_body;
+        $body := $new_body;
     }
-
-    return $body;
 }
 
-=item C<source($trans)>
-
-Returns the L<C<full_body()>> of the op with substitutions made by
-C<$trans> (a subclass of C<Ops::OpTrans>).
-
-=cut
-
-sub source {
-    my ( $self, $trans ) = @_;
-
-    my $flags = $self->flags;
-
-    if (exists($$flags{pic})
-        && !( ref($trans) eq 'Ops::OpTrans::CGP' || ref($trans) eq 'Ops::OpTrans::CSwitch' ) )
-    {
-        return qq{PANIC(interp, "How did you do that");\n};
-    }
-
-    my $prelude = $trans->can( 'add_body_prelude' )
-                ? $trans->add_body_prelude()
-                : '';
-
-    return $self->rewrite_body( $prelude . $self->full_body, $trans );
-}
+=begin
 
 =item C<size()>
 
