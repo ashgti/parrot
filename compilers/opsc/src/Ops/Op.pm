@@ -124,6 +124,7 @@ method name($name?) { self.attr('name', $name, defined($name)) }
 method args($args?) { self.attr('args', $args, defined($args)) }
 
 method arg_types($args?) { self.attr('arg_types', $args, defined($args)) }
+method arg_dirs($args?) { self.attr('arg_dirs', $args, defined($args)) }
 
 
 method full_name() {
@@ -277,7 +278,7 @@ the op itself as one argument.
 =end
 
 method size() {
-    return +self.arg_types + 1;
+    return pir::does__IPs(self.arg_types, 'array') ?? +self.arg_types + 1 !! 2;
 }
 
 =begin
