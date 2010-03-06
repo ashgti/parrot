@@ -59,6 +59,6 @@ ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 ok($source ~~ /PARROT_FUNCTION_CORE/, 'Trans::C core_type preserved');
 ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
 
-#say($source);
+say($source);
 
 # vim: expandtab shiftwidth=4 ft=perl6:

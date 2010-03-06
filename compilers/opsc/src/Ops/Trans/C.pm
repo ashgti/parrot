@@ -1,11 +1,19 @@
 
 class Ops::Trans::C is Ops::Trans;
 
+INIT {
+    pir::load_bytecode("nqp-settings.pbc");
+}
+
 method new() {
     # Storage for generated ops functions.
     self<op_funcs>  := list();
     # Storage for generated ops functions prototypes.
     self<op_protos> := list();
+
+    self<names>     := hash();
+
+    self<num_entries> := 0;
 
     self;
 }
@@ -41,6 +49,7 @@ method prepare_ops($emitter, $ops_file) {
     self<op_funcs>      := @op_funcs;
     self<op_protos>     := @op_protos;
     self<op_func_table> := @op_func_table;
+    self<num_entries>   := +@op_funcs + 1;
 }
 
 method emit_c_header_part($fh) {
@@ -85,8 +94,109 @@ method op_func($emitter) { $emitter.bs ~ 'op_func_table' }
 method getop($emitter)   { 'get_op' };
 
 method emit_source_part($emitter, $fh) {
+    self._emit_op_func_table($emitter, $fh);
+    self._emit_op_info_table($emitter, $fh);
 }
 
+method _emit_op_func_table($emitter, $fh) {
+
+        $fh.print(qq|
+
+INTVAL {$emitter.bs}numops{self.suffix} = {self<num_entries>};
+
+/*
+** Op Function Table:
+*/
+
+static op_func{self.suffix}_t {self.op_func($emitter)}[{self<num_entries>}] = | ~ '{'
+);
+
+        for self<op_func_table> {
+            $fh.print($_)
+        }
+
+        $fh.print(q|
+  NULL /* NULL function pointer */
+};
+
+|);
+}
+
+
+method _emit_op_info_table($emitter, $fh) {
+
+    my %names           := self<names>;
+    my %arg_dir_mapping := hash(
+        :i('PARROT_ARGDIR_IN'),
+        :o('PARROT_ARGDIR_OUT'),
+        :io('PARROT_ARGDIR_INOUT')
+    );
+
+    #
+    # Op Info Table:
+    #
+    $fh.print(qq|
+
+/*
+** Op Info Table:
+*/
+
+static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
+|);
+
+    my $index := 0;
+
+    for $emitter.ops_file.ops -> $op {
+        my $type := sprintf( "PARROT_%s_OP", uc($op.type) );
+        my $name := $op.name;
+        %names{$name} := 1;
+        my $full_name := $op.full_name;
+        my $func_name := $op.func_name( self );
+        my $body      := $op.body;
+        my $jump      := $op.jump || 0;
+        my $arg_count := $op.size;
+
+        ## 0 inserted if arrays are empty to prevent msvc compiler errors
+        my $arg_types := $op.arg_types
+            ?? '{ ' ~ join( ", ",
+                |map( -> $t { sprintf( "PARROT_ARG_%s", uc($t) ) }, $op.arg_types)
+            ) ~ ' }'
+            !! ' { (arg_type_t) 0 }';
+        my $arg_dirs := $op<normalized_args>
+            ?? '{ ' ~ join(", ",
+                |map( -> $d { %arg_dir_mapping{$d<direction>} }, $op<normalized_args>)
+            ) ~ ' }'
+            !! '{ (arg_dir_t) 0 }';
+        my $labels := '{ '
+            ~ join(
+            ", ", '0'
+            #$op->labels
+            #? $op->labels
+            #: 0
+            ) ~ ' }';
+
+        $fh.print('{' ~ qq|
+   /* $index */
+    /* type $type, */
+    "$name",
+    "$full_name",
+    "$func_name",
+    /* "",  body */
+    $jump,
+    $arg_count,
+    $arg_types,
+    $arg_dirs,
+    $labels
+  | ~ '},',
+            );
+
+            $index++;
+        }
+        $fh.print(q|
+};
+
+|);
+}
 
 method emit_op_lookup($emitter, $fh) {
 
