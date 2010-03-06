@@ -176,6 +176,11 @@ pir::load_bytecode('config.pbc');
 Returns a new instance initialized by calling C<read_ops()> on each of
 the specified op files.
 
+=item C<new_str($str)>
+
+Returns a new instance initialized by compiling C<$str> as the contents of an
+ops file.
+
 =end
 
 method new(*@files, :$nolines) {
@@ -189,6 +194,18 @@ method new(*@files, :$nolines) {
 
     self;
 }
+
+method new_str($str) {
+    self<ops>     := list(); # Ops
+    self<preamble>:= '';
+
+    self._set_version();
+
+    self.compile_ops($str);
+
+    self;
+}
+
 
 =begin
 
@@ -205,11 +222,15 @@ Reads in the specified .ops file, gathering information about the ops.
 =end
 
 method read_ops($file, $nolines) {
-    my $compiler := pir::compreg__Ps('Ops');
 
     say("# Parsing $file");
     my $buffer := slurp($file);
-    my $past   := $compiler.compile($buffer, :target('past'));
+    compile_ops($buffer);
+}
+
+method compile_ops($str) {
+    my $compiler := pir::compreg__Ps('Ops');
+    my $past     := $compiler.compile($str, :target('past'));
 
     for @($past<ops>) {
         self<ops>.push($_);
@@ -218,7 +239,9 @@ method read_ops($file, $nolines) {
     for @( $past<preamble> ) {
         self<preamble> := self<preamble> ~ $_;
     }
+    $past;
 }
+
 
 method preamble() { self<preamble> };
 method ops() { self<ops> };
