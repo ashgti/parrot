@@ -133,7 +133,7 @@ method full_name() {
     # FIXME. We should always have array here.
     @arg_types := list(@arg_types) if !pir::does__IPS(@arg_types, 'array');
 
-    say("# $name arg_types " ~ @arg_types);
+    #say("# $name arg_types " ~ @arg_types);
     join('_', $name, |@arg_types);
 }
 
