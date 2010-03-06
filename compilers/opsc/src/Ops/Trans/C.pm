@@ -23,7 +23,7 @@ method prepare_ops($emitter, $ops_file) {
         #say("# preparing " ~ $op);
         my $func_name := self.suffix ~ $op.full_name;
         my $definition := "opcode_t *\n$func_name (opcode_t *cur_opcode, PARROT_INTERP)";
-        my $prototype := ~$emitter<sym_export>
+        my $prototype := $emitter.sym_export
                 ~ "opcode_t * $func_name (opcode_t *cur_opcode, PARROT_INTERP);\n";
 
         my $src := $op.source( self );
