@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(11);
+plan(12);
 
 my $trans := Ops::Trans::C.new();
 
@@ -56,6 +56,9 @@ ok($source ~~ /io_private.h/, 'Preamble from io.ops preserved');
 
 ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 
-say($source);
+
+ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
+
+#say($source);
 
 # vim: expandtab shiftwidth=4 ft=perl6:

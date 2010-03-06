@@ -24,7 +24,7 @@ method new(:$ops_file!, :$trans!, :$script!, :$file, :%flags!) {
 
     self<base>    := $base;
     self<suffix>  := $suffix;
-    self<bs>      := $base ~ $suffix;
+    self<bs>      := $base ~ $suffix ~ '_';
 
     self<include> := "parrot/oplib/$base_ops_h";
     self<header>  := (~%flags<dir>) ~ "include/" ~ self<include>;
@@ -93,6 +93,8 @@ method emit_c_source_file($fh) {
     self._emit_source_preamble($fh);
 
     self.trans.emit_source_part($fh);
+
+    self.trans.emit_op_lookup(self, $fh);
 
     self._emit_init_func($fh);
     self._emit_dymanic_lib_load($fh);

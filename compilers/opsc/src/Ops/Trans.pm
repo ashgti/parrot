@@ -28,7 +28,13 @@ method source_preamble() { '' }
 
 method emit_source_part($fh) { die('...') }
 
+# Default op lookup do nothing. But op_deinit referenced anyway.
+method emit_op_lookup($fh) {
+    $fh.print(q|static void hop_deinit(SHIM_INTERP) {}|);
+}
+
 method init_func_init1() { '' }
 method init_func_disaptch() { '' }
+
 
 # vim: expandtab shiftwidth=4 ft=perl6:
