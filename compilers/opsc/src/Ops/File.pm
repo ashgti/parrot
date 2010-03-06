@@ -225,7 +225,7 @@ method read_ops($file, $nolines) {
 
     say("# Parsing $file");
     my $buffer := slurp($file);
-    compile_ops($buffer);
+    self.compile_ops($buffer);
 }
 
 method compile_ops($str) {
