@@ -756,6 +756,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_varargs)
     PMC         * type_tuple        = PMCNULL;
     PMC         * arg_flags         = PMCNULL;
+    PMC         * ignored_flags     = PMCNULL;
     PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
     const INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
@@ -765,12 +766,16 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     if (!sig_len)
         return call_object;
 
-    parse_signature_string(interp, sig, &arg_flags, &return_flags);
+    parse_signature_string(interp, sig, &arg_flags, &ignored_flags);
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
     /* Process the varargs list */
     for (i = 0; i < sig_len; ++i) {
         const INTVAL type = sig[i];
+
+        /* Don't process returns */
+        if (in_return_sig)
+            break;
 
         /* Regular arguments just set the value */
         switch (type) {
@@ -805,6 +810,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                 break;
             }
           case '-':
+            in_return_sig = 1;
             break;
           default:
             Parrot_ex_throw_from_c_args(interp, NULL,
