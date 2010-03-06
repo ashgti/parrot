@@ -123,12 +123,15 @@ method name($name?) { self.attr('name', $name, defined($name)) }
 
 method args($args?) { self.attr('args', $args, defined($args)) }
 
+method arg_types($args?) { self.attr('arg_types', $args, defined($args)) }
+
 
 method full_name() {
     my $name      := self.name;
     my @arg_types := self.arg_types;
 
-    join('_', $name, @arg_types);
+    say("# arg_types " ~ @arg_types);
+    join('_', $name, |@arg_types);
 }
 
 method func_name($trans) {
