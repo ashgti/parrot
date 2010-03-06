@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2008, The Perl Foundation.
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 
 .include 'cclass.pasm'
@@ -473,7 +473,7 @@
     literal .= $S0
     pos = $P1.'to'()
     goto scan_loop
-    
+
   succeed:
     mob.'!make'(literal)
     mob.'to'(pos)
