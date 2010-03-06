@@ -1933,60 +1933,6 @@ fill_results(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
 }
 
-/*
-
-=item C<void Parrot_pcc_fill_returns_from_op(PARROT_INTERP, PMC *call_object,
-PMC *raw_sig, opcode_t *raw_returns)>
-
-Sets return values for the current function call. First it sets the
-positional returns, then the named returns.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_pcc_fill_returns_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
-        ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_returns))
-{
-    ASSERT_ARGS(Parrot_pcc_fill_returns_from_op)
-
-    static pcc_get_funcs function_pointers = {
-        (intval_func_t)intval_arg_from_op,
-        (numval_func_t)numval_arg_from_op,
-        (string_func_t)string_arg_from_op,
-        (pmc_func_t)pmc_arg_from_op,
-
-        (intval_func_t)intval_constant_from_op,
-        (numval_func_t)numval_constant_from_op,
-        (string_func_t)string_constant_from_op,
-        (pmc_func_t)pmc_constant_from_op,
-    };
-
-    INTVAL raw_return_count = 0;
-
-    GETATTR_FixedIntegerArray_size(interp, raw_sig, raw_return_count);
-
-    /* A null call object is fine if there are no arguments and no returns. */
-    if (PMC_IS_NULL(call_object)) {
-
-        /* Check if we should be throwing errors. This is configured separately
-         * for parameters and return values. */
-        if (raw_return_count > 0
-        &&  PARROT_ERRORS_test(interp, PARROT_ERRORS_RESULT_COUNT_FLAG))
-            Parrot_ex_throw_from_c_args(interp, NULL,
-                EXCEPTION_INVALID_OPERATION,
-                "too many return values: %d passed, 0 expected",
-                raw_return_count);
-        return;
-    }
-
-    fill_results(interp, call_object, raw_sig, raw_returns, &function_pointers);
-
-    return;
-}
-
 
 /*
 

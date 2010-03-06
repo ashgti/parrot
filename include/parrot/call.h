@@ -206,16 +206,6 @@ void Parrot_pcc_fill_returns_from_c_args(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*call_object);
 
-PARROT_EXPORT
-void Parrot_pcc_fill_returns_from_op(PARROT_INTERP,
-    ARGMOD_NULLOK(PMC *call_object),
-    ARGIN(PMC *raw_sig),
-    ARGIN(opcode_t *raw_returns))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*call_object);
-
 void Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
     ARGMOD_NULLOK(PMC * parent),
     ARGMOD_NULLOK(PMC * tailcall))
