@@ -214,14 +214,15 @@ method op_param($/) {
 
 method op_body($/) {
     # Single big chunk
-    make PAST::Op.new(
+    my $op := PAST::Op.new(
         :node($/),
         :pasttype('inline'),
-        :inline(munch_body(~$/))
     );
+    $op<inline> := munch_body($op, ~$/);
+    make $op;
 }
 
-sub munch_body($body) {
+sub munch_body($op, $body) {
     #
     # Macro substitutions:
     #
@@ -252,40 +253,82 @@ sub munch_body($body) {
     # with labels, etc.).
     #
 
-    #subst($body, /\b/, { eval('{{$0}}') } );
+    #'goto ADDRESS((foo))' -> '{{=foo}}'
     $body := subst($body,
                 /goto \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
                 -> $m { '{{=' ~ $m<addr> ~ '}}' }
             );
+
+    #'expr ADDRESS((foo))' -> '{{^foo}}'
     $body := subst($body,
                 /expr \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
                 -> $m { '{{^' ~ $m<addr> ~ '}}' }
             );
+
+
+    #'goto ADDRESS(foo)' -> '{{=foo}}'
     $body := subst($body,
                 /goto \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
                 -> $m { '{{=' ~ $m<addr> ~ '}}' }
             );
+
+    #'expr ADDRESS(foo)' -> '{{^=foo}}'
     $body := subst($body,
                 /expr \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
                 -> $m { '{{^' ~ $m<addr> ~ '}}' }
             );
 
+    #'goto OFFSET((foo))' -> '{{+=foo}}'
+    $body := subst($body,
+                /goto \s+ OFFSET '((' $<addr>=[.*?] '))'/,
+                -> $m { '{{+=' ~ $m<addr> ~ '}}' }
+            );
+
+
+    #'goto OFFSET(foo)' -> '{{+=foo}}'
+    $body := subst($body,
+                /goto \s+ OFFSET '(' $<addr>=[.*?] ')'/,
+                -> $m { '{{+=' ~ $m<addr> ~ '}}' }
+            );
+
+    #'expr OFFSET((foo))' -> '{{^=foo}}'
+    $body := subst($body,
+                /expr \s+ OFFSET '((' $<addr>=[.*?] '))'/,
+                -> $m { '{{^=' ~ $m<addr> ~ '}}' }
+            );
+
+
+    #'expr OFFSET(foo)' -> '{{+=foo}}'
+    $body := subst($body,
+                /expr \s+ OFFSET '(' $<addr>=[.*?] ')'/,
+                -> $m { '{{^=' ~ $m<addr> ~ '}}' }
+            );
+
+    #'expr NEXT()' -> '{{^+OP_SIZE}}'
     $body := subst($body, /expr \s+ NEXT '(' ')'/, '{{^+OP_SIZE}}');
+    #'goto NEXT()' -> '{{+=OP_SIZE}}'
     $body := subst($body, /goto \s+ NEXT '(' ')'/, '{{+=OP_SIZE}}');
 
+
+    #'restart OFFSET(foo)' -> '{{=0,+=foo}}'
     $body := subst($body,
                 /restart \s+ OFFSET '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{=0,+' ~ $m<addr> ~ '}}' }
+                -> $m { '{{=0,+=' ~ $m<addr> ~ '}}' }
             );
+
+    #'restart NEXT()' -> '{{=0,+=OP_SIZE}}'
     $body := subst($body,
                 /restart \s+ NEXT '(' ')'/,
                 '{{=0,+=OP_SIZE}}'
             );
+
+    #'restart ADDRESS(foo)' -> '{{=foo}}'
     $body := subst($body,
                 /restart \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
                 -> $m { '{{=' ~ $m<addr> ~ '}}' }
             );
 
+    #'$1' -> '{{@1}}'        
     $body := subst($body,
                 /'$' $<arg_num>=[\d+]/,
                 -> $m { '{{@' ~ $m<arg_num> ~ '}}' }
