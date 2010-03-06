@@ -109,6 +109,7 @@ method getop($emitter)   { 'get_op' };
 method emit_source_part($emitter, $fh) {
     self._emit_op_func_table($emitter, $fh);
     self._emit_op_info_table($emitter, $fh);
+    self._emit_op_function_definitions($emitter, $fh);
 }
 
 method _emit_op_func_table($emitter, $fh) {
@@ -209,6 +210,19 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
 };
 
 |);
+}
+
+method _emit_op_function_definitions($emitter, $fh) {
+    $fh.print(q|
+/*
+** Op Function Definitions:
+*/
+
+|);
+
+    for self<op_funcs> -> $op {
+        $fh.print($op);
+    }
 }
 
 method emit_op_lookup($emitter, $fh) {
