@@ -181,6 +181,7 @@ the specified op files.
 method new(*@files, :$nolines) {
     self<files>   := @files;
     self<ops>     := list(); # Ops
+    self<preamble>:= '';
 
     self._set_version();
 
@@ -213,8 +214,13 @@ method read_ops($file, $nolines) {
     for @($past<ops>) {
         self<ops>.push($_);
     }
+
+    for @( $past<preamble> ) {
+        self<preamble> := self<preamble> ~ $_;
+    }
 }
 
+method preamble() { self<preamble> };
 method ops() { self<ops> };
 
 method version() {

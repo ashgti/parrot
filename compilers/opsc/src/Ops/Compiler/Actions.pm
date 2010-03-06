@@ -27,7 +27,7 @@ method body($/) {
     );
 
     for $<preamble> {
-        $past<preamble>.push($_.ast);
+        $past<preamble>.push($_<preamble_guts>);
     }
 
     for $<op> {

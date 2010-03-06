@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(7);
+plan(8);
 
 my $f := Ops::File.new();
 ok($f, "Empty Ops::File created");
@@ -36,5 +36,6 @@ my $version := join(' ', |$f.version);
 ok( $version ~~ /^\d+ \s \d+ \s \d+$/, "Version parsed");
 say("# $version");
 
+ok( $f.preamble ~~ /pmc_parrotlibrary.h/, "Preamble preserved");
 
 # vim: expandtab shiftwidth=4 ft=perl6:
