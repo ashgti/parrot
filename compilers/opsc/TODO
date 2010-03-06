@@ -1,0 +1,6 @@
+Simple todo:
+
+  * Implement Op.rewrite_body
+  * Implement handling of flags in Compiler:Actions
+  * Implement handling of labels in Trans::C
+  * Implement Trans::* for other runcores.
