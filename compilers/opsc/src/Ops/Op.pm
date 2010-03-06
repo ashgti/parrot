@@ -66,6 +66,10 @@ Op Type:
 
 class Ops::Op is PAST::Block;
 
+INIT {
+    pir::load_bytecode("dumper.pbc");
+}
+
 =begin
 
 =item C<new(:$code, :$type, :$name, :@args, :%flags)>
@@ -164,7 +168,13 @@ Sets/gets the op's code body.
 
 =end
 
-method body($body?) { self.attr('body', $body, defined($body)) }
+method body() {
+    my $res := '';
+    for @(self) -> $part {
+        $res := $res ~ $part<inline>;
+    }
+    $res;
+}
 
 =begin
 
