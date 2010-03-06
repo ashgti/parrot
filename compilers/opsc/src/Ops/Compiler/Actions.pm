@@ -235,10 +235,6 @@ sub munch_body($body) {
     #   expr OFFSET(X)     {{^+X}}  PC + X        Relative address
     #   expr NEXT()        {{^+S}}  PC + S        Where S is op size
     #   expr ADDRESS(X)    {{^X}}   X             Absolute address
-    #   OP_SIZE            {{^S}}   S             op size
-    #
-    #   HALT()             {{=0}}   PC' = 0       Halts run_ops loop, no resume
-    #
     #   restart OFFSET(X)  {{=0,+=X}}   PC' = 0   Restarts at PC + X
     #   restart NEXT()     {{=0,+=S}}   PC' = 0   Restarts at PC + S
     #
@@ -258,6 +254,14 @@ sub munch_body($body) {
 
     #subst($body, /\b/, { eval('{{$0}}') } );
     $body := subst($body,
+                /goto \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
+                -> $m { '{{=' ~ $m<addr> ~ '}}' }
+            );
+    $body := subst($body,
+                /expr \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
+                -> $m { '{{^' ~ $m<addr> ~ '}}' }
+            );
+    $body := subst($body,
                 /goto \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
                 -> $m { '{{=' ~ $m<addr> ~ '}}' }
             );
@@ -266,68 +270,40 @@ sub munch_body($body) {
                 -> $m { '{{^' ~ $m<addr> ~ '}}' }
             );
 
+    $body := subst($body, /expr \s+ NEXT '(' ')'/, '{{^+OP_SIZE}}');
+    $body := subst($body, /goto \s+ NEXT '(' ')'/, '{{+=OP_SIZE}}');
 
-    $body;
-=begin
+    $body := subst($body,
+                /restart \s+ OFFSET '(' $<addr>=[.*?] ')'/,
+                -> $m { '{{=0,+' ~ $m<addr> ~ '}}' }
+            );
+    $body := subst($body,
+                /restart \s+ NEXT '(' ')'/,
+                '{{=0,+=OP_SIZE}}'
+            );
+    $body := subst($body,
+                /restart \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
+                -> $m { '{{=' ~ $m<addr> ~ '}}' }
+            );
 
-    $absolute ||= $body =~ s/\bgoto\s+ADDRESS\(\( (.*?) \)\)/{{=$1}}/mg;
-                    $body =~ s/\bexpr\s+ADDRESS\(\( (.*?) \)\)/{{^$1}}/mg;
-    $absolute ||= $body =~ s/\bgoto\s+ADDRESS\((.*?)\)/{{=$1}}/mg;
-                    $body =~ s/\bexpr\s+ADDRESS\((.*?)\)/{{^$1}}/mg;
+    $body := subst($body,
+                /'$' $<arg_num>=[\d+]/,
+                -> $m { '{{@' ~ $m<arg_num> ~ '}}' }
+            );
 
-    $branch   ||= $short_name =~ /runinterp/;
-    $branch   ||= $body =~ s/\bgoto\s+OFFSET\(\( (.*?) \)\)/{{+=$1}}/mg;
-                    $body =~ s/\bexpr\s+OFFSET\(\( (.*?) \)\)/{{^+$1}}/mg;
-    $branch   ||= $body =~ s/\bgoto\s+OFFSET\((.*?)\)/{{+=$1}}/mg;
-                    $body =~ s/\bexpr\s+OFFSET\((.*?)\)/{{^+$1}}/mg;
 
-    $next     ||= $short_name =~ /runinterp/;
-    $next     ||= $body =~ s/\bexpr\s+NEXT\(\)/{{^+$op_size}}/mg;
-                    $body =~ s/\bgoto\s+NEXT\(\)/{{+=$op_size}}/mg;
-
-    $body =~ s/\bHALT\(\)/{{=0}}/mg;
-    $body =~ s/\bOP_SIZE\b/{{^$op_size}}/mg;
-
-    if ( $body =~ s/\brestart\s+OFFSET\((.*?)\)/{{=0,+=$1}}/mg ) {
-        $branch  = 1;
-        $restart = 1;
-    }
-    elsif ( $body =~ s/\brestart\s+NEXT\(\)/{{=0,+=$op_size}}/mg ) {
-        $restart = 1;
-        $next    = 1;
-    }
-    elsif ( $body =~ s/\brestart\s+ADDRESS\((.*?)\)/{{=$1}}/mg ) {
-        $next    = 0;
-        $restart = 1;
-    }
-
-    $body =~ s/\$(\d+)/{{\@$1}}/mg;
-
-    # We can only reference as many parameters as we declare
-    my $max_arg_num = @$args;
-    my @found_args = ($body =~ m/{{@(\d+)}}/g);
-    foreach my $arg (@found_args) {
-        die "opcode '$short_name' uses '\$$arg' but only has $max_arg_num parameters.\n" if $arg > $max_arg_num;
-    }
-
+=begin COMMENT
 
     my $file_escaped = $file;
     $file_escaped =~ s|(\\)|$1$1|g;    # escape backslashes
     $op->body( $nolines ? $body : qq{#line $line "$file_escaped"\n$body} );
 
     # Constants here are defined in include/parrot/op.h
-    or_flag( \$jumps, "PARROT_JUMP_ADDRESS"  ) if $absolute;
     or_flag( \$jumps, "PARROT_JUMP_RELATIVE" ) if $branch;
-    or_flag( \$jumps, "PARROT_JUMP_ENEXT"    ) if $next;
-    or_flag( \$jumps, "PARROT_JUMP_RESTART"  ) if $restart;
 
-    # I'm assuming the op branches to the value in the last argument.
-    if ( ($jumps)
-        && ( $fixedargs[ @fixedargs - 1 ] )
-        && ( $fixedargs[ @fixedargs - 1 ] eq 'i' ) ) {
-        or_flag( \$jumps, "PARROT_JUMP_GNEXT" );
-    }
-=end
+=end COMMENT
+
+    $body;
 
 }
 

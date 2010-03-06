@@ -205,7 +205,12 @@ method source( $trans ) {
 # Called from rewrite_body() to perform the actual substitutions.
 method _substitute($str, $trans) {
     $str;
-=begin
+=begin 
+
+    #also needed:
+    s/OP_SIZE/ self.size /g;
+    check that {{@1}}, {{@2}}, ... are defined
+
     my $rewrote_access =
         s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
 
@@ -269,14 +274,11 @@ method rewrite_body( $body, $trans ) {
 Returns the op's number of arguments. Note that this also includes
 the op itself as one argument.
 
-=cut
-
-sub size {
-    my $self = shift;
-
-    return scalar( $self->arg_types + 1 );
-}
 =end
+
+method size() {
+    return +self.arg_types + 1;
+}
 
 =begin
 
