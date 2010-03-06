@@ -25,6 +25,7 @@ method new(:$ops_file!, :$trans!, :$script!, :$file, :%flags!) {
 
     self<include> := "parrot/oplib/$base_ops_h";
     self<header>  := (~%flags<dir>) ~ "include/" ~ self<include>;
+    self<source>  := (~%flags<dir>) ~ "src/ops/$base_ops_stub.c";
 
     self<sym_export> := %flags<dynamic>
                         ?? 'PARROT_DYNEXT_EXPORT'
@@ -67,6 +68,23 @@ method emit_c_header_file($fh) {
 
     self._emit_coda($fh);
 }
+
+method print_c_source_file() {
+    # Build file in memeory
+    my $fh := pir::new__Ps('StringHandle');
+    self.emit_c_source_file($fh);
+    $fh.close();
+
+    # ... and write it to disk
+    my $final := pir::open__PSs(self<source>, 'w') || die("Can't open filehandle");
+    $final.print($fh.readall());
+    $final.close();
+    return self<source>;
+}
+
+method emit_c_source_file($fh) {
+}
+
 
 # given a headerfile name like "include/parrot/oplib/core_ops.h", this
 # returns a string like "PARROT_OPLIB_CORE_OPS_H_GUARD"

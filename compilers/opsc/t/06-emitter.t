@@ -40,4 +40,16 @@ ok($header ~~ /endif/, 'Close guard generated');
 ok($header ~~ /DO \s NOT \s EDIT \s THIS \s FILE/, 'Preamble generated');
 ok($header ~~ /Parrot_DynOp_core_ \d+ _ \d+ _ \d+/, '... and contains init_func');
 
+# Testing C emitting.
+#$emitter.print_c_source_file();
+
+$fh := pir::new__Ps('StringHandle');
+$fh.open('core.c', 'w');
+$emitter.emit_c_source_file($fh);
+
+$fh.close();
+my $source := $fh.readall();
+
+say($source);
+
 # vim: expandtab shiftwidth=4 ft=perl6:
