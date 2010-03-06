@@ -13,6 +13,8 @@ method prefix() { 'Parrot_' };
 # We can't use yada-yada-yada
 method suffix() { die("...") }
 
+method core_type() { die("...") }
+
 # Prepare internal structures from Ops::File.ops.
 method prepare_ops($emitter, $ops_file) { die('...') }
 
