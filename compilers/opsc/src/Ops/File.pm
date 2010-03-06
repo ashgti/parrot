@@ -178,8 +178,7 @@ the specified op files.
 
 method new(*@files, :$nolines) {
     self<files>   := @files;
-    self<parsed_ops> := list(); # Raw ops parsed.
-    self<ops>        := list(); # Renumbered versions of ops
+    self<ops>     := list(); # Ops
 
     for @files { self.read_ops( $_, $nolines ) }
 
@@ -203,14 +202,16 @@ Reads in the specified .ops file, gathering information about the ops.
 method read_ops($file, $nolines) {
     my $compiler := pir::compreg__Ps('Ops');
 
-    say("Parsing $file");
+    say("# Parsing $file");
     my $buffer := slurp($file);
     my $past   := $compiler.compile($buffer, :target('past'));
 
     for @($past<ops>) {
-        self<parsed_ops>.push($_);
+        self<ops>.push($_);
     }
 }
+
+method ops() { self<ops> };
 
 =begin
 

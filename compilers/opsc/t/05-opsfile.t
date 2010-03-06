@@ -15,7 +15,7 @@ my @files := <
 
 $f := Ops::File.new(|@files);
 
-my @ops := $f<parsed_ops>;
+my @ops := $f.ops;
 # 84 core
 # 116 math
 # We can generate more than 1 Ops::Op per op due args expansion.
