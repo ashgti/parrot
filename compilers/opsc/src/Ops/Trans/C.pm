@@ -72,4 +72,10 @@ method defines() {
 
 }
 
+method source_preamble() {
+q/
+static int get_op(PARROT_INTERP, const char * name, int full);
+/
+}
+
 # vim: expandtab shiftwidth=4 ft=perl6:

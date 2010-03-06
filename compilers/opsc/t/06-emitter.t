@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(10);
+plan(11);
 
 my $trans := Ops::Trans::C.new();
 
@@ -53,6 +53,8 @@ my $source := $fh.readall();
 ok($source ~~ /DO \s NOT \s EDIT \s THIS \s FILE/, 'Preamble generated');
 ok($source ~~ /Parrot_pcc_get_constants/, 'defines from Trans::C generated');
 ok($source ~~ /io_private.h/, 'Preamble from io.ops preserved');
+
+ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 
 #say($source);
 

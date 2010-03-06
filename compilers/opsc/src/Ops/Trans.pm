@@ -24,5 +24,7 @@ method body_prelude() { '' }
 
 method defines() { die('...') }
 
+method source_preamble() { '' }
+
 
 # vim: expandtab shiftwidth=4 ft=perl6:

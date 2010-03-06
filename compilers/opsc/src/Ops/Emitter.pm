@@ -105,6 +105,8 @@ method _emit_source_preamble($fh) {
 #END_C_2
 #    }
 
+    $fh.print(self.trans.source_preamble);
+
     $fh.print(self.ops_file.preamble);
 }
 
