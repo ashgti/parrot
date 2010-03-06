@@ -56,6 +56,6 @@ ok($source ~~ /io_private.h/, 'Preamble from io.ops preserved');
 
 ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 
-#say($source);
+say($source);
 
 # vim: expandtab shiftwidth=4 ft=perl6:

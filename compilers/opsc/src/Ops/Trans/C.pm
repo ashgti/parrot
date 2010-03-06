@@ -78,4 +78,7 @@ static int get_op(PARROT_INTERP, const char * name, int full);
 /
 }
 
+method emit_source_part($fh) {
+}
+
 # vim: expandtab shiftwidth=4 ft=perl6:

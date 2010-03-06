@@ -22,6 +22,9 @@ method new(:$ops_file!, :$trans!, :$script!, :$file, :%flags!) {
     my $base_ops_stub := $base ~ '_ops' ~ $suffix;
     my $base_ops_h    := $base_ops_stub ~ '.h';
 
+    self<base>    := $base;
+    self<suffix>  := $suffix;
+    self<bs>      := $base ~ $suffix;
 
     self<include> := "parrot/oplib/$base_ops_h";
     self<header>  := (~%flags<dir>) ~ "include/" ~ self<include>;
@@ -47,6 +50,10 @@ method file()       { self<file> };
 method flags()      { self<flags> };
 method sym_export() { self<sym_export> };
 method init_func()  { self<init_func> };
+
+method base()       { self<base> };
+method suffix()     { self<suffix> };
+method bs()         { self<bs> };
 
 method print_c_header_file() {
     my $fh := pir::open__PSs(self<header>, 'w') || die("Can't open filehandle");
@@ -84,6 +91,12 @@ method print_c_source_file() {
 
 method emit_c_source_file($fh) {
     self._emit_source_preamble($fh);
+
+    self.trans.emit_source_part($fh);
+
+    self._emit_init_func($fh);
+    self._emit_dymanic_lib_load($fh);
+    self._emit_coda($fh);
 }
 
 method _emit_source_preamble($fh) {
@@ -108,6 +121,61 @@ method _emit_source_preamble($fh) {
     $fh.print(self.trans.source_preamble);
 
     $fh.print(self.ops_file.preamble);
+}
+
+method _emit_init_func($fh) {
+
+    my $init1    := self.trans.init_func_init1;
+    my $dispatch := self.trans.init_func_disaptch;
+
+    # TODO There is a bug in NQP about \{ 
+    $fh.print(q|
+op_lib_t *
+| ~ self.init_func ~ q|(PARROT_INTERP, long init) {
+    /* initialize and return op_lib ptr */
+    if (init == 1) {
+| ~ $init1 ~ q|
+        return &| ~ self.bs ~q|op_lib;
+    }
+    /* set op_lib to the passed ptr (in init) */
+    else if (init) {
+| ~ $dispatch ~ q|
+    }
+    /* deinit - free resources */
+    else {
+        hop_deinit(interp);
+    }
+    return NULL;
+}
+
+|);
+}
+
+method _emit_dymanic_lib_load($fh) {
+
+    if ! self.flags<dynamic> {
+        return;
+    }
+
+    my $load_func := join('_',
+            q{Parrot}, q{lib}, self.base, q{ops} ~ self.suffix, q{load}, );
+    $fh.print(qq|
+/*
+ * dynamic lib load function - called once
+ */
+{self.sym_export} PMC*
+$load_func(PARROT_INTERP);
+
+{self.sym_export} PMC*
+$load_func(PARROT_INTERP)
+| ~ q|
+{
+    PMC *const lib = Parrot_pmc_new(interp, enum_class_ParrotLibrary);
+    ((Parrot_ParrotLibrary_attributes*)PMC_data(lib))->oplib_init = (void *) | ~ self.init_func ~q|;
+    dynop_register(interp, lib);
+    return lib;
+}
+|);
 }
 
 # given a headerfile name like "include/parrot/oplib/core_ops.h", this

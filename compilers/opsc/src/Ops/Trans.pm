@@ -26,5 +26,9 @@ method defines() { die('...') }
 
 method source_preamble() { '' }
 
+method emit_source_part($fh) { die('...') }
+
+method init_func_init1() { '' }
+method init_func_disaptch() { '' }
 
 # vim: expandtab shiftwidth=4 ft=perl6:
