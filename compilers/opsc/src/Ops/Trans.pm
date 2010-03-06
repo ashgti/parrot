@@ -28,7 +28,7 @@ method defines() { die('...') }
 
 method source_preamble() { '' }
 
-method emit_source_part($fh) { die('...') }
+method emit_source_part($emitter, $fh) { die('...') }
 
 # Default op lookup do nothing. But op_deinit referenced anyway.
 method emit_op_lookup($fh) {

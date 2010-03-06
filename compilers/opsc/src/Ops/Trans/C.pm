@@ -84,7 +84,7 @@ method op_info($emitter) { $emitter.bs ~ 'op_info_table' }
 method op_func($emitter) { $emitter.bs ~ 'op_func_table' }
 method getop($emitter)   { 'get_op' };
 
-method emit_source_part($fh) {
+method emit_source_part($emitter, $fh) {
 }
 
 
