@@ -78,7 +78,7 @@ method op($/) {
     $op<type>  := ~$<op_type>;
     $op<normalized_args> := @norm_args;
 
-    if %flags<flow> {
+    if !%flags<flow> {
         $op.push(PAST::Op.new(
             :pasttype('inline'),
             :inline("\n" ~ '{{+=OP_SIZE}};' ~ "\n")

@@ -85,12 +85,14 @@ ok(!($arg<variant>), 'Third arg without variant');
 
 ok( ($op.arg_types).join('_') eq 'i_p_nc', "First variant correct");
 
-# Check body munching.
-ok( $op.body ~~ /OP_SIZE/, "goto NEXT appended for :flow ops");
 
 # Second created op should have _pc_
 $op := @ops[2];
 ok( $op.arg_types.join('_') eq 'i_pc_nc', "Second variant correct");
+
+# Check body munching.
+$op := @ops[0];
+ok( $op.body ~~ /OP_SIZE/, "goto NEXT appended for non :flow ops");
 
 
 
