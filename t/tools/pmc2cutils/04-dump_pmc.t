@@ -23,7 +23,6 @@ use Test::More tests => 108;
 use File::Basename;
 use File::Copy;
 use FindBin;
-use Data::Dumper;
 use_ok('Parrot::Pmc2c::Pmc2cMain');
 use_ok('Cwd');
 use_ok( 'File::Temp', qw| tempdir | );
@@ -111,7 +110,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     #create a dump for default.pmc
     Parrot::Pmc2c::Pmc2cMain->new(
         {
-            include => \@include, 
+            include => \@include,
             opt=>\%opt,
             args=>[qq{$temppmcdir/default.pmc}],
             bin=>$Bin
@@ -215,7 +214,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     #create a dump for default.pmc
     Parrot::Pmc2c::Pmc2cMain->new(
         {
-            include => \@include, 
+            include => \@include,
             opt=>\%opt,
             args=>[qq{$temppmcdir/default.pmc}],
             bin=>$Bin
@@ -272,7 +271,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     for my $pmc ( qq{$temppmcdir/default.pmc},  qq{$temppmcdir/scalar.pmc}, qq{$temppmcdir/integer.pmc} ) {
         Parrot::Pmc2c::Pmc2cMain->new(
             {
-                include => \@include, 
+                include => \@include,
                 opt=>\%opt,
                 args=>[$pmc],
                 bin=>$Bin
@@ -376,7 +375,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     #create a dump for default.pmc
     Parrot::Pmc2c::Pmc2cMain->new(
         {
-            include => \@include, 
+            include => \@include,
             opt=>\%opt,
             args=>[qq{$temppmcdir/default.pmc}],
             bin=>$Bin
@@ -470,7 +469,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     #create a dump for default.pmc
     Parrot::Pmc2c::Pmc2cMain->new(
         {
-            include => \@include, 
+            include => \@include,
             opt=>\%opt,
             args=>[qq{$temppmcdir/default.pmc}],
             bin=>$Bin
@@ -538,7 +537,7 @@ my @include_orig = ( qq{$main::topdir}, qq{$main::topdir/src/pmc}, );
     #create a dump for default.pmc
     Parrot::Pmc2c::Pmc2cMain->new(
         {
-            include => \@include, 
+            include => \@include,
             opt=>\%opt,
             args=>[qq{$temppmcdir/default.pmc}],
             bin=>$Bin

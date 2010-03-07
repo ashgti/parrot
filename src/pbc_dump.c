@@ -62,8 +62,7 @@ efficiency on reading non-native PBCs.
 
 /*
 
-=item C<static void
-const_dump(PARROT_INTERP, const PackFile_Segment *segp)>
+=item C<static void const_dump(PARROT_INTERP, const PackFile_Segment *segp)>
 
 Dump the constant table.
 
@@ -81,8 +80,7 @@ const_dump(PARROT_INTERP, const PackFile_Segment *segp)
 
 /*
 
-=item C<static void
-fixup_dump(PARROT_INTERP, const PackFile_Segment *segp)>
+=item C<static void fixup_dump(PARROT_INTERP, const PackFile_Segment *segp)>
 
 Dump the fixup table.
 
@@ -100,8 +98,7 @@ fixup_dump(PARROT_INTERP, const PackFile_Segment *segp)
 
 /*
 
-=item C<static void
-disas_dump(PARROT_INTERP, const PackFile_Segment *self)>
+=item C<static void disas_dump(PARROT_INTERP, const PackFile_Segment *self)>
 
 Disassemble and dump.
 
@@ -136,8 +133,7 @@ disas_dump(PARROT_INTERP, const PackFile_Segment *self)
 
 /*
 
-=item C<static void
-PackFile_header_dump(PARROT_INTERP, PackFile *pf)>
+=item C<static void PackFile_header_dump(PARROT_INTERP, PackFile *pf)>
 
 Dump the header.
 
@@ -294,7 +290,7 @@ main(int argc, const char **argv)
 
         size = PackFile_pack_size(interp,
                 interp->code->base.pf) * sizeof (opcode_t);
-        pack = (opcode_t*) mem_sys_allocate(size);
+        pack = (opcode_t*) Parrot_gc_allocate_memory_chunk(interp, size);
         if (!pack) {
             printf("out of mem\n");
             exit(EXIT_FAILURE);
@@ -312,7 +308,7 @@ main(int argc, const char **argv)
             exit(EXIT_FAILURE);
         }
         fclose(fp);
-        mem_sys_free(pack);
+        Parrot_gc_free_memory_chunk(interp, pack);
         Parrot_exit(interp, 0);
     }
 

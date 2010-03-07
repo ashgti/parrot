@@ -10,20 +10,6 @@ src/runcore/main.c - main functions for Parrot runcores
 
 The runcore API handles running the operations.
 
-The predereferenced code chunk is pre-initialized with the opcode
-function pointers, addresses, or opnumbers of the C<prederef__>
-opcode. This opcode then calls the C<do_prederef()> function, which then
-fills in the real function, address or op number.
-
-Because the C<prederef__> opcode returns the same C<pc_prederef> it was
-passed, the runops loop will re-execute the same location, which will
-then have the pointer to the real C<prederef> opfunc and C<prederef>
-args.
-
-Pointer arithmetic is used to determine the index into the bytecode
-corresponding to the currect opcode. The bytecode and prederef arrays
-have the same number of elements because there is a one-to-one mapping.
-
 =head2 Functions
 
 =over 4
@@ -55,7 +41,9 @@ have the same number of elements because there is a one-to-one mapping.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void dynop_register_switch(size_t n_old, size_t n_new);
+static void dynop_register_switch(PARROT_INTERP, size_t n_old, size_t n_new)
+        __attribute__nonnull__(1);
+
 static void dynop_register_xx(PARROT_INTERP,
     size_t n_old,
     size_t n_new,
@@ -74,24 +62,14 @@ static void notify_func_table(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void prederef_args(
-    ARGMOD(void **pc_prederef),
-    PARROT_INTERP,
-    ARGIN(const opcode_t *pc),
-    ARGIN(const op_info_t *opinfo))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*pc_prederef);
-
 static void stop_prederef(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 static void turn_ev_check(PARROT_INTERP, int on)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_dynop_register_switch __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_dynop_register_switch __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_dynop_register_xx __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_get_dynamic_op_lib_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -99,11 +77,6 @@ static void turn_ev_check(PARROT_INTERP, int on)
 #define ASSERT_ARGS_notify_func_table __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(table))
-#define ASSERT_ARGS_prederef_args __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(pc_prederef) \
-    , PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(pc) \
-    , PARROT_ASSERT_ARG(opinfo))
 #define ASSERT_ARGS_stop_prederef __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_turn_ev_check __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -166,11 +139,12 @@ INTVAL
 Parrot_runcore_register(PARROT_INTERP, ARGIN(Parrot_runcore_t *coredata))
 {
     ASSERT_ARGS(Parrot_runcore_register)
-    size_t num_cores = ++interp->num_cores;
+    size_t i = interp->num_cores++;
 
-    mem_realloc_n_typed(interp->cores, num_cores, Parrot_runcore_t *);
+    interp->cores = mem_gc_realloc_n_typed_zeroed(interp, interp->cores,
+            interp->num_cores, i, Parrot_runcore_t *);
 
-    interp->cores[num_cores - 1] = coredata;
+    interp->cores[i] = coredata;
 
     return 1;
 }
@@ -208,195 +182,6 @@ Parrot_runcore_switch(PARROT_INTERP, ARGIN(STRING *name))
 
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
         "Invalid runcore %Ss requested\n", name);
-}
-
-
-/*
-
-=item C<static void prederef_args(void **pc_prederef, PARROT_INTERP, const
-opcode_t *pc, const op_info_t *opinfo)>
-
-Called from C<do_prederef()> to deal with any arguments.
-
-C<pc_prederef> is the current opcode.
-
-=cut
-
-*/
-
-static void
-prederef_args(ARGMOD(void **pc_prederef), PARROT_INTERP,
-        ARGIN(const opcode_t *pc), ARGIN(const op_info_t *opinfo))
-{
-    ASSERT_ARGS(prederef_args)
-    const PackFile_ConstTable * const const_table = interp->code->const_table;
-
-    const int regs_n = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_NUM);
-    const int regs_i = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_INT);
-    const int regs_p = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_PMC);
-    const int regs_s = Parrot_pcc_get_regs_used(interp, CURRENT_CONTEXT(interp), REGNO_STR);
-
-    /* prederef var part too */
-    const int m = opinfo->op_count;
-    int       n = opinfo->op_count;
-    int       i;
-
-    ADD_OP_VAR_PART(interp, interp->code, pc, n);
-    for (i = 1; i < n; i++) {
-        const opcode_t arg = pc[i];
-        int type;
-        if (i >= m) {
-            PMC * const sig = (PMC*) pc_prederef[1];
-            type = VTABLE_get_integer_keyed_int(interp, sig, i - m);
-            type &= (PARROT_ARG_TYPE_MASK | PARROT_ARG_CONSTANT);
-        }
-        else
-            type = opinfo->types[i - 1];
-
-        switch (type) {
-
-          case PARROT_ARG_KI:
-          case PARROT_ARG_I:
-            if (arg < 0 || arg >= regs_i)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal register number");
-
-            pc_prederef[i] = (void *)REG_OFFS_INT(arg);
-            break;
-
-          case PARROT_ARG_N:
-            if (arg < 0 || arg >= regs_n)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal register number");
-
-            pc_prederef[i] = (void *)REG_OFFS_NUM(arg);
-            break;
-
-          case PARROT_ARG_K:
-          case PARROT_ARG_P:
-            if (arg < 0 || arg >= regs_p)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal register number");
-
-            pc_prederef[i] = (void *)REG_OFFS_PMC(arg);
-            break;
-
-          case PARROT_ARG_S:
-            if (arg < 0 || arg >= regs_s)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal register number");
-
-            pc_prederef[i] = (void *)REG_OFFS_STR(arg);
-            break;
-
-          case PARROT_ARG_KIC:
-          case PARROT_ARG_IC:
-            pc_prederef[i] = (void *)pc[i];
-            break;
-
-          case PARROT_ARG_NC:
-            if (arg < 0 || arg >= const_table->const_count)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal constant number");
-
-            pc_prederef[i] = (void *)&const_table->constants[arg]->u.number;
-            break;
-
-          case PARROT_ARG_SC:
-            if (arg < 0 || arg >= const_table->const_count)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal constant number");
-
-            pc_prederef[i] = (void *)const_table->constants[arg]->u.string;
-            break;
-
-          case PARROT_ARG_PC:
-          case PARROT_ARG_KC:
-            if (arg < 0 || arg >= const_table->const_count)
-                Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-                    "Illegal constant number");
-
-            pc_prederef[i] = (void *)const_table->constants[arg]->u.key;
-            break;
-          default:
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_ARG_OP_NOT_HANDLED,
-                "Unhandled argtype 0x%x\n", type);
-            break;
-        }
-    }
-}
-
-
-/*
-
-=item C<void do_prederef(void **pc_prederef, PARROT_INTERP, Parrot_runcore_t
-*runcore)>
-
-This is called from within the run cores to predereference the current
-opcode.
-
-C<pc_prederef> is the current opcode, and C<type> is the run core type.
-
-=cut
-
-*/
-
-void
-do_prederef(ARGIN(void **pc_prederef), PARROT_INTERP, ARGIN(Parrot_runcore_t *runcore))
-{
-    ASSERT_ARGS(do_prederef)
-    const size_t     offset = pc_prederef - interp->code->prederef.code;
-    opcode_t * const pc     = ((opcode_t *)interp->code->base.data) + offset;
-    const op_info_t *opinfo;
-    size_t           n;
-
-    if (*pc < 0 || *pc >= (opcode_t)interp->op_count)
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INTERP_ERROR,
-            "Illegal opcode");
-
-    opinfo = &interp->op_info_table[*pc];
-
-    prederef_args(pc_prederef, interp, pc, opinfo);
-
-    if (PARROT_RUNCORE_PREDEREF_OPS_TEST(runcore)) {
-        *pc_prederef = PARROT_RUNCORE_CGOTO_OPS_TEST(runcore)
-            ? ((void **)interp->op_lib->op_func_table)[*pc]
-            : (void**)*pc;
-    }
-    else
-        Parrot_ex_throw_from_c_args(interp, NULL, 1,
-            "Tried to prederef wrong core");
-
-    /* now remember backward branches, invoke and similar opcodes */
-    n = opinfo->op_count;
-
-    if (((opinfo->jump & PARROT_JUMP_RELATIVE)
-    &&    opinfo->types[n - 2] == PARROT_ARG_IC
-    &&    pc[n - 1] < 0)                          /* relative backward branch */
-    ||   (opinfo->jump & PARROT_JUMP_ADDRESS)) {
-        Prederef * const pi = &interp->code->prederef;
-
-        /* first time prederef.branches == NULL:
-         * estimate size to 1/16th of opcodes */
-        if (!pi->branches) {
-            size_t nb = interp->code->base.size / 16;
-            if (nb < 8)
-                nb = (size_t)8;
-
-            pi->branches    = mem_allocate_n_typed(nb, Prederef_branch);
-            pi->n_allocated = nb;
-            pi->n_branches  = 0;
-        }
-        else if (pi->n_branches >= pi->n_allocated) {
-            pi->n_allocated = (size_t) (pi->n_allocated * 1.5);
-            mem_realloc_n_typed(pi->branches, pi->n_allocated, Prederef_branch);
-        }
-
-        pi->branches[pi->n_branches].offs = offset;
-        pi->branches[pi->n_branches].op   = *pc_prederef;
-
-        ++pi->n_branches;
-    }
 }
 
 
@@ -478,10 +263,10 @@ static void
 stop_prederef(PARROT_INTERP)
 {
     ASSERT_ARGS(stop_prederef)
-    interp->op_func_table = PARROT_CORE_OPLIB_INIT(1)->op_func_table;
+    interp->op_func_table = PARROT_CORE_OPLIB_INIT(interp, 1)->op_func_table;
 
     if (interp->evc_func_table) {
-        mem_sys_free(interp->evc_func_table);
+        mem_gc_free(interp, interp->evc_func_table);
         interp->evc_func_table = NULL;
     }
 
@@ -577,7 +362,7 @@ Parrot_setup_event_func_ptrs(PARROT_INTERP)
     ASSERT_ARGS(Parrot_setup_event_func_ptrs)
     const size_t       n         = interp->op_count;
     const oplib_init_f init_func = get_core_op_lib_init(interp, interp->run_core);
-    op_lib_t * const   lib       = init_func(1);
+    op_lib_t * const   lib       = init_func(interp, 1);
 
     /* remember op_func_table */
     interp->save_func_table      = lib->op_func_table;
@@ -589,7 +374,7 @@ Parrot_setup_event_func_ptrs(PARROT_INTERP)
     if (!interp->evc_func_table) {
         size_t i;
 
-        interp->evc_func_table = mem_allocate_n_typed(n, op_func_t);
+        interp->evc_func_table = mem_gc_allocate_n_zeroed_typed(interp, n, op_func_t);
 
         for (i = 0; i < n; ++i)
             interp->evc_func_table[i] = (op_func_t)
@@ -623,11 +408,11 @@ Parrot_runcore_destroy(PARROT_INTERP)
         if (destroy)
             (*destroy)(interp, core);
 
-        mem_sys_free(core);
+        mem_gc_free(interp, core);
     }
 
     if (interp->cores)
-        mem_sys_free(interp->cores);
+        mem_gc_free(interp, interp->cores);
 
     interp->cores    = NULL;
     interp->run_core = NULL;
@@ -637,20 +422,20 @@ Parrot_runcore_destroy(PARROT_INTERP)
         return;
 
 #ifdef HAVE_COMPUTED_GOTO
-    cg_lib = PARROT_CORE_CGP_OPLIB_INIT(1);
+    cg_lib = PARROT_CORE_CGP_OPLIB_INIT(interp, 1);
 
     if (cg_lib->op_func_table)
-        mem_sys_free(cg_lib->op_func_table);
+        mem_gc_free(interp, cg_lib->op_func_table);
     cg_lib->op_func_table = NULL;
 
-    cg_lib = PARROT_CORE_CG_OPLIB_INIT(1);
+    cg_lib = PARROT_CORE_CG_OPLIB_INIT(interp, 1);
     if (cg_lib->op_func_table)
-        mem_sys_free(cg_lib->op_func_table);
+        mem_gc_free(interp, cg_lib->op_func_table);
     cg_lib->op_func_table = NULL;
 #endif
 
-    mem_sys_free(interp->op_info_table);
-    mem_sys_free(interp->op_func_table);
+    mem_gc_free(interp, interp->op_info_table);
+    mem_gc_free(interp, interp->op_func_table);
     interp->op_info_table = NULL;
     interp->op_func_table = NULL;
 }
@@ -697,14 +482,14 @@ dynop_register(PARROT_INTERP, ARGIN(PMC *lib_pmc))
     }
 
     if (!interp->all_op_libs)
-        interp->all_op_libs = (op_lib_t **)mem_sys_allocate(
-                sizeof (op_lib_t *) * (interp->n_libs + 1));
+        interp->all_op_libs = mem_gc_allocate_n_zeroed_typed(interp,
+                interp->n_libs + 1, op_lib_t*);
     else
-        mem_realloc_n_typed(interp->all_op_libs, interp->n_libs + 1,
-                op_lib_t *);
+        interp->all_op_libs = mem_gc_realloc_n_typed_zeroed(interp, interp->all_op_libs,
+                interp->n_libs + 1, interp->n_libs, op_lib_t *);
 
     init_func = get_dynamic_op_lib_init(interp, lib_pmc);
-    lib       = init_func(1);
+    lib       = init_func(interp, 1);
 
     interp->all_op_libs[interp->n_libs++] = lib;
 
@@ -722,22 +507,22 @@ dynop_register(PARROT_INTERP, ARGIN(PMC *lib_pmc))
     n_old = interp->op_count;
     n_new = lib->op_count;
     n_tot = n_old + n_new;
-    core  = PARROT_CORE_OPLIB_INIT(1);
+    core  = PARROT_CORE_OPLIB_INIT(interp, 1);
 
     PARROT_ASSERT(interp->op_count == core->op_count);
 
-    new_evc_func_table = (op_func_t *)mem_sys_realloc(interp->evc_func_table,
-            sizeof (op_func_t) * n_tot);
+    new_evc_func_table = mem_gc_realloc_n_typed_zeroed(interp,
+            interp->evc_func_table, n_tot, n_old, op_func_t);
     if (core->flags & OP_FUNC_IS_ALLOCATED) {
-        new_func_table = (op_func_t *)mem_sys_realloc(core->op_func_table,
-                sizeof (op_func_t) * n_tot);
-        new_info_table = (op_info_t *)mem_sys_realloc(core->op_info_table,
-                sizeof (op_info_t) * n_tot);
+        new_func_table = mem_gc_realloc_n_typed_zeroed(interp,
+                core->op_func_table, n_tot, n_old, op_func_t);
+        new_info_table = mem_gc_realloc_n_typed_zeroed(interp,
+                core->op_info_table, n_tot, n_old, op_info_t);
     }
     else {
         /* allocate new op_func and info tables */
-        new_func_table = mem_allocate_n_typed(n_tot, op_func_t);
-        new_info_table = mem_allocate_n_typed(n_tot, op_info_t);
+        new_func_table = mem_gc_allocate_n_zeroed_typed(interp, n_tot, op_func_t);
+        new_info_table = mem_gc_allocate_n_zeroed_typed(interp, n_tot, op_info_t);
 
         /* copy old */
         for (i = 0; i < n_old; ++i) {
@@ -763,7 +548,7 @@ dynop_register(PARROT_INTERP, ARGIN(PMC *lib_pmc))
     interp->save_func_table = new_func_table;
 
     /* deinit core, so that it gets rehashed */
-    (void) PARROT_CORE_OPLIB_INIT(0);
+    (void) PARROT_CORE_OPLIB_INIT(interp, 0);
 
     /* set table */
     core->op_func_table = interp->op_func_table = new_func_table;
@@ -777,7 +562,7 @@ dynop_register(PARROT_INTERP, ARGIN(PMC *lib_pmc))
     dynop_register_xx(interp, n_old, n_new, PARROT_CORE_CG_OPLIB_INIT);
 #endif
 
-    dynop_register_switch(n_old, n_new);
+    dynop_register_switch(interp, n_old, n_new);
 }
 
 
@@ -799,25 +584,24 @@ dynop_register_xx(PARROT_INTERP,
     ASSERT_ARGS(dynop_register_xx)
     const size_t n_tot    = n_old + n_new;
     op_func_t   *ops_addr = NULL;
-    op_lib_t    *cg_lib   = init_func(1);
-    op_lib_t    *new_lib;
+    op_lib_t    *cg_lib   = init_func(interp, 1);
 
 #if 0
     /* related to CG and CGP ops issue below */
+    op_lib_t    *new_lib;
     STRING *op_variant;
-#endif
-
     oplib_init_f new_init_func;
     PMC *lib_variant;
+#endif
 
     if (cg_lib->flags & OP_FUNC_IS_ALLOCATED) {
-        ops_addr = (op_func_t *)mem_sys_realloc(cg_lib->op_func_table,
-                n_tot * sizeof (op_func_t));
+        ops_addr = mem_gc_realloc_n_typed_zeroed(interp,
+                cg_lib->op_func_table, n_tot, n_old, op_func_t);
     }
     else {
         size_t i;
 
-        ops_addr      = mem_allocate_n_typed(n_tot, op_func_t);
+        ops_addr      = mem_gc_allocate_n_zeroed_typed(interp, n_tot, op_func_t);
         cg_lib->flags = OP_FUNC_IS_ALLOCATED;
 
         for (i = 0; i < n_old; ++i)
@@ -890,13 +674,14 @@ dynop_register_xx(PARROT_INTERP,
     /* tell the cg_core about the new jump table */
     cg_lib->op_func_table = ops_addr;
     cg_lib->op_count      = n_tot;
-    init_func((long) ops_addr);
+    init_func(interp, (long) ops_addr);
 }
 
 
 /*
 
-=item C<static void dynop_register_switch(size_t n_old, size_t n_new)>
+=item C<static void dynop_register_switch(PARROT_INTERP, size_t n_old, size_t
+n_new)>
 
 Used only at the end of dynop_register.  Sums the old and new op_counts
 storing the result into the operations count field of the interpreter
@@ -907,10 +692,10 @@ object.
 */
 
 static void
-dynop_register_switch(size_t n_old, size_t n_new)
+dynop_register_switch(PARROT_INTERP, size_t n_old, size_t n_new)
 {
     ASSERT_ARGS(dynop_register_switch)
-    op_lib_t * const lib = PARROT_CORE_SWITCH_OPLIB_INIT(1);
+    op_lib_t * const lib = PARROT_CORE_SWITCH_OPLIB_INIT(interp, 1);
     lib->op_count        = n_old + n_new;
 }
 
@@ -931,7 +716,7 @@ notify_func_table(PARROT_INTERP, ARGIN(op_func_t *table), int on)
     ASSERT_ARGS(notify_func_table)
     const oplib_init_f init_func = get_core_op_lib_init(interp, interp->run_core);
 
-    init_func((long) table);
+    init_func(interp, (long) table);
 
     if (PARROT_RUNCORE_FUNC_TABLE_TEST(interp->run_core)) {
         PARROT_ASSERT(table);

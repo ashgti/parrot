@@ -32,7 +32,7 @@ typedef struct op_lib_t {
     size_t      op_count;
     op_info_t * op_info_table;
     op_func_t * op_func_table;
-    int (*op_code)(const char * name, int full);
+    int (*op_code)(PARROT_INTERP, const char * name, int full);
 } op_lib_t;
 
 typedef enum {
@@ -41,7 +41,7 @@ typedef enum {
 } op_lib_flags_enum;
 
 /* when init = true initialize, else de_initialize */
-typedef op_lib_t *(*oplib_init_f)(long init);
+typedef op_lib_t *(*oplib_init_f)(PARROT_INTERP, long init);
 
 /* core.ops special opcode numbers */
 typedef enum {

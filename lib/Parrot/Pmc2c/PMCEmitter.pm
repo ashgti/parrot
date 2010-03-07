@@ -251,54 +251,6 @@ EOC
         unless $self->is_dynamic;
 }
 
-=item C<proto($type,$parameters)>
-
-Determines the prototype (argument signature) for a method body
-(see F<src/call_list>).
-
-=cut
-
-my %calltype = (
-    "char"     => "c",
-    "short"    => "s",
-    "char"     => "c",
-    "short"    => "s",
-    "int"      => "i",
-    "INTVAL"   => "I",
-    "float"    => "f",
-    "FLOATVAL" => "N",
-    "double"   => "d",
-    "STRING*"  => "S",
-    "char*"    => "t",
-    "PMC*"     => "P",
-    "short*"   => "2",
-    "int*"     => "3",
-    "long*"    => "4",
-    "void"     => "v",
-    "void*"    => "b",
-    "void**"   => "B",
-);
-
-sub proto {
-    my ( $type, $parameters ) = @_;
-
-    # reduce to a comma separated set of types
-    $parameters =~ s/\w+(,|$)/,/g;
-    $parameters =~ s/ //g;
-
-    # flatten whitespace before "*" in return value
-    $type =~ s/\s+\*$/\*/ if defined $type;
-
-    # type method(interp, self, parameters...)
-    my $ret = $calltype{ $type or "void" }
-        . "JO"
-        . join( '',
-            map { $calltype{$_} or die "Unknown signature type '$_'" }
-            split( /,/, $parameters ) );
-
-    return $ret;
-}
-
 =item C<pre_method_gen>
 
 Generate switch-bases VTABLE for MULTI
@@ -703,7 +655,7 @@ EOC
         }
 
         /* set up MRO and _namespace */
-        Parrot_create_mro(interp, entry);
+        Parrot_pmc_create_mro(interp, entry);
 EOC
 
     # declare each nci method for this class
@@ -778,16 +730,25 @@ sub update_vtable_func {
     my $export = $self->is_dynamic ? 'PARROT_DYNEXT_EXPORT ' : 'PARROT_EXPORT';
 
     # Sets the attr_size field:
-    # If the auto_attrs flag is set, use the current data,
-    # else check if this PMC has init or init_pmc vtable functions,
+    # - If the auto_attrs flag is set, use the current data.
+    # - If manual_attrs is set, set to 0.
+    # - If none is set, check if this PMC has init or init_pmc vtable functions,
     # setting it to 0 in that case, and keeping the value from the
     # parent otherwise.
     my $set_attr_size = '';
-    if ( @{$self->attributes} && $self->{flags}{auto_attrs} ) {
+    my $flag_auto_attrs = $self->{flags}{auto_attrs};
+    my $flag_manual_attrs = $self->{flags}{manual_attrs};
+    die 'manual_attrs and auto_attrs can not be used together'
+        if ($flag_auto_attrs && $flag_manual_attrs);
+    warn 'PMC has attributes but no auto_attrs or manual_attrs'
+        if (@{$self->attributes} && ! ($flag_auto_attrs || $flag_manual_attrs));
+
+    if ( @{$self->attributes} &&  $flag_auto_attrs) {
         $set_attr_size .= "sizeof(Parrot_${classname}_attributes)";
     }
     else {
-        $set_attr_size .= "0" if exists($self->{has_method}{init}) ||
+        $set_attr_size .= "0" if $flag_manual_attrs ||
+                                 exists($self->{has_method}{init}) ||
                                  exists($self->{has_method}{init_pmc});
     }
     $set_attr_size =     "    vt->attr_size = " . $set_attr_size . ";\n"
@@ -870,7 +831,7 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 PMC* Parrot_${classname}_get_mro(PARROT_INTERP, PMC* mro) {
     if (PMC_IS_NULL(mro)) {
-        mro = pmc_new(interp, enum_class_ResizableStringArray);
+        mro = Parrot_pmc_new(interp, enum_class_ResizableStringArray);
     }
 $get_mro
     VTABLE_unshift_string(interp, mro,

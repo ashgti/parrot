@@ -193,41 +193,13 @@ static void rat_divide_float(PARROT_INTERP, PMC *self, double value) {
 
 /*
 
-=item * static void rat_power_int(PARROT_INTERP, PMC *self, int value)
-
-Calculates the power of a Rational-PMC to an exponent value in-place.
-
-=cut
-
-*/
-static void rat_power_int(PARROT_INTERP, PMC *self, int value) {
-  #ifdef PARROT_HAS_GMP
-    mpz_t num, den;
-
-    mpq_get_num(num, RT(self));
-    mpq_get_den(den, RT(self));
-
-    mpz_pow_ui(num, num, (unsigned int) value);
-    mpq_set_num(RT(self), num);
-    mpz_clear(num);
-
-    mpz_pow_ui(den, den, (unsigned int) value);
-    mpq_set_den(RT(self), den);
-    mpz_clear(den);
-  #else
-    RAISE_EXCEPTION
-  #endif
-}
-
-/*
-
 =back
 
 =cut
 
 */
 
-pmclass Rational dynpmc provides scalar {
+pmclass Rational dynpmc provides scalar auto_attrs {
     ATTR struct RATIONAL *rational;
 /*
 
@@ -265,9 +237,8 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
     VTABLE void init() {
       #ifdef PARROT_HAS_GMP
         Parrot_Rational_attributes *attrs =
-            mem_allocate_zeroed_typed(Parrot_Rational_attributes);
-        PMC_data(SELF)     = attrs;
-        PMC_rational(SELF) = (RATIONAL *)malloc(sizeof (RATIONAL));
+            PARROT_RATIONAL(SELF);
+        attrs->rational = mem_gc_allocate_zeroed_typed(INTERP, RATIONAL);
         mpq_init(RT(SELF));
         PObj_custom_destroy_SET(SELF);
       #endif
@@ -282,7 +253,7 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
 */
     VTABLE PMC *clone() {
       #ifdef PARROT_HAS_GMP
-        PMC * const ret = pmc_new(INTERP, SELF->vtable->base_type);
+        PMC * const ret = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         mpq_set(RT(ret), RT(SELF));
         return ret;
       #else
@@ -300,9 +271,7 @@ Returns the version of GNU Multiple Precision library. Returns 0.0.0, if GMP is 
     VTABLE void destroy() {
       #ifdef PARROT_HAS_GMP
         mpq_clear(RT(SELF));
-        mem_sys_free(RT(SELF));
-        mem_sys_free(PMC_data(SELF));
-        PMC_data(SELF) = NULL;
+        mem_gc_free(INTERP, RT(SELF));
       #else
         RAISE_EXCEPTION
       #endif
@@ -522,7 +491,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 
     MULTI PMC *add(Rational value, PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         mpq_add(RT(dest), RT(SELF), RT(value));
         return dest;
@@ -633,7 +602,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 
     MULTI PMC *subtract(Rational value, PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         mpq_sub(RT(dest), RT(SELF), RT(value));
         return dest;
       #else
@@ -743,7 +712,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 
     MULTI PMC *multiply(Rational value, PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         mpq_mul(RT(dest), RT(SELF), RT(value));
         return dest;
       #else
@@ -853,7 +822,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 
     MULTI PMC *divide(Rational value, PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         mpq_div(RT(dest), RT(SELF), RT(value));
         return dest;
       #else
@@ -951,7 +920,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 */
     VTABLE PMC *neg(PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         mpq_neg(RT(dest), RT(SELF));
         return dest;
@@ -984,7 +953,7 @@ Adds Integer-, Float- or Rational-PMCs to SELF and stores them in dest.
 */
     VTABLE PMC *absolute(PMC* dest) {
       #ifdef PARROT_HAS_GMP
-        dest = pmc_new(INTERP, SELF->vtable->base_type);
+        dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
         mpq_abs(RT(dest), RT(SELF));
         return dest;

@@ -28,7 +28,7 @@ void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI_attributes * const nci_in
     char    param_buf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     char   *param_sig    = sig_length <= 7
                          ? param_buf
-                         : mem_allocate_n_typed(sig_length, char);
+                         : mem_gc_allocate_n_typed(interp, sig_length, char);
     size_t  j            = 0;
     size_t  i;
 
@@ -78,7 +78,7 @@ void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI_attributes * const nci_in
             break;
           default:
             if (sig_length > 7)
-                mem_sys_free(param_sig);
+                mem_gc_free(interp, param_sig);
             Parrot_ex_throw_from_c_args(interp, NULL,
                     EXCEPTION_JIT_ERROR,
                     "Unknown param Signature %c\n", (char)c);
@@ -97,7 +97,7 @@ void pcc_params(PARROT_INTERP, STRING *sig, Parrot_NCI_attributes * const nci_in
         nci_info->pcc_params_signature = CONST_STRING(interp, "");
 
     if (sig_length > 7)
-        mem_sys_free(param_sig);
+        mem_gc_free(interp, param_sig);
 }
 
 /* actually build the NCI thunk */
@@ -254,7 +254,7 @@ Creates and returns a clone of the NCI.
         Parrot_NCI_attributes *nci_info_ret;
         void                  *orig_func;
 
-        PMC * const ret     = pmc_new(INTERP, SELF->vtable->base_type);
+        PMC * const ret     = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         nci_info_ret        = PARROT_NCI(ret);
 
         /* FIXME if data is malloced (JIT/i386!) then we need

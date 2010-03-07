@@ -51,7 +51,7 @@ register_nci_method(PARROT_INTERP, const int type, ARGIN(void *func),
                     ARGIN(const char *name), ARGIN(const char *proto))
 {
     ASSERT_ARGS(register_nci_method)
-    PMC    * const method      = pmc_new(interp, enum_class_NCI);
+    PMC    * const method      = Parrot_pmc_new(interp, enum_class_NCI);
     STRING * const method_name = string_make(interp, name, strlen(name),
         NULL, PObj_constant_FLAG|PObj_external_FLAG);
 
@@ -84,7 +84,7 @@ register_raw_nci_method_in_ns(PARROT_INTERP, const int type, ARGIN(void *func),
         ARGIN(STRING *name))
 {
     ASSERT_ARGS(register_raw_nci_method_in_ns)
-    PMC    * const method      = pmc_new(interp, enum_class_NCI);
+    PMC    * const method      = Parrot_pmc_new(interp, enum_class_NCI);
 
     /* setup call func */
     VTABLE_set_pointer(interp, method, func);
@@ -111,7 +111,7 @@ Parrot_mark_method_writes(PARROT_INTERP, int type, ARGIN(const char *name))
 {
     ASSERT_ARGS(Parrot_mark_method_writes)
     STRING *const str_name = Parrot_str_new_constant(interp, name);
-    PMC    *const pmc_true = pmc_new(interp, enum_class_Integer);
+    PMC    *const pmc_true = Parrot_pmc_new(interp, enum_class_Integer);
     PMC    *const method   = VTABLE_get_pmc_keyed_str(
         interp, interp->vtables[type]->_namespace, str_name);
     VTABLE_set_integer_native(interp, pmc_true, 1);
@@ -136,13 +136,13 @@ Parrot_compreg(PARROT_INTERP, ARGIN(STRING *type),
 {
     ASSERT_ARGS(Parrot_compreg)
     PMC* const iglobals = interp->iglobals;
-    PMC        *nci     = pmc_new(interp, enum_class_NCI);
+    PMC        *nci     = Parrot_pmc_new(interp, enum_class_NCI);
     STRING     *sc      = CONST_STRING(interp, "PJt");
     PMC        *hash    = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
                               IGLOBALS_COMPREG_HASH);
 
     if (!hash) {
-        hash = pmc_new_noinit(interp, enum_class_Hash);
+        hash = Parrot_pmc_new_noinit(interp, enum_class_Hash);
         VTABLE_init(interp, hash);
         VTABLE_set_pmc_keyed_int(interp, iglobals,
                 (INTVAL)IGLOBALS_COMPREG_HASH, hash);
@@ -322,16 +322,14 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
 {
     ASSERT_ARGS(interpinfo_s)
     switch (what) {
-      case EXECUTABLE_FULLNAME:
-        {
+        case EXECUTABLE_FULLNAME: {
             PMC *exe_name = VTABLE_get_pmc_keyed_int(interp, interp->iglobals,
                     IGLOBALS_EXECUTABLE);
             if (PMC_IS_NULL(exe_name))
                 return string_from_literal(interp, "");
             return VTABLE_get_string(interp, exe_name);
         }
-      case EXECUTABLE_BASENAME:
-        {
+        case EXECUTABLE_BASENAME: {
             STRING *basename;
             PMC    *exe_name = VTABLE_get_pmc_keyed_int(interp,
                                 interp->iglobals, IGLOBALS_EXECUTABLE);
@@ -359,8 +357,12 @@ interpinfo_s(PARROT_INTERP, INTVAL what)
                 return basename;
             }
         }
-      case RUNTIME_PREFIX:
-        return Parrot_get_runtime_path(interp);
+        case RUNTIME_PREFIX:
+            return Parrot_get_runtime_path(interp);
+        case GC_SYS_NAME: {
+            STRING * name = Parrot_gc_sys_name(interp);
+            return name;
+        }
       default:
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
                 "illegal argument in interpinfo");

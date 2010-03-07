@@ -138,15 +138,6 @@ op tailcallmethod(invar PMC, in STR) :object_base :flow {
     else {
         interp->current_cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
         PObj_get_FLAGS(interp->current_cont) |= SUB_FLAG_TAILCALL;
-        /* Detach continuation from current CallContext to avoid marking dead object. */
-        /* RetContinuation will kill itself after invoke */
-        if (interp->current_cont->vtable->base_type == enum_class_RetContinuation
-            && Parrot_pcc_do_run_ops(interp, method_pmc)) {
-            PMC * const ctx             = CURRENT_CONTEXT(interp);
-            PMC * const parent_ctx      = Parrot_pcc_get_caller_ctx(interp, ctx);
-            PMC_cont(interp->current_cont)->from_ctx = parent_ctx;
-            Parrot_pcc_set_continuation(interp, ctx, PMCNULL);
-        }
         interp->current_object = object;
         dest = (opcode_t *)VTABLE_invoke(interp, method_pmc, next);
     }
@@ -162,15 +153,6 @@ op tailcallmethod(invar PMC, invar PMC) :object_base :flow {
 
     interp->current_cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
     PObj_get_FLAGS(interp->current_cont) |= SUB_FLAG_TAILCALL;
-    /* Detach continuation from current CallContext to avoid marking dead object. */
-    /* RetContinuation will kill itself after invoke */
-    if (interp->current_cont->vtable->base_type == enum_class_RetContinuation
-        && Parrot_pcc_do_run_ops(interp, method_pmc)) {
-        PMC * const ctx             = CURRENT_CONTEXT(interp);
-        PMC * const parent_ctx      = Parrot_pcc_get_caller_ctx(interp, ctx);
-        PMC_cont(interp->current_cont)->from_ctx = parent_ctx;
-        Parrot_pcc_set_continuation(interp, ctx, PMCNULL);
-    }
 
     interp->current_object = object;
     dest = (opcode_t *)VTABLE_invoke(interp, method_pmc, next);
@@ -254,13 +236,13 @@ namespace, or string PMC.
 =cut
 
 inline op newclass(out PMC, in STR) :object_classes {
-    PMC * const name = pmc_new(interp, enum_class_String);
+    PMC * const name = Parrot_pmc_new(interp, enum_class_String);
     VTABLE_set_string_native(interp, name, $2);
-    $1 = pmc_new_init(interp, enum_class_Class, name);
+    $1 = Parrot_pmc_new_init(interp, enum_class_Class, name);
 }
 
 inline op newclass(out PMC, in PMC) :object_classes {
-    $1 = pmc_new_init(interp, enum_class_Class, $2);
+    $1 = Parrot_pmc_new_init(interp, enum_class_Class, $2);
 }
 
 =item B<subclass>(out PMC, in PMC)
@@ -285,7 +267,7 @@ inline op subclass(out PMC, in PMC) :object_classes :flow {
             "Class '%Ss' doesn't exist", VTABLE_get_string(interp, $2));
         goto ADDRESS(handler);
     }
-    $1 = pmc_new(interp, enum_class_Class);
+    $1 = Parrot_pmc_new(interp, enum_class_Class);
     VTABLE_add_parent(interp, $1, parent_class);
     goto ADDRESS(next);
 }
@@ -315,7 +297,7 @@ inline op subclass(out PMC, in PMC, in PMC) :object_classes :flow {
             "Class '%Ss' doesn't exist", VTABLE_get_string(interp, $2));
         goto ADDRESS(handler);
     }
-    $1 = pmc_new_init(interp, enum_class_Class, $3);
+    $1 = Parrot_pmc_new_init(interp, enum_class_Class, $3);
     VTABLE_add_parent(interp, $1, parent_class);
     goto ADDRESS(next);
 }
@@ -344,7 +326,7 @@ op subclass(out PMC, in STR) :object_classes :flow {
         goto ADDRESS(handler);
     }
 
-    $1 = pmc_new(interp, enum_class_Class);
+    $1 = Parrot_pmc_new(interp, enum_class_Class);
     VTABLE_add_parent(interp, $1, parent_class);
     goto ADDRESS(next);
 }
@@ -376,7 +358,7 @@ op subclass(out PMC, in STR, in PMC) :object_classes :flow {
         goto ADDRESS(handler);
     }
 
-    $1 = pmc_new_init(interp, enum_class_Class, $3);
+    $1 = Parrot_pmc_new_init(interp, enum_class_Class, $3);
     VTABLE_add_parent(interp, $1, parent_class);
     goto ADDRESS(next);
 }

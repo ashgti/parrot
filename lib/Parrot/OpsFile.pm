@@ -126,15 +126,6 @@ Transforms to C<PC + S>, the position of the next op.
 
 Transforms to C<X>, an absolute address.
 
-=item C<OP_SIZE>
-
-Transforms to C<S>, the size of an op.
-
-=item C<HALT()>
-
-Transforms to C<PC' = 0>. Halts run loop, and resets the current
-position to the start of the Parrot code, without resuming.
-
 =item C<restart OFFSET(X)>
 
 Transforms to C<PC' = 0> and restarts at C<PC + X>.
@@ -462,11 +453,8 @@ sub make_op {
         $argdirs, $line, $file, $labels,     $flags, $nolines
     ) = @_;
     my $counter  = 0;
-    my $absolute = 0;
     my $branch   = 0;
     my $pop      = 0;
-    my $next     = 0;
-    my $restart  = 0;
 
     if (exists($$flags{deprecated})) {
         $body = <<"END_CODE" . $body;
@@ -499,9 +487,6 @@ END_CODE
         #   expr OFFSET(X)     {{^+X}}  PC + X        Relative address
         #   expr NEXT()        {{^+S}}  PC + S        Where S is op size
         #   expr ADDRESS(X)    {{^X}}   X             Absolute address
-        #   OP_SIZE            {{^S}}   S             op size
-        #
-        #   HALT()             {{=0}}   PC' = 0       Halts run_ops loop, no resume
         #
         #   restart OFFSET(X)  {{=0,+=X}}   PC' = 0   Restarts at PC + X
         #   restart NEXT()     {{=0,+=S}}   PC' = 0   Restarts at PC + S
@@ -519,37 +504,26 @@ END_CODE
         # on the mode of operation (function calls, switch statements, gotos
         # with labels, etc.).
         #
-
-        $absolute ||= $body =~ s/\bgoto\s+ADDRESS\(\( (.*?) \)\)/{{=$1}}/mg;
-                      $body =~ s/\bexpr\s+ADDRESS\(\( (.*?) \)\)/{{^$1}}/mg;
-        $absolute ||= $body =~ s/\bgoto\s+ADDRESS\((.*?)\)/{{=$1}}/mg;
-                      $body =~ s/\bexpr\s+ADDRESS\((.*?)\)/{{^$1}}/mg;
-
-        $branch   ||= $short_name =~ /runinterp/;
-        $branch   ||= $body =~ s/\bgoto\s+OFFSET\(\( (.*?) \)\)/{{+=$1}}/mg;
-                      $body =~ s/\bexpr\s+OFFSET\(\( (.*?) \)\)/{{^+$1}}/mg;
-        $branch   ||= $body =~ s/\bgoto\s+OFFSET\((.*?)\)/{{+=$1}}/mg;
-                      $body =~ s/\bexpr\s+OFFSET\((.*?)\)/{{^+$1}}/mg;
-
-        $next     ||= $short_name =~ /runinterp/;
-        $next     ||= $body =~ s/\bexpr\s+NEXT\(\)/{{^+$op_size}}/mg;
-                      $body =~ s/\bgoto\s+NEXT\(\)/{{+=$op_size}}/mg;
-
-        $body =~ s/\bHALT\(\)/{{=0}}/mg;
-        $body =~ s/\bOP_SIZE\b/{{^$op_size}}/mg;
-
-        if ( $body =~ s/\brestart\s+OFFSET\((.*?)\)/{{=0,+=$1}}/mg ) {
-            $branch  = 1;
-            $restart = 1;
+        if ($body =~ /(goto|restart)\s+OFFSET\(.*?\)/ || $short_name =~ /runinterp/) {
+            $branch = 1;
         }
-        elsif ( $body =~ s/\brestart\s+NEXT\(\)/{{=0,+=$op_size}}/mg ) {
-            $restart = 1;
-            $next    = 1;
-        }
-        elsif ( $body =~ s/\brestart\s+ADDRESS\((.*?)\)/{{=$1}}/mg ) {
-            $next    = 0;
-            $restart = 1;
-        }
+
+        $body =~ s/\bgoto\s+ADDRESS\(\( (.*?) \)\)/{{=$1}}/mg;
+        $body =~ s/\bexpr\s+ADDRESS\(\( (.*?) \)\)/{{^$1}}/mg;
+        $body =~ s/\bgoto\s+ADDRESS\((.*?)\)/{{=$1}}/mg;
+        $body =~ s/\bexpr\s+ADDRESS\((.*?)\)/{{^$1}}/mg;
+
+        $body =~ s/\bgoto\s+OFFSET\(\( (.*?) \)\)/{{+=$1}}/mg;
+        $body =~ s/\bexpr\s+OFFSET\(\( (.*?) \)\)/{{^+$1}}/mg;
+        $body =~ s/\bgoto\s+OFFSET\((.*?)\)/{{+=$1}}/mg;
+        $body =~ s/\bexpr\s+OFFSET\((.*?)\)/{{^+$1}}/mg;
+
+        $body =~ s/\bexpr\s+NEXT\(\)/{{^+$op_size}}/mg;
+        $body =~ s/\bgoto\s+NEXT\(\)/{{+=$op_size}}/mg;
+
+        $body =~ s/\brestart\s+OFFSET\((.*?)\)/{{=0,+=$1}}/mg;
+        $body =~ s/\brestart\s+NEXT\(\)/{{=0,+=$op_size}}/mg;
+        $body =~ s/\brestart\s+ADDRESS\((.*?)\)/{{=$1}}/mg;
 
         $body =~ s/\$(\d+)/{{\@$1}}/mg;
 
@@ -566,17 +540,7 @@ END_CODE
         $op->body( $nolines ? $body : qq{#line $line "$file_escaped"\n$body} );
 
         # Constants here are defined in include/parrot/op.h
-        or_flag( \$jumps, "PARROT_JUMP_ADDRESS"  ) if $absolute;
         or_flag( \$jumps, "PARROT_JUMP_RELATIVE" ) if $branch;
-        or_flag( \$jumps, "PARROT_JUMP_ENEXT"    ) if $next;
-        or_flag( \$jumps, "PARROT_JUMP_RESTART"  ) if $restart;
-
-        # I'm assuming the op branches to the value in the last argument.
-        if ( ($jumps)
-            && ( $fixedargs[ @fixedargs - 1 ] )
-            && ( $fixedargs[ @fixedargs - 1 ] eq 'i' ) ) {
-            or_flag( \$jumps, "PARROT_JUMP_GNEXT" );
-        }
 
         $op->jump($jumps);
         $self->push_op($op);
@@ -663,7 +627,6 @@ sub preamble {
 
         #s/goto\s+NEXT\(\)/{{+=$op_size}}/mg;   #not supported--dependent on op size
         s/goto\s+ADDRESS\((.*)\)/{{=$1}}/mg;
-        s/HALT\(\)/{{=0}}/mg;
 
         $_ = Parrot::Op->rewrite_body( $_, $trans, 'preamble' );
     }

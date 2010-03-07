@@ -315,7 +315,6 @@ init_context(PARROT_INTERP, ARGMOD(PMC *pmcctx), ARGIN_NULLOK(PMC *pmcold))
     if (!PMC_IS_NULL(ctx->current_sub))
         return;
 
-    ctx->current_results   = NULL;
     ctx->results_signature = NULL;
     ctx->lex_pad           = PMCNULL;
     ctx->outer_ctx         = NULL;
@@ -567,7 +566,7 @@ Parrot_alloc_context(PARROT_INTERP, ARGIN(const UINTVAL *number_regs_used),
     ARGIN_NULLOK(PMC *old))
 {
     ASSERT_ARGS(Parrot_alloc_context)
-    PMC            *pmcctx = pmc_new(interp, enum_class_CallContext);
+    PMC            *pmcctx = Parrot_pmc_new(interp, enum_class_CallContext);
 
     allocate_registers(interp, pmcctx, number_regs_used);
     init_context(interp, pmcctx, old);
@@ -593,7 +592,7 @@ PMC *
 Parrot_pcc_allocate_empty_context(PARROT_INTERP, ARGIN_NULLOK(PMC *old))
 {
     ASSERT_ARGS(Parrot_pcc_allocate_empty_context)
-    PMC            *pmcctx = pmc_new(interp, enum_class_CallContext);
+    PMC            *pmcctx = Parrot_pmc_new(interp, enum_class_CallContext);
 
     init_context(interp, pmcctx, old);
 

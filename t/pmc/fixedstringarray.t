@@ -1,5 +1,5 @@
 #! parrot
-# Copyright (C) 2001-2009, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -19,7 +19,7 @@ out-of-bounds test. Checks INT and PMC keys.
 
 .sub 'main' :main
     .include 'test_more.pir'
-    plan(44)
+    plan(46)
 
     'test_set_size'()       # 2 tests
     'test_reset_size'()     # 1 test
@@ -37,6 +37,7 @@ out-of-bounds test. Checks INT and PMC keys.
     'test_get_string'()     # 1 test
     'test_equality'()       # 5 tests
     'test_gc'()             # 4 tests
+    'test_number'()         # 2 tests
 .end
 
 .sub 'test_set_size'
@@ -364,9 +365,20 @@ out-of-bounds test. Checks INT and PMC keys.
 .end
 
 
+.sub 'test_number'
+    .local pmc fsa
+    fsa = new ['FixedStringArray']
+    fsa = 3
+
+    $I0 = fsa
+    is($I0, 3, "get_integer returns correct size")
+    $N0 = fsa
+    is($N0, 3.0, "get_number returns correct size")
+.end
+
+
 # Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
+#   mode: pir
 #   fill-column: 100
 # End:
-# vim: expandtab shiftwidth=4:
+# vim: expandtab shiftwidth=4 ft=pir:

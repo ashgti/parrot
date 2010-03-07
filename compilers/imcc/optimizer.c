@@ -366,7 +366,7 @@ if_branch(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
                               last->symregs, args, 0, 0);
                     last->opnum = tmp->opnum;
                     last->opsize = tmp->opsize;
-                    free(last->opname);
+                    mem_sys_free(last->opname);
                     last->opname = mem_sys_strdup(tmp->opname);
                     free_ins(tmp);
 
@@ -802,7 +802,7 @@ eval_ins(PARROT_INTERP, ARGIN(const char *op), size_t ops, ARGIN(SymReg **r))
     int i;
     op_info_t *op_info;
 
-    opnum = interp->op_lib->op_code(op, 1);
+    opnum = interp->op_lib->op_code(interp, op, 1);
     if (opnum < 0)
         IMCC_fatal(interp, 1, "eval_ins: op '%s' not found\n", op);
     op_info = interp->op_info_table + opnum;
@@ -1293,7 +1293,7 @@ branch_cond_loop_swap(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction 
             changed = 1;
         }
 
-        free(label);
+        mem_sys_free(label);
     }
 
     return changed;

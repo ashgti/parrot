@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -25,6 +25,7 @@ the C-library.
 */
 
 #include "parrot/parrot.h"
+#include "pmc/pmc_parrotinterpreter.h"
 #include "inter_cb.str"
 
 
@@ -109,7 +110,7 @@ Parrot_make_cb(PARROT_INTERP, ARGMOD(PMC* sub), ARGIN(PMC* user_data),
         Parrot_ex_throw_from_c_args(interp, NULL, 1,
             "unhandled signature '%Ss' in make_cb", cb_signature);
 
-    cb_sig = pmc_new(interp, enum_class_String);
+    cb_sig = Parrot_pmc_new(interp, enum_class_String);
     VTABLE_set_string_native(interp, cb_sig, cb_signature);
     sc = CONST_STRING(interp, "_signature");
     VTABLE_setprop(interp, user_data, sc, cb_sig);
@@ -121,14 +122,14 @@ Parrot_make_cb(PARROT_INTERP, ARGMOD(PMC* sub), ARGIN(PMC* user_data),
      * we need to anchor it.
      *
      */
-    gc_register_pmc(interp, user_data);
+    Parrot_pmc_gc_register(interp, user_data);
 
     /*
      * Finally, the external lib awaits a function pointer.
      * Create a PMC that points to Parrot_callback_C (or _D);
      * it can be passed on with signature 'p'.
      */
-    cb = pmc_new(interp, enum_class_UnManagedStruct);
+    cb = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
     /*
      * Currently, we handle only 2 types:
      * _C ... user_data is 2nd parameter
@@ -138,7 +139,7 @@ Parrot_make_cb(PARROT_INTERP, ARGMOD(PMC* sub), ARGIN(PMC* user_data),
         VTABLE_set_pointer(interp, cb, F2DPTR(Parrot_callback_C));
     else
         VTABLE_set_pointer(interp, cb, F2DPTR(Parrot_callback_D));
-    gc_register_pmc(interp, cb);
+    Parrot_pmc_gc_register(interp, cb);
 
     return cb;
 }
@@ -159,6 +160,8 @@ verify_CD(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
     ASSERT_ARGS(verify_CD)
     PARROT_INTERP = NULL;
     size_t i;
+    PMC    *interp_pmc;
+    STRING *sc;
 
     /*
      * 1.) user_data is from external code so:
@@ -174,19 +177,14 @@ verify_CD(ARGIN(char *external_data), ARGMOD_NULLOK(PMC *user_data))
     if ((UINTVAL)user_data & 3)
         PANIC(interp, "user_data doesn't look like a pointer");
 
-    /*
-     * We don't yet know which interpreter this PMC is from, so run
-     * through all of the existing interpreters and check their PMC
-     * pools
-     */
+    /* Fetch original interpreter from prop */
     LOCK(interpreter_array_mutex);
-    for (i = 0; i < n_interpreters; ++i) {
-        Parrot_Interp checkinterp = interpreter_array [i];
-        if (checkinterp && Parrot_gc_ptr_is_pmc(checkinterp, user_data)) {
-            interp = checkinterp;
-            break;
-        }
-    }
+
+    interp      = interpreter_array[0];
+    sc          = CONST_STRING(interp, "_interpreter");
+    interp_pmc  = VTABLE_getprop(interp, user_data, sc);
+    GETATTR_ParrotInterpreter_interp(interp, interp_pmc, interp);
+
     UNLOCK(interpreter_array_mutex);
     if (!interp)
         PANIC(interp, "interpreter not found for callback");
@@ -347,7 +345,7 @@ case_I:
 #endif
       case 'p':
         /* created a UnManagedStruct */
-        p_param = pmc_new(interp, enum_class_UnManagedStruct);
+        p_param = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
         VTABLE_set_pointer(interp, p_param, external_data);
         pasm_sig[1] = 'P';
         param = (void*) p_param;

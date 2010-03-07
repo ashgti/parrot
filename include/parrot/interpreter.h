@@ -1,5 +1,5 @@
 /* interpreter.h
- *  Copyright (C) 2001-2009, Parrot Foundation.
+ *  Copyright (C) 2001-2010, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -164,9 +164,7 @@ typedef struct _Prederef {
     size_t n_allocated;                 /* allocated size of it */
 } Prederef;
 
-/*
- * Get Context from interpeter.
- */
+/* Get Context from interpreter */
 #define CONTEXT(interp)         Parrot_pcc_get_context_struct((interp), (interp)->ctx)
 
 /*
@@ -387,6 +385,18 @@ typedef PMC *(*Parrot_compiler_func_t)(PARROT_INTERP,
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
+Parrot_Interp allocate_interpreter(
+    ARGIN_NULLOK(Interp *parent),
+    INTVAL flags);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+Parrot_Interp initialize_interpreter(PARROT_INTERP, ARGIN(void *stacktop))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
 Parrot_Interp make_interpreter(ARGIN_NULLOK(Interp *parent), INTVAL flags);
 
 PARROT_EXPORT
@@ -398,6 +408,10 @@ void Parrot_really_destroy(PARROT_INTERP,
     SHIM(void *arg))
         __attribute__nonnull__(1);
 
+#define ASSERT_ARGS_allocate_interpreter __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+#define ASSERT_ARGS_initialize_interpreter __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(stacktop))
 #define ASSERT_ARGS_make_interpreter __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_Parrot_destroy __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -592,7 +606,7 @@ typedef void * *(*native_func_t)(PARROT_INTERP,
 #endif   /* PARROT_IN_CORE */
 
 #ifndef PMC_IS_NULL
-#  define PMC_IS_NULL(pmc) PMC_is_null(NULL, (pmc))
+#  define PMC_IS_NULL(pmc) Parrot_pmc_is_null(NULL, (pmc))
 #endif
 #ifndef STRING_IS_NULL
 #  define STRING_IS_NULL(s) ((s) == NULL || STRING_is_null(NULL, (s))

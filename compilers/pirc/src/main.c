@@ -27,7 +27,7 @@ extern int yypirdebug = 0;
 
 #endif
 
-
+/* HEADERIZER HFILE: none */
 
 /* XXX use pthreads library to test thread safety.
    does not work currently on windows.
@@ -47,6 +47,26 @@ extern int yypirdebug = 0;
 
 void * process_file(void *a);
 
+/* HEADERIZER HFILE: none */
+
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void print_help(ARGIN(char const * const program_name))
+        __attribute__nonnull__(1);
+
+static void runcode(PARROT_INTERP, int argc, ARGIN(char *argv[]))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(3);
+
+#define ASSERT_ARGS_print_help __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(program_name))
+#define ASSERT_ARGS_runcode __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(argv))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 
 =head1 FUNCTIONS
@@ -54,8 +74,7 @@ void * process_file(void *a);
 =over 4
 
 
-=item C<static void
-print_help(char const * const program_name)>
+=item C<static void print_help(char const * const program_name)>
 
 Routine to print usage of this program.
 
@@ -63,7 +82,7 @@ Routine to print usage of this program.
 
 */
 static void
-print_help(char const * const program_name)
+print_help(ARGIN(char const * const program_name))
 {
     fprintf(stderr, "Usage: %s [options] <file>\n", program_name);
     fprintf(stderr, "Options:\n\n"
@@ -116,8 +135,10 @@ temporary function for the thread-testing code.
 Unpack the arguments and invoke parse_file().
 
 */
+PARROT_CAN_RETURN_NULL
 void *
-process_file(void *a) {
+process_file(ARGIN(void *a))
+{
 
 
     /* unpack the arguments from the structure parser_args */
@@ -137,8 +158,7 @@ process_file(void *a) {
 
 /*
 
-=item C<static void
-runcode(PARROT_INTERP, int argc, char *argv[])>
+=item C<static void runcode(PARROT_INTERP, int argc, char *argv[])>
 
 This function runs the code in the interpreter's (in C<PARROT_INTERP>)
 code segment.
@@ -147,7 +167,8 @@ code segment.
 
 */
 static void
-runcode(PARROT_INTERP, int argc, char *argv[]) {
+runcode(PARROT_INTERP, int argc, ARGIN(char *argv[]))
+{
 
     /* runs :init functions */
     PackFile_fixup_subs(interp, PBC_MAIN, NULL);
@@ -159,8 +180,7 @@ runcode(PARROT_INTERP, int argc, char *argv[]) {
 
 /*
 
-=item C<int
-main(int argc, char *argv[])>
+=item C<int main(int argc, char *argv[])>
 
 Main compiler driver.
 

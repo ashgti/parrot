@@ -1,4 +1,9 @@
-#!/usr/bin/perl
+#!perl
+# Copyright (C) 2008-2010, Parrot Foundation.
+# $Id$
+
+use strict;
+use warnings;
 
 use lib ('./lib', '../../lib');
 use Parrot::Test::NCIGENAST;
@@ -24,3 +29,10 @@ decl_ident_is("c");
 
 parse('int a(), b(), c()');
 parse_failure;
+
+# Local Variables:
+#   mode: cperl
+#   cperl-indent-level: 4
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4:

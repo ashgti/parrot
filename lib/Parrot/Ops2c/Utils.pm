@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2008, Parrot Foundation.
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 package Parrot::Ops2c::Utils;
 use strict;
@@ -186,7 +186,6 @@ sub new {
     $argsref->{preamble}     = $preamble;
     $argsref->{init_func}    = $init_func;
     $argsref->{bs}           = "$argsref->{base}$argsref->{suffix}_";
-    $argsref->{opsarraytype} = $argsref->{trans}->opsarraytype();
 
     # Invoked as:  ${defines}
     $argsref->{defines} = $argsref->{trans}->defines();
@@ -197,7 +196,7 @@ sub new {
 
     my ( $op_info, $op_func, $getop );
     $op_info = $op_func = 'NULL';
-    $getop = '( int (*)(const char *, int) )NULL';
+    $getop = '( int (*)(PARROT_INTERP, const char *, int) )NULL';
 
     if ($self->{suffix} eq '') {
         $op_func = $self->{bs} . "op_func_table";
@@ -477,7 +476,7 @@ sub _print_preamble_header {
 #include "parrot/parrot.h"
 #include "parrot/oplib.h"
 
-$self->{sym_export} op_lib_t *$self->{init_func}(long init);
+$self->{sym_export} op_lib_t *$self->{init_func}(PARROT_INTERP, long init);
 
 END_C
     return 1;
@@ -559,7 +558,7 @@ END_C
 
     if ( $self->{suffix} eq '' && !$self->{flag}->{dynamic} ) {
         print $fh <<END_C_2;
-static int get_op(const char * name, int full);
+static int get_op(PARROT_INTERP, const char * name, int full);
 
 END_C_2
     }
@@ -606,9 +605,8 @@ sub _iterate_over_ops {
     $prev_src = '';
     foreach my $op ( $self->{ops}->ops ) {
         my $func_name = $op->func_name( $self->{trans} );
-        my $arg_types = "$self->{opsarraytype} *, PARROT_INTERP";
-        my $prototype = "$self->{sym_export} $self->{opsarraytype} * $func_name ($arg_types)";
-        my $args      = "$self->{opsarraytype} *cur_opcode, PARROT_INTERP";
+        my $prototype =
+          "$self->{sym_export} opcode_t * $func_name (opcode_t *, PARROT_INTERP)";
         my $definition;
         my $comment = '';
         my $one_op  = "";
@@ -622,7 +620,7 @@ sub _iterate_over_ops {
             $comment    = "/* " . $op->full_name() . " */";
         }
         else {
-            $definition = "$self->{opsarraytype} *\n$func_name ($args)";
+            $definition = "opcode_t *\n$func_name (opcode_t *cur_opcode, PARROT_INTERP)";
         }
 
         my $src = $op->source( $self->{trans} );
@@ -814,13 +812,13 @@ END_C
                 . join( ", ",
                 scalar $op->arg_types
                 ? map { sprintf( "PARROT_ARG_%s", uc $_ ) } $op->arg_types
-                : 0 )
-                . " }";
+                : '(arg_type_t) 0'
+                ) . " }";
             my $arg_dirs = "{ "
                 . join(
                 ", ", scalar $op->arg_dirs
                 ? map { $arg_dir_mapping{$_} } $op->arg_dirs
-                : 0
+                : '(arg_dir_t) 0'
                 ) . " }";
             my $labels = "{ "
                 . join(
@@ -828,7 +826,6 @@ END_C
                 ? $op->labels
                 : 0
                 ) . " }";
-            my $flags = 0;
 
             print $fh <<END_C;
   { /* $self->{index} */
@@ -841,8 +838,7 @@ END_C
     $arg_count,
     $arg_types,
     $arg_dirs,
-    $labels,
-    $flags
+    $labels
   },
 END_C
 
@@ -892,14 +888,14 @@ typedef struct hop {
 } HOP;
 static HOP **hop;
 
-static void hop_init(void);
+static void hop_init(PARROT_INTERP);
 static size_t hash_str(const char *str);
-static void store_op(op_info_t *info, int full);
+static void store_op(PARROT_INTERP, op_info_t *info, int full);
 
 /* XXX on changing interpreters, this should be called,
    through a hook */
 
-static void hop_deinit(void);
+static void hop_deinit(PARROT_INTERP);
 
 /*
  * find a short or full opcode
@@ -923,8 +919,8 @@ static size_t hash_str(const char *str) {
     return key;
 }
 
-static void store_op(op_info_t *info, int full) {
-    HOP * const p     = mem_allocate_typed(HOP);
+static void store_op(PARROT_INTERP, op_info_t *info, int full) {
+    HOP * const p     = mem_gc_allocate_zeroed_typed(interp, HOP);
     const size_t hidx =
         hash_str(full ? info->full_name : info->name) % OP_HASH_SIZE;
 
@@ -932,12 +928,12 @@ static void store_op(op_info_t *info, int full) {
     p->next   = hop[hidx];
     hop[hidx] = p;
 }
-static int get_op(const char * name, int full) {
+static int get_op(PARROT_INTERP, const char * name, int full) {
     const HOP * p;
     const size_t hidx = hash_str(name) % OP_HASH_SIZE;
     if (!hop) {
-        hop = mem_allocate_n_zeroed_typed(OP_HASH_SIZE,HOP *);
-        hop_init();
+        hop = mem_gc_allocate_n_zeroed_typed(interp, OP_HASH_SIZE,HOP *);
+        hop_init(interp);
     }
     for (p = hop[hidx]; p; p = p->next) {
         if(STREQ(name, full ? p->info->full_name : p->info->name))
@@ -945,18 +941,18 @@ static int get_op(const char * name, int full) {
     }
     return -1;
 }
-static void hop_init(void) {
+static void hop_init(PARROT_INTERP) {
     size_t i;
     op_info_t * const info = $self->{bs}op_lib.op_info_table;
     /* store full names */
     for (i = 0; i < $self->{bs}op_lib.op_count; i++)
-        store_op(info + i, 1);
+        store_op(interp, info + i, 1);
     /* plus one short name */
     for (i = 0; i < $self->{bs}op_lib.op_count; i++)
-        if (get_op(info[i].name, 0) == -1)
-            store_op(info + i, 0);
+        if (get_op(interp, info[i].name, 0) == -1)
+            store_op(interp, info + i, 0);
 }
-static void hop_deinit(void)
+static void hop_deinit(PARROT_INTERP)
 {
     if (hop) {
         size_t i;
@@ -964,7 +960,7 @@ static void hop_deinit(void)
             HOP *p = hop[i];
             while (p) {
                 HOP * const next = p->next;
-                mem_sys_free(p);
+                mem_gc_free(interp, p);
                 p = next;
             }
         }
@@ -977,7 +973,7 @@ END_C
     }
     else {
         print $fh <<END_C;
-static void hop_deinit(void) {}
+static void hop_deinit(SHIM_INTERP) {}
 END_C
     }
     return 1;
@@ -1026,11 +1022,11 @@ sub _generate_init_func {
 
     print $fh <<END_C;
 op_lib_t *
-$self->{init_func}(long init) {
+$self->{init_func}(PARROT_INTERP, long init) {
     /* initialize and return op_lib ptr */
     if (init == 1) {
 $init1_code
-    return &$self->{bs}op_lib;
+        return &$self->{bs}op_lib;
     }
     /* set op_lib to the passed ptr (in init) */
     else if (init) {
@@ -1038,7 +1034,7 @@ $init_set_dispatch
     }
     /* deinit - free resources */
     else {
-    hop_deinit();
+        hop_deinit(interp);
     }
     return NULL;
 }
@@ -1063,7 +1059,7 @@ $load_func(PARROT_INTERP);
 $self->{sym_export} PMC*
 $load_func(PARROT_INTERP)
 {
-    PMC *const lib      = pmc_new(interp, enum_class_ParrotLibrary);
+    PMC *const lib = Parrot_pmc_new(interp, enum_class_ParrotLibrary);
     ((Parrot_ParrotLibrary_attributes*)PMC_data(lib))->oplib_init = (void *) $self->{init_func};
     dynop_register(interp, lib);
     return lib;

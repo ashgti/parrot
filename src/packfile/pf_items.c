@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -1415,7 +1415,27 @@ size_t
 PF_size_string(ARGIN(const STRING *s))
 {
     ASSERT_ARGS(PF_size_string)
-    opcode_t padded_size = s->bufused;
+    /* TODO: don't break encapsulation on strings */
+    const UINTVAL len = s->bufused;
+    return PF_size_strlen(len);
+}
+
+/*
+
+=item C<size_t PF_size_strlen(const UINTVAL len)>
+
+Reports stored size of C<STRING> in C<opcode_t> units given its in-memory byte length.
+
+=cut
+
+*/
+
+PARROT_PURE_FUNCTION
+size_t
+PF_size_strlen(const UINTVAL len)
+{
+    ASSERT_ARGS(PF_size_strlen)
+    opcode_t padded_size = len;
 
     if (padded_size % sizeof (opcode_t)) {
         padded_size += sizeof (opcode_t) - (padded_size % sizeof (opcode_t));
@@ -1427,7 +1447,8 @@ PF_size_string(ARGIN(const STRING *s))
 
 /*
 
-=item C<char * PF_fetch_cstring(PackFile *pf, const opcode_t **cursor)>
+=item C<char * PF_fetch_cstring(PARROT_INTERP, PackFile *pf, const opcode_t
+**cursor)>
 
 Fetches a cstring from bytecode and returns an allocated copy
 
@@ -1438,11 +1459,11 @@ Fetches a cstring from bytecode and returns an allocated copy
 PARROT_MALLOC
 PARROT_CANNOT_RETURN_NULL
 char *
-PF_fetch_cstring(ARGIN(PackFile *pf), ARGIN(const opcode_t **cursor))
+PF_fetch_cstring(PARROT_INTERP, ARGIN(PackFile *pf), ARGIN(const opcode_t **cursor))
 {
     ASSERT_ARGS(PF_fetch_cstring)
     const size_t str_len = strlen((const char *)(*cursor)) + 1;
-    char * const p = (char *)mem_sys_allocate(str_len);
+    char * const p = mem_gc_allocate_n_typed(interp, str_len, char);
     const int wordsize = pf->header->wordsize;
 
     TRACE_PRINTF(("PF_fetch_cstring(): size is %ld...\n", str_len));

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -99,14 +99,14 @@ Parrot_io_setbuf(PARROT_INTERP, ARGMOD(PMC *filehandle), size_t bufsize)
     buffer_size = Parrot_io_get_buffer_size(interp, filehandle);
 
     if (buffer_start && (buffer_flags & PIO_BF_MALLOC)) {
-        mem_sys_free(buffer_start);
+        mem_gc_free(interp, buffer_start);
         Parrot_io_set_buffer_start(interp, filehandle, NULL);
         Parrot_io_set_buffer_next(interp, filehandle, NULL);
         buffer_start = buffer_next = NULL;
     }
 
     if (buffer_size > 0) {
-        buffer_start = buffer_next = (unsigned char *)mem_sys_allocate(buffer_size);
+        buffer_start = buffer_next = mem_gc_allocate_n_typed(interp, buffer_size, unsigned char);
         Parrot_io_set_buffer_start(interp, filehandle, buffer_start);
         Parrot_io_set_buffer_next(interp, filehandle, buffer_next);
         buffer_flags |= PIO_BF_MALLOC;
@@ -357,9 +357,12 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
         }
 
         got = Parrot_io_fill_readbuf(interp, filehandle);
-        len = (len < got)
-            ? len
-            : (got > 0) ? got : 0;
+
+        /* got is never < 0, but C's type system can't tell */
+        if (got < 0)
+            got = 0;
+
+        len = (len < got) ? len : got;
     }
 
     /* read from the read_buffer */

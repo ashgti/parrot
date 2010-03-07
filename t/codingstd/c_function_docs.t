@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2006-2009, Parrot Foundation.
+# Copyright (C) 2006-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -99,44 +99,28 @@ compilers/imcc/pcc.c
 compilers/imcc/reg_alloc.c
 compilers/imcc/symreg.c
 compilers/pirc/src/pircapi.c
-compilers/pirc/src/pircompiler.c
-compilers/pirc/src/piremit.c
-compilers/pirc/src/pirmacro.c
-compilers/pirc/src/pirpcc.c
-compilers/pirc/src/pirregalloc.c
-compilers/pirc/src/pirsymbol.c
 config/gen/platform/ansi/dl.c
 config/gen/platform/ansi/exec.c
 config/gen/platform/ansi/time.c
 config/gen/platform/darwin/dl.c
 config/gen/platform/darwin/memalign.c
 config/gen/platform/generic/dl.c
-config/gen/platform/generic/env.c
 config/gen/platform/generic/exec.c
 config/gen/platform/generic/math.c
 config/gen/platform/generic/memalign.c
-config/gen/platform/generic/memexec.c
 config/gen/platform/generic/stat.c
 config/gen/platform/generic/time.c
 config/gen/platform/netbsd/math.c
 config/gen/platform/openbsd/math.c
-config/gen/platform/openbsd/memexec.c
 config/gen/platform/solaris/math.c
 config/gen/platform/solaris/time.c
-examples/c/nanoparrot.c
-examples/c/pbc_info.c
 examples/compilers/japhc.c
-src/atomic/gcc_x86.c
-src/debug.c
 src/gc/generational_ms.c
 src/io/io_string.c
-src/pbc_dump.c
 src/string/charset/ascii.c
 src/string/charset/binary.c
 src/string/charset/iso-8859-1.c
 src/string/charset/unicode.c
-src/tsq.c
-include/parrot/atomic/gcc_pcc.h
 
 # Local Variables:
 #   mode: cperl

@@ -84,21 +84,7 @@ Not documented yet.
 
 =head2 Type signatures
 
-These are used with the Parrot_call_sub family of functions.
-
-=over 4
-
-=item v - void (return only)
-
-=item I - integer (return or argument)
-
-=item N - float (return or argument)
-
-=item S - string (return or argument)
-
-=item P - PMC (return or argument)
-
-=back
+    TODO: Write about signature strings
 
 =head2 Interpreter initialization and destruction
 
@@ -354,14 +340,6 @@ Call a Parrot subroutine using the supplied signature. Variables to be filled
 with return values are passed as references in the varargs list, after all
 arguments.
 
-=item [DEPRECATED] C<void *Parrot_call_sub(PARROT_INTERP, Parrot_PMC sub, const_char *signature)>
-
-Call a Parrot subroutine that returns a pointer using the supplied signature.
-
-=item [DEPRECATED] C<Parrot_Int Parrot_call_sub_ret_int(PARROT_INTERP, Parrot_PMC sub, const_char *signature)>
-
-Call a Parrot subroutine that returns an integer using the supplied signature.
-
 =back
 
 =head2 Objects
@@ -504,7 +482,7 @@ future.
         sub = Parrot_find_global_cur(interp, pstr);
 
         /* run foo(), which returns nothing */
-        Parrot_call_sub(interp, sub, "v");
+	Parrot_ext_call(interp, sub, "->");
 
         Parrot_destroy(interp);
 
@@ -600,10 +578,6 @@ The list may also be augmented if additional functionality is required.
 =item C<Parrot_callback_D>
 
 =item C<Parrot_ext_call>
-
-=item [DEPRECATED] C<Parrot_call_sub>
-
-=item [DEPRECATED] C<Parrot_call_sub_ret_int>
 
 =item C<Parrot_char_digit_value>
 
@@ -1053,46 +1027,6 @@ The list may also be augmented if additional functionality is required.
 
 =item C<Parrot_PMC_assign_string_native>
 
-=item C<Parrot_PMC_bitwise_and>
-
-=item C<Parrot_PMC_bitwise_and_int>
-
-=item C<Parrot_PMC_bitwise_ands>
-
-=item C<Parrot_PMC_bitwise_ands_str>
-
-=item C<Parrot_PMC_bitwise_lsr>
-
-=item C<Parrot_PMC_bitwise_lsr_int>
-
-=item C<Parrot_PMC_bitwise_not>
-
-=item C<Parrot_PMC_bitwise_nots>
-
-=item C<Parrot_PMC_bitwise_or>
-
-=item C<Parrot_PMC_bitwise_or_int>
-
-=item C<Parrot_PMC_bitwise_ors>
-
-=item C<Parrot_PMC_bitwise_ors_str>
-
-=item C<Parrot_PMC_bitwise_shl>
-
-=item C<Parrot_PMC_bitwise_shl_int>
-
-=item C<Parrot_PMC_bitwise_shr>
-
-=item C<Parrot_PMC_bitwise_shr_int>
-
-=item C<Parrot_PMC_bitwise_xor>
-
-=item C<Parrot_PMC_bitwise_xor_int>
-
-=item C<Parrot_PMC_bitwise_xors>
-
-=item C<Parrot_PMC_bitwise_xors_str>
-
 =item C<Parrot_PMC_can>
 
 =item C<Parrot_PMC_clone>
@@ -1162,8 +1096,6 @@ The list may also be augmented if additional functionality is required.
 =item C<Parrot_PMC_get_attr_keyed>
 
 =item C<Parrot_PMC_get_attr_str>
-
-=item C<Parrot_PMC_get_bignum>
 
 =item C<Parrot_PMC_get_bool>
 
@@ -1252,46 +1184,6 @@ The list may also be augmented if additional functionality is required.
 =item C<Parrot_PMC_i_add_float>
 
 =item C<Parrot_PMC_i_add_int>
-
-=item C<Parrot_PMC_i_bitwise_and>
-
-=item C<Parrot_PMC_i_bitwise_and_int>
-
-=item C<Parrot_PMC_i_bitwise_ands>
-
-=item C<Parrot_PMC_i_bitwise_ands_str>
-
-=item C<Parrot_PMC_i_bitwise_lsr>
-
-=item C<Parrot_PMC_i_bitwise_lsr_int>
-
-=item C<Parrot_PMC_i_bitwise_not>
-
-=item C<Parrot_PMC_i_bitwise_nots>
-
-=item C<Parrot_PMC_i_bitwise_or>
-
-=item C<Parrot_PMC_i_bitwise_or_int>
-
-=item C<Parrot_PMC_i_bitwise_ors>
-
-=item C<Parrot_PMC_i_bitwise_ors_str>
-
-=item C<Parrot_PMC_i_bitwise_shl>
-
-=item C<Parrot_PMC_i_bitwise_shl_int>
-
-=item C<Parrot_PMC_i_bitwise_shr>
-
-=item C<Parrot_PMC_i_bitwise_shr_int>
-
-=item C<Parrot_PMC_i_bitwise_xor>
-
-=item C<Parrot_PMC_i_bitwise_xor_int>
-
-=item C<Parrot_PMC_i_bitwise_xors>
-
-=item C<Parrot_PMC_i_bitwise_xors_str>
 
 =item C<Parrot_PMC_i_concatenate>
 
@@ -1661,14 +1553,6 @@ The list may also be augmented if additional functionality is required.
 
 =item C<Parrot_str_append>
 
-=item C<Parrot_str_bitwise_and>
-
-=item C<Parrot_str_bitwise_not>
-
-=item C<Parrot_str_bitwise_or>
-
-=item C<Parrot_str_bitwise_xor>
-
 =item C<Parrot_str_boolean>
 
 =item C<Parrot_str_byte_length>
@@ -1807,7 +1691,7 @@ The list may also be augmented if additional functionality is required.
 
 =item C<Parrot_warn>
 
-=item C<PMC_is_null>
+=item C<Parrot_pmc_is_null>
 
 =item C<pmc_new>
 

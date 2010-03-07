@@ -61,9 +61,7 @@ static void hash_freeze(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*info);
 
-static void hash_thaw(PARROT_INTERP,
-    ARGMOD(Hash *hash),
-    ARGMOD(PMC *info))
+static void hash_thaw(PARROT_INTERP, ARGMOD(Hash *hash), ARGMOD(PMC *info))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
@@ -752,11 +750,13 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
     /* resize mem */
     if (old_offset != old_mem) {
         /* This buffer has been reallocated at least once before. */
-        new_mem = (HashBucket *)mem_sys_realloc(old_mem, HASH_ALLOC_SIZE(new_size));
+        new_mem = (HashBucket *)Parrot_gc_reallocate_memory_chunk_with_interior_pointers(
+                interp, old_mem, HASH_ALLOC_SIZE(new_size), HASH_ALLOC_SIZE(old_size));
     }
     else {
         /* Allocate a new buffer. */
-        new_mem = (HashBucket *)mem_sys_allocate(HASH_ALLOC_SIZE(new_size));
+        new_mem = (HashBucket *)Parrot_gc_allocate_memory_chunk_with_interior_pointers(
+                interp, HASH_ALLOC_SIZE(new_size));
         memcpy(new_mem, old_mem, HASH_ALLOC_SIZE(old_size));
     }
 
@@ -953,7 +953,8 @@ parrot_create_hash(PARROT_INTERP, PARROT_DATA_TYPE val_type, Hash_key_type hkey_
 {
     ASSERT_ARGS(parrot_create_hash)
     HashBucket  *bp;
-    void        *alloc = mem_sys_allocate(sizeof (Hash) + HASH_ALLOC_SIZE(INITIAL_BUCKETS));
+    void        *alloc = Parrot_gc_allocate_memory_chunk_with_interior_pointers(
+                            interp, sizeof (Hash) + HASH_ALLOC_SIZE(INITIAL_BUCKETS));
     Hash * const hash  = (Hash*)alloc;
     size_t       i;
 
@@ -1012,13 +1013,13 @@ parrot_chash_destroy.
 
 PARROT_EXPORT
 void
-parrot_hash_destroy(SHIM_INTERP, ARGMOD(Hash *hash))
+parrot_hash_destroy(PARROT_INTERP, ARGMOD(Hash *hash))
 {
     ASSERT_ARGS(parrot_hash_destroy)
     HashBucket *bp = (HashBucket*)((char*)hash + sizeof (Hash));
     if (bp != hash->bs)
-        mem_sys_free(hash->bs);
-    mem_sys_free(hash);
+        mem_gc_free(interp, hash->bs);
+    mem_gc_free(interp, hash);
 }
 
 
@@ -1042,8 +1043,8 @@ parrot_chash_destroy(PARROT_INTERP, ARGMOD(Hash *hash))
     for (i = 0; i <= hash->mask; i++) {
         HashBucket *bucket = hash->bi[i];
         while (bucket) {
-            mem_sys_free(bucket->key);
-            mem_sys_free(bucket->value);
+            mem_gc_free(interp, bucket->key);
+            mem_gc_free(interp, bucket->value);
             bucket = bucket->next;
         }
     }
@@ -1077,7 +1078,7 @@ parrot_chash_destroy_values(PARROT_INTERP, ARGMOD(Hash *hash),
     for (i = 0; i <= hash->mask; i++) {
         HashBucket *bucket = hash->bi[i];
         while (bucket) {
-            mem_sys_free(bucket->key);
+            mem_gc_free(interp, bucket->key);
             func(bucket->value);
             bucket = bucket->next;
         }
@@ -1448,7 +1449,7 @@ PMC*
 get_integer_pmc(PARROT_INTERP, INTVAL value)
 {
     ASSERT_ARGS(get_integer_pmc)
-    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
+    PMC * const ret = Parrot_pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
     VTABLE_set_integer_native(interp, ret, value);
     return ret;
 }
@@ -1469,7 +1470,7 @@ PMC*
 get_number_pmc(PARROT_INTERP, FLOATVAL value)
 {
     ASSERT_ARGS(get_number_pmc)
-    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float));
+    PMC * const ret = Parrot_pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Float));
     VTABLE_set_number_native(interp, ret, value);
     return ret;
 }
@@ -1489,7 +1490,7 @@ PMC *
 get_string_pmc(PARROT_INTERP, ARGIN(STRING *value))
 {
     ASSERT_ARGS(get_string_pmc)
-    PMC * const ret = pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String));
+    PMC * const ret = Parrot_pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_String));
     VTABLE_set_string_native(interp, ret, value);
     return ret;
 }

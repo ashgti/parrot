@@ -31,6 +31,19 @@ B<Calling Ops>:  Various functions that call the run loop.
 static int
 runloop_id_counter = 0;          /* for synthesizing runloop ids. */
 
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void really_destroy_runloop_jump_points(PARROT_INTERP,
+    ARGFREE(Parrot_runloop *jump_point))
+        __attribute__nonnull__(1);
+
+#define ASSERT_ARGS_really_destroy_runloop_jump_points \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 
 =item C<void runops(PARROT_INTERP, size_t offs)>
@@ -142,7 +155,7 @@ new_runloop_jump_point(PARROT_INTERP)
         interp->runloop_jmp_free_list = jump_point->prev;
     }
     else
-        jump_point = mem_allocate_typed(Parrot_runloop);
+        jump_point = mem_gc_allocate_zeroed_typed(interp, Parrot_runloop);
 
     jump_point->prev        = interp->current_runloop;
     interp->current_runloop = jump_point;
@@ -184,13 +197,14 @@ void
 destroy_runloop_jump_points(PARROT_INTERP)
 {
     ASSERT_ARGS(destroy_runloop_jump_points)
-    really_destroy_runloop_jump_points(interp->current_runloop);
-    really_destroy_runloop_jump_points(interp->runloop_jmp_free_list);
+    really_destroy_runloop_jump_points(interp, interp->current_runloop);
+    really_destroy_runloop_jump_points(interp, interp->runloop_jmp_free_list);
 }
 
 /*
 
-=item C<void really_destroy_runloop_jump_points(Parrot_runloop *jump_point)>
+=item C<static void really_destroy_runloop_jump_points(PARROT_INTERP,
+Parrot_runloop *jump_point)>
 
 Takes a pointer to a runloop jump point (which had better be the last one in
 the list). Walks back through the list, freeing the memory of each one, until
@@ -200,13 +214,14 @@ it encounters NULL. Used by C<destroy_runloop_jump_points>.
 
 */
 
-void
-really_destroy_runloop_jump_points(ARGIN_NULLOK(Parrot_runloop *jump_point))
+static void
+really_destroy_runloop_jump_points(PARROT_INTERP,
+        ARGFREE(Parrot_runloop *jump_point))
 {
     ASSERT_ARGS(really_destroy_runloop_jump_points)
     while (jump_point) {
         Parrot_runloop * const prev = jump_point->prev;
-        mem_sys_free(jump_point);
+        mem_gc_free(interp, jump_point);
         jump_point = prev;
     }
 }

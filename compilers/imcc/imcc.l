@@ -726,7 +726,7 @@ SP              [ ]
                 "Invalid LABEL outside of macro");
         }
         else {
-            char * const fmt    = "local__%s__%s__$";
+            const char * const fmt    = "local__%s__%s__$";
             const size_t fmtlen = strlen(fmt) - (2 * strlen("%s"));
             const size_t len    = strlen(IMCC_INFO(interp)->cur_macro_name)
                                 + yyleng + fmtlen;
@@ -787,7 +787,7 @@ int yywrap(void* yyscanner) {
 static macro_frame_t *
 new_frame(PARROT_INTERP) {
     static int label   = 0;
-    macro_frame_t * const tmp = mem_allocate_zeroed_typed(macro_frame_t);
+    macro_frame_t * const tmp = mem_gc_allocate_zeroed_typed(interp, macro_frame_t);
 
     tmp->label         = ++label;
     tmp->s.line        = IMCC_INFO(interp)->line;
@@ -895,7 +895,7 @@ read_braced(YYSTYPE *valp, PARROT_INTERP, const char *macro_name,
                         macro_name);
 
         len     += strlen(val.s);
-        current  = (char *)realloc(current, len + 1);
+        current  = (char *)mem_sys_realloc(current, len + 1);
         strcat(current,val.s);
 
         mem_sys_free(val.s);
@@ -963,7 +963,7 @@ read_params(YYSTYPE *valp, PARROT_INTERP, params_t *params,
         else {
             if (!need_id || c != ' ') {
                 len     += strlen(val.s);
-                current  = (char *)realloc(current, len + 1);
+                current  = (char *)mem_sys_realloc(current, len + 1);
                 strcat(current, val.s);
             }
 
@@ -1019,7 +1019,6 @@ read_macro(YYSTYPE *valp, PARROT_INTERP, void *yyscanner)
     }
 
     while (c != ENDM) {
-        char *old_s = valp->s;
         int   elem_len;
 
         if (c <= 0) {
@@ -1107,7 +1106,7 @@ define_macro(PARROT_INTERP, ARGIN(const char *name), ARGIN(const params_t *param
         m->expansion = NULL;
     }
     else {
-        m = mem_allocate_zeroed_typed(macro_t);
+        m = mem_gc_allocate_zeroed_typed(interp, macro_t);
 
         if (!IMCC_INFO(interp)->macros)
             IMCC_INFO(interp)->macros = parrot_new_cstring_hash(interp);

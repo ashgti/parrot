@@ -14,7 +14,7 @@
 #include "parrot/parrot.h"
 #include "parrot/oplib.h"
 
- op_lib_t *Parrot_DynOp_core_2_0_0(long init);
+ op_lib_t *Parrot_DynOp_core_2_1_0(PARROT_INTERP, long init);
 
  opcode_t * Parrot_end (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_noop (opcode_t *, PARROT_INTERP);
@@ -22,8 +22,6 @@
  opcode_t * Parrot_check_events (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_check_events__ (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_wrapper__ (opcode_t *, PARROT_INTERP);
- opcode_t * Parrot_prederef__ (opcode_t *, PARROT_INTERP);
- opcode_t * Parrot_reserved_ic (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_load_bytecode_s (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_load_bytecode_sc (opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_load_language_s (opcode_t *, PARROT_INTERP);
