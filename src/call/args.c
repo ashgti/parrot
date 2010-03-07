@@ -753,23 +753,20 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     PMC         * arg_flags         = PMCNULL;
     PMC         * ignored_flags     = PMCNULL;
     PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
-    const INTVAL sig_len            = strlen(sig);
+    INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
     INTVAL       i;
     int          append_pi          = 1;
+    const INTVAL has_invocant = !PMC_IS_NULL(obj);
 
-    if (sig_len) {
-        parse_signature_string(interp, sig, &arg_flags);
-        VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
-    }
+    parse_signature_string(interp, sig, &arg_flags);
+    if (has_invocant && (sig[0] != 'P' || sig[1] != 'i'))
+        VTABLE_unshift_integer(interp, arg_flags, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
+    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
     /* Process the varargs list */
     for (i = 0; i < sig_len; ++i) {
         const INTVAL type = sig[i];
-
-        /* Don't process returns */
-        if (in_return_sig)
-            break;
 
         /* Regular arguments just set the value */
         switch (type) {
@@ -787,20 +784,19 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                 const INTVAL type_lookahead = sig[i+1];
                 PMC * const pmc_arg = va_arg(*args, PMC *);
                 if (type_lookahead == 'f') {
-                     dissect_aggregate_arg(interp, call_object, pmc_arg);
+                    dissect_aggregate_arg(interp, call_object, pmc_arg);
                     i++; /* skip 'f' */
                 }
-                else {
-                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
-                    if (type_lookahead == 'i') {
-                        if (i != 0)
-                            Parrot_ex_throw_from_c_args(interp, NULL,
-                                EXCEPTION_INVALID_OPERATION,
-                                "Dispatch: only the first argument can be an invocant");
-                        i++; /* skip 'i' */
-                        append_pi = 0; /* Don't append Pi in front of signature */
-                    }
+                else if (type_lookahead == 'i') {
+                    if (i != 0)
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION,
+                            "Dispatch: only the first argument can be an invocant");
+                    i++; /* skip 'i' */
+                    VTABLE_push_pmc(interp, call_object, obj);
                 }
+                else
+                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
                 break;
             }
           case '-':
@@ -812,10 +808,6 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                     "Dispatch: invalid argument type %c!", type);
         }
     }
-
-    /* Check if we have an invocant, and add it to the front of the arguments iff needed */
-    if (!PMC_IS_NULL(obj) && append_pi)
-        VTABLE_unshift_pmc(interp, call_object, obj);
 
     return call_object;
 }

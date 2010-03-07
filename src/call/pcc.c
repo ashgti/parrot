@@ -193,8 +193,7 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
     Parrot_pcc_split_signature_string(interp, signature, &arg_sig, &ret_sig);
 
     va_start(args, signature);
-    call_obj = Parrot_pcc_build_call_from_varargs(interp, pmc,
-                 arg_sig, &args);
+    call_obj = Parrot_pcc_build_call_from_varargs(interp, pmc, arg_sig, &args);
 
     /* Find the subroutine object as a named method on pmc */
     sub_obj = VTABLE_find_method(interp, pmc, method_name);
