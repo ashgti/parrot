@@ -110,18 +110,9 @@ method _emit_source_preamble($fh) {
 #include "pmc/pmc_parrotlibrary.h"
 #include "pmc/pmc_callcontext.h"
 
-{self.trans.defines}
+{self.trans.defines(self)}
 
 |);
-
-#    if ( $self->{suffix} eq '' && !$self->{flag}->{dynamic} ) {
-#        print $fh <<END_C_2;
-#static int get_op(PARROT_INTERP, const char * name, int full);
-#
-#END_C_2
-#    }
-
-    $fh.print(self.trans.source_preamble);
 
     $fh.print(self.ops_file.preamble);
 }

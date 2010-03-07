@@ -24,9 +24,7 @@ method emit_c_header_part($fh) { die('...') }
 # Called from Ops::Op.
 method body_prelude() { '' }
 
-method defines() { die('...') }
-
-method source_preamble() { '' }
+method defines($emitter) { die('...') }
 
 method emit_source_part($emitter, $fh) { die('...') }
 
