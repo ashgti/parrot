@@ -225,42 +225,39 @@ method _substitute($str, $trans) {
         -> $m { $trans.access_arg( self.arg_type(+$m<op_num> - 1), +$m<op_num>) }
     );
 
-    #XXX: the following substitutions need to be rewritten to exclude nested expressions 
-    # e.g. {{={{=0}},=foo}}
-
     #s/{{=0,=([^{]*?)}}/   $trans->restart_address($1) . "; {{=0}}"; /me;
     $str := subst($str,
-        /'{{=0,=' $<addr>=[.*?] '}}'/,
+        /'{{=0,=' $<addr>=[<-[{]>*?] '}}'/,
         -> $m { $trans.restart_address($m<addr>) ~ '; {{=0}}' }
     );
 
     #s/{{=0,\+=([^{]*?)}}/ $trans->restart_offset($1)  . "; {{=0}}"; /me;
     $str := subst($str,
-        /'{{=0,+=' $<offset>=[.*?] '}}'/,
+        /'{{=0,+=' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.restart_offset($m<offset>) ~ '; {{=0}}' }
     );
 
     #s/{{=0,-=([^{]*?)}}/  $trans->restart_offset(-$1) . "; {{=0}}"; /me;
     $str := subst($str,
-        /'{{=0,-=' $<offset>=[.*?] '}}'/,
+        /'{{=0,-=' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.restart_offset( '-' ~ $m<offset>) ~ '; {{=0}}' }
     );
 
     #s/{{=([^*][^{]*?)}}/  $trans->goto_address($1); /me;
     $str := subst($str,
-        /'{{=' $<addr>=[.*?] '}}'/,
+        /'{{=' $<addr>=[<-[{]>*?] '}}'/,
         -> $m { $trans.goto_address($m<addr>) }
     );
 
     #s/{{\+=([^{]*?)}}/    $trans->goto_offset($1);  /me;
     $str := subst($str,
-        /'{{+=' $<offset>=[.*?] '}}'/,
+        /'{{+=' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.goto_offset($m<offset>) }
     );
 
     #s/{{-=([^{]*?)}}/     $trans->goto_offset(-$1); /me;
     $str := subst($str,
-        /'{{-=' $<offset>=[.*?] '}}'/,
+        /'{{-=' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.goto_offset( '-' ~ $m<offset>) }
     );
 
@@ -272,19 +269,19 @@ method _substitute($str, $trans) {
 
     #s/{{\^\+([^{]*?)}}/   $trans->expr_offset($1);  /me;
     $str := subst($str,
-        /'{{^+' $<offset>=[.*?] '}}'/,
+        /'{{^+' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.expr_offset($m<offset>) }
     );
 
     #s/{{\^-([^{]*?)}}/    $trans->expr_offset(-$1); /me;
     $str := subst($str,
-        /'{{^-' $<offset>=[.*?] '}}'/,
+        /'{{^-' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.expr_offset( '-' ~ $m<offset>) }
     );
 
     #s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
     $str := subst($str,
-        /'{{^' $<addr>=[.*?] '}}'/,
+        /'{{^' $<addr>=[<-[{]>*?] '}}'/,
         -> $m { $trans.expr_address($m<addr>) }
     );
 
