@@ -133,6 +133,8 @@ method op_info($emitter) { $emitter.bs ~ 'op_info_table' }
 method op_func($emitter) { $emitter.bs ~ 'op_func_table' }
 method getop($emitter)   { 'get_op' };
 
+method body_prelude() { 'Parrot_Context const * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);' }
+
 method emit_source_part($emitter, $fh) {
     self._emit_op_func_table($emitter, $fh);
     self._emit_op_info_table($emitter, $fh);
