@@ -3,13 +3,14 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(18);
+plan(19);
 
 my $trans := Ops::Trans::C.new();
 
 my @files := <
     src/ops/io.ops
     src/ops/sys.ops
+    src/ops/cmp.ops
 >;
 
 my $f := Ops::File.new(|@files);
@@ -62,6 +63,8 @@ ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
 ok($source ~~ /'PREG(1)'/, 'Trans::C arg translation works');
 ok($source ~! /'OP_SIZE'/, 'Trans::C translates OP_SIZE');
 
+# "eq"
+ok($source ~~ /'0,' \s '0,' \s '1'/, "Labels handled correctly");
 
 my $op_body := '
 inline op do_stuff(invar PMC)
@@ -81,7 +84,7 @@ $restart_addr_ok := $new_body ~~ /'return (opcode_t *) cur_opcode + IREG(1);'/;
 ok($restart_addr_ok, "goto OFFSET() and \$1 translated ok");
 ok($new_body ~~ /'PARROT_JUMP_RELATIVE'/, "jump flags generated");
 
-#say($source);
+say($source);
 
 sub translate_op_body($trans, $body) {
     my $file  := Ops::File.new_str($body);

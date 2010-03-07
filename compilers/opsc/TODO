@@ -2,7 +2,6 @@ Simple todo.
 
 Required for initial self-hosting:
 
-  * Implement handling of labels in Trans::C
   * Replacement for ops2c.pl
   * Update config/gen/makefiles/root.in to use opsc instead of ops2c
 

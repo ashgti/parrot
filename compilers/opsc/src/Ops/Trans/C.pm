@@ -208,13 +208,11 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
                 |map( -> $d { %arg_dir_mapping{$d<direction>} }, $op<normalized_args>)
             ) ~ ' }'
             !! '{ (arg_dir_t) 0 }';
-        my $labels := '{ '
-            ~ join(
-            ", ", '0'
-            #$op->labels
-            #? $op->labels
-            #: 0
-            ) ~ ' }';
+        my $labels := $op<normalized_args>
+            ?? '{ ' ~ join(", ",
+                |map( -> $d { $d<is_label> ?? 1 !! 0 }, $op<normalized_args>)
+            ) ~ ' }'
+            !! '{ 0 }';
 
         $fh.print('{' ~ qq|
    /* $index */
