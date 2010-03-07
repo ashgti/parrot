@@ -758,11 +758,10 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     INTVAL       i;
     int          append_pi          = 1;
 
-    if (!sig_len)
-        return call_object;
-
-    parse_signature_string(interp, sig, &arg_flags);
-    VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
+    if (sig_len) {
+        parse_signature_string(interp, sig, &arg_flags);
+        VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
+    }
 
     /* Process the varargs list */
     for (i = 0; i < sig_len; ++i) {
@@ -2143,6 +2142,8 @@ Parrot_pcc_split_signature_string(PARROT_INTERP, ARGIN(const char *signature),
             arg_len++;
     }
     ret_len = strlen(signature) - arg_len - 2;
+    if (ret_len < 1)
+        ret_len = 0;
 
     arg_tmp = (char *) malloc(arg_len + 1);
     ret_tmp = (char *) malloc(ret_len + 1);
