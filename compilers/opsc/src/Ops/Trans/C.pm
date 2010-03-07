@@ -194,7 +194,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
         my $full_name := $op.full_name;
         my $func_name := $op.func_name( self );
         my $body      := $op.body;
-        my $jump      := $op.jump || 0;
+        my $jump      := $op.jump;
         my $arg_count := $op.size;
 
         ## 0 inserted if arrays are empty to prevent msvc compiler errors

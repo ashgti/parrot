@@ -192,10 +192,10 @@ may jump.
 
 =end
 
-method jump(*@jumps) {
+method jump($jump?) {
 
-    if (@jumps) {
-        self<JUMP> := @jumps;
+    if ($jump) {
+        self<JUMP> := $jump;
     }
 
     self<JUMP>;

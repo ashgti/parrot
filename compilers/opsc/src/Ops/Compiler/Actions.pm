@@ -72,6 +72,7 @@ method op($/) {
         $<op_body>.ast
     );
 
+    $op.jump($<op_body>.ast<jump>);
     $op<flags> := %flags;
     $op<args>  := @args;
     $op<type>  := ~$<op_type>;
