@@ -252,9 +252,11 @@ sub munch_body($op, $body) {
     # on the mode of operation (function calls, switch statements, gotos
     # with labels, etc.).
     #
+    
+    $op<jump> := '0';
 
     if ($body ~~ / [ goto | restart ] \s+ OFFSET / ) {
-        $op<jump> := ~ 'PARROT_JUMP_RELATIVE';
+        $op<jump> := $op<jump> ~ '|PARROT_JUMP_RELATIVE';
     }
 
     #'goto ADDRESS((foo))' -> '{{=foo}}'
