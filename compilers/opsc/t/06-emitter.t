@@ -85,7 +85,7 @@ $restart_addr_ok := $new_body ~~ /'return (opcode_t *) cur_opcode + IREG(1);'/;
 ok($restart_addr_ok, "goto OFFSET() and \$1 translated ok");
 ok($new_body ~~ /'PARROT_JUMP_RELATIVE'/, "jump flags generated");
 
-say($source);
+#say($source);
 
 sub translate_op_body($trans, $body) {
     my $file  := Ops::File.new_str($body);
