@@ -78,6 +78,13 @@ method op($/) {
     $op<type>  := ~$<op_type>;
     $op<normalized_args> := @norm_args;
 
+    if %flags<flow> {
+        $op.push(PAST::Op.new(
+            :pasttype('inline'),
+            :inline("\ngoto NEXT()\n")
+            ));
+    }
+
     my $past := PAST::Stmts.new(
         :node($/)
     );

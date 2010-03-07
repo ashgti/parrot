@@ -7,7 +7,7 @@ pir::load_bytecode('compilers/opsc/opsc.pbc');
 pir::load_bytecode('nqp-settings.pbc');
 pir::load_bytecode('dumper.pbc');
 
-plan(25);
+plan(26);
 
 my $buf := q|
 BEGIN_OPS_PREAMBLE    
@@ -83,11 +83,16 @@ ok($arg<direction> eq 'i', 'Third direction is correct');
 ok($arg<type> eq 'nc', 'Third type is correct');
 ok(!($arg<variant>), 'Third arg without variant');
 
-ok( ($op<args_types>).join('_') eq 'i_p_nc', "First variant correct");
+ok( ($op.arg_types).join('_') eq 'i_p_nc', "First variant correct");
+
+# Check body munching.
+ok( $op.body ~~ /goto \s NEXT/, "goto NEXT appended for :flow ops");
 
 # Second created op should have _pc_
 $op := @ops[2];
-ok( $op<args_types>.join('_') eq 'i_pc_nc', "Second variant correct");
+ok( $op.arg_types.join('_') eq 'i_pc_nc', "Second variant correct");
+
+
 
 # Don't forget to update plan!
 
