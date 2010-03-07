@@ -79,6 +79,7 @@ method emit_c_header_file($fh) {
 method print_c_source_file() {
     # Build file in memeory
     my $fh := pir::new__Ps('StringHandle');
+    $fh.open('dummy.c', 'w');
     self.emit_c_source_file($fh);
     $fh.close();
 
