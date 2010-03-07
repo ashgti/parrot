@@ -2,8 +2,8 @@ Simple todo.
 
 Required for initial self-hosting:
 
-  * Replacement for ops2c.pl
   * Update config/gen/makefiles/root.in to use opsc instead of ops2c
+  * Pass Ops::OpLib to Ops::File to skip ops.
 
 Required for full implementation:
   * Implement Trans::* for other runcores.
@@ -11,6 +11,7 @@ Required for full implementation:
   * Add tests for dynamic mode of Emitter.
 
 Nice to have:
+  * (almost mandatory) Cache regexes used for Op body munching.
   * Profiling and performance tuning of ops parsing (we need pmichaud).
   * A LOT OF DOCUMENTATION.
 
