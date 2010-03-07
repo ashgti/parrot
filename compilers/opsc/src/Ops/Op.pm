@@ -129,6 +129,8 @@ method args($args?) { self.attr('args', $args, defined($args)) }
 
 method arg_types($args?)  {
     my $res := self.attr('arg_types', $args, defined($args));
+
+    return list() if !defined($res);
     pir::does__IPS($res, 'array') ?? $res !! list($res);
 }
 
@@ -142,9 +144,6 @@ method arg_type($arg_num) {
 method full_name() {
     my $name      := self.name;
     my @arg_types := self.arg_types;
-
-    # FIXME. We should always have array here.
-    @arg_types := list(@arg_types) if !pir::does__IPS(@arg_types, 'array');
 
     #say("# $name arg_types " ~ @arg_types);
     join('_', $name, |@arg_types);
