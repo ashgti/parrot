@@ -81,7 +81,7 @@ method op($/) {
     if %flags<flow> {
         $op.push(PAST::Op.new(
             :pasttype('inline'),
-            :inline("\ngoto NEXT()\n")
+            :inline("\ngoto NEXT();\n")
             ));
     }
 
