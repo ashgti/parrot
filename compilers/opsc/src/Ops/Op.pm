@@ -192,14 +192,7 @@ may jump.
 
 =end
 
-method jump($jump?) {
-
-    if ($jump) {
-        self<JUMP> := $jump;
-    }
-
-    self<JUMP>;
-}
+method jump($jump?)   { self.attr('jump', $jump, defined($jump)) }
 
 =begin
 
