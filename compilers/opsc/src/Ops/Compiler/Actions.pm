@@ -121,7 +121,7 @@ sub normalize_args(@args) {
         if $arg<type> eq 'INTKEY' {
             $res<type> := 'ki';
         }
-        else {
+        elsif $arg<type> ne 'LABEL' {
             $res<type> := lc(substr($arg<type>, 0, 1));
         }
 

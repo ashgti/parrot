@@ -228,27 +228,77 @@ method _substitute($str, $trans) {
     #my $rewrote_access = s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
 
     $str := subst($str, 
-        /'{{' '@' $<op_num>=[<digit>+] '}}'/, 
+        /'{{@' $<op_num>=[<digit>+] '}}'/, 
         -> $m { $trans.access_arg( self.arg_type(+$m<op_num> - 1), +$m<op_num>) }
+    );
+
+    #XXX: the following substitutions need to be rewritten to exclude nested expressions 
+    # e.g. {{={{=0}},=foo}}
+
+    #s/{{=0,=([^{]*?)}}/   $trans->restart_address($1) . "; {{=0}}"; /me;
+    $str := subst($str,
+        /'{{=0,=' $<addr>=[.*?] '}}'/,
+        -> $m { $trans.restart_address($m<addr>) ~ '; {{=0}}' }
+    );
+
+    #s/{{=0,\+=([^{]*?)}}/ $trans->restart_offset($1)  . "; {{=0}}"; /me;
+    $str := subst($str,
+        /'{{=0,+=' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.restart_offset($m<offset>) ~ '; {{=0}}' }
+    );
+
+    #s/{{=0,-=([^{]*?)}}/  $trans->restart_offset(-$1) . "; {{=0}}"; /me;
+    $str := subst($str,
+        /'{{=0,-=' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.restart_offset( '-' ~ $m<offset>) ~ '; {{=0}}' }
+    );
+
+    #s/{{=([^*][^{]*?)}}/  $trans->goto_address($1); /me;
+    $str := subst($str,
+        /'{{=' $<addr>=[.*?] '}}'/,
+        -> $m { $trans.goto_address($m<addr>) }
+    );
+
+    #s/{{\+=([^{]*?)}}/    $trans->goto_offset($1);  /me;
+    $str := subst($str,
+        /'{{+=' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.goto_offset($m<offset>) }
+    );
+
+    #s/{{-=([^{]*?)}}/     $trans->goto_offset(-$1); /me;
+    $str := subst($str,
+        /'{{-=' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.goto_offset( '-' ~ $m<offset>) }
+    );
+
+    #s/{{\^(-?\d+)}}/      $1                        /me;
+    $str := subst($str,
+        /'{{^' $<addr>=[ '-'? <digit>+] '}}'/,
+        -> $m { $m<addr> }
+    );
+
+    #s/{{\^\+([^{]*?)}}/   $trans->expr_offset($1);  /me;
+    $str := subst($str,
+        /'{{^+' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.expr_offset($m<offset>) }
+    );
+
+    #s/{{\^-([^{]*?)}}/    $trans->expr_offset(-$1); /me;
+    $str := subst($str,
+        /'{{^-' $<offset>=[.*?] '}}'/,
+        -> $m { $trans.expr_offset( '-' ~ $m<offset>) }
+    );
+
+    #s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
+    $str := subst($str,
+        /'{{^' $<addr>=[.*?] '}}'/,
+        -> $m { $trans.expr_address($m<addr>) }
     );
 
 =begin COMMENT    
 
-        #die "Argument access not allowed in preamble\n"
-        if $preamble_only && $rewrote_access;
-
-    s/{{=0,=([^{]*?)}}/   $trans->restart_address($1) . "; {{=0}}"; /me;
-    s/{{=0,\+=([^{]*?)}}/ $trans->restart_offset($1)  . "; {{=0}}"; /me;
-    s/{{=0,-=([^{]*?)}}/  $trans->restart_offset(-$1) . "; {{=0}}"; /me;
-
-    s/{{\+=([^{]*?)}}/    $trans->goto_offset($1);  /me;
-    s/{{-=([^{]*?)}}/     $trans->goto_offset(-$1); /me;
-    s/{{=([^*][^{]*?)}}/  $trans->goto_address($1); /me;
-
-    s/{{\^(-?\d+)}}/      $1                        /me;
-    s/{{\^\+([^{]*?)}}/   $trans->expr_offset($1);  /me;
-    s/{{\^-([^{]*?)}}/    $trans->expr_offset(-$1); /me;
-    s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
+    #XXX: die "Argument access not allowed in preamble\n"
+    #XXX: if $preamble_only && $rewrote_access;
 
 =end COMMENT    
 

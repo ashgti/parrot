@@ -2,7 +2,6 @@ Simple todo.
 
 Required for initial self-hosting:
 
-  * Implement Op.rewrite_body
   * Implement handling of flags in Compiler:Actions
   * Implement handling of labels in Trans::C
   * Replacement for ops2c.pl

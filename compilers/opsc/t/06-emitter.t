@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(15);
+plan(17);
 
 my $trans := Ops::Trans::C.new();
 
@@ -62,6 +62,40 @@ ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
 ok($source ~~ /'PREG(1)'/, 'Trans::C arg translation works');
 ok($source ~! /'OP_SIZE'/, 'Trans::C translates OP_SIZE');
 
-say($source);
+
+my $op_body := '
+inline op do_stuff(invar PMC)
+{
+    restart ADDRESS(234);
+}';
+my $new_body := translate_op_body($trans, $op_body);
+my $restart_addr_ok := $new_body ~~ /'return' \s '(' 'opcode_t' \s '*' ')' \s '234'/;
+ok($restart_addr_ok, "restart ADDRESS() translated ok");
+
+$op_body := '
+inline op branch(in LABEL) :base_loop :flow {
+    goto OFFSET($1);
+}';
+$new_body := translate_op_body($trans, $op_body);
+$restart_addr_ok := $new_body ~~ /'return (opcode_t *) cur_opcode + IREG(1);'/;
+ok($restart_addr_ok, "goto OFFSET() and \$1 translated ok");
+
+#say($source);
+
+sub translate_op_body($trans, $body) {
+    my $file  := Ops::File.new_str($body);
+    my $emitter := Ops::Emitter.new(
+        :ops_file($file),
+        :trans($trans),
+        :script("opsc"),
+        :flags( hash(core => '1') )
+    );
+
+    my $sh := pir::new__Ps('StringHandle');
+    $sh.open('your_bank_account_information.txt', 'w');
+    $emitter.emit_c_source_file($sh);
+    $sh.close();
+    $sh.readall();
+}
 
 # vim: expandtab shiftwidth=4 ft=perl6:
