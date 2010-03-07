@@ -762,6 +762,7 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     parse_signature_string(interp, sig, &arg_flags);
     if (has_invocant) {
         VTABLE_unshift_integer(interp, arg_flags, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
+        VTABLE_unshift_pmc(interp, call_object, obj);
         if (sig[0] == 'P' && sig[1] == 'i')
             i += 2;
     }
