@@ -127,7 +127,11 @@ method name($name?) { self.attr('name', $name, defined($name)) }
 
 method args($args?) { self.attr('args', $args, defined($args)) }
 
-method arg_types($args?)  { self.attr('arg_types', $args, defined($args)) }
+method arg_types($args?)  {
+    my $res := self.attr('arg_types', $args, defined($args));
+    pir::does__IPS($res, 'array') ?? $res !! list($res);
+}
+
 method arg_dirs($args?)   { self.attr('arg_dirs', $args, defined($args)) }
 
 method arg_type($arg_num) {

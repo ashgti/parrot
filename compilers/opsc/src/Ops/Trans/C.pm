@@ -200,7 +200,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
         my $arg_count := $op.size;
 
         ## 0 inserted if arrays are empty to prevent msvc compiler errors
-        my $arg_types := $op.arg_types
+        my $arg_types := +$op.arg_types
             ?? '{ ' ~ join( ", ",
                 |map( -> $t { sprintf( "PARROT_ARG_%s", uc($t) ) }, $op.arg_types)
             ) ~ ' }'
