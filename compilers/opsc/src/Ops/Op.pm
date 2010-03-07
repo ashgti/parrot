@@ -127,9 +127,13 @@ method name($name?) { self.attr('name', $name, defined($name)) }
 
 method args($args?) { self.attr('args', $args, defined($args)) }
 
-method arg_types($args?) { self.attr('arg_types', $args, defined($args)) }
-method arg_dirs($args?) { self.attr('arg_dirs', $args, defined($args)) }
+method arg_types($args?)  { self.attr('arg_types', $args, defined($args)) }
+method arg_dirs($args?)   { self.attr('arg_dirs', $args, defined($args)) }
 
+method arg_type($arg_num) {
+    my @arg_types := self.arg_types;
+    @arg_types[$arg_num];
+}
 
 method full_name() {
     my $name      := self.name;
@@ -215,17 +219,22 @@ method source( $trans ) {
 
 # Called from rewrite_body() to perform the actual substitutions.
 method _substitute($str, $trans) {
-    $str;
-=begin 
+
 
     #also needed:
-    s/OP_SIZE/ self.size /g;
-    check that {{@1}}, {{@2}}, ... are defined
+    #s/OP_SIZE/ self.size /g;
+    $str := subst($str, /'OP_SIZE'/, self.size);
 
-    my $rewrote_access =
-        s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
+    #my $rewrote_access = s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
 
-    die "Argument access not allowed in preamble\n"
+    $str := subst($str, 
+        /'{{' '@' $<op_num>=[<digit>+] '}}'/, 
+        -> $m { $trans.access_arg( self.arg_type(+$m<op_num> - 1), +$m<op_num>) }
+    );
+
+=begin COMMENT    
+
+        #die "Argument access not allowed in preamble\n"
         if $preamble_only && $rewrote_access;
 
     s/{{=0,=([^{]*?)}}/   $trans->restart_address($1) . "; {{=0}}"; /me;
@@ -241,8 +250,9 @@ method _substitute($str, $trans) {
     s/{{\^-([^{]*?)}}/    $trans->expr_offset(-$1); /me;
     s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
 
-    return $_;
-=end
+=end COMMENT    
+
+    $str;
 }
 
 =begin
@@ -259,15 +269,6 @@ method >> >>> to C<VTABLE_I<method>>.
 =end
 
 method rewrite_body( $body, $trans ) {
-
-    # use vtable macros
-#    $body =~ s!
-#        (?:
-#            {{\@\d+\}}
-#            |
-#            \b\w+(?:->\w+)*
-#        )->vtable->\s*(\w+)\(
-#        !VTABLE_$1(!sgx;
 
     while (1) {
         my $new_body := self._substitute( $body, $trans );

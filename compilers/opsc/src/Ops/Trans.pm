@@ -42,13 +42,17 @@ method op_info($emitter) { 'NULL' }
 method op_func($emitter) { 'NULL' }
 method getop($emitter)   { '( int (*)(PARROT_INTERP, const char *, int) )NULL' };
 
+our %arg_maps := {};
+
+method access_arg($type, $num) { die('...'); }
+
 method restart_address($addr) { die('...'); }
-method restart_offset($addr) { die('...'); }
+method restart_offset($offset) { die('...'); }
 
 method goto_address($addr) { die('...'); }
-method goto_offset($addr) { die('...'); }
+method goto_offset($offset) { die('...'); }
 
 method expr_address($addr) { die('...'); }
-method expr_offset($addr) { die('...'); }
+method expr_offset($offset) { die('...'); }
 
 # vim: expandtab shiftwidth=4 ft=perl6:

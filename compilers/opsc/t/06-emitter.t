@@ -3,7 +3,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(13);
+plan(15);
 
 my $trans := Ops::Trans::C.new();
 
@@ -58,6 +58,9 @@ ok($source ~~ /static \s int \s get_op/, 'Trans::C preamble generated');
 
 ok($source ~~ /PARROT_FUNCTION_CORE/, 'Trans::C core_type preserved');
 ok($source ~~ /static \s size_t \s hash_str/, 'Trans::C op_lookup preserved');
+
+ok($source ~~ /'PREG(1)'/, 'Trans::C arg translation works');
+ok($source ~! /'OP_SIZE'/, 'Trans::C translates OP_SIZE');
 
 say($source);
 

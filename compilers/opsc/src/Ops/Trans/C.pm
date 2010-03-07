@@ -15,6 +15,24 @@ method new() {
 
     self<num_entries> := 0;
 
+    self<arg_maps> := hash(
+        :op("cur_opcode[NUM]"),
+
+        :i("IREG(NUM)"),
+        :n("NREG(NUM)"),
+        :p("PREG(NUM)"),
+        :s("SREG(NUM)"),
+        :k("PREG(NUM)"),
+        :ki("IREG(NUM)"),
+
+        :ic("cur_opcode[NUM]"),
+        :nc("CONST(NUM)->u.number"),
+        :pc("CONST(NUM)->u.key"),
+        :sc("CONST(NUM)->u.string"),
+        :kc("CONST(NUM)->u.key"),
+        :kic("cur_opcode[NUM]")
+    );
+
     self;
 }
 
@@ -58,7 +76,16 @@ method emit_c_header_part($fh) {
     }
 }
 
-method restart_address($addr) { "interp->resume_offset = $addr; interp->resume_flag = 1"; }
+method access_arg($type, $num) {
+    my $access := self<arg_maps>{$type};
+    die("unrecognized arg type '$type'") unless $access;
+    subst($access, /NUM/, $num);
+}
+
+method restart_address($addr) { 
+    "interp->resume_offset = $addr; interp->resume_flag = 1";
+}
+
 method restart_offset($offset) {
     "interp->resume_offset = REL_PC + $offset; interp->resume_flag = 1";
 }
