@@ -755,17 +755,20 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
     PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
     INTVAL sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
-    INTVAL       i;
+    INTVAL       i                  = 0;
     int          append_pi          = 1;
     const INTVAL has_invocant = !PMC_IS_NULL(obj);
 
     parse_signature_string(interp, sig, &arg_flags);
-    if (has_invocant && (sig[0] != 'P' || sig[1] != 'i'))
+    if (has_invocant) {
         VTABLE_unshift_integer(interp, arg_flags, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
+        if (sig[0] == 'P' && sig[1] == 'i')
+            i += 2;
+    }
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
     /* Process the varargs list */
-    for (i = 0; i < sig_len; ++i) {
+    for (; i < sig_len; ++i) {
         const INTVAL type = sig[i];
 
         /* Regular arguments just set the value */
@@ -788,12 +791,9 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                     i++; /* skip 'f' */
                 }
                 else if (type_lookahead == 'i') {
-                    if (i != 0)
-                        Parrot_ex_throw_from_c_args(interp, NULL,
-                            EXCEPTION_INVALID_OPERATION,
-                            "Dispatch: only the first argument can be an invocant");
-                    i++; /* skip 'i' */
-                    VTABLE_push_pmc(interp, call_object, obj);
+                    Parrot_ex_throw_from_c_args(interp, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "Dispatch: only the first argument can be an invocant");
                 }
                 else
                     VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
