@@ -92,11 +92,11 @@ method print_c_source_file() {
 
 method emit_c_source_file($fh) {
     self._emit_source_preamble($fh);
+    self._emit_op_lib_descriptor($fh);
 
     self.trans.emit_source_part(self, $fh);
     self.trans.emit_op_lookup(self, $fh);
 
-    self._emit_op_lib_descriptor($fh);
     self._emit_init_func($fh);
     self._emit_dymanic_lib_load($fh);
     self._emit_coda($fh);
