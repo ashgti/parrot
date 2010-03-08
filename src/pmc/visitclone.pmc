@@ -325,7 +325,6 @@ Sets a PMC to be cloned.
         /* freeze pmcs to queues */
         PARROT_VISITCLONE(SELF)->state = state_freezing;
         VTABLE_push_pmc(INTERP, SELF, p);
-        VTABLE_shift_pmc(INTERP, SELF);
         Parrot_visit_loop_visit(INTERP, SELF);
 
         /* drop origs, we don't need it anymore */
@@ -338,6 +337,7 @@ Sets a PMC to be cloned.
 
         /* thaw clones from queues */
         PARROT_VISITCLONE(SELF)->state = state_thawing;
+        VTABLE_shift_pmc(INTERP, SELF);
         Parrot_visit_loop_visit(INTERP, SELF);
         Parrot_visit_loop_thawfinish(INTERP, SELF);
     }
