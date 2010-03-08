@@ -185,7 +185,19 @@ PMC*
 Parrot_clone(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_clone)
-    return VTABLE_clone(interp, pmc);
+
+    PMC *cloner, *result;
+
+    cloner = Parrot_pmc_new(interp, enum_class_VisitClone);
+    VTABLE_set_pmc(interp, cloner, pmc);
+    result = VTABLE_get_pmc(interp, cloner);
+
+    return result;
+
+    /* equivalent but wasteful code:
+    STRING *img = Parrot_freeze(interp, pmc);
+    return Parrot_thaw(interp, img);
+    */
 }
 
 /*

@@ -1,0 +1,360 @@
+/*
+Copyright (C) 2010, Parrot Foundation.
+$Id: imageiosize.pmc 44214 2010-02-20 02:01:10Z plobsing $
+
+=head1 NAME
+
+src/pmc/visitclone.pmc - VisitClone PMC
+
+=head1 DESCRIPTION
+
+Deeply clones a PMC using the visit subsystem.
+
+=cut
+
+*/
+
+enum {
+    state_freezing,
+    state_thawing,
+};
+
+pmclass VisitClone auto_attrs {
+    ATTR INTVAL  state;      /* state_freezing | state_thawing */
+    ATTR PMC    *seen;       /* hash mapping seen PMCs to their clones */
+    ATTR PMC    *origs;      /* de-dupped list of original PMCs */
+    ATTR PMC    *clones;     /* de-dupped list of clone PMCs */
+
+    /* queues mediating cloning process */
+    ATTR PMC    *intval_queue;
+    ATTR PMC    *numval_queue;
+    ATTR PMC    *string_queue;
+    ATTR PMC    *pmc_queue;
+
+/*
+
+=head1 VTABLES
+
+=over 4
+
+=cut
+
+*/
+
+/*
+
+=item C<void init()>
+
+Initializes the PMC.
+
+=cut
+
+*/
+    VTABLE void init() {
+        PObj_custom_mark_SET(SELF);
+
+        PARROT_VISITCLONE(SELF)->seen = Parrot_pmc_new(INTERP, enum_class_Hash);
+        VTABLE_set_pointer(INTERP, PARROT_VISITCLONE(SELF)->seen,
+            parrot_new_pointer_hash(INTERP));
+
+        PARROT_VISITCLONE(SELF)->origs = Parrot_pmc_new(INTERP, enum_class_ResizablePMCArray);
+        PARROT_VISITCLONE(SELF)->clones = Parrot_pmc_new(INTERP, enum_class_ResizablePMCArray);
+
+        /* TODO: vivify these queues lazily (especially numval_queue) */
+        PARROT_VISITCLONE(SELF)->intval_queue = Parrot_pmc_new(INTERP, enum_class_ResizableIntegerArray);
+        PARROT_VISITCLONE(SELF)->numval_queue = Parrot_pmc_new(INTERP, enum_class_ResizableFloatArray);
+        PARROT_VISITCLONE(SELF)->string_queue = Parrot_pmc_new(INTERP, enum_class_ResizableStringArray);
+        PARROT_VISITCLONE(SELF)->pmc_queue    = Parrot_pmc_new(INTERP, enum_class_ResizablePMCArray);
+    }
+
+/*
+
+=item C<void mark()>
+
+Mark the PMC as alive.
+
+=cut
+
+*/
+
+    VTABLE void mark() {
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->seen);
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->origs);
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->clones);
+
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->intval_queue);
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->numval_queue);
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->string_queue);
+        Parrot_gc_mark_PMC_alive(interp, PARROT_VISITCLONE(SELF)->pmc_queue);
+    }
+
+/*
+
+=item C<VTABLE PMC *get_iter()>
+
+Get the current list of PMCs to visit.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_iter() {
+        switch (PARROT_VISITCLONE(SELF)->state) {
+          case state_freezing:
+            return PARROT_VISITCLONE(SELF)->origs;
+          case state_thawing:
+            return PARROT_VISITCLONE(SELF)->clones;
+          default:
+            Parrot_ex_throw_from_c_args(INTERP, NULL, 1, "Bad VisitClone.state");
+        }
+    }
+
+/*
+
+=item C<VTABLE INTVAL get_integer()>
+
+Returns the flags describing the current visit action.
+
+=cut
+
+*/
+
+    VTABLE INTVAL get_integer() {
+        switch (PARROT_VISITCLONE(SELF)->state) {
+          case state_freezing:
+            return VISIT_FREEZE_NORMAL;
+          case state_thawing:
+            return VISIT_THAW_NORMAL;
+          default:
+            Parrot_ex_throw_from_c_args(INTERP, NULL, 1, "Bad VisitClone.state");
+        }
+    }
+
+/*
+
+=item C<VTABLE void push_integer(INTVAL v)>
+
+Pushes the integer C<v> into the queue.
+
+=cut
+
+*/
+
+    VTABLE void push_integer(INTVAL v) {
+        VTABLE_push_integer(INTERP, PARROT_VISITCLONE(SELF)->intval_queue, v);
+    }
+
+
+/*
+
+=item C<VTABLE INTVALE shift_integer()>
+
+Shifts an integer of off the queue.
+
+=cut
+
+*/
+
+    VTABLE INTVAL shift_integer() {
+        return VTABLE_shift_integer(INTERP, PARROT_VISITCLONE(SELF)->intval_queue);
+    }
+
+
+/*
+
+=item C<VTABLE void push_float(FLOATVAL v)>
+
+Pushes the float C<v> into the queue.
+
+=cut
+
+*/
+
+    VTABLE void push_float(FLOATVAL v) {
+        VTABLE_push_float(INTERP, PARROT_VISITCLONE(SELF)->numval_queue, v);
+    }
+
+
+/*
+
+=item C<VTABLE FLOATVAL shift_float()>
+
+Shifts a float of off the queue.
+
+=cut
+
+*/
+
+    VTABLE FLOATVAL shift_float() {
+        return VTABLE_shift_float(INTERP, PARROT_VISITCLONE(SELF)->numval_queue);
+    }
+
+
+/*
+
+=item C<VTABLE void push_string(STRING *v)>
+
+Pushes the string C<*v> into the queue.
+
+=cut
+
+*/
+
+    VTABLE void push_string(STRING *v) {
+        VTABLE_push_string(INTERP, PARROT_VISITCLONE(SELF)->string_queue, v);
+    }
+
+
+/*
+
+=item C<VTABLE STRING *shift_string()>
+
+Shifts a string off of the queue.
+
+=cut
+
+*/
+
+    VTABLE STRING *shift_string() {
+        return VTABLE_shift_string(INTERP, PARROT_VISITCLONE(SELF)->string_queue);
+    }
+
+
+/*
+
+=item C<VTABLE void push_pmc(PMC *v)>
+
+Pushes a clone of C<*v> into the queue.
+
+If C<*v> hasn't been seen yet, a clone of it will be made.
+
+=cut
+
+*/
+
+    VTABLE void push_pmc(PMC *orig) {
+        int  seen;
+        PMC *clone;
+
+        if (PMC_IS_NULL(orig)) {
+            seen  = 1;
+            clone = PMCNULL;
+        }
+        else {
+            Hash *hash = (Hash *)VTABLE_get_pointer(INTERP, PARROT_VISITCLONE(SELF)->seen);
+            HashBucket * const b = parrot_hash_get_bucket(INTERP, hash, orig);
+            if (b) {
+                seen  = 1;
+                clone = (PMC *)b->value;
+            }
+            else {
+                seen = 0;
+                clone = Parrot_pmc_new_noinit(INTERP,
+                            PObj_is_object_TEST(orig) ?  enum_class_Object : orig->vtable->base_type);
+                VTABLE_push_pmc(INTERP, PARROT_VISITCLONE(SELF)->origs, orig);
+                VTABLE_push_pmc(INTERP, PARROT_VISITCLONE(SELF)->clones, clone);
+                parrot_hash_put(INTERP, hash, orig, clone);
+            }
+        }
+
+        VTABLE_push_pmc(INTERP, PARROT_VISITCLONE(SELF)->pmc_queue, clone);
+
+        if (!seen) {
+            /* TODO
+               use separate queues here to minimize size*life of queues?
+                pro: smaller queues
+                con: more GC-ables
+                pro: would simplify shift_pmc() (no more need for seen hash there)
+            */
+            VTABLE_freeze(INTERP, orig, SELF);
+        }
+    }
+
+
+/*
+
+=item C<VTABLE PMC *shift_pmc()>
+
+Shifts a pmc off of the queue.
+
+=cut
+
+*/
+
+    VTABLE PMC *shift_pmc() {
+        PMC *clone = VTABLE_shift_pmc(INTERP, PARROT_VISITCLONE(SELF)->pmc_queue);
+
+        if (!PMC_IS_NULL(clone)) {
+            Hash *hash = (Hash *)VTABLE_get_pointer(INTERP, PARROT_VISITCLONE(SELF)->seen);
+            HashBucket * const b = parrot_hash_get_bucket(INTERP, hash, clone);
+            if (!b) {
+                /* not yet seen */
+                VTABLE_thaw(INTERP, clone, SELF);
+                parrot_hash_put(INTERP, hash, clone, PMCNULL);
+            }
+        }
+
+        return clone;
+    }
+
+/*
+
+=item C<VTABLE PMC *get_pmc()>
+
+Gets the clone PMC.
+
+=cut
+
+*/
+
+    VTABLE PMC *get_pmc() {
+        return VTABLE_get_pmc_keyed_int(INTERP, PARROT_VISITCLONE(SELF)->clones, 0);
+    }
+
+/*
+
+=item C<VTABLE void set_pmc(PMC *p)>
+
+Sets a PMC to be cloned.
+
+=cut
+
+*/
+
+    VTABLE void set_pmc(PMC *p) {
+        /* freeze pmcs to queues */
+        PARROT_VISITCLONE(SELF)->state = state_freezing;
+        VTABLE_push_pmc(INTERP, SELF, p);
+        VTABLE_shift_pmc(INTERP, SELF);
+        Parrot_visit_loop_visit(INTERP, SELF);
+
+        /* drop origs, we don't need it anymore */
+        PARROT_VISITCLONE(SELF)->origs = PMCNULL;
+
+        /* reset seen hash */
+        PARROT_VISITCLONE(SELF)->seen = Parrot_pmc_new(INTERP, enum_class_Hash);
+        VTABLE_set_pointer(INTERP, PARROT_VISITCLONE(SELF)->seen,
+            parrot_new_pointer_hash(INTERP));
+
+        /* thaw clones from queues */
+        PARROT_VISITCLONE(SELF)->state = state_thawing;
+        Parrot_visit_loop_visit(INTERP, SELF);
+        Parrot_visit_loop_thawfinish(INTERP, SELF);
+    }
+
+/*
+
+=back
+
+=cut
+
+*/
+
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
