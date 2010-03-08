@@ -272,6 +272,31 @@ Creates and returns a clone of the NCI.
         return ret;
     }
 
+    VTABLE void freeze(PMC *visit) {
+        Parrot_NCI_attributes * const nci = PARROT_NCI(SELF);
+
+        VTABLE_push_integer(INTERP, visit, nci->func);
+        VTABLE_push_integer(INTERP, visit, nci->orig_func);
+        VTABLE_push_string(INTERP, visit, nci->signature);
+        VTABLE_push_string(INTERP, visit, nci->pcc_params_signature);
+        VTABLE_push_integer(INTERP, visit, nci->arity);
+        VTABLE_push_integer(INTERP, visit, nci->jitted);
+        VTABLE_push_integer(INTERP, visit, PObj_get_FLAGS(SELF) & 0x7);
+    }
+
+    VTABLE void thaw(PMC *visit) {
+        Parrot_NCI_attributes * const nci = PARROT_NCI(SELF);
+
+        nci->func                 = VTABLE_shift_integer(INTERP, visit);
+        nci->orig_func            = VTABLE_shift_integer(INTERP, visit);
+        nci->signature            = VTABLE_shift_string(INTERP, visit);
+        nci->pcc_params_signature = VTABLE_shift_string(INTERP, visit);
+        nci->arity                = VTABLE_shift_integer(INTERP, visit);
+        nci->jitted               = VTABLE_shift_integer(INTERP, visit);
+        PObj_get_FLAGS(SELF)     |= VTABLE_shift_integer(INTERP, visit);
+    }
+
+
 /*
 
 =item C<INTVAL defined()>
