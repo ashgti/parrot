@@ -34,7 +34,7 @@ ok(1, "PAST::Node created");
 
 my $preambles := $past<preamble>;
 
-ok($preambles[0][0] ~~ /HEADER/, 'Header parsed');
+ok(~$preambles[0] ~~ /HEADER/, 'Header parsed');
 
 my @ops := @($past<ops>);
 # One "bar" and two "foo"
