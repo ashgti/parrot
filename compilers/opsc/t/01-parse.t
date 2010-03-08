@@ -24,7 +24,7 @@
 inline op noop() {
 }
 END
-    
+
     "_parse_buffer"(buf)
     is(1, 1, "Simple noop parsed")
 
@@ -33,7 +33,7 @@ inline op noop() {
     foo
 }
 END
-    
+
     "_parse_buffer"(buf)
     is(1, 1, "noop body parsed")
 
@@ -44,7 +44,7 @@ inline op noop() {
     }
 }
 END
-    
+
     "_parse_buffer"(buf)
     is(1, 1, "noop nested body parsed")
 
@@ -76,7 +76,7 @@ asdsad
 inline op halt() {
 }
 
-=head2 
+=head2
 
 ads
 
@@ -87,7 +87,7 @@ inline op rule_the_world() {
 
 
 END
-    
+
     res = "_parse_buffer"(buf)
     is(1, 1, "Multiple ops parsed")
 
@@ -136,7 +136,7 @@ inline op noop() {
 }
 
 END
-    
+
     res = "_parse_buffer"(buf)
     is(1, 1, "Header parsed")
 
@@ -156,7 +156,7 @@ inline op reserved(inconst INT) {
 }
 
 END
-    
+
     "_parse_buffer"(buf)
     is(1, 1, "Op with single param parsed")
 
@@ -166,7 +166,7 @@ inline op add(out INT, inconst INT, inconst INT) {
 }
 
 END
-    
+
     "_parse_buffer"(buf)
     is(1, 1, "Op with multiple param parsed")
 
@@ -182,7 +182,7 @@ inline op hcf() :flow :deprecated {
 }
 
 END
-    
+
     res = "_parse_buffer"(buf)
     is(1, 1, "Op with flags parsed")
 
