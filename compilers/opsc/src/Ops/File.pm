@@ -183,8 +183,9 @@ ops file.
 
 =end
 
-method new(*@files, :$nolines) {
+method new(*@files, :$oplib!, :$nolines) {
     self<files>   := @files;
+    self<oplib>   := $oplib;
     self<ops>     := list(); # Ops
     self<preamble>:= '';
 
@@ -222,6 +223,7 @@ Reads in the specified .ops file, gathering information about the ops.
 =end
 
 method read_ops($file, $nolines) {
+    $Ops::Compiler::Actions::OPLIB := self<oplib>;
 
     say("# Parsing $file");
     my $buffer := slurp($file);

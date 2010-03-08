@@ -4,6 +4,7 @@
 class Ops::Compiler::Actions is HLL::Actions;
 
 our $CODE;
+our $OPLIB;
 
 INIT {
     pir::load_bytecode("nqp-settings.pbc");
@@ -32,9 +33,12 @@ method body($/) {
 
     for $<op> {
         my $ops := $_.ast;
-        for @($ops) {
-            $_<code> := $CODE++;
-            $past<ops>.push($_);
+        my $skiptable := $OPLIB.skiptable;
+        for @($ops) -> $op {
+            if !$skiptable.exists($op.full_name) {
+                $op<code> := $CODE++;
+                $past<ops>.push($op);
+            }
         }
     }
 

@@ -3,24 +3,22 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(8);
+plan(7);
 
-my $f := Ops::File.new();
-ok($f, "Empty Ops::File created");
-
+my $oplib := Ops::OpLib.new;
 my @files := <
     src/ops/core.ops
     src/ops/math.ops
 >;
 
-$f := Ops::File.new(|@files);
+my $f := Ops::File.new(:oplib($oplib), |@files);
 
 my @ops := $f.ops;
 # 84 core
 # 116 math
 # We can generate more than 1 Ops::Op per op due args expansion.
 say( "# Parsed " ~ +@ops);
-ok( @ops > 84 + 116, "Ops parsed correctly");
+ok(+@ops == 314, "Ops parsed correctly");
 
 my $op := @ops[0];
 #_dumper($op);
