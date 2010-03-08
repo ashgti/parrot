@@ -226,7 +226,7 @@ method op_body($/) {
         :node($/),
         :pasttype('inline'),
     );
-    $op<inline> := munch_body($op, ~$/);
+    $op<inline> := munch_body($op, ~$<body>);
     make $op;
 }
 
