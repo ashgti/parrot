@@ -537,12 +537,6 @@ Return a new Iterator for this PMC.
 
 /*
 
-=item C<void visit(PMC *info)>
-
-This is used by freeze/thaw to visit the contents of the array.
-
-C<*info> is the visit info, (see F<include/parrot/pmc_freeze.h>).
-
 =item C<void freeze(PMC *info)>
 
 Used to archive the array.
@@ -554,10 +548,6 @@ Used to unarchive the array.
 =cut
 
 */
-
-    /*VTABLE void visit(PMC *info) {
-        SUPER(info);
-    }*/
 
     VTABLE void freeze(PMC *info) {
         INTVAL   *int_array;
