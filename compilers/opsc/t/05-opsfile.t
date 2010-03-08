@@ -30,7 +30,7 @@ ok($op<code> == 0,      "... with code 0");
 
 $op := @ops[(+@ops)-1];
 ok($op.name eq 'fact',  "Last op is fact");
-ok($op<code> == 358,    "... with code 0");
+ok($op<code> > 84 + 116,    "... with non zero code");
 
 my $version := join(' ', |$f.version);
 ok( $version ~~ /^\d+ \s \d+ \s \d+$/, "Version parsed");
