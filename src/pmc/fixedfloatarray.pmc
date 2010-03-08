@@ -80,6 +80,52 @@ Creates and returns a copy of the array.
 
 /*
 
+=item C<void freeze(PMC *visit)>
+
+=item C<void thaw(PMC *visit)>
+
+Used in serialization/deserialization.
+
+=cut
+
+*/
+
+    VTABLE void freeze(PMC *visit) {
+        FLOATVAL *float_array;
+        INTVAL i, n;
+
+        SUPER(visit);
+
+        GET_ATTR_size(INTERP, SELF, n);
+        VTABLE_push_integer(INTERP, visit, n);
+        GET_ATTR_float_array(INTERP, SELF, float_array);
+
+        for (i = 0; i < n; ++i)
+            VTABLE_push_float(INTERP, visit, float_array[i]);
+    }
+
+    VTABLE void thaw(PMC *visit) {
+        INTVAL n;
+
+        SUPER(visit);
+
+        SET_ATTR_size(INTERP, SELF, 0);
+        SET_ATTR_float_array(INTERP, SELF, NULL);
+
+        if ((n = VTABLE_shift_integer(INTERP, visit))) {
+            INTVAL i;
+            FLOATVAL *float_array;
+
+            SELF.set_integer_native(n);
+            GET_ATTR_float_array(INTERP, SELF, float_array);
+
+            for (i = 0; i < n; ++i)
+                float_array[i] = VTABLE_shift_float(INTERP, visit);
+        }
+    }
+
+/*
+
 =item C<PMC *get_iter()>
 
 Return an Iterator for this PMC.
