@@ -192,8 +192,10 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
     char *arg_sig, *ret_sig;
     Parrot_pcc_split_signature_string(interp, signature, &arg_sig, &ret_sig);
 
+    interp->current_object = pmc;
+
     va_start(args, signature);
-    call_obj = Parrot_pcc_build_call_from_varargs(interp, pmc, arg_sig, &args);
+    call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL, arg_sig, &args);
 
     /* Find the subroutine object as a named method on pmc */
     sub_obj = VTABLE_find_method(interp, pmc, method_name);
@@ -203,10 +205,10 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
              "Method '%Ss' not found", method_name);
 
     /* Invoke the subroutine object with the given CallContext object */
-    interp->current_object = pmc;
     Parrot_pcc_invoke_from_sig_object(interp, sub_obj, call_obj);
     Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args);
     va_end(args);
+
 }
 
 /*

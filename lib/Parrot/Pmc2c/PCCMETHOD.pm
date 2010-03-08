@@ -258,7 +258,7 @@ END
     /*BEGIN RETURN $returns */
 END
         $e->emit( <<"END", __FILE__, __LINE__ + 1 );
-    Parrot_pcc_fill_returns_from_c_args(interp, _call_object, "$returns_signature",
+    Parrot_pcc_build_call_from_c_args(interp, _call_object, "$returns_signature",
             $returns_varargs);
     return;
     /*END RETURN $returns */

@@ -567,6 +567,11 @@ stored.)
         if (!PMC_data(SELF))
             return;
 
+        SET_ATTR_short_sig(INTERP, SELF, NULL);
+        SET_ATTR_arg_flags(INTERP, SELF, PMCNULL);
+        SET_ATTR_return_flags(INTERP, SELF, PMCNULL);
+        SET_ATTR_type_tuple(INTERP, SELF, PMCNULL);
+
         GET_ATTR_hash(INTERP, SELF, hash);
         GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
 

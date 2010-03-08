@@ -524,9 +524,10 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_op)
     PMC            *call_object;
     PMC            * const ctx = CURRENT_CONTEXT(interp);
+    PMC            *new_sig = PMCNULL;
     INTVAL         *int_array;
     INTVAL          arg_count;
-    INTVAL          arg_index;
+    INTVAL          arg_index = 0;
 
     if (PMC_IS_NULL(signature))
         call_object = Parrot_pmc_new(interp, enum_class_CallContext);
@@ -536,14 +537,33 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     }
 
     /* this macro is much, much faster than the VTABLE STRING comparisons */
-    SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
 
-    for (arg_index = 0; arg_index < arg_count; arg_index++) {
+    if (!PMC_IS_NULL(interp->current_object)) {
+        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
+        if (int_array[0] & (PARROT_ARG_PMC | PARROT_ARG_INVOCANT))
+            arg_index++;
+        else {
+            new_sig = Parrot_pmc_new(interp, enum_class_ResizablePMCArray);
+            VTABLE_unshift_integer(interp, new_sig, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
+        }
+        interp->current_object = NULL;
+    }
+
+    if (PMC_IS_NULL(new_sig)) {
+        SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);
+    }
+    else {
+        SETATTR_CallContext_arg_flags(interp, call_object, new_sig);
+    }
+
+    for (; arg_index < arg_count; arg_index++) {
         const INTVAL arg_flags = int_array[arg_index];
         const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(arg_flags);
         const INTVAL raw_index = raw_args[arg_index + 2];
+        if (!PMC_IS_NULL(new_sig))
+            VTABLE_push_integer(interp, new_sig, arg_flags);
 
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
           case PARROT_ARG_INTVAL:
@@ -730,8 +750,37 @@ dissect_aggregate_arg(PARROT_INTERP, ARGMOD(PMC *call_object), ARGIN(PMC *aggreg
 
 /*
 
-=item C<PMC* Parrot_pcc_build_call_from_varargs(PARROT_INTERP, PMC *obj, const
-char *sig, va_list *args)>
+=item C<PMC* Parrot_pcc_build_call_from_c_args(PARROT_INTERP, PMC *signature,
+const char *sig, ...)>
+
+Converts a variable list of C args into a CallContext PMC. The CallContext
+stores the original short signature string and an array of integer types to
+pass on to the multiple dispatch search.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC*
+Parrot_pcc_build_call_from_c_args(PARROT_INTERP,
+        ARGIN_NULLOK(PMC *signature), ARGIN(const char *sig), ...)
+{
+    ASSERT_ARGS(Parrot_pcc_build_call_from_c_args)
+    PMC *call_object;
+    va_list args;
+    va_start(args, sig);
+    call_object = Parrot_pcc_build_call_from_varargs(interp, signature,
+         sig, &args);
+    va_end(args);
+    return call_object;
+}
+
+/*
+
+=item C<PMC* Parrot_pcc_build_call_from_varargs(PARROT_INTERP, PMC *signature,
+const char *sig, va_list *args)>
 
 Converts a varargs list into a CallContext PMC. The CallContext stores the
 original short signature string and an array of integer types to pass on to the
@@ -745,26 +794,34 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 PMC*
-Parrot_pcc_build_call_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
-        ARGIN(const char *sig), ARGMOD(va_list *args))
+Parrot_pcc_build_call_from_varargs(PARROT_INTERP,
+        ARGIN_NULLOK(PMC *signature), ARGIN(const char *sig),
+        ARGMOD(va_list *args))
 {
     ASSERT_ARGS(Parrot_pcc_build_call_from_varargs)
     PMC         * type_tuple        = PMCNULL;
     PMC         * arg_flags         = PMCNULL;
     PMC         * ignored_flags     = PMCNULL;
-    PMC         * const call_object = Parrot_pmc_new(interp, enum_class_CallContext);
-    INTVAL sig_len            = strlen(sig);
+    PMC         * call_object;
+    INTVAL       sig_len            = strlen(sig);
     INTVAL       in_return_sig      = 0;
     INTVAL       i                  = 0;
     int          append_pi          = 1;
-    const INTVAL has_invocant = !PMC_IS_NULL(obj);
+
+    if (PMC_IS_NULL(signature))
+        call_object = Parrot_pmc_new(interp, enum_class_CallContext);
+    else {
+        call_object = signature;
+        VTABLE_morph(interp, call_object, PMCNULL);
+    }
 
     parse_signature_string(interp, sig, &arg_flags);
-    if (has_invocant) {
+    if (!PMC_IS_NULL(interp->current_object)) {
         VTABLE_unshift_integer(interp, arg_flags, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
-        VTABLE_unshift_pmc(interp, call_object, obj);
+        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
         if (sig[0] == 'P' && sig[1] == 'i')
             i += 2;
+        interp->current_object = NULL;
     }
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
