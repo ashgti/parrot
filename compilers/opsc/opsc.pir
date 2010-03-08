@@ -18,6 +18,7 @@
 .include 'compilers/opsc/gen/Ops/Trans/C.pir'
 
 .include 'compilers/opsc/gen/Ops/Op.pir'
+.include 'compilers/opsc/gen/Ops/OpLib.pir'
 .include 'compilers/opsc/gen/Ops/File.pir'
 
 .sub 'main' :main
