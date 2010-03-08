@@ -759,19 +759,19 @@ pir_output_is( <<'CODE', <<'OUTPUT', "clone of partly-advanced iterator" );
     .local pmc ar, i1, i2
     .local pmc temp
     ar = new ['ResizableIntegerArray']
-    push ar, 1
-    push ar, 2
+    push ar, 10
+    push ar, 20
     i1 = iter ar
 
     shift temp, i1
-    unless temp == 1 goto fail
+    unless temp == 10 goto fail
 
     clone i2, i1
     shift temp, i1
-    unless temp == 2 goto fail
+    unless temp == 20 goto fail
 
     shift temp, i2
-    unless temp == 2 goto fail
+    unless temp == 20 goto fail
 
     say "ok"
     end

@@ -138,6 +138,55 @@ Marks the current idx/key and the aggregate as live.
 
 /*
 
+=item C<void visit(PMC *visit)>
+
+=item C<void freeze(PMC *visit)>
+
+=item C<void thaw(PMC *visit)>
+
+=item C<void thaw_finish(PMC *visit)>
+
+Used in serializing/deserializing.
+
+=cut
+
+*/
+
+    VTABLE void visit(PMC *visit) {
+        VISIT_PMC_ATTR(INTERP, visit, SELF, ArrayIterator, array);
+    }
+
+    VTABLE void freeze(PMC *visit) {
+        INTVAL pos, rev;
+
+        GET_ATTR_pos(INTERP, SELF, pos);
+        VTABLE_push_integer(INTERP, visit, pos);
+
+        GET_ATTR_reverse(INTERP, SELF, rev);
+        VTABLE_push_integer(INTERP, visit, rev);
+    }
+
+    VTABLE void thaw(PMC *visit) {
+        INTVAL pos, rev;
+
+        pos = VTABLE_shift_integer(INTERP, visit);
+        SET_ATTR_pos(INTERP, SELF, pos);
+
+        rev = VTABLE_shift_integer(INTERP, visit);
+        SET_ATTR_reverse(INTERP, SELF, rev);
+    }
+
+    VTABLE void thawfinish(PMC *visit) {
+        PMC    *arr;
+        INTVAL  len;
+
+        GET_ATTR_array(INTERP, SELF, arr);
+        len = VTABLE_elements(INTERP, arr);
+        SET_ATTR_length(INTERP, SELF, len);
+    }
+
+/*
+
 =item C<INTVAL get_bool()>
 
 Returns true if there is more elements to iterate over.
