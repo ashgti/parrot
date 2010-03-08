@@ -8,7 +8,7 @@ plan(6);
 
 my @files := ('src/ops/core.ops', 'src/ops/math.ops');
 
-my $lib := Ops::OpLib.new.BUILD(
+my $lib := Ops::OpLib.new(
     :files(@files),
     :num_file('src/ops/ops.num'),
     :skip_file('src/ops/ops.skip'),
