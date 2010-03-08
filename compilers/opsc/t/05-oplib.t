@@ -4,24 +4,12 @@
 
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 
-plan(6);
-
-my @files := ('src/ops/core.ops', 'src/ops/math.ops');
+plan(5);
 
 my $lib := Ops::OpLib.new(
-    :files(@files),
     :num_file('src/ops/ops.num'),
     :skip_file('src/ops/ops.skip'),
 );
-
-$lib.parse_ops();
-
-# 84 core
-# 116 math
-# We generate all variants during compilation. So check for ">"
-ok(+($lib.ops_past) > 84 + 116, "ops file parsed");
-say("# count " ~+$lib.ops_past);
-#_dumper($lib.ops_past);
 
 # It's 1258 currently. But testing for exact match isn't nessary.
 ok( $lib.max_op_num > 1200, "ops.num file parsed");
