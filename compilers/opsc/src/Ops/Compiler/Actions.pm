@@ -1,4 +1,4 @@
-# Copyright (C) 2009, Parrot Foundation.
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
 
 class Ops::Compiler::Actions is HLL::Actions;
@@ -266,7 +266,7 @@ sub munch_body($op, $body) {
     # on the mode of operation (function calls, switch statements, gotos
     # with labels, etc.).
     #
-    
+
     $op<jump> := '0';
 
     if ($body ~~ / [ goto | restart ] \s+ OFFSET / ) {
@@ -348,7 +348,7 @@ sub munch_body($op, $body) {
                 -> $m { '{{=' ~ $m<addr> ~ '}}' }
             );
 
-    #'$1' -> '{{@1}}'        
+    #'$1' -> '{{@1}}'
     $body := subst($body,
                 /'$' $<arg_num>=[\d+]/,
                 -> $m { '{{@' ~ $m<arg_num> ~ '}}' }
