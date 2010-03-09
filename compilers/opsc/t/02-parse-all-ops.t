@@ -1,4 +1,6 @@
-#! ./parrot
+#! parrot
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
 
 .include 'compilers/opsc/t/common.pir'
 
