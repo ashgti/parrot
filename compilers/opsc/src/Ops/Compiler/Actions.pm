@@ -16,6 +16,8 @@ method TOP($/) {
 }
 
 method body($/) {
+    $OPLIB := Ops::OpLib.new() if !defined($OPLIB);
+
     my $past := PAST::Stmts.new(
         :node($/)
     );
