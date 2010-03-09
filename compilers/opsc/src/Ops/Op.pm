@@ -240,12 +240,6 @@ method _substitute($str, $trans) {
         -> $m { $trans.restart_offset($m<offset>) ~ '; {{=0}}' }
     );
 
-    #s/{{=0,-=([^{]*?)}}/  $trans->restart_offset(-$1) . "; {{=0}}"; /me;
-    $str := subst($str,
-        /'{{=0,-=' $<offset>=[<-[{]>*?] '}}'/,
-        -> $m { $trans.restart_offset( '-' ~ $m<offset>) ~ '; {{=0}}' }
-    );
-
     #s/{{=([^*][^{]*?)}}/  $trans->goto_address($1); /me;
     $str := subst($str,
         /'{{=' $<addr>=[<-[{]>*?] '}}'/,
@@ -258,15 +252,9 @@ method _substitute($str, $trans) {
         -> $m { $trans.goto_offset($m<offset>) }
     );
 
-    #s/{{-=([^{]*?)}}/     $trans->goto_offset(-$1); /me;
-    $str := subst($str,
-        /'{{-=' $<offset>=[<-[{]>*?] '}}'/,
-        -> $m { $trans.goto_offset( '-' ~ $m<offset>) }
-    );
-
     #s/{{\^(-?\d+)}}/      $1                        /me;
     $str := subst($str,
-        /'{{^' $<addr>=[ '-'? <digit>+] '}}'/,
+        /'{{^' $<addr>=[ <digit>+] '}}'/,
         -> $m { $m<addr> }
     );
 
@@ -274,12 +262,6 @@ method _substitute($str, $trans) {
     $str := subst($str,
         /'{{^+' $<offset>=[<-[{]>*?] '}}'/,
         -> $m { $trans.expr_offset($m<offset>) }
-    );
-
-    #s/{{\^-([^{]*?)}}/    $trans->expr_offset(-$1); /me;
-    $str := subst($str,
-        /'{{^-' $<offset>=[<-[{]>*?] '}}'/,
-        -> $m { $trans.expr_offset( '-' ~ $m<offset>) }
     );
 
     #s/{{\^([^{]*?)}}/     $trans->expr_address($1); /me;
