@@ -77,7 +77,7 @@ inline op do_stuff(invar PMC)
     restart ADDRESS(234);
 }';
 my $new_body := translate_op_body($trans, $op_body);
-my $restart_addr_ok := $new_body ~~ /'return' \s '(' 'opcode_t' \s '*' ')' \s '234'/;
+my $restart_addr_ok := $new_body ~~ /'return' \s '(' 'opcode_t' \s '*' ')' \s? '234'/;
 ok($restart_addr_ok, "restart ADDRESS() translated ok");
 
 $op_body := '
@@ -85,7 +85,7 @@ inline op branch(in LABEL) :base_loop :flow {
     goto OFFSET($1);
 }';
 $new_body := translate_op_body($trans, $op_body);
-$restart_addr_ok := $new_body ~~ /'return (opcode_t *) cur_opcode + IREG(1);'/;
+$restart_addr_ok := $new_body ~~ /'return (opcode_t *)cur_opcode + IREG(1);'/;
 ok($restart_addr_ok, "goto OFFSET() and \$1 translated ok");
 ok($new_body ~~ /'PARROT_JUMP_RELATIVE'/, "jump flags generated");
 
