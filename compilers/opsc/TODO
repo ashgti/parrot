@@ -1,17 +1,28 @@
 Simple todo.
 
 Required for initial self-hosting:
-
+ 
   * Update config/gen/makefiles/root.in to use opsc instead of ops2c
-  * Pass Ops::OpLib to Ops::File to skip ops.
 
 Required for full implementation:
+  * A LOT OF DOCUMENTATION.
   * Implement Trans::* for other runcores.
   * Add tests for Trans::C independent from 06-emitter.t
   * Add tests for dynamic mode of Emitter.
 
 Nice to have:
-  * (almost mandatory) Cache regexes used for Op body munching.
   * Profiling and performance tuning of ops parsing (we need pmichaud).
-  * A LOT OF DOCUMENTATION.
-
+  * Use ops.num for assigning Op.code.
+  * Generate something more meaningfull for Ops::Op.body instead of munched string.
+  E.g. "{ ...; restart OFFSET($1); ... };" can generate something like:
+    Block (
+        Op(:inline, '...'),
+        Op(:call, :name('restart_offset'),
+            Var(:name('$1'))
+        ),
+        Op(:inline, '...'),
+    )
+  and Op.source will generate end-code recursively as any other compilers do.
+  Problems:
+    - LTM still doesn't work.
+    - "munch_body" is reverting natural flow of PCT.
