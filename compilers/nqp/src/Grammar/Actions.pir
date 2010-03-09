@@ -1,4 +1,5 @@
-# Copyright (C) 2007-2009, Parrot Foundation.
+#! parrot
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 
 .sub '__onload' :init :load
@@ -1071,14 +1072,14 @@
     .local pmc past
     $P0 = quote_term[0]
     past = $P0.'ast'()
-    
+
     $P1 = get_hll_global ['PAST'], 'Op'
   loop:
     if count == terms goto make
     $P0 = quote_term[count]
     $P0 = $P0.'ast'()
     past = $P1.'new'(past, $P0, 'pasttype'=>'pirop', 'pirop'=>'concat')
-    
+
     inc count
     goto loop
 
