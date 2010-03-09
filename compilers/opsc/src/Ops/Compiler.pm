@@ -1,4 +1,7 @@
-# nqp
+#! nqp
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 class Ops::Compiler is HLL::Compiler;
 
 INIT {
