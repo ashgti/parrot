@@ -30198,7 +30198,7 @@ return (opcode_t *)cur_opcode + 3;}
 opcode_t *
 Parrot_find_sub_not_null_p_s (opcode_t *cur_opcode, PARROT_INTERP)  {
     Parrot_Context const * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
-#line 476 "src/ops/var.ops"
+#line 481 "src/ops/var.ops"
     opcode_t *dest = cur_opcode + 3;
     PMC *sub = Parrot_find_name_op(interp, SREG(2), dest);
 
@@ -30216,7 +30216,7 @@ return (opcode_t *)cur_opcode + 3;}
 opcode_t *
 Parrot_find_sub_not_null_p_sc (opcode_t *cur_opcode, PARROT_INTERP)  {
     Parrot_Context const * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
-#line 476 "src/ops/var.ops"
+#line 481 "src/ops/var.ops"
     opcode_t *dest = cur_opcode + 3;
     PMC *sub = Parrot_find_name_op(interp, CONST(2)->u.string, dest);
 
