@@ -7,7 +7,6 @@ my @files := <
     src/ops/bit.ops
     src/ops/cmp.ops
     src/ops/debug.ops
-    src/ops/experimental.ops
     src/ops/io.ops
     src/ops/math.ops
     src/ops/object.ops
@@ -16,6 +15,7 @@ my @files := <
     src/ops/string.ops
     src/ops/sys.ops
     src/ops/var.ops
+    src/ops/experimental.ops
 >;
 
 
