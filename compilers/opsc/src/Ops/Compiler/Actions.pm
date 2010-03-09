@@ -87,7 +87,7 @@ method op($/) {
     if !%flags<flow> {
         $op.push(PAST::Op.new(
             :pasttype('inline'),
-            :inline("\n" ~ '{{+=OP_SIZE}};' ~ "\n")
+            :inline("\n" ~ '{{+=OP_SIZE}};')
             ));
     }
 
