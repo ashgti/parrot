@@ -1,4 +1,6 @@
 #! nqp
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
 
 class Ops::Emitter is Hash;
 
@@ -146,7 +148,7 @@ method _emit_init_func($fh) {
     my $init1    := self.trans.init_func_init1;
     my $dispatch := self.trans.init_func_disaptch;
 
-    # TODO There is a bug in NQP about \{ 
+    # TODO There is a bug in NQP about \{
     $fh.print(q|
 op_lib_t *
 | ~ self.init_func ~ q|(PARROT_INTERP, long init) {
