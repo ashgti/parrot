@@ -13,9 +13,13 @@ my @files := <
     src/ops/cmp.ops
 >;
 
-my $f := Ops::File.new(|@files);
 my $emitter := Ops::Emitter.new(
-    :ops_file($f), :trans($trans), :script('ops2c'),
+    :ops_file(Ops::File.new(
+        :oplib(Ops::OpLib.new()),
+        |@files)
+    ),
+    :trans($trans),
+    :script('ops2c'),
     :flags(
         hash( dir => 'tmp/', core => 1 )
     ),
