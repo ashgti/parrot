@@ -309,7 +309,7 @@ sub munch_body($op, $body) {
                 -> $m { '{{+=' ~ $m<addr> ~ '}}' }
             );
 
-    #'expr OFFSET((foo))' -> '{{^=foo}}'
+    #'expr OFFSET((foo))' -> '{{+=foo}}'
     $body := subst($body,
                 /expr \s+ OFFSET '((' $<addr>=[.*?] '))'/,
                 -> $m { '{{^=' ~ $m<addr> ~ '}}' }

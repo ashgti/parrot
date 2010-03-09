@@ -20,8 +20,12 @@ my @files := <
 
 
 my $trans := Ops::Trans::C.new();
+my $lib := Ops::OpLib.new(
+    :num_file('src/ops/ops.num'),
+    :skip_file('src/ops/ops.skip'),
+);
 
-my $f := Ops::File.new(|@files);
+my $f := Ops::File.new(|@files, :oplib($lib));
 my $emitter := Ops::Emitter.new(
     :ops_file($f), :trans($trans), :script('ops2c'),
     :flags(
