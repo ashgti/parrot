@@ -1,5 +1,6 @@
+#! parrot
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
-# Copyright (C) 2009, Parrot Foundation.
 
 =head1 Builtins
 
@@ -54,7 +55,7 @@ Variour helper builtins.
     .local pmc recomp, resub, match, recache
 
     load_bytecode 'PGE.pbc'
-    
+
     #hash cache mapping patterns to subs, avoiding unneeded recompilation
     recache = get_hll_global ['Ops';'Op'], '%recache'
     $I0 = isnull recache
