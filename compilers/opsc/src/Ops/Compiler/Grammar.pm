@@ -1,4 +1,4 @@
-# Copyright (C) 2009, Parrot Foundation.
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
 
 INIT { pir::load_bytecode('HLL.pbc'); }
@@ -6,7 +6,7 @@ INIT { pir::load_bytecode('HLL.pbc'); }
 grammar Ops::Compiler::Grammar is HLL::Grammar;
 
 rule TOP {
-    <body> 
+    <body>
     [ $ || <panic: 'Syntax error'> ]
     {*}
 }
@@ -34,9 +34,9 @@ token end_preamble {
 }
 
 rule op {
-    <op_type>? 'op' <op_name=identifier> '(' 
+    <op_type>? 'op' <op_name=identifier> '('
         [ <op_params>? || <panic: "Fail to parse params"> ]
-    ')' <op_flag>* 
+    ')' <op_flag>*
     [ <op_body> || <panic: "Fail to parse op body"> ]
     {*}
 }
@@ -57,7 +57,7 @@ rule op_param {
 
 token op_param_direction {
     # Order is crucial. PGE doesn't support LTM yet.
-    [ 
+    [
     | 'inout'
     | 'inconst'
     | 'invar'
