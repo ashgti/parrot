@@ -1,4 +1,7 @@
 #! ./parrot-nqp
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 
 # "Comprehensive" test for creating PAST for op.
 # Parse single op and check various aspects of created PAST.
@@ -10,7 +13,7 @@ pir::load_bytecode('dumper.pbc');
 plan(26);
 
 my $buf := q|
-BEGIN_OPS_PREAMBLE    
+BEGIN_OPS_PREAMBLE
 /*
 THE HEADER
 */
