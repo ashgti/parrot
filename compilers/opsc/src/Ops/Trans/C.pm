@@ -52,7 +52,7 @@ method prepare_ops($emitter, $ops_file) {
         my $func_name := $op.func_name( self );
         my $definition := "opcode_t *\n$func_name (opcode_t *cur_opcode, PARROT_INTERP)";
         my $prototype := $emitter.sym_export
-                ~ "opcode_t * $func_name (opcode_t *cur_opcode, PARROT_INTERP);\n";
+                ~ " opcode_t * $func_name (opcode_t *, PARROT_INTERP);\n";
 
         my $src := $op.source( self );
 
@@ -188,7 +188,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
     my $index := 0;
 
     for $emitter.ops_file.ops -> $op {
-        my $type := sprintf( "PARROT_%s_OP", uc(~$op.type) );
+        my $type := sprintf( "PARROT_%s_OP", uc($op.type ?? 'INLINE' !! 'FUNCTION') );
         my $name := $op.name;
         %names{$name} := 1;
         my $full_name := $op.full_name;
@@ -214,7 +214,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
             ) ~ ' }'
             !! '{ 0 }';
 
-        $fh.print('{ ' ~ qq|/* $index */
+        $fh.print('  { ' ~ qq|/* $index */
     /* type $type, */
     "$name",
     "$full_name",
