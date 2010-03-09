@@ -1,4 +1,5 @@
-# Copyright (C) 2009, Parrot Foundation.
+#! parrot
+# Copyright (C) 2009-2010, Parrot Foundation.
 # $Id$
 
 .namespace [ 'Ops';'Compiler' ]
@@ -59,7 +60,7 @@
 
     #for each runcore
     # * make a clone of the op tree
-    # * call the runcore with it 
+    # * call the runcore with it
 
     exit 0
 .end
