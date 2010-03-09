@@ -1,4 +1,6 @@
-#! ./parrot
+#! parrot
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
 
 .include 'compilers/opsc/t/common.pir'
 
@@ -197,8 +199,7 @@ END
 # Don't forget to update plan!
 
 # Local Variables:
-#   mode: cperl
-#   cperl-indent-level: 4
+#   mode: pir
 #   fill-column: 100
 # End:
 # vim: expandtab shiftwidth=4 ft=pir:
