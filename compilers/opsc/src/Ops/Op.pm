@@ -223,8 +223,8 @@ method _substitute($str, $trans) {
 
     #my $rewrote_access = s/{{\@([^{]*?)}}/   $trans->access_arg($self->arg_type($1 - 1), $1, $self); /me;
 
-    $str := subst($str, 
-        /'{{@' $<op_num>=[<digit>+] '}}'/, 
+    $str := subst($str,
+        /'{{@' $<op_num>=[<digit>+] '}}'/,
         -> $m { $trans.access_arg( self.arg_type(+$m<op_num> - 1), +$m<op_num>) }
     );
 
@@ -270,12 +270,12 @@ method _substitute($str, $trans) {
         -> $m { $trans.expr_address($m<addr>) }
     );
 
-=begin COMMENT    
+=begin COMMENT
 
     #XXX: die "Argument access not allowed in preamble\n"
     #XXX: if $preamble_only && $rewrote_access;
 
-=end COMMENT    
+=end COMMENT
 
     $str;
 }
