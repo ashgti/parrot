@@ -188,7 +188,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
     my $index := 0;
 
     for $emitter.ops_file.ops -> $op {
-        my $type := sprintf( "PARROT_%s_OP", uc($op.type) );
+        my $type := sprintf( "PARROT_%s_OP", uc(~$op.type) );
         my $name := $op.name;
         %names{$name} := 1;
         my $full_name := $op.full_name;
@@ -202,7 +202,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
             ?? '{ ' ~ join( ", ",
                 |map( -> $t { sprintf( "PARROT_ARG_%s", uc($t) ) }, $op.arg_types)
             ) ~ ' }'
-            !! ' { (arg_type_t) 0 }';
+            !! '{ (arg_type_t) 0 }';
         my $arg_dirs := $op<normalized_args>
             ?? '{ ' ~ join(", ",
                 |map( -> $d { %arg_dir_mapping{$d<direction>} }, $op<normalized_args>)
@@ -214,8 +214,7 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
             ) ~ ' }'
             !! '{ 0 }';
 
-        $fh.print('{' ~ qq|
-   /* $index */
+        $fh.print('{ ' ~ qq|/* $index */
     /* type $type, */
     "$name",
     "$full_name",
@@ -226,7 +225,8 @@ static op_info_t {self.op_info($emitter)}[{self<num_entries>}] = | ~ q|{
     $arg_types,
     $arg_dirs,
     $labels
-  | ~ '},',
+  | ~ '},
+',
             );
 
             $index++;
