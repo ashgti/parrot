@@ -76,14 +76,6 @@ static void assign_default_param_value(PARROT_INTERP,
         __attribute__nonnull__(4)
         __attribute__nonnull__(5);
 
-static void assign_default_result_value(PARROT_INTERP,
-    ARGMOD(PMC *results),
-    INTVAL index,
-    INTVAL result_flags)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*results);
-
 PARROT_CAN_RETURN_NULL
 static PMC* clone_key_arg(PARROT_INTERP, ARGIN(PMC *key))
         __attribute__nonnull__(1)
@@ -359,9 +351,6 @@ static STRING** string_param_from_op(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(arg_info) \
     , PARROT_ASSERT_ARG(accessor))
-#define ASSERT_ARGS_assign_default_result_value __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(results))
 #define ASSERT_ARGS_clone_key_arg __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(key))
@@ -1401,41 +1390,6 @@ assign_default_param_value(PARROT_INTERP, INTVAL param_index, INTVAL param_flags
         break;
       case PARROT_ARG_PMC:
         *accessor->pmc(interp, arg_info, param_index) = PMCNULL;
-        break;
-      default:
-        Parrot_ex_throw_from_c_args(interp, NULL,
-                    EXCEPTION_INVALID_OPERATION, "invalid parameter type");
-        break;
-    }
-}
-
-/*
-
-=item C<static void assign_default_result_value(PARROT_INTERP, PMC *results,
-INTVAL index, INTVAL result_flags)>
-
-Assign an appropriate default value to the result depending on its type
-
-=cut
-
-*/
-
-static void
-assign_default_result_value(PARROT_INTERP, ARGMOD(PMC *results), INTVAL index, INTVAL result_flags)
-{
-    ASSERT_ARGS(assign_default_result_value)
-    switch (PARROT_ARG_TYPE_MASK_MASK(result_flags)) {
-      case PARROT_ARG_INTVAL:
-        csr_fill_integer(interp, results, index, 0);
-        break;
-      case PARROT_ARG_FLOATVAL:
-        csr_fill_number(interp, results, index, 0.0);
-        break;
-      case PARROT_ARG_STRING:
-        csr_fill_string(interp, results, index, NULL);
-        break;
-      case PARROT_ARG_PMC:
-        csr_fill_pmc(interp, results, index, PMCNULL);
         break;
       default:
         Parrot_ex_throw_from_c_args(interp, NULL,
