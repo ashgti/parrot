@@ -1,10 +1,14 @@
+#! parrot
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 =head1 COMMON FUNCTIONS FOR TESTING
 
 =cut
 
 .sub '_parse_buffer'
     .param string buffer
-    
+
     .local pmc compiler
     compiler = compreg 'Ops'
     .tailcall compiler.'parse'(buffer, 'target'=>'parse')
