@@ -5,16 +5,17 @@ pir::load_bytecode("compilers/opsc/opsc.pbc");
 my @files := <
     src/ops/core.ops
     src/ops/bit.ops
-    src/ops/io.ops
-    src/ops/string.ops
     src/ops/cmp.ops
-    src/ops/math.ops
-    src/ops/sys.ops
-    src/ops/object.ops
-    src/ops/var.ops
     src/ops/debug.ops
-    src/ops/pmc.ops
     src/ops/experimental.ops
+    src/ops/io.ops
+    src/ops/math.ops
+    src/ops/object.ops
+    src/ops/pmc.ops
+    src/ops/set.ops
+    src/ops/string.ops
+    src/ops/sys.ops
+    src/ops/var.ops
     src/ops/set.ops
 >;
 
