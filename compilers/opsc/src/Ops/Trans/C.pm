@@ -1,3 +1,6 @@
+#! nqp
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
 
 class Ops::Trans::C is Ops::Trans;
 
@@ -82,7 +85,7 @@ method access_arg($type, $num) {
     subst($access, /NUM/, $num);
 }
 
-method restart_address($addr) { 
+method restart_address($addr) {
     "interp->resume_offset = $addr; interp->resume_flag = 1";
 }
 
