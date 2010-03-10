@@ -184,6 +184,11 @@ Variour helper builtins.
     .return($S0)
 .end
 
+.sub 'say'
+    .param string arg
+    say arg
+.end
+
 # Local Variables:
 #   mode: pir
 #   fill-column: 100
