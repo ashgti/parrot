@@ -88,7 +88,6 @@ regex op_body {
     '{' 
     <body_word>*?
     ^^ '}' 
-    {*}
 }
 
 #Process op body by breaking it into "words" consisting entirely of whitespace,
@@ -100,14 +99,17 @@ regex body_word {
     | <op_macro>
     | $<word>=[<alnum>+|<punct>|<space>+]
     ]
+    {*}
 }
 
 token macro_param {
     '$' $<num>=[<digit>+]
+    {*}
 }
 
 rule op_macro {
-    <macro_type> <macro_destination> <macro_arg>
+    <macro_type> <macro_destination> '(' <body_word>? ')'
+    {*}
 }
 
 token macro_type {
@@ -129,10 +131,7 @@ token macro_destination {
 rule macro_arg {
     #XXX; needs to match balanced parens
     '('
-    [
-    | <macro_param>
-    | $<macro_word>=[[ <alnum>+ | <punct> | <space>+ ]*? ]
-    ]
+    <body_word>*?
     ')'
 }
 

@@ -58,7 +58,7 @@ method preamble($/) {
 method op($/) {
 
     # Handling flags.
-    my %flags := pir::new__Ps('OrderedHash');
+    my %flags := hash();
     for $<op_flag> {
         %flags{~$_<identifier>} := 1;
     }
@@ -74,10 +74,15 @@ method op($/) {
 
     my $op := Ops::Op.new(
         :name(~$<op_name>),
-        $<op_body>.ast
+        #$<op_body>.ast
     );
 
-    $op.jump($<op_body>.ast<jump>);
+    for $<op_body><body_word> {
+        #say('# BANG');
+        $op.push($_.ast);
+    }
+
+    # FIXME op.jump($<op_body>.ast<jump>);
     $op<flags> := %flags;
     $op<args>  := @args;
     $op<type>  := ~$<op_type>;
@@ -86,7 +91,7 @@ method op($/) {
     if !%flags<flow> {
         $op.push(PAST::Op.new(
             :pasttype('inline'),
-            :inline("\n" ~ '{{+=OP_SIZE}};')
+            :inline("\n" ~ 'goto_next')
             ));
     }
 
@@ -225,7 +230,7 @@ method op_param($/) {
     make $past;
 }
 
-method op_body($/) {
+method _op_body($/) {
     my $past := PAST::Block.new(
         :node($/),
     );
@@ -293,6 +298,52 @@ method op_body($/) {
     make $past;
 }
 
+method macro_param($/) {
+    make PAST::Var.new(
+        :name(~$/),
+        :node($/),
+    );
+}
+
+method body_word($/) {
+    #say('# body_word');
+    my $past;
+    if $<word> {
+        $past := PAST::Op.new(
+            :pasttype('inline'),
+            :inline(~$<word>)
+        );
+    }
+    elsif $<macro_param> {
+        $past := $<macro_param>.ast;
+    }
+    elsif $<op_macro> {
+        $past := $<op_macro>.ast;
+    }
+    else {
+        die('horribly');
+    }
+    #_dumper($past);
+    make $past;
+}
+
+method op_macro($/) {
+    #say('# op_macro');
+    my $macro_name := ~$<macro_type> ~ '_' ~ lc(~$<macro_destination>);
+    #if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
+    #        $past<jump> := 'PARROT_JUMP_RELATIVE';
+    #}
+
+    my $past := PAST::Op.new(
+        :pasttype('call'),
+        :name($macro_name),
+    );
+
+    for $<body_word> {
+        $past.push($_.ast);
+    }
+    make $past;
+}
 
 method macro_sanity_checks($/) {
     #can't have NEXT with non-empty param
