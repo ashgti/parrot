@@ -74,12 +74,11 @@ method op($/) {
 
     my $op := Ops::Op.new(
         :name(~$<op_name>),
-        #$<op_body>.ast
     );
 
-    for $<op_body><body_word> {
-        #say('# BANG');
-        $op.push($_.ast);
+    # Flatten PAST::Stmts into Op.
+    for @($<op_body>.ast) {
+        $op.push($_);
     }
 
     # FIXME op.jump($<op_body>.ast<jump>);
@@ -230,8 +229,8 @@ method op_param($/) {
     make $past;
 }
 
-method _op_body($/) {
-    my $past := PAST::Block.new(
+method op_body($/) {
+    my $past := PAST::Stmts.new(
         :node($/),
     );
     $past<jump> := 0;
@@ -249,43 +248,12 @@ method _op_body($/) {
                 $prev_words
             ));
             $prev_words := '';
-            
+
             if $_<macro_param> {
-                $past.push(PAST::Var.new(
-                    :name(~$_<macro_param><num>)
-                ));
+                $past.push($_<macro_param>.ast);
             }
             elsif $_<op_macro> {
-                my $op := $_<op_macro>;
-                my $op_arg;
-                #macro_sanity_checks($op);
-                if $op<macro_arg><macro_param> {
-                    $op_arg := PAST::Var.new(
-                        :name(~$op<macro_arg><macro_param><num>)
-                    );
-                }
-                elsif $op<macro_arg><macro_word> {
-                    $op_arg := PAST::Op.new(
-                        :pasttype('inline'),
-                        ~$op<macro_arg><macro_word>
-                    );
-                }
-                else {
-                    $op_arg := PAST::Op.new(
-                        :pasttype('inline'),
-                        ''
-                    );
-                }
-                my $macro_name := ~$op<macro_type> ~ '_' ~ lc(~$op<macro_destination>);
-                if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
-                        $past<jump> := 'PARROT_JUMP_RELATIVE';
-                }
-                my $macro_past := PAST::Op.new(
-                    :pasttype('call'),
-                    :name($macro_name),
-                    $op_arg
-                );
-                $past.push($macro_past);
+                $past.push($_<op_macro>.ast);
             }
         }
     }
