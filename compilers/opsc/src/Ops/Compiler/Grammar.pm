@@ -128,13 +128,6 @@ token macro_destination {
     ]
 }
 
-rule macro_arg {
-    #XXX; needs to match balanced parens
-    '('
-    <body_word>*?
-    ')'
-}
-
 token identifier {
     <.ident>
 }

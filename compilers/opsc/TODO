@@ -13,16 +13,3 @@ Required for full implementation:
 Nice to have:
   * Profiling and performance tuning of ops parsing (we need pmichaud).
   * Use ops.num for assigning Op.code.
-  * Generate something more meaningfull for Ops::Op.body instead of munched string.
-  E.g. "{ ...; restart OFFSET($1); ... };" can generate something like:
-    Block (
-        Op(:inline, '...'),
-        Op(:call, :name('restart_offset'),
-            Var(:name('$1'))
-        ),
-        Op(:inline, '...'),
-    )
-  and Op.source will generate end-code recursively as any other compilers do.
-  Problems:
-    - LTM still doesn't work.
-    - "munch_body" is reverting natural flow of PCT.

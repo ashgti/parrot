@@ -81,7 +81,9 @@ method op($/) {
         $op.push($_);
     }
 
-    # FIXME op.jump($<op_body>.ast<jump>);
+    for $<op_body>.ast<jump> {
+        $op.add_jump($_);
+    }
     $op<flags> := %flags;
     $op<args>  := @args;
     $op<type>  := ~$<op_type>;
@@ -233,7 +235,7 @@ method op_body($/) {
     my $past := PAST::Stmts.new(
         :node($/),
     );
-    $past<jump> := 0;
+    $past<jump> := list();
     my $prev_words := '';
     for $<body_word> {
         if $prev_words && $_<word> {
@@ -254,6 +256,9 @@ method op_body($/) {
             }
             elsif $_<op_macro> {
                 $past.push($_<op_macro>.ast);
+                for $_<op_macro>.ast<jump> {
+                    $past<jump>.push($_);
+                }
             }
         }
     }
@@ -298,14 +303,17 @@ method body_word($/) {
 method op_macro($/) {
     #say('# op_macro');
     my $macro_name := ~$<macro_type> ~ '_' ~ lc(~$<macro_destination>);
-    #if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
-    #        $past<jump> := 'PARROT_JUMP_RELATIVE';
-    #}
 
     my $past := PAST::Op.new(
         :pasttype('call'),
         :name($macro_name),
     );
+
+    $past<jump> := list();
+
+    if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
+        $past<jump>.push('PARROT_JUMP_RELATIVE');
+    }
 
     for $<body_word> {
         $past.push($_.ast);

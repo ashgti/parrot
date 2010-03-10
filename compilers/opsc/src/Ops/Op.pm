@@ -199,6 +199,50 @@ method jump($jump?)   { self.attr('jump', $jump, defined($jump)) }
 
 =begin
 
+=item C<add_jump($jump)>
+
+=item C<add_jump($jump)>
+
+Add a jump flag to this op if it's not there already.
+
+=end
+
+method add_jump($jump) {
+    my $found_jump := 0;
+
+    unless self.jump { self.jump(list()) }
+
+    for self.jump {
+        if $_ eq $jump { $found_jump := 1 }
+    }
+
+    unless $found_jump { 
+        self.jump.push($jump);
+    }
+}
+
+=begin
+
+=item C<get_jump()>
+
+=item C<get_jump()>
+
+Get the jump flags that apply to this op.
+
+=end
+
+method get_jump() {
+
+    if self.jump {
+        return join( '|', |self.jump );
+    }
+    else {
+        return '0';
+    }
+}
+
+=begin
+
 =item C<source($trans, $op)>
 
 Returns the L<C<body()>> of the op with substitutions made by
