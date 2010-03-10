@@ -84,8 +84,57 @@ rule op_flag {
 }
 
 # OpBody starts with '{' and ends with single '}' on line.
-token op_body {
-    '{' $<body>=[.*?] ^^ '}' {*}
+regex op_body {
+    '{' 
+    <body_word>*?
+    ^^ '}' 
+    {*}
+}
+
+#Process op body by breaking it into "words" consisting entirely of whitespace,
+#alnums or a single punctuation, then checking for interesting macros (e.g $1
+#or goto NEXT() ) in the midst of the words.
+regex body_word {
+    [ 
+    | <macro_param>
+    | <op_macro>
+    | $<word>=[<alnum>+|<punct>|<space>+]
+    ]
+}
+
+regex macro_param {
+    '$' $<num>=[<digit>+]
+}
+
+regex op_macro {
+    <macro_type> <space>*? <macro_destination> <space>*? <macro_arg>
+}
+
+regex macro_type {
+    [
+    | 'goto'
+    | 'expr'
+    | 'restart'
+    ]
+}
+
+regex macro_destination {
+    [
+    | 'OFFSET'
+    | 'ADDRESS'
+    | 'NEXT'
+    ]
+}
+
+regex macro_arg {
+    #XXX; needs to match balanced parens
+    '('
+    [
+    | 
+    | <macro_param>
+    | $<macro_word>=[[ <alnum>+ | <punct> | <space>+ ]*? ]
+    ]
+    ')'
 }
 
 token identifier {

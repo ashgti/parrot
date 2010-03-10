@@ -244,6 +244,10 @@ method compile_ops($str) {
     $past;
 }
 
+method get_parse_tree($str) {
+    my $compiler := pir::compreg__Ps('Ops');
+    $compiler.compile($str, :target('parse'));
+}
 
 method preamble() { self<preamble> };
 method ops() { self<ops> };

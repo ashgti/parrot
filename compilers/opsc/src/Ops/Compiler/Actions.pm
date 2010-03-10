@@ -74,7 +74,6 @@ method op($/) {
 
     my $op := Ops::Op.new(
         :name(~$<op_name>),
-
         $<op_body>.ast
     );
 
@@ -227,146 +226,78 @@ method op_param($/) {
 }
 
 method op_body($/) {
-    # Single big chunk
-    my $op := PAST::Op.new(
+    my $past := PAST::Block.new(
         :node($/),
-        :pasttype('inline'),
     );
-    $op<inline> := munch_body($op, ~$<body>);
-    make $op;
+    $past<jump> := 0;
+    my $prev_words := '';
+    for $<body_word> {
+        if $prev_words && $_<word> {
+            $prev_words := $prev_words ~ ~$_<word>;
+        }
+        elsif $_<word> {
+            $prev_words := ~$_<word>;
+        }
+        else {
+            $past.push(PAST::Op.new(
+                :pasttype('inline'),
+                $prev_words
+            ));
+            $prev_words := '';
+            
+            if $_<macro_param> {
+                $past.push(PAST::Var.new(
+                    :name(~$_<macro_param><num>)
+                ));
+            }
+            elsif $_<op_macro> {
+                my $op := $_<op_macro>;
+                my $op_arg;
+                #macro_sanity_checks($op);
+                if $op<macro_arg><macro_param> {
+                    $op_arg := PAST::Var.new(
+                        :name(~$op<macro_arg><macro_param><num>)
+                    );
+                }
+                elsif $op<macro_arg><macro_word> {
+                    $op_arg := PAST::Op.new(
+                        :pasttype('inline'),
+                        ~$op<macro_arg><macro_word>
+                    );
+                }
+                else {
+                    $op_arg := PAST::Op.new(
+                        :pasttype('inline'),
+                        ''
+                    );
+                }
+                my $macro_name := ~$op<macro_type> ~ '_' ~ lc(~$op<macro_destination>);
+                if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
+                        $past<jump> := 'PARROT_JUMP_RELATIVE';
+                }
+                my $macro_past := PAST::Op.new(
+                    :pasttype('call'),
+                    :name($macro_name),
+                    $op_arg
+                );
+                $past.push($macro_past);
+            }
+        }
+    }
+    if $prev_words {
+        $past.push(PAST::Op.new(
+            :pasttype('inline'),
+            $prev_words
+        ));
+    }
+    make $past;
 }
 
-sub munch_body($op, $body) {
-    #
-    # Macro substitutions:
-    #
-    # We convert the following notations:
-    #
-    #   .ops file          Op body  Meaning       Comment
-    #   -----------------  -------  ------------  ----------------------------------
-    #   goto OFFSET(X)     {{+=X}}  PC' = PC + X  Used for branches
-    #   goto NEXT()        {{+=S}}  PC' = PC + S  Where S is op size
-    #   goto ADDRESS(X)    {{=X}}   PC' = X       Used for absolute jumps
-    #   expr OFFSET(X)     {{^+X}}  PC + X        Relative address
-    #   expr NEXT()        {{^+S}}  PC + S        Where S is op size
-    #   expr ADDRESS(X)    {{^X}}   X             Absolute address
-    #   restart OFFSET(X)  {{=0,+=X}}   PC' = 0   Restarts at PC + X
-    #   restart NEXT()     {{=0,+=S}}   PC' = 0   Restarts at PC + S
-    #
-    #   $X                 {{@X}}   Argument X    $0 is opcode, $1 is first arg
-    #
-    # For ease of parsing, if the argument to one of the above
-    # notations in a .ops file contains parentheses, then double the
-    # enclosing parentheses and add a space around the argument,
-    # like so:
-    #
-    #    goto OFFSET(( (void*)interp->happy_place ))
-    #
-    # Later transformations turn the Op body notations into C code, based
-    # on the mode of operation (function calls, switch statements, gotos
-    # with labels, etc.).
-    #
 
-    $op<jump> := '0';
-
-    if ($body ~~ / [ goto | restart ] \s+ OFFSET / ) {
-        $op<jump> := 'PARROT_JUMP_RELATIVE';
-    }
-
-    #'goto ADDRESS((foo))' -> '{{=foo}}'
-    $body := subst($body,
-                /goto \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
-                -> $m { '{{=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'expr ADDRESS((foo))' -> '{{^foo}}'
-    $body := subst($body,
-                /expr \s+ ADDRESS '((' $<addr>=[.*?] '))'/,
-                -> $m { '{{^' ~ $m<addr> ~ '}}' }
-            );
-
-
-    #'goto ADDRESS(foo)' -> '{{=foo}}'
-    $body := subst($body,
-                /goto \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'expr ADDRESS(foo)' -> '{{^=foo}}'
-    $body := subst($body,
-                /expr \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{^' ~ $m<addr> ~ '}}' }
-            );
-
-    #'goto OFFSET((foo))' -> '{{+=foo}}'
-    $body := subst($body,
-                /goto \s+ OFFSET '((' $<addr>=[.*?] '))'/,
-                -> $m { '{{+=' ~ $m<addr> ~ '}}' }
-            );
-
-
-    #'goto OFFSET(foo)' -> '{{+=foo}}'
-    $body := subst($body,
-                /goto \s+ OFFSET '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{+=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'expr OFFSET((foo))' -> '{{+=foo}}'
-    $body := subst($body,
-                /expr \s+ OFFSET '((' $<addr>=[.*?] '))'/,
-                -> $m { '{{^=' ~ $m<addr> ~ '}}' }
-            );
-
-
-    #'expr OFFSET(foo)' -> '{{+=foo}}'
-    $body := subst($body,
-                /expr \s+ OFFSET '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{^=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'expr NEXT()' -> '{{^+OP_SIZE}}'
-    $body := subst($body, /expr \s+ NEXT '(' ')'/, '{{^+OP_SIZE}}');
-    #'goto NEXT()' -> '{{+=OP_SIZE}}'
-    $body := subst($body, /goto \s+ NEXT '(' ')'/, '{{+=OP_SIZE}}');
-
-
-    #'restart OFFSET(foo)' -> '{{=0,+=foo}}'
-    $body := subst($body,
-                /restart \s+ OFFSET '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{=0,+=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'restart NEXT()' -> '{{=0,+=OP_SIZE}}'
-    $body := subst($body,
-                /restart \s+ NEXT '(' ')'/,
-                '{{=0,+=OP_SIZE}}'
-            );
-
-    #'restart ADDRESS(foo)' -> '{{=foo}}'
-    $body := subst($body,
-                /restart \s+ ADDRESS '(' $<addr>=[.*?] ')'/,
-                -> $m { '{{=' ~ $m<addr> ~ '}}' }
-            );
-
-    #'$1' -> '{{@1}}'
-    $body := subst($body,
-                /'$' $<arg_num>=[\d+]/,
-                -> $m { '{{@' ~ $m<arg_num> ~ '}}' }
-            );
-
-
-=begin COMMENT
-
-    my $file_escaped = $file;
-    $file_escaped =~ s|(\\)|$1$1|g;    # escape backslashes
-    $op->body( $nolines ? $body : qq{#line $line "$file_escaped"\n$body} );
-
-    # Constants here are defined in include/parrot/op.h
-    or_flag( \$jumps, "PARROT_JUMP_RELATIVE" ) if $branch;
-
-=end COMMENT
-
-    $body;
+method macro_sanity_checks($/) {
+    #can't have NEXT with non-empty param
+    #must have param with OFFSET or ADDRESS
+    #can't have restart ADDRESS
 
 }
 

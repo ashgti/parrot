@@ -199,22 +199,22 @@ method jump($jump?)   { self.attr('jump', $jump, defined($jump)) }
 
 =begin
 
-=item C<source($trans)>
+=item C<source($trans, $op)>
 
 Returns the L<C<body()>> of the op with substitutions made by
 C<$trans> (a subclass of C<Ops::Trans>).
 
 =end
 
-method source( $trans ) {
+method source( $trans, $op ) {
 
     my $prelude := $trans.body_prelude;
-    self.rewrite_body( $prelude ~ self.body, $trans );
+    return self.get_body( $prelude, $trans, $op );
 }
 
 
 # Called from rewrite_body() to perform the actual substitutions.
-method _substitute($str, $trans) {
+method substitute($str, $trans) {
 
 
     #also needed:
@@ -282,7 +282,7 @@ method _substitute($str, $trans) {
 
 =begin
 
-=item C<rewrite_body($body, $trans, [$preamble])>
+=item C<get_body($prelude, $trans, $op)>
 
 Performs the various macro substitutions using the specified transform,
 correctly handling nested substitions, and repeating over the whole string
@@ -293,15 +293,17 @@ method >> >>> to C<VTABLE_I<method>>.
 
 =end
 
-method rewrite_body( $body, $trans ) {
+method get_body( $prelude, $trans, $op ) {
 
-    while (1) {
-        my $new_body := self._substitute( $body, $trans );
+    my $body := $prelude;
 
-        return $body if $body eq $new_body;
+    #work through the op_body tree
+    for $op<op_body> {
 
-        $body := $new_body;
+        pir::say("found an op body thing");
     }
+
+    return self.substitute( $body, $trans );
 }
 
 =begin
