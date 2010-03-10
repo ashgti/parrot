@@ -102,15 +102,15 @@ regex body_word {
     ]
 }
 
-regex macro_param {
+token macro_param {
     '$' $<num>=[<digit>+]
 }
 
-regex op_macro {
-    <macro_type> <space>*? <macro_destination> <space>*? <macro_arg>
+rule op_macro {
+    <macro_type> <macro_destination> <macro_arg>
 }
 
-regex macro_type {
+token macro_type {
     [
     | 'goto'
     | 'expr'
@@ -118,7 +118,7 @@ regex macro_type {
     ]
 }
 
-regex macro_destination {
+token macro_destination {
     [
     | 'OFFSET'
     | 'ADDRESS'
@@ -126,11 +126,10 @@ regex macro_destination {
     ]
 }
 
-regex macro_arg {
+rule macro_arg {
     #XXX; needs to match balanced parens
     '('
     [
-    | 
     | <macro_param>
     | $<macro_word>=[[ <alnum>+ | <punct> | <space>+ ]*? ]
     ]
