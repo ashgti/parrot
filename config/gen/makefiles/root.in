@@ -249,14 +249,12 @@ GEN_OPSFILES =
 
 GEN_HEADERS = \
     $(INC_DIR)/vtable.h \
-    $(INC_DIR)/oplib/core_ops.h \
     $(INC_DIR)/oplib/ops.h \
     $(INC_DIR)/oplib/core_ops_switch.h \
     $(INC_DIR)/extend_vtable.h \
     $(INC_DIR)/pbcversion.h
 
 GEN_SOURCES = \
-    src/core_ops.c \
     src/nci.c \
     src/glut_nci_thunks.c \
     src/core_ops_switch.c \
