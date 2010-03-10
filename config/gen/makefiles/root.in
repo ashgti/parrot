@@ -807,6 +807,13 @@ parrot_utils : $(PDUMP) $(DIS) $(PDB) $(PBC_MERGE) $(PBC_TO_EXE) $(PARROT_CONFIG
 
 installable: all $(INSTALLABLEPARROT) $(INSTALLABLEPDUMP) $(INSTALLABLEDIS) $(INSTALLABLEPDB) $(INSTALLABLEPBC_MERGE) $(INSTALLABLEPBCTOEXE) $(INSTALLABLECONFIG) $(INSTALLABLENQP) $(INSTALLABLENCITHUNKGEN)
 
+bootstrap-ops : opsc
+	$(NQP_RX) compilers/opsc/ops2c.nqp
+	make
+
+bootstrap-ops-test : opsc
+	$(NQP_RX) compilers/opsc/ops2c.nqp
+	make test
 
 runtime/parrot/include/parrotlib.pbc: runtime/parrot/library/parrotlib.pir $(PARROT) $(GEN_PASM_INCLUDES)
 	$(PARROT) -o $@ runtime/parrot/library/parrotlib.pir
