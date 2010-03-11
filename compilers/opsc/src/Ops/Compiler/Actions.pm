@@ -322,8 +322,13 @@ method op_macro($/) {
         $past<jump>.push('PARROT_JUMP_RELATIVE');
     }
 
-    for $<body_word> {
-        $past.push($_.ast);
+    #_dumper($<body_word>);
+    if $<body_word> {
+        for $<body_word> {
+            #say(' word ' ~ $_);
+            my $bit := $_.ast;
+            $past.push($_.ast) if defined($bit);
+        }
     }
     $past<is_next> := $is_next;
     make $past;
