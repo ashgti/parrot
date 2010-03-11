@@ -250,10 +250,10 @@ C<$trans> (a subclass of C<Ops::Trans>).
 
 =end
 
-method source( $trans, $op ) {
+method source( $trans ) {
 
     my $prelude := $trans.body_prelude;
-    return self.get_body( $prelude, $trans, $op );
+    return self.get_body( $prelude, $trans );
 }
 
 
@@ -326,7 +326,7 @@ method substitute($str, $trans) {
 
 =begin
 
-=item C<get_body($prelude, $trans, $op)>
+=item C<get_body($prelude, $trans)>
 
 Performs the various macro substitutions using the specified transform,
 correctly handling nested substitions, and repeating over the whole string
@@ -337,12 +337,12 @@ method >> >>> to C<VTABLE_I<method>>.
 
 =end
 
-method get_body( $prelude, $trans, $op ) {
+method get_body( $prelude, $trans ) {
 
     my $body := $prelude;
 
     #work through the op_body tree
-    for $op<op_body> {
+    for $self<op_body> {
 
         pir::say("found an op body thing");
     }

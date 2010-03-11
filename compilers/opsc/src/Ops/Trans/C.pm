@@ -57,7 +57,7 @@ method prepare_ops($emitter, $ops_file) {
         my $prototype := $emitter.sym_export
                 ~ " opcode_t * $func_name (opcode_t *, PARROT_INTERP);\n";
 
-        my $src := $op.source( self, $op );
+        my $src := $op.source( self );
 
         @op_func_table.push(sprintf( "  %-50s /* %6ld */\n", "$func_name,", $index ));
 
