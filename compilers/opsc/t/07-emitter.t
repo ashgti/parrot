@@ -5,7 +5,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(20);
+plan(21);
 
 my $trans := Ops::Trans::C.new();
 
@@ -90,6 +90,14 @@ $new_body := translate_op_body($trans, $op_body);
 $restart_addr_ok := $new_body ~~ /'return (opcode_t *)cur_opcode + IREG(1);'/;
 ok($restart_addr_ok, "goto OFFSET() and \$1 translated ok");
 ok($new_body ~~ /'PARROT_JUMP_RELATIVE'/, "jump flags generated");
+
+$op_body := '
+inline op thingy(in PMC) {
+    opcode * next = expr NEXT();
+}';
+$new_body := translate_op_body($trans, $op_body);
+$restart_addr_ok := $new_body ~~ /'cur_opcode + 3;'/;
+ok($restart_addr_ok, "expr NEXT() translated ok");
 
 #say($source);
 

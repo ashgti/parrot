@@ -108,7 +108,7 @@ token macro_param {
 }
 
 rule op_macro {
-    <macro_type> <macro_destination> '(' <body_word>? ')'
+    <macro_type> <macro_destination> '(' $<body_word>=[''|<body_word>] ')'
     {*}
 }
 
