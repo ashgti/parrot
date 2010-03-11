@@ -96,6 +96,10 @@ method op($/) {
         );
         $goto_next<is_next> := 1;
         $op.push($goto_next);
+        $op.push(PAST::Op.new(
+                :pasttype<inline>,
+                :inline<;>
+            ));
     }
 
     my $past := PAST::Stmts.new(
