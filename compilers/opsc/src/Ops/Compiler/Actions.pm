@@ -90,10 +90,12 @@ method op($/) {
     $op<normalized_args> := @norm_args;
 
     if !%flags<flow> {
-        $op.push(PAST::Op.new(
-            :pasttype('inline'),
-            :inline("\n" ~ 'goto_next')
-            ));
+        my $goto_next := PAST::Op.new(
+            :pasttype('call'),
+            :name('goto_offset')
+        );
+        $goto_next<is_next> := 1;
+        $op.push($goto_next);
     }
 
     my $past := PAST::Stmts.new(
@@ -247,7 +249,7 @@ method op_body($/) {
         else {
             $past.push(PAST::Op.new(
                 :pasttype('inline'),
-                $prev_words
+                :inline($prev_words),
             ));
             $prev_words := '';
 
@@ -265,7 +267,7 @@ method op_body($/) {
     if $prev_words {
         $past.push(PAST::Op.new(
             :pasttype('inline'),
-            $prev_words
+            :inline($prev_words)
         ));
     }
     make $past;
@@ -273,7 +275,7 @@ method op_body($/) {
 
 method macro_param($/) {
     make PAST::Var.new(
-        :name(~$/),
+        :name(~$<num>),
         :node($/),
     );
 }
@@ -302,7 +304,8 @@ method body_word($/) {
 
 method op_macro($/) {
     #say('# op_macro');
-    my $macro_name := ~$<macro_type> ~ '_' ~ lc(~$<macro_destination>);
+    my $is_next    := ~$<macro_destination> eq 'NEXT';
+    my $macro_name := ~$<macro_type> ~ '_' ~ lc($is_next ?? 'offset' !! ~$<macro_destination>);
 
     my $past := PAST::Op.new(
         :pasttype('call'),
@@ -318,6 +321,7 @@ method op_macro($/) {
     for $<body_word> {
         $past.push($_.ast);
     }
+    $past<is_next> := $is_next;
     make $past;
 }
 

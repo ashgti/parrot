@@ -253,7 +253,7 @@ C<$trans> (a subclass of C<Ops::Trans>).
 method source( $trans ) {
 
     my $prelude := $trans.body_prelude;
-    return self.get_body( $prelude, $trans );
+    return $prelude ~ self.get_body( $trans );
 }
 
 
@@ -326,7 +326,7 @@ method substitute($str, $trans) {
 
 =begin
 
-=item C<get_body($prelude, $trans)>
+=item C<get_body($trans)>
 
 Performs the various macro substitutions using the specified transform,
 correctly handling nested substitions, and repeating over the whole string
@@ -337,18 +337,70 @@ method >> >>> to C<VTABLE_I<method>>.
 
 =end
 
-method get_body( $prelude, $trans ) {
+method get_body( $trans ) {
 
-    my $body := $prelude;
+    my @body := list();
 
     #work through the op_body tree
-    for $self<op_body> {
-
-        pir::say("found an op body thing");
+    for @(self) {
+        my $chunk := self.process_body_chunk($trans, $_);
+        #pir::say('# chunk ' ~ $chunk);
+        @body.push($chunk);
     }
 
-    return self.substitute( $body, $trans );
+    join('', |@body);
 }
+
+# Recursively process body chunks returning string.
+# Ideally bunch of multisubs, but...
+method process_body_chunk($trans, $chunk) {
+    my $what := $chunk.WHAT;
+    # Poor man multis...
+    if $what eq 'PAST::Var()' {
+        my $n := +$chunk.name;
+        return $trans.access_arg( self.arg_type($n - 1), $n);
+    }
+    elsif $what eq 'PAST::Op()' {
+        my $type := $chunk.pasttype;
+        #say('OP ' ~ $type);
+        if $type eq 'inline' {
+            #_dumper($chunk);
+            #pir::say('RET ' ~ $chunk<inline>);
+            return $chunk.inline;
+        }
+        elsif $type eq 'call' {
+            my $name     := $chunk.name;
+            my $is_next  := $chunk<is_next>;
+            #say('NAME '~$name ~ ' ' ~ $is_next);
+            my $children;
+            if $is_next {
+                #say('is_next');
+                $children := ~self.size;
+            }
+            else {
+                my @children := list();
+                for @($chunk) {
+                    @children.push(self.process_body_chunk($trans, $_));
+                }
+                $children := join('', |@children);
+            }
+            #pir::say('children ' ~ $children);
+            my $ret := Q:PIR<
+                $P0 = find_lex '$trans'
+                $P1 = find_lex '$name'
+                $S0 = $P1
+                $P1 = find_lex '$children'
+                %r  = $P0.$S0($P1)
+            >;
+            #pir::say('RET ' ~ $ret);
+            return $ret;
+        }
+    }
+    else {
+        pir::die('HOLEY');
+    }
+}
+
 
 =begin
 
