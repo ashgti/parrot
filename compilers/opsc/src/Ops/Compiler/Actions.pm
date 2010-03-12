@@ -98,6 +98,12 @@ method op($/) {
             :name('goto_offset')
         );
         $goto_next<is_next> := 1;
+
+        my $nl := "\n";
+        $op.push(PAST::Op.new(
+                :pasttype<inline>,
+                :inline($nl)
+            ));
         $op.push($goto_next);
         $op.push(PAST::Op.new(
                 :pasttype<inline>,
