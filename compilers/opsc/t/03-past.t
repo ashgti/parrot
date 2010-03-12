@@ -95,8 +95,11 @@ ok( $op.arg_types.join('_') eq 'i_pc_nc', "Second variant correct");
 
 # Check body munching.
 $op := @ops[0];
-ok( $op.body ~~ /OP_SIZE/, "goto NEXT appended for non :flow ops");
-
+my $goto_offset := 0;
+for @($op) {
+    $goto_offset := $goto_offset || $_<name> eq 'goto_offset';
+}
+ok( $goto_offset, "goto NEXT appended for non :flow ops");
 
 
 # Don't forget to update plan!
