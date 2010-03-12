@@ -189,6 +189,9 @@ method new(*@files, :$oplib!, :$nolines) {
     self<ops>     := list(); # Ops
     self<preamble>:= '';
 
+    self<compiler>:= pir::compreg__Ps('Ops');
+    self<compiler>.set_oplib($oplib);
+
     self._set_version();
 
     for @files { self.read_ops( $_, $nolines ) }
@@ -233,7 +236,7 @@ method read_ops($file, $nolines) {
 }
 
 method compile_ops($str) {
-    my $compiler := pir::compreg__Ps('Ops');
+    my $compiler := self<compiler>;
     my $past     := $compiler.compile($str, :target('past'));
 
     for @($past<ops>) {

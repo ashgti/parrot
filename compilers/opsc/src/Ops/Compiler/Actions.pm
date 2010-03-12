@@ -36,9 +36,18 @@ method body($/) {
     for $<op> {
         my $ops := $_.ast;
         my $skiptable := $OPLIB.skiptable;
+        my $optable   := $OPLIB.optable;
         for @($ops) -> $op {
-            if !$skiptable.exists($op.full_name) {
-                $op<code> := $CODE++;
+            my $full_name := $op.full_name;
+            if ! $skiptable.exists($full_name) {
+                if $optable.exists($full_name) {
+                    $op<code> := $optable{$full_name};
+                }
+                else {
+                    say('# experimental. Not in ops.num ' ~ $full_name);
+                    $op<code> := $CODE++;
+                }
+
                 $past<ops>.push($op);
             }
         }
