@@ -326,6 +326,17 @@ method body_word($/) {
 
 method op_macro($/) {
     #say('# op_macro');
+    # Generate set of calls to Trans:
+    # goto NEXT()         -> goto_offset(opsize())
+    # goto OFFSET($addr)  -> goto_offset($addr)
+    # goto ADDRESS($addr) -> goto_address($addr)
+    # expr NEXT()         -> expr_offset(opsize())
+    # expr OFFSET($addr)  -> expr_offset($addr)
+    # expr ADDRERR($addr) -> expr_address($addr)
+    # restart NEXT()      -> restart_offset(opsize()); goto_offset(opsize())
+    # restart OFFSET()    -> restart_offset($addr); goto_offset($addr)
+    # restart ADDRESS()   -> restart_address($addr); goto_offset($addr)
+
     my $is_next    := ~$<macro_destination> eq 'NEXT';
     my $macro_name := ~$<macro_type> ~ '_' ~ lc($is_next ?? 'offset' !! ~$<macro_destination>);
 
