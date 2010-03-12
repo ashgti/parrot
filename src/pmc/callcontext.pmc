@@ -687,13 +687,45 @@ CallContext.
         GET_ATTR_type_tuple(INTERP, SELF, type_tuple);
 
         if (PMC_IS_NULL(type_tuple)) {
-            type_tuple = Parrot_mmd_build_type_tuple_from_sig_obj(INTERP, SELF);
+            Pcc_cell *c;
+            INTVAL    num_positionals;
+            INTVAL    i = 0;
+
+            GET_ATTR_positionals(INTERP, SELF, c);
+            GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
+
+            type_tuple = Parrot_pmc_new_init_int(interp,
+                enum_class_FixedIntegerArray, num_positionals);
+
+            while (c) {
+                INTVAL type;
+
+                switch (CELL_TYPE_MASK(c)) {
+                    case INTCELL:    type = enum_type_INTVAL;   break;
+                    case FLOATCELL:  type = enum_type_FLOATVAL; break;
+                    case STRINGCELL: type = enum_type_STRING;   break;
+                    case PMCCELL:
+                        type = PMC_IS_NULL(CELL_PMC(c))
+                             ? enum_type_PMC
+                             : VTABLE_type(interp, CELL_PMC(c));
+                        break;
+                    default:
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION,
+                            "Multiple Dispatch: invalid argument type!");
+                }
+
+                VTABLE_set_integer_keyed_int(interp, type_tuple, i, type);
+                i++;
+                c = NEXT_CELL(c);
+            }
+
             SET_ATTR_type_tuple(INTERP, SELF, type_tuple);
         }
 
         return type_tuple;
-
     }
+
 
 /*
 
