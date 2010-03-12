@@ -86,11 +86,11 @@ method access_arg($type, $num) {
 }
 
 method restart_address($addr) {
-    "interp->resume_offset = $addr; interp->resume_flag = 1";
+    "interp->resume_offset = $addr; interp->resume_flag = 1;";
 }
 
 method restart_offset($offset) {
-    "interp->resume_offset = REL_PC + $offset; interp->resume_flag = 1";
+    "interp->resume_offset = REL_PC + $offset; interp->resume_flag = 1;";
 }
 
 method goto_address($addr) { "return (opcode_t *)$addr"; }

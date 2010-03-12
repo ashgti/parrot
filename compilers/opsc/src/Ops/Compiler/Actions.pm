@@ -104,9 +104,12 @@ method op($/) {
     if !%flags<flow> {
         my $goto_next := PAST::Op.new(
             :pasttype('call'),
-            :name('goto_offset')
+            :name('goto_offset'),
+            PAST::Op.new(
+                :pasttype<call>,
+                :name<OPSIZE>,
+            )
         );
-        $goto_next<is_next> := 1;
 
         my $nl := "\n";
         $op.push(PAST::Op.new(
@@ -337,30 +340,78 @@ method op_macro($/) {
     # restart OFFSET()    -> restart_offset($addr); goto_offset($addr)
     # restart ADDRESS()   -> restart_address($addr); goto_offset($addr)
 
-    my $is_next    := ~$<macro_destination> eq 'NEXT';
-    my $macro_name := ~$<macro_type> ~ '_' ~ lc($is_next ?? 'offset' !! ~$<macro_destination>);
+    my $macro_type := ~$<macro_type>;
+    my $macro_dest := ~$<macro_destination>;
+    my $is_next    := $macro_dest eq 'NEXT';
+    my $macro_name := $macro_type ~ '_' ~ lc($is_next ?? 'offset' !! $macro_dest);
 
-    my $past := PAST::Op.new(
+    my $past  := PAST::Stmts.new;
+
+    my $macro := PAST::Op.new(
         :pasttype('call'),
         :name($macro_name),
     );
+    $past.push($macro);
 
     $past<jump> := list();
 
-    if ~$<macro_type> ne 'expr' && ~$<macro_destination> eq 'OFFSET' {
+    if $macro_type ne 'expr' && $macro_dest eq 'OFFSET' {
         $past<jump>.push('PARROT_JUMP_RELATIVE');
     }
 
+    if $macro_type eq 'expr' || $macro_type eq 'goto' {
+        if $is_next {
+            $macro.push(PAST::Op.new(
+                :pasttype<call>,
+                :name<OPSIZE>,
+            ));
+        }
+        else {
+            process_op_macro_body_word($/, $macro);
+        }
+    }
+    elsif $macro_type eq 'restart' {
+        if $is_next {
+            $macro.push(PAST::Op.new(
+                :pasttype<call>,
+                :name<OPSIZE>,
+            ));
+        }
+        else {
+            process_op_macro_body_word($/, $macro);
+        }
+
+        $macro := PAST::Op.new(
+            :pasttype<call>,
+            :name('goto_' ~ ($is_next ?? 'offset' !! lc($macro_dest))),
+        );
+        if $is_next {
+            $macro.push(PAST::Op.new(
+                :pasttype<call>,
+                :name<OPSIZE>,
+            ));
+        }
+        else {
+            process_op_macro_body_word($/, $macro);
+        }
+        $past.push($macro);
+    }
+    else {
+        pir::die("Horribly");
+    }
+
+    make $past;
+}
+
+sub process_op_macro_body_word($/, $macro) {
     #_dumper($<body_word>);
     if $<body_word> {
         for $<body_word> {
             #say(' word ' ~ $_);
             my $bit := $_.ast;
-            $past.push($_.ast) if defined($bit);
+            $macro.push($_.ast) if defined($bit);
         }
     }
-    $past<is_next> := $is_next;
-    make $past;
 }
 
 method macro_sanity_checks($/) {

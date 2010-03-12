@@ -302,20 +302,18 @@ method process_body_chunk($trans, $chunk) {
         }
         elsif $type eq 'call' {
             my $name     := $chunk.name;
-            my $is_next  := $chunk<is_next>;
             #say('NAME '~$name ~ ' ' ~ $is_next);
-            my $children;
-            if $is_next {
+            if $name eq 'OPSIZE' {
                 #say('is_next');
-                $children := ~self.size;
+                return ~self.size;
             }
-            else {
-                my @children := list();
-                for @($chunk) {
-                    @children.push(self.process_body_chunk($trans, $_));
-                }
-                $children := join('', |@children);
+
+            my @children := list();
+            for @($chunk) {
+                @children.push(self.process_body_chunk($trans, $_));
             }
+            my $children := join('', |@children);
+
             #pir::say('children ' ~ $children);
             my $ret := Q:PIR<
                 $P0 = find_lex '$trans'
@@ -327,6 +325,14 @@ method process_body_chunk($trans, $chunk) {
             #pir::say('RET ' ~ $ret);
             return $ret;
         }
+    }
+    elsif $what eq 'PAST::Stmts()' {
+        my @children := list();
+        for @($chunk) {
+            @children.push(self.process_body_chunk($trans, $_));
+        }
+        my $children := join('', |@children);
+        return $children;
     }
     else {
         pir::die('HOLEY');
