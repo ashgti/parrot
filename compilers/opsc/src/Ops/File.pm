@@ -226,8 +226,10 @@ method read_ops($file, $nolines) {
     $Ops::Compiler::Actions::OPLIB := self<oplib>;
 
     say("# Parsing $file");
-    my $buffer := slurp($file);
+    my $start_time := pir::time__N();
+    my $buffer     := slurp($file);
     self.compile_ops($buffer);
+    say('# ... in ' ~ pir::time__N() - $start_time ~ ' seconds');
 }
 
 method compile_ops($str) {

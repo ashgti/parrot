@@ -25,7 +25,10 @@ my $lib := Ops::OpLib.new(
     :skip_file('src/ops/ops.skip'),
 );
 
+my $start_time := pir::time__N();
 my $f := Ops::File.new(|@files, :oplib($lib));
+my $end_time := pir::time__N();
+say('# Ops parsed ' ~ ($end_time - $start_time));
 my $emitter := Ops::Emitter.new(
     :ops_file($f), :trans($trans), :script('ops2c'),
     :flags(
