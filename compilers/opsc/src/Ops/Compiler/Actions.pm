@@ -84,6 +84,9 @@ method op($/) {
     for $<op_body>.ast<jump> {
         $op.add_jump($_);
     }
+    if ~$<op_name> eq 'runinterp' {
+        $op.add_jump('PARROT_JUMP_RELATIVE');
+    }
     $op<flags> := %flags;
     $op<args>  := @args;
     $op<type>  := ~$<op_type>;
@@ -318,7 +321,7 @@ method op_macro($/) {
 
     $past<jump> := list();
 
-    if $macro_name eq 'restart_offset' || $macro_name eq 'goto_offset' {
+    if ~$<macro_type> ne 'expr' && ~$<macro_destination> eq 'OFFSET' {
         $past<jump>.push('PARROT_JUMP_RELATIVE');
     }
 

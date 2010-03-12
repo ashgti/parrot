@@ -5,7 +5,7 @@
 pir::load_bytecode("compilers/opsc/opsc.pbc");
 pir::load_bytecode("nqp-settings.pbc");
 
-plan(21);
+plan(22);
 
 my $trans := Ops::Trans::C.new();
 
@@ -96,8 +96,15 @@ inline op thingy(in PMC) {
     opcode * next = expr NEXT();
 }';
 $new_body := translate_op_body($trans, $op_body);
-$restart_addr_ok := $new_body ~~ /'cur_opcode + 3;'/;
+$restart_addr_ok := $new_body ~~ /'cur_opcode + 2;'/;
 ok($restart_addr_ok, "expr NEXT() translated ok");
+
+$op_body := '
+inline op runinterp(in PMC) {
+}';
+$new_body := translate_op_body($trans, $op_body);
+$restart_addr_ok := $new_body ~~ /'PARROT_JUMP_RELATIVE'/;
+ok($restart_addr_ok, "runinterp has PARROT_JUMP_RELATIVE");
 
 #say($source);
 
