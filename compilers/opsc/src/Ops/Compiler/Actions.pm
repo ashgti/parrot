@@ -338,6 +338,7 @@ method op_macro($/) {
     # expr ADDRERR($addr) -> expr_address($addr)
     # restart NEXT()      -> restart_offset(opsize()); goto_address(0)
     # restart OFFSET()    -> restart_offset($addr); goto_offset($addr)
+    # XXX In trunk "restart ADDRESS" equivalent of "goto ADDRESS".
     # restart ADDRESS()   -> restart_address($addr); goto_address($addr)
 
     my $macro_type := ~$<macro_type>;
