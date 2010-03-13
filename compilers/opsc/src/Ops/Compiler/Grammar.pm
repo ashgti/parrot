@@ -85,16 +85,16 @@ rule op_flag {
 
 # OpBody starts with '{' and ends with single '}' on line.
 regex op_body {
-    '{' 
+    '{'
     <body_word>*?
-    ^^ '}' 
+    ^^ '}'
 }
 
 #Process op body by breaking it into "words" consisting entirely of whitespace,
 #alnums or a single punctuation, then checking for interesting macros (e.g $1
 #or goto NEXT() ) in the midst of the words.
 regex body_word {
-    [ 
+    [
     | <macro_param>
     | <op_macro>
     | $<word>=[<alnum>+|<punct>|<space>+]

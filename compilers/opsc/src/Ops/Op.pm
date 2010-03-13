@@ -216,7 +216,7 @@ method add_jump($jump) {
         if $_ eq $jump { $found_jump := 1 }
     }
 
-    unless $found_jump { 
+    unless $found_jump {
         self.jump.push($jump);
     }
 }
