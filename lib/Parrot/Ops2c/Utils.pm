@@ -606,7 +606,7 @@ sub _iterate_over_ops {
     foreach my $op ( $self->{ops}->ops ) {
         my $func_name = $op->func_name( $self->{trans} );
         my $prototype =
-          "$self->{sym_export} opcode_t * $func_name (opcode_t *, PARROT_INTERP)";
+          "$self->{sym_export} opcode_t * $func_name(opcode_t *, PARROT_INTERP)";
         my $definition;
         my $comment = '';
         my $one_op  = "";
@@ -620,7 +620,7 @@ sub _iterate_over_ops {
             $comment    = "/* " . $op->full_name() . " */";
         }
         else {
-            $definition = "opcode_t *\n$func_name (opcode_t *cur_opcode, PARROT_INTERP)";
+            $definition = "opcode_t *\n$func_name(opcode_t *cur_opcode, PARROT_INTERP)";
         }
 
         my $src = $op->source( $self->{trans} );
@@ -936,7 +936,7 @@ static int get_op(PARROT_INTERP, const char * name, int full) {
         hop_init(interp);
     }
     for (p = hop[hidx]; p; p = p->next) {
-        if(STREQ(name, full ? p->info->full_name : p->info->name))
+        if (STREQ(name, full ? p->info->full_name : p->info->name))
             return p->info - $self->{bs}op_lib.op_info_table;
     }
     return -1;
