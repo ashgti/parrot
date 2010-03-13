@@ -336,9 +336,9 @@ method op_macro($/) {
     # expr NEXT()         -> expr_offset(opsize())
     # expr OFFSET($addr)  -> expr_offset($addr)
     # expr ADDRERR($addr) -> expr_address($addr)
-    # restart NEXT()      -> restart_offset(opsize()); goto_offset(opsize())
+    # restart NEXT()      -> restart_offset(opsize()); goto_address(0)
     # restart OFFSET()    -> restart_offset($addr); goto_offset($addr)
-    # restart ADDRESS()   -> restart_address($addr); goto_offset($addr)
+    # restart ADDRESS()   -> restart_address($addr); goto_address($addr)
 
     my $macro_type := ~$<macro_type>;
     my $macro_dest := ~$<macro_destination>;
@@ -383,12 +383,12 @@ method op_macro($/) {
 
         $macro := PAST::Op.new(
             :pasttype<call>,
-            :name('goto_' ~ ($is_next ?? 'offset' !! lc($macro_dest))),
+            :name<goto_address>,
         );
         if $is_next {
             $macro.push(PAST::Op.new(
-                :pasttype<call>,
-                :name<OPSIZE>,
+                :pasttype<inline>,
+                :inline<0>,
             ));
         }
         else {
