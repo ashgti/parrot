@@ -167,7 +167,8 @@ static void fill_params(PARROT_INTERP,
     ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
     ARGIN(void *arg_info),
-    ARGIN(struct pcc_set_funcs *accessor))
+    ARGIN(struct pcc_set_funcs *accessor),
+    Errors_classes direction)
         __attribute__nonnull__(1)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
@@ -943,7 +944,7 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
 /*
 
 =item C<static void fill_params(PARROT_INTERP, PMC *call_object, PMC *raw_sig,
-void *arg_info, struct pcc_set_funcs *accessor)>
+void *arg_info, struct pcc_set_funcs *accessor, Errors_classes direction)>
 
 Gets args for the current function call and puts them into position.
 First it gets the positional non-slurpy parameters, then the positional
@@ -956,7 +957,9 @@ slurpy parameters.
 
 static void
 fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
-        ARGIN(PMC *raw_sig), ARGIN(void *arg_info), ARGIN(struct pcc_set_funcs *accessor))
+        ARGIN(PMC *raw_sig), ARGIN(void *arg_info),
+        ARGIN(struct pcc_set_funcs *accessor),
+        Errors_classes direction)
 {
     ASSERT_ARGS(fill_params)
     INTVAL *raw_params;
@@ -972,7 +975,7 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
 
     /* Check if we should be throwing errors. This is configured separately
      * for parameters and return values. */
-    if (PARROT_ERRORS_test(interp, PARROT_ERRORS_PARAM_COUNT_FLAG))
+    if (PARROT_ERRORS_test(interp, direction))
         err_check = 1;
 
     /* A null call object is fine if there are no arguments and no returns. */
@@ -1406,12 +1409,15 @@ assign_default_param_value(PARROT_INTERP, INTVAL param_index, INTVAL param_flags
 /*
 
 =item C<void Parrot_pcc_fill_params_from_op(PARROT_INTERP, PMC *call_object, PMC
-*raw_sig, opcode_t *raw_params)>
+*raw_sig, opcode_t *raw_params, Errors_classes direction)>
 
 Gets args for the current function call and puts them into position.
 First it gets the positional non-slurpy parameters, then the positional
 slurpy parameters, then the named parameters, and finally the named
 slurpy parameters.
+
+C<direction> used to distinguish set_returns vs set_params for checking
+different flags.
 
 =cut
 
@@ -1420,7 +1426,7 @@ slurpy parameters.
 PARROT_EXPORT
 void
 Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
-        ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_params))
+        ARGIN(PMC *raw_sig), ARGIN(opcode_t *raw_params), Errors_classes direction)
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_op)
 
@@ -1436,7 +1442,7 @@ Parrot_pcc_fill_params_from_op(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
         (pmc_func_t)pmc_constant_from_op,
     };
 
-    fill_params(interp, call_object, raw_sig, raw_params, &function_pointers);
+    fill_params(interp, call_object, raw_sig, raw_params, &function_pointers, direction);
 }
 
 /*
@@ -1514,7 +1520,8 @@ Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD(PMC *call_object),
 
     parse_signature_string(interp, signature, &raw_sig);
 
-    fill_params(interp, call_object, raw_sig, args, &function_pointers);
+    fill_params(interp, call_object, raw_sig, args, &function_pointers,
+            PARROT_ERRORS_PARAM_COUNT_FLAG);
 }
 
 /*

@@ -212,7 +212,8 @@ PARROT_EXPORT
 void Parrot_pcc_fill_params_from_op(PARROT_INTERP,
     ARGMOD_NULLOK(PMC *call_object),
     ARGIN(PMC *raw_sig),
-    ARGIN(opcode_t *raw_params))
+    ARGIN(opcode_t *raw_params),
+    Errors_classes direction)
         __attribute__nonnull__(1)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
