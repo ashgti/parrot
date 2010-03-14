@@ -320,7 +320,9 @@ Parrot_mmd_multi_dispatch_from_c_args(PARROT_INTERP,
 #endif
 
     Parrot_pcc_invoke_from_sig_object(interp, sub, call_obj);
-    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args);
+    call_obj = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
     va_end(args);
 }
 

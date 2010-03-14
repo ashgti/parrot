@@ -1479,14 +1479,15 @@ Parrot_pcc_fill_params_from_c_args(PARROT_INTERP, ARGMOD(PMC *call_object),
     va_list args;
 
     va_start(args, signature);
-    Parrot_pcc_fill_params_from_varargs(interp, call_object, signature, &args);
+    Parrot_pcc_fill_params_from_varargs(interp, call_object, signature, &args,
+            PARROT_ERRORS_PARAM_COUNT_FLAG);
     va_end(args);
 }
 
 /*
 
 =item C<void Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, PMC
-*call_object, const char *signature, va_list *args)>
+*call_object, const char *signature, va_list *args, Errors_classes direction)>
 
 Gets args for the current function call and puts them into position.
 First it gets the positional non-slurpy parameters, then the positional
@@ -1504,8 +1505,8 @@ variables.
 
 PARROT_EXPORT
 void
-Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD(PMC *call_object),
-        ARGIN(const char *signature), ARGMOD(va_list *args))
+Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
+        ARGIN(const char *signature), ARGMOD(va_list *args), Errors_classes direction)
 {
     ASSERT_ARGS(Parrot_pcc_fill_params_from_varargs)
     PMC    *raw_sig  = PMCNULL;
@@ -1527,7 +1528,7 @@ Parrot_pcc_fill_params_from_varargs(PARROT_INTERP, ARGMOD(PMC *call_object),
     parse_signature_string(interp, signature, &raw_sig);
 
     fill_params(interp, call_object, raw_sig, args, &function_pointers,
-            PARROT_ERRORS_PARAM_COUNT_FLAG);
+            direction);
 }
 
 /*

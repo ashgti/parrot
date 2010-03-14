@@ -221,11 +221,11 @@ void Parrot_pcc_fill_params_from_op(PARROT_INTERP,
 
 PARROT_EXPORT
 void Parrot_pcc_fill_params_from_varargs(PARROT_INTERP,
-    ARGMOD(PMC *call_object),
+    ARGMOD_NULLOK(PMC *call_object),
     ARGIN(const char *signature),
-    ARGMOD(va_list *args))
+    ARGMOD(va_list *args),
+    Errors_classes direction)
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*call_object)
@@ -293,7 +293,6 @@ void Parrot_pcc_split_signature_string(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_pcc_fill_params_from_varargs \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(call_object) \
     , PARROT_ASSERT_ARG(signature) \
     , PARROT_ASSERT_ARG(args))
 #define ASSERT_ARGS_Parrot_pcc_merge_signature_for_tailcall \

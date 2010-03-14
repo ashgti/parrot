@@ -1055,7 +1055,8 @@ Parrot_ext_call(PARROT_INTERP, ARGIN(Parrot_PMC sub_pmc),
     call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL, arg_sig, &args);
 
     Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, call_obj);
-    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args);
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
     va_end(args);
 }
 

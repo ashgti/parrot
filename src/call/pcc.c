@@ -72,8 +72,11 @@ Parrot_pcc_invoke_sub_from_c_args(PARROT_INTERP, ARGIN(PMC *sub_obj),
     va_start(args, sig);
     call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL,
          arg_sig, &args);
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_obj);
     Parrot_pcc_invoke_from_sig_object(interp, sub_obj, call_obj);
-    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args);
+    call_obj = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
     va_end(args);
 
 }
@@ -196,6 +199,7 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
 
     va_start(args, signature);
     call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL, arg_sig, &args);
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_obj);
 
     /* Find the subroutine object as a named method on pmc */
     sub_obj = VTABLE_find_method(interp, pmc, method_name);
@@ -206,7 +210,9 @@ Parrot_pcc_invoke_method_from_c_args(PARROT_INTERP, ARGIN(PMC* pmc),
 
     /* Invoke the subroutine object with the given CallContext object */
     Parrot_pcc_invoke_from_sig_object(interp, sub_obj, call_obj);
-    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args);
+    call_obj = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
     va_end(args);
 
 }
@@ -321,8 +327,9 @@ Parrot_pcc_invoke_from_sig_object(PARROT_INTERP, ARGIN(PMC *sub_obj),
         runops(interp, offset);
         Interp_core_SET(interp, old_core);
     }
-    Parrot_pcc_set_signature(interp, ctx, NULL);
     Parrot_pop_context(interp);
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp),
+            Parrot_pcc_get_signature(interp, ctx));
 }
 
 /*
