@@ -1,12 +1,12 @@
 #! perl
-# Copyright (C) 2001-2009, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 use strict;
 use warnings;
 use lib qw( . lib ../lib ../../lib );
 use Test::More;
-use Parrot::Test tests => 71;
+use Parrot::Test;
 use Parrot::Config qw(%PConfig);
 
 =head1 NAME
@@ -34,8 +34,9 @@ $ENV{TEST_PROG_ARGS} ||= '';
 
 SKIP: {
     unless ( -e "runtime/parrot/dynext/libnci_test$PConfig{load_ext}" ) {
-        skip( "Please make libnci_test$PConfig{load_ext}", Test::Builder->expected_tests() );
+        plan skip_all => "Please make libnci_test$PConfig{load_ext}";
     }
+    plan tests => 71;
 
     pir_output_is( << 'CODE', << 'OUTPUT', 'load library fails' );
 .sub test :main

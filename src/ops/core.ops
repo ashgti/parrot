@@ -63,12 +63,6 @@ inline op end() :base_core :check_event :flow {
 Does nothing other than waste an iota of time and 32 bits of bytecode space.
 (Must be op #1, CORE_OPS_noop)
 
-=item B<cpu_ret>()
-
-Emit a cpu return instruction. This is used to return from CGP core
-to JIT code. Note: Do B<not> use this opcode. It is for internal use only.
-(Must be op #2, CORE_OPS_cpu_ret)
-
 =item B<check_events>()
 
 Check the event queue and run event handlers if there are unhandled events.
@@ -96,26 +90,6 @@ file.
 =cut
 
 inline op noop() :base_core {
-}
-
-inline op cpu_ret() {
-    /* We only want to call __asm__("ret") if we're in the JIT core. Otherwise
-       we want to throw an error. Seriously people: Do not use this opcode
-       directly in PIR. Ever. It absolutely makes no sense and it doesn't do
-       anything productive. You've been warned. */
-   if (PARROT_RUNCORE_JIT_OPS_TEST(interp->run_core)) {
-#ifdef __GNUC__
-#  ifdef I386
-        __asm__("ret");
-#  endif
-#endif
-    }
-    else {
-        opcode_t * const handler= Parrot_ex_throw_from_op_args(interp,
-            NULL, EXCEPTION_INVALID_OPERATION,
-            "cpu_ret: May not use this opcode from PIR source");
-        goto ADDRESS(handler);
-    }
 }
 
 inline op check_events() :base_core :flow {
@@ -748,7 +722,7 @@ inline op push_eh(invar PMC) {
 
 inline op pop_eh() {
     Parrot_cx_delete_handler_local(interp,
-            Parrot_str_new(interp, "exception", 9));
+            Parrot_str_new_constant(interp, "exception"));
 }
 
 inline op throw(invar PMC) :flow {
@@ -794,7 +768,7 @@ inline op rethrow(invar PMC) :flow {
 
 inline op count_eh(out INT) {
     $1 = Parrot_cx_count_handlers_local(interp,
-            Parrot_str_new(interp, "exception", 9));
+            Parrot_str_new_constant(interp, "exception"));
 }
 
 inline op die(in STR) :flow {
@@ -1303,7 +1277,6 @@ op dlfunc(out PMC, invar PMC, in STR, in STR) {
     else {
         $1 = Parrot_pmc_new(interp, enum_class_NCI);
         VTABLE_set_pointer_keyed_str(interp, $1, $4, F2DPTR(p));
-        PObj_get_FLAGS($1) |= PObj_private1_FLAG;
     }
     Parrot_str_free_cstring(name);
 }

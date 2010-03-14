@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -560,6 +560,39 @@ Parrot_pmc_new_init(PARROT_INTERP, INTVAL base_type, ARGOUT(PMC *init))
         return pmc;
     }
 }
+
+
+/*
+
+=item C<PMC * Parrot_pmc_new_init_int(PARROT_INTERP, INTVAL base_type, INTVAL
+init)>
+
+As C<Parrot_pmc_new()>, but passes C<init> to the PMC's C<init_int()> vtable entry.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC *
+Parrot_pmc_new_init_int(PARROT_INTERP, INTVAL base_type, INTVAL init)
+{
+    ASSERT_ARGS(Parrot_pmc_new_init_int)
+    PMC *const classobj = interp->vtables[base_type]->pmc_class;
+
+    if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj)) {
+        PMC *initial = Parrot_pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
+        VTABLE_set_integer_native(interp, initial, init);
+        VTABLE_instantiate(interp, classobj, initial);
+    }
+    else {
+        PMC * const pmc = get_new_pmc_header(interp, base_type, 0);
+        VTABLE_init_int(interp, pmc, init);
+        return pmc;
+    }
+}
+
 
 
 /*

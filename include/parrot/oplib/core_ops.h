@@ -18,7 +18,6 @@
 
  opcode_t * Parrot_end(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_noop(opcode_t *, PARROT_INTERP);
- opcode_t * Parrot_cpu_ret(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_check_events(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_check_events__(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_wrapper__(opcode_t *, PARROT_INTERP);
@@ -448,6 +447,8 @@
  opcode_t * Parrot_backtrace(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_getline_i(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_getfile_s(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_set_label_p_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_get_label_i_p(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_close_p(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_fdopen_p_i_s(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_fdopen_p_ic_s(opcode_t *, PARROT_INTERP);
@@ -1266,8 +1267,6 @@
  opcode_t * Parrot_find_sub_not_null_p_s(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_find_sub_not_null_p_sc(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_trap(opcode_t *, PARROT_INTERP);
- opcode_t * Parrot_set_label_p_ic(opcode_t *, PARROT_INTERP);
- opcode_t * Parrot_get_label_i_p(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_fetch_p_p_p_p(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_fetch_p_pc_p_p(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_fetch_p_p_pc_p(opcode_t *, PARROT_INTERP);
@@ -1316,6 +1315,18 @@
  opcode_t * Parrot_vivify_p_pc_s_pc(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_vivify_p_p_sc_pc(opcode_t *, PARROT_INTERP);
  opcode_t * Parrot_vivify_p_pc_sc_pc(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_s_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_sc_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_s_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_sc_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_p_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_pc_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_p_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_new_p_pc_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_root_new_p_p_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_root_new_p_pc_i(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_root_new_p_p_ic(opcode_t *, PARROT_INTERP);
+ opcode_t * Parrot_root_new_p_pc_ic(opcode_t *, PARROT_INTERP);
 
 #endif /* PARROT_OPLIB_CORE_OPS_H_GUARD */
 

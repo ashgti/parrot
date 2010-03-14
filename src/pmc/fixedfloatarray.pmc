@@ -48,6 +48,25 @@ Destroys the array.
 
 /*
 
+=item C<void init_int(INTVAL size)>
+
+Initializes the array.
+
+=cut
+
+*/
+
+    VTABLE void init_int(INTVAL size) {
+        if (size < 0)
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_OUT_OF_BOUNDS,
+                _("FixedFloatArray: Cannot set array size to a negative number (%d)"), size);
+        SET_ATTR_size(INTERP, SELF, size);
+        SET_ATTR_float_array(INTERP, SELF, mem_gc_allocate_n_typed(INTERP, size, FLOATVAL));
+        PObj_custom_destroy_SET(SELF);
+    }
+
+/*
+
 =item C<PMC *clone()>
 
 Creates and returns a copy of the array.
