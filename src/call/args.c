@@ -822,9 +822,14 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP,
                     i++; /* skip 'f' */
                 }
                 else if (type_lookahead == 'i') {
-                    Parrot_ex_throw_from_c_args(interp, NULL,
-                        EXCEPTION_INVALID_OPERATION,
-                        "Dispatch: only the first argument can be an invocant");
+                    if (i)
+                        Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_INVALID_OPERATION,
+                            "Dispatch: only the first argument can be an invocant");
+                    else {
+                        VTABLE_push_pmc(interp, call_object, pmc_arg);
+                        i++; /* skip 'i' */
+                    }
                 }
                 else
                     VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
