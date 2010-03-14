@@ -538,12 +538,11 @@ op get_params(inconst PMC) :flow {
 op set_returns(inconst PMC) :flow {
     opcode_t * const raw_args = CUR_OPCODE;
     PMC * const signature = $1;
-    PMC *call_sig, *old_sig;
+    PMC * call_sig;
     INTVAL argc;
 
-    old_sig = CURRENT_CONTEXT(interp);
     call_sig = Parrot_pcc_build_sig_object_from_op(interp,
-            old_sig, signature, raw_args);
+            PMCNULL, signature, raw_args);
     Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_sig);
 
     argc = VTABLE_elements(interp, signature);
