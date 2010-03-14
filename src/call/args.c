@@ -595,7 +595,9 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
                     dissect_aggregate_arg(interp, call_object, pmc_value);
                 }
                 else {
-                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_value));
+                    VTABLE_push_pmc(interp, call_object, PMC_IS_NULL(pmc_value)
+                            ? PMCNULL
+                            : clone_key_arg(interp, pmc_value));
                 }
 
                 break;
@@ -833,7 +835,9 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP,
                     }
                 }
                 else
-                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
+                    VTABLE_push_pmc(interp, call_object, PMC_IS_NULL(pmc_arg)
+                            ? PMCNULL
+                            : clone_key_arg(interp, pmc_arg));
                 break;
             }
           case '-':
@@ -912,7 +916,9 @@ Parrot_pcc_build_sig_object_from_varargs(PARROT_INTERP, ARGIN_NULLOK(PMC *obj),
                     i++; /* skip 'f' */
                 }
                 else {
-                    VTABLE_push_pmc(interp, call_object, clone_key_arg(interp, pmc_arg));
+                    VTABLE_push_pmc(interp, call_object, PMC_IS_NULL(pmc_arg)
+                            ? PMCNULL
+                            : clone_key_arg(interp, pmc_arg));
                     if (type_lookahead == 'i') {
                         if (i != 0)
                             Parrot_ex_throw_from_c_args(interp, NULL,
