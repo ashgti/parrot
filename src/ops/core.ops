@@ -543,6 +543,7 @@ op set_returns(inconst PMC) :flow {
     old_sig = CURRENT_CONTEXT(interp);
     call_sig = Parrot_pcc_build_sig_object_from_op(interp,
             old_sig, signature, raw_args);
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), call_sig);
 
     argc = VTABLE_elements(interp, signature);
     goto OFFSET(argc + 2);
