@@ -580,9 +580,9 @@ pasm_output_is( <<'CODE', <<'OUTPUT', "get_param later" );
 .pcc_sub main:
     set I16, 77
     set_args "0, 0", 42, I16
-    get_results "0, 0", I16, I17
     find_name P1, "foo"
     invokecc P1
+    get_results "0, 0", I16, I17
     print I16
     print "\n"
     print I17
@@ -610,8 +610,8 @@ pir_output_is( <<'CODE', <<'OUTPUT', "tailcall 1" );
 .sub main :main
     .const 'Sub' f = "foo"
     print "main\n"
-    get_results "0", $S0
     invokecc f
+    get_results "0", $S0
     print $S0
 .end
 .sub foo
