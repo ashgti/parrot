@@ -746,6 +746,7 @@ Parrot_pcc_get_int_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_int_constant_func)
     Parrot_Context const * c = get_context_struct_fast(interp, ctx);
+    PARROT_ASSERT(c->constants[idx]->type == 'i');
     return c->constants[idx]->u.integer;
 }
 
@@ -756,6 +757,7 @@ Parrot_pcc_get_num_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_num_constant_func)
     Parrot_Context const * c = get_context_struct_fast(interp, ctx);
+    PARROT_ASSERT(c->constants[idx]->type == 'n');
     return c->constants[idx]->u.number;
 }
 
@@ -766,6 +768,7 @@ Parrot_pcc_get_string_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_string_constant_func)
     Parrot_Context const * c = get_context_struct_fast(interp, ctx);
+    PARROT_ASSERT(c->constants[idx]->type == 's');
     return c->constants[idx]->u.string;
 }
 
@@ -776,6 +779,8 @@ Parrot_pcc_get_pmc_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 {
     ASSERT_ARGS(Parrot_pcc_get_pmc_constant_func)
     Parrot_Context const * c = get_context_struct_fast(interp, ctx);
+    PARROT_ASSERT((c->constants[idx]->type == 'k')
+            || (c->constants[idx]->type == 'p'));
     return c->constants[idx]->u.key;
 }
 
