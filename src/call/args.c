@@ -514,17 +514,6 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
 
-    if (!PMC_IS_NULL(interp->current_object)) {
-        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
-        if (int_array[0] & (PARROT_ARG_PMC | PARROT_ARG_INVOCANT))
-            arg_index++;
-        else {
-            new_sig = Parrot_pmc_new(interp, enum_class_ResizablePMCArray);
-            VTABLE_unshift_integer(interp, new_sig, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
-        }
-        interp->current_object = NULL;
-    }
-
     if (PMC_IS_NULL(new_sig)) {
         SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);
     }
