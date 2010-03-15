@@ -196,14 +196,17 @@ sub normalize_args(@args) {
     @result;
 }
 
-=begin
+=over 4
 
 =item C<expand_args(@args)>
 
 Given an argument list, returns a list of all the possible argument
 combinations.
 
-=end
+=back
+
+=cut
+
 sub expand_args(@args) {
 
     return list() unless @args;
