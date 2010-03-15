@@ -4,8 +4,6 @@
 
 # XXX Better to put this into docs/ somewhere.
 
-=begin
-
 =head1 NAME
 
 Ops::File - Ops To C Code Generation
@@ -163,13 +161,11 @@ parentheses and add a space around the argument, like so:
 
 =over 4
 
-=end
+=cut
 
 class Ops::File is Hash;
 
 pir::load_bytecode('config.pbc');
-
-=begin
 
 =item C<new(@files)>
 
@@ -181,7 +177,7 @@ the specified op files.
 Returns a new instance initialized by compiling C<$str> as the contents of an
 ops file.
 
-=end
+=cut
 
 method new(*@files, :$oplib!, :$nolines) {
     self<files>   := @files;
@@ -211,8 +207,6 @@ method new_str($str) {
 }
 
 
-=begin
-
 =back
 
 =head2 Instance Methods
@@ -223,7 +217,7 @@ method new_str($str) {
 
 Reads in the specified .ops file, gathering information about the ops.
 
-=end
+=cut
 
 method read_ops($file, $nolines) {
     $Ops::Compiler::Actions::OPLIB := self<oplib>;
@@ -276,8 +270,6 @@ method _set_version() {
     self<version>       := @bits;
 }
 
-=begin
-
 =back
 
 =head1 SEE ALSO
@@ -296,7 +288,7 @@ method _set_version() {
 
 =back
 
-=end
+=cut
 
 # Local Variables:
 #   mode: cperl
