@@ -781,13 +781,6 @@ Parrot_pcc_build_call_from_varargs(PARROT_INTERP,
     }
 
     parse_signature_string(interp, sig, &arg_flags);
-    if (!PMC_IS_NULL(interp->current_object)) {
-        VTABLE_unshift_integer(interp, arg_flags, PARROT_ARG_PMC | PARROT_ARG_INVOCANT);
-        VTABLE_unshift_pmc(interp, call_object, interp->current_object);
-        if (sig[0] == 'P' && sig[1] == 'i')
-            i += 2;
-        interp->current_object = NULL;
-    }
     VTABLE_set_attr_str(interp, call_object, CONST_STRING(interp, "arg_flags"), arg_flags);
 
     /* Process the varargs list */
