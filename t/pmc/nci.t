@@ -452,8 +452,8 @@ OUTPUT
   dlfunc P0, P1, "nci_dd", "dd"
   print "dlfunced\n"
   set_args "0", 4.0
-  get_results "0", N5
   invokecc P0
+  get_results "0", N5
   ne N5, 8.0, nok_1
   print "ok 1\n"
   end
@@ -523,8 +523,8 @@ OUTPUT
   set N5, 12.0
   set N6, 3.0
   set_args "0,0", N5, N6
-  get_results "0", N5
   invokecc P0
+  get_results "0", N5
   ne N5, 4.0, nok_1
   print "ok 1\n"
   end
@@ -546,8 +546,8 @@ OUTPUT
   set I5, 2
   set I6, 3
   set_args "0,0", I5, I6
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   ne I5, 6, nok_1
   print "ok 1\n"
   end
@@ -569,8 +569,8 @@ OUTPUT
   set I5, -2
   set I6, 3
   set_args "0,0", I5, I6
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   ne I5, -6, nok_1
   print "ok 1\n"
   end
@@ -592,8 +592,8 @@ OUTPUT
   set I5, 6
   set I6, 7
   set_args "0,0", I5, I6
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   ne I5, 42, nok_1
   print "ok 1\n"
   end
@@ -614,8 +614,8 @@ OUTPUT
   printerr "dlfunced\n"
   set S5, "ko\n"
   set_args "0", S5
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   ne I5, 2, nok_1
   printerr "ok 2\n"
   end
@@ -669,8 +669,8 @@ OUTPUT
   print "dlfunced\n"
   set S5, "ko\n"
   set_args "0", S5
-  get_results "0", S5
   invokecc P0
+  get_results "0", S5
   print S5
   end
 nok_1: print "nok 1\n"
@@ -694,8 +694,8 @@ loop:
   dlfunc P0, P1, "nci_dd", "dd"
   set N5, 77.0
   set_args "0", 4.0
-  get_results "0", N5
   invokecc P0
+  get_results "0", N5
   ne N5, 8.0, nok_1
   dec I10
   gt I10, 0, loop
@@ -721,13 +721,13 @@ OUTPUT
   clone P2, P0
   print "ok 1\n"
   set_args "0", 4.0
-  get_results "0", N5
   invokecc P0
+  get_results "0", N5
   ne N5, 8.0, nok_1
   print "ok 2\n"
   set_args "0", 4.0
-  get_results "0", N5
   invokecc P2
+  get_results "0", N5
   ne N5, 8.0, nok_1
   end
 nok_1: print "nok 1\n"
@@ -748,8 +748,8 @@ OUTPUT
   set I6, 20
   set I7, 30
   set_args "0,0,0", I5,I6,I7
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   print I5
   print "\n"
   end
@@ -765,8 +765,8 @@ OUTPUT
   set P5, -6
   set I5, -7
   set_args "0,0", P5,I5
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   print I5
   print "\n"
   end
@@ -784,8 +784,8 @@ OUTPUT
   set P5, -7
 
   set_args "0,0", I5,P5
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
 
   print I5
   print "\n"
@@ -802,8 +802,8 @@ OUTPUT
   dlfunc P0, P1, "nci_tb", "tb"
   set S5, "ko\n"
   set_args "0", S5
-  get_results "0", S5
   invokecc P0
+  get_results "0", S5
   print S5
   end
 CODE
@@ -815,8 +815,8 @@ OUTPUT
   dlfunc P0, P1, "nci_tB", "tB"
   set S5, "ko\n"
   set_args "0", S5
-  get_results "0", S5
   invokecc P0
+  get_results "0", S5
   print S5
   end
 CODE
@@ -829,8 +829,8 @@ OUTPUT
   # this test function returns a struct { int[2]; char }
   set I5, 0
   set_args "0", I5
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
   new P2, ['ResizablePMCArray']
 .include "datatypes.pasm"
   push P2, .DATATYPE_INT
@@ -861,8 +861,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { float[2]; double }
   set_args "0", 1
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
   new P2, ['ResizablePMCArray']
 .include "datatypes.pasm"
   push P2, .DATATYPE_FLOAT
@@ -893,8 +893,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { char; int }
   set_args "0", 2
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
   new P2, ['ResizablePMCArray']
 .include "datatypes.pasm"
   push P2, .DATATYPE_CHAR
@@ -927,8 +927,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { char*; int }
   set_args "0", 3
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
   new P2, ['ResizablePMCArray']
 .include "datatypes.pasm"
   push P2, .DATATYPE_CSTR
@@ -955,8 +955,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { char; x->{int, double} }
   set_args "0", 4
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 .include "datatypes.pasm"
   # the contained structure
   new P3, ['ResizablePMCArray']
@@ -1009,8 +1009,8 @@ OUTPUT
   loadlib P1, "libnci_test"
   dlfunc P0, P1, "nci_pi", "pi"
   set_args "0", 8
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 .include "datatypes.pasm"
   # the contained structure pointer
   new  P6, 'OrderedHash'
@@ -1080,8 +1080,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { int (*f)(char *) }
   set_args "0", 5
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
   new P2, ['ResizablePMCArray']
 .include "datatypes.pasm"
   push P2, .DATATYPE_FUNC_PTR
@@ -1096,8 +1096,8 @@ OUTPUT
   # now we get a callable NCI PMC
   set P0, P5[0]
   set_args "0", "hello call_back"
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   print I5
   print "\n"
   end
@@ -1111,8 +1111,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { int; {int; int} int }
   set_args "0", 6
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 .include "datatypes.pasm"
   # the nested structure
   new P3, ['ResizablePMCArray']
@@ -1166,8 +1166,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { char; {char; int} char }
   set_args "0", 7
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 .include "datatypes.pasm"
   # the nested structure
   new P3, ['ResizablePMCArray']
@@ -1221,8 +1221,8 @@ OUTPUT
   dlfunc P0, P1, "nci_pi", "pi"
   # this test function returns a struct { char; {char; int} char }
   set_args "0", 7
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 .include "datatypes.pasm"
   # the nested structure
   new P3, ['OrderedHash']
@@ -1345,8 +1345,8 @@ OUTPUT
   set P5[3], "hello from Parrot\x0"
   set I5, 1
   set_args "0", P5
-  get_results "0", I5
   invokecc P0
+  get_results "0", I5
   print I5
   print "\n"
   end
@@ -2140,9 +2140,9 @@ OUTPUT
 
   loadlib P1, "libnci_test"
   set_args "0,0", P2, P3
-  get_results "0", I5
   dlfunc P0, P1, "nci_i33", "i33"
   invokecc P0
+  get_results "0", I5
 
   print "Double: "
   print P2
@@ -2222,8 +2222,8 @@ OUTPUT
   loadlib P1, "libnci_test"
   dlfunc P0, P1, "nci_piiii", "piiii"
   set_args "0,0,0,0", 100,200,400,800
-  get_results "0", P5
   invokecc P0
+  get_results "0", P5
 
   new  P6, 'OrderedHash'
   set  P6[ 'count' ], .DATATYPE_INT
