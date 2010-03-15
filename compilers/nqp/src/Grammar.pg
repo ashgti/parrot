@@ -186,15 +186,14 @@ rule make_statement {
 
 rule inline_pir_statement {
     'PIR'
-    [ 'q:to:' [ \' (<-['\n]>+) \' | \" (<-["\n]>+) \" | \< (<-[\>\n]>+) \> ]
+    [ <quote> {*}                              #= quote
+    | 'q:to:' [ \' (<-['\n]>+) \' | \" (<-["\n]>+) \" | \< (<-[\>\n]>+) \> ]
       [:sigspace(0):ratchet(0)
         ';' \h*: \n
         $<text>=[ [\N*:\n]*? ]
         ^^ \h*: $0 \h*: \n
         <.MARK_STATEMENT_END>
       ] {*}                                    #= heredoc
-    #| <quote> {*}                              #= quote
-    | q <.nofun> <.ws> <quote_expression: :PIR> {*} #= quote
     ]
 }
 
@@ -340,42 +339,13 @@ token value {
     | <typename> {*}                                       #= typename
 }
 
-token nofun { <!before '(' | '.(' | '\\' > }
-
-##  Quoting is tricky -- the <quote_concat> subrule is in
-##  F<src/parser/quote_expression.pir> .
 token quote {
-    [
-    | <.before \'>     <quote_expression: :q>
-    | <.before '"' >   <quote_expression: :qq>
-    | <.before '<<' | '«'>  <quote_expression: :ww :qq>
-    | <.before '<' >   <quote_expression: :w :q>
-    | <.before '/'>    <quote_expression: :regex>
-    | [m|rx] <.nofun> <.ws> 
-        [ [':P5'|':Perl5'] <.nofun> <.ws> <quote_expression: :regex :P5>
-        |              <quote_expression: :regex>
-        ]
-    | qq [ <.ws> ':' ]?
-        [ w         <.nofun> <.ws> <quote_expression: :qq :w>
-        | $<x>=[x?] <.nofun> <.ws> <quote_expression: :qq>
-        ]
-    | q [ <.ws> ':' ]?
-        [ q         <.nofun> <.ws> <quote_expression: :qq>
-        | w         <.nofun> <.ws> <quote_expression: :q :w>
-        | PIR       <.nofun> <.ws> <quote_expression: :PIR>
-        | $<x>=[x?] <.nofun> <.ws> <quote_expression: :q>
-        ]
-    | Q [ <.ws> ':' ]?
-        [ PIR       <.nofun> <.ws> <quote_expression: :PIR>
-        | q         <.nofun> <.ws> <quote_expression: :q>
-        | qq        <.nofun> <.ws> <quote_expression: :qq>
-        | b         <.nofun> <.ws> <quote_expression: :b>
-        | $<x>=[x?] <.nofun> <.ws> <quote_expression: >
-        ]
-    | s <.nofun> <.ws> <quote_expression: :q> 
-        <.panic: 's/// not implemented, try .subst as workaround'>
+    [ \'  <string_literal: '\''> \' {*}                    #= string
+    | '"' <string_literal: '"'> '"' {*}                    #= string
+    | 'q' <.ws> '<' <string_literal: '>'> '>' {*}          #= string
+    | 'Q' <.ws> ':PIR' <.ws>
+        [:ratchet(0) '{{' (.*?) '}}' | '{' (.*?) '}' ] {*} #= PIR
     ]
-    {*}
 }
 
 

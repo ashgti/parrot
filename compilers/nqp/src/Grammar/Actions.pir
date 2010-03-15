@@ -1,5 +1,4 @@
-#! parrot
-# Copyright (C) 2007-2010, Parrot Foundation.
+# Copyright (C) 2007-2009, Parrot Foundation.
 # $Id$
 
 .sub '__onload' :init :load
@@ -329,7 +328,7 @@
 
 ##    method inline_pir_statement($/, $key) {
 ##        my $inline;
-##        if ($key eq 'quote')   { $inline := $<quote_expression><quote_pir> }
+##        if ($key eq 'quote')   { $inline := ~$($<quote><string_literal>) }
 ##        if ($key eq 'heredoc') { $inline := ~$/<text> }
 ##
 ##        make PAST::Op.new( :inline( $inline ),
@@ -340,10 +339,11 @@
 .sub 'inline_pir_statement' :method
     .param pmc match
     .param pmc key
-    .local string inline
+    .local pmc inline
     if key != 'quote' goto not_quote
-    $P0 = match['quote_expression']
-    inline = $P0['quote_pir']
+    $P0 = match['quote']
+    $P0 = $P0['string_literal']
+    inline = $P0.'ast'()
     goto make
   not_quote:
     if key != 'heredoc' goto not_heredoc
@@ -936,207 +936,33 @@
 .end
 
 
-##    method quote($/) {
-##        my $past := $<quote_expression>.ast;
-##        # We don't support :x in NQP. Not yet.
-##        if $<x> eq 'x' {
-##            $past := PAST::Op.new( :name('!qx'), :pasttype('call'), $past );
+##    method quote($/, $key) {
+##        if $key eq 'PIR' {
+##            make PAST::Op.new( :node($/), :inline(~($[0])) );
 ##        }
-##        make $past;
+##        else {
+##            make PAST::Val.new( :node($/), :value(~($<string_literal>)) );
+##        }
 ##    }
 .sub 'quote' :method
     .param pmc match
-    $P0 = match['quote_expression']
-    .local pmc past
-    past = $P0.'ast'()
-    match.'!make'(past)
+    .param pmc key             :optional
+    .local string value
+    unless key == 'PIR' goto quote_string
+  quote_pir:
+    $S0 = match[0]
+    $P0 = get_hll_global ['PAST'], 'Op'
+    $P1 = $P0.'new'('node'=>match, 'inline'=>$S0)
+    goto end
+  quote_string:
+    $P0 = match['string_literal']
+    value = $P0.'ast'()
+    $P0 = get_hll_global ['PAST'], 'Val'
+    $P1 = $P0.'new'('node'=>match, 'value'=>value)
+  end:
+    match.'!make'($P1)
 .end
 
-##    method quote_expression($/, $key) {
-##        my $past;
-##        if $key eq 'quote_concat' {
-##            if +$<quote_concat> == 1 {
-##                $past := $<quote_concat>[0].ast;
-##            }
-##            else {
-##                $past := PAST::Op.new(
-##                    :name('list'),
-##                    :pasttype('call'),
-##                    :node( $/ )
-##                );
-##                for $<quote_concat> {
-##                    $past.push( $_.ast );
-##                }
-##            }
-##        }
-##        elsif $key eq 'quote_regex' {
-##            $past := PAST::Block.new(
-##                $<quote_regex>,
-##                :compiler('PGE::Perl6Regex'),
-##                :blocktype('declaration'),
-##                :node( $/ )
-##            );
-##            set_block_type($past, 'Regex');
-##        }
-##        elsif $key eq 'quote_p5regex' {
-##            $past := PAST::Block.new(
-##                $<quote_p5regex>,
-##                :compiler('PGE::P5Regex'),
-##                :blocktype('declaration'),
-##                :node( $/ )
-##            );
-##            set_block_type($past, 'Regex');
-##        }
-##        elsif $key eq 'quote_pir' {
-##            $past := PAST::Op.new( :inline( $<quote_pir> ), :node($/) );
-##        }
-##        make $past;
-##    }
-.sub 'quote_expression' :method
-    .param pmc match
-    .param pmc key
-
-    .local pmc past
-
-    if key != 'quote_concat' goto not_quote_concat
-    $P0 = match['quote_concat']
-    $I0 = $P0
-    if $I0 != 1 goto quote_concat_list
-    $P1 = $P0[0]
-    past = $P1.'ast'()
-    goto make
-  quote_concat_list:
-
-    $P1 = get_hll_global ['PAST'], 'Op'
-    past = $P1.'new'('name'=>'infix:,', 'pasttype'=>'call', 'node'=>match)
-    .local pmc it
-    it = iter $P0
-  iter_loop:
-    unless it goto iter_end
-    $P2 = shift it
-    $P2 = $P2.'ast'()
-    past.'push'($P2)
-    goto iter_loop
-  iter_end:
-    goto make
-
-  not_quote_concat:
-    if key != 'quote_regex' goto not_quote_regex
-    $P0 = match['quote_regex']
-    $P1 = get_hll_global ['PAST'], 'Block'
-    past = $P1.'new'($P0, 'compiler'=>'PGE::Perl6Regex', 'blocktype'=>'declaration', 'node'=>match)
-    goto make
-
-  not_quote_regex:
-    if key != 'quote_p5regex' goto not_quote_p5regex
-    match.'panic'('Not implemented yet')
-    goto make
-
-  not_quote_p5regex:
-    if key != 'quote_pir' goto not_quote_pir
-    $P0 = match['quote_pir']
-    $P1 = get_hll_global ['PAST'], 'Op'
-    past = $P1.'new'( 'inline'=>$P0, 'pasttype'=>'inline', 'node'=>match)
-    goto make
-
-  not_quote_pir:
-    # XXX Panic here?
-
-  make:
-    match.'!make'(past)
-.end
-
-##    method quote_concat($/) {
-##        my $quote_term := $<quote_term>;
-##        my $terms := +$quote_term;
-##        my $count := 1;
-##        my $past := $quote_term[0].ast;
-##        while ($count != $terms) {
-##            $past := PAST::Op.new(
-##                $past,
-##                $quote_term[$count].ast,
-##                :pirop('concat'),
-##                :pasttype('pirop')
-##            );
-##            $count := $count + 1;
-##        }
-##        make $past;
-##    }
-.sub 'quote_concat' :method
-    .param pmc match
-    .local pmc quote_term
-    .local int terms, count
-    quote_term = match['quote_term']
-    terms = quote_term
-    count = 1
-    .local pmc past
-    $P0 = quote_term[0]
-    past = $P0.'ast'()
-
-    $P1 = get_hll_global ['PAST'], 'Op'
-  loop:
-    if count == terms goto make
-    $P0 = quote_term[count]
-    $P0 = $P0.'ast'()
-    past = $P1.'new'(past, $P0, 'pasttype'=>'pirop', 'pirop'=>'concat')
-
-    inc count
-    goto loop
-
-  make:
-    match.'!make'(past)
-.end
-
-##    method quote_term($/, $key) {
-##        my $past;
-##        if ($key eq 'literal') {
-##            $past := PAST::Val.new(
-##                :value( ~$<quote_literal>.ast ),
-##                :returns('Str'), :node($/)
-##            );
-##        }
-##        elsif ($key eq 'variable') {
-##            $past := PAST::Op.new( $<variable>.ast, :pirop('set S*'), :pasttype('pirop') );
-##        }
-##        elsif ($key eq 'circumfix') {
-##            $past := $<circumfix>.ast;
-##            if $past.isa(PAST::Block) {
-##                $past.blocktype('immediate');
-##            }
-##            $past := PAST::Op.new( $past, :pirop('set S*'), :pasttype('pirop') );
-##        }
-##        make $past;
-##    }
-.sub 'quote_term' :method
-    .param pmc match
-    .param pmc key
-    .local pmc past
-
-    if key != 'literal' goto not_literal
-    $P0 = match['quote_literal']
-    $S0 = $P0.'ast'()
-    $P1 = get_hll_global ['PAST'], 'Val'
-    past = $P1.'new'('value'=>$S0, 'node'=>$P0)
-    goto make
-
-  not_literal:
-    if key != 'variable' goto not_variable
-    $P1 = get_hll_global ['PAST'], 'Op'
-    $P0 = match['variable']
-    $P0 = $P0.'ast'()
-    past = $P1.'new'($P0, 'pasttype'=>'pirop', 'pirop'=>'set S*')
-    goto make
-
-  not_variable:
-    match.'panic'('Not implemented yet')
-    if key != 'circumfix' goto not_circumfix
-
-  not_circumfix:
-    # XXX Panic here?
-
-  make:
-    match.'!make'(past)
-.end
 
 ##    method typename($/, $key) {
 ##        my $ns := $<name><ident>.clone();
