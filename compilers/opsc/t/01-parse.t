@@ -2,6 +2,21 @@
 # Copyright (C) 2010, Parrot Foundation.
 # $Id$
 
+=head1 NAME
+
+core.ops - Core Opcodes
+
+=cut
+
+=head1 DESCRIPTION
+
+Parrot's core library of ops.
+
+Core operations are primarily flow control and interpreter
+introspection.
+
+=cut
+
 .include 'compilers/opsc/t/common.pir'
 
 .sub 'main' :main
@@ -59,6 +74,7 @@ END
 
     buf = <<"END"
 
+=over 4
 
 =item noop
 
@@ -73,12 +89,14 @@ inline op noop() {
 
 asdsad
 
+=back
+
 =cut
 
 inline op halt() {
 }
 
-=head2
+=head2 rule_the_world
 
 ads
 
@@ -104,10 +122,6 @@ END
     .local pmc res
 
     buf = <<"END"
-/*
- * $Id$
-** core.ops
-*/
 
 BEGIN_OPS_PREAMBLE
 
@@ -118,21 +132,6 @@ BEGIN_OPS_PREAMBLE
 #include "../pmc/pmc_parrotlibrary.h"
 
 END_OPS_PREAMBLE
-
-=head1 NAME
-
-core.ops - Core Opcodes
-
-=cut
-
-=head1 DESCRIPTION
-
-Parrot's core library of ops.
-
-Core operations are primarily flow control and interpreter
-introspection.
-
-=cut
 
 inline op noop() {
 }
