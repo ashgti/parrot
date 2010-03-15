@@ -101,13 +101,15 @@ method expr_address($addr) { $addr; }
 
 method expr_offset($offset) { "cur_opcode + $offset"; }
 
-=begin
+=over 4
 
 =item C<defines()>
 
 Returns the C C<#define> macros for register access etc.
 
-=end
+=back
+
+=cut
 
 method defines($emitter) {
     return qq|
