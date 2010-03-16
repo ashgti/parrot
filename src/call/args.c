@@ -1709,19 +1709,7 @@ Parrot_pcc_merge_signature_for_tailcall(PARROT_INTERP,
         return;
     else {
         /* Broke encapuslation. Direct poking into CallContext is much faster */
-        void ** returns_values;
-        void ** tailcall_returns_values;
-        INTVAL  returns_size;
         PMC * return_flags;
-
-        GETATTR_CallContext_returns_size(interp, parent, returns_size);
-        GETATTR_CallContext_returns_values(interp, parent, returns_values);
-
-        /* Resize tailcall.returns_values to new size */
-        tailcall_returns_values = csr_reallocate_return_values(interp, tailcall, returns_size);
-
-        /* And copy values over it */
-        mem_copy_n_typed(tailcall_returns_values, returns_values, returns_size, void**);
 
         /* Store raw signature */
         GETATTR_CallContext_return_flags(interp, parent, return_flags);
