@@ -173,7 +173,7 @@ sub _init {
 
     my $gcc_or_gpp_cage = [ qw(
         -std=c89
-        -Werror-implicit-function-declaration
+        -Werror=implicit-function-declaration
         -Wformat=2
         -Wlarger-than-4096
         -Wlong-long
@@ -193,29 +193,29 @@ sub _init {
     $gpp->{'cage'} = $gcc_or_gpp_cage;
 
     $gcc->{'todo'} = $gpp->{'todo'} = {
-        '-Wformat-nonliteral' => [
-            'src/spf_render.c',
-            'compilers/imcc/optimizer.c',
-        ],
-        '-Wstrict-prototypes' => [
-            'src/nci/extra_thunks.c',
-            'src/extra_nci_thunks.c',
-        ],
+        '-Wformat-nonliteral' => [ qw(
+            src/spf_render.c
+            compilers/imcc/optimizer.c
+        ) ],
+        '-Wstrict-prototypes' => [ qw(
+            src/nci/extra_thunks.c
+            src/extra_nci_thunks.c
+        ) ],
     };
 
     $gcc->{'never'} = $gpp->{'never'} = {
-        '-Wformat-nonliteral' => [
-            'compilers/imcc/imclexer.c',
-        ],
-        '-Wswitch-default' => [
-            'compilers/imcc/imclexer.c',
-        ],
-        '-Wcast-qual' => [
-            'compilers/imcc/imcparser.c',
-        ],
-        '-Wlogical-op' => [
-            'compilers/imcc/imcparser.c',
-        ],
+        '-Wformat-nonliteral' => [ qw(
+            compilers/imcc/imclexer.c
+        ) ],
+        '-Wswitch-default' => [ qw(
+            compilers/imcc/imclexer.c
+        ) ],
+        '-Wcast-qual' => [ qw(
+            compilers/imcc/imcparser.c
+        ) ],
+        '-Wlogical-op' => [ qw(
+            compilers/imcc/imcparser.c
+        ) ],
     };
 
     $icc->{'basic'} = [ qw(
