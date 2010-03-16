@@ -73,6 +73,25 @@ static const CHARSET * string_rep_compatible(SHIM_INTERP,
 
 /*
 
+=item C<INTVAL Parrot_str_is_null(PARROT_INTERP, const STRING *s)>
+
+Tests if the given STRING is STRINGNULL.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+INTVAL
+Parrot_str_is_null(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
+{
+    ASSERT_ARGS(Parrot_str_is_null)
+    return !s || s == STRINGNULL;
+}
+
+
+/*
+
 =item C<INTVAL STRING_is_null(PARROT_INTERP, const STRING *s)>
 
 Tests if the given STRING is STRINGNULL.
@@ -2821,9 +2840,6 @@ Parrot_str_unescape(PARROT_INTERP,
     STRING         *result;
     const CHARSET  *charset;
     const ENCODING *encoding = NULL;
-
-    /* the default encoding is ascii */
-    const char     *enc_name = enc_char ? enc_char : "ascii";
 
     /* does the encoding have a character set? */
     const char     *p        = enc_char ? strchr(enc_char, ':') : NULL;

@@ -50,7 +50,7 @@ static int e_file_emit(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(4);
 
-static int e_file_open(PARROT_INTERP, ARGIN(void *param))
+static int e_file_open(PARROT_INTERP, ARGIN(const char *param))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -782,7 +782,7 @@ static char *output;
 
 /*
 
-=item C<static int e_file_open(PARROT_INTERP, void *param)>
+=item C<static int e_file_open(PARROT_INTERP, const char *param)>
 
 Prints a message to STDOUT.
 
@@ -791,19 +791,19 @@ Prints a message to STDOUT.
 */
 
 static int
-e_file_open(PARROT_INTERP, ARGIN(void *param))
+e_file_open(PARROT_INTERP, ARGIN(const char *param))
 {
     ASSERT_ARGS(e_file_open)
-    char * const file = (char *) param;
+    DECL_CONST_CAST;
 
-    if (!STREQ(file, "-")) {
-        FILE *newfile = freopen(file, "w", stdout);
+    if (!STREQ(param, "-")) {
+        FILE *newfile = freopen(param, "w", stdout);
         if (!newfile)
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_EXTERNAL_ERROR,
                 "Cannot reopen stdout: %s'\n", strerror(errno));
     }
 
-    output = file;
+    output = PARROT_const_cast(char *, param);
     Parrot_io_printf(interp, "# IMCC does produce b0rken PASM files\n");
     Parrot_io_printf(interp, "# see http://guest@rt.perl.org/rt3/Ticket/Display.html?id=32392\n");
     return 1;
@@ -859,7 +859,7 @@ e_file_emit(PARROT_INTERP,
 
 /*
 
-=item C<int emit_open(PARROT_INTERP, int type, void *param)>
+=item C<int emit_open(PARROT_INTERP, int type, const char *param)>
 
 Opens the emitter function C<open> of the given C<type>. Passes
 the C<param> to the open function.
@@ -870,7 +870,7 @@ the C<param> to the open function.
 
 PARROT_EXPORT
 int
-emit_open(PARROT_INTERP, int type, ARGIN_NULLOK(void *param))
+emit_open(PARROT_INTERP, int type, ARGIN_NULLOK(const char *param))
 {
     ASSERT_ARGS(emit_open)
     IMCC_INFO(interp)->emitter       = type;

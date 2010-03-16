@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -252,7 +252,7 @@ Parrot_pmc_reuse_noinit(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
 
     ASSERT_ARGS(Parrot_pmc_reuse_noinit)
     VTABLE *new_vtable;
-    INTVAL  has_ext, new_flags = 0;
+    INTVAL  new_flags = 0;
 
     if (pmc->vtable->base_type == new_type)
         return pmc;
@@ -303,7 +303,7 @@ Parrot_pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC *pmc), ARGIN(PMC *class_),
     ASSERT_ARGS(Parrot_pmc_reuse_by_class)
     const INTVAL   new_type   = PARROT_CLASS(class_)->id;
     VTABLE * const new_vtable = interp->vtables[new_type];
-    INTVAL         new_flags  = flags;
+    const INTVAL   new_flags  = flags;
 
     if (pmc->vtable->base_type == new_type)
         return pmc;
@@ -564,6 +564,40 @@ Parrot_pmc_new_init(PARROT_INTERP, INTVAL base_type, ARGOUT(PMC *init))
 
 /*
 
+=item C<PMC * Parrot_pmc_new_init_int(PARROT_INTERP, INTVAL base_type, INTVAL
+init)>
+
+As C<Parrot_pmc_new()>, but passes C<init> to the PMC's C<init_int()> vtable entry.
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC *
+Parrot_pmc_new_init_int(PARROT_INTERP, INTVAL base_type, INTVAL init)
+{
+    ASSERT_ARGS(Parrot_pmc_new_init_int)
+    PMC *const classobj = interp->vtables[base_type]->pmc_class;
+
+    if (!PMC_IS_NULL(classobj) && PObj_is_class_TEST(classobj)) {
+        PMC * const initial = Parrot_pmc_new(interp, Parrot_get_ctx_HLL_type(interp, enum_class_Integer));
+        VTABLE_set_integer_native(interp, initial, init);
+        VTABLE_instantiate(interp, classobj, initial);
+        /* XXX Falls through to end of function without returning */
+    }
+    else {
+        PMC * const pmc = get_new_pmc_header(interp, base_type, 0);
+        VTABLE_init_int(interp, pmc, init);
+        return pmc;
+    }
+}
+
+
+
+/*
+
 =item C<PMC * Parrot_pmc_new_constant_init(PARROT_INTERP, INTVAL base_type, PMC
 *init)>
 
@@ -758,9 +792,7 @@ Parrot_pmc_get_type(PARROT_INTERP, ARGIN(PMC *name))
 {
     ASSERT_ARGS(Parrot_pmc_get_type)
     PMC * const classname_hash = interp->class_hash;
-    PMC * item;
-
-    item = (PMC *)VTABLE_get_pointer_keyed(interp, classname_hash, name);
+    PMC * const item = (PMC *)VTABLE_get_pointer_keyed(interp, classname_hash, name);
 
     if (!PMC_IS_NULL(item))
         return VTABLE_get_integer(interp, item);
@@ -827,9 +859,9 @@ void
 Parrot_pmc_create_mro(PARROT_INTERP, INTVAL type)
 {
     ASSERT_ARGS(Parrot_pmc_create_mro)
-    PMC    *_class, *mro;
+    PMC    *mro;
     VTABLE *vtable   = interp->vtables[type];
-    PMC    *mro_list = vtable->mro;
+    PMC    * const mro_list = vtable->mro;
     INTVAL  i, count;
 
     /* this should never be PMCNULL */
@@ -848,8 +880,9 @@ Parrot_pmc_create_mro(PARROT_INTERP, INTVAL type)
     count = VTABLE_elements(interp, mro_list);
 
     for (i = 0; i < count; ++i) {
-        STRING *class_name  = VTABLE_get_string_keyed_int(interp, mro_list, i);
-        INTVAL  parent_type = Parrot_pmc_get_type_str(interp, class_name);
+        STRING * const class_name = VTABLE_get_string_keyed_int(interp, mro_list, i);
+        const INTVAL parent_type  = Parrot_pmc_get_type_str(interp, class_name);
+        PMC *_class;
 
         /* abstract classes don't have a vtable */
         if (!parent_type)
@@ -937,10 +970,6 @@ F<include/parrot/vtable.h>.
 
 C<5.1.0.14.2.20011008152120.02158148@pop.sidhe.org>
 (http://www.nntp.perl.org/group/perl.perl6.internals/5516).
-
-=head1 HISTORY
-
-Initial version by Simon on 2001.10.20.
 
 =cut
 

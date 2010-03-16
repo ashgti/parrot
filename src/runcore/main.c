@@ -485,7 +485,7 @@ dynop_register(PARROT_INTERP, ARGIN(PMC *lib_pmc))
         interp->all_op_libs = mem_gc_allocate_n_zeroed_typed(interp,
                 interp->n_libs + 1, op_lib_t*);
     else
-        mem_gc_realloc_n_typed_zeroed(interp, interp->all_op_libs,
+        interp->all_op_libs = mem_gc_realloc_n_typed_zeroed(interp, interp->all_op_libs,
                 interp->n_libs + 1, interp->n_libs, op_lib_t *);
 
     init_func = get_dynamic_op_lib_init(interp, lib_pmc);
@@ -585,15 +585,14 @@ dynop_register_xx(PARROT_INTERP,
     const size_t n_tot    = n_old + n_new;
     op_func_t   *ops_addr = NULL;
     op_lib_t    *cg_lib   = init_func(interp, 1);
-    op_lib_t    *new_lib;
 
 #if 0
     /* related to CG and CGP ops issue below */
+    op_lib_t    *new_lib;
     STRING *op_variant;
-#endif
-
     oplib_init_f new_init_func;
     PMC *lib_variant;
+#endif
 
     if (cg_lib->flags & OP_FUNC_IS_ALLOCATED) {
         ops_addr = mem_gc_realloc_n_typed_zeroed(interp,

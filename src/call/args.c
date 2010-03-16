@@ -1889,7 +1889,8 @@ static INTVAL
 intval_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(intval_constant_from_varargs)
-    PARROT_ASSERT(!"Wrong call");
+    UNUSED(index);
+    PARROT_FAILURE("Wrong call");
     return 0;
 }
 
@@ -1897,7 +1898,8 @@ static FLOATVAL
 numval_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(numval_constant_from_varargs)
-    PARROT_ASSERT(!"Wrong call");
+    UNUSED(index);
+    PARROT_FAILURE("Wrong call");
     return 0.0;
 }
 
@@ -1906,7 +1908,8 @@ static STRING*
 string_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(string_constant_from_varargs)
-    PARROT_ASSERT(!"Wrong call");
+    UNUSED(index);
+    PARROT_FAILURE("Wrong call");
     return NULL;
 }
 
@@ -1915,7 +1918,8 @@ static PMC*
 pmc_constant_from_varargs(PARROT_INTERP, ARGIN(void *data), INTVAL index)
 {
     ASSERT_ARGS(pmc_constant_from_varargs)
-    PARROT_ASSERT(!"Wrong call");
+    UNUSED(index);
+    PARROT_FAILURE("Wrong call");
     return PMCNULL;
 }
 

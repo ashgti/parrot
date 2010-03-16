@@ -132,11 +132,11 @@ main(int argc, char * argv[])
         PMC *env = Parrot_pmc_new(interp, enum_class_Env);
         STRING *path = VTABLE_get_string_keyed_str(interp, env,
                 Parrot_str_new_constant(interp, "PARROT_LIBRARY"));
-        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+        if (!Parrot_str_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
             Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_LIBRARY);
         path = VTABLE_get_string_keyed_str(interp, env,
                 Parrot_str_new_constant(interp, "PARROT_INCLUDE"));
-        if (!STRING_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
+        if (!Parrot_str_is_null(interp, path) && Parrot_str_length(interp, path) > 0)
             Parrot_lib_add_path(interp, path, PARROT_LIB_PATH_INCLUDE);
     }
 
@@ -405,6 +405,13 @@ parseflags_minimal(PARROT_INTERP, int argc, ARGIN(char *argv[]))
             }
             break;
         }
+        else if (STREQ(arg, "--hash-seed")) {
+            ++pos;
+            arg = argv[pos];
+            if (is_all_hex_digits(arg)) {
+                interp->hash_seed = strtoul(arg, NULL, 16);
+            }
+        }
         ++pos;
     }
 }
@@ -496,11 +503,6 @@ parseflags(PARROT_INTERP,
             else
                 SET_DEBUG(PARROT_MEM_STAT_DEBUG_FLAG);
             break;
-          case 'H':
-            if (opt.opt_arg && is_all_hex_digits(opt.opt_arg)) {
-                interp->hash_seed = strtoul(opt.opt_arg, NULL, 16);
-            }
-            break;
 
           case '.':  /* Give Windows Parrot hackers an opportunity to
                       * attach a debuggger. */
@@ -509,6 +511,9 @@ parseflags(PARROT_INTERP,
           case 'h':
             help();
             exit(EXIT_FAILURE);
+            break;
+          case 'H':
+            /* handled in parseflags_minimal */
             break;
           case OPT_HELP_DEBUG:
             help_debug();
