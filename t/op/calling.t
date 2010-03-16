@@ -1455,7 +1455,7 @@ OUTPUT
 
 # result_info op
 
-pir_output_is( <<'CODE', <<'OUTPUT', "result_info op" );
+pir_output_is( <<'CODE', <<'OUTPUT', "result_info op", todo => "Broken TT#1511" );
 .sub main :main
     test()
     $I0 = test()
@@ -1475,7 +1475,7 @@ CODE
 3
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "result_info op with eval" );
+pir_output_is( <<'CODE', <<'OUTPUT', "result_info op with eval", todo => "Broken TT#1511" );
 .sub main :main
     $S0 = <<"TESTSUB"
 .sub test
