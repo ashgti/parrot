@@ -410,7 +410,6 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
 {
     ASSERT_ARGS(Parrot_pcc_build_sig_object_from_op)
     PMC            * const ctx = CURRENT_CONTEXT(interp);
-    PMC            *new_sig    = PMCNULL;
     PMC            *call_object;
     INTVAL         *int_array;
     INTVAL          arg_count;
@@ -424,22 +423,14 @@ Parrot_pcc_build_sig_object_from_op(PARROT_INTERP, ARGIN_NULLOK(PMC *signature),
     }
 
     /* this macro is much, much faster than the VTABLE STRING comparisons */
+    SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);
     GETATTR_FixedIntegerArray_size(interp, raw_sig, arg_count);
     GETATTR_FixedIntegerArray_int_array(interp, raw_sig, int_array);
-
-    if (PMC_IS_NULL(new_sig)) {
-        SETATTR_CallContext_arg_flags(interp, call_object, raw_sig);
-    }
-    else {
-        SETATTR_CallContext_arg_flags(interp, call_object, new_sig);
-    }
 
     for (; arg_index < arg_count; arg_index++) {
         const INTVAL arg_flags = int_array[arg_index];
         const INTVAL constant  = PARROT_ARG_CONSTANT_ISSET(arg_flags);
         const INTVAL raw_index = raw_args[arg_index + 2];
-        if (!PMC_IS_NULL(new_sig))
-            VTABLE_push_integer(interp, new_sig, arg_flags);
 
         switch (PARROT_ARG_TYPE_MASK_MASK(arg_flags)) {
           case PARROT_ARG_INTVAL:
