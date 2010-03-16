@@ -431,10 +431,6 @@ pmclass CallContext provides array provides hash auto_attrs {
     ATTR Hash   *hash;                 /* Hash of named arguments */
     ATTR INTVAL  num_positionals;      /* count of positionals */
 
-    /* Storage for returns */
-    ATTR void     **returns_values;             /* stored pointers */
-    ATTR INTVAL     returns_size;               /* number of stored elements */
-    ATTR INTVAL     returns_resize_threshold;   /* max size before resizing array */
 /*
 
 =item C<void init()>
@@ -449,11 +445,7 @@ Initializes a newly created CallContext object.
         SET_ATTR_type_tuple(INTERP, SELF, PMCNULL);
 
         SET_ATTR_positionals(INTERP, SELF, NULL);
-        SET_ATTR_returns_values(INTERP, SELF, NULL);
-
-        SET_ATTR_returns_size(INTERP, SELF, 0);
         SET_ATTR_num_positionals(INTERP, SELF, 0);
-        SET_ATTR_returns_resize_threshold(INTERP, SELF, 0);
 
         PObj_custom_mark_destroy_SETALL(SELF);
     }
@@ -610,15 +602,12 @@ stored.)
     VTABLE void destroy() {
         INTVAL    num_positionals, returns_resize_threshold;
         Hash     *hash;
-        void    **returns_values;
 
         if (!PMC_data(SELF))
             return;
 
         GET_ATTR_hash(INTERP, SELF, hash);
         GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-        GET_ATTR_returns_values(INTERP, SELF, returns_values);
-        GET_ATTR_returns_resize_threshold(INTERP, SELF, returns_resize_threshold);
 
         if (num_positionals) {
             Pcc_cell *c;
@@ -645,15 +634,6 @@ stored.)
             }
 
             parrot_hash_destroy(INTERP, hash);
-        }
-
-        /* Destroy returns storage */
-        if (returns_values) {
-            if (returns_resize_threshold == 8)
-                Parrot_gc_free_fixed_size_storage(INTERP,
-                    8 * sizeof (void *), returns_values);
-            else
-                mem_gc_free(INTERP, returns_values);
         }
 
         Parrot_pcc_free_registers(INTERP, SELF);
