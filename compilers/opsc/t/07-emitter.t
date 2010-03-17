@@ -15,9 +15,10 @@ my @files := <
     src/ops/cmp.ops
 >;
 
+my $lib := Ops::OpLib.new();
 my $emitter := Ops::Emitter.new(
     :ops_file(Ops::File.new(
-        :oplib(Ops::OpLib.new()),
+        :oplib($lib),
         |@files)
     ),
     :trans($trans),
@@ -109,7 +110,8 @@ ok($restart_addr_ok, "runinterp has PARROT_JUMP_RELATIVE");
 #say($source);
 
 sub translate_op_body($trans, $body) {
-    my $file  := Ops::File.new_str($body);
+    my $file  := Ops::File.new_str(
+        :oplib($lib), $body);
     my $emitter := Ops::Emitter.new(
         :ops_file($file),
         :trans($trans),

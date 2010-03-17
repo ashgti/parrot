@@ -199,9 +199,15 @@ method new(*@files, :$oplib!, :$nolines) {
     self;
 }
 
-method new_str($str) {
-    self<ops>     := list(); # Ops
-    self<preamble>:= '';
+method new_str($str, :$oplib) {
+    self<ops>      := list(); # Ops
+    self<preamble> := '';
+
+    self<compiler> := pir::compreg__Ps('Ops');
+    self<oplib>    := $oplib;
+    self<compiler>.set_oplib($oplib);
+
+    self._set_version();
 
     self._set_version();
 
