@@ -2,6 +2,8 @@
 # Copyright (C) 2010, Parrot Foundation.
 # $Id$
 
+=begin
+
 =head1 NAME
 
 Ops::Op - Parrot Operation
@@ -60,13 +62,15 @@ Op Type:
 
 =over 4
 
-=cut
+=end
 
 class Ops::Op is PAST::Block;
 
 INIT {
     pir::load_bytecode("dumper.pbc");
 }
+
+=begin
 
 =item C<new(:$code, :$type, :$name, :@args, :%flags)>
 
@@ -113,7 +117,7 @@ are appended to the name.
 
 The same as C<full_name()>, but with 'C<Parrot_>' prefixed.
 
-=cut
+=end
 
 method code($code?) { self.attr('code', $code, defined($code)) }
 
@@ -150,14 +154,18 @@ method func_name($trans) {
 }
 
 
+=begin
+
 =item C<flags()>
 
 Sets the op's flags.  This returns a hash reference, whose keys are any
 flags (passed as ":flag") specified for the op.
 
-=cut
+=end
 
 method flags(%flags?) { self.attr('flags', %flags, defined(%flags)) }
+
+=begin
 
 =item C<body($body)>
 
@@ -165,7 +173,7 @@ method flags(%flags?) { self.attr('flags', %flags, defined(%flags)) }
 
 Sets/gets the op's code body.
 
-=cut
+=end
 
 method body() {
     my $res := '';
@@ -175,6 +183,8 @@ method body() {
     $res;
 }
 
+=begin
+
 =item C<jump($jump)>
 
 =item C<jump()>
@@ -183,9 +193,11 @@ Sets/gets a string containing one or more C<op_jump_t> values joined with
 C<|> (see F<include/parrot/op.h>). This indicates if and how an op
 may jump.
 
-=cut
+=end
 
 method jump($jump?)   { self.attr('jump', $jump, defined($jump)) }
+
+=begin
 
 =item C<add_jump($jump)>
 
@@ -193,7 +205,7 @@ method jump($jump?)   { self.attr('jump', $jump, defined($jump)) }
 
 Add a jump flag to this op if it's not there already.
 
-=cut
+=end
 
 method add_jump($jump) {
     my $found_jump := 0;
@@ -209,13 +221,15 @@ method add_jump($jump) {
     }
 }
 
+=begin
+
 =item C<get_jump()>
 
 =item C<get_jump()>
 
 Get the jump flags that apply to this op.
 
-=cut
+=end
 
 method get_jump() {
 
@@ -227,18 +241,22 @@ method get_jump() {
     }
 }
 
+=begin
+
 =item C<source($trans, $op)>
 
 Returns the L<C<body()>> of the op with substitutions made by
 C<$trans> (a subclass of C<Ops::Trans>).
 
-=cut
+=end
 
 method source( $trans ) {
 
     my $prelude := $trans.body_prelude;
     return $prelude ~ self.get_body( $trans );
 }
+
+=begin
 
 =item C<get_body($trans)>
 
@@ -249,7 +267,7 @@ until no more substitutions can be made.
 C<VTABLE_> macros are enforced by converting C<<< I<< x >>->vtable->I<<
 method >> >>> to C<VTABLE_I<method>>.
 
-=cut
+=end
 
 method get_body( $trans ) {
 
@@ -322,16 +340,20 @@ method process_body_chunk($trans, $chunk) {
 }
 
 
+=begin
+
 =item C<size()>
 
 Returns the op's number of arguments. Note that this also includes
 the op itself as one argument.
 
-=cut
+=end
 
 method size() {
     return pir::does__IPs(self.arg_types, 'array') ?? +self.arg_types + 1 !! 2;
 }
+
+=begin
 
 =back
 
@@ -357,7 +379,7 @@ Author: Gregor N. Purdy E<lt>gregor@focusresearch.comE<gt>
 
 Migrate to NQP: Vasily Chekalkin E<lt>bacek@bacek.comE<gt>
 
-=cut
+=end
 
 1;
 
