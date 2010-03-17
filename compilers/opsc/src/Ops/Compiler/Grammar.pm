@@ -107,8 +107,8 @@ token macro_param {
     {*}
 }
 
-rule op_macro {
-    <macro_type> <macro_destination> '(' <body_word>*? ')'
+regex op_macro {
+    <macro_type> <space>* <macro_destination> <space>* '(' <space>* <body_word>*? ')'
     {*}
 }
 
