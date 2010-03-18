@@ -27,173 +27,64 @@ typedef struct Pcc_cell
         INTVAL   i;
         FLOATVAL n;
     } u;
-    struct Pcc_cell *next;
+    INTVAL type;
 } Pcc_cell;
 
 /* mask off lower two bits (1 + 2 = 3) for pointer tags */
-#define TAG_BITS 3
-#define UNTAG_CELL(c) INTVAL2PTR(Pcc_cell *, (PTR2INTVAL(c)) & ~TAG_BITS)
-
-#define CELL_INT(c)     UNTAG_CELL(c)->u.i
-#define CELL_FLOAT(c)   UNTAG_CELL(c)->u.n
-#define CELL_STRING(c)  UNTAG_CELL(c)->u.s
-#define CELL_PMC(c)     UNTAG_CELL(c)->u.p
-
-#define NEXT_CELL(c) UNTAG_CELL(c)->next
-#define FREE_CELL(i, c) \
-    Parrot_gc_free_fixed_size_storage((i), sizeof (Pcc_cell), (UNTAG_CELL(c)))
-
-#define CELL_TYPE_MASK(c) (PTR2INTVAL(c)) & 3
 #define INTCELL    0
 #define FLOATCELL  1
 #define STRINGCELL 2
 #define PMCCELL    3
 
-#define SET_CELL_INT(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | INTCELL)
-
-#define SET_CELL_FLOAT(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | FLOATCELL)
-
-#define SET_CELL_STRING(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | STRINGCELL)
-
-#define SET_CELL_PMC(c) \
-        INTVAL2PTR(Pcc_cell *, PTR2INTVAL(UNTAG_CELL(c)) | PMCCELL)
-
 #define ALLOC_CELL(i) \
     (Pcc_cell *)Parrot_gc_allocate_fixed_size_storage((i), sizeof (Pcc_cell))
 
-#define INIT_CELL_INT(c)    INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | INTCELL)
-#define INIT_CELL_FLOAT(c)  INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | FLOATCELL)
-#define INIT_CELL_STRING(c) INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | STRINGCELL)
-#define INIT_CELL_PMC(c)    INTVAL2PTR(Pcc_cell *, PTR2INTVAL(c) | PMCCELL)
+#define FREE_CELL(i, c) \
+    Parrot_gc_free_fixed_size_storage((i), sizeof (Pcc_cell), c)
 
-#define CREATE_INTVAL_CELL(i)   INIT_CELL_INT(ALLOC_CELL(i))
+#define CELL_TYPE_MASK(c) (c)->type
 
-#define CREATE_FLOATVAL_CELL(i) INIT_CELL_FLOAT(ALLOC_CELL(i))
-
-#define CREATE_STRING_CELL(i)   INIT_CELL_STRING(ALLOC_CELL(i))
-
-#define CREATE_PMC_CELL(i)      INIT_CELL_PMC(ALLOC_CELL(i))
-
-#define APPEND_CELL(i, obj, cell) \
-    do { \
-        INTVAL num_positionals; \
-        Pcc_cell *positionals; \
-        GETATTR_CallContext_num_positionals((i), (obj), num_positionals); \
-        GETATTR_CallContext_positionals((i), (obj), positionals); \
-        SETATTR_CallContext_num_positionals((i), (obj), num_positionals+1); \
-        NEXT_CELL(cell) = NULL; \
-        if (positionals) { \
-            while (NEXT_CELL(positionals)) { \
-                positionals = NEXT_CELL(positionals); \
-            } \
-            NEXT_CELL(positionals) = (cell); \
-        } \
-        else \
-            SETATTR_CallContext_positionals((i), (obj), (cell)); \
-    } while (0)
-
-#define PREPEND_CELL(i, obj, cell) \
-    do { \
-        INTVAL num_positionals; \
-        Pcc_cell *positionals; \
-        GETATTR_CallContext_num_positionals((i), (obj), num_positionals); \
-        GETATTR_CallContext_positionals((i), (obj), positionals); \
-        SETATTR_CallContext_num_positionals((i), (obj), num_positionals+1); \
-        NEXT_CELL(cell) = positionals; \
-        SETATTR_CallContext_positionals((i), (obj), (cell)); \
-    } while (0)
+#define CELL_INT(c)     (c)->u.i
+#define CELL_FLOAT(c)   (c)->u.n
+#define CELL_STRING(c)  (c)->u.s
+#define CELL_PMC(c)     (c)->u.p
 
 #define HLL_TYPE(i) Parrot_get_ctx_HLL_type(interp, (i))
 
-/* TODO: could use get_cell_at */
-static Pcc_cell *
-pop_cell(PARROT_INTERP, ARGIN(PMC *SELF))
+static void
+ensure_positionals_storage(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
 {
-    INTVAL num_positionals;
-    Pcc_cell *cell;
-    Pcc_cell *prev = NULL;
+    INTVAL num_positionals, allocated_positionals;
+    struct Pcc_cell  *array;
+    struct Pcc_cell  *new_array;
 
-    GETATTR_CallContext_positionals(interp, SELF, cell);
+    GETATTR_CallContext_allocated_positionals(interp, self, allocated_positionals);
+    if (size <= allocated_positionals)
+        return;
 
-    /* no cells */
-    if (!cell)
-        return NULL;
+    if (size < 8)
+        size = 8;
 
-    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
-    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals-1);
+    GETATTR_CallContext_num_positionals(interp, self, num_positionals);
+    GETATTR_CallContext_positionals(interp, self, array);
+    new_array = (struct Pcc_cell*)Parrot_gc_allocate_fixed_size_storage(interp,
+            size * sizeof (Pcc_cell));
+    memcpy(new_array, array, num_positionals * sizeof (Pcc_cell));
 
-    /* one cell */
-    if (!NEXT_CELL(cell)) {
-        SETATTR_CallContext_positionals(interp, SELF, NULL);
-        return cell;
-    }
+    Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
+            array);
 
-    while (cell) {
-        if (!NEXT_CELL(cell)) {
-            NEXT_CELL(prev) = NULL;
-            return cell;
-        }
-
-        prev = cell;
-        cell = NEXT_CELL(cell);
-    }
-
-    /* should abort here */
-    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals+1);
-    return NULL;
+    SETATTR_CallContext_allocated_positionals(interp, self, size);
+    SETATTR_CallContext_positionals(interp, self, new_array);
 }
 
-static Pcc_cell *
-shift_cell(PARROT_INTERP, ARGIN(PMC *SELF))
+static Pcc_cell*
+get_cell_at(PARROT_INTERP, ARGIN(PMC *self), INTVAL key)
 {
-    INTVAL num_positionals;
-    Pcc_cell *cell;
-
-    GETATTR_CallContext_positionals(interp, SELF, cell);
-
-    /* no cells */
-    if (!cell)
-        return NULL;
-
-    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
-    SETATTR_CallContext_num_positionals(interp, SELF, num_positionals-1);
-
-    /* one cell */
-    if (!NEXT_CELL(cell))
-        SETATTR_CallContext_positionals(interp, SELF, NULL);
-    else
-        SETATTR_CallContext_positionals(interp, SELF, NEXT_CELL(cell));
-
-    return cell;
-}
-
-static Pcc_cell *
-get_cell_at(PARROT_INTERP, ARGIN(PMC *SELF), INTVAL key)
-{
-    INTVAL    i, num_positionals;
-    Pcc_cell *cell;
-
-    GETATTR_CallContext_num_positionals(interp, SELF, num_positionals);
-
-    if (key > num_positionals)
-        return NULL;
-
-    GETATTR_CallContext_positionals(interp, SELF, cell);
-
-    while (key) {
-        /* XXX: shouldn't happen */
-        if (!NEXT_CELL(cell))
-            return NULL;
-
-        cell = NEXT_CELL(cell);
-        key--;
-    }
-
-    return cell;
-
+    Pcc_cell *cells;
+    ensure_positionals_storage(interp, self, key + 1);
+    GETATTR_CallContext_positionals(interp, self, cells);
+    return &cells[key];
 }
 
 static INTVAL
@@ -311,26 +202,38 @@ get_hash(PARROT_INTERP, ARGIN(PMC *SELF))
 }
 
 static void
-mark_positionals(PARROT_INTERP, ARGIN(Pcc_cell *c))
+mark_cell(PARROT_INTERP, ARGIN(Pcc_cell *c))
 {
-    while (c) {
-        switch (CELL_TYPE_MASK(c)) {
-          case STRINGCELL:
+    switch (CELL_TYPE_MASK(c)) {
+        case STRINGCELL:
             if (CELL_STRING(c))
                 Parrot_gc_mark_STRING_alive(interp, CELL_STRING(c));
             break;
-          case PMCCELL:
+        case PMCCELL:
             if (!PMC_IS_NULL(CELL_PMC(c)))
                 Parrot_gc_mark_PMC_alive(interp, CELL_PMC(c));
             break;
-          case INTCELL:
-          case FLOATCELL:
-          default:
+        case INTCELL:
+        case FLOATCELL:
+        default:
             break;
-        }
-
-        c = NEXT_CELL(c);
     }
+
+}
+
+static void
+mark_positionals(PARROT_INTERP, ARGIN(PMC *self))
+{
+    INTVAL pos;
+    struct Pcc_cell *cells;
+
+    GETATTR_CallContext_num_positionals(interp, self, pos);
+    GETATTR_CallContext_positionals(interp, self, cells);
+
+    do {
+        --pos;
+        mark_cell(interp, &cells[pos]);
+    } while (pos >= 0);
 }
 
 /* don't look now, but here goes encapsulation.... */
@@ -345,7 +248,7 @@ mark_hash(PARROT_INTERP, ARGIN(Hash *h))
 
         while (b) {
             Parrot_gc_mark_STRING_alive(interp, (STRING *)b->key);
-            mark_positionals(interp, (Pcc_cell *)b->value);
+            mark_cell(interp, (Pcc_cell *)b->value);
             b = b->next;
         }
 
@@ -423,13 +326,15 @@ pmclass CallContext provides array provides hash auto_attrs {
     ATTR size_t pred_offset;
 
     /* Storage for arguments */
-    ATTR struct Pcc_cell *positionals; /* linked list of positionals */
+    ATTR struct Pcc_cell *positionals; /* array of positionals */
+    ATTR INTVAL  num_positionals;      /* count of used positionals */
+    ATTR INTVAL  allocated_positionals;/* count of allocated positionals */
+
     ATTR PMC    *type_tuple;           /* Cached argument types for MDD */
     ATTR STRING *short_sig;            /* Simple string sig args & returns */
     ATTR PMC    *arg_flags;            /* Integer array of argument flags */
     ATTR PMC    *return_flags;         /* Integer array of return flags */
     ATTR Hash   *hash;                 /* Hash of named arguments */
-    ATTR INTVAL  num_positionals;      /* count of positionals */
 
 /*
 
@@ -485,8 +390,7 @@ Mark any referenced strings and PMCs.
         Parrot_gc_mark_PMC_alive(INTERP, arg_flags);
         Parrot_gc_mark_PMC_alive(INTERP, return_flags);
 
-        if (num_positionals)
-            mark_positionals(INTERP, positionals);
+        mark_positionals(INTERP, SELF);
 
         if (hash)
             mark_hash(INTERP, hash);
@@ -553,8 +457,7 @@ stored.)
 
 */
     VTABLE void morph(PMC *type) {
-        INTVAL  num_positionals;
-        Hash   *hash;
+        Hash     *hash;
 
         if (!PMC_data(SELF))
             return;
@@ -564,23 +467,10 @@ stored.)
         SET_ATTR_return_flags(INTERP, SELF, PMCNULL);
         SET_ATTR_type_tuple(INTERP, SELF, PMCNULL);
 
+        /* Don't free positionals. Just reuse them */
+        SET_ATTR_num_positionals(INTERP, SELF, 0);
+
         GET_ATTR_hash(INTERP, SELF, hash);
-        GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-
-        if (num_positionals) {
-            Pcc_cell *c;
-
-            GET_ATTR_positionals(INTERP, SELF, c);
-
-            while (c) {
-                Pcc_cell *to_free = c;
-                c = NEXT_CELL(c);
-                FREE_CELL(INTERP, to_free);
-            }
-            SET_ATTR_num_positionals(INTERP, SELF, 0);
-            SET_ATTR_positionals(interp, SELF, NULL);
-        }
-
 
         if (hash) {
             UINTVAL i;
@@ -600,25 +490,21 @@ stored.)
     }
 
     VTABLE void destroy() {
-        INTVAL    num_positionals, returns_resize_threshold;
+        INTVAL    allocated_positionals;
         Hash     *hash;
 
         if (!PMC_data(SELF))
             return;
 
         GET_ATTR_hash(INTERP, SELF, hash);
-        GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
+        GET_ATTR_allocated_positionals(INTERP, SELF, allocated_positionals);
 
-        if (num_positionals) {
+        if (allocated_positionals) {
             Pcc_cell *c;
 
             GET_ATTR_positionals(INTERP, SELF, c);
-
-            while (c) {
-                Pcc_cell *to_free = c;
-                c = NEXT_CELL(c);
-                FREE_CELL(INTERP, to_free);
-            }
+            Parrot_gc_free_fixed_size_storage(INTERP, allocated_positionals * sizeof (Pcc_cell),
+                    c);
         }
 
         if (hash) {
@@ -664,7 +550,7 @@ Returns the short signature for the CallContext.
 */
 
     VTABLE STRING *get_string() {
-        INTVAL    num_positionals;
+        INTVAL    num_positionals, i;
         STRING   *res;
         Pcc_cell *c;
 
@@ -678,8 +564,8 @@ Returns the short signature for the CallContext.
 
         res = Parrot_str_new(INTERP, NULL, num_positionals);
 
-        while (c) {
-            switch (CELL_TYPE_MASK(c)) {
+        for (i=0; i<num_positionals; ++i) {
+            switch (c[i].type) {
               case INTCELL:
                 res = Parrot_str_append(INTERP, res, CONST_STRING(INTERP, "I"));
                 break;
@@ -696,7 +582,6 @@ Returns the short signature for the CallContext.
                 PARROT_ASSERT(!"Impossible flag");
                 break;
             }
-            c = NEXT_CELL(c);
         }
         /* TODO Add named args to signature */
         /* After fixind build_MMD_type_tuple to use raw arguments instead of signature */
@@ -911,76 +796,29 @@ return current Namespace
     }
 
     VTABLE void push_integer(INTVAL value) {
-        Pcc_cell *cell = CREATE_INTVAL_CELL(INTERP);
-        APPEND_CELL(INTERP, SELF, cell);
-        CELL_INT(cell) = value;
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        cell->u.i      = value;
+        cell->type     = INTCELL;
     }
 
     VTABLE void push_float(FLOATVAL value) {
-        Pcc_cell *cell = CREATE_FLOATVAL_CELL(INTERP);
-        APPEND_CELL(INTERP, SELF, cell);
-        CELL_FLOAT(cell) = value;
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        cell->u.n      = value;
+        cell->type     = FLOATCELL;
     }
 
     VTABLE void push_string(STRING *value) {
-        Pcc_cell *cell = CREATE_STRING_CELL(INTERP);
-        APPEND_CELL(INTERP, SELF, cell);
-        CELL_STRING(cell) = value;
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        cell->u.s      = value;
+        cell->type     = STRINGCELL;
     }
 
     VTABLE void push_pmc(PMC *value) {
-        Pcc_cell *cell = CREATE_PMC_CELL(INTERP);
-        APPEND_CELL(INTERP, SELF, cell);
-        CELL_PMC(cell) = value;
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        cell->u.p      = value;
+        cell->type     = PMCCELL;
     }
 
-    VTABLE INTVAL pop_integer() {
-        Pcc_cell *cell = pop_cell(INTERP, SELF);
-
-        if (cell) {
-            INTVAL result = autobox_intval(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return 0;
-    }
-
-    VTABLE FLOATVAL pop_float() {
-        Pcc_cell *cell = pop_cell(INTERP, SELF);
-
-        if (cell) {
-            FLOATVAL result = autobox_floatval(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return 0.0;
-    }
-
-    VTABLE PMC * pop_pmc() {
-        Pcc_cell *cell = pop_cell(INTERP, SELF);
-
-        if (cell) {
-            PMC *result = autobox_pmc(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return PMCNULL;
-    }
-
-    VTABLE STRING * pop_string() {
-        Pcc_cell *cell = pop_cell(INTERP, SELF);
-
-        if (cell) {
-            STRING *result = autobox_string(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return NULL;
-    }
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
@@ -1016,78 +854,6 @@ return current Namespace
             return PMCNULL;
 
         return autobox_pmc(INTERP, cell);
-    }
-
-    VTABLE void unshift_integer(INTVAL value) {
-        Pcc_cell *cell = CREATE_INTVAL_CELL(INTERP);
-        PREPEND_CELL(INTERP, SELF, cell);
-        CELL_INT(cell) = value;
-    }
-
-    VTABLE void unshift_float(FLOATVAL value) {
-        Pcc_cell *cell = CREATE_FLOATVAL_CELL(INTERP);
-        PREPEND_CELL(INTERP, SELF, cell);
-        CELL_FLOAT(cell) = value;
-    }
-
-    VTABLE void unshift_string(STRING *value) {
-        Pcc_cell *cell = CREATE_STRING_CELL(INTERP);
-        PREPEND_CELL(INTERP, SELF, cell);
-        CELL_STRING(cell) = value;
-    }
-
-    VTABLE void unshift_pmc(PMC *value) {
-        Pcc_cell *cell = CREATE_PMC_CELL(INTERP);
-        PREPEND_CELL(INTERP, SELF, cell);
-        CELL_PMC(cell) = value;
-    }
-
-    VTABLE INTVAL shift_integer() {
-        Pcc_cell *cell = shift_cell(INTERP, SELF);
-
-        if (cell) {
-            INTVAL result = autobox_intval(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return 0;
-    }
-
-    VTABLE FLOATVAL shift_float() {
-        Pcc_cell *cell = shift_cell(INTERP, SELF);
-
-        if (cell) {
-            FLOATVAL result = autobox_floatval(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return 0.0;
-    }
-
-    VTABLE STRING * shift_string() {
-        Pcc_cell *cell = shift_cell(INTERP, SELF);
-
-        if (cell) {
-            STRING *result = autobox_string(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return NULL;
-    }
-
-    VTABLE PMC * shift_pmc() {
-        Pcc_cell *cell = shift_cell(INTERP, SELF);
-
-        if (cell) {
-            PMC *result = autobox_pmc(INTERP, cell);
-            FREE_CELL(INTERP, cell);
-            return result;
-        }
-
-        return PMCNULL;
     }
 
     VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
@@ -1167,14 +933,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, (void *)key);
 
         if (!cell) {
-            cell = CREATE_INTVAL_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_INT(cell);
 
-        CELL_INT(cell) = value;
+        cell->u.i       = value;
+        cell->type      = INTCELL;
     }
 
     VTABLE void set_number_keyed_str(STRING *key, FLOATVAL value) {
@@ -1182,14 +946,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, (void *)key);
 
         if (!cell) {
-            cell = CREATE_FLOATVAL_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_FLOAT(cell);
 
-        CELL_FLOAT(cell) = value;
+        cell->u.n       = value;
+        cell->type      = FLOATCELL;
     }
 
     VTABLE void set_string_keyed_str(STRING *key, STRING *value) {
@@ -1197,14 +959,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, (void *)key);
 
         if (!cell) {
-            cell = CREATE_STRING_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_STRING(cell);
 
-        CELL_STRING(cell) = value;
+        cell->u.s       = value;
+        cell->type      = STRINGCELL;
     }
 
     VTABLE void set_pmc_keyed_str(STRING *key, PMC *value) {
@@ -1212,14 +972,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, (void *)key);
 
         if (!cell) {
-            cell = CREATE_PMC_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, (void *)key, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_PMC(cell);
 
-        CELL_PMC(cell) = value;
+        cell->u.p       = value;
+        cell->type      = PMCCELL;
     }
 
     VTABLE void set_integer_keyed(PMC *key, INTVAL value) {
@@ -1228,14 +986,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, k);
 
         if (!cell) {
-            cell = CREATE_INTVAL_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, k, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_INT(cell);
 
-        CELL_INT(cell) = value;
+        cell->u.i       = value;
+        cell->type      = INTCELL;
     }
 
     VTABLE void set_number_keyed(PMC *key, FLOATVAL value) {
@@ -1244,14 +1000,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, k);
 
         if (!cell) {
-            cell = CREATE_FLOATVAL_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, k, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_FLOAT(cell);
 
-        CELL_FLOAT(cell) = value;
+        cell->u.n       = value;
+        cell->type      = FLOATCELL;
     }
 
     VTABLE void set_string_keyed(PMC *key, STRING *value) {
@@ -1260,14 +1014,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, k);
 
         if (!cell) {
-            cell = CREATE_STRING_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, k, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_STRING(cell);
 
-        CELL_STRING(cell) = value;
+        cell->u.s       = value;
+        cell->type      = STRINGCELL;
     }
 
     VTABLE void set_pmc_keyed(PMC *key, PMC *value) {
@@ -1276,14 +1028,12 @@ return current Namespace
         Pcc_cell *cell = (Pcc_cell *)parrot_hash_get(INTERP, hash, k);
 
         if (!cell) {
-            cell = CREATE_PMC_CELL(INTERP);
+            cell = ALLOC_CELL(INTERP);
             parrot_hash_put(INTERP, hash, k, (void *)cell);
-            NEXT_CELL(cell) = NULL;
         }
-        else
-            SET_CELL_PMC(cell);
 
-        CELL_PMC(cell) = value;
+        cell->u.p       = value;
+        cell->type      = PMCCELL;
     }
 
     VTABLE INTVAL get_integer_keyed_str(STRING *key) {
@@ -1442,13 +1192,13 @@ Creates and returns a clone of the signature.
 
 */
     VTABLE PMC *clone() {
-        Pcc_cell    *cell;
+        Pcc_cell    *cells;
         STRING      *short_sig;
         PMC         *type_tuple, *arg_flags, *return_flags;
         PMC * const dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
 
-        GET_ATTR_positionals(INTERP, SELF, cell);
-
+        GET_ATTR_positionals(INTERP, SELF, cells);
+#if 0
         /* Copy all positional cells (thanks to APPEND_CELL, this also
          * sets num_positionals). */
         for (; cell; cell = NEXT_CELL(cell)) {
@@ -1476,21 +1226,12 @@ Creates and returns a clone of the signature.
             }
             APPEND_CELL(INTERP, dest, cloned_cell);
         }
-
+#endif
 
         GET_ATTR_type_tuple(INTERP, SELF, type_tuple);
         GET_ATTR_short_sig(INTERP, SELF, short_sig);
         GET_ATTR_arg_flags(INTERP, SELF, arg_flags);
         GET_ATTR_return_flags(INTERP, SELF, return_flags);
-
-        /* FIXME
-        PMC *results;
-
-        GET_ATTR_results(INTERP, SELF, results);
-
-        if (!PMC_IS_NULL(results))
-            SET_ATTR_results(INTERP, dest, VTABLE_clone(INTERP, results));
-        */
 
         if (!PMC_IS_NULL(type_tuple))
             SET_ATTR_type_tuple(INTERP, dest, VTABLE_clone(INTERP, type_tuple));
