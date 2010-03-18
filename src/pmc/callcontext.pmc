@@ -228,16 +228,14 @@ mark_cell(PARROT_INTERP, ARGIN(Pcc_cell *c))
 static void
 mark_positionals(PARROT_INTERP, ARGIN(PMC *self))
 {
-    INTVAL pos;
+    INTVAL size, i;
     struct Pcc_cell *cells;
 
-    GETATTR_CallContext_num_positionals(interp, self, pos);
+    GETATTR_CallContext_num_positionals(interp, self, size);
     GETATTR_CallContext_positionals(interp, self, cells);
 
-    do {
-        --pos;
-        mark_cell(interp, &cells[pos]);
-    } while (pos >= 0);
+    for (i=0; i<size; ++i)
+        mark_cell(interp, &cells[i]);
 }
 
 /* don't look now, but here goes encapsulation.... */
