@@ -67,15 +67,22 @@ ensure_positionals_storage(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
         size = 8;
 
     GETATTR_CallContext_positionals(interp, self, array);
-    new_array = (struct Pcc_cell*)Parrot_gc_allocate_fixed_size_storage(interp,
-            size * sizeof (Pcc_cell));
+    if (size > 8)
+        new_array = (struct Pcc_cell*)Parrot_gc_allocate_memory_chunk(interp,
+                size * sizeof (Pcc_cell));
+    else
+        new_array = (struct Pcc_cell*)Parrot_gc_allocate_fixed_size_storage(interp,
+                size * sizeof (Pcc_cell));
 
     if (array) {
         memset(new_array, size * sizeof (Pcc_cell), 0);
         GETATTR_CallContext_num_positionals(interp, self, num_positionals);
         memcpy(new_array, array, num_positionals * sizeof (Pcc_cell));
-        Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
-                array);
+        if (num_positionals > 8)
+            Parrot_gc_free_memory_chunk(interp, array);
+        else
+            Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
+                    array);
     }
 
     SETATTR_CallContext_allocated_positionals(interp, self, size);
@@ -505,8 +512,11 @@ stored.)
             Pcc_cell *c;
 
             GET_ATTR_positionals(INTERP, SELF, c);
-            Parrot_gc_free_fixed_size_storage(INTERP, allocated_positionals * sizeof (Pcc_cell),
-                    c);
+            if (allocated_positionals > 8)
+                Parrot_gc_free_memory_chunk(INTERP, c);
+            else
+                Parrot_gc_free_fixed_size_storage(INTERP, allocated_positionals * sizeof (Pcc_cell),
+                        c);
         }
 
         if (hash) {
