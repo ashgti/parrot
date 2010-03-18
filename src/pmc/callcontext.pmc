@@ -862,40 +862,47 @@ return current Namespace
 
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
+        INTVAL    num_pos = STATICSELF.elements();
+        Pcc_cell *cells;
 
-        if (cell->type == NOCELL)
+        if (key>=num_pos || key < 0)
             return 0;
 
-        return autobox_intval(INTERP, cell);
+        GET_ATTR_positionals(INTERP, SELF, cells);
+        return autobox_intval(INTERP, &cells[key]);
     }
 
     VTABLE FLOATVAL get_number_keyed_int(INTVAL key) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
+        INTVAL    num_pos = STATICSELF.elements();
+        Pcc_cell *cells;
 
-        if (cell->type == NOCELL)
+        if (key>=num_pos || key < 0)
             return 0.0;
 
-        return autobox_floatval(INTERP, cell);
+        GET_ATTR_positionals(INTERP, SELF, cells);
+        return autobox_floatval(INTERP, &cells[key]);
     }
 
     VTABLE STRING * get_string_keyed_int(INTVAL key) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
+        INTVAL    num_pos = STATICSELF.elements();
+        Pcc_cell *cells;
 
-        if (cell->type == NOCELL)
+        if (key>=num_pos || key < 0)
             return NULL;
 
-        return autobox_string(INTERP, cell);
+        GET_ATTR_positionals(INTERP, SELF, cells);
+        return autobox_string(INTERP, &cells[key]);
     }
 
     VTABLE PMC * get_pmc_keyed_int(INTVAL key) {
-        INTVAL    pos;
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
+        INTVAL    num_pos = STATICSELF.elements();
+        Pcc_cell *cells;
 
-        if (cell->type == NOCELL)
+        if (key>=num_pos || key < 0)
             return PMCNULL;
 
-        return autobox_pmc(INTERP, cell);
+        GET_ATTR_positionals(INTERP, SELF, cells);
+        return autobox_pmc(INTERP, &cells[key]);
     }
 
     VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
