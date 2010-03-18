@@ -797,27 +797,35 @@ return current Namespace
     }
 
     VTABLE void push_integer(INTVAL value) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        INTVAL    pos  = STATICSELF.elements();
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
         cell->u.i      = value;
         cell->type     = INTCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
     VTABLE void push_float(FLOATVAL value) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        INTVAL    pos  = STATICSELF.elements();
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
         cell->u.n      = value;
         cell->type     = FLOATCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
     VTABLE void push_string(STRING *value) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        INTVAL    pos  = STATICSELF.elements();
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
         cell->u.s      = value;
         cell->type     = STRINGCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
     VTABLE void push_pmc(PMC *value) {
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, 1 + STATICSELF.elements());
+        INTVAL    pos  = STATICSELF.elements();
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
         cell->u.p      = value;
         cell->type     = PMCCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
 
