@@ -808,15 +808,25 @@ return current Namespace
     }
 
     VTABLE void push_integer(INTVAL value) {
-        INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
-        cell->u.i      = value;
-        cell->type     = INTCELL;
-        SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
+        INTVAL    num_pos;
+        Pcc_cell *cells;
+
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
+        ensure_positionals_storage(INTERP, SELF, num_pos + 1);
+
+        GET_ATTR_positionals(INTERP, SELF, cells);
+        cells[num_pos].u.i      = value;
+        cells[num_pos].type     = INTCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, num_pos + 1);
     }
 
     VTABLE void push_float(FLOATVAL value) {
-        INTVAL    pos  = STATICSELF.elements();
+        INTVAL    num_pos;
+        Pcc_cell *cells;
+
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
+        ensure_positionals_storage(INTERP, SELF, num_pos + 1);
+
         Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
         cell->u.n      = value;
         cell->type     = FLOATCELL;
@@ -824,16 +834,26 @@ return current Namespace
     }
 
     VTABLE void push_string(STRING *value) {
-        INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
+        INTVAL    num_pos;
+        Pcc_cell *cells;
+
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
+        ensure_positionals_storage(INTERP, SELF, num_pos + 1);
+
+        GET_ATTR_positionals(INTERP, SELF, cells);
         cell->u.s      = value;
         cell->type     = STRINGCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
     VTABLE void push_pmc(PMC *value) {
-        INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
+        INTVAL    num_pos;
+        Pcc_cell *cells;
+
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
+        ensure_positionals_storage(INTERP, SELF, num_pos + 1);
+
+        GET_ATTR_positionals(INTERP, SELF, cells);
         cell->u.p      = value;
         cell->type     = PMCCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
@@ -862,9 +882,10 @@ return current Namespace
 
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
-        INTVAL    num_pos = STATICSELF.elements();
+        INTVAL    num_pos;
         Pcc_cell *cells;
 
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
         if (key>=num_pos || key < 0)
             return 0;
 
@@ -873,9 +894,10 @@ return current Namespace
     }
 
     VTABLE FLOATVAL get_number_keyed_int(INTVAL key) {
-        INTVAL    num_pos = STATICSELF.elements();
+        INTVAL    num_pos;
         Pcc_cell *cells;
 
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
         if (key>=num_pos || key < 0)
             return 0.0;
 
@@ -884,9 +906,10 @@ return current Namespace
     }
 
     VTABLE STRING * get_string_keyed_int(INTVAL key) {
-        INTVAL    num_pos = STATICSELF.elements();
+        INTVAL    num_pos;
         Pcc_cell *cells;
 
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
         if (key>=num_pos || key < 0)
             return NULL;
 
@@ -895,9 +918,10 @@ return current Namespace
     }
 
     VTABLE PMC * get_pmc_keyed_int(INTVAL key) {
-        INTVAL    num_pos = STATICSELF.elements();
+        INTVAL    num_pos;
         Pcc_cell *cells;
 
+        GET_ATTR_num_positionals(INTERP, SELF, num_pos);
         if (key>=num_pos || key < 0)
             return PMCNULL;
 
