@@ -1206,41 +1206,19 @@ Creates and returns a clone of the signature.
 
 */
     VTABLE PMC *clone() {
-        Pcc_cell    *cells;
         STRING      *short_sig;
         PMC         *type_tuple, *arg_flags, *return_flags;
-        PMC * const dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
+        PMC * const  dest = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
+        INTVAL       num;
+        Pcc_cell    *our_cells, *dest_cells;
 
-        GET_ATTR_positionals(INTERP, SELF, cells);
-#if 0
-        /* Copy all positional cells (thanks to APPEND_CELL, this also
-         * sets num_positionals). */
-        for (; cell; cell = NEXT_CELL(cell)) {
-            Pcc_cell *cloned_cell;
-
-            switch (CELL_TYPE_MASK(cell)) {
-              case INTCELL:
-                cloned_cell = CREATE_INTVAL_CELL(INTERP);
-                CELL_INT(cloned_cell) = CELL_INT(cell);
-                break;
-              case FLOATCELL:
-                cloned_cell = CREATE_FLOATVAL_CELL(INTERP);
-                CELL_FLOAT(cloned_cell) = CELL_FLOAT(cell);
-                break;
-              case STRINGCELL:
-                cloned_cell = CREATE_STRING_CELL(INTERP);
-                CELL_STRING(cloned_cell) = CELL_STRING(cell);
-                break;
-              case PMCCELL:
-                cloned_cell = CREATE_PMC_CELL(INTERP);
-                CELL_PMC(cloned_cell) = CELL_PMC(cell);
-                break;
-              default:
-                break;
-            }
-            APPEND_CELL(INTERP, dest, cloned_cell);
-        }
-#endif
+        GET_ATTR_num_positionals(INTERP, SELF, num);
+        /* Copy positionals */
+        ensure_positionals_storage(INTERP, dest, num);
+        GET_ATTR_positionals(INTERP, SELF, our_cells);
+        GET_ATTR_positionals(INTERP, dest, dest_cells);
+        memcpy(dest_cells, our_cells, num * sizeof (Pcc_cell));
+        SET_ATTR_num_positionals(INTERP, dest, num);
 
         GET_ATTR_type_tuple(INTERP, SELF, type_tuple);
         GET_ATTR_short_sig(INTERP, SELF, short_sig);
@@ -1264,7 +1242,6 @@ Creates and returns a clone of the signature.
 
         return dest;
     }
-
 
 /*
 
