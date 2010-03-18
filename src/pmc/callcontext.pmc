@@ -66,15 +66,17 @@ ensure_positionals_storage(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
     if (size < 8)
         size = 8;
 
-    GETATTR_CallContext_num_positionals(interp, self, num_positionals);
     GETATTR_CallContext_positionals(interp, self, array);
     new_array = (struct Pcc_cell*)Parrot_gc_allocate_fixed_size_storage(interp,
             size * sizeof (Pcc_cell));
-    memcpy(new_array, array, num_positionals * sizeof (Pcc_cell));
 
-    if (array)
+    if (array) {
+        memset(new_array, size * sizeof (Pcc_cell), 0);
+        GETATTR_CallContext_num_positionals(interp, self, num_positionals);
+        memcpy(new_array, array, num_positionals * sizeof (Pcc_cell));
         Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
                 array);
+    }
 
     SETATTR_CallContext_allocated_positionals(interp, self, size);
     SETATTR_CallContext_positionals(interp, self, new_array);
@@ -799,7 +801,7 @@ return current Namespace
 
     VTABLE void push_integer(INTVAL value) {
         INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
         cell->u.i      = value;
         cell->type     = INTCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
@@ -807,7 +809,7 @@ return current Namespace
 
     VTABLE void push_float(FLOATVAL value) {
         INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
         cell->u.n      = value;
         cell->type     = FLOATCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
@@ -815,7 +817,7 @@ return current Namespace
 
     VTABLE void push_string(STRING *value) {
         INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
         cell->u.s      = value;
         cell->type     = STRINGCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
@@ -823,7 +825,7 @@ return current Namespace
 
     VTABLE void push_pmc(PMC *value) {
         INTVAL    pos  = STATICSELF.elements();
-        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos + 1);
+        Pcc_cell *cell = get_cell_at(INTERP, SELF, pos);
         cell->u.p      = value;
         cell->type     = PMCCELL;
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
@@ -890,7 +892,7 @@ return current Namespace
     VTABLE void set_pmc_keyed_int(INTVAL key, PMC *value) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        cell->u.s   = value;
+        cell->u.p   = value;
         cell->type  = STRINGCELL;
     }
 
