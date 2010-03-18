@@ -831,6 +831,25 @@ return current Namespace
         SET_ATTR_num_positionals(INTERP, SELF, pos + 1);
     }
 
+    /*
+        TODO It's very naive implementation. But we do unshift _once_ only.
+        So, for speed sake, allocate _one_ Cell upfront. Or store it independent.
+    */
+
+    VTABLE void unshift_pmc(PMC *value) {
+        INTVAL    size = STATICSELF.elements();
+        Pcc_cell *cells;
+        INTVAL    i;
+
+        ensure_positionals_storage(INTERP, SELF, size + 1);
+        GET_ATTR_positionals(INTERP, SELF, cells);
+
+        for (i = size; i; --i)
+            cells[i] = cells[i - 1];
+
+        cells[0].u.p = value;
+    }
+
 
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
