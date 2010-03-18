@@ -154,7 +154,7 @@ sub _init {
     $gcc->{'basic'} = [ @gcc_or_gpp ];
     $gpp->{'basic'} = [ @gcc_or_gpp ];
 
-    # Add some gcc only warnings that would break g++
+    # Add some gcc-only warnings that would break g++
     push @{$gcc->{'basic'}}, qw(
         -Wbad-function-cast
         -Wc++-compat
@@ -219,17 +219,17 @@ sub _init {
     };
 
     $icc->{'basic'} = [ qw(
-        -wd269
-        -wd1572
-        -wd1599
+        -wd117
+        -wd177
         -wd181
+        -wd269
+        -wd810
         -wd869
         -wd981
-        -wd1419
-        -wd117
-        -wd810
-        -wd177
         -wd1296
+        -wd1419
+        -wd1572
+        -wd1599
         -Wall
         -Wcheck
         -w2
