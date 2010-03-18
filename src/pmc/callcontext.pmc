@@ -889,6 +889,7 @@ return current Namespace
     }
 
     VTABLE PMC * get_pmc_keyed_int(INTVAL key) {
+        INTVAL    pos;
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
         if (cell->type == NOCELL)
@@ -898,31 +899,47 @@ return current Namespace
     }
 
     VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
+        INTVAL    pos;
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
         cell->u.i   = value;
         cell->type  = INTCELL;
+        GET_ATTR_num_positionals(INTERP, SELF, pos);
+        if (pos <= key)
+            SET_ATTR_num_positionals(INTERP, SELF, key + 1);
     }
 
     VTABLE void set_number_keyed_int(INTVAL key, FLOATVAL value) {
+        INTVAL    pos;
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
         cell->u.n   = value;
         cell->type  = FLOATCELL;
+        GET_ATTR_num_positionals(INTERP, SELF, pos);
+        if (pos <= key)
+            SET_ATTR_num_positionals(INTERP, SELF, key + 1);
     }
 
     VTABLE void set_string_keyed_int(INTVAL key, STRING *value) {
+        INTVAL    pos;
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
         cell->u.s   = value;
         cell->type  = STRINGCELL;
+        GET_ATTR_num_positionals(INTERP, SELF, pos);
+        if (pos <= key)
+            SET_ATTR_num_positionals(INTERP, SELF, key + 1);
     }
 
     VTABLE void set_pmc_keyed_int(INTVAL key, PMC *value) {
+        INTVAL    pos;
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
         cell->u.p   = value;
-        cell->type  = STRINGCELL;
+        cell->type  = PMCCELL;
+        GET_ATTR_num_positionals(INTERP, SELF, pos);
+        if (pos <= key)
+            SET_ATTR_num_positionals(INTERP, SELF, key + 1);
     }
 
     VTABLE void set_integer_keyed_str(STRING *key, INTVAL value) {
