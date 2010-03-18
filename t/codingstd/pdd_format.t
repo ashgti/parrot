@@ -7,22 +7,20 @@ use warnings;
 
 use Test::More tests =>  1;
 use Carp;
-use Cwd;
 use Tie::File;
 
-my $cwd = cwd();
-my @pdddirs = (
-    qq{$cwd/docs/pdds},
-    qq{$cwd/docs/pdds/draft},
+my @pdddirs = qw(
+    ./docs/pdds
+    ./docs/pdds/draft
 );
 
 my @pddfiles = ();
 foreach my $dir (@pdddirs) {
-    opendir my $DIRH, $dir
-        or croak "Unable to open directory handle: $!";
-    my @pdds = map { qq|$dir/$_| } grep { m/^pdd\d{2,}_.*\.pod$/ }
-        readdir $DIRH;
-    closedir $DIRH or croak "Unable to close directory handle: $!";
+    die "Directory '$dir' is not found, or not a directory" if not -d $dir;
+
+    my @pdds = glob "$dir/pdd*.pod"
+        or warn "No PDD files found in directory '$dir'";
+
     push @pddfiles, @pdds;
 }
 
@@ -34,20 +32,14 @@ foreach my $pdd (@pddfiles) {
     }
 }
 
-my $errmsg = q{};
-if ( @diagnostics ) {
-    $errmsg = join ("\n" => @diagnostics) . "\n";
+for my $msg (@diagnostics) {
+    diag($msg);
 }
-
-$errmsg ? fail( qq{\n$errmsg} )
-        : pass( q{All PDDs are formatted correctly} );
+cmp_ok( scalar(@diagnostics), '==', 0, 'PDDs are formatted correctly' );
 
 sub check_pdd_formatting {
     my $pdd = shift;
-    my $base = $pdd;
-    if ($pdd =~ m{((draft/)?[^/]+)$}) {
-        $base = $1;
-    }
+
     my $diag = q{};
     my @toolong = ();
     my @sections_needed = qw(
@@ -76,13 +68,13 @@ sub check_pdd_formatting {
     untie @lines or croak "Unable to untie from $pdd: $!";
     if ( @toolong ) {
         $diag .=
-            qq{$base has } .
+            qq{$pdd has } .
             scalar(@toolong) .
             qq{ lines > 78 chars:  @toolong\n};
     }
     foreach my $need (@sections_needed) {
         if ( ! $sections_seen{$need} ) {
-            $diag .= qq{$base lacks 'head2' $need section\n};
+            $diag .= qq{$pdd lacks 'head2' $need section\n};
         }
     }
     return $diag;
