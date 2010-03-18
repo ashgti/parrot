@@ -31,10 +31,11 @@ typedef struct Pcc_cell
 } Pcc_cell;
 
 /* mask off lower two bits (1 + 2 = 3) for pointer tags */
-#define INTCELL    0
-#define FLOATCELL  1
-#define STRINGCELL 2
-#define PMCCELL    3
+#define NOCELL     0
+#define INTCELL    1
+#define FLOATCELL  2
+#define STRINGCELL 3
+#define PMCCELL    4
 
 #define ALLOC_CELL(i) \
     (Pcc_cell *)Parrot_gc_allocate_fixed_size_storage((i), sizeof (Pcc_cell))
@@ -832,7 +833,7 @@ return current Namespace
     VTABLE INTVAL get_integer_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell)
+        if (cell->type == NOCELL)
             return 0;
 
         return autobox_intval(INTERP, cell);
@@ -841,7 +842,7 @@ return current Namespace
     VTABLE FLOATVAL get_number_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell)
+        if (cell->type == NOCELL)
             return 0.0;
 
         return autobox_floatval(INTERP, cell);
@@ -850,7 +851,7 @@ return current Namespace
     VTABLE STRING * get_string_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell)
+        if (cell->type == NOCELL)
             return NULL;
 
         return autobox_string(INTERP, cell);
@@ -859,7 +860,7 @@ return current Namespace
     VTABLE PMC * get_pmc_keyed_int(INTVAL key) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell)
+        if (cell->type == NOCELL)
             return PMCNULL;
 
         return autobox_pmc(INTERP, cell);
@@ -868,73 +869,29 @@ return current Namespace
     VTABLE void set_integer_keyed_int(INTVAL key, INTVAL value) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell) {
-            INTVAL num_positionals;
-
-            GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-
-            if (key == num_positionals)
-                VTABLE_push_integer(INTERP, SELF, value);
-
-            /* XXX: else throw exception? */
-            return;
-        }
-
-        CELL_INT(cell) = value;
+        cell->u.i   = value;
+        cell->type  = INTCELL;
     }
 
     VTABLE void set_number_keyed_int(INTVAL key, FLOATVAL value) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell) {
-            INTVAL num_positionals;
-
-            GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-
-            if (key == num_positionals)
-                VTABLE_push_float(INTERP, SELF, value);
-
-            /* XXX: else throw exception? */
-            return;
-        }
-
-        CELL_FLOAT(cell) = value;
+        cell->u.n   = value;
+        cell->type  = FLOATCELL;
     }
 
     VTABLE void set_string_keyed_int(INTVAL key, STRING *value) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell) {
-            INTVAL num_positionals;
-
-            GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-
-            if (key == num_positionals)
-                VTABLE_push_string(INTERP, SELF, value);
-
-            /* XXX: else throw exception? */
-            return;
-        }
-
-        CELL_STRING(cell) = value;
+        cell->u.s   = value;
+        cell->type  = STRINGCELL;
     }
 
     VTABLE void set_pmc_keyed_int(INTVAL key, PMC *value) {
         Pcc_cell *cell = get_cell_at(INTERP, SELF, key);
 
-        if (!cell) {
-            INTVAL num_positionals;
-
-            GET_ATTR_num_positionals(INTERP, SELF, num_positionals);
-
-            if (key == num_positionals)
-                VTABLE_push_pmc(INTERP, SELF, value);
-
-            /* XXX: else throw exception? */
-            return;
-        }
-
-        CELL_PMC(cell) = value;
+        cell->u.s   = value;
+        cell->type  = STRINGCELL;
     }
 
     VTABLE void set_integer_keyed_str(STRING *key, INTVAL value) {
