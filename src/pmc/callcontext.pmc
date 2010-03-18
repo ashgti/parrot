@@ -847,7 +847,9 @@ return current Namespace
         for (i = size; i; --i)
             cells[i] = cells[i - 1];
 
-        cells[0].u.p = value;
+        cells[0].u.p    = value;
+        cells[0].type   = PMCCELL;
+        SET_ATTR_num_positionals(INTERP, SELF, size + 1);
     }
 
 
