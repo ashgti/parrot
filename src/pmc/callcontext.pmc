@@ -71,8 +71,9 @@ ensure_positionals_storage(PARROT_INTERP, ARGIN(PMC *self), INTVAL size)
             size * sizeof (Pcc_cell));
     memcpy(new_array, array, num_positionals * sizeof (Pcc_cell));
 
-    Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
-            array);
+    if (array)
+        Parrot_gc_free_fixed_size_storage(interp, allocated_positionals * sizeof (Pcc_cell),
+                array);
 
     SETATTR_CallContext_allocated_positionals(interp, self, size);
     SETATTR_CallContext_positionals(interp, self, new_array);
