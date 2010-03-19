@@ -1,39 +1,3 @@
-PMCS_DIGEST = \
-  src/dynpmc/md2.pmc \
-  src/dynpmc/md4.pmc \
-  src/dynpmc/md5.pmc \
-  src/dynpmc/ripemd160.pmc \
-  src/dynpmc/sha.pmc \
-  src/dynpmc/sha1.pmc \
-  src/dynpmc/sha256.pmc \
-  src/dynpmc/sha512.pmc
-
-OBJS_DIGEST = \
-  src/dynpmc/md2$(O) \
-  src/dynpmc/md4$(O) \
-  src/dynpmc/md5$(O) \
-  src/dynpmc/ripemd160$(O) \
-  src/dynpmc/sha$(O) \
-  src/dynpmc/sha1$(O) \
-  src/dynpmc/sha256$(O) \
-  src/dynpmc/sha512$(O)
-
-PMCS_FOO = \
-  src/dynpmc/foo.pmc \
-  src/dynpmc/foo2.pmc
-
-OBJS_FOO = \
-  src/dynpmc/foo$(O) \
-  src/dynpmc/foo2$(O)
-
-#IF(win32 and cc==gcc):LIB_GDBM = -llibgdbm
-#ELSIF(win32):LIB_GDBM = libgdbm.lib
-#ELSE:LIB_GDBM = -lgdbm
-
-#IF(win32 and cc==gcc):LIB_CRYPTO = -lcrypto
-#ELSIF(win32):LIB_CRYPTO = libcrypto.lib
-#ELSE:LIB_CRYPTO = -lcrypto
-
 $(DYNEXT_DIR)/dynlexpad$(LOAD_EXT): src/dynpmc/dynlexpad$(O)
 	$(LD)  @ld_out@$(DYNEXT_DIR)/dynlexpad$(LOAD_EXT) src/dynpmc/dynlexpad$(O) $(LINKARGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
@@ -218,13 +182,8 @@ $(DYNEXT_DIR)/subproxy$(LOAD_EXT): src/dynpmc/subproxy$(O)
 src/dynpmc/subproxy$(O): src/dynpmc/subproxy.c
 	$(CC) -c @cc_o_out@src/dynpmc/subproxy$(O) $(INCLUDES) $(CFLAGS) src/dynpmc/subproxy.c
 
-src/dynpmc/subproxy.c: src/dynpmc/subproxy.dump
+src/dynpmc/subproxy.c: src/dynpmc/subproxy.dump vtable.dump
 	$(PMC2CC) src/dynpmc/subproxy.pmc
 
-src/dynpmc/subproxy.dump: src/dynpmc/subproxy.pmc
+src/dynpmc/subproxy.dump: src/dynpmc/subproxy.pmc vtable.dump
 	$(PMC2CD) src/dynpmc/subproxy.pmc
-
-# Local variables:
-#   mode: makefile
-# End:
-# vim: ft=make:

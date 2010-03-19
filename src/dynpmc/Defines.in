@@ -1,28 +1,45 @@
 DYNPMC_TARGETS = \
-  $(DYNEXT_DIR)/dynlexpad$(LOAD_EXT) \
-  $(DYNEXT_DIR)/foo_group$(LOAD_EXT) \
-  $(DYNEXT_DIR)/pccmethod_test$(LOAD_EXT) \
-  $(DYNEXT_DIR)/rotest$(LOAD_EXT) \
-#IF(has_gdbm):  $(DYNEXT_DIR)/gdbmhash$(LOAD_EXT) \
-  $(DYNEXT_DIR)/rational$(LOAD_EXT) \
-#IF(has_crypto):  $(DYNEXT_DIR)/digest_group$(LOAD_EXT) \
-  $(DYNEXT_DIR)/subproxy$(LOAD_EXT)
+    $(DYNEXT_DIR)/dynlexpad$(LOAD_EXT) \
+    $(DYNEXT_DIR)/foo_group$(LOAD_EXT) \
+    $(DYNEXT_DIR)/pccmethod_test$(LOAD_EXT) \
+    $(DYNEXT_DIR)/rotest$(LOAD_EXT) \
+#IF(has_gdbm):    $(DYNEXT_DIR)/gdbmhash$(LOAD_EXT) \
+    $(DYNEXT_DIR)/rational$(LOAD_EXT) \
+#IF(has_crypto):    $(DYNEXT_DIR)/digest_group$(LOAD_EXT) \
+    $(DYNEXT_DIR)/subproxy$(LOAD_EXT)
 
-DYNPMC_CLEANUPS = \
-  src/dynpmc/*.c \
-  src/dynpmc/pmc_*.h \
-  src/dynpmc/*_group.h \
-  src/dynpmc/*.dump \
-#IF(o):  src/dynpmc/*@o@ \
-#IF(win32):  src/dynpmc/*.lib \
-#IF(win32):  src/dynpmc/*.pdb \
-#IF(win32):  src/dynpmc/*.ilk \
-#IF(win32):  src/dynpmc/*.exp \
-#IF(win32):  src/dynpmc/*.def \
-#IF(win32):  src/dynpmc/*.manifest \
-#IF(load_ext):  src/dynpmc/*@load_ext@
+DYNPMC_DIGEST = \
+    src/dynpmc/md2.pmc \
+    src/dynpmc/md4.pmc \
+    src/dynpmc/md5.pmc \
+    src/dynpmc/ripemd160.pmc \
+    src/dynpmc/sha.pmc \
+    src/dynpmc/sha1.pmc \
+    src/dynpmc/sha256.pmc \
+    src/dynpmc/sha512.pmc
 
-# Local variables:
-#   mode: makefile
-# End:
-# vim: ft=make:
+DYNPMC_DIGEST_OBJS = \
+    src/dynpmc/md2$(O) \
+    src/dynpmc/md4$(O) \
+    src/dynpmc/md5$(O) \
+    src/dynpmc/ripemd160$(O) \
+    src/dynpmc/sha$(O) \
+    src/dynpmc/sha1$(O) \
+    src/dynpmc/sha256$(O) \
+    src/dynpmc/sha512$(O)
+
+DYNPMC_FOO = \
+    src/dynpmc/foo.pmc \
+    src/dynpmc/foo2.pmc
+
+DYNPMC_FOO_OBJS = \
+    src/dynpmc/foo$(O) \
+    src/dynpmc/foo2$(O)
+
+#IF(win32 and cc==gcc):LIB_GDBM = -llibgdbm
+#ELSIF(win32):LIB_GDBM = libgdbm.lib
+#ELSE:LIB_GDBM = -lgdbm
+
+#IF(win32 and cc==gcc):LIB_CRYPTO = -lcrypto
+#ELSIF(win32):LIB_CRYPTO = libcrypto.lib
+#ELSE:LIB_CRYPTO = -lcrypto
