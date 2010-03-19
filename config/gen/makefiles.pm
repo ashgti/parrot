@@ -42,6 +42,12 @@ sub _init {
         'src/dynoplibs/Defines.mak' => {
              SOURCE => 'src/dynoplibs/Defines.in',
         },
+        'src/dynpmc/Rules.mak' => {
+             SOURCE => 'src/dynpmc/Rules.in',
+        },
+        'src/dynpmc/Defines.mak' => {
+             SOURCE => 'src/dynpmc/Defines.in',
+        },
 
         'ext/Parrot-Embed/Makefile.PL' => {
             SOURCE            => 'config/gen/makefiles/parrot_embed_pl.in',
@@ -50,8 +56,6 @@ sub _init {
 
         'compilers/ncigen/Makefile'  =>
             { SOURCE => 'compilers/ncigen/config/makefiles/ncigen.in' },
-        'src/dynpmc/Makefile'        =>
-            { SOURCE => 'config/gen/makefiles/dynpmc.in' },
         'editor/Makefile'            =>
             { SOURCE => 'config/gen/makefiles/editor.in' },
 
