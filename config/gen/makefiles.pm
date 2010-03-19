@@ -50,8 +50,12 @@ sub _init {
 
         'compilers/ncigen/Makefile'  =>
             { SOURCE => 'compilers/ncigen/config/makefiles/ncigen.in' },
-        'src/dynpmc/Makefile'        =>
-            { SOURCE => 'config/gen/makefiles/dynpmc.in' },
+        'src/dynpmc/Rules.mak' => {
+             SOURCE => 'src/dynpmc/Rules.in',
+        },
+        'src/dynpmc/Defines.mak' => {
+             SOURCE => 'src/dynpmc/Defines.in',
+        },
         'editor/Makefile'            =>
             { SOURCE => 'config/gen/makefiles/editor.in' },
 
