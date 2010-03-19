@@ -1447,12 +1447,6 @@ src/pbc_merge$(O) : $(INC_DIR)/embed.h \
 
 src/io/filehandle$(O) : $(PARROT_H_HEADERS) include/pmc/pmc_filehandle.h src/io/io_private.h
 
-src/dynpmc/subproxy$(O) : $(PARROT_H_HEADERS) $(INC_DIR)/extend.h \
-  $(INC_DIR)/dynext.h include/pmc/pmc_subproxy.h \
-  include/pmc/pmc_sub.h include/pmc_default.h \
-  include/pmc/pmc_continuation.h include/pmc/pmc_callcontext.h \
-  include/pmc/pmc_default.h
-
 src/gc/malloc_trace$(O) : src/gc/malloc.c
 
 src/packfile/pf_items$(O) : $(PARROT_H_HEADERS)
