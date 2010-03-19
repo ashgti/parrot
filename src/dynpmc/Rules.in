@@ -9,13 +9,13 @@ src/dynpmc/dynlexpad.c: src/dynpmc/dynlexpad.dump
 src/dynpmc/dynlexpad.dump: src/dynpmc/dynlexpad.pmc vtable.dump
 	$(PMC2CD) src/dynpmc/dynlexpad.pmc
 
-$(DYNEXT_DIR)/foo_group$(LOAD_EXT): $(OBJS_FOO) src/dynpmc/lib-foo_group$(O)
+$(DYNEXT_DIR)/foo_group$(LOAD_EXT): $(DYNPMC_FOO_OBJS) src/dynpmc/lib-foo_group$(O)
 	$(LD)  @ld_out@$(DYNEXT_DIR)/foo_group$(LOAD_EXT) src/dynpmc/lib-foo_group$(O) $(OBJS_FOO) $(LINKARGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 #IF(cygwin or hpux):   $(CHMOD) 0775 $@
 
-src/dynpmc/foo_group.c: $(OBJS_FOO)
-	$(PMC2C) --library foo_group --c $(PMCS_FOO)
+src/dynpmc/foo_group.c: $(DYNPMC_FOO_OBJS)
+	$(PMC2C) --library foo_group --c $(DYNPMC_FOO)
 	$(MV) foo_group.c src/dynpmc/foo_group.c
 
 src/dynpmc/foo.c: src/dynpmc/foo.dump
@@ -78,8 +78,8 @@ $(DYNEXT_DIR)/digest_group$(LOAD_EXT): $(OBJS_DIGEST) src/dynpmc/lib-digest_grou
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;2
 #IF(cygwin or hpux):   $(CHMOD) 0775 $@
 
-src/dynpmc/digest_group.c: $(OBJS_DIGEST)
-	$(PMC2C) --library digest_group --c $(PMCS_DIGEST)
+src/dynpmc/digest_group.c: $(DYNPMC_DIGEST_OBJS)
+	$(PMC2C) --library digest_group --c $(DYNPMC_DIGEST)
 	$(MV) digest_group.c src/dynpmc/digest_group.c
 
 src/dynpmc/md2.c: src/dynpmc/md2.dump
