@@ -1,0 +1,28 @@
+DYNPMC_TARGETS = \
+  $(DYNEXT_DIR)/dynlexpad$(LOAD_EXT) \
+  $(DYNEXT_DIR)/foo_group$(LOAD_EXT) \
+  $(DYNEXT_DIR)/pccmethod_test$(LOAD_EXT) \
+  $(DYNEXT_DIR)/rotest$(LOAD_EXT) \
+#IF(has_gdbm):  $(DYNEXT_DIR)/gdbmhash$(LOAD_EXT) \
+  $(DYNEXT_DIR)/rational$(LOAD_EXT) \
+#IF(has_crypto):  $(DYNEXT_DIR)/digest_group$(LOAD_EXT) \
+  $(DYNEXT_DIR)/subproxy$(LOAD_EXT)
+
+DYNPMC_CLEANUPS = \
+  src/dynpmc/*.c \
+  src/dynpmc/pmc_*.h \
+  src/dynpmc/*_group.h \
+  src/dynpmc/*.dump \
+#IF(o):  src/dynpmc/*@o@ \
+#IF(win32):  src/dynpmc/*.lib \
+#IF(win32):  src/dynpmc/*.pdb \
+#IF(win32):  src/dynpmc/*.ilk \
+#IF(win32):  src/dynpmc/*.exp \
+#IF(win32):  src/dynpmc/*.def \
+#IF(win32):  src/dynpmc/*.manifest \
+#IF(load_ext):  src/dynpmc/*@load_ext@
+
+# Local variables:
+#   mode: makefile
+# End:
+# vim: ft=make:
