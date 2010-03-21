@@ -1455,10 +1455,16 @@ OUTPUT
 
 # result_info op
 
-pir_output_is( <<'CODE', <<'OUTPUT', "result_info op", todo => "Broken TT#1511" );
+pir_output_is( <<'CODE', <<'OUTPUT', "result_info op" );
 .sub main :main
     test()
+    $P0 = new 'FixedIntegerArray'
+    set_result_info $P0
+    $P0 = 1
     $I0 = test()
+    $P0 = new 'FixedIntegerArray'
+    $P0 = 3
+    set_result_info $P0
     ($I1, $I2, $I3) = test()
 .end
 
@@ -1475,7 +1481,7 @@ CODE
 3
 OUTPUT
 
-pir_output_is( <<'CODE', <<'OUTPUT', "result_info op with eval", todo => "Broken TT#1511" );
+pir_output_is( <<'CODE', <<'OUTPUT', "result_info op with eval" );
 .sub main :main
     $S0 = <<"TESTSUB"
 .sub test
@@ -1487,8 +1493,18 @@ pir_output_is( <<'CODE', <<'OUTPUT', "result_info op with eval", todo => "Broken
 TESTSUB
     $P0 = compreg "PIR"
     $P1 = $P0($S0)
+    $P0 = new 'FixedIntegerArray'
+    set_result_info $P0
     test()
+
+    $P0 = new 'FixedIntegerArray'
+    $P0 = 1
+    set_result_info $P0
     $I0 = test()
+
+    $P0 = new 'FixedIntegerArray'
+    $P0 = 3
+    set_result_info $P0
     ($I1, $I2, $I3) = test()
 .end
 CODE

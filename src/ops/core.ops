@@ -540,6 +540,19 @@ op get_results(inconst PMC) :flow {
     goto OFFSET(argc + 2);
 }
 
+=item B<set_result_info>(in PMC)
+
+Set result_info. See also C<result_info>.
+
+=cut
+
+inline op set_result_info(in PMC) {
+    PMC *ctx = CURRENT_CONTEXT(interp);
+    VTABLE_set_attr_str(interp, ctx,
+            Parrot_str_new_constant(interp, "return_flags"),
+            $1);
+}
+
 =item B<result_info>(out PMC)
 
 Returns the get_results signature PMC of the caller. This PMC is a
@@ -551,8 +564,7 @@ specified in F<docs/pdds/pdd03_calling_conventions.pod>.
 
 inline op result_info(out PMC) {
     PMC *caller_ctx  = Parrot_pcc_get_caller_ctx(interp, CURRENT_CONTEXT(interp));
-    PMC *call_object = Parrot_pcc_get_signature(interp, caller_ctx);
-    PMC *sig = VTABLE_get_attr_str(interp, call_object,
+    PMC *sig = VTABLE_get_attr_str(interp, caller_ctx,
             Parrot_str_new_constant(interp, "return_flags"));
 
     /* If no elements, hand back empty array; otherwise PMC. */
