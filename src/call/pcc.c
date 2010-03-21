@@ -182,7 +182,8 @@ Parrot_PCCINVOKE(PARROT_INTERP, ARGIN(PMC* pmc), ARGMOD(STRING *method_name),
 
 /*
 
-=item C<void Parrot_pcc_add_invocant(PARROT_INTERP, PMC *call_obj, PMC *pmc)>
+=item C<static void Parrot_pcc_add_invocant(PARROT_INTERP, PMC *call_obj, PMC
+*pmc)>
 
 Adds the given PMC as an invocant to the given CallContext PMC.  You should
 never have to use this, and it should go away with interp->current_object.

@@ -315,7 +315,6 @@ pmclass CallContext provides array provides hash auto_attrs {
     ATTR PMC      *current_cont;          /* the return continuation PMC */
     ATTR PMC      *current_object;        /* current object if a method call */
     ATTR PMC      *current_namespace;     /* The namespace we're currently in */
-    ATTR PMC      *results_signature;     /* non-const results signature PMC */
     ATTR opcode_t *current_pc;            /* program counter of Sub invocation */
     ATTR PMC      *current_sig;           /* temporary CallContext PMC for active call */
 
@@ -426,9 +425,6 @@ Mark any referenced strings and PMCs.
         Parrot_gc_mark_PMC_alive(INTERP, tmp);
 
         GET_ATTR_current_namespace(INTERP, SELF, tmp);
-        Parrot_gc_mark_PMC_alive(INTERP, tmp);
-
-        GET_ATTR_results_signature(INTERP, SELF, tmp);
         Parrot_gc_mark_PMC_alive(INTERP, tmp);
 
         GET_ATTR_current_sig(INTERP, SELF, tmp);
@@ -803,8 +799,6 @@ return current Namespace
             GET_ATTR_current_namespace(INTERP, SELF, value);
         else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "handlers")))
             GET_ATTR_handlers(INTERP, SELF, value);
-        else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "results_signature")))
-            GET_ATTR_results_signature(INTERP, SELF, value);
         else if (Parrot_str_equal(INTERP, key, CONST_STRING(INTERP, "current_HLL"))) {
             /* This function from src/hash.c. */
             /* We probably have to move it to more suitable place */
