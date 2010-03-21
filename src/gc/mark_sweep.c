@@ -673,6 +673,28 @@ C<get_bufferlike_pool> internally, which in turn calls C<new_bufferlike_pool>.
 
 */
 
+static void
+free_string_header(PARROT_INTERP,
+        ARGIN(Memory_Pools *mem_pools),
+        ARGMOD(Fixed_Size_Pool *pool),
+        ARGMOD(PObj *p))
+{
+    /* ASSERT_ARGS(free_buffer) */
+    STRING *s         = (STRING *)p;
+    INTVAL *ref_count = Buffer_bufrefcountptr(s);
+
+    *ref_count--;
+
+    if (*ref_count <= 0)
+    Parrot_gc_free_fixed_size_storage(interp, Buffer_buflen(s),
+        Buffer_bufstart(s));
+
+    Buffer_buflen(s)   = 0;
+    Buffer_bufstart(s) = NULL;
+    Buffer_bufstart(s) = NULL;
+    s->strstart        = NULL;
+}
+
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static Fixed_Size_Pool *
@@ -681,14 +703,15 @@ new_string_pool(PARROT_INTERP,
         INTVAL constant)
 {
     ASSERT_ARGS(new_string_pool)
-    Fixed_Size_Pool *pool;
+    const size_t     size = sizeof (STRING);
+    Fixed_Size_Pool *pool = new_bufferlike_pool(interp, mem_pools, size);
+
     if (constant) {
-        pool           = new_bufferlike_pool(interp, mem_pools, sizeof (STRING));
         pool->gc_object = NULL;
-        pool->mem_pool = mem_pools->constant_string_pool;
+        pool->mem_pool  = mem_pools->constant_string_pool;
     }
     else
-        pool = get_bufferlike_pool(interp, mem_pools, sizeof (STRING));
+        pool->gc_object = free_string_header;
 
     pool->objects_per_alloc = STRING_HEADERS_PER_ALLOC;
 

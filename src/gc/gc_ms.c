@@ -849,18 +849,12 @@ gc_ms_allocate_buffer_storage(PARROT_INTERP,
     ARGOUT(Buffer *buffer), size_t size)
 {
     ASSERT_ARGS(gc_ms_allocate_buffer_storage)
-    size_t new_size;
-    char *mem;
+    const size_t  new_size  = aligned_string_size(size);
+    const char   *mem       = (char *)Parrot_gc_allocate_fixed_size_storage(
+                                interp, new_size);
 
-    Buffer_buflen(buffer) = 0;
-    Buffer_bufstart(buffer) = NULL;
-    new_size = aligned_string_size(size);
-    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size,
-        interp->mem_pools->memory_pool);
-    mem = aligned_mem(buffer, mem);
-    Buffer_bufstart(buffer) = mem;
-    new_size -= sizeof (void*);
-    Buffer_buflen(buffer) = new_size;
+    Buffer_bufstart(buffer) = aligned_mem(buffer, mem);
+    Buffer_buflen(buffer)   = new_size - sizeof (void *);
 }
 
 /*
@@ -919,13 +913,16 @@ gc_ms_reallocate_buffer_storage(PARROT_INTERP, ARGMOD(Buffer *buffer),
     else
         pool->possibly_reclaimable   += copysize;
 
-    mem = (char *)mem_allocate(interp, interp->mem_pools, new_size, pool);
+    mem = (char *)Parrot_gc_allocate_fixed_size_storage(interp, new_size);
     mem = aligned_mem(buffer, mem);
 
     /* We shouldn't ever have a 0 from size, but we do. If we can track down
      * those bugs, this can be removed which would make things cheaper */
     if (copysize)
         memcpy(mem, Buffer_bufstart(buffer), copysize);
+
+    Parrot_gc_free_fixed_size_storage(interp,
+        Buffer_buflen(buffer) + sizeof (void *), Buffer_bufstart(buffer));
 
     Buffer_bufstart(buffer) = mem;
 
