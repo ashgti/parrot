@@ -903,7 +903,8 @@ fill_params(PARROT_INTERP, ARGMOD_NULLOK(PMC *call_object),
     /* First iterate over positional args and positional parameters. */
     arg_index       = 0;
     param_index     = 0;
-    positional_args = VTABLE_elements(interp, call_object);
+    positional_args;
+    GETATTR_CallContext_num_positionals(interp, call_object, positional_args);
 
     while (1) {
         INTVAL param_flags;
