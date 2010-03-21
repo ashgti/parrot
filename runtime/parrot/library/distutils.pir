@@ -558,6 +558,8 @@ the others items of the array are just the dependencies
     $I0 = newer(pbc, src)
     if $I0 goto L1
   L4:
+    $S0 = dirname(pbc)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_parrot()
     cmd .= " -o "
@@ -612,6 +614,8 @@ the value is an array of PGE pathname or a single PGE pathname
     $I0 = newer(pir, src)
     if $I0 goto L1
   L4:
+    $S0 = dirname(pir)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
@@ -657,6 +661,8 @@ the value is the TGE pathname
     tge = hash[pir]
     $I0 = newer(pir, tge)
     if $I0 goto L1
+    $S0 = dirname(pir)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
@@ -704,6 +710,8 @@ the value is the NQP pathname
     nqp = hash[pir]
     $I0 = newer(pir, nqp)
     if $I0 goto L1
+    $S0 = dirname(pir)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_parrot()
     cmd .= " "
@@ -754,6 +762,8 @@ the value is the NQP pathname
     nqp = hash[pir]
     $I0 = newer(pir, nqp)
     if $I0 goto L1
+    $S0 = dirname(pir)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_nqp()
     cmd .= " --target=pir --output="
@@ -795,6 +805,8 @@ the value is an array of PIR pathname
     srcs = hash[pir]
     $I0 = newer(pir, srcs)
     if $I0 goto L1
+    $S0 = dirname(pir)
+    mkpath($S0, 1 :named('verbose'))
     spew(pir, '', 1 :named('verbose'))
     $P1 = iter srcs
   L3:
@@ -833,19 +845,21 @@ the value is an array of PBC pathname
     $P0 = iter hash
   L1:
     unless $P0 goto L2
-    .local string pbc, src
+    .local string pbc
     pbc = shift $P0
     .local pmc srcs
     srcs = hash[pbc]
     $I0 = newer(pbc, srcs)
     if $I0 goto L1
-    src = join ' ', srcs
+    $S0 = dirname(pbc)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = get_executable('pbc_merge')
     cmd .= " -o "
     cmd .= pbc
     cmd .= " "
-    cmd .= src
+    $S0 = join " ", srcs
+    cmd .= $S0
     system(cmd, 1 :named('verbose'))
     goto L1
   L2:
@@ -1462,6 +1476,8 @@ the value is the POD pathname
     pod = hash[html]
     $I0 = newer(html, pod)
     if $I0 goto L1
+    $S0 = dirname(html)
+    mkpath($S0, 1 :named('verbose'))
     .local string cmd
     cmd = "pod2html --infile "
     cmd .= pod
@@ -2216,11 +2232,15 @@ a hash
 
 =over 4
 
-=item inst_bin ???
+=item inst_bin (useful ?)
 
 array of pathname or a single pathname
 
-=item inst_dynext ???
+=item inst_data
+
+array of pathname or a single pathname
+
+=item inst_dynext (useful ?)
 
 array of pathname or a single pathname
 
@@ -2303,6 +2323,11 @@ array of pathname or a single pathname
     $P0 = kv['inst_lib']
     get_install_lib(files, "library", $P0)
   L5:
+    $I0 = exists kv['inst_data']
+    unless $I0 goto L6
+    $P0 = kv['inst_data']
+    get_install_data(files, $P0)
+  L6:
     .return (files)
 .end
 
@@ -2310,6 +2335,28 @@ array of pathname or a single pathname
     .param pmc files
     .param pmc array
     $S1 = get_bindir()
+    $S1 .= "/"
+    $I0 = does array, 'array'
+    if $I0 goto L1
+    $S0 = array
+    $S2 = $S1 . $S0
+    files[$S2] = $S0
+    goto L2
+  L1:
+    $P0 = iter array
+  L3:
+    unless $P0 goto L2
+    $S0 = shift $P0
+    $S2 = $S1 . $S0
+    files[$S2] = $S0
+    goto L3
+  L2:
+.end
+
+.sub 'get_install_data' :anon
+    .param pmc files
+    .param pmc array
+    $S1 = get_datadir()
     $S1 .= "/"
     $I0 = does array, 'array'
     if $I0 goto L1
@@ -2738,7 +2785,7 @@ array of pathname or a single pathname
 =item pbc_pir, pir_pge, pir_tge, pir_nqp, pir_nqp-rx, pir_nqprx, pir_pir
 pbc_pbc, exe_pbc, installable_pbc, dynops, dynpmc, html_pod
 
-=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+=item inst_bin, inst_data, inst_dynext, inst_inc, inst_lang, inst_lib
 
 =item harness_files, prove_files
 
@@ -2782,7 +2829,7 @@ the default value is setup.pir
     goto L1
   L2:
 
-    $P0 = split ' ', 'inst_bin inst_dynext inst_inc inst_lang inst_lib doc_files'
+    $P0 = split ' ', 'inst_bin inst_data inst_dynext inst_inc inst_lang inst_lib doc_files'
   L3:
     unless $P0 goto L4
     $S0 = shift $P0
@@ -3176,7 +3223,7 @@ the default value is ports/rpm
 
 =item installable_pbc, dynops, dynpmc
 
-=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+=item inst_bin, inst_data, inst_dynext, inst_inc, inst_lang, inst_lib
 
 =item setup
 
@@ -3419,7 +3466,7 @@ the default value is ports/debian
 
 =item installable_pbc, dynops, dynpmc
 
-=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+=item inst_bin, inst_data, inst_dynext, inst_inc, inst_lang, inst_lib
 
 =item setup
 
@@ -3909,7 +3956,7 @@ See L<http://www.jrsoftware.org/>.
 
 =item installable_pbc, dynops, dynpmc
 
-=item inst_bin, inst_dynext, inst_inc, inst_lang, inst_lib
+=item inst_bin, inst_data, inst_dynext, inst_inc, inst_lang, inst_lib
 
 =item doc_files
 
@@ -4231,6 +4278,16 @@ Return the whole config
     $S0 .= '/compilers/'
   L2:
     $S0 .= name
+    .return ($S0)
+.end
+
+=item get_datadir
+
+=cut
+
+.sub 'get_datadir'
+    $P0 = get_config()
+    $S0 = $P0['datadir']
     .return ($S0)
 .end
 

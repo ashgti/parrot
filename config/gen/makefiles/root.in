@@ -2367,6 +2367,7 @@ install-bin: installable
     --destdir=$(DESTDIR) \
     --docdir=$(DOC_DIR) \
     --versiondir=$(VERSION_DIR) \
+    --pkgconfigdir=@PKGCONFIG_DIR@ \
     MANIFEST MANIFEST.generated
 
 install-dev-only: installable
@@ -2406,6 +2407,8 @@ release : MANIFEST MANIFEST.generated
 	grep -v DEVELOPING MANIFEST.real > MANIFEST
 	$(PERL) -lane 'print"parrot-$(VERSION)/$$F[0]"unless!length||/#/' MANIFEST | \
     tar -zcv -T - -f parrot-$(VERSION).tar.gz
+	$(PERL) -lane 'print"parrot-$(VERSION)/$$F[0]"unless!length||/#/' \
+             MANIFEST | tar -jcv -T - -f parrot-$(VERSION).tar.bz2
 	mv MANIFEST.real MANIFEST
 	rm parrot-$(VERSION)
 

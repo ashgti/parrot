@@ -154,7 +154,7 @@ sub _init {
     $gcc->{'basic'} = [ @gcc_or_gpp ];
     $gpp->{'basic'} = [ @gcc_or_gpp ];
 
-    # Add some gcc only warnings that would break g++
+    # Add some gcc-only warnings that would break g++
     push @{$gcc->{'basic'}}, qw(
         -Wbad-function-cast
         -Wc++-compat
@@ -218,34 +218,38 @@ sub _init {
         ) ],
     };
 
+    # Warning flags docs
+    # http://software.intel.com/sites/products/documentation/hpc/compilerpro/en-us/cpp/lin/compiler_c/index.htm
+
     $icc->{'basic'} = [ qw(
-        -wd269
-        -wd1572
-        -wd1599
-        -wd181
-        -wd869
-        -wd981
-        -wd1419
-        -wd117
-        -wd810
-        -wd177
-        -wd1296
-        -Wall
-        -Wcheck
         -w2
         -Wabi
+        -Wall
+        -Wcheck
         -Wcomment
         -Wdeprecated
+        -Weffc++
+        -Wextra-tokens
+        -Wformat
+        -Wformat-security
         -Wmain
+        -Wmissing-declarations
         -Wmissing-prototypes
         -Wpointer-arith
+        -Wport
         -Wreturn-type
+        -Wshadow
         -Wstrict-prototypes
         -Wuninitialized
         -Wunknown-pragmas
         -Wunused-function
         -Wunused-variable
-    )];
+        -Wwrite-strings
+        ),
+        # Disable some warnings and notifications that are overly noisy
+        '-diag-disable 981',  # Operands are evaluated in unspecified order
+        '-diag-disable 2259', # Non-pointer conversion from "typeA" to "typeB" may lose significant bits
+    ];
 
     $data->{'warnings'}{'gcc'} = $gcc;
     $data->{'warnings'}{'g++'} = $gpp;
@@ -374,7 +378,7 @@ sub valid_warning {
 
     $verbose and print "  output: $output\n";
 
-    if ( $output !~ /error|warning|not supported/i ) {
+    if ( $output !~ /\berror|warning|not supported|ignoring (unknown )?option\b/i ) {
         push @{$self->{'validated'}}, $warning;
         $verbose and print "    valid warning: '$warning'\n";
         return 1;

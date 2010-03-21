@@ -37,6 +37,12 @@ specifically by including this C<PIR> code:
 
 =over 4
 
+=item RetContinuation [eligible in 2.4]
+
+In future, just use Continuation.
+
+L<https://trac.parrot.org/parrot/ticket/1427>
+
 =item moved to dynpmc [eligible in 1.1]
 
 AddrRegistry, CodeString, Env, Eval, File, OS, PCCMETHOD_Test, StringHandle,
@@ -59,12 +65,6 @@ signature call arguments when there is no current object and is
 not already here. This allows the usage of $P0() instead of $P0($P0).
 
 L<https://trac.parrot.org/parrot/ticket/103>
-
-=item CPointer PMC [eligible in 2.1]
-
-And all uses in the Parrot calling conventions.
-
-L<https://trac.parrot.org/parrot/ticket/1407>
 
 =item Digest dynpmcs [eligible in 2.4]
 
@@ -221,10 +221,6 @@ renamed to Parrot_str_is_null
 =item Parrot_string_* [eligible in 2.4]
 
 rename Parrot_string_cstring to Parrot_str_cstring
-
-=item STRING functions which don't have Parrot_str_ prefix
-
-The string subsytem is gradually getting an overhaul.
 
 =back
 
