@@ -1,5 +1,5 @@
 #! parrot
-# Copyright (C) 2006-2009, Parrot Foundation.
+# Copyright (C) 2006-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -19,13 +19,14 @@ Tests the CallContext PMC.
 .sub 'main' :main
     .include 'test_more.pir'
 
-    plan(37)
+    plan(42)
 
     test_instantiate()
     test_get_set_attrs()
     test_indexed_access()
     test_indexed_boxing()
     test_keyed_access()
+    test_shift_access()
     test_exists()
     test_clone()
 .end
@@ -193,6 +194,35 @@ Tests the CallContext PMC.
     is($S2, "Hello Parrot", 'clone - string positional cloned')
     $N2 = $P1['floatval']
     is($N2, 3.14159, 'clone - named number cloned')
+.end
+
+.sub 'test_shift_access'
+    $P0 = new ['CallContext']
+    $P1 = new [ 'String' ]
+    $P1 = 'derF'
+
+    unshift $P0, $P1
+
+    $S1 = shift $P0
+    is($S1, 'derF', 'shift should convert to proper type (PMC -> STRING)')
+
+    unshift $P0, $P1
+    $P2 = shift $P0
+
+    is($P2, 'derF', '... but not convert when unneccesary')
+    $I0 = issame $P1, $P2
+    ok($I0, '... returning the same item' )
+
+    # no unshift_string for now
+    $P0[0] = 'Fred'
+
+    $P2 = shift $P0
+    is($P2, 'Fred', 'shift should convert to proper type (STRING -> PMC)')
+
+    $P0[0] = 'Fred'
+    $S2 = shift $P0
+
+    is($S2, 'Fred', '... but not convert when unnecessary')
 .end
 
 # Local Variables:
