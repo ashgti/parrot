@@ -1,86 +1,72 @@
 #!/usr/bin/env parrot-nqp
 
+INIT {
+    pir::load_bytecode('ProfTest/ProfTest.pbc');
+}
 
-my $pir := '
-.sub main
+# XXX: Don't bother tryting to run these tests.  None of the supporting code
+# exists.  This code is only here to help me figure out the final interface.
+
+my $pir_code := 
+'.sub main
   say "what"
 .end';
 
-pir::load_bytecode('dumper.pbc');
-pir::load_bytecode('Test/More.pbc');
+my $prof := ProfTest::PirProfile.new($pir);
 
-Test;More;plan(1);
-
-Test;More;ok(1);
-
-my $pprof_str := get_profile_from_pir($pir);
-#pir::say($pprof_str);
-get_profile_array($pprof_str);
+#Does the profile have a version string?
+my $matcher := ProfTest::Matcher.new();
+$matcher.push( ProfTest::Want::Version() ): #use count=1 by default
 
 
-sub get_profile_array($pprof) {
+ok( $matcher.matches($prof), "profile has a version number");
 
-    my @pprof_lines := pir::split("\n", $pprof);
-    my @pprof := ();
+#Does the profile have a CLI invocation?
+$matcher := ProfTest::Matcher.new();
+$matcher.push( ProfTest::Want::CLI() );
 
-    grammar pprof_line {
-        rule TOP { ^^ [ <fixed_line> | <variable_line> ] $$ }
-        
-        rule fixed_line      { <fixed_line_type> ':' <fixed_line_data> }
-        rule fixed_line_type { [ 'VERSION' | 'CLI' | 'END_OF_RUNLOOP' ] }
-        rule fixed_line_data { \N* }
+ok( $matcher.matches($prof), "profile contains a CLI string");
 
-        rule variable_line      { <variable_line_type> ':' <variable_line_data>* }
-        rule variable_line_type { [ 'CS' | 'OP' ] }
-        rule variable_line_data { '{x{' <field_name> ':' <field_data> '}x}' }
-        rule field_name         { <.ident> }
-        rule field_data         { <[a..zA..Z0..9_\-]>* }
-    }
 
-    for @pprof_lines -> $line {
-        my $line_match := pprof_line.parse($line);
-        #pir::say($line);
-        #_dumper($line_match);
-        @pprof.push($line_match);
-    }
-    @pprof;
-}
+#Does the profile have a 'say' op somewhere?
+$matcher := ProfTest::Matcher.new();
+$matcher.push( ProfTest::Want::Op( 'say' ));
 
-sub get_profile_from_pir($pir, $canonical? = 1) {
+ok( $matcher.matches($prof), "profile has a say op");
 
-    my $tmp_pir := '/tmp/test.pir';
-    my $tmp_pprof := '/tmp/test.pprof';
-    my $fh := pir::new__p_sc('FileHandle');
-    $fh.open($tmp_pir, "w");
-    $fh.puts($pir);
-    $fh.close();
 
-    my %env := pir::new__p_sc('Env');
-    %env{'PARROT_PROFILING_FILENAME'} := $tmp_pprof;
-    if $canonical {
-        %env{'PARROT_PROFILING_CANONICAL_OUTPUT'} := 1;
-    }
-    
-    my %config := get_config();
-    my $parrot_exe := %config<prefix> ~ %config<slash> ~ %config<test_prog>;
+#Does the profile show a 'say' op inside the 'main' sub?
+$matcher := ProfTest::Matcher.new(
+    ProfTest::Want::CS.new( :ns('main')),
+    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
+    ProfTest::Want::Op.new( :op('say')),
+);
+ 
+ok( $matcher.matches($prof), "profile shows 'say' inside main sub");
 
-    my $cli := "$parrot_exe --hash-seed=1234 --runcore profiling $tmp_pir";  
 
-    my $pipe := pir::new__p_sc('FileHandle');
-    $pipe.open($cli, "rp");
-    $pipe.readall();
-    my $exit_status := $pipe.exit_status();
+#Does the profile show a 'say' op on line 2?
+$match := ProfTest::Matcher.new();
+$matcher.push (ProfTest::Want::Op.new( :count(1), :op('say'), :line('2')));
 
-    my $pprof_fh := pir::new__p_sc('FileHandle');
-    $pprof_fh.readall($tmp_pprof);
-}
+ok( $matcher.matches($prof), "profile shows say on the correct line");
 
-sub get_config() {
-    return Q:PIR {
-        .include 'iglobals.pasm'
-        .local pmc i
-        i = getinterp
-        %r = i[.IGLOBALS_CONFIG_HASH]
-    };
-}
-        
+
+
+#test: main calls foo, foo tailcalls bar, bar returns to main
+
+my $nqp_code := '
+main();
+sub main() {
+    pir:say("nqp");
+}';
+
+$prof := ProfTest::NQPProfile.new($nqp_code);
+
+$matcher := ProfTest::Matcher.new();
+$matcher.push( ProfTest::Want::CS.new( :ns('*main') ) ); #matches parrot::foo::main
+$matcher.push( ProfTest::Want.new(    :count('*'), :type_isnt('CS') ) );
+$matcher.push( ProfTest::Want::Op.new( :op('say') ) );
+
+ok( $matcher.matches($prof), "profile shows 'say' inside nqp sub");
+
