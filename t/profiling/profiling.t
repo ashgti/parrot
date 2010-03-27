@@ -1,21 +1,21 @@
 #!/usr/bin/env parrot-nqp
 
 INIT {
-    pir::load_bytecode('ProfTest/ProfTest.pbc');
+    pir::load_bytecode('ProfTest.pbc');
 }
 
-# XXX: Don't bother tryting to run these tests.  None of the supporting code
-# exists.  This code is only here to help me figure out the final interface.
+
+#basic tests
+
 
 my $pir_code := 
 '.sub main
   say "what"
 .end';
 
-my $prof := ProfTest::PIRProfile.new($pir);
+my $prof := ProfTest::PIRProfile.new($pir_code);
 
 
-ok(1, "profile creation didn't explode");
 ok(1, "profile creation didn't explode");
 
 #Does the profile have a version string?
@@ -40,16 +40,23 @@ $matcher := ProfTest::Matcher.new(
 ok( $matcher.matches($prof), "profile has a say op");
 
 #Does the profile have expected timing values?
-$matcher := ProfTets::Matcher.new(
-    op('say' :time(1))
+$matcher := ProfTest::Matcher.new(
+    op('say', :time(1))
 );
 
 ok( $matcher.matches($prof), "profile has canonical timing information");
 
+#Does the matcher fail to find the non-existent 'LOL' opcode?
+$matcher := ProfTest::Matcher.new(
+    op('LOL')
+);
+
+ok( !$matcher.matches($prof), "matcher didn't find non-existent opcode");
+
 #Does the profile show a 'say' op inside the 'main' sub?
 $matcher := ProfTest::Matcher.new(
     cs(:ns('main')),
-    any(:except('cs'), :count('*')),
+    any(:except('cs')),
     op('say'),
 );
  
@@ -75,7 +82,7 @@ $pir_code :=
   say 'in third'
 .end";
 
-$prof = ProfTest::PIRProfile.new($pir_code);
+$prof := ProfTest::PIRProfile.new($pir_code);
 
 $matcher := ProfTest::Matcher.new(
     cs(:ns('first'),  :slurp_until('cs')),
@@ -137,9 +144,16 @@ $prof := ProfTest::NQPProfile.new($nqp_code, :annotations(1));
 
 $matcher := ProfTest::Matcher.new(
     cs(:ns('parrot;main') ),
-    any(:except('cs'), :count('*')), 
+    any(:except('cs')), 
     op('say'),
 );
 
 ok( $matcher.matches($prof), "profile shows 'say' inside nqp sub");
 
+
+sub version($v?)             { ProfTest::Want::Version.new($v) }
+sub cli($c?)                 { ProfTest::Want::CLI.new($c) }
+sub eor()                    { ProfTest::Want::EndOfRunloop.new() }
+sub op($name, $line?)        { ProfTest::Want::Op.new($name, $line) }
+sub cs($ns?, :$slurp_until?) { Proftest::Want::CS.new($ns, :slurp_until($slurp_until)) }
+sub any(@except?)            { ProfTest::Want::Any.new(@except) }

@@ -84,7 +84,7 @@ method accepts($prof_line) {
 
 
 
-class ProfTest::Want::EOR is ProfTest::Want;
+class ProfTest::Want::EndOfRunloop is ProfTest::Want;
 
 method new() { }
 
