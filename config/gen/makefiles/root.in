@@ -1046,19 +1046,29 @@ $(INSTALLABLEPBC_MERGE) : src/pbc_merge$(O) $(LIBPARROT) $(INSTALLABLECONFIG)
 # Profiling runcore test supporting code
 #
 
-$(LIBRARY_DIR)/ProfTest.pbc: $(LIBRARY_DIR)/ProfTest/PIRProfile.pir \
-	$(LIBRARY_DIR)/ProfTest/Matcher.pir  $(LIBRARY_DIR)/ProfTest/Want.pir
-	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/PIRProfile.pir \
-		$(LIBRARY_DIR)/ProfTest/Matcher.pir $(LIBRARY_DIR)/ProfTest/Want.pir
+$(LIBRARY_DIR)/ProfTest.pbc: $(LIBRARY_DIR)/ProfTest/PIRProfile.pbc \
+	$(LIBRARY_DIR)/ProfTest/Matcher.pbc  $(LIBRARY_DIR)/ProfTest/Want.pbc
+	$(PBC_MERGE) -o $@ $(LIBRARY_DIR)/ProfTest/PIRProfile.pbc \
+		$(LIBRARY_DIR)/ProfTest/Matcher.pbc $(LIBRARY_DIR)/ProfTest/Want.pbc
+
+$(LIBRARY_DIR)/ProfTest/PIRProfile.pbc: $(LIBRARY_DIR)/ProfTest/PIRProfile.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/PIRProfile.pir
 
 $(LIBRARY_DIR)/ProfTest/PIRProfile.pir: $(LIBRARY_DIR)/ProfTest/PIRProfile.nqp $(NQP_RX)
 	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/PIRProfile.nqp > $@
 
-$(LIBRARY_DIR)/ProfTest/Matcher.pir: $(LIBRARY_DIR)/ProfTest/Matcher.nqp $(NQP_RX)
-	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/Matcher.nqp > $@
+$(LIBRARY_DIR)/ProfTest/Want.pbc: $(LIBRARY_DIR)/ProfTest/Want.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/Want.pir
 
 $(LIBRARY_DIR)/ProfTest/Want.pir: $(LIBRARY_DIR)/ProfTest/Want.nqp $(NQP_RX)
 	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/Want.nqp > $@
+
+$(LIBRARY_DIR)/ProfTest/Matcher.pbc: $(LIBRARY_DIR)/ProfTest/Matcher.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/Matcher.pir
+
+$(LIBRARY_DIR)/ProfTest/Matcher.pir: $(LIBRARY_DIR)/ProfTest/Matcher.nqp $(NQP_RX)
+	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/Matcher.nqp > $@
+
 
 
 ###############################################################################
