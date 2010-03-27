@@ -14,34 +14,43 @@ my $pir_code :=
 
 my $prof := ProfTest::PIRProfile.new($pir);
 
+
+ok(1, "profile creation didn't explode");
+ok(1, "profile creation didn't explode");
+
 #Does the profile have a version string?
 my $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::Version.new(),
+    version
 );
 
 ok( $matcher.matches($prof), "profile has a version number");
 
 #Does the profile have a CLI invocation?
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::CLI.new()
+    cli
 ); 
 
 ok( $matcher.matches($prof), "profile contains a CLI string");
 
-
 #Does the profile have a 'say' op somewhere?
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::Op.new( :op('say') ));
+    op('say')
 );
 
 ok( $matcher.matches($prof), "profile has a say op");
 
+#Does the profile have expected timing values?
+$matcher := ProfTets::Matcher.new(
+    op('say' :time(1))
+);
+
+ok( $matcher.matches($prof), "profile has canonical timing information");
 
 #Does the profile show a 'say' op inside the 'main' sub?
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::CS.new( :ns('main')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::Op.new( :op('say')),
+    cs(:ns('main')),
+    any(:except('cs'), :count('*')),
+    op('say'),
 );
  
 ok( $matcher.matches($prof), "profile shows 'say' inside main sub");
@@ -69,15 +78,11 @@ $pir_code :=
 $prof = ProfTest::PIRProfile.new($pir_code);
 
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::CS.new( :ns('first')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('second')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('third')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('second')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('first')),
+    cs(:ns('first'),  :slurp_until('cs')),
+    cs(:ns('second'), :slurp_until('cs')),
+    cs(:ns('third'),  :slurp_until('cs')),
+    cs(:ns('second'), :slurp_until('cs')),
+    cs(:ns('first')),
 );
 
 ok( $matcher.matches($prof), "profile properly reflects normal control flow");
@@ -105,13 +110,10 @@ $pir_code :=
 $prof := ProfTest::PIRProfile.new($pir_code);
 
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::CS.new( :ns('first') ),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('foo')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('bar')),
-    ProfTest::Want.new( :count('*'), :type_isnt('CS')),
-    ProfTest::Want::CS.new( :ns('first')),
+    cs(:ns('first'), :slurp_until('cs')),
+    cs(:ns('foo'),   :slurp_until('cs')),
+    cs(:ns('bar'),   :slurp_until('cs')),
+    cs(:ns('first')),
 );
 
 ok( $matcher.matches($prof), "profile properly reflects tailcall control flow");
@@ -119,7 +121,7 @@ ok( $matcher.matches($prof), "profile properly reflects tailcall control flow");
 
 #Does the profile show a 'say' op on line 2?
 $matcher := ProfTest::Matcher.new(
-    ProfTest::Want::Op.new( :op('say'), :line('2')),
+    op('say', :line('2')),
 );
 
 ok( $matcher.matches($prof), "profile shows say on the correct line");
@@ -133,10 +135,11 @@ sub main() {
 
 $prof := ProfTest::NQPProfile.new($nqp_code, :annotations(1));
 
-$matcher := ProfTest::Matcher.new();
-$matcher.push( ProfTest::Want::CS.new( :ns('parrot;main') ) ); #matches parrot::foo::main
-$matcher.push( ProfTest::Want.new(    :count('*'), :type_isnt('CS') ) );
-$matcher.push( ProfTest::Want::Op.new( :op('say') ) );
+$matcher := ProfTest::Matcher.new(
+    cs(:ns('parrot;main') ),
+    any(:except('cs'), :count('*')), 
+    op('say'),
+);
 
 ok( $matcher.matches($prof), "profile shows 'say' inside nqp sub");
 
