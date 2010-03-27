@@ -8,7 +8,7 @@ method new(*@args) {
     );
     self<wants>.unshift(
         ProfTest::Want::Goal.new()
-    };
+    );
     for @args -> $arg {
         self<wants>.push($arg);
     }
@@ -16,16 +16,33 @@ method new(*@args) {
 
 method matches($profile) {
 
-    #if this is the last line
-        #exhaust the current want
+    my @backtracks := ();
+    my $line_idx   := 0;
+    my $want_idx   := 0;
 
-    #if we're at a goal
-        #return true
-    #elsif this want accepts the current profile line
-        #if this want is unexhausted, push it onto the backtrack stack
-        #move to the next want and profile line
-    #else
-        #backtrack to the previous unexhausted want
+    my $curr_line := $profile.profile_array[$line_idx];
+    my $curr_want := self<wants>[$want_idx];
 
+    while (11) {
+        if $curr_want.goal {
+            return 1;
+        }
+        elsif ($curr_want.accepts($curr_line)) {
+
+            @backtracks.push( [$line_idx+1, $want_idx] );
+            $line_idx++;
+            $want_idx++;
+            $curr_line := $profile.profile_array[$line_idx];
+            $curr_want := self<wants>[$want_idx];
+        }
+        else {
+            if !@backtracks {
+                return 0;
+            }
+            ($curr_want, $curr_line) := @backtracks.pop;
+            $curr_line := $profile.profile_array[$line_idx];
+            $curr_want := self<wants>[$want_idx];
+        }
+    }
 }
 

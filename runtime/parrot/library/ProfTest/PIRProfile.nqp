@@ -9,6 +9,10 @@ method new($pir_code, $canonical? = 1) {
     self;
 }
 
+method profile_array() {
+    self<profile_array>;
+}
+
 method build_profile_array() {
 
     my @pprof_lines := pir::split("\n", self<profile>);
@@ -30,8 +34,8 @@ method build_profile_array() {
 
     for @pprof_lines -> $line {
         my $line_match := pprof_line.parse($line);
-        pir::say($line);
-        _dumper($line_match);
+        #pir::say($line);
+        #_dumper($line_match);
         self<profile_array>.push($line_match);
     }
 }

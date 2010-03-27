@@ -13,16 +13,20 @@ method hashify_variable_data($data) {
     %h;
 }
 
-method exhaust() {
-    self<exhausted> := 1;
+method exhaust($x? = 1) {
+    self<exhausted> := $x;
 }
+
+method exhausted() { self<exhausted>; }
+
+method goal() { 0; }
 
 
 class ProfTest::Want::Goal;
 
 method new() { }
 
-method accepts($prof_line) { 1; }
+method goal() { 1; }
 
 
 
@@ -44,7 +48,6 @@ method accepts($prof_line) {
             return 0;
         }
     }
-    #XXX: how does this get exhausted?
     return 1;
 }
 
@@ -133,7 +136,6 @@ method new($ns?, :$slurp_until?) {
 
 method accepts($prof_line) {
     if self<found_cs> && self<slurp_until> {
-        #XXX: how to properly exhaust this?
         return $prof_line<variable_line><line_type> ne self<slurp_until>;
     }
     elsif $prof_line<variable_line> && $prof_line<variable_line><line_type> eq 'CS' {
