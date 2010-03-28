@@ -1,17 +1,19 @@
 
-class ProfTest::Matcher;
+class ProfTest::Matcher is Hash;
 
-method new(*@args) {
+method new(*@wants) {
     self<wants> := ();
-    self<wants>.push(
+    self<wants>.unshift(
         ProfTest::Want::Any.new()
     );
-    self<wants>.unshift(
+    for @wants -> $want {
+        self<wants>.push($want);
+        pir::say("pushed a thing:"~$want.get_str);
+    }
+    self<wants>.push(
         ProfTest::Want::Goal.new()
     );
-    for @args -> $arg {
-        self<wants>.push($arg);
-    }
+    self;
 }
 
 method matches($profile) {
@@ -27,6 +29,7 @@ method matches($profile) {
 
         $curr_line := $profile.profile_array[$line_idx];
         $curr_want := self<wants>[$want_idx];
+        pir::say("current want: "~$curr_want.get_str);
 
         if $curr_want.goal {
             return 1;
