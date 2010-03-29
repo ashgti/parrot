@@ -13,12 +13,6 @@ method hashify_profile_data($data) {
     %h;
 }
 
-method exhaust($x? = 1) {
-    self<exhausted> := $x;
-}
-
-method exhausted() { self<exhausted>; }
-
 method goal() { 0; }
 
 
@@ -35,9 +29,7 @@ method get_str() { 'Goal' };
 class ProfTest::Want::Any is ProfTest::Want;
 
 method new(@except?) {
-    self<except>     := @except;
-    self<cursor_pos> := 0;
-    self<exhausted>  := 0;
+    self<except> := @except;
     self;
 }
 
@@ -69,14 +61,12 @@ class ProfTest::Want::Version is ProfTest::Want;
 
 method new($version?) {
     self<version>   := $version;
-    self<exhausted> := 0;
     self;
 }
 
 method accepts($prof_line) {
     if $prof_line<fixed_line> &&
         $prof_line<fixed_line><line_type> eq 'VERSION' {
-        self.exhaust;
         return 1;
     }
 }
@@ -95,21 +85,17 @@ method get_str() {
 class ProfTest::Want::CLI is ProfTest::Want;
 
 method new() { 
-    self<exhausted> := 1;
     self;
 }
 
 method accepts($prof_line) {
     if $prof_line<fixed_line> &&
         $prof_line<fixed_line><line_type> eq 'CLI' {
-        self.exhaust;
         return 1;
     }
 }
 
-method get_str() {
-    "CLI()";
-}
+method get_str() { "CLI()" }
 
 
 
@@ -120,14 +106,11 @@ method new() { self; }
 method accepts($prof_line) {
     if $prof_line<fixed_line> &&
         $prof_line<fixed_line><line_type> eq 'END_OF_RUNLOOP' {
-        self.exhaust;
         return 1;
     }
 }
 
-method get_str() {
-    'EndOfRunloop()';
-}
+method get_str() { 'EndOfRunloop()' }
 
 
 
@@ -135,7 +118,6 @@ class ProfTest::Want::Op is ProfTest::Want;
 
 method new($name, $line?) {
     self<name> := $name;
-    self.exhaust;
     if $line {
         self<line> := $line;
     }
@@ -151,10 +133,9 @@ method accepts($prof_line) {
         if self<line> && self<line> != %variable_data<line> {
             return 0;
         }
-
+        return 1;
     }
-    self.exhaust;
-    return 1;
+    return 0;
 }
 
 method get_str() {
@@ -184,7 +165,6 @@ method accepts($prof_line) {
     elsif $prof_line<variable_line> && $prof_line<variable_line><line_type> eq 'CS' {
         if !self<ns> {
             self<found_cs>  := 1;
-            self<exhausted> := !?self<slurp_until>;
             return 1;
         }
         my %h := self.hashify_profile_data($prof_line<variable_line><variable_data>);
