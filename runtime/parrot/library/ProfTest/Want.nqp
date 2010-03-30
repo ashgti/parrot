@@ -1,4 +1,7 @@
 
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 class ProfTest::Want is Hash;
 
 method new() { die('...'); }

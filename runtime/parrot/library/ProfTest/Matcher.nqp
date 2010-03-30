@@ -1,4 +1,7 @@
 
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 class ProfTest::Matcher is Hash;
 
 method new(*@wants) {

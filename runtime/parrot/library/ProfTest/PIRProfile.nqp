@@ -1,4 +1,7 @@
 
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 class ProfTest::PIRProfile is Hash;
 
 method new($pir_code, $canonical? = 1) {

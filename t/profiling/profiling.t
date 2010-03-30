@@ -1,5 +1,8 @@
 #!/usr/bin/env parrot-nqp
 
+# Copyright (C) 2010, Parrot Foundation.
+# $Id$
+
 INIT {
     pir::load_bytecode('ProfTest.pbc');
 }
