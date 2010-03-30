@@ -5,8 +5,7 @@ INIT {
 }
 
 
-#basic tests
-
+plan(12);
 
 my $pir_code := 
 '.sub main
@@ -74,6 +73,31 @@ $pir_code :=
 .sub second
   .local pmc p
   p = new ['Interger']
+  p = 1
+.end";
+
+$prof := ProfTest::PIRProfile.new($pir_code);
+
+$matcher := ProfTest::Matcher.new(
+    cs(:ns('parrot;first'),  :slurp_until('cs')),
+    cs(:ns('parrot;second'), :slurp_until('cs')),
+    cs(:ns('parrot;first')),
+);
+
+ok( $matcher.matches($prof), "profile properly reflects normal control flow (simple)");
+
+
+$pir_code :=
+".sub first :main
+  .local int i
+  i = 0
+  'second'()
+  inc i
+.end
+
+.sub second
+  .local pmc p
+  p = new ['Interger']
   'third'()
   p = 1
 .end
@@ -85,14 +109,14 @@ $pir_code :=
 $prof := ProfTest::PIRProfile.new($pir_code);
 
 $matcher := ProfTest::Matcher.new(
-    cs(:ns('first'),  :slurp_until('cs')),
-    cs(:ns('second'), :slurp_until('cs')),
-    cs(:ns('third'),  :slurp_until('cs')),
-    cs(:ns('second'), :slurp_until('cs')),
-    cs(:ns('first')),
+    cs(:ns('parrot;first'),  :slurp_until('cs')),
+    cs(:ns('parrot;second'), :slurp_until('cs')),
+    cs(:ns('parrot;third'),  :slurp_until('cs')),
+    cs(:ns('parrot;second'), :slurp_until('cs')),
+    cs(:ns('parrot;first')),
 );
 
-ok( $matcher.matches($prof), "profile properly reflects normal control flow");
+ok( $matcher.matches($prof), "profile properly reflects normal control flow (slightly less simple)");
 
 
 #test: main calls foo, foo tailcalls bar, bar returns to main
@@ -100,6 +124,7 @@ $pir_code :=
 ".sub first :main
   .local int i
   i = 'foo'(9)
+  say i
 .end
 
 .sub foo
@@ -117,10 +142,10 @@ $pir_code :=
 $prof := ProfTest::PIRProfile.new($pir_code);
 
 $matcher := ProfTest::Matcher.new(
-    cs(:ns('first'), :slurp_until('cs')),
-    cs(:ns('foo'),   :slurp_until('cs')),
-    cs(:ns('bar'),   :slurp_until('cs')),
-    cs(:ns('first')),
+    cs(:ns('parrot;first'), :slurp_until('cs')),
+    cs(:ns('parrot;foo'),   :slurp_until('cs')),
+    cs(:ns('parrot;bar'),   :slurp_until('cs')),
+    cs(:ns('parrot;first')),
 );
 
 ok( $matcher.matches($prof), "profile properly reflects tailcall control flow");
@@ -128,19 +153,19 @@ ok( $matcher.matches($prof), "profile properly reflects tailcall control flow");
 
 #Does the profile show a 'say' op on line 2?
 $matcher := ProfTest::Matcher.new(
-    op('say', :line('2')),
+    op('say', :line('3')),
 );
 
 ok( $matcher.matches($prof), "profile shows say on the correct line");
 
 
-my $nqp_code := '
-main();
+my $nqp_code :=
+'main();
 sub main() {
-    pir:say("nqp");
+    pir::say("nqp");
 }';
 
-$prof := ProfTest::NQPProfile.new($nqp_code, :annotations(1));
+$prof := ProfTest::NQPProfile.new($nqp_code);
 
 $matcher := ProfTest::Matcher.new(
     cs(:ns('parrot;main') ),
@@ -156,6 +181,6 @@ sub version(*@p, *%n) { ProfTest::Want::Version.new(|@p, |%n) }
 sub cli(*@p, *%n)     { ProfTest::Want::CLI.new(|@p, |%n) }
 sub eor(*@p, *%n)     { ProfTest::Want::EndOfRunloop.new(|@p, |%n) }
 sub op(*@p, *%n)      { ProfTest::Want::Op.new(|@p, |%n) }
-sub cs(*@p, *%n)      { Proftest::Want::CS.new(|@p, |%n) }
+sub cs(*@p, *%n)      { ProfTest::Want::CS.new(|@p, |%n) }
 sub any(*@p, *%n)     { ProfTest::Want::Any.new(|@p, |%n) }
 

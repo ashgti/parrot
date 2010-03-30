@@ -153,18 +153,23 @@ class ProfTest::Want::CS is ProfTest::Want;
 
 method new(:$ns?, :$slurp_until?) {
     self<ns> := $ns;
-    self<slurp_until> := $slurp_until;
+    if $slurp_until {
+        self<slurp_until> := $slurp_until;
+    }
     self<found_cs> := 0;
     self;
 }
 
 method accepts($prof_line) {
     if self<found_cs> && self<slurp_until> {
-        return $prof_line<variable_line><line_type> ne self<slurp_until>;
+        if pir::downcase($prof_line<variable_line><line_type>) ne self<slurp_until> {
+            return 1;
+        }
+        return 0;
     }
     elsif $prof_line<variable_line> && $prof_line<variable_line><line_type> eq 'CS' {
         if !self<ns> {
-            self<found_cs>  := 1;
+            self<found_cs> := 1;
             return 1;
         }
         my %h := self.hashify_profile_data($prof_line<variable_line><variable_data>);
@@ -179,10 +184,10 @@ method accepts($prof_line) {
 method get_str() {
     my $str := 'CS(';
     if self<ns> {
-        $str := $str ~ ', :ns(' ~ self<ns> ~ '),';
+        $str := $str ~ ':ns(' ~ self<ns> ~ ')';
     }
     if self<slurp_until> {
-        $str := $str ~ ', :slurp_until(' ~ self<ns> ~ ')';
+        $str := $str ~ ', :slurp_until(' ~ self<slurp_until> ~ ')';
     }
     $str := $str ~ ')';
     $str;

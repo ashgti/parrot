@@ -29,7 +29,8 @@ method build_profile_array() {
         rule variable_line { <line_type> ':' <variable_data>* }
         rule variable_data { '{x{' <field_name> ':' <field_data> '}x}' }
         rule field_name    { <.ident> }
-        rule field_data    { <[a..zA..Z0..9_\-]>* }
+        #XXX: really need to find something better 
+        rule field_data    { <[a..zA..Z0..9_\-;\/.]>* }
     }
 
     for @pprof_lines -> $line {
