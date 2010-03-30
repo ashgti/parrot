@@ -80,3 +80,9 @@ method say($str) {
 method debugging($i) {
     self<debugging> := $i+0;
 }
+
+# Local Variables:
+#   mode: perl6
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4 ft=perl

@@ -86,3 +86,9 @@ method get_config() {
         %r = i[.IGLOBALS_CONFIG_HASH]
     };
 }
+
+# Local Variables:
+#   mode: perl6
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4 ft=perl

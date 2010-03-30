@@ -196,3 +196,9 @@ method get_str() {
     $str;
 }
 
+
+# Local Variables:
+#   mode: perl6
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4 ft=perl

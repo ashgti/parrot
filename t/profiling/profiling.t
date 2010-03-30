@@ -187,3 +187,8 @@ sub op(*@p, *%n)      { ProfTest::Want::Op.new(|@p, |%n) }
 sub cs(*@p, *%n)      { ProfTest::Want::CS.new(|@p, |%n) }
 sub any(*@p, *%n)     { ProfTest::Want::Any.new(|@p, |%n) }
 
+# Local Variables:
+#   mode: perl6
+#   fill-column: 100
+# End:
+# vim: expandtab shiftwidth=4 ft=perl6
