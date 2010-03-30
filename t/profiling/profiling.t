@@ -1,4 +1,4 @@
-#!/usr/bin/env parrot-nqp
+#!./parrot-nqp
 
 # Copyright (C) 2010, Parrot Foundation.
 # $Id$
