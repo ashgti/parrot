@@ -462,9 +462,9 @@ Retrieve the read mode string for the stringhandle.
 */
 
     METHOD mode() {
-        STRING *mode, *mode_copy;
+        STRING *mode;
         GET_ATTR_mode(INTERP, SELF, mode);
-        RETURN(STRING *mode_copy);
+        RETURN(STRING *mode);
     }
 
 /*
