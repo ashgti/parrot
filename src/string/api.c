@@ -3106,17 +3106,11 @@ Parrot_str_change_encoding(PARROT_INTERP, ARGIN_NULLOK(STRING *src),
      */
     if (dest) {
         dest->encoding = new_encoding;
-        if (new_encoding == src->encoding) {
-            dest = Parrot_str_reuse_COW(interp, src, dest);
-            return dest;
-        }
-    }
-    else {
         if (new_encoding == src->encoding)
-            return src;
-
-        Parrot_str_write_COW(interp, src);
+            return dest;
     }
+    else if (new_encoding == src->encoding)
+        return src;
 
     return new_encoding->to_encoding(interp, src, dest);
 }
