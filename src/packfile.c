@@ -2786,7 +2786,7 @@ pf_debug_unpack(PARROT_INTERP, ARGOUT(PackFile_Segment *self), ARGIN(const opcod
 
     /* find seg e.g. CODE_DB => CODE and attach it */
     str_len     = Parrot_str_length(interp, debug->base.name);
-    code_name   = Parrot_str_substr(interp, debug->base.name, 0, str_len - 3, NULL, 1);
+    code_name   = Parrot_str_substr(interp, debug->base.name, 0, str_len - 3);
     code        = (PackFile_ByteCode *)PackFile_find_segment(interp, self->dir, code_name, 0);
 
     if (!code || code->base.type != PF_BYTEC_SEG) {
@@ -4327,7 +4327,7 @@ PackFile_Annotations_unpack(PARROT_INTERP, ARGMOD(PackFile_Segment *seg),
 
     /* Need to associate this segment with the applicable code segment. */
     str_len     = Parrot_str_length(interp, self->base.name);
-    code_name   = Parrot_str_substr(interp, self->base.name, 0, str_len - 4, NULL, 1);
+    code_name   = Parrot_str_substr(interp, self->base.name, 0, str_len - 4);
     code        = (PackFile_ByteCode *)PackFile_find_segment(interp,
                                 self->base.dir, code_name, 0);
 
@@ -4790,7 +4790,7 @@ Parrot_load_language(PARROT_INTERP, ARGIN_NULLOK(STRING *lang_name))
     parrot_split_path_ext(interp, path, &found_path, &found_ext);
     name_length = Parrot_str_length(interp, lang_name);
     found_path = Parrot_str_substr(interp, found_path, 0,
-            Parrot_str_length(interp, found_path)-name_length, NULL, 0);
+            Parrot_str_length(interp, found_path)-name_length);
 
     Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "include/")),
             PARROT_LIB_PATH_INCLUDE);

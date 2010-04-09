@@ -39,36 +39,28 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_bitwise_and(PARROT_INTERP,
     ARGIN_NULLOK(const STRING *s1),
-    ARGIN_NULLOK(const STRING *s2),
-    ARGOUT_NULLOK(STRING **dest))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*dest);
+    ARGIN_NULLOK(const STRING *s2))
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_bitwise_not(PARROT_INTERP,
-    ARGIN_NULLOK(const STRING *s),
-    ARGOUT_NULLOK(STRING **dest))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*dest);
+    ARGIN_NULLOK(const STRING *s))
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_bitwise_or(PARROT_INTERP,
     ARGIN_NULLOK(const STRING *s1),
-    ARGIN_NULLOK(const STRING *s2),
-    ARGOUT_NULLOK(STRING **dest))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*dest);
+    ARGIN_NULLOK(const STRING *s2))
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_bitwise_xor(PARROT_INTERP,
     ARGIN_NULLOK(const STRING *s1),
-    ARGIN_NULLOK(const STRING *s2),
-    ARGOUT_NULLOK(STRING **dest))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*dest);
+    ARGIN_NULLOK(const STRING *s2))
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
@@ -84,21 +76,17 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 STRING* Parrot_str_change_charset(PARROT_INTERP,
     ARGMOD_NULLOK(STRING *src),
-    INTVAL charset_nr,
-    ARGOUT_NULLOK(STRING *dest))
+    INTVAL charset_nr)
         __attribute__nonnull__(1)
-        FUNC_MODIFIES(*src)
-        FUNC_MODIFIES(*dest);
+        FUNC_MODIFIES(*src);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 STRING* Parrot_str_change_encoding(PARROT_INTERP,
     ARGIN_NULLOK(STRING *src),
-    INTVAL encoding_nr,
-    ARGOUT_NULLOK(STRING *dest))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*dest);
+    INTVAL encoding_nr)
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
@@ -336,12 +324,10 @@ STRING * Parrot_str_replace(PARROT_INTERP,
     ARGIN(STRING *src),
     INTVAL offset,
     INTVAL length,
-    ARGIN(STRING *rep),
-    ARGOUT_NULLOK(STRING **d))
+    ARGIN(STRING *rep))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*d);
+        __attribute__nonnull__(5);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
@@ -357,11 +343,8 @@ PARROT_WARN_UNUSED_RESULT
 STRING * Parrot_str_substr(PARROT_INTERP,
     ARGIN_NULLOK(STRING *src),
     INTVAL offset,
-    INTVAL length,
-    ARGOUT_NULLOK(STRING **d),
-    int replace_dest)
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*d);
+    INTVAL length)
+        __attribute__nonnull__(1);
 
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL

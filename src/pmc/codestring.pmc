@@ -118,7 +118,7 @@ A newline is automatically added to the end of the fmt.
         if (pos < 0)
             break;
 
-        key = Parrot_str_substr(INTERP, fmt, pos+1, 1, &key, 0);
+        key = Parrot_str_substr(INTERP, fmt, pos+1, 1);
 
         if (VTABLE_exists_keyed_str(INTERP, hash, key)) {
             repl = VTABLE_get_string_keyed_str(INTERP, hash, key);
@@ -151,7 +151,7 @@ A newline is automatically added to the end of the fmt.
             continue;
         }
 
-        (void) Parrot_str_replace(INTERP, fmt, pos, 2, repl, NULL);
+        fmt = str_replace(INTERP, fmt, pos, 2, repl);
         replen = Parrot_str_byte_length(INTERP, repl);
     }
 
