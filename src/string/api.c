@@ -1248,68 +1248,47 @@ STRING *
 Parrot_str_chopn(PARROT_INTERP, ARGMOD(STRING *s), INTVAL n)
 {
     ASSERT_ARGS(Parrot_str_chopn)
-    STRING * const chopped = Parrot_str_copy(interp, s);
-    Parrot_str_chopn_inplace(interp, chopped, n);
-    return chopped;
-}
 
-
-/*
-
-=item C<void Parrot_str_chopn_inplace(PARROT_INTERP, STRING *s, INTVAL n)>
-
-Removes the last C<n> characters of the specified Parrot string. If C<n> is
-negative, cuts the string after C<+n> characters. The string passed in is
-modified and returned.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_str_chopn_inplace(PARROT_INTERP, ARGMOD(STRING *s), INTVAL n)
-{
-    ASSERT_ARGS(Parrot_str_chopn_inplace)
     UINTVAL new_length, uchar_size;
+    STRING * const chopped = Parrot_gc_new_string_header(interp, 0);
+    STRUCT_COPY(chopped, s);
 
     if (n < 0) {
         new_length = -n;
-        if (new_length > s->strlen)
-            return;
+        if (new_length > chopped->strlen)
+            return chopped;
     }
     else {
-        if (s->strlen > (UINTVAL)n)
-            new_length = s->strlen - n;
+        if (chopped->strlen > (UINTVAL)n)
+            new_length = chopped->strlen - n;
         else
             new_length = 0;
     }
 
-    s->hashval = 0;
+    chopped->hashval = 0;
 
-    if (!new_length || !s->strlen) {
-        s->bufused = s->strlen = 0;
-        return;
+    if (!new_length || !chopped->strlen) {
+        chopped->bufused = chopped->strlen = 0;
+        return chopped;
     }
 
-    uchar_size = s->bufused / s->strlen;
-    s->strlen  = new_length;
+    uchar_size = chopped->bufused / chopped->strlen;
+    chopped->strlen  = new_length;
 
-    if (s->encoding == Parrot_fixed_8_encoding_ptr) {
-        s->bufused = new_length;
+    if (chopped->encoding == Parrot_fixed_8_encoding_ptr) {
+        chopped->bufused = new_length;
     }
-    else if (s->encoding == Parrot_ucs2_encoding_ptr) {
-        s->bufused = new_length * uchar_size;
+    else if (chopped->encoding == Parrot_ucs2_encoding_ptr) {
+        chopped->bufused = new_length * uchar_size;
     }
     else {
         String_iter iter;
 
         ENCODING_ITER_INIT(interp, s, &iter);
         iter.set_position(interp, &iter, new_length);
-        s->bufused = iter.bytepos;
+        chopped->bufused = iter.bytepos;
     }
-
-    return;
+    return chopped;
 }
 
 

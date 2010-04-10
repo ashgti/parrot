@@ -96,12 +96,6 @@ STRING * Parrot_str_chopn(PARROT_INTERP, ARGMOD(STRING *s), INTVAL n)
         FUNC_MODIFIES(*s);
 
 PARROT_EXPORT
-void Parrot_str_chopn_inplace(PARROT_INTERP, ARGMOD(STRING *s), INTVAL n)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*s);
-
-PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL Parrot_str_compare(PARROT_INTERP,
     ARGIN_NULLOK(const STRING *s1),
@@ -519,9 +513,6 @@ STRING* Parrot_str_from_uint(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_str_change_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_str_chopn __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(s))
-#define ASSERT_ARGS_Parrot_str_chopn_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_Parrot_str_compare __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
