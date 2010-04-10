@@ -237,6 +237,9 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src))
     if (src->encoding == Parrot_utf16_encoding_ptr ||
             src->encoding == Parrot_ucs2_encoding_ptr)
         return src;
+
+    result = Parrot_gc_new_string_header(interp, 0);
+
     /*
      * TODO adapt string creation functions
      */
@@ -256,7 +259,6 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src))
        UErrorCode *pErrorCode);
        */
 #if PARROT_HAS_ICU
-    result = Parrot_gc_new_string_header(interp, 0);
     Parrot_gc_allocate_string_storage(interp, result, sizeof (UChar) * src_len);
     p = (UChar *)result->strstart;
 
