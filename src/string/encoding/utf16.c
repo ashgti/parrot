@@ -63,17 +63,6 @@ static STRING * get_bytes(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING * get_bytes_inplace(PARROT_INTERP,
-    ARGIN(STRING *src),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGIN(STRING *return_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5);
-
 static UINTVAL get_codepoint(PARROT_INTERP,
     ARGIN(const STRING *src),
     UINTVAL offset)
@@ -88,18 +77,6 @@ static STRING * get_codepoints(PARROT_INTERP,
     UINTVAL count)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING * get_codepoints_inplace(PARROT_INTERP,
-    ARGIN(STRING *src),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGMOD(STRING *return_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*return_string);
 
 static void iter_init(PARROT_INTERP,
     ARGIN(const STRING *src),
@@ -182,20 +159,12 @@ static void utf16_set_position(PARROT_INTERP,
 #define ASSERT_ARGS_get_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_get_bytes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src) \
-    , PARROT_ASSERT_ARG(return_string))
 #define ASSERT_ARGS_get_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_get_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_get_codepoints_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src) \
-    , PARROT_ASSERT_ARG(return_string))
 #define ASSERT_ARGS_iter_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src) \
@@ -491,39 +460,6 @@ get_codepoints(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
 
 /*
 
-=item C<static STRING * get_codepoints_inplace(PARROT_INTERP, STRING *src,
-UINTVAL offset, UINTVAL count, STRING *return_string)>
-
-Gets from string C<src> at position C<offset> C<count> codepoints and returns
-them in C<return_string>.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-get_codepoints_inplace(PARROT_INTERP, ARGIN(STRING *src),
-        UINTVAL offset, UINTVAL count, ARGMOD(STRING *return_string))
-{
-    ASSERT_ARGS(get_codepoints_inplace)
-    String_iter iter;
-    UINTVAL start;
-    Parrot_str_reuse_COW(interp, src, return_string);
-    iter_init(interp, src, &iter);
-    iter.set_position(interp, &iter, offset);
-    start = iter.bytepos;
-    return_string->strstart = (char *)return_string->strstart + start ;
-    iter.set_position(interp, &iter, offset + count);
-    return_string->bufused = iter.bytepos - start;
-    return_string->strlen = count;
-    return_string->hashval = 0;
-    return return_string;
-}
-
-/*
-
 =item C<static STRING * get_bytes(PARROT_INTERP, STRING *src, UINTVAL offset,
 UINTVAL count)>
 
@@ -543,33 +479,6 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
     UNUSED(src);
     UNUSED(offset)
     UNUSED(count);
-    UNIMPL;
-}
-
-/*
-
-=item C<static STRING * get_bytes_inplace(PARROT_INTERP, STRING *src, UINTVAL
-offset, UINTVAL count, STRING *return_string)>
-
-Gets from string C<src> at position C<offset> C<count> bytes and returns them
-in C<return_string>.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-get_bytes_inplace(PARROT_INTERP, ARGIN(STRING *src),
-        UINTVAL offset, UINTVAL count, ARGIN(STRING *return_string))
-{
-    ASSERT_ARGS(get_bytes_inplace)
-    UNUSED(interp);
-    UNUSED(src);
-    UNUSED(offset)
-    UNUSED(count);
-    UNUSED(return_string);
     UNIMPL;
 }
 
@@ -813,9 +722,7 @@ Parrot_encoding_utf16_init(PARROT_INTERP)
         get_byte,
         set_byte,
         get_codepoints,
-        get_codepoints_inplace,
         get_bytes,
-        get_bytes_inplace,
         set_codepoints,
         set_bytes,
         become_encoding,
