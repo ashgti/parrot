@@ -1165,7 +1165,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
 {
     ASSERT_ARGS(Parrot_str_replace)
     UINTVAL         start_byte, end_byte;
-    INTVAL          diff;
+    INTVAL          diff, buf_size;
     String_iter     iter;
 
     const CHARSET  *cs;
@@ -1216,12 +1216,12 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             "replace: subend somehow is less than substart");
 
     /* Now do the replacement */
-    dest = Parrot_str_copy(interp, src);
-
-    /* Alloctate new string size. */
-    Parrot_gc_allocate_string_storage(interp, dest,
+    dest     = Parrot_str_copy(interp, src);
             /* size          removed bytes           added bytes */
-            src->bufused - (end_byte - start_byte) + rep->bufused);
+    buf_size = src->bufused - (end_byte - start_byte) + rep->bufused;
+    /* Alloctate new string size. */
+    Parrot_gc_allocate_string_storage(interp, dest, buf_size);
+    dest->bufused = buf_size;
 
     /* Copy begin of string */
     mem_sys_memcopy(dest->strstart, src->strstart, start_byte);
