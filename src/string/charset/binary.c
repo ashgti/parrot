@@ -516,7 +516,6 @@ Parrot_charset_binary_init(PARROT_INTERP)
     static const CHARSET base_set = {
         "binary",
         ascii_get_graphemes,
-        ascii_get_graphemes_inplace,
         set_graphemes,
         to_charset,
         compose,

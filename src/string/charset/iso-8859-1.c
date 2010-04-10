@@ -663,7 +663,6 @@ Parrot_charset_iso_8859_1_init(PARROT_INTERP)
     static const CHARSET base_set = {
         "iso-8859-1",
         ascii_get_graphemes,
-        ascii_get_graphemes_inplace,
         set_graphemes,
         to_charset,
         compose,
