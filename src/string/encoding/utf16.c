@@ -141,9 +141,7 @@ static void set_codepoints(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+static STRING * to_encoding(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -242,7 +240,7 @@ static void utf16_set_position(PARROT_INTERP,
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -256,7 +254,7 @@ place.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+to_encoding(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_encoding)
 #if PARROT_HAS_ICU
@@ -265,22 +263,15 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
     UChar *p;
 #endif
     int src_len;
-    int in_place = dest == NULL;
     STRING *result;
 
     if (src->encoding == Parrot_utf16_encoding_ptr ||
             src->encoding == Parrot_ucs2_encoding_ptr)
-        return in_place ? src : Parrot_str_copy(interp, src);
+        return src;
     /*
      * TODO adapt string creation functions
      */
     src_len = src->strlen;
-    if (in_place) {
-        result = src;
-    }
-    else {
-        result = dest;
-    }
     if (!src_len) {
         result->charset  = Parrot_unicode_charset_ptr;
         result->encoding = Parrot_ucs2_encoding_ptr;
@@ -296,14 +287,10 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
        UErrorCode *pErrorCode);
        */
 #if PARROT_HAS_ICU
-    if (in_place) {
-        /* need intermediate memory */
-        p = mem_gc_allocate_n_typed(interp, src_len, UChar);
-    }
-    else {
-        Parrot_gc_reallocate_string_storage(interp, dest, sizeof (UChar) * src_len);
-        p = (UChar *)dest->strstart;
-    }
+    result = Parrot_gc_new_string_header(interp, 0);
+    Parrot_gc_allocate_string_storage(interp, result, sizeof (UChar) * src_len);
+    p = (UChar *)result->strstart;
+
     if (src->charset == Parrot_iso_8859_1_charset_ptr ||
             src->charset == Parrot_ascii_charset_ptr) {
         for (dest_len = 0; dest_len < (int)src->strlen; ++dest_len) {
@@ -318,25 +305,16 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
             /*
              * have to resize - required len in UChars is in dest_len
              */
-            if (in_place)
-                p = mem_gc_realloc_n_typed(interp, p, dest_len, UChar);
-            else {
-                result->bufused = dest_len * sizeof (UChar);
-                Parrot_gc_reallocate_string_storage(interp, dest,
-                                         sizeof (UChar) * dest_len);
-                p = (UChar *)dest->strstart;
-            }
+            result->bufused = dest_len * sizeof (UChar);
+            Parrot_gc_reallocate_string_storage(interp, result,
+                                     sizeof (UChar) * dest_len);
+            p = (UChar *)result->strstart;
             u_strFromUTF8(p, dest_len,
                     &dest_len, src->strstart, src->bufused, &err);
             PARROT_ASSERT(U_SUCCESS(err));
         }
     }
     result->bufused = dest_len * sizeof (UChar);
-    if (in_place) {
-        Parrot_gc_reallocate_string_storage(interp, src, src->bufused);
-        memcpy(src->strstart, p, src->bufused);
-        mem_gc_free(interp, p);
-    }
     result->charset  = Parrot_unicode_charset_ptr;
     result->encoding = Parrot_utf16_encoding_ptr;
     result->strlen = src_len;
@@ -496,7 +474,8 @@ get_codepoints(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
     ASSERT_ARGS(get_codepoints)
     String_iter iter;
     UINTVAL start;
-    STRING * const return_string = Parrot_str_new_COW(interp, src);
+    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
+    STRUCT_COPY(return_string, src);
 
     iter_init(interp, src, &iter);
     iter.set_position(interp, &iter, offset);

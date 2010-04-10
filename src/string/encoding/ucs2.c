@@ -143,13 +143,9 @@ static void set_codepoints(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGMOD(STRING *dest))
+static STRING * to_encoding(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*dest);
+        __attribute__nonnull__(2);
 
 static UINTVAL ucs2_decode_and_advance(PARROT_INTERP,
     ARGMOD(String_iter *i))
@@ -211,8 +207,7 @@ static void ucs2_set_position(SHIM_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_to_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src) \
-    , PARROT_ASSERT_ARG(dest))
+    , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_ucs2_decode_and_advance __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(i))
@@ -235,7 +230,7 @@ static void ucs2_set_position(SHIM_INTERP,
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -248,11 +243,11 @@ place.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, ARGIN(STRING *src), ARGMOD(STRING *dest))
+to_encoding(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_encoding)
     STRING * const result =
-        Parrot_utf16_encoding_ptr->to_encoding(interp, src, dest);
+        Parrot_utf16_encoding_ptr->to_encoding(interp, src);
 
     /* conversion to utf16 downgrads to ucs-2 if possible - check result */
     if (result->encoding == Parrot_utf16_encoding_ptr)
