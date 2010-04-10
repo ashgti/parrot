@@ -100,12 +100,9 @@ static STRING * to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_unicode(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGMOD_NULLOK(STRING *dest))
+static STRING * to_unicode(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*dest);
+        __attribute__nonnull__(2);
 
 static void upcase(PARROT_INTERP, ARGIN(STRING *source_string))
         __attribute__nonnull__(1)
@@ -233,7 +230,7 @@ to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
 
 /*
 
-=item C<static STRING * to_unicode(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_unicode(PARROT_INTERP, STRING *src)>
 
 Converts STRING C<src> to unicode STRING C<dest>.
 
@@ -243,35 +240,32 @@ Converts STRING C<src> to unicode STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_unicode(PARROT_INTERP, ARGIN(STRING *src), ARGMOD_NULLOK(STRING *dest))
+to_unicode(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_unicode)
-    if (dest) {
-        UINTVAL offs;
-        String_iter iter;
+    STRING * dest = Parrot_str_clone(interp, src);
+    UINTVAL offs;
+    String_iter iter;
 
-        dest->charset = Parrot_unicode_charset_ptr;
-        dest->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, dest);
-        Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-        ENCODING_ITER_INIT(interp, dest, &iter);
-        for (offs = 0; offs < src->strlen; ++offs) {
-            const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
+    dest->charset = Parrot_unicode_charset_ptr;
+    dest->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, dest);
+    Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
+    ENCODING_ITER_INIT(interp, dest, &iter);
+    for (offs = 0; offs < src->strlen; ++offs) {
+        const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
 
-            if (iter.bytepos >= Buffer_buflen(dest) - 4) {
-                UINTVAL need = (UINTVAL)((src->strlen - offs) * 1.5);
-                if (need < 16)
-                    need = 16;
-                Parrot_gc_reallocate_string_storage(interp, dest,
-                        Buffer_buflen(dest) + need);
-            }
-            iter.set_and_advance(interp, &iter, c);
+        if (iter.bytepos >= Buffer_buflen(dest) - 4) {
+            UINTVAL need = (UINTVAL)((src->strlen - offs) * 1.5);
+            if (need < 16)
+                need = 16;
+            Parrot_gc_reallocate_string_storage(interp, dest,
+                    Buffer_buflen(dest) + need);
         }
-        dest->bufused = iter.bytepos;
-        dest->strlen  = iter.charpos;
-        return dest;
+        iter.set_and_advance(interp, &iter, c);
     }
-    Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
-            "to_unicode inplace for iso-8859-1 not implemented");
+    dest->bufused = iter.bytepos;
+    dest->strlen  = iter.charpos;
+    return dest;
 }
 
 /*
