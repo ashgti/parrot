@@ -267,29 +267,6 @@ get_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<static STRING * get_graphemes_inplace(PARROT_INTERP, STRING
-*source_string, UINTVAL offset, UINTVAL count, STRING *dest_string)>
-
-Gets C<count> graphemes in place from STRING C<source_string> starting at
-offset C<offset>. Puts them into STRING C<dest_string>.
-
-=cut
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-get_graphemes_inplace(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL count, ARGMOD(STRING *dest_string))
-{
-    ASSERT_ARGS(get_graphemes_inplace)
-    return ENCODING_GET_CODEPOINTS_INPLACE(interp, source_string,
-            offset, count, dest_string);
-}
-
-
-/*
-
 =item C<static STRING* to_charset(PARROT_INTERP, STRING *src)>
 
 Converts input STRING C<src> to unicode STRING C<dest>.
@@ -1080,7 +1057,6 @@ Parrot_charset_unicode_init(PARROT_INTERP)
     static const CHARSET base_set   = {
         "unicode",
         get_graphemes,
-        get_graphemes_inplace,
         set_graphemes,
         to_charset,
         compose,

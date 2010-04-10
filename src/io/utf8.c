@@ -118,8 +118,7 @@ Parrot_io_write_utf8(PARROT_INTERP, ARGMOD(PMC *filehandle),
     if (s->encoding == Parrot_utf8_encoding_ptr)
         return Parrot_io_write_buffer(interp, filehandle, s);
 
-    dest = Parrot_utf8_encoding_ptr->to_encoding(interp, s,
-            Parrot_gc_new_string_header(interp, 0));
+    dest = Parrot_utf8_encoding_ptr->to_encoding(interp, s);
     return Parrot_io_write_buffer(interp, filehandle, dest);
 }
 

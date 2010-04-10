@@ -219,30 +219,6 @@ set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<STRING * ascii_get_graphemes_inplace(PARROT_INTERP, STRING
-*source_string, UINTVAL offset, UINTVAL count, STRING *dest_string)>
-
-Retrieves the graphemes in place for ascii STRING C<source_string>,
-starting at C<offset>. Retrieves C<count> graphemes and puts them
-into C<dest_string>.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-STRING *
-ascii_get_graphemes_inplace(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL count, ARGMOD(STRING *dest_string))
-{
-    ASSERT_ARGS(ascii_get_graphemes_inplace)
-    return ENCODING_GET_BYTES_INPLACE(interp, source_string,
-            offset, count, dest_string);
-}
-
-/*
-
 =item C<static STRING * to_ascii(PARROT_INTERP, STRING *src)>
 
 Attempts to convert STRING C<src> to ASCII in STRING C<dest>. Throws
@@ -865,7 +841,6 @@ Parrot_charset_ascii_init(PARROT_INTERP)
     static const CHARSET base_set = {
         "ascii",
         ascii_get_graphemes,
-        ascii_get_graphemes_inplace,
         set_graphemes,
         to_charset,
         compose,

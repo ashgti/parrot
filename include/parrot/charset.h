@@ -34,11 +34,10 @@ PARROT_DATA CHARSET *Parrot_ascii_charset_ptr;
 #define PARROT_UNICODE_CHARSET Parrot_unicode_charset_ptr
 
 typedef STRING *(*charset_get_graphemes_t)(PARROT_INTERP, STRING *source_string, UINTVAL offset, UINTVAL count);
-typedef STRING *(*charset_get_graphemes_inplace_t)(PARROT_INTERP, STRING *source_string, UINTVAL offset, UINTVAL count, STRING *dest_string);
 typedef void (*charset_set_graphemes_t)(PARROT_INTERP, STRING *source_string, UINTVAL offset, UINTVAL replace_count, STRING *insert_string);
 
-typedef STRING * (*charset_to_charset_t)(PARROT_INTERP, STRING *source_string, STRING *dest);
-typedef STRING * (*charset_from_unicode_t)(PARROT_INTERP, STRING *source_string, STRING *dest);
+typedef STRING * (*charset_to_charset_t)(PARROT_INTERP, STRING *source_string);
+typedef STRING * (*charset_from_unicode_t)(PARROT_INTERP, STRING *source_string);
 typedef STRING* (*charset_compose_t)(PARROT_INTERP, STRING *source_string);
 typedef STRING* (*charset_decompose_t)(PARROT_INTERP, STRING *source_string);
 typedef void (*charset_upcase_t)(PARROT_INTERP, STRING *source_string);
@@ -73,7 +72,7 @@ typedef INTVAL (*charset_find_word_boundary_t)(PARROT_INTERP, STRING *source_str
 typedef STRING *(*charset_string_from_codepoint_t)(PARROT_INTERP, UINTVAL codepoint);
 typedef size_t (*charset_compute_hash_t)(PARROT_INTERP, const STRING *, size_t seed);
 
-typedef STRING* (*charset_converter_t)(PARROT_INTERP, STRING *src, STRING *dst);
+typedef STRING* (*charset_converter_t)(PARROT_INTERP, STRING *src);
 
 /* HEADERIZER BEGIN: src/string/charset.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -214,7 +213,6 @@ void Parrot_register_charset_converter(PARROT_INTERP,
 struct _charset {
     const char *name;
     charset_get_graphemes_t get_graphemes;
-    charset_get_graphemes_inplace_t get_graphemes_inplace;
     charset_set_graphemes_t set_graphemes;
     charset_to_charset_t to_charset;
     charset_compose_t compose;
@@ -238,7 +236,6 @@ struct _charset {
 };
 
 #define CHARSET_GET_GRAPEMES(interp, source, offset, count) ((source)->charset)->get_graphemes((interp), (source), (offset), (count))
-#define CHARSET_GET_GRAPHEMES_INPLACE(interp, source, dest, offset, count) ((source)->charset)->get_graphemes((interp), (source), (dest), (offset), (count))
 #define CHARSET_SET_GRAPHEMES(interp, source, offset, replace_count, insert) ((source)->charset)->set_graphemes((interp), (source), (offset), (replace_count), (insert))
 #define CHARSET_TO_UNICODE(interp, source, dest) ((source)->charset)->to_unicode((interp), (source), (dest))
 #define CHARSET_COMPOSE(interp, source) ((source)->charset)->compose((interp), (source))
@@ -266,9 +263,7 @@ struct _charset {
 #define CHARSET_GET_BYTE(interp, source, offset) ((source)->encoding)->get_byte((interp), (source), (offset))
 #define CHARSET_SET_BYTE(interp, source, offset, value) ((source)->encoding)->set_byte((interp), (source), (offset), (value))
 #define CHARSET_GET_CODEPOINTS(interp, source, offset, count) ((source)->encoding)->get_codepoints((interp), (source), (offset), (count))
-#define CHARSET_GET_CODEPOINTS_INPLACE(interp, source, dest, offset, count) ((source)->encoding)->get_codepoints_inplace((interp), (source), (dest), (offset), (count))
 #define CHARSET_GET_BYTES(interp, source, offset, count) ((source)->encoding)->get_bytes((interp), (source), (offset), (count))
-#define CHARSET_GET_BYTES_INPLACE(interp, source, offset, count, dest) ((source)->encoding)->get_bytes((interp), (source), (offset), (count), (dest))
 #define CHARSET_SET_CODEPOINTS(interp, source, offset, count, newdata) ((source)->encoding)->set_codepoints((interp), (source), (offset), (count), (newdata))
 #define CHARSET_SET_BYTES(interp, source, offset, count, newdata) ((source)->encoding)->set_bytes((interp), (source), (offset), (count), (newdata))
 #define CHARSET_BECOME_ENCODING(interp, source) ((source)->encoding)->become_encoding((interp), (source))
