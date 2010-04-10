@@ -54,11 +54,13 @@ PARROT_CANNOT_RETURN_NULL
 static STRING* decompose(PARROT_INTERP, SHIM(STRING *src))
         __attribute__nonnull__(1);
 
-static void downcase(PARROT_INTERP, ARGIN(STRING *src))
+PARROT_CANNOT_RETURN_NULL
+static STRING* downcase(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 static INTVAL find_cclass(PARROT_INTERP,
@@ -106,11 +108,13 @@ PARROT_CANNOT_RETURN_NULL
 static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
 
-static void titlecase(PARROT_INTERP, ARGIN(STRING *src))
+PARROT_CANNOT_RETURN_NULL
+static STRING* titlecase(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
@@ -121,11 +125,13 @@ static STRING* to_charset(PARROT_INTERP, ARGIN(STRING *src))
 static int u_iscclass(PARROT_INTERP, UINTVAL codepoint, INTVAL flags)
         __attribute__nonnull__(1);
 
-static void upcase(PARROT_INTERP, ARGIN(STRING *src))
+PARROT_CANNOT_RETURN_NULL
+static STRING* upcase(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
@@ -361,7 +367,7 @@ decompose(PARROT_INTERP, SHIM(STRING *src))
 
 /*
 
-=item C<static void upcase(PARROT_INTERP, STRING *src)>
+=item C<static STRING* upcase(PARROT_INTERP, STRING *src)>
 
 Converts the STRING C<src> to all upper-case graphemes, for those characters
 which support upper-case versions.
@@ -372,7 +378,8 @@ Throws an exception if ICU is not installed.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 upcase(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(upcase)
@@ -384,10 +391,11 @@ upcase(PARROT_INTERP, ARGIN(STRING *src))
     if (src->bufused  == src->strlen
             && src->encoding == Parrot_utf8_encoding_ptr) {
         Parrot_ascii_charset_ptr->upcase(interp, src);
-        return;
+        return Parrot_str_clone(interp, src);
     }
 
 #if PARROT_HAS_ICU
+    /* to_encoding will allocate new string */
     src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
     /*
        U_CAPI int32_t U_EXPORT2
@@ -457,7 +465,7 @@ upcase(PARROT_INTERP, ARGIN(STRING *src))
 
 /*
 
-=item C<static void downcase(PARROT_INTERP, STRING *src)>
+=item C<static STRING* downcase(PARROT_INTERP, STRING *src)>
 
 Converts all graphemes to lower-case, for those graphemes which have cases.
 
@@ -467,7 +475,8 @@ Throws an exception if ICU is not installed.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 downcase(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(downcase)
@@ -479,10 +488,11 @@ downcase(PARROT_INTERP, ARGIN(STRING *src))
     if (src->bufused  == src->strlen
             && src->encoding == Parrot_utf8_encoding_ptr) {
         Parrot_ascii_charset_ptr->downcase(interp, src);
-        return;
+        return Parrot_str_clone(interp, src);
     }
 
 #if PARROT_HAS_ICU
+    /* to_encoding will allocate new string */
     src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
     /*
 U_CAPI int32_t U_EXPORT2
@@ -512,6 +522,9 @@ u_strToLower(UChar *dest, int32_t destCapacity,
     /* downgrade if possible */
     if (dest_len == (int)src->strlen)
         src->encoding = Parrot_ucs2_encoding_ptr;
+
+    return src;
+
 #else
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LIBRARY_ERROR,
         "no ICU lib loaded");
@@ -521,7 +534,7 @@ u_strToLower(UChar *dest, int32_t destCapacity,
 
 /*
 
-=item C<static void titlecase(PARROT_INTERP, STRING *src)>
+=item C<static STRING* titlecase(PARROT_INTERP, STRING *src)>
 
 Converts the string to title case, for those characters which support cases.
 
@@ -531,7 +544,8 @@ Throws an exception if ICU is not installed.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 titlecase(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(titlecase)
@@ -543,9 +557,10 @@ titlecase(PARROT_INTERP, ARGIN(STRING *src))
     if (src->bufused  == src->strlen
     &&  src->encoding == Parrot_utf8_encoding_ptr) {
         Parrot_ascii_charset_ptr->titlecase(interp, src);
-        return;
+        return Parrot_str_clone(interp, src);
     }
 
+    /* to_encoding will allocate new string */
     src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
 
     /*
@@ -579,6 +594,9 @@ u_strToTitle(UChar *dest, int32_t destCapacity,
     /* downgrade if possible */
     if (dest_len == (int)src->strlen)
         src->encoding = Parrot_ucs2_encoding_ptr;
+
+    return src;
+
 #else
     UNUSED(src);
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LIBRARY_ERROR,
@@ -589,7 +607,7 @@ u_strToTitle(UChar *dest, int32_t destCapacity,
 
 /*
 
-=item C<static void upcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase_first(PARROT_INTERP, STRING *source_string)>
 
 Converts the first grapheme in the STRING C<source_string> to uppercase, if the
 grapheme supports it. Not implemented.
@@ -598,7 +616,8 @@ grapheme supports it. Not implemented.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
@@ -609,7 +628,7 @@ upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static void downcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase_first(PARROT_INTERP, STRING *source_string)>
 
 Converts the first grapheme in the STRING C<source_string> to lower-case, if
 the grapheme supports it. Not implemented
@@ -618,7 +637,8 @@ the grapheme supports it. Not implemented
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
@@ -629,7 +649,7 @@ downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static void titlecase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase_first(PARROT_INTERP, STRING *source_string)>
 
 Converts the first grapheme in STRING C<source_string> to title case, if the
 string supports it. Not implemented.
@@ -638,7 +658,8 @@ string supports it. Not implemented.
 
 */
 
-static void
+PARROT_CANNOT_RETURN_NULL
+static STRING*
 titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
