@@ -564,7 +564,7 @@ try_bytecode_extensions(PARROT_INTERP, ARGMOD(STRING* path))
     STRING * const pir_extension      = CONST_STRING(interp, ".pir");
     STRING * const pasm_extension     = CONST_STRING(interp, ".pasm");
 
-    test_path = Parrot_str_copy(interp, path);
+    test_path = path;
 
     /* First try the path as given. */
     result = try_load_path(interp, test_path);
