@@ -71,7 +71,7 @@ If $3 is negative, cut the string after -$3 characters.
 =cut
 
 inline op chopn(inout STR, in INT) :base_core {
-    Parrot_str_chopn_inplace(interp, $1, $2);
+    $1 = Parrot_str_chopn(interp, $1, $2);
 }
 
 inline op chopn(out STR, in STR, in INT) :base_core {
@@ -431,7 +431,7 @@ inline op upcase(out STR, in STR) :base_core {
 }
 
 inline op upcase(inout STR) :base_core {
-    Parrot_str_upcase_inplace(interp, $1);
+    $1 = Parrot_str_upcase(interp, $1);
 }
 
 
@@ -450,7 +450,7 @@ inline op downcase(out STR, in STR) :base_core {
 }
 
 inline op downcase(inout STR) :base_core {
-    Parrot_str_downcase_inplace(interp, $1);
+    $1 = Parrot_str_downcase(interp, $1);
 }
 
 
@@ -469,7 +469,7 @@ inline op titlecase(out STR, in STR) :base_core {
 }
 
 inline op titlecase(inout STR) :base_core {
-    Parrot_str_titlecase_inplace(interp, $1);
+    $1 = Parrot_str_titlecase(interp, $1);
 }
 
 

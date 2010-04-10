@@ -2648,38 +2648,12 @@ Parrot_str_upcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't upcase NULL string");
     }
     else {
-        DECL_CONST_CAST;
-        STRING * const dest = Parrot_str_copy(interp, PARROT_const_cast(STRING *, s));
-        Parrot_str_upcase_inplace(interp, dest);
+        STRING * dest = clone_string(interp, s);
+        CHARSET_UPCASE(interp, dest);
         return dest;
     }
 }
 
-
-/*
-
-=item C<void Parrot_str_upcase_inplace(PARROT_INTERP, STRING *s)>
-
-Converts the specified Parrot string to upper case.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_str_upcase_inplace(PARROT_INTERP, ARGMOD_NULLOK(STRING *s))
-{
-    ASSERT_ARGS(Parrot_str_upcase_inplace)
-    if (STRING_IS_NULL(s)) {
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
-            "Can't upcase NULL string");
-    }
-    else {
-        Parrot_str_write_COW(interp, s);
-        CHARSET_UPCASE(interp, s);
-    }
-}
 
 
 /*
@@ -2705,42 +2679,9 @@ Parrot_str_downcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't downcase NULL string");
     }
     else {
-        DECL_CONST_CAST;
-        STRING * const dest = Parrot_str_copy(interp, PARROT_const_cast(STRING *, s));
-        Parrot_str_downcase_inplace(interp, dest);
+        STRING * dest = clone_string(interp, s);
+        CHARSET_DOWNCASE(interp, dest);
         return dest;
-    }
-}
-
-
-/*
-
-=item C<void Parrot_str_downcase_inplace(PARROT_INTERP, STRING *s)>
-
-Converts the specified Parrot string to lower case.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_str_downcase_inplace(PARROT_INTERP, ARGMOD_NULLOK(STRING *s))
-{
-    ASSERT_ARGS(Parrot_str_downcase_inplace)
-    if (STRING_IS_NULL(s)) {
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
-            "Can't downcase NULL string");
-    }
-    else {
-        /*
-         * TODO get rid of all the inplace variants. We have for utf8:
-         * * 1 Parrot_str_copy from the non-incase variant
-         * * conversion to utf16, with doubling the buffer
-         * * possibly one more reallocation in downcase
-         */
-        Parrot_str_write_COW(interp, s);
-        CHARSET_DOWNCASE(interp, s);
     }
 }
 
@@ -2768,38 +2709,12 @@ Parrot_str_titlecase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't titlecase NULL string");
     }
     else {
-        DECL_CONST_CAST;
-        STRING * const dest = Parrot_str_copy(interp, PARROT_const_cast(STRING *, s));
-        Parrot_str_titlecase_inplace(interp, dest);
+        STRING * dest = clone_string(interp, s);
+        CHARSET_TITLECASE(interp, dest);
         return dest;
     }
 }
 
-
-/*
-
-=item C<void Parrot_str_titlecase_inplace(PARROT_INTERP, STRING *s)>
-
-Converts the specified Parrot string to title case.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-void
-Parrot_str_titlecase_inplace(PARROT_INTERP, ARGMOD_NULLOK(STRING *s))
-{
-    ASSERT_ARGS(Parrot_str_titlecase_inplace)
-    if (STRING_IS_NULL(s)) {
-        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
-            "Can't titlecase NULL string");
-    }
-    else {
-        Parrot_str_write_COW(interp, s);
-        CHARSET_TITLECASE(interp, s);
-    }
-}
 
 
 /*

@@ -68,13 +68,12 @@ static void gen_sprintf_call(
 PARROT_CANNOT_RETURN_NULL
 static STRING * handle_flags(PARROT_INTERP,
     ARGIN(const SpfInfo *info),
-    ARGMOD(STRING *str),
+    ARGIN(STRING *str),
     INTVAL is_int_type,
     ARGIN_NULLOK(STRING* prefix))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*str);
+        __attribute__nonnull__(3);
 
 PARROT_CANNOT_RETURN_NULL
 static STRING* str_append_w_flags(PARROT_INTERP,
@@ -125,7 +124,7 @@ Handles C<+>, C<->, C<0>, C<#>, space, width, and prec.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGMOD(STRING *str),
+handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGIN(STRING *str),
         INTVAL is_int_type, ARGIN_NULLOK(STRING* prefix))
 {
     ASSERT_ARGS(handle_flags)
@@ -135,7 +134,7 @@ handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGMOD(STRING *str),
         if (info->flags & FLAG_PREC && info->prec == 0 &&
                 len == 1 &&
                 string_ord(interp, str, 0) == '0') {
-            Parrot_str_chopn_inplace(interp, str, len);
+            str = Parrot_str_chopn(interp, str, len);
             len = 0;
         }
         /* +, space */
@@ -176,11 +175,11 @@ handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGMOD(STRING *str),
     else {
         /* string precision */
         if (info->flags & FLAG_PREC && info->prec == 0) {
-            Parrot_str_chopn_inplace(interp, str, len);
+            str = Parrot_str_chopn(interp, str, len);
             len = 0;
         }
         else if (info->flags & FLAG_PREC && info->prec < len) {
-            Parrot_str_chopn_inplace(interp, str, -(INTVAL)(info->prec));
+            str = Parrot_str_chopn(interp, str, -(INTVAL)(info->prec));
             len = info->prec;
         }
     }
@@ -203,7 +202,7 @@ handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGMOD(STRING *str),
                 STRING *temp = NULL;
                 STRING *ignored;
                 temp = Parrot_str_substr(interp, str, 1, len-1);
-                Parrot_str_chopn_inplace(interp, str, -1);
+                str = Parrot_str_chopn(interp, str, -1);
                 str = Parrot_str_append(interp, str, fill);
                 str = Parrot_str_append(interp, str, temp);
             }
@@ -638,9 +637,9 @@ Parrot_sprintf_format(PARROT_INTERP,
                             STRING * const prefix = CONST_STRING(interp, "0X");
                             const UHUGEINTVAL theuint =
                                 obj->getuint(interp, info.type, obj);
-                            STRING * const ts =
+                            STRING * ts =
                                 Parrot_str_from_uint(interp, tc, theuint, 16, 0);
-                            Parrot_str_upcase_inplace(interp, ts);
+                            ts = Parrot_str_upcase(interp, ts);
 
                             /* unsigned conversion - no plus */
                             info.flags &= ~FLAG_PLUS;
