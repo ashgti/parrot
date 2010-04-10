@@ -1186,7 +1186,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     mem_sys_memcopy(dest->strstart, src->strstart, start_byte);
 
     /* Copy the replacement in */
-    mem_sys_memcopy((char*)src->strstart + start_byte, rep->strstart,
+    mem_sys_memcopy((char*)dest->strstart + start_byte, rep->strstart,
             rep->bufused);
 
     /* Copy the end of old string */
