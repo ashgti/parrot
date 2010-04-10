@@ -394,8 +394,7 @@ upcase(PARROT_INTERP, ARGIN(const STRING *src))
 
     if (src->bufused  == src->strlen
             && src->encoding == Parrot_utf8_encoding_ptr) {
-        Parrot_ascii_charset_ptr->upcase(interp, src);
-        return Parrot_str_clone(interp, src);
+        return Parrot_ascii_charset_ptr->upcase(interp, src);
     }
 
 #if PARROT_HAS_ICU
@@ -494,8 +493,7 @@ downcase(PARROT_INTERP, ARGIN(const STRING *src))
 
     if (src->bufused  == src->strlen
             && src->encoding == Parrot_utf8_encoding_ptr) {
-        Parrot_ascii_charset_ptr->downcase(interp, src);
-        return Parrot_str_clone(interp, src);
+        return Parrot_ascii_charset_ptr->downcase(interp, src);
     }
 
 #if PARROT_HAS_ICU
@@ -564,8 +562,7 @@ titlecase(PARROT_INTERP, ARGIN(const STRING *src))
 
     if (src->bufused  == src->strlen
     &&  src->encoding == Parrot_utf8_encoding_ptr) {
-        Parrot_ascii_charset_ptr->titlecase(interp, src);
-        return Parrot_str_clone(interp, src);
+        return Parrot_ascii_charset_ptr->titlecase(interp, src);
     }
 
     /* to_encoding will allocate new string */
