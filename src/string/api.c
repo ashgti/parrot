@@ -1175,6 +1175,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
 
     /* Now do the replacement */
     dest = Parrot_gc_new_string_header(interp, 0);
+    STRUCT_COPY(dest, src);
 
     /* Alloctate new string size. */
     Parrot_gc_allocate_string_storage(interp, dest,
