@@ -411,8 +411,8 @@ upcase(PARROT_INTERP, ARGIN(const STRING *src))
 
     /* use all available space - see below XXX */
     /* TODO downcase, titlecase too */
-    dest_len = Buffer_buflen(src) / sizeof (UChar);
-    src_len  = src->bufused     / sizeof (UChar);
+    dest_len = Buffer_buflen(res) / sizeof (UChar);
+    src_len  = res->bufused       / sizeof (UChar);
 
     /*
      * XXX troubles:
@@ -442,7 +442,7 @@ upcase(PARROT_INTERP, ARGIN(const STRING *src))
 
     err      = U_ZERO_ERROR;
     dest_len = u_strToUpper((UChar *)res->strstart, dest_len,
-            (UChar *)src->strstart, src_len,
+            (UChar *)res->strstart, src_len,
             NULL,       /* locale = default */
             &err);
     PARROT_ASSERT(U_SUCCESS(err));
@@ -507,9 +507,9 @@ u_strToLower(UChar *dest, int32_t destCapacity,
              UErrorCode *pErrorCode);
      */
     err      = U_ZERO_ERROR;
-    src_len  = src->bufused / sizeof (UChar);
+    src_len  = res->bufused / sizeof (UChar);
     dest_len = u_strToLower((UChar *)res->strstart, src_len,
-            (UChar *)src->strstart, src_len,
+            (UChar *)res->strstart, src_len,
             NULL,       /* locale = default */
             &err);
     res->bufused = dest_len * sizeof (UChar);
@@ -517,8 +517,8 @@ u_strToLower(UChar *dest, int32_t destCapacity,
     if (!U_SUCCESS(err)) {
         err = U_ZERO_ERROR;
         Parrot_gc_reallocate_string_storage(interp, res, res->bufused);
-        dest_len = u_strToLower((UChar *)src->strstart, dest_len,
-                (UChar *)src->strstart, src_len,
+        dest_len = u_strToLower((UChar *)res->strstart, dest_len,
+                (UChar *)res->strstart, src_len,
                 NULL,       /* locale = default */
                 &err);
         PARROT_ASSERT(U_SUCCESS(err));
