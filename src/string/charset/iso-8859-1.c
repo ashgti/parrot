@@ -36,12 +36,13 @@ static STRING* decompose(PARROT_INTERP, SHIM(STRING *src))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* downcase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* downcase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -83,12 +84,13 @@ static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* titlecase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* titlecase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -109,12 +111,13 @@ static STRING * to_unicode(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* upcase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -342,7 +345,7 @@ decompose(PARROT_INTERP, SHIM(STRING *src))
 
 /*
 
-=item C<static STRING* upcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase(PARROT_INTERP, const STRING *source_string)>
 
 Convert all graphemes in the STRING C<source_string> to upper case, for those
 graphemes that support cases.
@@ -353,7 +356,7 @@ graphemes that support cases.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase(PARROT_INTERP, ARGIN(STRING *source_string))
+upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(upcase)
     unsigned char *buffer;
@@ -378,7 +381,7 @@ upcase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase(PARROT_INTERP, const STRING *source_string)>
 
 Converts all graphemes in STRING C<source_string> to lower-case, for those graphemes
 that support cases.
@@ -389,7 +392,7 @@ that support cases.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase(PARROT_INTERP, ARGIN(STRING *source_string))
+downcase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(downcase)
     unsigned char *buffer;
@@ -414,7 +417,7 @@ downcase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase(PARROT_INTERP, const STRING *source_string)>
 
 Converts the graphemes in STRING C<source_string> to title case, for those graphemes
 that support cases.
@@ -425,7 +428,7 @@ that support cases.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
+titlecase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase)
     unsigned char *buffer;
@@ -458,7 +461,7 @@ titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* upcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase_first(PARROT_INTERP, const STRING *source_string)>
 
 Converts the first grapheme in STRING C<source_string> to upper case, if it
 supports cases.
@@ -469,7 +472,7 @@ supports cases.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+upcase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
     unsigned char *buffer;
@@ -492,7 +495,8 @@ upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Converts the first character of the STRING C<source_string> to lower case, if the
 grapheme supports lower case.
@@ -503,7 +507,7 @@ grapheme supports lower case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+downcase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
     unsigned char *buffer;
@@ -526,7 +530,8 @@ downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Converts the first grapheme in STRING C<source_string> to title case, if the grapheme
 supports case.
@@ -537,7 +542,7 @@ supports case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+titlecase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
     return upcase_first(interp, source_string);

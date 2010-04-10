@@ -52,11 +52,12 @@ static STRING* decompose(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* downcase(PARROT_INTERP, SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* downcase_first(PARROT_INTERP,
+    SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 static INTVAL find_cclass(SHIM_INTERP,
@@ -91,11 +92,12 @@ static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* titlecase(PARROT_INTERP, SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* titlecase_first(PARROT_INTERP,
+    SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
@@ -104,11 +106,12 @@ static STRING* to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* upcase(PARROT_INTERP, SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+static STRING* upcase_first(PARROT_INTERP,
+    SHIM(const STRING *source_string))
         __attribute__nonnull__(1);
 
 static UINTVAL validate(SHIM_INTERP, SHIM(STRING *source_string));
@@ -244,7 +247,7 @@ decompose(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* upcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase(PARROT_INTERP, const STRING *source_string)>
 
 Throws an exception because we cannot convert a binary string to
 upper case.
@@ -255,7 +258,7 @@ upper case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase(PARROT_INTERP, SHIM(STRING *source_string))
+upcase(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(upcase)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't upcase binary data");
@@ -263,7 +266,7 @@ upcase(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase(PARROT_INTERP, const STRING *source_string)>
 
 Throws an exception because we cannot convert a binary string to
 lower-case.
@@ -274,7 +277,7 @@ lower-case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase(PARROT_INTERP, SHIM(STRING *source_string))
+downcase(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(downcase)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't downcase binary data");
@@ -282,7 +285,7 @@ downcase(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase(PARROT_INTERP, const STRING *source_string)>
 
 Throws an exception because we cannot convert a binary string to
 title case.
@@ -293,7 +296,7 @@ title case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase(PARROT_INTERP, SHIM(STRING *source_string))
+titlecase(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't titlecase binary data");
@@ -301,7 +304,7 @@ titlecase(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* upcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase_first(PARROT_INTERP, const STRING *source_string)>
 
 Throws an exception because we cannot set the first "character" of the
 binary string to uppercase.
@@ -312,7 +315,7 @@ binary string to uppercase.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+upcase_first(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't upcase binary data");
@@ -320,7 +323,8 @@ upcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Throws an exception because we cannot set the first "character"
 of the binary string to lowercase.
@@ -331,7 +335,7 @@ of the binary string to lowercase.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
+downcase_first(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't downcase binary data");
@@ -339,7 +343,8 @@ downcase_first(PARROT_INTERP, SHIM(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Throws an exception because we can't convert the first "character"
 of binary data to title case.
@@ -350,7 +355,7 @@ of binary data to title case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
+titlecase_first(PARROT_INTERP, SHIM(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
     EXCEPTION(EXCEPTION_INVALID_CHARTYPE, "Can't titlecase binary data");

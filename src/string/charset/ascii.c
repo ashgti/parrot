@@ -43,12 +43,13 @@ static STRING* decompose(PARROT_INTERP, ARGMOD(STRING *src))
         FUNC_MODIFIES(*src);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* downcase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* downcase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -93,15 +94,15 @@ static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* titlecase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* titlecase_first(PARROT_INTERP, ARGMOD(STRING *source_string))
+static STRING* titlecase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*source_string);
+        __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
 static STRING * to_ascii(PARROT_INTERP, ARGIN(STRING *src))
@@ -123,12 +124,13 @@ static STRING * to_unicode(PARROT_INTERP,
         FUNC_MODIFIES(*dest);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+static STRING* upcase_first(PARROT_INTERP,
+    ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -371,7 +373,7 @@ decompose(PARROT_INTERP, ARGMOD(STRING *src))
 
 /*
 
-=item C<static STRING* upcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase(PARROT_INTERP, const STRING *source_string)>
 
 Converts the STRING C<source_string> to all uppercase.
 
@@ -381,7 +383,7 @@ Converts the STRING C<source_string> to all uppercase.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase(PARROT_INTERP, ARGIN(STRING *source_string))
+upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(upcase)
     STRING       *result = Parrot_str_clone(interp, source_string);
@@ -401,7 +403,7 @@ upcase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase(PARROT_INTERP, const STRING *source_string)>
 
 Converts the STRING C<source_string> to all lower-case.
 
@@ -411,7 +413,7 @@ Converts the STRING C<source_string> to all lower-case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase(PARROT_INTERP, ARGIN(STRING *source_string))
+downcase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(downcase)
     STRING       *result = Parrot_str_clone(interp, source_string);
@@ -431,7 +433,7 @@ downcase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase(PARROT_INTERP, const STRING *source_string)>
 
 Converts the STRING given by C<source_string> to title case, where
 the first character is upper case and all the rest of the characters
@@ -443,7 +445,7 @@ are lower-case.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
+titlecase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase)
     STRING       *result = Parrot_str_clone(interp, source_string);
@@ -464,7 +466,7 @@ titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* upcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase_first(PARROT_INTERP, const STRING *source_string)>
 
 Sets the first character in the STRING C<source_string> to upper case,
 but doesn't modify the rest of the string.
@@ -475,7 +477,7 @@ but doesn't modify the rest of the string.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+upcase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
     STRING *result = Parrot_str_clone(interp, source_string);
@@ -490,7 +492,8 @@ upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* downcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Sets the first character of the STRING C<source_string> to lowercase,
 but doesn't modify the rest of the characters.
@@ -501,7 +504,7 @@ but doesn't modify the rest of the characters.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+downcase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
     STRING *result = Parrot_str_clone(interp, source_string);
@@ -516,7 +519,8 @@ downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 
 /*
 
-=item C<static STRING* titlecase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase_first(PARROT_INTERP, const STRING
+*source_string)>
 
 Converts the first letter of STRING C<source_string> to upper case,
 but doesn't modify the rest of the string.
@@ -527,7 +531,7 @@ but doesn't modify the rest of the string.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-titlecase_first(PARROT_INTERP, ARGMOD(STRING *source_string))
+titlecase_first(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
     STRING *result = Parrot_str_clone(interp, source_string);
