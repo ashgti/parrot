@@ -414,10 +414,11 @@ STRING *
 Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *b))
 {
     ASSERT_ARGS(Parrot_str_append)
-    UINTVAL a_capacity;
-    UINTVAL total_length;
-    const CHARSET *cs;
-    const ENCODING *enc;
+    UINTVAL          a_capacity;
+    UINTVAL          total_length;
+    const CHARSET   *cs;
+    const ENCODING  *enc;
+    STRING          *dest;
 
     /* XXX should this be a CHARSET method? */
 
@@ -466,21 +467,19 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     a_capacity   = string_capacity(interp, a);
     total_length = a->bufused + b->bufused;
 
-    /* make sure A's big enough for both  */
-    if (total_length > a_capacity)
-        Parrot_gc_reallocate_string_storage(interp, a, total_length << 1);
+    dest = Parrot_str_new_noinit(interp, enum_stringrep_one, total_length);
 
-    /* A is now ready to receive the contents of B */
+    /* Copy A first */
+    mem_sys_memcopy(dest->strstart, a->strstart, a->bufused);
 
     /* Tack B on the end of A */
-    mem_sys_memcopy((void *)((ptrcast_t)a->strstart + a->bufused),
+    mem_sys_memcopy((void *)((ptrcast_t)dest->strstart + a->bufused),
             b->strstart, b->bufused);
 
-    a->bufused += b->bufused;
-    a->strlen  += b_len;
-    a->hashval  = 0;
+    dest->bufused = a->bufused + b->bufused;
+    dest->strlen  = a->strlen + b_len;
 
-    return a;
+    return dest;
 }
 
 /*
