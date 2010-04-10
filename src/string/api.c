@@ -43,12 +43,6 @@ STRING *STRINGNULL;
 
 PARROT_INLINE
 PARROT_WARN_UNUSED_RESULT
-static STRING* clone_string(PARROT_INTERP, ARGIN(STRING const * const s))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
-PARROT_INLINE
-PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static const CHARSET * string_rep_compatible(SHIM_INTERP,
     ARGIN(const STRING *a),
@@ -59,9 +53,6 @@ static const CHARSET * string_rep_compatible(SHIM_INTERP,
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*e);
 
-#define ASSERT_ARGS_clone_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_string_rep_compatible __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(a) \
     , PARROT_ASSERT_ARG(b) \
@@ -338,18 +329,18 @@ string_rep_compatible(SHIM_INTERP,
 
 /*
 
-=item C<static STRING* clone_string(PARROT_INTERP, STRING const * const s)>
+=item C<STRING* Parrot_str_clone(PARROT_INTERP, STRING const * const s)>
 
 Helper function to clone string.
 
 */
 
-PARROT_INLINE
 PARROT_WARN_UNUSED_RESULT
-static STRING*
-clone_string(PARROT_INTERP, ARGIN(STRING const * const s))
+PARROT_CANNOT_RETURN_NULL
+STRING*
+Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
 {
-    ASSERT_ARGS(clone_string)
+    ASSERT_ARGS(Parrot_str_clone)
 
     STRING *result = Parrot_gc_new_string_header(interp, 0);
     size_t  alloc_size = s->bufused;
@@ -462,14 +453,13 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
               ? Parrot_utf16_encoding_ptr
               : Parrot_utf8_encoding_ptr;
 
-        Parrot_unicode_charset_ptr->to_charset(interp, a, NULL);
-        b = Parrot_unicode_charset_ptr->to_charset(interp, b,
-                Parrot_gc_new_string_header(interp, 0));
+        a = Parrot_unicode_charset_ptr->to_charset(interp, a);
+        b = Parrot_unicode_charset_ptr->to_charset(interp, b);
 
         if (a->encoding != enc)
-            enc->to_encoding(interp, a, NULL);
+            a = enc->to_encoding(interp, a);
         if (b->encoding != enc)
-            enc->to_encoding(interp, b, NULL);
+            b = enc->to_encoding(interp, b);
     }
 
     /* calc usable and total bytes */
@@ -1158,9 +1148,8 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     cs = string_rep_compatible(interp, src, rep, &enc);
 
     if (!cs) {
-        Parrot_utf16_encoding_ptr->to_encoding(interp, src, NULL);
-        rep = Parrot_utf16_encoding_ptr->to_encoding(interp, rep,
-                Parrot_gc_new_string_header(interp, 0));
+        src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
+        rep = Parrot_utf16_encoding_ptr->to_encoding(interp, rep);
     }
     else {
         src->charset  = cs;
@@ -2640,7 +2629,7 @@ Parrot_str_upcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't upcase NULL string");
     }
     else {
-        STRING * dest = clone_string(interp, s);
+        STRING * dest = Parrot_str_clone(interp, s);
         CHARSET_UPCASE(interp, dest);
         return dest;
     }
@@ -2671,7 +2660,7 @@ Parrot_str_downcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't downcase NULL string");
     }
     else {
-        STRING * dest = clone_string(interp, s);
+        STRING * dest = Parrot_str_clone(interp, s);
         CHARSET_DOWNCASE(interp, dest);
         return dest;
     }
@@ -2701,7 +2690,7 @@ Parrot_str_titlecase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't titlecase NULL string");
     }
     else {
-        STRING * dest = clone_string(interp, s);
+        STRING * dest = Parrot_str_clone(interp, s);
         CHARSET_TITLECASE(interp, dest);
         return dest;
     }
@@ -2883,9 +2872,7 @@ Parrot_str_change_charset(PARROT_INTERP, ARGMOD_NULLOK(STRING *src),
     if (new_charset == src->charset)
         return src;
 
-    Parrot_str_write_COW(interp, src);
-
-    return new_charset->to_charset(interp, src, NULL);
+    return new_charset->to_charset(interp, src);
 }
 
 
@@ -2923,7 +2910,7 @@ Parrot_str_change_encoding(PARROT_INTERP, ARGIN_NULLOK(STRING *src),
     if (new_encoding == src->encoding)
         return src;
 
-    return new_encoding->to_encoding(interp, src, NULL);
+    return new_encoding->to_encoding(interp, src);
 }
 
 
@@ -2980,8 +2967,9 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
     if (ar_len == 0)
         return Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
-    s   = VTABLE_get_string_keyed_int(interp, ar, 0);
-    res = s ? Parrot_str_copy(interp, s) : NULL;
+    /* FIXME It's very-very bad implementation of C<join>. */
+    /* FIXME We are reallocating buffer on each step */
+    res = VTABLE_get_string_keyed_int(interp, ar, 0);
 
     for (i = 1; i < ar_len; ++i) {
         STRING * const next = VTABLE_get_string_keyed_int(interp, ar, i);
