@@ -43,6 +43,12 @@ STRING *STRINGNULL;
 
 PARROT_INLINE
 PARROT_WARN_UNUSED_RESULT
+static STRING* clone_string(PARROT_INTERP, ARGIN(STRING const * const s))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+PARROT_INLINE
+PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 static const CHARSET * string_rep_compatible(SHIM_INTERP,
     ARGIN(const STRING *a),
@@ -53,6 +59,9 @@ static const CHARSET * string_rep_compatible(SHIM_INTERP,
         __attribute__nonnull__(4)
         FUNC_MODIFIES(*e);
 
+#define ASSERT_ARGS_clone_string __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(s))
 #define ASSERT_ARGS_string_rep_compatible __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(a) \
     , PARROT_ASSERT_ARG(b) \
@@ -325,6 +334,33 @@ string_rep_compatible(SHIM_INTERP,
         return b->charset;
 
     return NULL;
+}
+
+/*
+
+=item C<static STRING* clone_string(PARROT_INTERP, STRING const * const s)>
+
+Helper function to clone string.
+
+*/
+
+PARROT_INLINE
+PARROT_WARN_UNUSED_RESULT
+static STRING*
+clone_string(PARROT_INTERP, ARGIN(STRING const * const s))
+{
+    ASSERT_ARGS(clone_string)
+
+    STRING *result = Parrot_gc_new_string_header(interp, 0);
+    size_t  alloc_size = s->bufused;
+
+    Parrot_gc_allocate_string_storage(interp, result, alloc_size);
+
+    /* now copy memory over */
+    mem_sys_memcopy(result->strstart, s->strstart, alloc_size);
+    result->strlen = s->strlen;
+
+    return result;
 }
 
 
