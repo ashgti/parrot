@@ -1114,6 +1114,7 @@ A negative offset is allowed to replace from the end.
 
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
 STRING *
 Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     INTVAL offset, INTVAL length, ARGIN(STRING *rep))
