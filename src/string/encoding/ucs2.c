@@ -73,15 +73,6 @@ static STRING * get_bytes(PARROT_INTERP,
     SHIM(UINTVAL count))
         __attribute__nonnull__(1);
 
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING * get_bytes_inplace(PARROT_INTERP,
-    SHIM(STRING *src),
-    SHIM(UINTVAL offset),
-    SHIM(UINTVAL count),
-    SHIM(STRING *return_string))
-        __attribute__nonnull__(1);
-
 static UINTVAL get_codepoint(PARROT_INTERP,
     ARGIN(const STRING *src),
     UINTVAL offset)
@@ -96,15 +87,6 @@ static STRING * get_codepoints(PARROT_INTERP,
     UINTVAL count)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING * get_codepoints_inplace(PARROT_INTERP,
-    SHIM(STRING *src),
-    SHIM(UINTVAL offset),
-    SHIM(UINTVAL count),
-    SHIM(STRING *dest_string))
-        __attribute__nonnull__(1);
 
 static void iter_init(PARROT_INTERP,
     ARGIN(const STRING *src),
@@ -182,16 +164,12 @@ static void ucs2_set_position(SHIM_INTERP,
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_get_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
-#define ASSERT_ARGS_get_bytes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_get_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_get_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_get_codepoints_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_iter_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src) \
@@ -423,51 +401,6 @@ get_bytes(PARROT_INTERP, SHIM(STRING *src), SHIM(UINTVAL offset),
         SHIM(UINTVAL count))
 {
     ASSERT_ARGS(get_bytes)
-    UNIMPL;
-}
-
-
-/*
-
-=item C<static STRING * get_codepoints_inplace(PARROT_INTERP, STRING *src,
-UINTVAL offset, UINTVAL count, STRING *dest_string)>
-
-Gets from string C<src> at position C<offset> C<count> codepoints and returns
-them in C<return_string>.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-get_codepoints_inplace(PARROT_INTERP, SHIM(STRING *src),
-        SHIM(UINTVAL offset), SHIM(UINTVAL count), SHIM(STRING *dest_string))
-{
-    ASSERT_ARGS(get_codepoints_inplace)
-    UNIMPL;
-}
-
-/*
-
-=item C<static STRING * get_bytes_inplace(PARROT_INTERP, STRING *src, UINTVAL
-offset, UINTVAL count, STRING *return_string)>
-
-Gets from string C<src> at position C<offset> C<count> bytes and returns them
-in C<return_string>.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-get_bytes_inplace(PARROT_INTERP, SHIM(STRING *src),
-        SHIM(UINTVAL offset), SHIM(UINTVAL count), SHIM(STRING *return_string))
-{
-    ASSERT_ARGS(get_bytes_inplace)
     UNIMPL;
 }
 
@@ -715,9 +648,7 @@ Parrot_encoding_ucs2_init(PARROT_INTERP)
         get_byte,
         set_byte,
         get_codepoints,
-        get_codepoints_inplace,
         get_bytes,
-        get_bytes_inplace,
         set_codepoints,
         set_bytes,
         become_encoding,
