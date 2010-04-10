@@ -1454,8 +1454,6 @@ Parrot_str_bitwise_and(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, minlen, enum_stringrep_one);
-
     { /* bitwise AND the strings */
         const Parrot_UInt1 *curr1 = (Parrot_UInt1 *)s1->strstart;
         const Parrot_UInt1 *curr2 = (Parrot_UInt1 *)s2->strstart;
@@ -1598,8 +1596,6 @@ Parrot_str_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
 
-    make_writable(interp, &res, maxlen, enum_stringrep_one);
-
     BITWISE_OR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
             s1, s2, res, maxlen);
     res->bufused = res->strlen = maxlen;
@@ -1664,8 +1660,6 @@ Parrot_str_bitwise_xor(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
     if (interp && GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
-
-    make_writable(interp, &res, maxlen, enum_stringrep_one);
 
     BITWISE_XOR_STRINGS(Parrot_UInt1, Parrot_UInt1, Parrot_UInt1,
             s1, s2, res, maxlen);
@@ -1732,8 +1726,6 @@ Parrot_str_bitwise_not(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
     if (interp && GC_DEBUG(interp))
         Parrot_gc_mark_and_sweep(interp, GC_trace_stack_FLAG);
 #endif
-
-    make_writable(interp, &res, len, enum_stringrep_one);
 
     res->strlen = res->bufused = len;
 
