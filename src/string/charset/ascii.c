@@ -42,10 +42,14 @@ static STRING* decompose(PARROT_INTERP, ARGMOD(STRING *src))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*src);
 
-static void downcase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* downcase(PARROT_INTERP, ARGIN(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void downcase_first(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
@@ -88,10 +92,14 @@ PARROT_WARN_UNUSED_RESULT
 static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
 
-static void titlecase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void titlecase_first(SHIM_INTERP, ARGMOD(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* titlecase_first(PARROT_INTERP, ARGMOD(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*source_string);
 
@@ -114,10 +122,14 @@ static STRING * to_unicode(PARROT_INTERP,
         FUNC_MODIFIES(*src)
         FUNC_MODIFIES(*dest);
 
-static void upcase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* upcase(PARROT_INTERP, ARGIN(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void upcase_first(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING* upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
+        __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
@@ -132,9 +144,11 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_downcase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_downcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_find_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
@@ -151,9 +165,11 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
 #define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_titlecase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_to_ascii __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
@@ -164,9 +180,11 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_upcase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_upcase_first __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(source_string))
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_validate __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
@@ -353,7 +371,7 @@ decompose(PARROT_INTERP, ARGMOD(STRING *src))
 
 /*
 
-=item C<static void upcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase(PARROT_INTERP, STRING *source_string)>
 
 Converts the STRING C<source_string> to all uppercase.
 
@@ -361,25 +379,29 @@ Converts the STRING C<source_string> to all uppercase.
 
 */
 
-static void
-upcase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+upcase(PARROT_INTERP, ARGIN(STRING *source_string))
 {
     ASSERT_ARGS(upcase)
+    STRING       *result = Parrot_str_clone(interp, source_string);
     const UINTVAL n = source_string->strlen;
 
     if (n) {
-        char * const buffer = source_string->strstart;
+        char * const buffer = result->strstart;
         UINTVAL offset;
 
         for (offset = 0; offset < n; offset++) {
             buffer[offset] = (char)toupper((unsigned char)buffer[offset]);
         }
     }
+
+    return result;
 }
 
 /*
 
-=item C<static void downcase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase(PARROT_INTERP, STRING *source_string)>
 
 Converts the STRING C<source_string> to all lower-case.
 
@@ -387,25 +409,29 @@ Converts the STRING C<source_string> to all lower-case.
 
 */
 
-static void
-downcase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+downcase(PARROT_INTERP, ARGIN(STRING *source_string))
 {
     ASSERT_ARGS(downcase)
-    const UINTVAL n = source_string->strlen;
+    STRING       *result = Parrot_str_clone(interp, source_string);
+    const UINTVAL n      = source_string->strlen;
 
     if (n) {
-        char * const buffer = source_string->strstart;
+        char * const buffer = result->strstart;
         UINTVAL offset;
 
         for (offset = 0; offset < n; offset++) {
             buffer[offset] = (char)tolower((unsigned char)buffer[offset]);
         }
     }
+
+    return result;
 }
 
 /*
 
-=item C<static void titlecase(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase(PARROT_INTERP, STRING *source_string)>
 
 Converts the STRING given by C<source_string> to title case, where
 the first character is upper case and all the rest of the characters
@@ -415,14 +441,16 @@ are lower-case.
 
 */
 
-static void
-titlecase(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
 {
     ASSERT_ARGS(titlecase)
-    const UINTVAL n = source_string->strlen;
+    STRING       *result = Parrot_str_clone(interp, source_string);
+    const UINTVAL n      = source_string->strlen;
 
     if (n) {
-        char * const buffer = source_string->strstart;
+        char * const buffer = result->strstart;
         UINTVAL offset;
 
         buffer[0] = (char)toupper((unsigned char)buffer[0]);
@@ -430,11 +458,13 @@ titlecase(SHIM_INTERP, ARGIN(STRING *source_string))
             buffer[offset] = (char)tolower((unsigned char)buffer[offset]);
         }
     }
+
+    return result;
 }
 
 /*
 
-=item C<static void upcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* upcase_first(PARROT_INTERP, STRING *source_string)>
 
 Sets the first character in the STRING C<source_string> to upper case,
 but doesn't modify the rest of the string.
@@ -443,19 +473,24 @@ but doesn't modify the rest of the string.
 
 */
 
-static void
-upcase_first(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 {
     ASSERT_ARGS(upcase_first)
-    if (source_string->strlen) {
-        char * const buffer = source_string->strstart;
+    STRING *result = Parrot_str_clone(interp, source_string);
+
+    if (result->strlen) {
+        char * const buffer = result->strstart;
         buffer[0] = (char)toupper((unsigned char)buffer[0]);
     }
+
+    return result;
 }
 
 /*
 
-=item C<static void downcase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* downcase_first(PARROT_INTERP, STRING *source_string)>
 
 Sets the first character of the STRING C<source_string> to lowercase,
 but doesn't modify the rest of the characters.
@@ -464,19 +499,24 @@ but doesn't modify the rest of the characters.
 
 */
 
-static void
-downcase_first(SHIM_INTERP, ARGIN(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 {
     ASSERT_ARGS(downcase_first)
-    if (source_string->strlen) {
-        char * const buffer = source_string->strstart;
+    STRING *result = Parrot_str_clone(interp, source_string);
+
+    if (result->strlen) {
+        char * const buffer = result->strstart;
         buffer[0] = (char)tolower((unsigned char)buffer[0]);
     }
+
+    return result;
 }
 
 /*
 
-=item C<static void titlecase_first(PARROT_INTERP, STRING *source_string)>
+=item C<static STRING* titlecase_first(PARROT_INTERP, STRING *source_string)>
 
 Converts the first letter of STRING C<source_string> to upper case,
 but doesn't modify the rest of the string.
@@ -485,14 +525,19 @@ but doesn't modify the rest of the string.
 
 */
 
-static void
-titlecase_first(SHIM_INTERP, ARGMOD(STRING *source_string))
+PARROT_CANNOT_RETURN_NULL
+static STRING*
+titlecase_first(PARROT_INTERP, ARGMOD(STRING *source_string))
 {
     ASSERT_ARGS(titlecase_first)
-    if (source_string->strlen) {
-        char * const buffer = source_string->strstart;
+    STRING *result = Parrot_str_clone(interp, source_string);
+
+    if (result->strlen) {
+        char * const buffer = result->strstart;
         buffer[0] = (char)toupper((unsigned char)buffer[0]);
     }
+
+    return result;
 }
 
 /*
