@@ -345,11 +345,14 @@ Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
     STRING *result = Parrot_gc_new_string_header(interp, 0);
     size_t  alloc_size = s->bufused;
 
+    /* Copy all fields over */
+    STRUCT_COPY(result, s);
+
+    /* Allocate new chunk of memory */
     Parrot_gc_allocate_string_storage(interp, result, alloc_size);
 
-    /* now copy memory over */
+    /* and copy it over */
     mem_sys_memcopy(result->strstart, s->strstart, alloc_size);
-    result->strlen = s->strlen;
 
     return result;
 }
