@@ -445,8 +445,7 @@ get_codepoints(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
     ASSERT_ARGS(get_codepoints)
     String_iter iter;
     UINTVAL start;
-    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(return_string, src);
+    STRING * const return_string = Parrot_str_copy(interp, src);
 
     iter_init(interp, src, &iter);
     iter.set_position(interp, &iter, offset);

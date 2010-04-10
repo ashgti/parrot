@@ -1216,8 +1216,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             "replace: subend somehow is less than substart");
 
     /* Now do the replacement */
-    dest = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(dest, src);
+    dest = Parrot_str_copy(interp, src);
 
     /* Alloctate new string size. */
     Parrot_gc_allocate_string_storage(interp, dest,
@@ -1262,8 +1261,7 @@ Parrot_str_chopn(PARROT_INTERP, ARGMOD(STRING *s), INTVAL n)
     ASSERT_ARGS(Parrot_str_chopn)
 
     UINTVAL new_length, uchar_size;
-    STRING * const chopped = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(chopped, s);
+    STRING * const chopped = Parrot_str_copy(interp, s);
 
     if (n < 0) {
         new_length = -n;

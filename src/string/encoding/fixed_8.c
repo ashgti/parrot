@@ -382,8 +382,7 @@ static STRING *
 get_bytes(PARROT_INTERP, ARGIN(STRING *source_string), UINTVAL offset, UINTVAL count)
 {
     ASSERT_ARGS(get_bytes)
-    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(return_string, source_string);
+    STRING * const return_string = Parrot_str_copy(interp, source_string);
 
     return_string->encoding = source_string->encoding;
     return_string->charset = source_string->charset;

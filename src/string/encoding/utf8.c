@@ -742,11 +742,9 @@ get_codepoints(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
 {
     ASSERT_ARGS(get_codepoints)
 
-    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
+    STRING * const return_string = Parrot_str_copy(interp, src);
     String_iter    iter;
     UINTVAL        start;
-
-    STRUCT_COPY(return_string, src);
 
     iter_init(interp, src, &iter);
 
@@ -782,8 +780,7 @@ static STRING *
 get_bytes(PARROT_INTERP, ARGMOD(STRING *src), UINTVAL offset, UINTVAL count)
 {
     ASSERT_ARGS(get_bytes)
-    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(return_string, src);
+    STRING * const return_string = Parrot_str_copy(interp, src);
 
     return_string->strstart = (char *)return_string->strstart + offset ;
     return_string->bufused = count;

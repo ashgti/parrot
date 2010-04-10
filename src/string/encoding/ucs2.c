@@ -361,8 +361,7 @@ static STRING *
 get_codepoints(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
 {
     ASSERT_ARGS(get_codepoints)
-    STRING * const return_string = Parrot_gc_new_string_header(interp, 0);
-    STRUCT_COPY(return_string, src);
+    STRING * const return_string = Parrot_str_copy(interp, src);
 
 #if PARROT_HAS_ICU
     return_string->strstart = (char*)src->strstart + offset * sizeof (UChar);
