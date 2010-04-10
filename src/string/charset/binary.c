@@ -95,9 +95,7 @@ static void titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* to_charset(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+static STRING* to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -176,7 +174,7 @@ set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<static STRING* to_charset(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING* to_charset(PARROT_INTERP, STRING *src)>
 
 Converts the STRING C<src> to STRING C<dest> in binary mode. Throws
 an exception if a suitable conversion function is not found.
@@ -187,14 +185,14 @@ an exception if a suitable conversion function is not found.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-to_charset(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+to_charset(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_charset)
     charset_converter_t conversion_func =
         Parrot_find_charset_converter(interp, src->charset, Parrot_binary_charset_ptr);
 
     if (conversion_func)
-         return conversion_func(interp, src, dest);
+         return conversion_func(interp, src);
 
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNIMPLEMENTED,
         "to_charset for binary not implemented");

@@ -96,17 +96,12 @@ static void titlecase_first(SHIM_INTERP, ARGMOD(STRING *source_string))
         FUNC_MODIFIES(*source_string);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_ascii(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGMOD_NULLOK(STRING *dest))
+static STRING * to_ascii(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*dest);
+        __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_charset(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+static STRING * to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -248,7 +243,7 @@ ascii_get_graphemes_inplace(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<static STRING * to_ascii(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_ascii(PARROT_INTERP, STRING *src)>
 
 Attempts to convert STRING C<src> to ASCII in STRING C<dest>. Throws
 an exception if unconvertable UNICODE characters are involved.
@@ -259,7 +254,7 @@ an exception if unconvertable UNICODE characters are involved.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_ascii(PARROT_INTERP, ARGIN(STRING *src), ARGMOD_NULLOK(STRING *dest))
+to_ascii(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_ascii)
     String_iter iter;
@@ -267,13 +262,9 @@ to_ascii(PARROT_INTERP, ARGIN(STRING *src), ARGMOD_NULLOK(STRING *dest))
     unsigned char *p;
     const UINTVAL len = src->strlen;
 
-    if (dest) {
-        Parrot_gc_reallocate_string_storage(interp, dest, len);
-    }
-    else {
-        /* the string can't grow - replace inplace */
-        dest = src;
-    }
+    /* the string can't grow. Just clone it */
+    STRING * dest = Parrot_str_clone(interp, src);
+
     p = (unsigned char *)dest->strstart;
     ENCODING_ITER_INIT(interp, src, &iter);
     for (offs = 0; offs < len; ++offs) {
@@ -320,7 +311,7 @@ to_unicode(PARROT_INTERP, ARGMOD(STRING *src), ARGMOD_NULLOK(STRING *dest))
 
 /*
 
-=item C<static STRING * to_charset(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_charset(PARROT_INTERP, STRING *src)>
 
 Converts STRING C<src> to ASCII charset STRING C<dest>.
 
@@ -330,17 +321,17 @@ Converts STRING C<src> to ASCII charset STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_charset(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+to_charset(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_charset)
     const charset_converter_t conversion_func =
         Parrot_find_charset_converter(interp, src->charset, Parrot_ascii_charset_ptr);
 
     if (conversion_func) {
-         return conversion_func(interp, src, dest);
+         return conversion_func(interp, src);
     }
     else {
-        return to_ascii(interp, src, dest);
+        return to_ascii(interp, src);
     }
 }
 
@@ -905,8 +896,7 @@ Parrot_charset_ascii_init(PARROT_INTERP)
 
 /*
 
-=item C<STRING * charset_cvt_ascii_to_binary(PARROT_INTERP, STRING *src, STRING
-*dest)>
+=item C<STRING * charset_cvt_ascii_to_binary(PARROT_INTERP, STRING *src)>
 
 Converts an ASCII STRING C<src> to a binary STRING C<dest>.
 
@@ -916,29 +906,25 @@ Converts an ASCII STRING C<src> to a binary STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 STRING *
-charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(charset_cvt_ascii_to_binary)
-    if (dest) {
-        UINTVAL offs;
+    STRING *dest = Parrot_str_clone(interp, src);
+    UINTVAL offs;
 
-        Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-        dest->bufused = src->bufused;
-        dest->strlen  = src->strlen;
-        for (offs = 0; offs < src->strlen; ++offs) {
-            const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
-            ENCODING_SET_BYTE(interp, dest, offs, c);
-        }
-        return dest;
+    Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
+    dest->bufused = src->bufused;
+    dest->strlen  = src->strlen;
+    for (offs = 0; offs < src->strlen; ++offs) {
+        const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
+        ENCODING_SET_BYTE(interp, dest, offs, c);
     }
-    src->charset = Parrot_binary_charset_ptr;
-    return src;
+    return dest;
 }
 
 /*
 
-=item C<STRING * charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, STRING *src,
-STRING *dest)>
+=item C<STRING * charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, STRING *src)>
 
 Converts ASCII STRING C<src> to ISO8859-1 STRING C<dest>.
 
@@ -948,24 +934,20 @@ Converts ASCII STRING C<src> to ISO8859-1 STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 STRING *
-charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(charset_cvt_ascii_to_iso_8859_1)
-    if (dest) {
-        UINTVAL offs;
+    STRING * dest = Parrot_str_clone(interp, src);
+    UINTVAL offs;
 
-        Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-        dest->bufused = src->bufused;
-        dest->strlen  = src->strlen;
-        for (offs = 0; offs < src->strlen; ++offs) {
-            const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
-            ENCODING_SET_BYTE(interp, dest, offs, c);
-        }
-        return dest;
+    Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
+    dest->bufused = src->bufused;
+    dest->strlen  = src->strlen;
+    for (offs = 0; offs < src->strlen; ++offs) {
+        const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
+        ENCODING_SET_BYTE(interp, dest, offs, c);
     }
-    src->charset = Parrot_iso_8859_1_charset_ptr;
-    return src;
+    return dest;
 }
 
 /*

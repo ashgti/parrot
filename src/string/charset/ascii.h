@@ -74,16 +74,12 @@ STRING * ascii_get_graphemes_inplace(PARROT_INTERP,
         FUNC_MODIFIES(*dest_string);
 
 PARROT_CANNOT_RETURN_NULL
-STRING * charset_cvt_ascii_to_binary(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+STRING * charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-STRING * charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+STRING * charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 

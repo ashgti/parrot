@@ -90,19 +90,14 @@ static void titlecase_first(PARROT_INTERP, ARGIN(STRING *source_string))
 
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-static STRING * to_charset(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+static STRING * to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_iso_8859_1(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGMOD_NULLOK(STRING *dest))
+static STRING * to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*dest);
+        __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
 static STRING * to_unicode(PARROT_INTERP,
@@ -202,7 +197,7 @@ set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<static STRING * to_iso_8859_1(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_iso_8859_1(PARROT_INTERP, STRING *src)>
 
 Converts STRING C<src> to iso-8859-1 in STRING C<dest>.
 
@@ -212,22 +207,16 @@ Converts STRING C<src> to iso-8859-1 in STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src), ARGMOD_NULLOK(STRING *dest))
+to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_iso_8859_1)
     UINTVAL offs, src_len;
     String_iter iter;
+    /* iso-8859-1 is never bigger then source */
+    STRING * dest = Parrot_str_clone(interp, src);
 
     ENCODING_ITER_INIT(interp, src, &iter);
     src_len = src->strlen;
-    if (dest) {
-        Parrot_gc_reallocate_string_storage(interp, dest, src_len);
-        dest->strlen  = src_len;
-    }
-    else {
-        /* iso-8859-1 is never bigger then source */
-        dest = src;
-    }
     dest->bufused = src_len;
     dest->charset = Parrot_iso_8859_1_charset_ptr;
     dest->encoding = Parrot_fixed_8_encoding_ptr;
@@ -287,7 +276,7 @@ to_unicode(PARROT_INTERP, ARGIN(STRING *src), ARGMOD_NULLOK(STRING *dest))
 
 /*
 
-=item C<static STRING * to_charset(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING * to_charset(PARROT_INTERP, STRING *src)>
 
 Converts the STRING C<src> to an ISO-8859-1 STRING C<dest>.
 
@@ -298,16 +287,16 @@ Converts the STRING C<src> to an ISO-8859-1 STRING C<dest>.
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 static STRING *
-to_charset(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+to_charset(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_charset)
     const charset_converter_t conversion_func =
         Parrot_find_charset_converter(interp, src->charset, Parrot_iso_8859_1_charset_ptr);
 
     if (conversion_func)
-        return conversion_func(interp, src, dest);
+        return conversion_func(interp, src);
     else
-        return to_iso_8859_1(interp, src, dest);
+        return to_iso_8859_1(interp, src);
 }
 
 
@@ -372,7 +361,6 @@ upcase(PARROT_INTERP, ARGIN(STRING *source_string))
     if (!source_string->strlen)
         return;
 
-    Parrot_str_write_COW(interp, source_string);
     buffer = (unsigned char *)source_string->strstart;
     for (offset = 0; offset < source_string->strlen; offset++) {
         unsigned int c = buffer[offset]; /* XXX use encoding ? */
@@ -403,7 +391,6 @@ downcase(PARROT_INTERP, ARGIN(STRING *source_string))
         UINTVAL offset;
         unsigned char *buffer;
 
-        Parrot_str_write_COW(interp, source_string);
         buffer = (unsigned char *)source_string->strstart;
         for (offset = 0; offset < source_string->strlen; offset++) {
             unsigned int c = buffer[offset];
@@ -438,7 +425,6 @@ titlecase(PARROT_INTERP, ARGIN(STRING *source_string))
     if (!source_string->strlen)
         return;
 
-    Parrot_str_write_COW(interp, source_string);
     buffer = (unsigned char *)source_string->strstart;
     c = buffer[0];
     if (c >= 0xe0 && c != 0xf7)
@@ -476,7 +462,6 @@ upcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
         unsigned char *buffer;
         unsigned int c;
 
-        Parrot_str_write_COW(interp, source_string);
         buffer = (unsigned char *)source_string->strstart;
         c = buffer[0];
         if (c >= 0xe0 && c != 0xf7)
@@ -506,7 +491,6 @@ downcase_first(PARROT_INTERP, ARGIN(STRING *source_string))
         unsigned char *buffer;
         unsigned int c;
 
-        Parrot_str_write_COW(interp, source_string);
         buffer = (unsigned char *)source_string->strstart;
         c = buffer[0];
         if (c >= 0xc0 && c != 0xd7 && c <= 0xde)
@@ -710,8 +694,7 @@ Parrot_charset_iso_8859_1_init(PARROT_INTERP)
 
 /*
 
-=item C<STRING * charset_cvt_iso_8859_1_to_ascii(PARROT_INTERP, STRING *src,
-STRING *dest)>
+=item C<STRING * charset_cvt_iso_8859_1_to_ascii(PARROT_INTERP, STRING *src)>
 
 Converts STRING C<src> in ISO-8859-1 to ASCII STRING C<dest>.
 
@@ -722,29 +705,21 @@ Converts STRING C<src> in ISO-8859-1 to ASCII STRING C<dest>.
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 STRING *
-charset_cvt_iso_8859_1_to_ascii(PARROT_INTERP, ARGIN(STRING *src),
-        ARGMOD_NULLOK(STRING *dest))
+charset_cvt_iso_8859_1_to_ascii(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(charset_cvt_iso_8859_1_to_ascii)
     UINTVAL offs;
-    if (dest) {
-        Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-        dest->bufused = src->bufused;
-        dest->strlen  = src->strlen;
-    }
+    STRING *dest = Parrot_str_clone(interp, src);
+
     for (offs = 0; offs < src->strlen; ++offs) {
         UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
         if (c >= 0x80)
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_LOSSY_CONVERSION,
                 "lossy conversion to ascii");
 
-        if (dest)
-            ENCODING_SET_BYTE(interp, dest, offs, c);
+        ENCODING_SET_BYTE(interp, dest, offs, c);
     }
-    if (dest)
-        return dest;
-    src->charset = Parrot_ascii_charset_ptr;
-    return src;
+    return dest;
 }
 
 /*

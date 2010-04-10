@@ -125,9 +125,7 @@ static void titlecase_first(PARROT_INTERP, SHIM(STRING *source_string))
         __attribute__nonnull__(1);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING* to_charset(PARROT_INTERP,
-    ARGIN(STRING *src),
-    ARGIN_NULLOK(STRING *dest))
+static STRING* to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -292,7 +290,7 @@ get_graphemes_inplace(PARROT_INTERP, ARGIN(STRING *source_string),
 
 /*
 
-=item C<static STRING* to_charset(PARROT_INTERP, STRING *src, STRING *dest)>
+=item C<static STRING* to_charset(PARROT_INTERP, STRING *src)>
 
 Converts input STRING C<src> to unicode STRING C<dest>.
 
@@ -302,7 +300,7 @@ Converts input STRING C<src> to unicode STRING C<dest>.
 
 PARROT_CANNOT_RETURN_NULL
 static STRING*
-to_charset(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
+to_charset(PARROT_INTERP, ARGIN(STRING *src))
 {
     ASSERT_ARGS(to_charset)
     const charset_converter_t conversion_func =
@@ -310,9 +308,9 @@ to_charset(PARROT_INTERP, ARGIN(STRING *src), ARGIN_NULLOK(STRING *dest))
                     Parrot_unicode_charset_ptr);
 
     if (conversion_func)
-         return conversion_func(interp, src, dest);
+         return conversion_func(interp, src);
 
-    return Parrot_utf8_encoding_ptr->to_encoding(interp, src, dest);
+    return Parrot_utf8_encoding_ptr->to_encoding(interp, src);
 }
 
 
@@ -428,7 +426,7 @@ upcase(PARROT_INTERP, ARGIN(STRING *src))
     }
 
 #if PARROT_HAS_ICU
-    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src, NULL);
+    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
     /*
        U_CAPI int32_t U_EXPORT2
        u_strToUpper(UChar *dest, int32_t destCapacity,
@@ -523,7 +521,7 @@ downcase(PARROT_INTERP, ARGIN(STRING *src))
     }
 
 #if PARROT_HAS_ICU
-    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src, NULL);
+    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
     /*
 U_CAPI int32_t U_EXPORT2
 u_strToLower(UChar *dest, int32_t destCapacity,
@@ -586,7 +584,7 @@ titlecase(PARROT_INTERP, ARGIN(STRING *src))
         return;
     }
 
-    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src, NULL);
+    src = Parrot_utf16_encoding_ptr->to_encoding(interp, src);
 
     /*
 U_CAPI int32_t U_EXPORT2
