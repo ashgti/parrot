@@ -61,18 +61,6 @@ STRING * ascii_get_graphemes(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_WARN_UNUSED_RESULT
-PARROT_CANNOT_RETURN_NULL
-STRING * ascii_get_graphemes_inplace(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGMOD(STRING *dest_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*dest_string);
-
 PARROT_CANNOT_RETURN_NULL
 STRING * charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
@@ -113,10 +101,6 @@ const CHARSET * Parrot_charset_ascii_init(PARROT_INTERP)
 #define ASSERT_ARGS_ascii_get_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_ascii_get_graphemes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(dest_string))
 #define ASSERT_ARGS_charset_cvt_ascii_to_binary __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))

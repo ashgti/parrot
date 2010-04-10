@@ -85,17 +85,6 @@ static STRING * get_graphemes(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_CANNOT_RETURN_NULL
-static STRING * get_graphemes_inplace(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGMOD(STRING *dest_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*dest_string);
-
 static INTVAL is_cclass(PARROT_INTERP,
     INTVAL flags,
     ARGIN(const STRING *source_string),
@@ -171,10 +160,6 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
 #define ASSERT_ARGS_get_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_get_graphemes_inplace __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(dest_string))
 #define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
