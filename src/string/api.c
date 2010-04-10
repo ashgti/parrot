@@ -1172,50 +1172,27 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             "replace: subend somehow is less than substart");
 
     /* Now do the replacement */
-    Parrot_str_write_COW(interp, src);
+    dest = Parrot_gc_new_string_header(interp, 0);
 
-    /*
-     * If the replacement string fits inside the original substring
-     * don't create a new string, just pack it.
-     */
-    diff = (end_byte - start_byte) - rep->bufused;
+    /* Alloctate new string size. */
+    Parrot_gc_allocate_string_storage(interp, dest,
+            /* size          removed bytes           added bytes */
+            src->bufused - (end_byte - start_byte) + rep->bufused);
 
-    if (diff >= 0
-    || ((INTVAL)src->bufused - (INTVAL)Buffer_buflen(src)) <= diff) {
+    /* Copy begin of string */
+    mem_sys_memcopy(dest->strstart, src->strstart, start_byte);
 
-        if (diff != 0) {
-            mem_sys_memmove((char *)src->strstart + start_byte + rep->bufused,
-                    (char *)src->strstart + end_byte,
-                    src->bufused - end_byte);
-            src->bufused -= diff;
-        }
+    /* Copy the replacement in */
+    mem_sys_memcopy((char*)src->strstart + start_byte, rep->strstart,
+            rep->bufused);
 
-        mem_sys_memcopy((char *)src->strstart + start_byte,
-                rep->strstart, rep->bufused);
+    /* Copy the end of old string */
+    mem_sys_memcopy((char*)dest->strstart + start_byte + rep->bufused,
+            (char *)src->strstart + end_byte,
+            src->bufused - end_byte);
 
-        if (diff)
-            (void)Parrot_str_length(interp, src);
-    }
+    (void)Parrot_str_length(interp, dest);
 
-    /* Replacement is larger than avail buffer, grow the string */
-    else {
-        /* diff is negative here, make it positive */
-        diff = -(diff);
-        Parrot_str_resize(interp, src, (UINTVAL)diff);
-
-        /* Move the end of old string that isn't replaced to new offset first */
-        mem_sys_memmove((char *)src->strstart + end_byte + diff,
-                (char *)src->strstart + end_byte,
-                src->bufused - end_byte);
-
-        /* Copy the replacement in */
-        mem_sys_memcopy((char *)src->strstart + start_byte, rep->strstart,
-                rep->bufused);
-        src->bufused += diff;
-        (void)Parrot_str_length(interp, src);
-    }
-
-    /* src is modified, now return the original substring */
     return dest;
 }
 
@@ -2236,7 +2213,7 @@ Parrot_str_pin(PARROT_INTERP, ARGMOD(STRING *s))
      *          not work for these
      *          so probably only sysmem should be tested
      */
-    Parrot_str_write_COW(interp, s);
+    //Parrot_str_write_COW(interp, s);
 
     size   = Buffer_buflen(s);
     memory = (char *)mem_internal_allocate(size);
@@ -2274,7 +2251,7 @@ Parrot_str_unpin(PARROT_INTERP, ARGMOD(STRING *s))
     if (!PObj_sysmem_TEST(s))
         return;
 
-    Parrot_str_write_COW(interp, s);
+    //Parrot_str_write_COW(interp, s);
     size = Buffer_buflen(s);
 
     /* We need a handle on the fixed memory so we can get rid of it later */
