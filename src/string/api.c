@@ -1221,6 +1221,10 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
 
     /* Now do the replacement */
     dest     = Parrot_str_copy(interp, src);
+    PObj_get_FLAGS(dest)  = PObj_is_string_FLAG
+                          | PObj_is_COWable_FLAG
+                          | PObj_live_FLAG;
+
             /* size          removed bytes           added bytes */
     buf_size = src->bufused - (end_byte - start_byte) + rep->bufused;
     /* Alloctate new string size. */
