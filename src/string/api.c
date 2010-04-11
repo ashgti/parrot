@@ -513,6 +513,8 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     total_length = a->bufused + b->bufused;
 
     dest = Parrot_str_new_noinit(interp, enum_stringrep_one, total_length);
+    dest->encoding = a->encoding;
+    dest->charset  = a->charset;
 
     /* Copy A first */
     mem_sys_memcopy(dest->strstart, a->strstart, a->bufused);
