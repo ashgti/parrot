@@ -19,16 +19,15 @@ These operations all set registers to various values.
 
 =item B<clone>(out STR, in STR)
 
-Make a clone of $2, and put it in $1. Doesn't affect what was in
-$1. Removes the constant flag on the copy, if there was one.
+Effectively the same as set $1, $2, except that if $2 is a null STRING, $1 gets
+a new empty string instead.
 
 =cut
 
 inline op clone(out STR, in STR) :base_mem {
     /* cloning a NULL STRING produces an empty STRING; TT #964 */
-    /* FIXME We can clone header only! */
     $1 = $2
-       ? Parrot_str_clone(interp, $2)
+       ? $2
        : Parrot_str_new(interp, NULL, 0);
 }
 
