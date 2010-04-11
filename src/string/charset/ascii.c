@@ -943,6 +943,8 @@ charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src))
         const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
         ENCODING_SET_BYTE(interp, dest, offs, c);
     }
+
+    dest->charset = Parrot_binary_charset_ptr;
     return dest;
 }
 
@@ -971,6 +973,8 @@ charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
         const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
         ENCODING_SET_BYTE(interp, dest, offs, c);
     }
+
+    dest->charset = Parrot_iso_8859_1_charset_ptr;
     return dest;
 }
 
