@@ -2975,20 +2975,57 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
     STRING *s;
     const int ar_len = VTABLE_elements(interp, ar);
     int i;
+    int total_length = 0;
+    PMC *chunks;
+    char *pos;
 
     if (ar_len == 0)
         return Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
     /* FIXME It's very-very bad implementation of C<join>. */
-    /* FIXME We are reallocating buffer on each step */
-    res = VTABLE_get_string_keyed_int(interp, ar, 0);
+
+    /* Allocate new RSA. Gather all strings in same encoding. And join them */
+    chunks = pmc_new(interp, enum_class_ResizableStringArray);
+    j = Parrot_utf8_encoding_ptr->to_encoding(interp, j);
+
+    for (i = 0; i < ar_len; ++i) {
+        STRING * next = VTABLE_get_string_keyed_int(interp, ar, i);
+
+        next = Parrot_utf8_encoding_ptr->to_encoding(interp, next);
+        total_length += next->bufused;
+        VTABLE_push_string(interp, chunks, next);
+    }
+
+    total_length += (ar_len - 1) * j->bufused;
+
+    res = Parrot_gc_new_string_header(interp, 0);
+    Parrot_gc_allocate_string_storage(interp, res, total_length);
+
+    res->charset  = Parrot_unicode_charset_ptr;
+    res->encoding = Parrot_utf8_encoding_ptr;
+    res->bufused  = total_length;
+
+    /* Iterate over chunks and append it to res */
+    pos = res->strstart;
+
+    /* Copy first chunk */
+    s = VTABLE_get_string_keyed_int(interp, chunks, 0);
+    mem_sys_memcopy(pos, s->strstart, s->bufused);
+    pos += s->bufused;
 
     for (i = 1; i < ar_len; ++i) {
-        STRING * const next = VTABLE_get_string_keyed_int(interp, ar, i);
+        STRING *next = VTABLE_get_string_keyed_int(interp, chunks, i);
 
-        res  = Parrot_str_append(interp, res, j);
-        res  = Parrot_str_append(interp, res, next);
+        mem_sys_memcopy(pos, j->strstart, j->bufused);
+        pos += j->bufused;
+
+        mem_sys_memcopy(pos, next->strstart, next->bufused);
+        pos += next->bufused;
+
+        PARROT_ASSERT(pos <= res->strstart + Buffer_buflen(res));
     }
+
+    (void)Parrot_str_length(interp, res);
 
     return res;
 }
