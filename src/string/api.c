@@ -458,13 +458,11 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     /* If B isn't real, we just bail */
     const UINTVAL b_len = b ? Parrot_str_byte_length(interp, b) : 0;
     if (!b_len)
-        return a
-            ? Parrot_str_copy(interp, a)
-            : NULL;
+        return a ? a : NULL;
 
     /* Is A real? */
     if (a == NULL || Buffer_bufstart(a) == NULL)
-        return Parrot_str_copy(interp, b);
+        return b;
 
     saneify_string(a);
     saneify_string(b);
@@ -3013,9 +3011,9 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
         for (i = 0; i < ar_len; ++i) {
             STRING *s = chunks[i];
             if (s->encoding != e || s->charset != c) {
-                STRING *new   = e->to_encoding(interp, s);
-                chunks[i]     = new;
-                total_length += s->bufused - new->bufused;
+                STRING *new_s = e->to_encoding(interp, s);
+                chunks[i]     = new_s;
+                total_length += s->bufused - new_s->bufused;
             }
         }
     }
