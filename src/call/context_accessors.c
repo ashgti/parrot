@@ -761,10 +761,10 @@ Parrot_pcc_get_pmc_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PMC*
-Parrot_pcc_get_pmc_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+Parrot_pcc_get_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_pcc_get_exit_handlers)
-    Parrot_Context const * c = get_context_struct_fast(interp
+    Parrot_Context const * c = get_context_struct_fast(interp, ctx);
     return c->exit_handler;
 }
 

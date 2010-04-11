@@ -591,26 +591,25 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, ARGIN(PMC *pmc))
 
 /*
 
-=item C<void Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx),
-ARGIN(PMC * handlers))>
+=item C<void Parrot_sub_exe_exit_handlers(PARROT_INTERP, PMC *ctx)>
 
 =cut
 
 */
 
 void
-Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC * handlers))
+Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
 {
     ASSERT_ARGS(Parrot_sub_exe_exit_handlers)
-    PMC * const exit_handler = Parrot_pcc_get_exit_handler(interp, ctx);
+    PMC * const exit_handler = Parrot_pcc_get_exit_handlers(interp, ctx);
     if (PMC_IS_NULL(exit_handler))
         return;
     else {
-        const INTVAL base_type = handlers->vtable->base_type;
+        const INTVAL base_type = exit_handler->vtable->base_type;
         if (base_type == enum_class_Sub)
-            Parrot_pcc_invoke_method_from_c_args(interp, ctx, handlers, "->");
+            Parrot_pcc_invoke_method_from_c_args(interp, ctx, exit_handler, "->");
         else {
-            PMC * const iter = VTABLE_get_iter(interp, handlers);
+            PMC * const iter = VTABLE_get_iter(interp, exit_handler);
             while(VTABLE_get_bool(interp, iter)) {
                 PMC * const sub = VTABLE_shift_pmc(interp, iter);
                 Parrot_pcc_invoke_method_from_c_args(interp, ctx, sub, "->");

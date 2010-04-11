@@ -249,6 +249,10 @@ PMC* Parrot_find_pad(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
+void Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_Sub_get_filename_from_pc(PARROT_INTERP,
     ARGIN_NULLOK(PMC *subpmc),
@@ -299,6 +303,9 @@ INTVAL Parrot_Sub_get_line_from_pc(PARROT_INTERP,
 #define ASSERT_ARGS_Parrot_find_pad __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(lex_name) \
+    , PARROT_ASSERT_ARG(ctx))
+#define ASSERT_ARGS_Parrot_sub_exe_exit_handlers __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(ctx))
 #define ASSERT_ARGS_Parrot_Sub_get_filename_from_pc \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
