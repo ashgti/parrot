@@ -578,9 +578,9 @@ u_strToTitle(UChar *dest, int32_t destCapacity,
      */
 
     err      = U_ZERO_ERROR;
-    src_len  = src->bufused / sizeof (UChar);
+    src_len  = res->bufused / sizeof (UChar);
     dest_len = u_strToTitle((UChar *)res->strstart, src_len,
-            (UChar *)src->strstart, src_len,
+            (UChar *)res->strstart, src_len,
             NULL,       /* default titleiter */
             NULL,       /* locale = default */
             &err);
@@ -590,7 +590,7 @@ u_strToTitle(UChar *dest, int32_t destCapacity,
         err = U_ZERO_ERROR;
         Parrot_gc_reallocate_string_storage(interp, res, res->bufused);
         dest_len = u_strToTitle((UChar *)res->strstart, dest_len,
-                (UChar *)src->strstart, src_len,
+                (UChar *)res->strstart, src_len,
                 NULL, NULL,
                 &err);
         PARROT_ASSERT(U_SUCCESS(err));
