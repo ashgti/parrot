@@ -2652,7 +2652,9 @@ Parrot_str_upcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't upcase NULL string");
     }
     else {
-        return CHARSET_UPCASE(interp, s);
+        STRING * res = CHARSET_UPCASE(interp, s);
+        res->hashval = 0;
+        return res;
     }
 }
 
@@ -2681,7 +2683,9 @@ Parrot_str_downcase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't downcase NULL string");
     }
     else {
-        return CHARSET_DOWNCASE(interp, s);
+        STRING * res = CHARSET_DOWNCASE(interp, s);
+        res->hashval = 0;
+        return res;
     }
 }
 
@@ -2709,7 +2713,9 @@ Parrot_str_titlecase(PARROT_INTERP, ARGIN_NULLOK(const STRING *s))
             "Can't titlecase NULL string");
     }
     else {
-        return CHARSET_TITLECASE(interp, s);
+        STRING * res = CHARSET_TITLECASE(interp, s);
+        res->hashval = 0;
+        return res;
     }
 }
 
