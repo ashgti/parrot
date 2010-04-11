@@ -347,6 +347,9 @@ Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
 
     /* Clear COW flag. We own buffer */
     PObj_COW_CLEAR(result);
+    PObj_constant_CLEAR(result);
+    PObj_external_CLEAR(result);
+    PObj_sysmem_CLEAR(result);
 
     /* Allocate new chunk of memory */
     Parrot_gc_allocate_string_storage(interp, result, alloc_size);
