@@ -424,21 +424,7 @@ Parrot_str_concat(PARROT_INTERP, ARGIN_NULLOK(STRING *a),
             ARGIN_NULLOK(STRING *b), UINTVAL Uflags)
 {
     ASSERT_ARGS(Parrot_str_concat)
-    if (a && a->strlen) {
-        if (b && b->strlen) {
-            /* don't make a copy; get the size right from the start */
-            STRING *result = Parrot_str_new_init(interp, NULL,
-                a->strlen + b->strlen, a->encoding, a->charset, Uflags);
-            result = Parrot_str_append(interp, result, a);
-            return Parrot_str_append(interp, result, b);
-        }
-
-        return a;
-    }
-
-    return b
-        ? b
-        : string_make(interp, NULL, 0, NULL, Uflags);
+    return Parrot_str_append(interp, a, b);
 }
 
 
@@ -472,19 +458,16 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     /* If B isn't real, we just bail */
     const UINTVAL b_len = b ? Parrot_str_byte_length(interp, b) : 0;
     if (!b_len)
-        return a;
+        return a
+            ? Parrot_str_copy(interp, a)
+            : NULL;
 
     /* Is A real? */
     if (a == NULL || Buffer_bufstart(a) == NULL)
-        return b;
+        return Parrot_str_copy(interp, b);
 
     saneify_string(a);
     saneify_string(b);
-
-    /* If the destination's constant, or external then just fall back to
-       Parrot_str_concat */
-    if (PObj_is_cowed_TESTALL(a))
-        return Parrot_str_concat(interp, a, b, 0);
 
     cs = string_rep_compatible(interp, a, b, &enc);
 
