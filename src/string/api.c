@@ -346,10 +346,9 @@ Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
     size_t  alloc_size = s->bufused;
 
     /* Clear COW flag. We own buffer */
-    PObj_COW_CLEAR(result);
-    PObj_constant_CLEAR(result);
-    PObj_external_CLEAR(result);
-    PObj_sysmem_CLEAR(result);
+    PObj_get_FLAGS(result)  = PObj_is_string_FLAG
+                            | PObj_is_COWable_FLAG
+                            | PObj_live_FLAG;
 
     /* Allocate new chunk of memory */
     Parrot_gc_allocate_string_storage(interp, result, alloc_size);
