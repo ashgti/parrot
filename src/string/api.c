@@ -2971,50 +2971,74 @@ STRING*
 Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 {
     ASSERT_ARGS(Parrot_str_join)
-    STRING *res;
-    STRING *s;
-    const int ar_len = VTABLE_elements(interp, ar);
-    int i;
-    int total_length = 0;
-    PMC *chunks;
-    char *pos;
+    STRING  **chunks;
+    STRING   *res;
+    STRING   *s;
+    char     *pos;
+    const int ar_len       = VTABLE_elements(interp, ar);
+    int       total_length = 0;
+    int       transcoded   = 0;
+    int       i;
 
     if (ar_len == 0)
         return Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
-    /* FIXME It's very-very bad implementation of C<join>. */
+    if (!j || STRING_IS_NULL(j))
+        j = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
-    /* Allocate new RSA. Gather all strings in same encoding. And join them */
-    chunks = pmc_new(interp, enum_class_ResizableStringArray);
-    j = Parrot_utf8_encoding_ptr->to_encoding(interp, j);
+    chunks = (STRING **)Parrot_gc_allocate_fixed_size_storage(interp,
+        ar_len * sizeof (STRING *));
 
     for (i = 0; i < ar_len; ++i) {
-        STRING * next = VTABLE_get_string_keyed_int(interp, ar, i);
+        STRING *next = VTABLE_get_string_keyed_int(interp, ar, i);
 
-        next = Parrot_utf8_encoding_ptr->to_encoding(interp, next);
+        if (next->encoding != j->encoding) {
+            ENCODING *e = j->encoding;
+            CHARSET  *c = string_rep_compatible(interp, next, j, &e);
+            if (e == Parrot_fixed_8_encoding_ptr)
+                e = Parrot_utf8_encoding_ptr;
+            j           = e->to_encoding(interp, j);
+            transcoded  = 1;
+        }
+
+        chunks[i]     = next;
         total_length += next->bufused;
-        VTABLE_push_string(interp, chunks, next);
     }
 
-    total_length += (ar_len - 1) * j->bufused;
+    /* with the right charset, transcode any strings if necessary*/
+    if (transcoded) {
+        CHARSET  *c = j->charset;
+        ENCODING *e = j->encoding;
+
+        for (i = 0; i < ar_len; ++i) {
+            STRING *s = chunks[i];
+            if (s->encoding != e || s->charset != c) {
+                STRING *new   = e->to_encoding(interp, s);
+                chunks[i]     = new;
+                total_length += s->bufused - new->bufused;
+            }
+        }
+    }
+
+    /* add the length of the separator, now that it's transcoded */
+    total_length += j->bufused * ar_len;
 
     res = Parrot_gc_new_string_header(interp, 0);
     Parrot_gc_allocate_string_storage(interp, res, total_length);
 
-    res->charset  = Parrot_unicode_charset_ptr;
-    res->encoding = Parrot_utf8_encoding_ptr;
-    res->bufused  = total_length;
+    res->charset  = j->charset;
+    res->encoding = j->encoding;
 
     /* Iterate over chunks and append it to res */
     pos = res->strstart;
 
     /* Copy first chunk */
-    s = VTABLE_get_string_keyed_int(interp, chunks, 0);
+    s = chunks[0];
     mem_sys_memcopy(pos, s->strstart, s->bufused);
     pos += s->bufused;
 
     for (i = 1; i < ar_len; ++i) {
-        STRING *next = VTABLE_get_string_keyed_int(interp, chunks, i);
+        STRING *next = chunks[i];
 
         mem_sys_memcopy(pos, j->strstart, j->bufused);
         pos += j->bufused;
@@ -3025,7 +3049,11 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
         PARROT_ASSERT(pos <= res->strstart + Buffer_buflen(res));
     }
 
+    res->bufused  = pos - res->strstart;
+
     (void)Parrot_str_length(interp, res);
+    Parrot_gc_free_fixed_size_storage(interp, ar_len * sizeof (STRING *),
+        chunks);
 
     return res;
 }
