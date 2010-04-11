@@ -448,6 +448,7 @@ pmclass CallContext provides array provides hash auto_attrs {
     ATTR PMC    *arg_flags;            /* Integer array of argument flags */
     ATTR PMC    *return_flags;         /* Integer array of return flags */
     ATTR Hash   *hash;                 /* Hash of named arguments */
+    ATTR PMC *   exit_handler;         /* Handlers to execute on block exit */
 
 /*
 
@@ -535,6 +536,9 @@ Mark any referenced strings and PMCs.
         GET_ATTR_current_sig(INTERP, SELF, tmp);
         Parrot_gc_mark_PMC_alive(INTERP, tmp);
 
+        GET_ATTR_exit_handler(INTERP, SELF, tmp);
+        Parrot_gc_mark_PMC_alive(INTERP, tmp);
+
         GET_ATTR_n_regs_used(INTERP, SELF, n_regs_used);
         if (!n_regs_used)
             return;
@@ -565,6 +569,7 @@ stored.)
 =cut
 
 */
+
     VTABLE void morph(PMC *type) {
         Hash     *hash;
 
@@ -1505,6 +1510,34 @@ sub, or for the point of the call a level deeper for the rest.
 
         RETURN(PMC *result);
     }
+
+    METHOD add_exit_handler(PMC * handler) {
+        PMC * existing;
+        GET_ATTR_exit_handler(INTERP, SELF, existing);
+        if (PMC_IS_NULL(existing)) {
+            SET_ATTR_exit_hander(INTERP, SELF, handler);
+            RETURN();
+        }
+        else if (existing->vtable->base_type == enum_class_Sub) {
+            PMC * const array = Parrot_pmc_new(INTERP, enum_class_ResizablePMCArray);
+            VTABLE_set_pmc_keyed_int(INTERP, array, 0, existing);
+            VTABLE_set_pmc_keyed_int(INTERP, array, 1, handler);
+            RETURN();
+        }
+        else
+            VTABLE_push_pmc(INTERP, existing, handler);
+    }
+
+    METHOD clear_exit_handlers() {
+        SET_ATTR_exit_handler(INTERP, SELF, PMCNULL);
+    }
+
+    METHOD get_exit_handlers() {
+        PMC * existing;
+        GET_ATTR_exit_handler(INTERP, SELF, existing);
+        RETURN(PMC *existing);
+    }
+
 /*
 
 =back

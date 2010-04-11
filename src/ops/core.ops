@@ -428,7 +428,10 @@ inline op tailcall(invar PMC) :flow {
 }
 
 inline op returncc() :flow {
-    PMC * const p = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
+    PMC * const curr_ctx = CURRENT_CONTEXT(interp);
+    PMC * const p = Parrot_pcc_get_continuation(interp, curr_ctx);
+    opcode_t * dest;
+    Parrot_sub_exe_exit_handlers(INTERP, curr_ctx);
     opcode_t * const dest = VTABLE_invoke(interp, p, expr NEXT());
     goto ADDRESS(dest);
 }

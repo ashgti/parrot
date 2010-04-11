@@ -163,6 +163,8 @@ Swaps the "context".
 
         GET_ATTR_ctx(INTERP, SELF, ctx);
 
+        /* On first execution, the ctx is null. Setup the coroutine here for
+           first execution. */
         if (PMC_IS_NULL(ctx)) {
             PackFile_ByteCode *seg;
             size_t             start_offs;

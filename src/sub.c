@@ -569,8 +569,9 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, ARGIN(PMC *pmc))
 {
     ASSERT_ARGS(Parrot_continuation_rewind_environment)
 
-    PMC * const to_ctx = PARROT_CONTINUATION(pmc)->to_ctx;
-    PMC * const sig    = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    PMC * const to_ctx       = PARROT_CONTINUATION(pmc)->to_ctx;
+    PMC * const cur_ctx      = CURRENT_CONTEXT(interp);
+    PMC * const sig          = Parrot_pcc_get_signature(interp, cur_ctx);
 
     /* debug print before context is switched */
     if (Interp_trace_TEST(interp, PARROT_TRACE_SUB_CALL_FLAG)) {
@@ -581,9 +582,41 @@ Parrot_continuation_rewind_environment(PARROT_INTERP, ARGIN(PMC *pmc))
                     interp->dynamic_env);
     }
 
+    Parrot_sub_exe_exit_handlers(interp, cur_ctx);
+
     /* set context */
     CURRENT_CONTEXT(interp) = to_ctx;
     Parrot_pcc_set_signature(interp, to_ctx, sig);
+}
+
+/*
+
+=item C<void Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx),
+ARGIN(PMC * handlers))>
+
+=cut
+
+*/
+
+void
+Parrot_sub_exe_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx), ARGIN(PMC * handlers))
+{
+    ASSERT_ARGS(Parrot_sub_exe_exit_handlers)
+    PMC * const exit_handler = Parrot_pcc_get_exit_handler(interp, ctx);
+    if (PMC_IS_NULL(exit_handler))
+        return;
+    else {
+        const INTVAL base_type = handlers->vtable->base_type;
+        if (base_type == enum_class_Sub)
+            Parrot_pcc_invoke_method_from_c_args(interp, ctx, handlers, "->");
+        else {
+            PMC * const iter = VTABLE_get_iter(interp, handlers);
+            while(VTABLE_get_bool(interp, iter)) {
+                PMC * const sub = VTABLE_shift_pmc(interp, iter);
+                Parrot_pcc_invoke_method_from_c_args(interp, ctx, sub, "->");
+            }
+        }
+    }
 }
 
 

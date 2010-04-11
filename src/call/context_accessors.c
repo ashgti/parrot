@@ -750,6 +750,23 @@ Parrot_pcc_get_pmc_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
     return c->constants[idx]->u.key;
 }
 
+/*
+
+=item C<Parrot_pcc_get_exit_handlers(PARROT_INTERP, ARGIN(PMC *ctx))
+
+=cut
+
+*/
+
+PARROT_EXPORT
+PARROT_CAN_RETURN_NULL
+PMC*
+Parrot_pcc_get_pmc_constant_func(PARROT_INTERP, ARGIN(PMC *ctx), INTVAL idx)
+{
+    ASSERT_ARGS(Parrot_pcc_get_exit_handlers)
+    Parrot_Context const * c = get_context_struct_fast(interp
+    return c->exit_handler;
+}
 
 
 /*
@@ -778,6 +795,7 @@ get_context_struct_fast(PARROT_INTERP, ARGIN(PMC *ctx))
     /* temporarily violate encapsulation; big speedup here */
     return PMC_data_typed(ctx, Parrot_Context *);
 }
+
 
 /*
 
