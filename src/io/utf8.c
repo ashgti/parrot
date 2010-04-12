@@ -88,6 +88,7 @@ Parrot_io_read_utf8(PARROT_INTERP, ARGMOD(PMC *filehandle),
                 s            = Parrot_str_append(interp, s, s2);
                 /* String is updated. Poke into iterator to replace old string */
                 iter.str     = s;
+                *buf         = s;
                 len         += len2 + 1;
 
                 /* check last char */
