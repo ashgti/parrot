@@ -415,7 +415,7 @@ handler:
     substr $S2, $S0, 12, 3, $S1
     ok(0,"no exception")
 handler:
-    .exception_is( "Can only replace inside string or index after end of string" )
+    .exception_is( "Cannot take substr outside string" )
 .end
 
 .sub five_arg_substr_neg_offset_repl_eq_length
@@ -452,7 +452,7 @@ handler:
     substr $S2, $S0, -12, 4, $S1
     ok(0,"no exception")
 handler:
-    .exception_is( "Can only replace inside string or index after end of string" )
+    .exception_is( "Cannot take substr outside string" )
 .end
 
 .sub five_arg_substr_length_gt_strlen
