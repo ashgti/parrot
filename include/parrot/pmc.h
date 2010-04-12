@@ -53,6 +53,7 @@ INTVAL Parrot_pmc_get_type_str(PARROT_INTERP, ARGIN_NULLOK(STRING *name))
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
+PARROT_WARN_UNUSED_RESULT
 INTVAL Parrot_pmc_is_null(SHIM_INTERP, ARGIN_NULLOK(const PMC *pmc));
 
 PARROT_EXPORT
@@ -71,6 +72,13 @@ PARROT_CANNOT_RETURN_NULL
 PMC * Parrot_pmc_new_constant_init(PARROT_INTERP,
     INTVAL base_type,
     ARGIN_NULLOK(PMC *init))
+        __attribute__nonnull__(1);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PMC * Parrot_pmc_new_constant_init_int(PARROT_INTERP,
+    INTVAL base_type,
+    INTVAL init)
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
@@ -108,7 +116,7 @@ PARROT_IGNORABLE_RESULT
 PMC * Parrot_pmc_reuse(PARROT_INTERP,
     ARGIN(PMC *pmc),
     INTVAL new_type,
-    UINTVAL flags)
+    NULLOK(UINTVAL flags))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -131,7 +139,7 @@ PMC * Parrot_pmc_reuse_init(PARROT_INTERP,
     ARGIN(PMC *pmc),
     INTVAL new_type,
     ARGIN(PMC *init),
-    UINTVAL flags)
+    NULLOK(UINTVAL flags))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(4);
@@ -147,6 +155,10 @@ INTVAL Parrot_pmc_get_new_vtable_index(PARROT_INTERP)
 PARROT_CANNOT_RETURN_NULL
 PMC * Parrot_pmc_new_temporary(PARROT_INTERP, INTVAL base_type)
         __attribute__nonnull__(1);
+
+INTVAL Parrot_pmc_type_does(PARROT_INTERP, ARGIN(STRING *role), INTVAL type)
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
 
 #define ASSERT_ARGS_Parrot_pmc_create_mro __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -170,6 +182,9 @@ PMC * Parrot_pmc_new_temporary(PARROT_INTERP, INTVAL base_type)
 #define ASSERT_ARGS_Parrot_pmc_new_constant __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_pmc_new_constant_init __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_pmc_new_constant_init_int \
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_pmc_new_constant_noinit \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -203,6 +218,9 @@ PMC * Parrot_pmc_new_temporary(PARROT_INTERP, INTVAL base_type)
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_pmc_new_temporary __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_Parrot_pmc_type_does __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(role))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/pmc.c */
 

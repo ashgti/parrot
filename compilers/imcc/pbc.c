@@ -1064,8 +1064,7 @@ mk_multi_sig(PARROT_INTERP, ARGIN(const SymReg *r))
     if (!pcc_sub->multi[0])
         return Parrot_pmc_new(interp, enum_class_FixedIntegerArray);
 
-    multi_sig = Parrot_pmc_new(interp, enum_class_FixedPMCArray);
-    VTABLE_set_integer_native(interp, multi_sig, n);
+    multi_sig = Parrot_pmc_new_init_int(interp, enum_class_FixedPMCArray, n);
     ct        = interp->code->const_table;
 
     for (i = 0; i < n; ++i) {
@@ -1395,7 +1394,7 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         STRING *vtable_name;
         INTVAL  vtable_index;
 
-        /* Work out the name of the vtable method. */
+        /* Work out the name of the vtable function. */
         if (unit->vtable_name) {
             vtable_name = Parrot_str_new(interp, unit->vtable_name + 1,
                     strlen(unit->vtable_name) - 2);
@@ -1404,14 +1403,13 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
         else
             vtable_name = sub->name;
 
-        /* Check this is a valid vtable method to override. */
+        /* Check this is a valid vtable function to override. */
         vtable_index = Parrot_get_vtable_index(interp, vtable_name);
 
-        if (vtable_index == -1) {
+        if (vtable_index == -1)
             IMCC_fatal(interp, 1,
-                "'%S' is not a v-table method, but was used with :vtable.\n",
+                "'%S' is not a vtable, but was used with :vtable.\n",
                 vtable_name);
-        }
 
         /* TODO check for duplicates */
         sub->vtable_index = vtable_index;
@@ -1542,7 +1540,7 @@ build_key(PARROT_INTERP, ARGIN(SymReg *key_reg))
     SymReg   *reg;
 
     char      s_key[KEYLEN * 10];
-    opcode_t  key[KEYLEN];
+    opcode_t  key[KEYLEN + 1]; /* [0] -> length, [1..] -> keys */
     opcode_t  size;
     int       key_length;     /* P0["hi;there"; S0; 2] has length 3 */
     int       k;

@@ -1,5 +1,5 @@
 /* gc_api.h
- *  Copyright (C) 2001-2009, Parrot Foundation.
+ *  Copyright (C) 2001-2010, Parrot Foundation.
  *  SVN Info
  *     $Id$
  *  Overview:
@@ -136,9 +136,8 @@ void Parrot_gc_mark_PObj_alive(PARROT_INTERP, ARGMOD(PObj *obj))
         FUNC_MODIFIES(*obj);
 
 PARROT_EXPORT
-void Parrot_gc_mark_STRING_alive_fun(PARROT_INTERP,
+void Parrot_gc_mark_STRING_alive_fun(SHIM_INTERP,
     ARGMOD_NULLOK(STRING *obj))
-        __attribute__nonnull__(1)
         FUNC_MODIFIES(*obj);
 
 PARROT_EXPORT
@@ -256,8 +255,7 @@ void Parrot_gc_free_pmc_header(PARROT_INTERP, ARGMOD(PMC *pmc))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*pmc);
 
-void Parrot_gc_free_pmc_sync(PARROT_INTERP, ARGMOD(PMC *p))
-        __attribute__nonnull__(1)
+void Parrot_gc_free_pmc_sync(SHIM_INTERP, ARGMOD(PMC *p))
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*p);
 
@@ -350,8 +348,7 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(obj))
 #define ASSERT_ARGS_Parrot_gc_mark_STRING_alive_fun \
-     __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
+     __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_Parrot_gc_reallocate_memory_chunk \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
@@ -421,8 +418,7 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_Parrot_gc_free_pmc_sync __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(p))
+       PARROT_ASSERT_ARG(p))
 #define ASSERT_ARGS_Parrot_gc_free_string_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(s))
@@ -471,8 +467,6 @@ int Parrot_gc_total_sized_buffers(PARROT_INTERP)
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/gc/api.c */
-
-void Parrot_gc_inf_init(PARROT_INTERP);
 
 #if defined(NDEBUG) && defined(PARROT_IN_CORE)
 #  define Parrot_gc_mark_STRING_alive(interp, obj) \

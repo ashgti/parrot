@@ -16,13 +16,17 @@ Implements oplib VTABLEs.
 
 #include "parrot/parrot.h"
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* HEADERIZER END: static */
+
 /* TODO: Since Opcode PMCs are essentially read-only after initialization
          here, we should cache them. A FixedPMCArray would be okay, an
          INTVAL->PMC HASH might be better, since it's unlikely that we will
          need to cache even a majority of the ~1300 ops. */
 static PMC *OPLIB_PMC_INSTANCE;
 static PMC *OPLIB_OPCODE_CACHE;
-pmclass OpLib {
+pmclass OpLib singleton {
     void class_init() {
         OPLIB_PMC_INSTANCE = NULL;
         OPLIB_OPCODE_CACHE = NULL;

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2008, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -50,9 +50,29 @@ An empty Hash PMC is allocated during initialization.
 
 #include "pmc/pmc_namespace.h"
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void init_role_from_hash(PARROT_INTERP,
+    ARGIN(PMC *self),
+    ARGIN(PMC *info))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3);
+
+#define ASSERT_ARGS_init_role_from_hash __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(info))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /* Takes a hash and initializes the role based on it. */
-static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
+static void
+init_role_from_hash(PARROT_INTERP, ARGIN(PMC *self), ARGIN(PMC *info))
 {
+    ASSERT_ARGS(init_role_from_hash)
     Parrot_Role_attributes * const role     = PARROT_ROLE(self);
     STRING * const ns_string     = CONST_STRING(interp, "NameSpace");
     STRING * const name_str      = CONST_STRING(interp, "name");
@@ -127,13 +147,13 @@ static void init_role_from_hash(PARROT_INTERP, PMC *self, PMC *info)
      * need to unset ourselves in the old namespace. */
     if (!PMC_IS_NULL(old_ns) && role->_namespace != old_ns) {
         STRING * const set_class_str = CONST_STRING(interp, "set_class");
-        Parrot_PCCINVOKE(interp, old_ns, set_class_str, "P->", PMCNULL);
+        Parrot_pcc_invoke_method_from_c_args(interp, old_ns, set_class_str, "P->", PMCNULL);
     }
 
     /* Link namespace to this role, if there is one. */
     if (!PMC_IS_NULL(role->_namespace)) {
         STRING * const set_class_str = CONST_STRING(interp, "set_class");
-        Parrot_PCCINVOKE(interp, role->_namespace, set_class_str, "P->", self);
+        Parrot_pcc_invoke_method_from_c_args(interp, role->_namespace, set_class_str, "P->", self);
     }
 
     /* Initialize roles, if we have any. */
@@ -553,7 +573,7 @@ Returns whether the class does the givne C<*role>.
     }
 
     /*
-     * Below here are non-vtable methods that eventually will go in a role
+     * Below here are methods that eventually will go in a role
      * that is composed into here to optionally give a nice interface from
      * PIR (ParrotRole isa Role does RoleMethods or something like this).
      */
@@ -750,7 +770,7 @@ parameter is supplied, a particular item of introspection data.
     METHOD inspect(STRING *what :optional, int got_what :opt_flag) {
         PMC *found;
 
-        /* Just delegate to the appropriate vtable method. */
+        /* Just delegate to the appropriate vtable. */
         if (got_what)
             found = VTABLE_inspect_str(interp, SELF, what);
         else

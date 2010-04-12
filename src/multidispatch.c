@@ -264,24 +264,26 @@ Parrot_mmd_multi_dispatch_from_c_args(PARROT_INTERP,
         ARGIN(const char *name), ARGIN(const char *sig), ...)
 {
     ASSERT_ARGS(Parrot_mmd_multi_dispatch_from_c_args)
-    PMC *sig_object, *sub;
-
+    PMC *call_obj, *sub;
     va_list args;
+    const char *arg_sig, *ret_sig;
+
+    Parrot_pcc_split_signature_string(sig, &arg_sig, &ret_sig);
+
     va_start(args, sig);
-    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL, sig, args);
-    va_end(args);
+    call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL, arg_sig, &args);
 
     /* Check the cache. */
     sub = Parrot_mmd_cache_lookup_by_types(interp, interp->op_mmd_cache, name,
-            VTABLE_get_pmc(interp, sig_object));
+            VTABLE_get_pmc(interp, call_obj));
 
     if (PMC_IS_NULL(sub)) {
         sub = Parrot_mmd_find_multi_from_sig_obj(interp,
-            Parrot_str_new_constant(interp, name), sig_object);
+            Parrot_str_new_constant(interp, name), call_obj);
 
         if (!PMC_IS_NULL(sub))
             Parrot_mmd_cache_store_by_types(interp, interp->op_mmd_cache, name,
-                    VTABLE_get_pmc(interp, sig_object), sub);
+                    VTABLE_get_pmc(interp, call_obj), sub);
     }
 
     if (PMC_IS_NULL(sub))
@@ -296,7 +298,11 @@ Parrot_mmd_multi_dispatch_from_c_args(PARROT_INTERP,
             VTABLE_name(interp, sub));
 #endif
 
-    Parrot_pcc_invoke_from_sig_object(interp, sub, sig_object);
+    Parrot_pcc_invoke_from_sig_object(interp, sub, call_obj);
+    call_obj = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
+    va_end(args);
 }
 
 
@@ -385,11 +391,10 @@ static PMC*
 mmd_build_type_tuple_from_type_list(PARROT_INTERP, ARGIN(PMC *type_list))
 {
     ASSERT_ARGS(mmd_build_type_tuple_from_type_list)
-    PMC   *multi_sig   = Parrot_pmc_new_constant(interp, enum_class_FixedIntegerArray);
     INTVAL param_count = VTABLE_elements(interp, type_list);
+    PMC   *multi_sig   = Parrot_pmc_new_constant_init_int(interp,
+            enum_class_FixedIntegerArray, param_count);
     INTVAL i;
-
-    VTABLE_set_integer_native(interp, multi_sig, param_count);
 
     for (i = 0; i < param_count; i++) {
         STRING *type_name = VTABLE_get_string_keyed_int(interp, type_list, i);
@@ -512,10 +517,8 @@ mmd_cvt_to_types(PARROT_INTERP, ARGIN(PMC *multi_sig))
             type = Parrot_pmc_get_type(interp, sig_elem);
 
         /* create destination PMC only as necessary */
-        if (PMC_IS_NULL(ar)) {
-            ar = Parrot_pmc_new(interp, enum_class_FixedIntegerArray);
-            VTABLE_set_integer_native(interp, ar, n);
-        }
+        if (PMC_IS_NULL(ar))
+            ar = Parrot_pmc_new_init_int(interp, enum_class_FixedIntegerArray, n);
 
         VTABLE_set_integer_keyed_int(interp, ar, i, type);
     }
@@ -628,7 +631,7 @@ mmd_distance(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *arg_tuple))
     /* now go through args */
     for (i = 0; i < n; ++i) {
         const INTVAL type_sig  = VTABLE_get_integer_keyed_int(interp, multi_sig, i);
-        const INTVAL type_call = VTABLE_get_integer_keyed_int(interp, arg_tuple, i);
+        INTVAL type_call = VTABLE_get_integer_keyed_int(interp, arg_tuple, i);
         if (type_sig == type_call)
             continue;
 
@@ -641,15 +644,27 @@ mmd_distance(PARROT_INTERP, ARGIN(PMC *pmc), ARGIN(PMC *arg_tuple))
         switch (type_call) {
           case enum_type_INTVAL:
             if (type_sig == enum_class_Integer) { dist++; continue; }
-            if (type_sig == enum_type_PMC) dist++;
+            if (type_sig == enum_type_PMC ||
+                (type_sig >= enum_class_default && type_sig < enum_class_core_max)) {
+                dist++;
+                type_call = enum_class_Integer;
+            }
             break;
           case enum_type_FLOATVAL:
             if (type_sig == enum_class_Float)   { dist++; continue; }
-            if (type_sig == enum_type_PMC) dist++;
+            if (type_sig == enum_type_PMC ||
+                (type_sig >= enum_class_default && type_sig < enum_class_core_max)) {
+                dist++;
+                type_call = enum_class_Float;
+            }
             break;
           case enum_type_STRING:
             if (type_sig == enum_class_String)  { dist++; continue; }
-            if (type_sig == enum_type_PMC) dist++;
+            if (type_sig == enum_type_PMC ||
+                (type_sig >= enum_class_default && type_sig < enum_class_core_max)) {
+                dist++;
+                type_call = enum_class_String;
+            }
             break;
           default:
             break;

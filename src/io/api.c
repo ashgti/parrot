@@ -179,9 +179,8 @@ Parrot_io_fdopen(PARROT_INTERP, ARGIN_NULLOK(PMC *pmc), PIOHANDLE fd,
 {
     ASSERT_ARGS(Parrot_io_fdopen)
     PMC *new_filehandle;
-    INTVAL flags;
+    const INTVAL flags = Parrot_io_parse_open_flags(interp, sflags);
 
-    flags = Parrot_io_parse_open_flags(interp, sflags);
     if (!flags)
         return PMCNULL;
 
@@ -904,7 +903,7 @@ Parrot_io_make_offset32(INTVAL hi, INTVAL lo)
 
 =item C<PIOOFF_T Parrot_io_make_offset_pmc(PARROT_INTERP, PMC *pmc)>
 
-Returns the return value of the C<get_integer> vtable method on C<*pmc>.
+Returns the return value of the C<get_integer> vtable on C<*pmc>.
 
 =cut
 

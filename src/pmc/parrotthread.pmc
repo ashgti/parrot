@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2007, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -40,13 +40,43 @@ and these methods:
 
 #define PMC_interp(x) ((Parrot_ParrotInterpreter_attributes *)PMC_data(x))->interp
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static INTVAL do_thread_run(PARROT_INTERP,
+    ARGIN(PMC *thread),
+    INTVAL clone_flags,
+    ARGIN(PMC *sub),
+    ARGIN(PMC *args))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(4)
+        __attribute__nonnull__(5);
+
+static void stop_GC(ARGIN(Interp *parent), ARGIN(Interp *thread))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2);
+
+#define ASSERT_ARGS_do_thread_run __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(thread) \
+    , PARROT_ASSERT_ARG(sub) \
+    , PARROT_ASSERT_ARG(args))
+#define ASSERT_ARGS_stop_GC __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(parent) \
+    , PARROT_ASSERT_ARG(thread))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
  * can't do multi-threaded GC yet
  * XXX a quick hack to pass the few tests
  */
 static void
-stop_GC(Interp *parent, Interp *thread)
+stop_GC(ARGIN(Interp *parent), ARGIN(Interp *thread))
 {
+    ASSERT_ARGS(stop_GC)
     Parrot_block_GC_mark(parent);
     Parrot_block_GC_mark(thread);
     Parrot_block_GC_sweep(parent);
@@ -57,9 +87,13 @@ stop_GC(Interp *parent, Interp *thread)
    coke's]
  */
 
-static INTVAL do_thread_run(PARROT_INTERP, PMC *thread,
-                            INTVAL clone_flags, PMC *sub, PMC *args) {
-    INTVAL tid = VTABLE_get_integer(interp, thread);
+static INTVAL
+do_thread_run(PARROT_INTERP, ARGIN(PMC *thread),
+                            INTVAL clone_flags, ARGIN(PMC *sub), ARGIN(PMC *args))
+{
+    ASSERT_ARGS(do_thread_run)
+
+    const INTVAL tid = VTABLE_get_integer(interp, thread);
 
     if (PMC_IS_NULL(sub)) {
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_OPERATION,

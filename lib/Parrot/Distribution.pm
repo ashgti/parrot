@@ -580,11 +580,9 @@ This is to exclude automatically generated PIR-language files Parrot might have.
 
 =cut
 
-{
-    sub is_pir_exemption {
-        my ( $self, $file ) = @_;
-        $file->path =~ m{/ext/};
-    }
+sub is_pir_exemption {
+    my ( $self, $file ) = @_;
+    return $file->path =~ m{/ext/};
 }
 
 
@@ -616,7 +614,7 @@ sub is_pir {
     my $line = <$file_handle>;
     close $file_handle;
 
-    if ( $line && $line =~ /^#!.*parrot/ ) {
+    if ( $line && $line =~ /^#!.*parrot(?:\s|$)/ ) {
         # something that specifies a pir or pbc is probably a HLL, skip it
         return 0 if $line =~ /\.(?:pir|pbc)/;
         return 1;

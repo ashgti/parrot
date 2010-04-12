@@ -205,7 +205,7 @@ A type safe wrapper of Parrot_gc_mark_PObj_alive for STRING.
 
 PARROT_EXPORT
 void
-Parrot_gc_mark_STRING_alive_fun(PARROT_INTERP, ARGMOD_NULLOK(STRING *obj))
+Parrot_gc_mark_STRING_alive_fun(SHIM_INTERP, ARGMOD_NULLOK(STRING *obj))
 {
     ASSERT_ARGS(Parrot_gc_mark_STRING_alive_fun)
     if (!STRING_IS_NULL(obj)) {
@@ -252,14 +252,12 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     };
 
     /* Assertions that GC subsystem has complete API */
-    PARROT_ASSERT(interp->gc_sys->finalize_gc_system);
-    PARROT_ASSERT(interp->gc_sys->destroy_child_interp);
-
     PARROT_ASSERT(interp->gc_sys->do_gc_mark);
     PARROT_ASSERT(interp->gc_sys->compact_string_pool);
 
-    PARROT_ASSERT(interp->gc_sys->mark_special);
-    PARROT_ASSERT(interp->gc_sys->pmc_needs_early_collection);
+    /* It should be mandatory. But there is abstraction leak in */
+    /* mark_foo_alive. */
+    /* PARROT_ASSERT(interp->gc_sys->mark_special); */
 
     PARROT_ASSERT(interp->gc_sys->allocate_pmc_header);
     PARROT_ASSERT(interp->gc_sys->free_pmc_header);
@@ -287,14 +285,6 @@ Parrot_gc_initialize(PARROT_INTERP, ARGIN(void *stacktop))
     PARROT_ASSERT(interp->gc_sys->allocate_memory_chunk_with_interior_pointers);
     PARROT_ASSERT(interp->gc_sys->reallocate_memory_chunk_with_interior_pointers);
     PARROT_ASSERT(interp->gc_sys->free_memory_chunk);
-
-    PARROT_ASSERT(interp->gc_sys->block_mark);
-    PARROT_ASSERT(interp->gc_sys->unblock_mark);
-    PARROT_ASSERT(interp->gc_sys->is_blocked_mark);
-
-    PARROT_ASSERT(interp->gc_sys->block_sweep);
-    PARROT_ASSERT(interp->gc_sys->unblock_sweep);
-    PARROT_ASSERT(interp->gc_sys->is_blocked_sweep);
 
     PARROT_ASSERT(interp->gc_sys->get_gc_info);
 }
@@ -384,7 +374,7 @@ Frees the PMC_sync field of the PMC, if one exists.
 */
 
 void
-Parrot_gc_free_pmc_sync(PARROT_INTERP, ARGMOD(PMC *p))
+Parrot_gc_free_pmc_sync(SHIM_INTERP, ARGMOD(PMC *p))
 {
     ASSERT_ARGS(Parrot_gc_free_pmc_sync)
 
@@ -796,7 +786,8 @@ Parrot_gc_destroy_child_interp(ARGMOD(Interp *dest_interp),
     ARGIN(Interp *source_interp))
 {
     ASSERT_ARGS(Parrot_gc_destroy_child_interp)
-    dest_interp->gc_sys->destroy_child_interp(dest_interp, source_interp);
+    if (dest_interp->gc_sys->destroy_child_interp)
+        dest_interp->gc_sys->destroy_child_interp(dest_interp, source_interp);
 }
 
 /*

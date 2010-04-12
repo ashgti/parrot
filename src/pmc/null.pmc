@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2007, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -19,10 +19,24 @@ really slowing down the bytecode execution.
 
 */
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+PARROT_DOES_NOT_RETURN
+static void null_pmc_access(PARROT_INTERP, int index)
+        __attribute__nonnull__(1);
+
+#define ASSERT_ARGS_null_pmc_access __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 PARROT_DOES_NOT_RETURN
 static void
 null_pmc_access(PARROT_INTERP, int index)
 {
+    ASSERT_ARGS(null_pmc_access)
     Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_NULL_REG_ACCESS,
             "Null PMC access in %s()",
             Parrot_get_vtable_name(interp, index));

@@ -36,10 +36,23 @@ These are the vtable functions for the ParrotInterpreter base class
 #define PMC_args(x)   ((Parrot_ParrotInterpreter_attributes *)PMC_data(x))->args
 #define PMC_sub(x)    ((Parrot_ParrotInterpreter_attributes *)PMC_data(x))->sub
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void create_interp(
+    ARGIN(PMC *self),
+    ARGIN_NULLOK(Parrot_Interp parent))
+        __attribute__nonnull__(1);
+
+#define ASSERT_ARGS_create_interp __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(self))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 
-=item C<void
-clone_interpreter(Parrot_Interp dest, const Parrot_Interp source, INTVAL flags)>
+=item C<void clone_interpreter(Parrot_Interp d, Parrot_Interp s, INTVAL flags)>
 
 Clones the interpreter as specified by the flags.
 
@@ -127,10 +140,11 @@ clone_interpreter(Parrot_Interp d, Parrot_Interp s, INTVAL flags)
                     PObj_is_class_TEST(s->vtables[i]->pmc_class)) {
                 /* Cloning the class into the new interpreter ought
                  * to be sufficient to instantiate the class.  */
-                PMC          *source       = s->vtables[i]->pmc_class;
-                PMC          *dest         = Parrot_clone(d, source);
-                Parrot_Class_attributes *source_class = PARROT_CLASS(source);
-                Parrot_Class_attributes *dest_class   = PARROT_CLASS(dest);
+                PMC                     * const source       = s->vtables[i]->pmc_class;
+                PMC                     * const dest         = Parrot_clone(d, source);
+                Parrot_Class_attributes * const source_class = PARROT_CLASS(source);
+                Parrot_Class_attributes * const dest_class   = PARROT_CLASS(dest);
+
                 dest_class->name           = Parrot_str_copy(d, source_class->name);
                 dest_class->_namespace     = VTABLE_clone(d, source_class->_namespace);
             }
@@ -149,8 +163,7 @@ clone_interpreter(Parrot_Interp d, Parrot_Interp s, INTVAL flags)
 
 /*
 
-=item C<static void
-create_interp(PMC *self, Parrot_Interp parent)>
+=item C<static void create_interp(PMC *self, Parrot_Interp parent)>
 
 Creates a new child interpreter of C<parent>.
 
@@ -159,8 +172,9 @@ Creates a new child interpreter of C<parent>.
 */
 
 static void
-create_interp(PMC *self, Parrot_Interp parent)
+create_interp(ARGIN(PMC *self), ARGIN_NULLOK(Parrot_Interp parent))
 {
+    ASSERT_ARGS(create_interp)
     Interp_flags flag  = PARROT_NO_FLAGS;
     Parrot_Interp new_interp;
 
@@ -231,7 +245,7 @@ Initializes the interpreter.
          * so we check, if the interpreter is already set up
          */
         if (!PMC_data(SELF)) {
-            Parrot_ParrotInterpreter_attributes *attrs =
+            Parrot_ParrotInterpreter_attributes * const attrs =
                 mem_gc_allocate_zeroed_typed(INTERP, Parrot_ParrotInterpreter_attributes);
             PMC_data(SELF) = attrs;
         }
@@ -254,10 +268,11 @@ C<parent> and uses that thread.
 */
 
     VTABLE void init_pmc(PMC *parent) {
+        /* XXX Can this be moved inside the block where it's used */
         Parrot_Interp p = PMC_interp(parent);
 
         if (!PMC_data(SELF)) {
-            Parrot_ParrotInterpreter_attributes *attrs =
+            Parrot_ParrotInterpreter_attributes * const attrs =
                 mem_gc_allocate_zeroed_typed(INTERP, Parrot_ParrotInterpreter_attributes);
             PMC_data(SELF) = attrs;
         }
@@ -302,7 +317,7 @@ Sets C<struct_val> to C<*value>.
          * ParrotInterpreter through Parrot_pmc_new_noinit.  If this PMC hasn't been
          * initialized, cheat by initializing instead. */
         if (!PMC_data(SELF)) {
-            Parrot_ParrotInterpreter_attributes *attrs =
+            Parrot_ParrotInterpreter_attributes * const attrs =
                 mem_gc_allocate_zeroed_typed(INTERP, Parrot_ParrotInterpreter_attributes);
             PMC_data(SELF) = attrs;
             PObj_custom_destroy_SET(SELF);

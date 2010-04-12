@@ -44,7 +44,6 @@ include/parrot/oplib/core_ops_switch.h            [main]include
 include/parrot/oplib/ops.h                        [main]include
 include/parrot/pbcversion.h                       [devel]include
 include/parrot/platform.h                         [main]include
-include/parrot/platform_interface.h               [main]include
 include/parrot/platform_limits.h                  [devel]include
 include/parrot/vtable.h                           [main]include
 install_config.fpmc                               [main]lib
@@ -205,6 +204,7 @@ runtime/parrot/library/Stream/ParrotIO.pbc        [main]
 runtime/parrot/library/Stream/Replay.pbc          [main]
 runtime/parrot/library/Stream/Sub.pbc             [main]
 runtime/parrot/library/Stream/Writer.pbc          [main]
+runtime/parrot/library/TAP/Parser.pbc             [main]
 runtime/parrot/library/Tcl/Glob.pbc               [main]
 runtime/parrot/library/TclLibrary.pbc             [main]
 runtime/parrot/library/Test/Builder/Test.pbc      [main]

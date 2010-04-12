@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2003-2008, Parrot Foundation.
+Copyright (C) 2003-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -21,9 +21,33 @@ integer type without going to an I register.
 
 #include "pmc/pmc_bigint.h"
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void maybe_throw_overflow_error(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+PARROT_IGNORABLE_RESULT
+PARROT_CANNOT_RETURN_NULL
+static PMC* upgrade_self_to_bignum(PARROT_INTERP, ARGMOD(PMC *self))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        FUNC_MODIFIES(*self);
+
+#define ASSERT_ARGS_maybe_throw_overflow_error __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_upgrade_self_to_bignum __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 static void
 maybe_throw_overflow_error(PARROT_INTERP)
 {
+    ASSERT_ARGS(maybe_throw_overflow_error)
+
     /* check to see what the behavior is. If the interpreter is set
        to throw an exception on overflow. If so, throw the exception,
        otherwise, chill out it's no big deal. */
@@ -32,9 +56,13 @@ maybe_throw_overflow_error(PARROT_INTERP)
             "Integer overflow");
 }
 
+PARROT_IGNORABLE_RESULT
+PARROT_CANNOT_RETURN_NULL
 static PMC*
-upgrade_self_to_bignum(PARROT_INTERP, PMC *self)
+upgrade_self_to_bignum(PARROT_INTERP, ARGMOD(PMC *self))
 {
+    ASSERT_ARGS(upgrade_self_to_bignum)
+
     /* Do an in-place upgrade to a Bignum of SELF and return a pointer
        to it (which is probably redundant, but whatever). */
     const INTVAL a = VTABLE_get_integer(interp, self);
@@ -353,6 +381,7 @@ Adds C<value> to C<SELF> inplace.
 
     MULTI void i_add(Complex value) {
         const INTVAL a = SELF.get_integer();
+        UNUSED(a);
 
         Parrot_pmc_reuse(INTERP, SELF, enum_class_Complex, 0);
         VTABLE_set_number_native(INTERP, SELF,
@@ -373,7 +402,6 @@ Adds C<value> to C<SELF> inplace.
         if ((c^a) >= 0 || (c^b) >= 0)
             VTABLE_set_integer_native(INTERP, SELF, c);
         else {
-            PMC *temp;
             maybe_throw_overflow_error(interp);
             SELF = upgrade_self_to_bignum(interp, SELF);
             VTABLE_i_add_int(interp, SELF, b);
@@ -854,7 +882,6 @@ Divides C<SELF> by C<value> inplace.
 
     VTABLE void i_floor_divide_float(FLOATVAL value) {
         FLOATVAL f;
-        INTVAL   self_val;
 
         if (FLOAT_IS_ZERO(value))
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_DIV_BY_ZERO,

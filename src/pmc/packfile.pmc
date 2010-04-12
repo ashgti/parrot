@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2008, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -21,12 +21,34 @@ the top level parser and serializer for *.pbc files.
 
 #include "pmc/pmc_packfiledirectory.h"
 
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static void copy_packfile_header(PARROT_INTERP,
+    ARGMOD(PMC *self),
+    ARGIN(PackFile *pf))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(2)
+        __attribute__nonnull__(3)
+        FUNC_MODIFIES(*self);
+
+#define ASSERT_ARGS_copy_packfile_header __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(self) \
+    , PARROT_ASSERT_ARG(pf))
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
 /*
 Copy attributes from PackFile* to Packfile PMC.
 */
 static void
-copy_packfile_header(PARROT_INTERP, PMC *self, PackFile *pf) {
-    Parrot_Packfile_attributes *attrs = PARROT_PACKFILE(self);
+copy_packfile_header(PARROT_INTERP, ARGMOD(PMC *self), ARGIN(PackFile *pf))
+{
+    ASSERT_ARGS(copy_packfile_header)
+
+    Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(self);
 
     attrs->wordsize         = pf->header->wordsize;
     attrs->byteorder        = pf->header->byteorder;
@@ -66,7 +88,7 @@ Initialize the structure.  (Create a blank PackFile object.)
 
 */
     VTABLE void init() {
-        Parrot_Packfile_attributes *attrs =
+        Parrot_Packfile_attributes * const attrs =
                 PMC_data_typed(SELF, Parrot_Packfile_attributes*);
         PackFile                   *pf;
 
@@ -93,7 +115,7 @@ Marks the Packfile as alive.
 */
 
     VTABLE void mark() {
-        Parrot_Packfile_attributes * attrs = PARROT_PACKFILE(SELF);
+        Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(SELF);
 
         Parrot_gc_mark_STRING_alive(INTERP, attrs->uuid);
         Parrot_gc_mark_PMC_alive(INTERP, attrs->directory);
@@ -110,17 +132,15 @@ Implementation note: all hard stuff done by PackfileDirectory.
 
 */
     VTABLE STRING *get_string() {
-        Parrot_Packfile_attributes * attrs = PARROT_PACKFILE(SELF);
-        PackFile                   * pf =
+        Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(SELF);
+        PackFile                   * const pf =
                 (PackFile*)VTABLE_get_pointer(interp, attrs->directory);
 
-        opcode_t    length;
-        opcode_t    *ptr;
         STRING      *str;
 
         /* Calculate required memory */
-        length  = PackFile_pack_size(interp, pf) * sizeof (opcode_t);
-        ptr     = (opcode_t*)Parrot_gc_allocate_memory_chunk(INTERP, length);
+        const opcode_t length = PackFile_pack_size(interp, pf) * sizeof (opcode_t);
+        opcode_t * const ptr  = (opcode_t*)Parrot_gc_allocate_memory_chunk(INTERP, length);
 
         /* Copy related attributes to header */
         pf->header->major     = attrs->version_major;
@@ -148,18 +168,21 @@ Parse raw serialized PBC file data into the Packfile data structure.
 =cut
 
 Implementation note: taken from the bottom end of Parrot_pbc_read().
+
 */
+
     VTABLE void set_string_native(STRING *str) {
-        PackFile        *pf = PackFile_new(interp, 0);
-        const opcode_t  *ptr =
-                (const opcode_t*)Parrot_string_cstring(interp, str);
-        int             length = Parrot_str_byte_length(interp, str);
-        Parrot_Packfile_attributes * attrs = PARROT_PACKFILE(SELF);
+        Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(SELF);
+        PackFile                   * const pf    = PackFile_new(interp, 0);
+        const opcode_t             * const ptr   =
+                (const opcode_t *)Parrot_string_cstring(interp, str);
+
+        const int length = Parrot_str_byte_length(interp, str);
 
         if (!PackFile_unpack(interp, pf, ptr, length)) {
             PackFile_destroy(interp, pf);
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_MALFORMED_PACKFILE,
-                                        "Can't unpack packfile.");
+            Parrot_ex_throw_from_c_args(interp, NULL,
+                EXCEPTION_MALFORMED_PACKFILE, "Can't unpack packfile.");
         }
 
         /* Disable GC during copy data into internal structures. */
@@ -210,7 +233,8 @@ Fetch an integer keyed value from the packfile object.  Valid keys are:
 
 */
     VTABLE INTVAL get_integer_keyed_str(STRING *key) {
-        Parrot_Packfile_attributes *attrs = PARROT_PACKFILE(SELF);
+        Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(SELF);
+
         if (!Parrot_str_compare(interp, key, CONST_STRING(interp, "wordsize")))
             return attrs->wordsize;
         if (!Parrot_str_compare(interp, key, CONST_STRING(interp, "byteorder")))
@@ -313,7 +337,7 @@ Set an integer keyed value to the specified value.  Valid keys are:
 
 */
     VTABLE void set_integer_keyed_str(STRING *key, INTVAL value) {
-        Parrot_Packfile_attributes *attrs = PARROT_PACKFILE(SELF);
+        Parrot_Packfile_attributes * const attrs = PARROT_PACKFILE(SELF);
         if (!Parrot_str_compare(interp, key, CONST_STRING(interp, "version_major"))) {
             attrs->version_major = value;
             return;
@@ -406,7 +430,7 @@ Return raw serialized PBC file data. Synonym for get_string.
 */
 
     METHOD pack() {
-        STRING * ret = SELF.get_string();
+        STRING * const ret = SELF.get_string();
         RETURN(STRING * ret);
     }
 
@@ -436,11 +460,9 @@ start of the packfile.
 
 */
     METHOD get_directory() {
-        PMC *dir = PARROT_PACKFILE(SELF)->directory;
+        PMC * const dir = PARROT_PACKFILE(SELF)->directory;
         RETURN(PMC *dir);
     }
-
-
 }
 /*
 

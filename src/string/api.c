@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -82,6 +82,8 @@ Tests if the given STRING is STRINGNULL.
 */
 
 PARROT_EXPORT
+PARROT_HOT
+PARROT_PURE_FUNCTION
 INTVAL
 Parrot_str_is_null(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
 {
@@ -101,6 +103,8 @@ Tests if the given STRING is STRINGNULL.
 */
 
 PARROT_EXPORT
+PARROT_HOT
+PARROT_PURE_FUNCTION
 INTVAL
 STRING_is_null(SHIM_INTERP, ARGIN_NULLOK(const STRING *s))
 {
@@ -128,8 +132,6 @@ Parrot_str_write_COW(PARROT_INTERP, ARGMOD(STRING *s))
 
     /* COW_FLAG | constant_FLAG | external_FLAG) */
     if (PObj_is_cowed_TESTALL(s)) {
-        STRING for_alloc;
-
         /* Create new pool data for this header to use,
          * independent of the original COW data */
         PObj_constant_CLEAR(s);
@@ -137,22 +139,24 @@ Parrot_str_write_COW(PARROT_INTERP, ARGMOD(STRING *s))
         /* constant may have been marked */
         PObj_live_CLEAR(s);
 
-        /*
-         * allocate a dummy strings memory
-         * buflen might be bigger and used, so pass this length
-         * also be sure not to allocate from the constant pool
-         */
-        PObj_flags_CLEARALL(&for_alloc);
-        Parrot_gc_allocate_string_storage(interp, &for_alloc, Buffer_buflen(s));
+        if (Buffer_buflen(s)) {
+            STRING for_alloc;
+            size_t alloc_size;
 
-        /* now copy memory over */
-        mem_sys_memcopy(for_alloc.strstart, s->strstart, s->bufused);
+            PObj_flags_CLEARALL(&for_alloc);
+            alloc_size = s->bufused;
+            Parrot_gc_allocate_string_storage(interp, &for_alloc, alloc_size);
 
-        /* and finally use that string memory */
+            /* now copy memory over */
+            mem_sys_memcopy(for_alloc.strstart, s->strstart, alloc_size);
 
-        Buffer_bufstart(s) = Buffer_bufstart(&for_alloc);
-        s->strstart      = for_alloc.strstart;
-        Buffer_buflen(s)   = Buffer_buflen(&for_alloc);
+            /* and finally use that string memory */
+
+            Buffer_bufstart(s) = Buffer_bufstart(&for_alloc);
+            s->strstart      = for_alloc.strstart;
+            Buffer_buflen(s)   = Buffer_buflen(&for_alloc);
+            PARROT_ASSERT(Buffer_buflen(s) >= alloc_size);
+        }
 
         /* COW_FLAG | external_FLAG */
         PObj_is_external_CLEARALL(s);
@@ -515,8 +519,10 @@ Parrot_str_concat(PARROT_INTERP, ARGIN_NULLOK(STRING *a),
     ASSERT_ARGS(Parrot_str_concat)
     if (a && a->strlen) {
         if (b && b->strlen) {
-            STRING *result = Parrot_str_copy(interp, a);
-            Parrot_str_write_COW(interp, result);
+            /* don't make a copy; get the size right from the start */
+            STRING *result = Parrot_str_new_init(interp, NULL,
+                a->strlen + b->strlen, a->encoding, a->charset, Uflags);
+            result = Parrot_str_append(interp, result, a);
             return Parrot_str_append(interp, result, b);
         }
 
@@ -1171,6 +1177,7 @@ of characters in the specified Parrot string's representation.
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
+PARROT_PURE_FUNCTION
 INTVAL
 string_max_bytes(SHIM_INTERP, ARGIN(const STRING *s), UINTVAL nchars)
 {
@@ -1397,6 +1404,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             "replace: subend somehow is less than substart");
 
     /* Now do the replacement */
+    Parrot_str_write_COW(interp, src);
 
     /*
      * If the replacement string fits inside the original substring
@@ -1406,7 +1414,6 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
 
     if (diff >= 0
     || ((INTVAL)src->bufused - (INTVAL)Buffer_buflen(src)) <= diff) {
-        Parrot_str_write_COW(interp, src);
 
         if (diff != 0) {
             mem_sys_memmove((char *)src->strstart + start_byte + rep->bufused,
@@ -1666,8 +1673,8 @@ make_writable(PARROT_INTERP, ARGMOD(STRING **s),
 =item C<STRING * Parrot_str_bitwise_and(PARROT_INTERP, const STRING *s1, const
 STRING *s2, STRING **dest)>
 
-Performs a bitwise C<AND> on two Parrot string, performing type and encoding
-conversions if necessary. If the second string is not C<NULL> then it is
+Performs a bitwise C<AND> on two Parrot strings, performing type and encoding
+conversions if necessary. If the third string is not C<NULL> then it is
 reused.  Otherwise a new Parrot string is created.
 
 =cut
@@ -1895,7 +1902,7 @@ Parrot_str_bitwise_or(PARROT_INTERP, ARGIN_NULLOK(const STRING *s1),
 STRING *s2, STRING **dest)>
 
 Performs a bitwise C<XOR> on two Parrot strings, performing type and encoding
-conversions if necessary. If the second string is not C<NULL>, then it is
+conversions if necessary. If the third string is not C<NULL>, then it is
 reused.  Otherwise a new Parrot string is created.
 
 =cut
@@ -2525,7 +2532,7 @@ sorts of leak potential otherwise.
 
 PARROT_EXPORT
 void
-Parrot_str_free_cstring(ARGIN_NULLOK(char *p))
+Parrot_str_free_cstring(ARGFREE(char *p))
 {
     ASSERT_ARGS(Parrot_str_free_cstring)
     mem_internal_free((void *)p);
@@ -2638,7 +2645,7 @@ Parrot_str_to_hashval(PARROT_INTERP, ARGMOD_NULLOK(STRING *s))
     UINTVAL     offs;
     size_t      hashval = interp->hash_seed;
 
-    if (!s)
+    if (!s || !s->strlen)
         return hashval;
 
     /* ZZZZZ workaround for something not setting up encodings right */

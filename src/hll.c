@@ -88,15 +88,14 @@ new_hll_entry(PARROT_INTERP, ARGIN_NULLOK(STRING *entry_name))
 
     PMC *entry_id;
 
-    PMC * const entry = Parrot_pmc_new_constant(interp, enum_class_FixedPMCArray);
+    PMC * const entry = Parrot_pmc_new_constant_init_int(interp,
+            enum_class_FixedPMCArray, e_HLL_MAX);
 
     if (entry_name && !STRING_IS_EMPTY(entry_name)) {
         VTABLE_set_pmc_keyed_str(interp, hll_info, entry_name, entry);
     }
     else
         VTABLE_push_pmc(interp, hll_info, entry);
-
-    VTABLE_set_integer_native(interp, entry, e_HLL_MAX);
 
     entry_id = Parrot_pmc_new_constant(interp, enum_class_Integer);
     VTABLE_set_integer_native(interp, entry_id, id);
@@ -272,15 +271,18 @@ INTVAL
 Parrot_get_HLL_id(PARROT_INTERP, ARGIN_NULLOK(STRING *hll_name))
 {
     ASSERT_ARGS(Parrot_get_HLL_id)
+    PMC *       entry;
     PMC * const hll_info = interp->HLL_info;
-    INTVAL      i;
+    INTVAL      i        = -1;
+
+    if (!hll_name)
+        return i;
 
     START_READ_HLL_INFO(interp, hll_info);
 
-    if (!hll_name || !VTABLE_exists_keyed_str(interp, hll_info, hll_name))
-        i = -1;
-    else {
-        PMC * const entry    = VTABLE_get_pmc_keyed_str(interp, hll_info, hll_name);
+    entry = VTABLE_get_pmc_keyed_str(interp, hll_info, hll_name);
+
+    if (!PMC_IS_NULL(entry)) {
         PMC * const entry_id = VTABLE_get_pmc_keyed_int(interp, entry, e_HLL_id);
         i = VTABLE_get_integer(interp, entry_id);
     }

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -20,6 +20,7 @@ Threads are created by creating new C<ParrotInterpreter> objects.
 
 #include "parrot/parrot.h"
 #include "parrot/atomic.h"
+#include "parrot/runcore_api.h"
 #include "pmc/pmc_sub.h"
 #include "pmc/pmc_parrotinterpreter.h"
 
@@ -89,7 +90,7 @@ static void pt_suspend_all_for_gc(PARROT_INTERP)
 static void pt_suspend_one_for_gc(PARROT_INTERP)
         __attribute__nonnull__(1);
 
-static void pt_thread_signal(NOTNULL(Parrot_Interp self), PARROT_INTERP)
+static void pt_thread_signal(ARGIN(Parrot_Interp self), PARROT_INTERP)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -368,7 +369,7 @@ Wakes up an C<interp> which should have called pt_thread_wait().
 */
 
 static void
-pt_thread_signal(NOTNULL(Parrot_Interp self), PARROT_INTERP)
+pt_thread_signal(ARGIN(Parrot_Interp self), PARROT_INTERP)
 {
     ASSERT_ARGS(pt_thread_signal)
     COND_SIGNAL(interp->thread_data->interp_cond);
@@ -776,10 +777,6 @@ pt_thread_run(PARROT_INTERP, ARGOUT(PMC *dest_interp), ARGIN(PMC *sub), ARGIN_NU
     VTABLE_set_pmc(interp, dest_interp,
             make_local_args_copy(interpreter, interp, arg));
 
-    /*
-     * set regs according to pdd03
-     */
-    interpreter->current_object = dest_interp;
     /*
      * create a joinable thread
      */
@@ -1240,7 +1237,7 @@ Joins (by waiting for) a joinable thread.
 
 PARROT_CAN_RETURN_NULL
 PMC*
-pt_thread_join(NOTNULL(Parrot_Interp parent), UINTVAL tid)
+pt_thread_join(ARGIN(Parrot_Interp parent), UINTVAL tid)
 {
     ASSERT_ARGS(pt_thread_join)
     int           state;

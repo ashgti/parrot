@@ -1377,11 +1377,11 @@ l1:
 
     $P1 = new 'Foo41'
     $S1 = $P1
-    is( $S1, 'Hello world', 'get_string method' )
+    is( $S1, 'Hello world', 'get_string :vtable :method' )
 
     $P1 = new 'Bar41'
     $S1 = $P1
-    is( $S1, 'Hello world', 'vtable method get_string' )
+    is( $S1, 'Hello world', 'get_string :method :vtable' )
 .end
 
 .namespace [ 'Foo41' ]
@@ -1713,57 +1713,52 @@ end:
     new $P5, ['String']        # set attribute values
     set $P5, "i"       # attribute slots have reference semantics
     set_args "0,0,0", $P5, "Foo56", "i"
-    get_results ""
     callmethodcc $P2, "set"
 
     new $P5, ['String']
     set $P5, "j"
     set_args "0,0,0", $P5, "Foo56", "j"
-    get_results ""
     callmethodcc $P2, "set"
 
     new $P5, ['String']
     set $P5, "k"
     set_args "0,0,0", $P5, "Bar56", "k"
-    get_results ""
     callmethodcc $P2, "set"
 
     new $P5, ['String']
     set $P5, "l"
     set_args "0,0,0", $P5, "Bar56", "l"
-    get_results ""
     callmethodcc $P2, "set"
 
     new $P5, ['String']
     set $P5, "m"
     set_args "0,0,0", $P5, "Bar56", "m"
-    get_results ""
     callmethodcc $P2, "set"
 
     # now retrieve attributes
     set_args "0,0", "Foo56", "i"
-    get_results "0", $P5
     callmethodcc $P2, "get"
+    get_results "0", $P5
     is( $P5, 'i', 'got attrib i from subclass through parent method' )
 
     set_args "0,0", "Foo56", "j"
-    get_results "0", $P5
     callmethodcc $P2, "get"
+    get_results "0", $P5
     is( $P5, "j", 'got attrib i from subclass through parent method' )
 
     set_args "0,0", "Bar56", "k"
-    get_results "0", $P5
     callmethodcc $P2, "get"
+    get_results "0", $P5
     is( $P5, "k", 'got attrib i from subclass through parent method' )
 
     set_args "0,0", "Bar56", "l"
-    get_results "0", $P5
     callmethodcc $P2, "get"
+    get_results "0", $P5
     is( $P5, "l", 'got attrib i from subclass through parent method' )
 
     set_args "0,0", "Bar56", "m"
-    get_results "0", $P5
     callmethodcc $P2, "get"
+    get_results "0", $P5
     is( $P5, "m", 'got attrib i from subclass through parent method' )
 .end
 

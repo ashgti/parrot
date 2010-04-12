@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2007, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -417,10 +417,10 @@ Note that you must free this string with C<Parrot_str_free_cstring()>!
 
 PARROT_EXPORT
 PARROT_MALLOC
-PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 char *
-Parrot_PMC_get_cstring_intkey(PARROT_INTERP,
-        Parrot_PMC pmc, Parrot_Int key)
+Parrot_PMC_get_cstring_intkey(PARROT_INTERP, Parrot_PMC pmc, Parrot_Int key)
 {
     ASSERT_ARGS(Parrot_PMC_get_cstring_intkey)
     STRING *intermediate;
@@ -448,7 +448,8 @@ Note that you must free this string with C<Parrot_str_free_cstring()>!
 
 PARROT_EXPORT
 PARROT_MALLOC
-PARROT_CAN_RETURN_NULL
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
 char *
 Parrot_PMC_get_cstring(PARROT_INTERP, Parrot_PMC pmc)
 {
@@ -482,10 +483,10 @@ Note that you must free the string with C<Parrot_str_free_cstring()>.
 
 PARROT_EXPORT
 PARROT_MALLOC
-PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 char *
-Parrot_PMC_get_cstringn(PARROT_INTERP, ARGIN(Parrot_PMC pmc),
-        ARGOUT(Parrot_Int *length))
+Parrot_PMC_get_cstringn(PARROT_INTERP, ARGIN(Parrot_PMC pmc), ARGOUT(Parrot_Int *length))
 {
     ASSERT_ARGS(Parrot_PMC_get_cstringn)
     char *retval;
@@ -516,7 +517,8 @@ Note that you must free this string with C<Parrot_str_free_cstring()>.
 
 PARROT_EXPORT
 PARROT_MALLOC
-PARROT_CAN_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PARROT_CANNOT_RETURN_NULL
 char *
 Parrot_PMC_get_cstringn_intkey(PARROT_INTERP, ARGIN(Parrot_PMC pmc),
         ARGOUT(Parrot_Int *length), Parrot_Int key)
@@ -832,8 +834,7 @@ Push the passed-in Parrot integer onto the passed in PMC
 
 PARROT_EXPORT
 void
-Parrot_PMC_push_intval(PARROT_INTERP,
-        Parrot_PMC pmc, Parrot_Int value)
+Parrot_PMC_push_intval(PARROT_INTERP, Parrot_PMC pmc, Parrot_Int value)
 {
     ASSERT_ARGS(Parrot_PMC_push_intval)
     PARROT_CALLIN_START(interp);
@@ -1003,7 +1004,7 @@ Deallocate a C string that the interpreter has handed to you.
 
 PARROT_EXPORT
 void
-Parrot_free_cstring(ARGIN_NULLOK(char *string))
+Parrot_free_cstring(ARGFREE(char *string))
 {
     ASSERT_ARGS(Parrot_free_cstring)
     Parrot_str_free_cstring(string);
@@ -1047,14 +1048,25 @@ Parrot_ext_call(PARROT_INTERP, ARGIN(Parrot_PMC sub_pmc),
 {
     ASSERT_ARGS(Parrot_ext_call)
     va_list args;
-    PMC  *sig_object;
+    PMC  *call_obj;
+    const char *arg_sig, *ret_sig;
+
+    PMC  * const old_call_obj = Parrot_pcc_get_signature(interp,
+        CURRENT_CONTEXT(interp));
+    Parrot_pcc_split_signature_string(signature, &arg_sig, &ret_sig);
 
     va_start(args, signature);
-    sig_object = Parrot_pcc_build_sig_object_from_varargs(interp, PMCNULL, signature, args);
-    va_end(args);
+    call_obj = Parrot_pcc_build_call_from_varargs(interp, PMCNULL,
+        arg_sig, &args);
 
-    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, sig_object);
+    Parrot_pcc_invoke_from_sig_object(interp, sub_pmc, call_obj);
+    call_obj = Parrot_pcc_get_signature(interp, CURRENT_CONTEXT(interp));
+    Parrot_pcc_fill_params_from_varargs(interp, call_obj, ret_sig, &args,
+            PARROT_ERRORS_RESULT_COUNT_FLAG);
+    va_end(args);
+    Parrot_pcc_set_signature(interp, CURRENT_CONTEXT(interp), old_call_obj);
 }
+
 
 /*
 

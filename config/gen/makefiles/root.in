@@ -151,7 +151,6 @@ GEN_MAKEFILES = \
 GEN_CONFIGS = \
     $(INC_DIR)/config.h \
     $(INC_DIR)/platform.h \
-    $(INC_DIR)/platform_interface.h \
     $(INC_DIR)/platform_limits.h \
     $(INC_DIR)/has_header.h \
     $(INC_DIR)/feature.h \
@@ -296,6 +295,11 @@ GEN_LIBRARY = \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL_funcs.pbc \
 #IF(has_opengl):    $(LIBRARY_DIR)/OpenGL/Math.pbc \
     $(LIBRARY_DIR)/P6object.pbc \
+    $(LIBRARY_DIR)/ProfTest.pbc \
+    $(LIBRARY_DIR)/ProfTest/PIRProfile.pir \
+    $(LIBRARY_DIR)/ProfTest/NQPProfile.pir \
+    $(LIBRARY_DIR)/ProfTest/Matcher.pir \
+    $(LIBRARY_DIR)/ProfTest/Want.pir \
     $(LIBRARY_DIR)/parrotlib.pbc \
     $(LIBRARY_DIR)/pcore.pbc \
     $(LIBRARY_DIR)/pcre.pbc \
@@ -318,6 +322,7 @@ GEN_LIBRARY = \
     $(LIBRARY_DIR)/Stream/Sub.pbc \
     $(LIBRARY_DIR)/Stream/Writer.pbc \
     $(LIBRARY_DIR)/String/Utils.pbc \
+    $(LIBRARY_DIR)/TAP/Parser.pbc \
     $(LIBRARY_DIR)/Test/Builder/Output.pbc \
     $(LIBRARY_DIR)/Test/Builder/Test.pbc \
     $(LIBRARY_DIR)/Test/Builder/Tester.pbc \
@@ -343,6 +348,10 @@ FLUID_FILES_1 = \
 
 FLUID_FILES_2 = \
     $(GEN_LIBRARY) \
+    $(LIBRARY_DIR)/ProfTest/PIRProfile.pbc \
+    $(LIBRARY_DIR)/ProfTest/NQPProfile.pbc \
+    $(LIBRARY_DIR)/ProfTest/Matcher.pbc \
+    $(LIBRARY_DIR)/ProfTest/Want.pbc \
     runtime/parrot/include/parrotlib.pbc
 
 
@@ -1039,6 +1048,46 @@ $(INSTALLABLEPBC_MERGE) : src/pbc_merge$(O) $(LIBPARROT) $(INSTALLABLECONFIG)
     @rpath_lib@ $(ALL_PARROT_LIBS) $(LINKFLAGS)
 #IF(win32):	if exist $@.manifest mt.exe -nologo -manifest $@.manifest -outputresource:$@;1
 
+#
+# Profiling runcore test supporting code
+#
+
+$(LIBRARY_DIR)/ProfTest.pbc: $(LIBRARY_DIR)/ProfTest/PIRProfile.pbc \
+	$(LIBRARY_DIR)/ProfTest/NQPProfile.pbc $(LIBRARY_DIR)/ProfTest/Matcher.pbc \
+	$(LIBRARY_DIR)/ProfTest/Want.pbc
+	$(PBC_MERGE) -o $@ $(LIBRARY_DIR)/ProfTest/PIRProfile.pbc \
+	$(LIBRARY_DIR)/ProfTest/NQPProfile.pbc $(LIBRARY_DIR)/ProfTest/Matcher.pbc \
+	$(LIBRARY_DIR)/ProfTest/Want.pbc
+
+
+$(LIBRARY_DIR)/ProfTest/PIRProfile.pbc: $(LIBRARY_DIR)/ProfTest/PIRProfile.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/PIRProfile.pir
+
+$(LIBRARY_DIR)/ProfTest/PIRProfile.pir: $(LIBRARY_DIR)/ProfTest/PIRProfile.nqp $(NQP_RX)
+	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/PIRProfile.nqp > $@
+
+
+$(LIBRARY_DIR)/ProfTest/NQPProfile.pbc: $(LIBRARY_DIR)/ProfTest/NQPProfile.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/NQPProfile.pir
+
+$(LIBRARY_DIR)/ProfTest/NQPProfile.pir: $(LIBRARY_DIR)/ProfTest/NQPProfile.nqp $(NQP_RX)
+	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/NQPProfile.nqp > $@
+
+
+$(LIBRARY_DIR)/ProfTest/Want.pbc: $(LIBRARY_DIR)/ProfTest/Want.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/Want.pir
+
+$(LIBRARY_DIR)/ProfTest/Want.pir: $(LIBRARY_DIR)/ProfTest/Want.nqp $(NQP_RX)
+	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/Want.nqp > $@
+
+
+$(LIBRARY_DIR)/ProfTest/Matcher.pbc: $(LIBRARY_DIR)/ProfTest/Matcher.pir
+	$(PARROT) -o $@ $(LIBRARY_DIR)/ProfTest/Matcher.pir
+
+$(LIBRARY_DIR)/ProfTest/Matcher.pir: $(LIBRARY_DIR)/ProfTest/Matcher.nqp $(NQP_RX)
+	$(NQP_RX) --target=pir $(LIBRARY_DIR)/ProfTest/Matcher.nqp > $@
+
+
 
 ###############################################################################
 #
@@ -1705,6 +1754,7 @@ fulltest :
 	testS \
 	src_tests \
 	run_tests \
+	buildtools_tests \
 	perl_tests \
 	library_tests \
 	nqp_test \
@@ -2479,7 +2529,7 @@ tags-emacs: tags.emacs.dummy
         --links=no --totals \
         -R --exclude=blib --exclude=.svn  \
         --languages=c,perl --langmap=c:+.h,c:+.pmc,c:+.ops \
-        -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK \
+        -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK,ARGFREE \
         .
 
 # this works with an old etags (XEmacs 21.5*)
@@ -2499,7 +2549,7 @@ tags-vi: tags.vi.dummy
     --links=no --totals \
     -R --exclude=blib --exclude=.svn  \
     --languages=c,perl --langmap=c:+.h,c:+.pmc,c:+.ops \
-    -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK \
+    -I NOTNULL,NULLOK,ARGIN,ARGMOD,ARGOUT,ARGINOUT,ARGIN_NULLOK,ARGOUT_NULLOK,ARGMOD_NULLOK,ARGFREE \
     .
 	$(PERL) $(BUILD_TOOLS_DIR)/addopstags.pl $(OPS_FILES)
 
@@ -2521,6 +2571,7 @@ cagecritic:
 
 HEADERIZER_O_FILES = \
     $(O_FILES) \
+    src/main$(O) \
     src/packdump$(O) \
     src/pbc_merge$(O) \
     $(PIRC_O_FILES)

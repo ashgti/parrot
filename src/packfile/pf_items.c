@@ -984,14 +984,16 @@ fetch_op_le_4(ARGIN(const unsigned char *b))
         unsigned char buf[4];
         opcode_t o;
     } u;
-    fetch_buf_le_4(u.buf, b);
 #if PARROT_BIGENDIAN
+    fetch_buf_le_4(u.buf, b);
 #  if OPCODE_T_SIZE == 8
     return (Parrot_Int4)(u.o >> 32);
 #  else
     return (opcode_t) fetch_iv_be((INTVAL)u.o);
 #  endif
 #else
+    /* inlining the effects of the fetch_buf_le_4() call is worth it */
+    memcpy(u.buf, b, 4);
 #  if OPCODE_T_SIZE == 8
     /* without the cast we would not get a negative int, the vtable indices */
     return (Parrot_Int4)(u.o & 0xffffffff);
@@ -1307,17 +1309,13 @@ PF_fetch_string(PARROT_INTERP, ARGIN_NULLOK(PackFile *pf), ARGIN(const opcode_t 
 {
     ASSERT_ARGS(PF_fetch_string)
     STRING   *s;
-    UINTVAL   flags    = PF_fetch_opcode(pf, cursor);
-    const int wordsize = pf ? pf->header->wordsize : sizeof (opcode_t);
-    size_t    size;
-    opcode_t  charset_nr;
+    UINTVAL   flags      = PF_fetch_opcode(pf, cursor);
+    opcode_t  charset_nr = PF_fetch_opcode(pf, cursor);
+    size_t    size       = (size_t)PF_fetch_opcode(pf, cursor);
+    const int wordsize   = pf ? pf->header->wordsize : sizeof (opcode_t);
 
     /* don't let PBC mess our internals - only constant or not */
     flags      &= (PObj_constant_FLAG | PObj_private7_FLAG);
-    charset_nr  = PF_fetch_opcode(pf, cursor);
-
-    /* These may need to be separate */
-    size        = (size_t)PF_fetch_opcode(pf, cursor);
 
     TRACE_PRINTF(("PF_fetch_string(): flags=0x%04x, ", flags));
     TRACE_PRINTF(("charset_nr=%ld, ", charset_nr));

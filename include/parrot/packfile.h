@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2009, Parrot Foundation.
+ * Copyright (C) 2001-2010, Parrot Foundation.
  */
 
 /* packfile.h
@@ -808,10 +808,9 @@ PMC * PackFile_Annotations_lookup(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-opcode_t * PackFile_Annotations_pack(PARROT_INTERP,
+opcode_t * PackFile_Annotations_pack(SHIM_INTERP,
     ARGIN(PackFile_Segment *seg),
     ARGMOD(opcode_t *cursor))
-        __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*cursor);
@@ -976,8 +975,7 @@ void Parrot_trace_eprintf(ARGIN(const char *s), ...)
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(self))
 #define ASSERT_ARGS_PackFile_Annotations_pack __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(seg) \
+       PARROT_ASSERT_ARG(seg) \
     , PARROT_ASSERT_ARG(cursor))
 #define ASSERT_ARGS_PackFile_Annotations_packed_size \
      __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -1015,20 +1013,6 @@ void PackFile_Fixup_dump(PARROT_INTERP,
     , PARROT_ASSERT_ARG(ft))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: src/packdump.c */
-
-/* HEADERIZER BEGIN: src/fingerprint.c */
-
-PARROT_EXPORT
-PARROT_PURE_FUNCTION
-int PackFile_check_fingerprint(ARGIN(const void *cursor))
-        __attribute__nonnull__(1);
-
-PARROT_EXPORT
-size_t PackFile_write_fingerprint(NOTNULL(void *cursor))
-        __attribute__nonnull__(1);
-
-/* HEADERIZER END: src/fingerprint.c */
-
 
 /* HEADERIZER BEGIN: src/packfile/pf_items.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */

@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2008, Parrot Foundation.
+# Copyright (C) 2007-2010, Parrot Foundation.
 # $Id$
 
 =head1 NAME
@@ -32,7 +32,7 @@ Always true.
 sub pre_method_gen {
     my ($self) = @_;
 
-    # vtable methods
+    # vtables
     foreach my $method ( @{ $self->vtable->methods } ) {
         my $vt_method_name = $method->name;
         next unless $self->unimplemented_vtable($vt_method_name);
@@ -134,7 +134,7 @@ EOC
 
 PARROT_EXPORT VTABLE* Parrot_default_ro_get_vtable(PARROT_INTERP) {
 
-    VTABLE * vt = Parrot_default_get_vtable(interp);
+    VTABLE * const vt = Parrot_default_get_vtable(interp);
 
 $ro_vtable_decl
 

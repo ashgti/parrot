@@ -82,6 +82,8 @@ $pmc = $foo->invoke( 'S->P', 'BAR' );
 is( $pmc->get_string(), 'BAR FOO ',
     '... and compiled sub should work just like any other Sub pmc' );
 
+my $foo;
+
 =cut
 
 my $foo;

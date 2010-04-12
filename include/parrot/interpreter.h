@@ -296,7 +296,6 @@ struct parrot_interp_t {
     /* during a call sequencer the caller fills these objects
      * inside the invoke these get moved to the context structure */
     PMC *current_cont;                        /* the return continuation PMC */
-    PMC *current_object;                      /* invocant, if a method call */
 };
 
 /* typedef struct parrot_interp_t Interp;    done in parrot.h so that
@@ -316,6 +315,8 @@ typedef enum {
     IGLOBALS_COMPREG_HASH,
     IGLOBALS_ARGV_LIST,
     IGLOBALS_NCI_FUNCS,
+    IGLOBALS_NCI_FB_CB,
+    IGLOBALS_NCI_FB_UD,
     IGLOBALS_INTERPRETER,       /* this interpreter as ParrotInterpreter PMC */
     IGLOBALS_DYN_LIBS,          /* Hash of ParrotLibrary loaded dynamic ext */
     IGLOBALS_CONFIG_HASH,
@@ -509,7 +510,7 @@ void * Parrot_compile_file(PARROT_INTERP,
 PARROT_EXPORT
 void Parrot_compreg(PARROT_INTERP,
     ARGIN(STRING *type),
-    NOTNULL(Parrot_compiler_func_t func))
+    ARGIN(Parrot_compiler_func_t func))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
@@ -582,20 +583,9 @@ STRING * sysinfo_s(PARROT_INTERP, INTVAL info_wanted)
 /* HEADERIZER END: src/interp/inter_misc.c */
 
 
-/* interpreter.c */
-void runops_int(Interp *, size_t offset);
-void exec_init_prederef(PARROT_INTERP,
-    void *prederef_arena);
-void prepare_for_run(PARROT_INTERP);
-PARROT_EXPORT void dynop_register(PARROT_INTERP, PMC *op_lib);
-
-/* interpreter.pmc */
+/* parrotinterpreter.pmc */
+/* XXX Would be nice if this could live in some headerized grouping */
 void clone_interpreter(Parrot_Interp dest, Parrot_Interp self, INTVAL flags);
-
-void Parrot_setup_event_func_ptrs(PARROT_INTERP);
-
-PARROT_EXPORT void disable_event_checking(PARROT_INTERP);
-PARROT_EXPORT void enable_event_checking(PARROT_INTERP);
 
 #else /* !PARROT_IN_CORE */
 
