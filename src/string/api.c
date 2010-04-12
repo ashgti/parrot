@@ -3025,7 +3025,7 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
         if (next->encoding != j->encoding) {
             const ENCODING *e = j->encoding;
-            CHARSET        *c = string_rep_compatible(interp, next, j, &e);
+            const CHARSET  *c = string_rep_compatible(interp, next, j, &e);
             if (e == Parrot_fixed_8_encoding_ptr)
                 e = Parrot_utf8_encoding_ptr;
             j           = e->to_encoding(interp, j);
@@ -3038,8 +3038,8 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
     /* with the right charset, transcode any strings if necessary*/
     if (transcoded) {
-        CHARSET  *c = j->charset;
-        ENCODING *e = j->encoding;
+        const CHARSET  *c = j->charset;
+        const ENCODING *e = j->encoding;
 
         for (i = 0; i < ar_len; ++i) {
             STRING *s = chunks[i];
