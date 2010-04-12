@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(405)
+    plan(403)
 
     set_s_s_sc()
     test_clone()
@@ -1835,19 +1835,6 @@ WHILE:
     eq_addr $S1, $S0, OK1
       set $I99, 0
   OK1:
-    ok($I99, 'eq_addr/ne_addr')
-
-    set $S1, "Test"
-    set $I99, 0
-    eq_addr $S1, $S0, BAD2
-      set $I99, 1
-  BAD2:
-    ok($I99, 'eq_addr/ne_addr')
-
-    set $I99, 1
-    ne_addr $S1, $S0, OK3
-      set $I99, 0
-  OK3:
     ok($I99, 'eq_addr/ne_addr')
 
     set $S0, $S1
