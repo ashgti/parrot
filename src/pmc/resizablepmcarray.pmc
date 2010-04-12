@@ -391,9 +391,14 @@ the array.
     }
 
     VTABLE void push_pmc(PMC *value) {
+        const INTVAL size   = PMC_size(SELF);
+        const INTVAL thresh = PMC_threshold(SELF);
 
-        const INTVAL size = PMC_size(SELF);
-        SELF.set_integer_native(size + 1);
+        if (PMC_array(SELF) && size < thresh)
+            PMC_size(SELF) = size + 1;
+        else {
+            SELF.set_integer_native(size + 1);
+        }
         ((PMC **)PMC_array(SELF))[size] = value;
 
         return;
