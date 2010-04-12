@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(411)
+    plan(408)
 
     set_s_s_sc()
     test_clone()
@@ -27,7 +27,6 @@ Tests Parrot string registers and operations.
     test_length_i_s()
     zero_length_substr()
     chopn_with_clone()
-    chopn_with_set()
     chopn_oob_values()
     three_argument_chopn()
     three_argument_chopn__oob_values()
@@ -235,20 +234,6 @@ Tests Parrot string registers and operations.
     is( $S4, "JAPH", '' )
     is( $S5, "japh", '' )
     is( $S3, "JAPHxyzw", '' )
-.end
-
-.sub chopn_with_set
-    set $S4, "JAPHxyzw"
-    set $S5, "japhXYZW"
-    set     $S3, $S4
-    set $I1, 4
-    chopn   $S4, 3
-    chopn   $S4, 1
-    chopn   $S5, $I1
-
-    is( $S4, "JAPH", '' )
-    is( $S5, "japh", '' )
-    is( $S3, "JAPH", '' )
 .end
 
 .sub chopn_oob_values
