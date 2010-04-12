@@ -48,8 +48,7 @@ static PMC * get_new_pmc_header(PARROT_INTERP,
 PARROT_CANNOT_RETURN_NULL
 static PMC* Parrot_pmc_reuse_noinit(PARROT_INTERP,
     ARGIN(PMC *pmc),
-    INTVAL new_type,
-    SHIM(UINTVAL flags))
+    INTVAL new_type)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -190,10 +189,10 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_IGNORABLE_RESULT
 PMC *
 Parrot_pmc_reuse(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
-    UINTVAL flags)
+    SHIM(UINTVAL flags))
 {
     ASSERT_ARGS(Parrot_pmc_reuse)
-    pmc = Parrot_pmc_reuse_noinit(interp, pmc, new_type, flags);
+    pmc = Parrot_pmc_reuse_noinit(interp, pmc, new_type);
 
     /* Call the base init for the redone pmc. Warning, this should not
        be called on Object PMCs. */
@@ -224,10 +223,10 @@ PARROT_CANNOT_RETURN_NULL
 PARROT_IGNORABLE_RESULT
 PMC *
 Parrot_pmc_reuse_init(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type, ARGIN(PMC *init),
-          UINTVAL flags)
+          SHIM(UINTVAL flags))
 {
     ASSERT_ARGS(Parrot_pmc_reuse_init)
-    pmc = Parrot_pmc_reuse_noinit(interp, pmc, new_type, flags);
+    pmc = Parrot_pmc_reuse_noinit(interp, pmc, new_type);
 
     /* Call the base init for the redone pmc. Warning, this should not
        be called on Object PMCs. */
@@ -239,43 +238,39 @@ Parrot_pmc_reuse_init(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type, ARGIN(PMC
 /*
 
 =item C<static PMC* Parrot_pmc_reuse_noinit(PARROT_INTERP, PMC *pmc, INTVAL
-new_type, UINTVAL flags)>
+new_type)>
 
 Prepare pmc for reuse. Do all scuffolding except initing.
 
 =cut
 
 */
+
 PARROT_CANNOT_RETURN_NULL
 static PMC*
-Parrot_pmc_reuse_noinit(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type,
-    SHIM(UINTVAL flags)) {
-
+Parrot_pmc_reuse_noinit(PARROT_INTERP, ARGIN(PMC *pmc), INTVAL new_type)
+{
     ASSERT_ARGS(Parrot_pmc_reuse_noinit)
-    VTABLE *new_vtable;
-    INTVAL  new_flags = 0;
 
-    if (pmc->vtable->base_type == new_type)
-        return pmc;
+    if (pmc->vtable->base_type != new_type) {
+        VTABLE * const new_vtable = interp->vtables[new_type];
 
-    new_vtable = interp->vtables[new_type];
+        /* Singleton/const PMCs/types are not eligible */
+        check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
 
-    /* Singleton/const PMCs/types are not eligible */
-    check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
+        /* Free the old PMC resources. */
+        Parrot_pmc_destroy(interp, pmc);
 
-    /* Free the old PMC resources. */
-    Parrot_pmc_destroy(interp, pmc);
+        PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG);
 
-    PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
+        /* Set the right vtable */
+        pmc->vtable = new_vtable;
 
-    /* Set the right vtable */
-    pmc->vtable = new_vtable;
-
-    if (new_vtable->attr_size)
-        Parrot_gc_allocate_pmc_attributes(interp, pmc);
-
-    else
-        PMC_data(pmc) = NULL;
+        if (new_vtable->attr_size)
+            Parrot_gc_allocate_pmc_attributes(interp, pmc);
+        else
+            PMC_data(pmc) = NULL;
+    }
 
     return pmc;
 }
@@ -303,26 +298,25 @@ Parrot_pmc_reuse_by_class(PARROT_INTERP, ARGMOD(PMC *pmc), ARGIN(PMC *class_),
 {
     ASSERT_ARGS(Parrot_pmc_reuse_by_class)
     const INTVAL   new_type   = PARROT_CLASS(class_)->id;
-    VTABLE * const new_vtable = interp->vtables[new_type];
-    const INTVAL   new_flags  = flags;
 
-    if (pmc->vtable->base_type == new_type)
-        return pmc;
+    if (pmc->vtable->base_type != new_type) {
+        VTABLE * const new_vtable = interp->vtables[new_type];
 
-    /* Singleton/const PMCs/types are not eligible */
-    check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
+        /* Singleton/const PMCs/types are not eligible */
+        check_pmc_reuse_flags(interp, pmc->vtable->flags, new_vtable->flags);
 
-    Parrot_pmc_destroy(interp, pmc);
+        Parrot_pmc_destroy(interp, pmc);
 
-    PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | new_flags);
+        PObj_flags_SETTO(pmc, PObj_is_PMC_FLAG | flags);
 
-    /* Set the right vtable */
-    pmc->vtable = new_vtable;
+        /* Set the right vtable */
+        pmc->vtable = new_vtable;
 
-    if (new_vtable->attr_size)
-        Parrot_gc_allocate_pmc_attributes(interp, pmc);
-    else
-        PMC_data(pmc) = NULL;
+        if (new_vtable->attr_size)
+            Parrot_gc_allocate_pmc_attributes(interp, pmc);
+        else
+            PMC_data(pmc) = NULL;
+    }
 
     return pmc;
 }

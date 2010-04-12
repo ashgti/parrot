@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 This program is free software. It is subject to the same license as
 Parrot itself.
 $Id$
@@ -93,10 +93,10 @@ static PackFile_Segment * create_seg(PARROT_INTERP,
         __attribute__nonnull__(5)
         FUNC_MODIFIES(*dir);
 
-static void default_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
+static void default_destroy(PARROT_INTERP,
+    ARGFREE_NOTNULL(PackFile_Segment *self))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*self);
+        __attribute__nonnull__(2);
 
 static void default_dump(PARROT_INTERP, ARGIN(const PackFile_Segment *self))
         __attribute__nonnull__(1)
@@ -534,13 +534,9 @@ Deletes a C<PackFile>.
 
 PARROT_EXPORT
 void
-PackFile_destroy(PARROT_INTERP, ARGMOD_NULLOK(PackFile *pf))
+PackFile_destroy(PARROT_INTERP, ARGMOD(PackFile *pf))
 {
     ASSERT_ARGS(PackFile_destroy)
-    if (!pf) {
-        Parrot_io_eprintf(NULL, "PackFile_destroy: pf == NULL!\n");
-        return;
-    }
 
 #ifdef PARROT_HAS_HEADER_SYSMMAN
     if (pf->is_mmap_ped) {
@@ -2390,7 +2386,8 @@ directory_pack(PARROT_INTERP, ARGIN(PackFile_Segment *self), ARGOUT(opcode_t *cu
 
     for (i = 0; i < num_segs; i++) {
         const PackFile_Segment * const seg = dir->segments[i];
-        char *name = Parrot_str_to_cstring(interp, seg->name);
+        char * const name = Parrot_str_to_cstring(interp, seg->name);
+
         *cursor++ = seg->type;
         cursor = PF_store_cstring(cursor, name);
         *cursor++ = seg->file_offset;
@@ -2500,7 +2497,7 @@ The default destroy function.  Destroys a PackFile_Segment.
 */
 
 static void
-default_destroy(PARROT_INTERP, ARGMOD(PackFile_Segment *self))
+default_destroy(PARROT_INTERP, ARGFREE_NOTNULL(PackFile_Segment *self))
 {
     ASSERT_ARGS(default_destroy)
     if (!self->pf->is_mmap_ped && self->data) {
@@ -4213,7 +4210,7 @@ Packs this segment into bytecode.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 opcode_t *
-PackFile_Annotations_pack(PARROT_INTERP, ARGIN(PackFile_Segment *seg),
+PackFile_Annotations_pack(SHIM_INTERP, ARGIN(PackFile_Segment *seg),
         ARGMOD(opcode_t *cursor))
 {
     ASSERT_ARGS(PackFile_Annotations_pack)
@@ -4269,7 +4266,7 @@ PackFile_Annotations_unpack(PARROT_INTERP, ARGMOD(PackFile_Segment *seg),
         ARGIN(const opcode_t *cursor))
 {
     ASSERT_ARGS(PackFile_Annotations_unpack)
-    PackFile_Annotations *self = (PackFile_Annotations *)seg;
+    PackFile_Annotations * const self = (PackFile_Annotations *)seg;
     PackFile_ByteCode    *code;
     STRING               *code_name;
 #if TRACE_PACKFILE
@@ -4359,7 +4356,7 @@ void
 PackFile_Annotations_dump(PARROT_INTERP, ARGIN(const PackFile_Segment *seg))
 {
     ASSERT_ARGS(PackFile_Annotations_dump)
-    const PackFile_Annotations *self = (const PackFile_Annotations *)seg;
+    const PackFile_Annotations * const self = (const PackFile_Annotations *)seg;
     INTVAL                      i;
 
     default_dump_header(interp, (const PackFile_Segment *)self);
@@ -4432,6 +4429,7 @@ PackFile_Annotations_add_group(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
         opcode_t offset)
 {
     ASSERT_ARGS(PackFile_Annotations_add_group)
+    PackFile_Annotations_Group *group;
 
     /* Allocate extra space for the group in the groups array. */
     if (self->groups)
@@ -4442,11 +4440,10 @@ PackFile_Annotations_add_group(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
                 1 + self->num_groups, PackFile_Annotations_Group *);
 
     /* Store details. */
-    self->groups[self->num_groups]                  =
-                            mem_gc_allocate_zeroed_typed(interp,
-                                    PackFile_Annotations_Group);
-    self->groups[self->num_groups]->bytecode_offset = offset;
-    self->groups[self->num_groups]->entries_offset  = self->num_entries;
+    group = self->groups[self->num_groups] =
+                mem_gc_allocate_zeroed_typed(interp, PackFile_Annotations_Group);
+    group->bytecode_offset = offset;
+    group->entries_offset  = self->num_entries;
 
     /* Increment group count. */
     self->num_groups++;
@@ -4476,12 +4473,12 @@ PackFile_Annotations_add_entry(PARROT_INTERP, ARGMOD(PackFile_Annotations *self)
 {
     ASSERT_ARGS(PackFile_Annotations_add_entry)
     /* See if we already have this key. */
-    STRING  *key_name = PF_CONST(self->code, key)->u.string;
+    STRING  * const key_name = PF_CONST(self->code, key)->u.string;
     opcode_t key_id   = -1;
     INTVAL   i;
 
     for (i = 0; i < self->num_keys; i++) {
-        STRING *test_key = PF_CONST(self->code, self->keys[i]->name)->u.string;
+        STRING * const test_key = PF_CONST(self->code, self->keys[i]->name)->u.string;
         if (Parrot_str_equal(interp, test_key, key_name)) {
             key_id = i;
             break;

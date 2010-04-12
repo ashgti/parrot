@@ -54,7 +54,7 @@ static void expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
         FUNC_MODIFIES(*hash);
 
 static void hash_freeze(PARROT_INTERP,
-    ARGIN(const Hash * const hash),
+    ARGIN(const Hash *hash),
     ARGMOD(PMC *info))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
@@ -571,18 +571,24 @@ hash_thaw(PARROT_INTERP, ARGMOD(Hash *hash), ARGMOD(PMC *info))
         HashBucket *b;
 
         switch (hash->key_type) {
-          case Hash_key_type_STRING:
-            {
-                STRING * const s_key = VTABLE_shift_string(interp, info);
-                b = parrot_hash_put(interp, hash, s_key, NULL);
-            }
-            break;
           case Hash_key_type_int:
             {
                 const INTVAL i_key = VTABLE_shift_integer(interp, info);
                 b = parrot_hash_put(interp, hash, (void*)i_key, NULL);
             }
             break;
+          case Hash_key_type_STRING:
+            {
+                STRING * const s_key = VTABLE_shift_string(interp, info);
+                b = parrot_hash_put(interp, hash, s_key, NULL);
+            }
+            break;
+          case Hash_key_type_PMC:
+            {
+                PMC * const p_key = VTABLE_shift_pmc(interp, info);
+                b = parrot_hash_put(interp, hash, p_key, NULL);
+                break;
+            }
           default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
                     "unimplemented key type");
@@ -590,16 +596,22 @@ hash_thaw(PARROT_INTERP, ARGMOD(Hash *hash), ARGMOD(PMC *info))
         }
 
         switch (hash->entry_type) {
-          case enum_hash_pmc:
-            {
-                PMC *p   = VTABLE_shift_pmc(interp, info);
-                b->value = (void *)p;
-                break;
-            }
           case enum_hash_int:
             {
                 const INTVAL i = VTABLE_shift_integer(interp, info);
                 b->value       = (void *)i;
+                break;
+            }
+          case enum_hash_string:
+            {
+                STRING * const s = VTABLE_shift_string(interp, info);
+                b->value = (void *)s;
+                break;
+            }
+          case enum_hash_pmc:
+            {
+                PMC * const p = VTABLE_shift_pmc(interp, info);
+                b->value = (void *)p;
                 break;
             }
           default:
@@ -613,8 +625,7 @@ hash_thaw(PARROT_INTERP, ARGMOD(Hash *hash), ARGMOD(PMC *info))
 
 /*
 
-=item C<static void hash_freeze(PARROT_INTERP, const Hash * const hash, PMC
-*info)>
+=item C<static void hash_freeze(PARROT_INTERP, const Hash *hash, PMC *info)>
 
 Freezes hash into a string.
 
@@ -628,7 +639,7 @@ Use by parrot_hash_visit.
 */
 
 static void
-hash_freeze(PARROT_INTERP, ARGIN(const Hash * const hash), ARGMOD(PMC *info))
+hash_freeze(PARROT_INTERP, ARGIN(const Hash *hash), ARGMOD(PMC *info))
 {
     ASSERT_ARGS(hash_freeze)
     size_t           i;
@@ -637,11 +648,14 @@ hash_freeze(PARROT_INTERP, ARGIN(const Hash * const hash), ARGMOD(PMC *info))
         HashBucket * const b = hash->bs+i;
 
         switch (hash->key_type) {
+          case Hash_key_type_int:
+            VTABLE_push_integer(interp, info, (INTVAL)b->key);
+            break;
           case Hash_key_type_STRING:
             VTABLE_push_string(interp, info, (STRING *)b->key);
             break;
-          case Hash_key_type_int:
-            VTABLE_push_integer(interp, info, (INTVAL)b->key);
+          case Hash_key_type_PMC:
+            VTABLE_push_pmc(interp, info, (PMC *)b->key);
             break;
           default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -650,11 +664,14 @@ hash_freeze(PARROT_INTERP, ARGIN(const Hash * const hash), ARGMOD(PMC *info))
         }
 
         switch (hash->entry_type) {
-          case enum_hash_pmc:
-            VTABLE_push_pmc(interp, info, (PMC *)b->value);
-            break;
           case enum_hash_int:
             VTABLE_push_integer(interp, info, (INTVAL)b->value);
+            break;
+          case enum_hash_string:
+            VTABLE_push_string(interp, info, (STRING *)b->value);
+            break;
+          case enum_hash_pmc:
+            VTABLE_push_pmc(interp, info, (PMC *)b->value);
             break;
           default:
             Parrot_ex_throw_from_c_args(interp, NULL, 1,
@@ -735,13 +752,13 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
     ASSERT_ARGS(expand_hash)
     HashBucket  **old_bi, **new_bi;
     HashBucket   *bs, *b, *new_mem;
-    HashBucket   *old_offset = (HashBucket *)((char *)hash + sizeof (Hash));
+    HashBucket * const old_offset = (HashBucket *)((char *)hash + sizeof (Hash));
 
     void * const  old_mem    = hash->bs;
     const UINTVAL old_size   = hash->mask + 1;
     const UINTVAL new_size   = old_size << 1;
     const UINTVAL old_nb     = N_BUCKETS(old_size);
-    size_t        offset, i, new_loc;
+    size_t        offset, i;
 
     /*
        allocate some less buckets
@@ -799,8 +816,9 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
      * as expand_hash is only called for that case).
      */
     if (offset) {
-        for (i = 0; i < old_size; ++i) {
-            HashBucket **next_p = new_bi + i;
+        size_t j;
+        for (j = 0; j < old_size; ++j) {
+            HashBucket **next_p = new_bi + j;
             while (*next_p) {
                 *next_p = (HashBucket *)((char *)*next_p + offset);
                 b       = *next_p;
@@ -812,11 +830,11 @@ expand_hash(PARROT_INTERP, ARGMOD(Hash *hash))
     /* recalc bucket index */
     for (i = 0; i < old_size; ++i) {
         HashBucket **next_p = new_bi + i;
-        while (*next_p) {
-            b = *next_p;
+
+        while ((b = *next_p) != NULL) {
             /* rehash the bucket */
-            new_loc = (hash->hash_val)(interp, b->key, hash->seed) &
-                (new_size - 1);
+            const size_t new_loc =
+                (hash->hash_val)(interp, b->key, hash->seed) & (new_size - 1);
 
             if (i != new_loc) {
                 *next_p         = b->next;
@@ -1009,13 +1027,15 @@ parrot_create_hash(PARROT_INTERP, PARROT_DATA_TYPE val_type, Hash_key_type hkey_
 Frees the memory allocated to the specified hash and its bucket store.  Used by
 parrot_chash_destroy.
 
+Unlike the C library function free(), the hash function must not be NULL.
+
 =cut
 
 */
 
 PARROT_EXPORT
 void
-parrot_hash_destroy(PARROT_INTERP, ARGFREE(Hash *hash))
+parrot_hash_destroy(PARROT_INTERP, ARGFREE_NOTNULL(Hash *hash))
 {
     ASSERT_ARGS(parrot_hash_destroy)
     HashBucket * const bp = (HashBucket*)((char*)hash + sizeof (Hash));
@@ -1236,7 +1256,8 @@ parrot_hash_get_bucket(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(cons
 
 /*
 
-=item C<void * parrot_hash_get(PARROT_INTERP, Hash *hash, const void *key)>
+=item C<void * parrot_hash_get(PARROT_INTERP, const Hash *hash, const void
+*key)>
 
 Returns the value keyed by C<key>, or C<NULL> if no bucket is found.
 
@@ -1248,7 +1269,7 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 void *
-parrot_hash_get(PARROT_INTERP, ARGIN(Hash *hash), ARGIN(const void *key))
+parrot_hash_get(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(const void *key))
 {
     ASSERT_ARGS(parrot_hash_get)
     const HashBucket * const bucket = parrot_hash_get_bucket(interp, hash, key);
@@ -1323,7 +1344,6 @@ parrot_hash_put(PARROT_INTERP, ARGMOD(Hash *hash),
     if (bucket)
         bucket->value = value;
     else {
-
         bucket = hash->free_list;
 
         if (!bucket) {
@@ -1514,8 +1534,7 @@ TYPE hash_value_to_TYPE convert from values type.
 
 /*
 
-=item C<void* hash_key_from_int(PARROT_INTERP, const Hash * const hash, INTVAL
-key)>
+=item C<void* hash_key_from_int(PARROT_INTERP, const Hash *hash, INTVAL key)>
 
 Cast INTVAL to hash key.
 
@@ -1525,7 +1544,7 @@ Cast INTVAL to hash key.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_key_from_int(PARROT_INTERP, ARGIN(const Hash * const hash), INTVAL key)
+hash_key_from_int(PARROT_INTERP, ARGIN(const Hash *hash), INTVAL key)
 {
     ASSERT_ARGS(hash_key_from_int)
     void *ret;
@@ -1549,8 +1568,8 @@ hash_key_from_int(PARROT_INTERP, ARGIN(const Hash * const hash), INTVAL key)
 
 /*
 
-=item C<void* hash_key_from_string(PARROT_INTERP, const Hash * const hash,
-STRING *key)>
+=item C<void* hash_key_from_string(PARROT_INTERP, const Hash *hash, STRING
+*key)>
 
 Cast STRING to hash key.
 
@@ -1560,7 +1579,7 @@ Cast STRING to hash key.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_key_from_string(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(STRING *key))
+hash_key_from_string(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(STRING *key))
 {
     ASSERT_ARGS(hash_key_from_string)
     void *ret;
@@ -1590,8 +1609,7 @@ hash_key_from_string(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(STRING
 
 /*
 
-=item C<void* hash_key_from_pmc(PARROT_INTERP, const Hash * const hash, PMC
-*key)>
+=item C<void* hash_key_from_pmc(PARROT_INTERP, const Hash *hash, PMC *key)>
 
 Cast PMC* to hash key.
 
@@ -1601,7 +1619,7 @@ Cast PMC* to hash key.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_key_from_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(PMC *key))
+hash_key_from_pmc(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(PMC *key))
 {
     ASSERT_ARGS(hash_key_from_pmc)
     void *ret;
@@ -1658,8 +1676,7 @@ hash_key_from_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(PMC *key)
 
 /*
 
-=item C<INTVAL hash_key_to_int(PARROT_INTERP, const Hash * const hash, void
-*key)>
+=item C<INTVAL hash_key_to_int(PARROT_INTERP, const Hash *hash, void *key)>
 
 Cast hash key to INTVAL.
 
@@ -1668,7 +1685,7 @@ Cast hash key to INTVAL.
 */
 
 INTVAL
-hash_key_to_int(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *key))
+hash_key_to_int(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *key))
 {
     ASSERT_ARGS(hash_key_to_int)
     INTVAL ret;
@@ -1691,8 +1708,7 @@ hash_key_to_int(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void
 
 /*
 
-=item C<STRING* hash_key_to_string(PARROT_INTERP, const Hash * const hash, void
-*key)>
+=item C<STRING* hash_key_to_string(PARROT_INTERP, const Hash *hash, void *key)>
 
 Cast hash key to STRING.
 
@@ -1702,7 +1718,7 @@ Cast hash key to STRING.
 
 PARROT_CANNOT_RETURN_NULL
 STRING*
-hash_key_to_string(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *key))
+hash_key_to_string(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *key))
 {
     ASSERT_ARGS(hash_key_to_string)
     STRING *ret;
@@ -1764,7 +1780,7 @@ hash_key_to_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN(void *key))
 
 /*
 
-=item C<void* hash_value_from_int(PARROT_INTERP, const Hash * const hash, INTVAL
+=item C<void* hash_value_from_int(PARROT_INTERP, const Hash *hash, INTVAL
 value)>
 
 Cast INTVAL to hash value.
@@ -1775,7 +1791,7 @@ Cast INTVAL to hash value.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_value_from_int(PARROT_INTERP, ARGIN(const Hash * const hash), INTVAL value)
+hash_value_from_int(PARROT_INTERP, ARGIN(const Hash *hash), INTVAL value)
 {
     ASSERT_ARGS(hash_value_from_int)
     void *ret;
@@ -1801,8 +1817,8 @@ hash_value_from_int(PARROT_INTERP, ARGIN(const Hash * const hash), INTVAL value)
 
 /*
 
-=item C<void* hash_value_from_string(PARROT_INTERP, const Hash * const hash,
-STRING *value)>
+=item C<void* hash_value_from_string(PARROT_INTERP, const Hash *hash, STRING
+*value)>
 
 Cast STRING to hash value.
 
@@ -1812,7 +1828,7 @@ Cast STRING to hash value.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_value_from_string(PARROT_INTERP, ARGIN(const Hash * const hash),
+hash_value_from_string(PARROT_INTERP, ARGIN(const Hash *hash),
         ARGIN_NULLOK(STRING *value))
 {
     ASSERT_ARGS(hash_value_from_string)
@@ -1844,8 +1860,7 @@ hash_value_from_string(PARROT_INTERP, ARGIN(const Hash * const hash),
 
 /*
 
-=item C<void* hash_value_from_pmc(PARROT_INTERP, const Hash * const hash, PMC
-*value)>
+=item C<void* hash_value_from_pmc(PARROT_INTERP, const Hash *hash, PMC *value)>
 
 Cast PMC to hash value.
 
@@ -1855,7 +1870,7 @@ Cast PMC to hash value.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_value_from_pmc(PARROT_INTERP, ARGIN(const Hash * const hash),
+hash_value_from_pmc(PARROT_INTERP, ARGIN(const Hash *hash),
     ARGIN_NULLOK(PMC *value))
 {
     ASSERT_ARGS(hash_value_from_pmc)
@@ -1884,8 +1899,8 @@ hash_value_from_pmc(PARROT_INTERP, ARGIN(const Hash * const hash),
 
 /*
 
-=item C<void* hash_value_from_number(PARROT_INTERP, const Hash * const hash,
-FLOATVAL value)>
+=item C<void* hash_value_from_number(PARROT_INTERP, const Hash *hash, FLOATVAL
+value)>
 
 Cast FLOATVAL to hash value.
 
@@ -1895,7 +1910,7 @@ Cast FLOATVAL to hash value.
 
 PARROT_CAN_RETURN_NULL
 void*
-hash_value_from_number(PARROT_INTERP, ARGIN(const Hash * const hash), FLOATVAL value)
+hash_value_from_number(PARROT_INTERP, ARGIN(const Hash *hash), FLOATVAL value)
 {
     ASSERT_ARGS(hash_value_from_number)
     void *ret;
@@ -1924,8 +1939,7 @@ hash_value_from_number(PARROT_INTERP, ARGIN(const Hash * const hash), FLOATVAL v
 
 /*
 
-=item C<INTVAL hash_value_to_int(PARROT_INTERP, const Hash * const hash, void
-*value)>
+=item C<INTVAL hash_value_to_int(PARROT_INTERP, const Hash *hash, void *value)>
 
 Cast hash value to INTVAL.
 
@@ -1934,7 +1948,7 @@ Cast hash value to INTVAL.
 */
 
 INTVAL
-hash_value_to_int(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *value))
+hash_value_to_int(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(hash_value_to_int)
     INTVAL ret;
@@ -1958,8 +1972,8 @@ hash_value_to_int(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(vo
 
 /*
 
-=item C<STRING* hash_value_to_string(PARROT_INTERP, const Hash * const hash,
-void *value)>
+=item C<STRING* hash_value_to_string(PARROT_INTERP, const Hash *hash, void
+*value)>
 
 Cast hash value to STRING.
 
@@ -1969,7 +1983,7 @@ Cast hash value to STRING.
 
 PARROT_CANNOT_RETURN_NULL
 STRING*
-hash_value_to_string(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *value))
+hash_value_to_string(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(hash_value_to_string)
     STRING *ret;
@@ -1992,8 +2006,7 @@ hash_value_to_string(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK
 
 /*
 
-=item C<PMC* hash_value_to_pmc(PARROT_INTERP, const Hash * const hash, void
-*value)>
+=item C<PMC* hash_value_to_pmc(PARROT_INTERP, const Hash *hash, void *value)>
 
 Cast hash value to PMC.
 
@@ -2003,7 +2016,7 @@ Cast hash value to PMC.
 
 PARROT_CANNOT_RETURN_NULL
 PMC*
-hash_value_to_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *value))
+hash_value_to_pmc(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(hash_value_to_pmc)
     PMC *ret;
@@ -2026,8 +2039,8 @@ hash_value_to_pmc(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(vo
 
 /*
 
-=item C<FLOATVAL hash_value_to_number(PARROT_INTERP, const Hash * const hash,
-void *value)>
+=item C<FLOATVAL hash_value_to_number(PARROT_INTERP, const Hash *hash, void
+*value)>
 
 Cast hash value to FLOATVAL.
 
@@ -2036,7 +2049,7 @@ Cast hash value to FLOATVAL.
 */
 
 FLOATVAL
-hash_value_to_number(PARROT_INTERP, ARGIN(const Hash * const hash), ARGIN_NULLOK(void *value))
+hash_value_to_number(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN_NULLOK(void *value))
 {
     ASSERT_ARGS(hash_value_to_number)
     FLOATVAL ret;
