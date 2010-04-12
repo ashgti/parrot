@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(403)
+    plan(404)
 
     set_s_s_sc()
     test_clone()
