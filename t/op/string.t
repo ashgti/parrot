@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(408)
+    plan(405)
 
     set_s_s_sc()
     test_clone()
@@ -124,7 +124,6 @@ Tests Parrot string registers and operations.
     test_string_encoding()
     test_assign()
     assign_and_globber()
-    assign_and_globber_2()
     bands_null_string()
     bands_2()
     bands_3()
@@ -1499,14 +1498,6 @@ WHILE:
     assign  $S4, "Parrot"
     is( $S4, "Parrot", 'assign & globber' )
     is( $S5, "JAPH", 'assign & globber' )
-.end
-
-.sub assign_and_globber_2
-    set $S4, "JAPH"
-    set     $S5, $S4
-    assign  $S4, "Parrot"
-    is( $S4, "Parrot", 'assign & globber 2' )
-    is( $S5, "Parrot", 'assign & globber 2' )
 .end
 
 .sub bands_null_string
