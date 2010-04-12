@@ -3009,7 +3009,7 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
     if (ar_len == 0)
         return Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
-    if (!j || STRING_IS_NULL(j))
+    if (STRING_IS_NULL(j))
         j = Parrot_str_new_noinit(interp, enum_stringrep_one, 0);
 
     chunks = (STRING **)Parrot_gc_allocate_fixed_size_storage(interp,
@@ -3017,6 +3017,11 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
     for (i = 0; i < ar_len; ++i) {
         STRING *next = VTABLE_get_string_keyed_int(interp, ar, i);
+
+        if (STRING_IS_NULL(next)) {
+            chunks[i] = STRINGNULL;
+            continue;
+        }
 
         if (next->encoding != j->encoding) {
             const ENCODING *e = j->encoding;
@@ -3038,6 +3043,10 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
         for (i = 0; i < ar_len; ++i) {
             STRING *s = chunks[i];
+
+            if (STRING_IS_NULL(s))
+                continue;
+
             if (s->encoding != e || s->charset != c) {
                 STRING *new_s = e->to_encoding(interp, s);
                 chunks[i]     = new_s;
@@ -3060,11 +3069,16 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
     /* Copy first chunk */
     s = chunks[0];
-    mem_sys_memcopy(pos, s->strstart, s->bufused);
-    pos += s->bufused;
+    if (!STRING_IS_NULL(s)) {
+        mem_sys_memcopy(pos, s->strstart, s->bufused);
+        pos += s->bufused;
+    }
 
     for (i = 1; i < ar_len; ++i) {
         STRING *next = chunks[i];
+
+        if (STRING_IS_NULL(next))
+            continue;
 
         mem_sys_memcopy(pos, j->strstart, j->bufused);
         pos += j->bufused;
