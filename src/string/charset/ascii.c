@@ -115,15 +115,6 @@ static STRING * to_charset(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
 
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_unicode(PARROT_INTERP,
-    ARGMOD(STRING *src),
-    ARGMOD_NULLOK(STRING *dest))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*src)
-        FUNC_MODIFIES(*dest);
-
-PARROT_CANNOT_RETURN_NULL
 static STRING* upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
@@ -176,9 +167,6 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_to_charset __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_to_unicode __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_upcase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -275,34 +263,6 @@ to_ascii(PARROT_INTERP, ARGIN(STRING *src))
     dest->charset = Parrot_ascii_charset_ptr;
     dest->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, dest);
     return dest;
-}
-
-/*
-
-=item C<static STRING * to_unicode(PARROT_INTERP, STRING *src, STRING *dest)>
-
-Converts the ASCII STRING C<src> to UNICODE STRING C<dest>.
-
-=cut
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-static STRING *
-to_unicode(PARROT_INTERP, ARGMOD(STRING *src), ARGMOD_NULLOK(STRING *dest))
-{
-    ASSERT_ARGS(to_unicode)
-    if (dest) {
-        dest->charset = Parrot_unicode_charset_ptr;
-        dest->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, dest);
-        Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-        return dest;
-    }
-    else {
-        src->charset = Parrot_unicode_charset_ptr;
-        src->encoding = CHARSET_GET_PREFERRED_ENCODING(interp, src);
-        return src;
-    }
 }
 
 /*
