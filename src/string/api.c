@@ -204,30 +204,6 @@ Parrot_str_finish(PARROT_INTERP)
 
 /*
 
-=item C<UINTVAL string_capacity(PARROT_INTERP, const STRING *s)>
-
-Returns the capacity of the specified Parrot string in bytes (how many bytes
-can be appended).
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_PURE_FUNCTION
-UINTVAL
-string_capacity(SHIM_INTERP, ARGIN(const STRING *s))
-{
-    ASSERT_ARGS(string_capacity)
-
-    return ((ptrcast_t)Buffer_bufstart(s) + Buffer_buflen(s) -
-            (ptrcast_t)s->strstart);
-}
-
-
-/*
-
 =item C<STRING * Parrot_str_new_noinit(PARROT_INTERP,
 parrot_string_representation_t representation, UINTVAL capacity)>
 
@@ -459,7 +435,6 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     const CHARSET   *cs;
     const ENCODING  *enc;
     STRING          *dest;
-    UINTVAL          a_capacity;
     UINTVAL          total_length;
 
     /* XXX should this be a CHARSET method? */
@@ -501,7 +476,6 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     }
 
     /* calc usable and total bytes */
-    a_capacity   = string_capacity(interp, a);
     total_length = a->bufused + b->bufused;
 
     dest = Parrot_str_new_noinit(interp, enum_stringrep_one, total_length);
