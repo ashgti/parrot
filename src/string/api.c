@@ -397,8 +397,7 @@ Parrot_str_copy(PARROT_INTERP, ARGMOD(STRING *s))
 
 /*
 
-=item C<STRING * Parrot_str_concat(PARROT_INTERP, STRING *a, STRING *b, UINTVAL
-Uflags)>
+=item C<STRING * Parrot_str_concat(PARROT_INTERP, STRING *a, STRING *b)>
 
 Concatenates two Parrot strings. If necessary, converts the second
 string's encoding and/or type to match those of the first string. If
@@ -414,31 +413,9 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING *
 Parrot_str_concat(PARROT_INTERP, ARGIN_NULLOK(STRING *a),
-            ARGIN_NULLOK(STRING *b), UINTVAL Uflags)
+            ARGIN_NULLOK(STRING *b))
 {
     ASSERT_ARGS(Parrot_str_concat)
-    return Parrot_str_append(interp, a, b);
-}
-
-
-/*
-
-=item C<STRING * Parrot_str_append(PARROT_INTERP, STRING *a, STRING *b)>
-
-Takes two Parrot strings and appends the second to the first, returning the
-result as a new string.
-
-=cut
-
-*/
-
-PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-STRING *
-Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *b))
-{
-    ASSERT_ARGS(Parrot_str_append)
     const CHARSET   *cs;
     const ENCODING  *enc;
     STRING          *dest;
@@ -449,7 +426,7 @@ Parrot_str_append(PARROT_INTERP, ARGMOD_NULLOK(STRING *a), ARGIN_NULLOK(STRING *
     /* If B isn't real, we just bail */
     const UINTVAL b_len = b ? Parrot_str_byte_length(interp, b) : 0;
     if (!b_len)
-        return a ? a : NULL;
+        return a;
 
     /* Is A real? */
     if (STRING_IS_NULL(a) || Buffer_bufstart(a) == NULL)
@@ -2502,7 +2479,7 @@ Parrot_str_escape_truncate(PARROT_INTERP,
         else
             hex = Parrot_sprintf_c(interp, "\\u%04x", c);
 
-        result = Parrot_str_append(interp, result, hex);
+        result = Parrot_str_concat(interp, result, hex);
 
         /* adjust our insert idx */
         i += hex->strlen;

@@ -475,7 +475,7 @@ filehandle when finished.
 
             do {
                 STRING * const part = Parrot_io_reads(INTERP, SELF, 0);
-                result = Parrot_str_append(INTERP, result, part);
+                result = Parrot_str_concat(INTERP, result, part);
 
                 if (Parrot_io_eof(INTERP, SELF))
                     break;

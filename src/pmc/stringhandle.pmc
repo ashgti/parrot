@@ -376,7 +376,7 @@ Print the string to the stringhandle.
             Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_PIO_ERROR,
                 "Cannot write to a filehandle not opened for write");
 
-        new_string = Parrot_str_append(interp, old_string, to_print);
+        new_string = Parrot_str_concat(interp, old_string, to_print);
 
         SET_ATTR_stringhandle(INTERP, SELF, new_string);
 

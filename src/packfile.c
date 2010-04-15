@@ -4759,10 +4759,10 @@ Parrot_load_language(PARROT_INTERP, ARGIN_NULLOK(STRING *lang_name))
 
     /* Full path to language library is "abc/abc.pbc". */
     pbc = CONST_STRING(interp, "pbc");
-    wo_ext   = Parrot_str_concat(interp, lang_name, CONST_STRING(interp, "/"), 0);
-    wo_ext   = Parrot_str_append(interp, wo_ext, lang_name);
-    file_str = Parrot_str_concat(interp, wo_ext, CONST_STRING(interp, "."), 0);
-    file_str = Parrot_str_append(interp, file_str, pbc);
+    wo_ext   = Parrot_str_concat(interp, lang_name, CONST_STRING(interp, "/"));
+    wo_ext   = Parrot_str_concat(interp, wo_ext, lang_name);
+    file_str = Parrot_str_concat(interp, wo_ext, CONST_STRING(interp, "."));
+    file_str = Parrot_str_concat(interp, file_str, pbc);
 
     /* Check if the language is already loaded */
     is_loaded_hash = VTABLE_get_pmc_keyed_int(interp,
@@ -4789,11 +4789,11 @@ Parrot_load_language(PARROT_INTERP, ARGIN_NULLOK(STRING *lang_name))
     found_path = Parrot_str_substr(interp, found_path, 0,
             Parrot_str_length(interp, found_path)-name_length);
 
-    Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "include/")),
+    Parrot_lib_add_path(interp, Parrot_str_concat(interp, found_path, CONST_STRING(interp, "include/")),
             PARROT_LIB_PATH_INCLUDE);
-    Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "dynext/")),
+    Parrot_lib_add_path(interp, Parrot_str_concat(interp, found_path, CONST_STRING(interp, "dynext/")),
             PARROT_LIB_PATH_DYNEXT);
-    Parrot_lib_add_path(interp, Parrot_str_append(interp, found_path, CONST_STRING(interp, "library/")),
+    Parrot_lib_add_path(interp, Parrot_str_concat(interp, found_path, CONST_STRING(interp, "library/")),
             PARROT_LIB_PATH_LIBRARY);
 
 

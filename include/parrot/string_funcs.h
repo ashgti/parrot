@@ -27,15 +27,6 @@
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_EXPORT
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-STRING * Parrot_str_append(PARROT_INTERP,
-    ARGMOD_NULLOK(STRING *a),
-    ARGIN_NULLOK(STRING *b))
-        __attribute__nonnull__(1)
-        FUNC_MODIFIES(*a);
-
-PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_bitwise_and(PARROT_INTERP,
     ARGIN_NULLOK(const STRING *s1),
@@ -112,8 +103,7 @@ PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 STRING * Parrot_str_concat(PARROT_INTERP,
     ARGIN_NULLOK(STRING *a),
-    ARGIN_NULLOK(STRING *b),
-    UINTVAL Uflags)
+    ARGIN_NULLOK(STRING *b))
         __attribute__nonnull__(1);
 
 PARROT_EXPORT
@@ -488,8 +478,6 @@ STRING* Parrot_str_from_uint(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*tc);
 
-#define ASSERT_ARGS_Parrot_str_append __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_str_bitwise_and __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_str_bitwise_not __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
