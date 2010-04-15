@@ -71,6 +71,11 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $P0 = subclass ['TAP';'Parser';'Result'], ['TAP';'Parser';'Result';'Bailout']
 .end
 
+.sub 'bailout' :method
+    $P0 = getattribute self, 'explanation'
+    .return ($P0)
+.end
+
 
 .namespace ['TAP';'Parser';'Result';'Comment']
 
@@ -97,6 +102,33 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $P0.'add_attribute'('test_num')
     $P0.'add_attribute'('description')
     $P0.'add_attribute'('unplanned')
+.end
+
+.sub 'get_string' :vtable :method
+    $P0 = getattribute self, 'ok'
+    $S0 = $P0
+    $S0 .= ' '
+    $P0 = getattribute self, 'test_num'
+    $S1 = $P0
+    $S0 .= $S1
+    $P0 = getattribute self, 'description'
+    if null $P0 goto L1
+    $S1 = $P0
+    if $S1 == '' goto L1
+    $S0 .= ' '
+    $S0 .= $S1
+  L1:
+    $P0 = getattribute self, 'directive'
+    if null $P0 goto L2
+    $S1 = $P0
+    if $S1 == '' goto L2
+    $S0 .= ' # '
+    $S0 .= $S1
+    $P0 = getattribute self, 'explanation'
+    $S1 = $P0
+    $S0 .= $S1
+  L2:
+    .return ($S0)
 .end
 
 .sub 'is_ok' :method
@@ -515,60 +547,60 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     setattribute self, 'ok_callbacks', $P0
 .end
 
-.sub 'skipped' :method
+.sub 'skipped' :method :nsentry
     $P0 = getattribute self, 'skipped'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'todo' :method
+.sub 'todo' :method :nsentry
     $P0 = getattribute self, 'todo'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'passed' :method
+.sub 'passed' :method :nsentry
     $P0 = getattribute self, 'passed'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'failed' :method
+.sub 'failed' :method :nsentry
     $P0 = getattribute self, 'failed'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'todo_passed' :method
+.sub 'todo_passed' :method :nsentry
     $P0 = getattribute self, 'todo_passed'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'parse_errors' :method
+.sub 'parse_errors' :method :nsentry
     $P0 = getattribute self, 'parse_errors'
     $I0 = elements $P0
     .return ($I0)
 .end
 
-.sub 'tests_run' :method
+.sub 'tests_run' :method :nsentry
     $P0 = getattribute self, 'tests_run'
     .return ($P0)
 .end
 
-.sub 'tests_planned' :method
+.sub 'tests_planned' :method :nsentry
     $P0 = getattribute self, 'tests_planned'
     .return ($P0)
 .end
 
-.sub 'ignore_exit' :method
+.sub 'ignore_exit' :method :nsentry
     .param int ign
     $P0 = new 'Boolean'
     set $P0, ign
     setattribute self, 'ignore_exit', $P0
 .end
 
-.sub 'exit' :method
+.sub 'exit' :method :nsentry
     $P0 = getattribute self, 'ignore_exit'
     if null $P0 goto L1
     unless $P0 goto L1
@@ -600,9 +632,10 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .end
 
 .sub '_add_error' :method
-    .param string error
+    .param pmc args :slurpy
     $P0 = getattribute self, 'parse_errors'
-    $P1 = box error
+    $S0 = join '', args
+    $P1 = box $S0
     push $P0, $P1
 .end
 
@@ -614,6 +647,13 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .sub 'spool' :method
     .param pmc spool
     setattribute self, 'spool', spool
+.end
+
+.sub 'delete_spool' :method
+    $P0 = getattribute self, 'spool'
+    null $P1
+    setattribute self, 'spool', $P1
+    .return ($P0)
 .end
 
 .sub 'pragma' :method
@@ -686,42 +726,47 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     .return (str)
 .end
 
-.sub 'run' :method :lex
-    .param pmc result           :optional # only for test
-    .param int has_result       :opt_flag
+.sub 'run' :method
+    .const 'Sub' next = 'next'
+    $P0 = clone next
+  L1:
+    $P1 = $P0(self)
+    unless null $P1 goto L1
+.end
+
+.sub 'next' :method :nsentry
     .local pmc stream, spool
     stream = getattribute self, 'stream'
     if null stream goto L1
     $N0 = time
     $P0 = box $N0
     setattribute self, 'start_time', $P0
-    .local pmc grammar, st
+    .local pmc grammar
     grammar = new ['TAP';'Parser';'Grammar']
-    st = box 'INIT'
-    .lex 'state', st
+    .local string st
+    st = 'INIT'
   L2:
     $S0 = readline stream
     if $S0 == '' goto L3
     $S0 = chomp($S0)
     .local pmc token
     token = grammar.'tokenize'($S0)
-    self.'next_state'(token)
-    unless has_result goto L4
-    push result, token
-  L4:
+    st = self.'next_state'(token, st)
     $S0 = token.'type'()
     $P0 = self.'_callback_for'($S0)
-    if null $P0 goto L5
+    if null $P0 goto L4
     $P0(token)
-    goto L6
-  L5:
+    goto L5
+  L4:
     self.'_make_callback'('ELSE', token)
-  L6:
+  L5:
     self.'_make_callback'('ALL', token)
     spool = getattribute self, 'spool'
-    if null spool goto L2
+    if null spool goto L6
     $S0 = token
     print spool, $S0
+  L6:
+    .yield (token)
     goto L2
   L3:
     close stream
@@ -734,23 +779,23 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
   L7:
     self.'_finish'()
     $I0 = self.'_make_callback'('EOF', self)
-    .return ()
+    null $P0
+    .return ($P0)
   L1:
     die "no stream"
 .end
 
-.sub 'next_state' :method :lex :outer('run')
+.sub 'next_state' :method
     .param pmc token
-    .local pmc STATES, st
+    .param string st
+    .local pmc STATES
     STATES = get_global ['TAP';'Parser'], 'STATES'
-    st = find_lex 'state'
     .local string type
     type = token.'type'()
   REDO:
     $I0 = STATES[st]
     if $I0 goto L1
-    $S0 = st
-    $S0 = "Illegal state: " . $S0
+    $S0 = "Illegal state: " . st
     die $S0
   L1:
     $P0 = STATES[st]
@@ -778,7 +823,7 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     printerr type
     printerr "\n"
   L5:
-    .return ()
+    .return (st)
 .end
 
 .sub '_make_state_table'
@@ -873,28 +918,26 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     .return (states)
 .end
 
-.sub '_no_action' :method
+.sub '_no_action' :method :nsentry
     # nothing
 .end
 
-.sub '_DEFAULT_version' :method
+.sub '_DEFAULT_version' :method :nsentry
     .param pmc result
     self.'_add_error'('If TAP version is present it must be the first line of output')
 .end
 
-.sub '_DEFAULT_unknown' :method
+.sub '_DEFAULT_unknown' :method :nsentry
     .param pmc result
     $I0 = self.'pragma'('strict')
     unless $I0 goto L1
     $P0 = getattribute result, 'raw'
-    $S0 = $P0
-    $S0 = 'Unknown TAP token: "' . $S0
-    $S0 .= '"'
-    self.'_add_error'($S0)
+    $S1 = $P0
+    self.'_add_error'('Unknown TAP token: "', $S1, '"')
   L1:
 .end
 
-.sub '_DEFAULT_plan' :method
+.sub '_DEFAULT_plan' :method :nsentry
     .param pmc result
     $P0 = getattribute result, 'tests_planned'
     setattribute self, 'tests_planned', $P0
@@ -912,7 +955,7 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
   L1:
 .end
 
-.sub '_DEFAULT_test' :method
+.sub '_DEFAULT_test' :method :nsentry
     .param pmc result
     $P0 = getattribute self, 'tests_run'
     inc $P0
@@ -933,14 +976,9 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     .local int number
     number = $P0
     unless number != tests_run goto L22
-    $S0 = "Tests out of sequence.  Found ("
     $S1 = number
-    $S0 .= $S1
-    $S0 .= ") but expected ("
-    $S1 = tests_run
-    $S0 .= $S1
-    $S0 .= ")"
-    self.'_add_error'($S0)
+    $S2 = tests_run
+    self.'_add_error'("Tests out of sequence.  Found (", $S1, ") but expected (", $S2, ")")
     goto L22
   L21:
     number = tests_run
@@ -990,24 +1028,22 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
   L37:
 .end
 
-.sub '_INIT_version' :method
+.sub '_INIT_version' :method :nsentry
     .param pmc result
     $P0 = getattribute result, 'version'
     setattribute self, 'version', $P0
 .end
 
-.sub '_PLANNED_plan' :method
+.sub '_PLANNED_plan' :method :nsentry
     .param pmc result
     self.'_add_error'('More than one plan found in TAP output')
 .end
 
-.sub '_GOT_PLAN_test' :method
+.sub '_GOT_PLAN_test' :method :nsentry
     .param pmc result
     $P0 = getattribute self, 'plan'
-    $S0 = $P0
-    $S0 = "Plan (" . $S0
-    $S0 .= ") must be at the beginning or end of the TAP output"
-    self.'_add_error'($S0)
+    $S1 = $P0
+    self.'_add_error'("Plan (", $S1, ") must be at the beginning or end of the TAP output")
     self.'is_good_plan'(0)
 .end
 
@@ -1039,14 +1075,9 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $P0 = box 0
     setattribute self, 'good_plan', $P0
     if tests_planned == 0 goto L4
-    $S0 = "Bad plan.  You planned "
     $S1 = tests_planned
-    $S0 .= $S1
-    $S0 .= " tests but ran "
-    $S1 = tests_run
-    $S0 .= $S1
-    $S0 .= "."
-    self.'_add_error'($S0)
+    $S2 = tests_run
+    self.'_add_error'("Bad plan.  You planned ", $S1, " tests but ran ", $S2, ".")
   L4:
 
     $P0 = getattribute self, 'good_plan'
@@ -1163,14 +1194,19 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
   L3:
 .end
 
-.sub 'parsers' :method :multi(_,string)
-    .param string desc
-    $P0 = getattribute self, 'parser_for'
-    $P1 = $P0[desc]
-    .return ($P1)
+.sub 'total' :method
+    $P0 = getattribute self, 'total'
+    $I0 = $P0
+    .return ($I0)
 .end
 
-.sub 'parsers' :method :multi()
+.sub 'passed' :method
+    $P0 = getattribute self, 'passed'
+    $I0 = $P0
+    .return ($I0)
+.end
+
+.sub 'descriptions' :method
     $P0 = getattribute self, 'parse_order'
     .return ($P0)
 .end
@@ -1198,6 +1234,15 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     .return ($N0)
   L1:
     die "Can't call elapsed without first calling start and then stop"
+.end
+
+.sub 'elapsed_timestr' :method
+    $N0 = self.'elapsed'()
+    $P0 = new 'FixedPMCArray'
+    $P0 = 1
+    $P0[0] = $N0
+    $S0 = sprintf "%.3f wallclock secs", $P0
+    .return ($S0)
 .end
 
 .sub 'has_problems' :method

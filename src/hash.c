@@ -319,7 +319,7 @@ Uses void pointers to store the PMC, sadly.
 PARROT_WARN_UNUSED_RESULT
 PARROT_PURE_FUNCTION
 int
-PMC_compare(PARROT_INTERP, ARGIN(PMC *a), ARGIN_NULLOK(PMC *b))
+PMC_compare(PARROT_INTERP, ARGIN(PMC *a), ARGIN(PMC *b))
 {
     ASSERT_ARGS(PMC_compare)
 
@@ -406,7 +406,7 @@ null in all buckets.
 
 PARROT_EXPORT
 void
-parrot_mark_hash(PARROT_INTERP, ARGIN(Hash *hash))
+parrot_mark_hash(PARROT_INTERP, ARGMOD(Hash *hash))
 {
     ASSERT_ARGS(parrot_mark_hash)
     int mark_key   = 0;
@@ -1661,7 +1661,7 @@ hash_key_from_pmc(PARROT_INTERP, ARGIN(const Hash *hash), ARGIN(PMC *key))
       case Hash_key_type_STRING:
         {
             STRING * const tmp = VTABLE_get_string(interp, key);
-            if (!tmp)
+            if (STRING_IS_NULL(tmp))
                 Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
                             "hash: can't use null as key");
             ret = (void *)tmp;

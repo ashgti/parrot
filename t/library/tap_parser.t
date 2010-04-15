@@ -162,6 +162,22 @@ Test the TAP/Parser library
     is($P0, 12, "version")
 .end
 
+.sub '_get_results'
+    .param pmc parser
+    .local pmc result
+    result = new 'ResizablePMCArray'
+    $P0 = get_hll_global ['TAP';'Parser'], 'next'
+    .local pmc coro
+    coro = clone $P0
+  L1:
+    $P0 = coro(parser)
+    if null $P0 goto L2
+    push result, $P0
+    goto L1
+  L2:
+    .return (result)
+.end
+
 .sub 'test_tap'
     .local pmc parser, result, token
     parser = new ['TAP';'Parser']
@@ -178,8 +194,7 @@ ok 5 # skip we have no description
 ok 6 - you shall not pass! # TODO should have failed
 not ok 7 - Gandalf wins.  Game over.  # TODO 'bout time!
 END_TAP
-    result = new 'ResizablePMCArray'
-    parser.'run'(result)
+    result = _get_results(parser)
     $I0 = elements result
     is($I0, 11, "elements")
 
@@ -379,8 +394,7 @@ ok 1 - input file opened
 
 ok 2 - read the rest of the file
 END_TAP
-    result = new 'ResizablePMCArray'
-    parser.'run'(result)
+    result = _get_results(parser)
     $I0 = elements result
     is($I0, 5, "elements")
 
@@ -527,9 +541,9 @@ END_TAP
     agg.'add'('tap1', parser1)
     agg.'add'('tap2', parser2)
 
-    $P0 = agg.'parsers'()
+    $P0 = agg.'descriptions'()
     $I0 = elements $P0
-    is($I0, 2, "parsers")
+    is($I0, 2, "descriptions")
 
     $P0 = getattribute agg, 'passed'
     is($P0, 10, "passed")
