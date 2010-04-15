@@ -169,7 +169,7 @@ Retrieves the C<type> attribute of this event handler.
         if (e)
             return e->type;
 
-        return string_from_literal(INTERP, "");
+        return CONST_STRING(INTERP, "");
     }
 
 /*
