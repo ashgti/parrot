@@ -350,7 +350,7 @@ get_path(PARROT_INTERP, ARGMOD_NULLOK(STRING *lib), Parrot_dlopen_flags flags,
     /* And on cygwin replace a leading "lib" by "cyg". */
 #ifdef __CYGWIN__
     if (!STRING_IS_EMPTY(lib) && memcmp(lib->strstart, "lib", 3) == 0) {
-        path = Parrot_str_append(interp, CONST_STRING(interp, "cyg"),
+        path = Parrot_str_concat(interp, CONST_STRING(interp, "cyg"),
             Parrot_str_substr(interp, lib, 3, lib->strlen - 3, NULL, 0));
 
         *handle = dlopen_string(interp, flags, path);
