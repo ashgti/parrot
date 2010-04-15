@@ -2266,12 +2266,6 @@ Parrot_str_pin(PARROT_INTERP, ARGMOD(STRING *s))
     size_t size   = Buffer_buflen(s);
     char  *memory = (char *)mem_internal_allocate(size);
 
-    /* XXX -lt: COW strings have the external_FLAG set, so this will
-     *          not work for these
-     *          so probably only sysmem should be tested
-     */
-    //Parrot_str_write_COW(interp, s);
-
     mem_sys_memcopy(memory, Buffer_bufstart(s), size);
     Buffer_bufstart(s) = memory;
     s->strstart        = memory;
@@ -2304,7 +2298,6 @@ Parrot_str_unpin(PARROT_INTERP, ARGMOD(STRING *s))
     if (!PObj_sysmem_TEST(s))
         return;
 
-    //Parrot_str_write_COW(interp, s);
     size = Buffer_buflen(s);
 
     /* We need a handle on the fixed memory so we can get rid of it later */
