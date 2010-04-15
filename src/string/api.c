@@ -326,7 +326,7 @@ Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
 {
     ASSERT_ARGS(Parrot_str_clone)
 
-    STRING *result     = Parrot_gc_new_string_header(interp, 0);
+    STRING *result     = Parrot_str_copy(interp, s);
     size_t  alloc_size = s->bufused;
 
     /* Clear COW flag. We own buffer */
