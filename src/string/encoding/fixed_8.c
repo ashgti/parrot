@@ -115,32 +115,12 @@ static void set_byte(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void set_bytes(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGMOD(STRING *new_bytes))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*new_bytes);
-
 static void set_codepoint(PARROT_INTERP,
     ARGIN(STRING *source_string),
     UINTVAL offset,
     UINTVAL codepoint)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
-
-static void set_codepoints(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGMOD(STRING *new_codepoints))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*new_codepoints);
 
 PARROT_DOES_NOT_RETURN
 PARROT_CANNOT_RETURN_NULL
@@ -187,17 +167,9 @@ static STRING * to_encoding(PARROT_INTERP, SHIM(const STRING *src))
 #define ASSERT_ARGS_set_byte __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_set_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(new_bytes))
 #define ASSERT_ARGS_set_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_set_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(new_codepoints))
 #define ASSERT_ARGS_to_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -403,46 +375,6 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *source_string), UINTVAL offset, UINTVAL c
     return_string->hashval = 0;
 
     return return_string;
-}
-
-/*
-
-=item C<static void set_codepoints(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL count, STRING *new_codepoints)>
-
-Delegate to set_bytes
-
-=cut
-
-*/
-
-static void
-set_codepoints(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL count, ARGMOD(STRING *new_codepoints))
-{
-    ASSERT_ARGS(set_codepoints)
-    set_bytes(interp, source_string, offset, count, new_codepoints);
-}
-
-/*
-
-=item C<static void set_bytes(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL count, STRING *new_bytes)>
-
-Replaces in string C<src> at position C<offset> for C<count> bytes with the
-contents of string C<new_bytes>.
-
-=cut
-
-*/
-
-static void
-set_bytes(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL count, ARGMOD(STRING *new_bytes))
-{
-    ASSERT_ARGS(set_bytes)
-    // FIXME set_bytes shouldn't do update in-place!!!
-    //Parrot_str_replace(interp, source_string, offset, count, new_bytes, NULL);
 }
 
 /*

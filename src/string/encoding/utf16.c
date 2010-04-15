@@ -93,28 +93,12 @@ static void set_byte(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void set_bytes(PARROT_INTERP,
-    SHIM(STRING *src),
-    UINTVAL offset,
-    UINTVAL count,
-    SHIM(STRING *new_bytes))
-        __attribute__nonnull__(1);
-
 static void set_codepoint(PARROT_INTERP,
     ARGIN(STRING *src),
     UINTVAL offset,
     UINTVAL codepoint)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
-
-static void set_codepoints(PARROT_INTERP,
-    ARGIN(STRING *src),
-    UINTVAL offset,
-    UINTVAL count,
-    ARGIN(STRING *new_codepoints))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5);
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
@@ -172,15 +156,9 @@ static void utf16_set_position(PARROT_INTERP,
 #define ASSERT_ARGS_set_byte __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_set_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_set_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_set_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src) \
-    , PARROT_ASSERT_ARG(new_codepoints))
 #define ASSERT_ARGS_to_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
@@ -478,54 +456,6 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
     ASSERT_ARGS(get_bytes)
     UNUSED(interp);
     UNUSED(src);
-    UNUSED(offset)
-    UNUSED(count);
-    UNIMPL;
-}
-
-/*
-
-=item C<static void set_codepoints(PARROT_INTERP, STRING *src, UINTVAL offset,
-UINTVAL count, STRING *new_codepoints)>
-
-Replaces in string C<src> at position C<offset> for C<count> codepoints with
-the contents of string C<new_codepoints>.
-
-=cut
-
-*/
-
-static void
-set_codepoints(PARROT_INTERP, ARGIN(STRING *src),
-        UINTVAL offset, UINTVAL count, ARGIN(STRING *new_codepoints))
-{
-    ASSERT_ARGS(set_codepoints)
-    UNUSED(interp);
-    UNUSED(src);
-    UNUSED(offset)
-    UNUSED(count);
-    UNUSED(new_codepoints);
-    UNIMPL;
-}
-
-/*
-
-=item C<static void set_bytes(PARROT_INTERP, STRING *src, UINTVAL offset,
-UINTVAL count, STRING *new_bytes)>
-
-Replaces in string C<src> at position C<offset> for C<count> bytes with the
-contents of string C<new_bytes>.
-
-=cut
-
-*/
-
-static void
-set_bytes(PARROT_INTERP, SHIM(STRING *src),
-        UINTVAL offset, UINTVAL count, SHIM(STRING *new_bytes))
-{
-    ASSERT_ARGS(set_bytes)
-    UNUSED(interp);
     UNUSED(offset)
     UNUSED(count);
     UNIMPL;
