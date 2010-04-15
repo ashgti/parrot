@@ -326,8 +326,11 @@ Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
 {
     ASSERT_ARGS(Parrot_str_clone)
 
-    STRING *result     = Parrot_str_copy(interp, s);
     size_t  alloc_size = s->bufused;
+    STRING *result = Parrot_gc_new_string_header(interp, 0);
+
+    /* Copy encoding/charset/etc */
+    STRUCT_COPY(result, s);
 
     /* Clear COW flag. We own buffer */
     PObj_get_FLAGS(result)  = PObj_is_string_FLAG
@@ -1194,10 +1197,15 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             "replace: subend somehow is less than substart");
 
     /* Now do the replacement */
-    dest     = Parrot_str_copy(interp, src);
-    PObj_get_FLAGS(dest)  = PObj_is_string_FLAG
-                          | PObj_is_COWable_FLAG
-                          | PObj_live_FLAG;
+    dest = Parrot_gc_new_string_header(interp, 0);
+
+    /* Copy encoding/charset/etc */
+    STRUCT_COPY(dest, src);
+
+    /* Clear COW flag. We own buffer */
+    PObj_get_FLAGS(dest) = PObj_is_string_FLAG
+                         | PObj_is_COWable_FLAG
+                         | PObj_live_FLAG;
 
             /* size            removed bytes            added bytes */
     buf_size = src->bufused - (end_byte - start_byte) + rep->bufused;
