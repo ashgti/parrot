@@ -125,7 +125,7 @@ static void set_codepoints(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP, ARGIN(STRING *src))
+static STRING * to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -217,7 +217,7 @@ static void ucs2_set_position(SHIM_INTERP,
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
+=item C<static STRING * to_encoding(PARROT_INTERP, const STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -230,7 +230,7 @@ place.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, ARGIN(STRING *src))
+to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(to_encoding)
     STRING * const result =

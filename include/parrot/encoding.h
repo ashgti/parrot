@@ -15,7 +15,7 @@
 
 #include "parrot/parrot.h"
 
-typedef STRING * (*encoding_to_encoding_t)(PARROT_INTERP, NOTNULL(STRING *src));
+typedef STRING * (*encoding_to_encoding_t)(PARROT_INTERP, NOTNULL(const STRING *src));
 typedef UINTVAL (*encoding_get_codepoint_t)(PARROT_INTERP, const STRING *src, UINTVAL offset);
 typedef void (*encoding_set_codepoint_t)(PARROT_INTERP, STRING *src, UINTVAL offset, UINTVAL codepoint);
 typedef UINTVAL (*encoding_get_byte_t)(PARROT_INTERP, const STRING *src, UINTVAL offset);

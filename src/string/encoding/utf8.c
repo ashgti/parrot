@@ -112,10 +112,9 @@ static void set_codepoints(PARROT_INTERP,
         __attribute__nonnull__(1);
 
 PARROT_CAN_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP, ARGMOD(STRING *src))
+static STRING * to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*src);
+        __attribute__nonnull__(2);
 
 static UINTVAL utf8_characters(PARROT_INTERP,
     ARGIN(const utf8_t *ptr),
@@ -537,7 +536,7 @@ utf8_set_position(SHIM_INTERP, ARGMOD(String_iter *i), UINTVAL pos)
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
+=item C<static STRING * to_encoding(PARROT_INTERP, const STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -549,7 +548,7 @@ place.
 
 PARROT_CAN_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, ARGMOD(STRING *src))
+to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(to_encoding)
     STRING *result;
@@ -558,7 +557,7 @@ to_encoding(PARROT_INTERP, ARGMOD(STRING *src))
     unsigned char *p;
 
     if (src->encoding == Parrot_utf8_encoding_ptr)
-        return src;
+        return Parrot_str_clone(interp, src);
 
     result = Parrot_gc_new_string_header(interp, 0);
     src_len = src->strlen;

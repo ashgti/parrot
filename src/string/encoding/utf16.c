@@ -118,7 +118,7 @@ static void set_codepoints(PARROT_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP, ARGIN(STRING *src))
+static STRING * to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -209,7 +209,7 @@ static void utf16_set_position(PARROT_INTERP,
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
+=item C<static STRING * to_encoding(PARROT_INTERP, const STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -223,7 +223,7 @@ place.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, ARGIN(STRING *src))
+to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(to_encoding)
 #if PARROT_HAS_ICU
@@ -236,7 +236,7 @@ to_encoding(PARROT_INTERP, ARGIN(STRING *src))
 
     if (src->encoding == Parrot_utf16_encoding_ptr ||
             src->encoding == Parrot_ucs2_encoding_ptr)
-        return src;
+        return Parrot_str_clone(interp, src);
 
     result = Parrot_gc_new_string_header(interp, 0);
 

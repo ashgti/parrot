@@ -144,7 +144,7 @@ static void set_codepoints(PARROT_INTERP,
 
 PARROT_DOES_NOT_RETURN
 PARROT_CANNOT_RETURN_NULL
-static STRING * to_encoding(PARROT_INTERP, SHIM(STRING *src))
+static STRING * to_encoding(PARROT_INTERP, SHIM(const STRING *src))
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_become_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -208,7 +208,7 @@ static STRING * to_encoding(PARROT_INTERP, SHIM(STRING *src))
 
 /*
 
-=item C<static STRING * to_encoding(PARROT_INTERP, STRING *src)>
+=item C<static STRING * to_encoding(PARROT_INTERP, const STRING *src)>
 
 Converts the string C<src> to this particular encoding.  If C<dest> is
 provided, it will contain the result.  Otherwise this function operates in
@@ -222,7 +222,7 @@ place.
 PARROT_DOES_NOT_RETURN
 PARROT_CANNOT_RETURN_NULL
 static STRING *
-to_encoding(PARROT_INTERP, SHIM(STRING *src))
+to_encoding(PARROT_INTERP, SHIM(const STRING *src))
 {
     ASSERT_ARGS(to_encoding)
     UNIMPL;
