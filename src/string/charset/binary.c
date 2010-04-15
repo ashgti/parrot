@@ -77,16 +77,6 @@ static INTVAL is_cclass(SHIM_INTERP,
     SHIM(const STRING *source_string),
     SHIM(UINTVAL offset));
 
-static void set_graphemes(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL replace_count,
-    ARGMOD(STRING *insert_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*insert_string);
-
 PARROT_CANNOT_RETURN_NULL
 static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
@@ -131,10 +121,6 @@ static UINTVAL validate(SHIM_INTERP, SHIM(STRING *source_string));
 #define ASSERT_ARGS_find_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_find_not_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
-#define ASSERT_ARGS_set_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(insert_string))
 #define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -159,27 +145,6 @@ static UINTVAL validate(SHIM_INTERP, SHIM(STRING *source_string));
 #define EXCEPTION(err, str) \
     Parrot_ex_throw_from_c_args(interp, NULL, (err), (str))
 
-/*
-
-=item C<static void set_graphemes(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL replace_count, STRING *insert_string)>
-
-Sets the graphemes for STRING C<source_string>, starting at offset
-C<offset>. Replaces C<replace_count> graphemes from STRING
-C<insert_string>.
-
-=cut
-
-*/
-
-static void
-set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL replace_count, ARGMOD(STRING *insert_string))
-{
-    ASSERT_ARGS(set_graphemes)
-    ENCODING_SET_BYTES(interp, source_string, offset,
-            replace_count, insert_string);
-}
 
 /*
 
@@ -533,7 +498,6 @@ Parrot_charset_binary_init(PARROT_INTERP)
     static const CHARSET base_set = {
         "binary",
         ascii_get_graphemes,
-        set_graphemes,
         to_charset,
         compose,
         decompose,

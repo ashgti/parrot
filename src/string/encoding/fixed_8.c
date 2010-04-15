@@ -637,15 +637,12 @@ Parrot_encoding_fixed_8_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        set_codepoints,
-        set_bytes,
         become_encoding,
         codepoints,
         bytes,
         iter_init,
         find_cclass,
         fixed_8_hash
-
     };
 
     STRUCT_COPY_FROM_STRUCT(return_encoding, base_encoding);

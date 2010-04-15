@@ -95,16 +95,6 @@ static INTVAL is_cclass(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-static void set_graphemes(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL replace_count,
-    ARGMOD(STRING *insert_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*insert_string);
-
 PARROT_CANNOT_RETURN_NULL
 static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
         __attribute__nonnull__(1);
@@ -172,10 +162,6 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
 #define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_set_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(insert_string))
 #define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -214,27 +200,6 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
     Parrot_ex_throw_from_c_args(interp, NULL, (err), (str))
 
 #define UNIMPL EXCEPTION(EXCEPTION_UNIMPLEMENTED, "unimplemented unicode")
-
-/*
-
-=item C<static void set_graphemes(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL replace_count, STRING *insert_string)>
-
-Sets C<replace_count> graphemes in STRING C<source_string> starting at offset
-C<offset>.  Gets the graphemes to be replaced from STRING C<insert_string>.
-
-=cut
-
-*/
-
-static void
-set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL replace_count, ARGMOD(STRING *insert_string))
-{
-    ASSERT_ARGS(set_graphemes)
-    ENCODING_SET_CODEPOINTS(interp, source_string, offset,
-            replace_count, insert_string);
-}
 
 
 /*
@@ -1070,7 +1035,6 @@ Parrot_charset_unicode_init(PARROT_INTERP)
     static const CHARSET base_set   = {
         "unicode",
         get_graphemes,
-        set_graphemes,
         to_charset,
         compose,
         decompose,

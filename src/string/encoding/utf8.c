@@ -942,8 +942,6 @@ Parrot_encoding_utf8_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        set_codepoints,
-        set_bytes,
         become_encoding,
         codepoints,
         bytes,

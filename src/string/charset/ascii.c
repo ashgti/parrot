@@ -78,16 +78,6 @@ static INTVAL is_cclass(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);
 
-static void set_graphemes(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL replace_count,
-    ARGMOD(STRING *insert_string))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(5)
-        FUNC_MODIFIES(*insert_string);
-
 PARROT_CANNOT_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
 static STRING * string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
@@ -151,10 +141,6 @@ static UINTVAL validate(PARROT_INTERP, ARGIN(STRING *src))
 #define ASSERT_ARGS_is_cclass __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_set_graphemes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string) \
-    , PARROT_ASSERT_ARG(insert_string))
 #define ASSERT_ARGS_string_from_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_titlecase __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -201,28 +187,6 @@ ascii_get_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
 {
     ASSERT_ARGS(ascii_get_graphemes)
     return ENCODING_GET_BYTES(interp, source_string, offset, count);
-}
-
-/*
-
-=item C<static void set_graphemes(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL replace_count, STRING *insert_string)>
-
-Sets the graphemes for C<source_string>, starting at C<offset>. Replace
-C<replace_count> graphemes with those from STRING C<insert_string>.
-
-=cut
-
-*/
-
-static void
-set_graphemes(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL replace_count, ARGMOD(STRING *insert_string))
-{
-    ASSERT_ARGS(set_graphemes)
-    ENCODING_SET_BYTES(interp, source_string, offset,
-            replace_count, insert_string);
-
 }
 
 /*
@@ -850,7 +814,6 @@ Parrot_charset_ascii_init(PARROT_INTERP)
     static const CHARSET base_set = {
         "ascii",
         ascii_get_graphemes,
-        set_graphemes,
         to_charset,
         compose,
         decompose,
