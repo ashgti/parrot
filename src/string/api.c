@@ -1157,6 +1157,11 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     UINTVAL         start_byte, end_byte;
     INTVAL          diff, buf_size;
 
+    if (STRING_IS_NULL(src)) {
+        Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
+            "Can't replace in NULL string");
+    }
+
     /* abs(-offset) may not be > strlen-1 */
     if (offset < 0)
         true_offset = (UINTVAL)(src->strlen + offset);
