@@ -20,7 +20,7 @@ Tests the C<String> PMC.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(169)
+    plan(171)
 
     set_or_get_strings()
     setting_integers()
