@@ -171,6 +171,9 @@ typedef struct Memory_Block {
     struct Memory_Block *next;
     char *start;
     char *top;
+
+    /* Actually used size. Used in compact_pool */
+    size_t used;
 } Memory_Block;
 
 typedef struct Variable_Size_Pool {
