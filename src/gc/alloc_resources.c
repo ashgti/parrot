@@ -498,7 +498,6 @@ compact_pool(PARROT_INTERP,
                         sizeof (Memory_Block**) * total_blocks);
 
     /* Calculate blocks used amount */
-    /* Run through all the Buffer header pools and copy */
     for (j = (INTVAL)mem_pools->num_sized - 1; j >= 0; --j) {
         Fixed_Size_Pool * const header_pool = mem_pools->sized_header_pools[j];
         UINTVAL       object_size;
@@ -642,7 +641,8 @@ pad_pool_size(ARGIN(const Variable_Size_Pool *pool),
             skip_blocks[skip_pos++] = cur_block;
         }
         else {
-            total_size += cur_block->size - cur_block->free;
+            //total_size += cur_block->size - cur_block->free;
+            total_size += cur_block->used;
         }
         cur_block   = cur_block->prev;
     }
@@ -731,7 +731,7 @@ move_one_buffer(PARROT_INTERP, ARGMOD(Buffer *old_buf), ARGMOD(char *new_pool_pt
 
             if (PObj_is_COWable_TEST(old_buf)) {
                 INTVAL * const new_ref_count = ((INTVAL*) new_pool_ptr) - 1;
-                *new_ref_count        = 2;
+                *new_ref_count        = 0;
             }
 
             /* Copy our memory to the new pool */
@@ -804,7 +804,7 @@ calculate_blocks_usage(PARROT_INTERP, ARGIN(Memory_Block *top_block), ARGMOD(Buf
                 if (top_block->start <= (char*)Buffer_bufstart(buf)
                     && (char*)Buffer_bufstart(buf) < top_block->top) {
                     /* ... and update usage */
-                    top_block->used += Buffer_buflen(buf);
+                    top_block->used += aligned_string_size(Buffer_buflen(buf));
                     break;
                 }
 
