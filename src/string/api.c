@@ -321,6 +321,8 @@ string_rep_compatible(SHIM_INTERP,
 
 Helper function to clone string.
 
+=cut
+
 */
 
 PARROT_WARN_UNUSED_RESULT
