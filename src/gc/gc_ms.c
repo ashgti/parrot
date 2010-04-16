@@ -480,9 +480,6 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
     pt_gc_start_mark(interp);
     Parrot_gc_run_init(interp, interp->mem_pools);
 
-    /* compact STRING pools to collect free headers and allocated buffers */
-    Parrot_gc_compact_memory_pool(interp);
-
     /* Now go trace the PMCs. returning true means we did a complete trace.
        false means it was a lazy trace. */
     if (gc_ms_trace_active_PMCs(interp, (flags & GC_trace_stack_FLAG)
@@ -502,6 +499,9 @@ gc_ms_mark_and_sweep(PARROT_INTERP, UINTVAL flags)
 
         Parrot_gc_clear_live_bits(interp, mem_pools->pmc_pool);
     }
+
+    /* compact STRING pools to collect free headers and allocated buffers */
+    Parrot_gc_compact_memory_pool(interp);
 
     pt_gc_stop_mark(interp);
 
