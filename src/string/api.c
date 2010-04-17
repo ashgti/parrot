@@ -317,7 +317,7 @@ string_rep_compatible(SHIM_INTERP,
 
 /*
 
-=item C<STRING* Parrot_str_clone(PARROT_INTERP, STRING const * const s)>
+=item C<STRING* Parrot_str_clone(PARROT_INTERP, const STRING *s)>
 
 Helper function to clone string.
 
@@ -328,12 +328,12 @@ Helper function to clone string.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 STRING*
-Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
+Parrot_str_clone(PARROT_INTERP, ARGIN(const STRING *s))
 {
     ASSERT_ARGS(Parrot_str_clone)
 
-    size_t  alloc_size = s->bufused;
-    STRING *result = Parrot_gc_new_string_header(interp, 0);
+    const size_t alloc_size = s->bufused;
+    STRING * const result = Parrot_gc_new_string_header(interp, 0);
 
     /* Copy encoding/charset/etc */
     STRUCT_COPY(result, s);

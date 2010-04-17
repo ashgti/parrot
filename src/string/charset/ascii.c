@@ -310,7 +310,7 @@ static STRING*
 upcase(PARROT_INTERP, ARGIN(const STRING *source_string))
 {
     ASSERT_ARGS(upcase)
-    STRING       *result = Parrot_str_clone(interp, source_string);
+    STRING * const result = Parrot_str_clone(interp, source_string);
     const UINTVAL n = source_string->strlen;
 
     if (n) {

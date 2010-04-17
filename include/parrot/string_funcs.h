@@ -452,7 +452,7 @@ char * string_to_cstring_nullable(SHIM_INTERP,
 
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
-STRING* Parrot_str_clone(PARROT_INTERP, ARGIN(STRING const * const s))
+STRING* Parrot_str_clone(PARROT_INTERP, ARGIN(const STRING *s))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
