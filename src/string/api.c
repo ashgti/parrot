@@ -1213,7 +1213,8 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             (char *)src->strstart + end_byte,
             src->bufused - end_byte);
 
-    dest->strlen = CHARSET_CODEPOINTS(interp, dest);
+    dest->strlen  = CHARSET_CODEPOINTS(interp, dest);
+    dest->hashval = 0;
 
     return dest;
 }

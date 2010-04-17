@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(398)
+    plan(399)
 
     set_s_s_sc()
     test_clone()
@@ -39,6 +39,7 @@ Tests Parrot string registers and operations.
     five_arg_substr_w_rep_eq_length()
     five_arg_substr_w_replacement_gt_length()
     five_arg_substr_w_replacement_lt_length()
+    five_arg_substr_vs_hash()
     five_arg_substr__offset_at_end_of_string()
     exception_five_arg_substr__offset_past_end_of_string()
     five_arg_substr_neg_offset_repl_eq_length()
@@ -402,6 +403,18 @@ handler:
     is( $S0, "abcdefghijkxyz", '' )
     is( $S1, "xyz", '' )
     is( $S2, "", '' )
+.end
+
+.sub five_arg_substr_vs_hash
+    # Check that string hashval properly updated.
+    .local pmc hash
+    hash = new ['Hash']
+    $S0 = "fooo"
+    hash[$S0]   = 1
+    hash["foo"] = 42
+    $S0 = replace $S0, 1, 1, ''
+    $S1 = hash[$S0]
+    is( $S1, '42', 'substr behave it self')
 .end
 
 .sub exception_five_arg_substr__offset_past_end_of_string
