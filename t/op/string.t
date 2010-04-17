@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(397)
+    plan(398)
 
     set_s_s_sc()
     test_clone()
@@ -472,9 +472,10 @@ handler:
 .sub four_arg_replacement_only_substr
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S0, 3, 3, $S1
-    is( $S0, "abcxyzghijk", '' )
+    $S2 = replace $S0, 3, 3, $S1
+    is( $S0, "abcdefghijk", '' )
     is( $S1, "xyz", '' )
+    is( $S2, "abcxyzghijk", '' )
 .end
 
 .sub three_arg_substr
