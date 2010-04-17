@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2004-2009, Parrot Foundation.
+Copyright (C) 2004-2010, Parrot Foundation.
 $Id$
 
 =head1 NAME
@@ -490,8 +490,7 @@ ascii_compare(PARROT_INTERP, ARGIN(const STRING *lhs), ARGIN(const STRING *rhs))
     const UINTVAL min_len = l_len > r_len ? r_len : l_len;
     String_iter iter;
 
-    if (lhs->encoding == Parrot_fixed_8_encoding_ptr &&
-            rhs->encoding == Parrot_fixed_8_encoding_ptr) {
+    if (lhs->encoding == rhs->encoding) {
         const int ret_val = memcmp(lhs->strstart, rhs->strstart, min_len);
         if (ret_val)
             return ret_val < 0 ? -1 : 1;
