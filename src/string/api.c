@@ -960,7 +960,7 @@ string_chr(PARROT_INTERP, UINTVAL character)
 
 =over 4
 
-=item C<INTVAL Parrot_str_length(PARROT_INTERP, const STRING * const s)>
+=item C<INTVAL Parrot_str_length(PARROT_INTERP, const STRING *s)>
 
 Calculates and returns the number of characters in the specified Parrot string.
 
@@ -971,7 +971,7 @@ Calculates and returns the number of characters in the specified Parrot string.
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL
-Parrot_str_length(PARROT_INTERP, ARGIN(const STRING * const s))
+Parrot_str_length(SHIM_INTERP, ARGIN(const STRING *s))
 {
     ASSERT_ARGS(Parrot_str_length)
 
@@ -1133,7 +1133,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
     UINTVAL         true_length = (UINTVAL)length;
 
     UINTVAL         start_byte, end_byte;
-    INTVAL          diff, buf_size;
+    INTVAL          buf_size;
 
     if (STRING_IS_NULL(src)) {
         Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_UNEXPECTED_NULL,
@@ -2238,7 +2238,7 @@ Replaces the specified Parrot string's managed buffer memory by system memory.
 
 PARROT_EXPORT
 void
-Parrot_str_pin(PARROT_INTERP, ARGMOD(STRING *s))
+Parrot_str_pin(SHIM_INTERP, ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_str_pin)
     size_t size   = Buffer_buflen(s);

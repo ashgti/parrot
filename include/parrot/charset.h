@@ -155,7 +155,7 @@ CHARSET * Parrot_new_charset(PARROT_INTERP)
 PARROT_EXPORT
 INTVAL Parrot_register_charset(PARROT_INTERP,
     ARGIN(const char *charsetname),
-    ARGIN(const CHARSET *charset))
+    ARGIN(CHARSET *charset))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);

@@ -43,7 +43,7 @@ typedef struct To_converter {
 } To_converter;
 
 typedef struct One_charset {
-    NOTNULL(const CHARSET *charset);
+    NOTNULL(CHARSET *charset);
     STRING          *name;
     To_converter    *to_converters;
     int              n_converters;
@@ -66,7 +66,7 @@ static void Parrot_str_internal_register_charset_names(PARROT_INTERP)
 
 static INTVAL register_charset(PARROT_INTERP,
     ARGIN(const char *charsetname),
-    ARGIN(const CHARSET *charset))
+    ARGIN(CHARSET *charset))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
@@ -315,7 +315,7 @@ Parrot_charset_c_name(SHIM_INTERP, INTVAL number_of_charset)
 /*
 
 =item C<static INTVAL register_charset(PARROT_INTERP, const char *charsetname,
-const CHARSET *charset)>
+CHARSET *charset)>
 
 Adds a new charset C<charset> with name <charsetname> to the list of
 all charsets. Returns 0 and does nothing if a charset with that name
@@ -327,7 +327,7 @@ already exists. Returns 1 otherwise.
 
 static INTVAL
 register_charset(PARROT_INTERP, ARGIN(const char *charsetname),
-        ARGIN(const CHARSET *charset))
+        ARGIN(CHARSET *charset))
 {
     ASSERT_ARGS(register_charset)
     int i;
@@ -414,7 +414,7 @@ register_static_converters(PARROT_INTERP)
 /*
 
 =item C<INTVAL Parrot_register_charset(PARROT_INTERP, const char *charsetname,
-const CHARSET *charset)>
+CHARSET *charset)>
 
 Register a new charset C<charset> with name C<charsetname>. Charset may only
 be one of the 4 following names:
@@ -434,7 +434,7 @@ failed, for any reason.
 PARROT_EXPORT
 INTVAL
 Parrot_register_charset(PARROT_INTERP, ARGIN(const char *charsetname),
-        ARGIN(const CHARSET *charset))
+        ARGIN(CHARSET *charset))
 {
     ASSERT_ARGS(Parrot_register_charset)
     if (!all_charsets) {
