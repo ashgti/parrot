@@ -261,7 +261,6 @@ struct _charset {
 #define CHARSET_SET_BYTE(interp, source, offset, value) ((source)->encoding)->set_byte((interp), (source), (offset), (value))
 #define CHARSET_GET_CODEPOINTS(interp, source, offset, count) ((source)->encoding)->get_codepoints((interp), (source), (offset), (count))
 #define CHARSET_GET_BYTES(interp, source, offset, count) ((source)->encoding)->get_bytes((interp), (source), (offset), (count))
-#define CHARSET_BECOME_ENCODING(interp, source) ((source)->encoding)->become_encoding((interp), (source))
 #define CHARSET_CODEPOINTS(interp, source) ((source)->encoding)->codepoints((interp), (source))
 #define CHARSET_BYTES(interp, source) ((source)->encoding)->bytes((interp), (source))
 

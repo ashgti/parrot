@@ -36,9 +36,6 @@ static void no_ICU_lib(PARROT_INTERP) /* HEADERIZER SKIP */
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void become_encoding(PARROT_INTERP, SHIM(STRING *src))
-        __attribute__nonnull__(1);
-
 PARROT_WARN_UNUSED_RESULT
 static UINTVAL bytes(PARROT_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(1)
@@ -140,8 +137,6 @@ static void ucs2_set_position(SHIM_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*i);
 
-#define ASSERT_ARGS_become_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
@@ -396,23 +391,6 @@ get_bytes(PARROT_INTERP, SHIM(STRING *src), SHIM(UINTVAL offset),
     UNIMPL;
 }
 
-/*
-
-=item C<static void become_encoding(PARROT_INTERP, STRING *src)>
-
-Unconditionally makes the string be in this encoding, if that's valid
-
-=cut
-
-*/
-
-static void
-become_encoding(PARROT_INTERP, SHIM(STRING *src))
-{
-    ASSERT_ARGS(become_encoding)
-    UNIMPL;
-}
-
 
 /*
 
@@ -635,7 +613,6 @@ Parrot_encoding_ucs2_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        become_encoding,
         codepoints,
         bytes,
         iter_init,

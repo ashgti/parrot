@@ -27,9 +27,6 @@ UTF-8 (L<http://www.utf-8.com/>).
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void become_encoding(PARROT_INTERP, SHIM(STRING *src))
-        __attribute__nonnull__(1);
-
 PARROT_PURE_FUNCTION
 static UINTVAL bytes(SHIM_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
@@ -145,8 +142,6 @@ PARROT_CANNOT_RETURN_NULL
 static const void * utf8_skip_forward(ARGIN(const void *ptr), UINTVAL n)
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_become_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -772,22 +767,6 @@ get_bytes(PARROT_INTERP, ARGMOD(STRING *src), UINTVAL offset, UINTVAL count)
     return return_string;
 }
 
-/*
-
-=item C<static void become_encoding(PARROT_INTERP, STRING *src)>
-
-Unconditionally makes the string be in this encoding, if that's valid
-
-=cut
-
-*/
-
-static void
-become_encoding(PARROT_INTERP, SHIM(STRING *src))
-{
-    ASSERT_ARGS(become_encoding)
-    UNIMPL;
-}
 
 
 /*
@@ -883,7 +862,6 @@ Parrot_encoding_utf8_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        become_encoding,
         codepoints,
         bytes,
         iter_init,

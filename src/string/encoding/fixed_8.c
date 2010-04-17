@@ -24,9 +24,6 @@ This file implements the encoding functions for fixed-width 8-bit codepoints
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void become_encoding(PARROT_INTERP, SHIM(STRING *source_string))
-        __attribute__nonnull__(1);
-
 static UINTVAL bytes(SHIM_INTERP, ARGIN(STRING *source_string))
         __attribute__nonnull__(2);
 
@@ -127,8 +124,6 @@ PARROT_CANNOT_RETURN_NULL
 static STRING * to_encoding(PARROT_INTERP, SHIM(const STRING *src))
         __attribute__nonnull__(1);
 
-#define ASSERT_ARGS_become_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -377,23 +372,6 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *source_string), UINTVAL offset, UINTVAL c
     return return_string;
 }
 
-/*
-
-=item C<static void become_encoding(PARROT_INTERP, STRING *source_string)>
-
-Unconditionally makes the string be in this encoding, if that's valid
-
-=cut
-
-*/
-
-static void
-become_encoding(PARROT_INTERP, SHIM(STRING *source_string))
-{
-    ASSERT_ARGS(become_encoding)
-    UNIMPL;
-}
-
 
 /*
 
@@ -569,7 +547,6 @@ Parrot_encoding_fixed_8_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        become_encoding,
         codepoints,
         bytes,
         iter_init,

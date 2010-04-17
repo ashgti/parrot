@@ -26,9 +26,6 @@ UTF-16 encoding with the help of the ICU library.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void become_encoding(PARROT_INTERP, SHIM(STRING *src))
-        __attribute__nonnull__(1);
-
 PARROT_WARN_UNUSED_RESULT
 static UINTVAL bytes(SHIM_INTERP, ARGIN(STRING *src))
         __attribute__nonnull__(2);
@@ -127,8 +124,6 @@ static void utf16_set_position(PARROT_INTERP,
         __attribute__nonnull__(2)
         FUNC_MODIFIES(*i);
 
-#define ASSERT_ARGS_become_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_bytes __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_codepoints __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -463,24 +458,6 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
 
 /*
 
-=item C<static void become_encoding(PARROT_INTERP, STRING *src)>
-
-Unconditionally makes the string be in this encoding, if that's valid
-
-=cut
-
-*/
-
-static void
-become_encoding(PARROT_INTERP, SHIM(STRING *src))
-{
-    ASSERT_ARGS(become_encoding)
-    UNIMPL;
-}
-
-
-/*
-
 =item C<static UINTVAL codepoints(PARROT_INTERP, STRING *src)>
 
 Returns the number of codepoints in string C<src>.
@@ -654,7 +631,6 @@ Parrot_encoding_utf16_init(PARROT_INTERP)
         set_byte,
         get_codepoints,
         get_bytes,
-        become_encoding,
         codepoints,
         bytes,
         iter_init,
