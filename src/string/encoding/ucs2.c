@@ -459,7 +459,7 @@ ucs2_encode_and_advance(PARROT_INTERP, ARGMOD(String_iter *i), UINTVAL c)
     ASSERT_ARGS(ucs2_encode_and_advance)
 
 #if PARROT_HAS_ICU
-    UChar    *s = (const UChar*) i->str->strstart;
+    UChar    *s = (UChar*) i->str->strstart;
     UINTVAL pos = i->bytepos / sizeof (UChar);
     s[pos++]    = (UChar)c;
     i->charpos++;
