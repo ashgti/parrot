@@ -198,8 +198,8 @@ inline op length(out INT, in STR) :base_mem {
 
 inline op bytelength(out INT, in STR) :base_mem {
     UINTVAL n;
-    STRING * const s = $2;
-    if (!s)
+    const STRING * const s = $2;
+    if (STRING_IS_NULL(s))
         n = 0;
     else {
         n = s->bufused;

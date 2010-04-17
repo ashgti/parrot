@@ -84,7 +84,7 @@ const char * Parrot_charset_c_name(SHIM_INTERP, INTVAL number_of_charset);
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-const STRING * Parrot_charset_name(SHIM_INTERP, INTVAL number_of_charset);
+STRING * Parrot_charset_name(SHIM_INTERP, INTVAL number_of_charset);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
@@ -257,7 +257,6 @@ struct _charset {
 #define CHARSET_TO_ENCODING(interp, source) ((source)->encoding)->to_encoding((interp), (source))
 #define CHARSET_COPY_TO_ENCODING(interp, source) ((source)->encoding)->copy_to_encoding((interp), (source))
 #define CHARSET_GET_CODEPOINT(interp, source, offset) ((source)->encoding)->get_codepoint((interp), (source), (offset))
-#define CHARSET_SET_CODEPOINT(interp, source, offset, codepoint) ((source)->encoding)->set_codepoint((interp), (source), (offset), (codepoint))
 #define CHARSET_GET_BYTE(interp, source, offset) ((source)->encoding)->get_byte((interp), (source), (offset))
 #define CHARSET_SET_BYTE(interp, source, offset, value) ((source)->encoding)->set_byte((interp), (source), (offset), (value))
 #define CHARSET_GET_CODEPOINTS(interp, source, offset, count) ((source)->encoding)->get_codepoints((interp), (source), (offset), (count))

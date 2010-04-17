@@ -44,7 +44,7 @@ typedef struct To_converter {
 
 typedef struct One_charset {
     NOTNULL(const CHARSET *charset);
-    const STRING    *name;
+    STRING          *name;
     To_converter    *to_converters;
     int              n_converters;
 } One_charset;
@@ -244,8 +244,7 @@ Parrot_charset_number_of_str(SHIM_INTERP, ARGIN(const STRING *src))
 
 /*
 
-=item C<const STRING * Parrot_charset_name(PARROT_INTERP, INTVAL
-number_of_charset)>
+=item C<STRING * Parrot_charset_name(PARROT_INTERP, INTVAL number_of_charset)>
 
 Returns the name of the charset given by the INTVAL index
 C<number_of_charset>.
@@ -257,7 +256,7 @@ C<number_of_charset>.
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-const STRING *
+STRING *
 Parrot_charset_name(SHIM_INTERP, INTVAL number_of_charset)
 {
     ASSERT_ARGS(Parrot_charset_name)

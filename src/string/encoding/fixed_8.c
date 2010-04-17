@@ -109,13 +109,6 @@ static void set_byte(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void set_codepoint(PARROT_INTERP,
-    ARGIN(STRING *source_string),
-    UINTVAL offset,
-    UINTVAL codepoint)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_DOES_NOT_RETURN
 PARROT_CANNOT_RETURN_NULL
 static STRING * to_encoding(PARROT_INTERP, SHIM(const STRING *src))
@@ -154,9 +147,6 @@ static STRING * to_encoding(PARROT_INTERP, SHIM(const STRING *src))
        PARROT_ASSERT_ARG(src) \
     , PARROT_ASSERT_ARG(iter))
 #define ASSERT_ARGS_set_byte __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(source_string))
-#define ASSERT_ARGS_set_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(source_string))
 #define ASSERT_ARGS_to_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -208,25 +198,6 @@ get_codepoint(PARROT_INTERP, ARGIN(const STRING *source_string),
 {
     ASSERT_ARGS(get_codepoint)
     return get_byte(interp, source_string, offset);
-}
-
-/*
-
-=item C<static void set_codepoint(PARROT_INTERP, STRING *source_string, UINTVAL
-offset, UINTVAL codepoint)>
-
-This is the same as set byte
-
-=cut
-
-*/
-
-static void
-set_codepoint(PARROT_INTERP, ARGIN(STRING *source_string),
-        UINTVAL offset, UINTVAL codepoint)
-{
-    ASSERT_ARGS(set_codepoint)
-    set_byte(interp, source_string, offset, codepoint);
 }
 
 
@@ -535,7 +506,6 @@ Parrot_encoding_fixed_8_init(PARROT_INTERP)
         1, /* Max bytes per codepoint */
         to_encoding,
         get_codepoint,
-        set_codepoint,
         get_byte,
         set_byte,
         get_codepoints,

@@ -90,13 +90,6 @@ static void set_byte(PARROT_INTERP,
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void set_codepoint(PARROT_INTERP,
-    ARGIN(STRING *src),
-    UINTVAL offset,
-    UINTVAL codepoint)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 static STRING * to_encoding(PARROT_INTERP, ARGIN(const STRING *src))
@@ -149,9 +142,6 @@ static void utf16_set_position(PARROT_INTERP,
     , PARROT_ASSERT_ARG(src) \
     , PARROT_ASSERT_ARG(iter))
 #define ASSERT_ARGS_set_byte __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(src))
-#define ASSERT_ARGS_set_codepoint __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(src))
 #define ASSERT_ARGS_to_encoding __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -305,27 +295,6 @@ get_codepoint(PARROT_INTERP, ARGIN(const STRING *src), UINTVAL offset)
 #endif
 }
 
-/*
-
-=item C<static void set_codepoint(PARROT_INTERP, STRING *src, UINTVAL offset,
-UINTVAL codepoint)>
-
-Sets, in string C<src> at position C<offset>, the codepoint C<codepoint>.
-
-=cut
-
-*/
-
-static void
-set_codepoint(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL codepoint)
-{
-    ASSERT_ARGS(set_codepoint)
-    UNUSED(interp);
-    UNUSED(src);
-    UNUSED(offset);
-    UNUSED(codepoint);
-    UNIMPL;
-}
 
 /*
 
@@ -631,7 +600,6 @@ Parrot_encoding_utf16_init(PARROT_INTERP)
         4, /* Max bytes per codepoint 0 .. 0x10ffff */
         to_encoding,
         get_codepoint,
-        set_codepoint,
         get_byte,
         set_byte,
         get_codepoints,
