@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(404)
+    plan(397)
 
     set_s_s_sc()
     test_clone()
@@ -121,7 +121,6 @@ Tests Parrot string registers and operations.
     correct_precision_for_sprintf_x()
     test_exchange()
     test_find_encoding()
-    test_string_encoding()
     test_assign()
     assign_and_globber()
     bands_null_string()
@@ -139,8 +138,6 @@ Tests Parrot string registers and operations.
     bnots_null_string()
     bnots_2()
     bnots_cow()
-    transcode_to_utf8()
-    string_chartype()
     split_on_empty_string()
     split_on_non_empty_string()
     test_join()
@@ -1457,34 +1454,6 @@ WHILE:
     # is( $I0, "3", 'find_encoding' )
 .end
 
-.sub test_string_encoding
-    skip(4, "no more visible encoding" )
-    # set $I0, 0
-    # new $S0, 0, $I0
-    # string_encoding $I1, $S0
-    # eq $I0, $I1, OK1
-    # print "not "
-    # OK1:  print "ok 1\n"
-    # set $I0, 1
-    # new $S0, 0, $I0
-    # string_encoding $I1, $S0
-    # eq $I0, $I1, OK2
-    # print "not "
-    # OK2:  print "ok 2\n"
-    # set $I0, 2
-    # new $S0, 0, $I0
-    # string_encoding $I1, $S0
-    # eq $I0, $I1, OK3
-    # print "not "
-    # OK3:  print "ok 3\n"
-    # set $I0, 3
-    # new $S0, 0, $I0
-    # string_encoding $I1, $S0
-    # eq $I0, $I1, OK4
-    # print "not "
-    # OK4:  print "ok 4\n"
-.end
-
 .sub test_assign
     set $S4, "JAPH"
     assign  $S5, $S4
@@ -1738,25 +1707,6 @@ WHILE:
     substr $S2, $S1, 0, 3
     bnots $S1, $S1
     is( $S2, "foo", 'bnots COW' )
-.end
-
-.sub transcode_to_utf8
-    skip( 2, "no more transcode" )
-    # set $S1, "ASCII is the same as UTF8\n"
-    # find_encoding $I1, "utf8"
-    # transcode $S2, $S1, $I1
-    # is( $S1, "ASCII is the same as UTF8", 'transcode to utf8' )
-    # is( $S2, "ASCII is the same as UTF8", 'transcode to utf8' )
-.end
-
-.sub string_chartype
-    skip( 1, "no more chartype" )
-
-    # set $S0, "Test String"
-    # find_chartype $I0, "usascii"
-    # set_chartype $S0, $I0
-    # string_chartype $I1, $S0
-    # is( $I0, $I1, 'string_chartype' )
 .end
 
 .sub split_on_empty_string
