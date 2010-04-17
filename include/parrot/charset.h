@@ -84,7 +84,7 @@ const char * Parrot_charset_c_name(SHIM_INTERP, INTVAL number_of_charset);
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-STRING* Parrot_charset_name(SHIM_INTERP, INTVAL number_of_charset);
+const STRING * Parrot_charset_name(SHIM_INTERP, INTVAL number_of_charset);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
@@ -135,18 +135,19 @@ const CHARSET * Parrot_get_charset(SHIM_INTERP, INTVAL number_of_charset);
 PARROT_EXPORT
 PARROT_CAN_RETURN_NULL
 PARROT_WARN_UNUSED_RESULT
-CHARSET * Parrot_load_charset(PARROT_INTERP, ARGIN(const char *charsetname))
+const CHARSET * Parrot_load_charset(PARROT_INTERP,
+    ARGIN(const char *charsetname))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
 PARROT_EXPORT
 INTVAL Parrot_make_default_charset(SHIM_INTERP,
     SHIM(const char *charsetname),
-    ARGIN(CHARSET *charset))
+    ARGIN(const CHARSET *charset))
         __attribute__nonnull__(3);
 
 PARROT_EXPORT
-PARROT_CAN_RETURN_NULL
+PARROT_CANNOT_RETURN_NULL
 PARROT_MALLOC
 CHARSET * Parrot_new_charset(PARROT_INTERP)
         __attribute__nonnull__(1);
@@ -154,7 +155,7 @@ CHARSET * Parrot_new_charset(PARROT_INTERP)
 PARROT_EXPORT
 INTVAL Parrot_register_charset(PARROT_INTERP,
     ARGIN(const char *charsetname),
-    ARGIN(CHARSET *charset))
+    ARGIN(const CHARSET *charset))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
@@ -162,7 +163,7 @@ INTVAL Parrot_register_charset(PARROT_INTERP,
 PARROT_EXPORT
 void Parrot_register_charset_converter(PARROT_INTERP,
     ARGIN(const CHARSET *lhs),
-    ARGIN(CHARSET *rhs),
+    ARGIN(const CHARSET *rhs),
     ARGIN(charset_converter_t func))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
