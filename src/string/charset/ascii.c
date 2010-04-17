@@ -859,9 +859,6 @@ charset_cvt_ascii_to_binary(PARROT_INTERP, ARGIN(STRING *src))
     STRING *dest = Parrot_str_clone(interp, src);
     UINTVAL offs;
 
-    Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-    dest->bufused = src->bufused;
-    dest->strlen  = src->strlen;
     for (offs = 0; offs < src->strlen; ++offs) {
         const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
         ENCODING_SET_BYTE(interp, dest, offs, c);
@@ -889,9 +886,6 @@ charset_cvt_ascii_to_iso_8859_1(PARROT_INTERP, ARGIN(STRING *src))
     STRING * dest = Parrot_str_clone(interp, src);
     UINTVAL offs;
 
-    Parrot_gc_reallocate_string_storage(interp, dest, src->strlen);
-    dest->bufused = src->bufused;
-    dest->strlen  = src->strlen;
     for (offs = 0; offs < src->strlen; ++offs) {
         const UINTVAL c = ENCODING_GET_BYTE(interp, src, offs);
         ENCODING_SET_BYTE(interp, dest, offs, c);
