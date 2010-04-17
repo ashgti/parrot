@@ -480,7 +480,7 @@ string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
 
 /*
 
-=item C<const CHARSET * Parrot_charset_binary_init(PARROT_INTERP)>
+=item C<void Parrot_charset_binary_init(PARROT_INTERP)>
 
 Initialize the binary charset, including function pointers and
 settings.
@@ -489,8 +489,7 @@ settings.
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-const CHARSET *
+void
 Parrot_charset_binary_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_charset_binary_init)
@@ -522,7 +521,8 @@ Parrot_charset_binary_init(PARROT_INTERP)
     STRUCT_COPY_FROM_STRUCT(return_set, base_set);
     return_set->preferred_encoding = Parrot_fixed_8_encoding_ptr;
     Parrot_register_charset(interp, "binary", return_set);
-    return return_set;
+
+    return;
 
 }
 

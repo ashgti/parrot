@@ -80,8 +80,7 @@ INTVAL mixed_cs_index(PARROT_INTERP,
         __attribute__nonnull__(2)
         __attribute__nonnull__(3);
 
-PARROT_CANNOT_RETURN_NULL
-const CHARSET * Parrot_charset_ascii_init(PARROT_INTERP)
+void Parrot_charset_ascii_init(PARROT_INTERP)
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_ascii_compare __attribute__unused__ int _ASSERT_ARGS_CHECK = (\

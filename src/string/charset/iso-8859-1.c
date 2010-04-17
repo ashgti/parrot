@@ -640,7 +640,7 @@ string_from_codepoint(PARROT_INTERP, UINTVAL codepoint)
 
 /*
 
-=item C<const CHARSET * Parrot_charset_iso_8859_1_init(PARROT_INTERP)>
+=item C<void Parrot_charset_iso_8859_1_init(PARROT_INTERP)>
 
 Initializes the ISO-8859-1 charset by installing all the necessary function pointers.
 
@@ -648,8 +648,7 @@ Initializes the ISO-8859-1 charset by installing all the necessary function poin
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-const CHARSET *
+void
 Parrot_charset_iso_8859_1_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_charset_iso_8859_1_init)
@@ -681,7 +680,8 @@ Parrot_charset_iso_8859_1_init(PARROT_INTERP)
     STRUCT_COPY_FROM_STRUCT(return_set, base_set);
     return_set->preferred_encoding = Parrot_fixed_8_encoding_ptr;
     Parrot_register_charset(interp, "iso-8859-1", return_set);
-    return return_set;
+
+    return;
 }
 
 /*

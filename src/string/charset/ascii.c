@@ -795,7 +795,7 @@ ascii_compute_hash(SHIM_INTERP, ARGIN(const STRING *source_string), size_t seed)
 
 /*
 
-=item C<const CHARSET * Parrot_charset_ascii_init(PARROT_INTERP)>
+=item C<void Parrot_charset_ascii_init(PARROT_INTERP)>
 
 Initialize the ASCII charset but registering all the necessary
 function pointers and settings.
@@ -804,8 +804,7 @@ function pointers and settings.
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-const CHARSET *
+void
 Parrot_charset_ascii_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_charset_ascii_init)
@@ -837,7 +836,8 @@ Parrot_charset_ascii_init(PARROT_INTERP)
     STRUCT_COPY_FROM_STRUCT(return_set, base_set);
     return_set->preferred_encoding = Parrot_fixed_8_encoding_ptr;
     Parrot_register_charset(interp, "ascii", return_set);
-    return return_set;
+
+    return;
 }
 
 /*

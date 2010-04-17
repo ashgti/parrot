@@ -604,7 +604,7 @@ iter_init(PARROT_INTERP, ARGIN(const STRING *src), ARGOUT(String_iter *iter))
 
 /*
 
-=item C<ENCODING * Parrot_encoding_ucs2_init(PARROT_INTERP)>
+=item C<void Parrot_encoding_ucs2_init(PARROT_INTERP)>
 
 Initializes the UCS-2 encoding.
 
@@ -612,8 +612,7 @@ Initializes the UCS-2 encoding.
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-ENCODING *
+void
 Parrot_encoding_ucs2_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_encoding_ucs2_init)
@@ -637,7 +636,8 @@ Parrot_encoding_ucs2_init(PARROT_INTERP)
     };
     STRUCT_COPY_FROM_STRUCT(return_encoding, base_encoding);
     Parrot_register_encoding(interp, "ucs2", return_encoding);
-    return return_encoding;
+
+    return;
 }
 
 /*

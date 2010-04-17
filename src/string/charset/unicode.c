@@ -1017,7 +1017,7 @@ compute_hash(PARROT_INTERP, ARGIN(const STRING *src), size_t seed)
 
 /*
 
-=item C<const CHARSET * Parrot_charset_unicode_init(PARROT_INTERP)>
+=item C<void Parrot_charset_unicode_init(PARROT_INTERP)>
 
 Initializes the Unicode charset by installing all the necessary function
 pointers.
@@ -1026,8 +1026,7 @@ pointers.
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-const CHARSET *
+void
 Parrot_charset_unicode_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_charset_unicode_init)
@@ -1066,7 +1065,8 @@ Parrot_charset_unicode_init(PARROT_INTERP)
      */
     return_set->preferred_encoding = Parrot_utf8_encoding_ptr;
     Parrot_register_charset(interp, "unicode", return_set);
-    return return_set;
+
+    return;
 }
 
 

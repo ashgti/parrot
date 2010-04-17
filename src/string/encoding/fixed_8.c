@@ -516,7 +516,7 @@ fixed_8_hash(SHIM_INTERP, ARGIN(const STRING *s), size_t hashval)
 
 /*
 
-=item C<ENCODING * Parrot_encoding_fixed_8_init(PARROT_INTERP)>
+=item C<void Parrot_encoding_fixed_8_init(PARROT_INTERP)>
 
 Initializes the fixed-8 encoding.
 
@@ -524,8 +524,7 @@ Initializes the fixed-8 encoding.
 
 */
 
-PARROT_CANNOT_RETURN_NULL
-ENCODING *
+void
 Parrot_encoding_fixed_8_init(PARROT_INTERP)
 {
     ASSERT_ARGS(Parrot_encoding_fixed_8_init)
@@ -550,7 +549,8 @@ Parrot_encoding_fixed_8_init(PARROT_INTERP)
 
     STRUCT_COPY_FROM_STRUCT(return_encoding, base_encoding);
     Parrot_register_encoding(interp, "fixed_8", return_encoding);
-    return return_encoding;
+
+    return;
 }
 
 
