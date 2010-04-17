@@ -27,11 +27,11 @@ UTF-16 encoding with the help of the ICU library.
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_WARN_UNUSED_RESULT
-static UINTVAL bytes(SHIM_INTERP, ARGIN(STRING *src))
+static UINTVAL bytes(SHIM_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
-static UINTVAL codepoints(PARROT_INTERP, ARGIN(STRING *src))
+static UINTVAL codepoints(PARROT_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
@@ -343,6 +343,12 @@ static UINTVAL
 find_cclass(PARROT_INTERP, ARGIN(STRING *s), ARGIN(const INTVAL *typetable),
 INTVAL flags, UINTVAL pos, UINTVAL end)
 {
+    UNUSED(s);
+    UNUSED(typetable);
+    UNUSED(flags);
+    UNUSED(pos);
+    UNUSED(end);
+
     Parrot_ex_throw_from_c_args(interp, NULL,
         EXCEPTION_UNIMPLEMENTED,
         "No find_cclass support in unicode encoding plugins");
@@ -458,7 +464,7 @@ get_bytes(PARROT_INTERP, ARGIN(STRING *src), UINTVAL offset, UINTVAL count)
 
 /*
 
-=item C<static UINTVAL codepoints(PARROT_INTERP, STRING *src)>
+=item C<static UINTVAL codepoints(PARROT_INTERP, const STRING *src)>
 
 Returns the number of codepoints in string C<src>.
 
@@ -468,7 +474,7 @@ Returns the number of codepoints in string C<src>.
 
 PARROT_WARN_UNUSED_RESULT
 static UINTVAL
-codepoints(PARROT_INTERP, ARGIN(STRING *src))
+codepoints(PARROT_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(codepoints)
     String_iter iter;
@@ -484,7 +490,7 @@ codepoints(PARROT_INTERP, ARGIN(STRING *src))
 
 /*
 
-=item C<static UINTVAL bytes(PARROT_INTERP, STRING *src)>
+=item C<static UINTVAL bytes(PARROT_INTERP, const STRING *src)>
 
 Returns the number of bytes in string C<src>.
 
@@ -494,7 +500,7 @@ Returns the number of bytes in string C<src>.
 
 PARROT_WARN_UNUSED_RESULT
 static UINTVAL
-bytes(SHIM_INTERP, ARGIN(STRING *src))
+bytes(SHIM_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(bytes)
     return src->bufused;

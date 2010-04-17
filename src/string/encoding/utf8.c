@@ -28,13 +28,12 @@ UTF-8 (L<http://www.utf-8.com/>).
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_PURE_FUNCTION
-static UINTVAL bytes(SHIM_INTERP, ARGIN(STRING *src))
+static UINTVAL bytes(SHIM_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(2);
 
-static UINTVAL codepoints(PARROT_INTERP, ARGMOD(STRING *src))
+static UINTVAL codepoints(PARROT_INTERP, ARGIN(const STRING *src))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*src);
+        __attribute__nonnull__(2);
 
 PARROT_WARN_UNUSED_RESULT
 static UINTVAL find_cclass(PARROT_INTERP,
@@ -217,10 +216,6 @@ const char Parrot_utf8skip[256] = {
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,     /* cjk etc. */
     4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6      /* cjk etc. */
 };
-
-#if 0
-typedef unsigned char utf8_t;
-#endif
 
 /*
 
@@ -771,7 +766,7 @@ get_bytes(PARROT_INTERP, ARGMOD(STRING *src), UINTVAL offset, UINTVAL count)
 
 /*
 
-=item C<static UINTVAL codepoints(PARROT_INTERP, STRING *src)>
+=item C<static UINTVAL codepoints(PARROT_INTERP, const STRING *src)>
 
 Returns the number of codepoints in string C<src>.
 
@@ -780,7 +775,7 @@ Returns the number of codepoints in string C<src>.
 */
 
 static UINTVAL
-codepoints(PARROT_INTERP, ARGMOD(STRING *src))
+codepoints(PARROT_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(codepoints)
     String_iter iter;
@@ -796,7 +791,7 @@ codepoints(PARROT_INTERP, ARGMOD(STRING *src))
 
 /*
 
-=item C<static UINTVAL bytes(PARROT_INTERP, STRING *src)>
+=item C<static UINTVAL bytes(PARROT_INTERP, const STRING *src)>
 
 Returns the number of bytes in string C<src>.
 
@@ -806,7 +801,7 @@ Returns the number of bytes in string C<src>.
 
 PARROT_PURE_FUNCTION
 static UINTVAL
-bytes(SHIM_INTERP, ARGIN(STRING *src))
+bytes(SHIM_INTERP, ARGIN(const STRING *src))
 {
     ASSERT_ARGS(bytes)
     return src->bufused;
