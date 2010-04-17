@@ -231,10 +231,9 @@ STRING* Parrot_str_join(PARROT_INTERP,
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
-INTVAL Parrot_str_length(PARROT_INTERP, ARGMOD(STRING *s))
+INTVAL Parrot_str_length(PARROT_INTERP, ARGIN(const STRING * const s))
         __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*s);
+        __attribute__nonnull__(2);
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT

@@ -757,7 +757,7 @@ Parrot_str_new_init(PARROT_INTERP, ARGIN_NULLOK(const char *buffer), UINTVAL len
         if (encoding == Parrot_fixed_8_encoding_ptr)
             s->strlen = len;
         else
-            (void)Parrot_str_length(interp, s);
+            s->strlen = CHARSET_CODEPOINTS(interp, s);
 
         return s;
     }
@@ -770,7 +770,7 @@ Parrot_str_new_init(PARROT_INTERP, ARGIN_NULLOK(const char *buffer), UINTVAL len
         if (encoding == Parrot_fixed_8_encoding_ptr)
             s->strlen = len;
         else
-            (void)Parrot_str_length(interp, s);
+            s->strlen = CHARSET_CODEPOINTS(interp, s);
     }
     else {
         s->strlen = s->bufused = 0;
@@ -960,7 +960,7 @@ string_chr(PARROT_INTERP, UINTVAL character)
 
 =over 4
 
-=item C<INTVAL Parrot_str_length(PARROT_INTERP, STRING *s)>
+=item C<INTVAL Parrot_str_length(PARROT_INTERP, const STRING * const s)>
 
 Calculates and returns the number of characters in the specified Parrot string.
 
@@ -971,11 +971,10 @@ Calculates and returns the number of characters in the specified Parrot string.
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 INTVAL
-Parrot_str_length(PARROT_INTERP, ARGMOD(STRING *s))
+Parrot_str_length(PARROT_INTERP, ARGIN(const STRING * const s))
 {
     ASSERT_ARGS(Parrot_str_length)
 
-    s->strlen = CHARSET_CODEPOINTS(interp, s);
     return s->strlen;
 }
 
@@ -1214,7 +1213,7 @@ Parrot_str_replace(PARROT_INTERP, ARGIN(STRING *src),
             (char *)src->strstart + end_byte,
             src->bufused - end_byte);
 
-    (void)Parrot_str_length(interp, dest);
+    dest->strlen = CHARSET_CODEPOINTS(interp, dest);
 
     return dest;
 }
@@ -2603,7 +2602,7 @@ Parrot_str_unescape(PARROT_INTERP,
 
     /* Force validating the string */
     if (encoding != result->encoding)
-        (void)Parrot_str_length(interp, result);
+        result->strlen = CHARSET_CODEPOINTS(interp, result);
 
     if (!CHARSET_VALIDATE(interp, result))
         Parrot_ex_throw_from_c_args(interp, NULL,
@@ -3061,8 +3060,8 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
     }
 
     res->bufused  = pos - res->strstart;
+    res->strlen = CHARSET_CODEPOINTS(interp, res);
 
-    (void)Parrot_str_length(interp, res);
     Parrot_gc_free_fixed_size_storage(interp, ar_len * sizeof (STRING *),
         chunks);
 
