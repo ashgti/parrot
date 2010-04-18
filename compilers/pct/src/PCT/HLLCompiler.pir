@@ -745,7 +745,7 @@ options are passed to the evaluator.
     ifh.'encoding'(encoding)
   iter_loop_1:
     $S0 = ifh.'readall'(iname)
-    code .= $S0
+    code = code . $S0
     close ifh
     goto iter_loop
   iter_end:
@@ -928,7 +928,7 @@ Dump C<obj> with C<name> according to C<options>.
 
   load_dumper:
     load_bytecode 'PCT/Dumper.pbc'
-    downcase $S0
+    $S0 = downcase $S0
     $P0 = get_hll_global ['PCT';'Dumper'], $S0
     .tailcall $P0(obj, name)
 .end
