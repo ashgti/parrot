@@ -576,7 +576,7 @@ This handles comparisons of array-like and hash-like structures.
     if does_flag goto compare_hash
 
     diagnosis  = typeof left
-    diagnosis .= ' is not a nested data structure'
+    diagnosis  = diagnosis . ' is not a nested data structure'
     result     = 0
     goto report_result
 
@@ -628,20 +628,24 @@ This handles comparisons of array-like and hash-like structures.
     .local string nested_path
     nested_path = join '][', position
 
-    diagnosis   = 'Mismatch'
+    .local pmc bits
+    bits = new ['ResizableStringArray']
+
+    push bits, 'Mismatch'
     unless nested_path goto show_expected
 
-    diagnosis  .= ' at ['
-    diagnosis  .= nested_path
-    diagnosis  .= ']'
+    push bits, ' at ['
+    push bits, nested_path
+    push bits, ']'
 
   show_expected:
-    diagnosis  .= ': expected '
-    diagnosis  .= left_value
-    diagnosis  .= ', received '
-    diagnosis  .= right_value
+    push bits, ': expected '
+    push bits, left_value
+    push bits, ', received '
+    push bits, right_value
 
   return_it:
+    diagnosis = '_join'(bits :flat)
     test.'diag'( diagnosis )
     .return( result )
 .end
@@ -662,14 +666,14 @@ This handles comparisons of array-like and hash-like structures.
 
     .local string l_count_string
     .local string r_count_string
-    l_count_string  = l_count
-    l_count_string .= ' element'
+    l_count_string = l_count
+    l_count_string = l_count_string . ' element'
 
     if l_count == 1 goto pluralization_done
-    l_count_string .= 's'
+    l_count_string = l_count_string . 's'
 
   pluralization_done:
-    r_count_string  = r_count
+    r_count_string = r_count
 
     push position, l_count_string
     push position, r_count_string
@@ -735,11 +739,11 @@ This handles comparisons of array-like and hash-like structures.
 
     .local string l_count_string
     .local string r_count_string
-    l_count_string  = l_count
-    l_count_string .= ' element'
+    l_count_string = l_count
+    l_count_string = l_count_string . ' element'
 
     if l_count == 1 goto pluralization_done
-    l_count_string .= 's'
+    l_count_string = l_count_string . 's'
 
   pluralization_done:
     r_count_string  = r_count
@@ -1172,11 +1176,7 @@ optional test description in C<description>.
     $I0 = isne $I0, -1
     test.'ok'( $I0, description )
     if $I0 goto done
-    diagnostic = "substring failed: '"
-    diagnostic .= target
-    diagnostic .= "' does not contain '"
-    diagnostic .= text
-    diagnostic .= "'"
+    diagnostic = _join("substring failed: '", target, "' does not contain '", text, "'")
     test.'diag'(diagnostic)
   done:
 .end
@@ -1222,11 +1222,7 @@ optional test description in C<description>.
   match_success:
     goto pass_it
   match_fail:
-    diagnostic = "match failed: target '"
-    diagnostic .= target
-    diagnostic .= "' does not match pattern '"
-    diagnostic .= pattern
-    diagnostic .= "'"
+    diagnostic = '_join'("match failed: target '", target, "' does not match pattern '", pattern, "'")
     goto report
   rule_fail:
     diagnostic = "rule error"
@@ -1326,19 +1322,19 @@ Bad input: "C<test that the return from Foo is correct type>"
     description = object_name
   keep_default:
     diagnostic = description
-    description .= " isa "
+    description = description . " isa "
     $S0 = class_name
-    description .= $S0
+    description = description . $S0
 
     $I0 = isa thingy, class_name
     test.'ok'($I0, description)
     if $I0 goto out
-    diagnostic .= " isn't a "
+    diagnostic = diagnostic . " isn't a "
     $S1 = class_name
-    diagnostic .= $S1
-    diagnostic .= " it's a "
+    diagnostic = diagnostic . $S1
+    diagnostic = diagnostic . " it's a "
     $S2 = typeof thingy
-    diagnostic .= $S2
+    diagnostic = diagnostic . $S2
     test.'diag'(diagnostic)
   out:
 .end
@@ -1348,12 +1344,14 @@ Bad input: "C<test that the return from Foo is correct type>"
     .param string expected
     .local string diagnostic
 
-    diagnostic  = 'Have: '
-    diagnostic .= received
-    diagnostic .= "\nWant: "
-    diagnostic .= expected
-
+    diagnostic  = '_join'('Have: ', received, "\nWant: ", expected)
     .return( diagnostic )
+.end
+
+.sub '_join'
+    .param pmc bits :slurpy
+    $S0 = join '', bits
+    .return($S0)
 .end
 
 =back
