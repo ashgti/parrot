@@ -112,22 +112,25 @@ An alternate dump output for a Match object and all of its subcaptures.
     if has_b1 goto start
     b1 = "["
   start:
-    .local string out
-    out = concat prefix, ':'
+    .local pmc out
+    out = new ['ResizableStringArray']
+
+    push out, prefix
+    push out, ':'
     unless self goto subpats
-    out .= ' <'
+    push out, ' <'
     $S0 = self
-    out .= $S0
-    out .= ' @ '
+    push out, $S0
+    push out, ' @ '
     $S0 = self.'from'()
-    out .= $S0
-    out .= '> '
+    push out, $S0
+    push out, '> '
 
   subpats:
     $I0 = self
     $S0 = $I0
-    out .= $S0
-    out .= "\n"
+    push out, $S0
+    push out, "\n"
     capt = self.'list'()
     if_null capt, subrules
     spi = 0
@@ -136,8 +139,8 @@ An alternate dump output for a Match object and all of its subcaptures.
     unless spi < spc goto subrules
     prefix1 = concat prefix, b1
     $S0 = spi
-    concat prefix1, $S0
-    concat prefix1, b2
+    prefix1 = concat prefix1, $S0
+    prefix1 = concat prefix1, b2
     $I0 = defined capt[spi]
     unless $I0 goto subpats_2
     $P0 = capt[spi]
@@ -154,8 +157,8 @@ An alternate dump output for a Match object and all of its subcaptures.
     unless it goto end
     $S0 = shift it
     prefix1 = concat prefix, '<'
-    concat prefix1, $S0
-    concat prefix1, ">"
+    prefix1 = concat prefix1, $S0
+    prefix1 = concat prefix1, ">"
     $I0 = defined capt[$S0]
     unless $I0 goto subrules_1
     $P0 = capt[$S0]
@@ -166,7 +169,7 @@ An alternate dump output for a Match object and all of its subcaptures.
     $I0 = isa $P0, ['PGE';'Match']
     unless $I0 goto dumper_0
     $S0 = $P0.'dump_str'(prefix1, b1, b2)
-    out .= $S0
+    push out, $S0
     local_return jmpstack
   dumper_0:
     $I0 = does $P0, 'array'
@@ -178,24 +181,25 @@ An alternate dump output for a Match object and all of its subcaptures.
     $P1 = $P0[$I0]
     prefix2 = concat prefix1, b1
     $S0 = $I0
-    concat prefix2, $S0
-    concat prefix2, b2
+    prefix2 = concat prefix2, $S0
+    prefix2 = concat prefix2, b2
     $S0 = $P1.'dump_str'(prefix2, b1, b2)
-    out .= $S0
+    push out, $S0
     inc $I0
     goto dumper_1
   dumper_2:
     local_return jmpstack
   dumper_3:
-    out .= prefix1
-    out .= ': '
+    push out, prefix1
+    push out, ': '
     $S0 = $P0
-    out .= $S0
-    out .= "\n"
+    push out, $S0
+    push out, "\n"
     local_return jmpstack
 
   end:
-    .return (out)
+    $S0 = join '', out
+    .return ($S0)
 .end
 
 
