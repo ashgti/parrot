@@ -132,16 +132,16 @@
     $P0 = pos
     $P0 = new 'Exception'
     $S0 = 'p5regex parse error: '
-    $S0 .= message
-    $S0 .= ' at offset '
+    $S0 = $S0 . message
+    $S0 = $S0 . ' at offset '
     $S1 = pos
-    $S0 .= $S1
-    $S0 .= ", found '"
+    $S0 = $S0 . $S1
+    $S0 = $S0 . ", found '"
     $P1 = getattribute mob, '$.target'
     $S1 = $P1
     $S1 = substr $S1, pos, 1
-    $S0 .= $S1
-    $S0 .= "'"
+    $S0 = $S0 . $S1
+    $S0 = $S0 . "'"
     $P0 = $S0
     throw $P0
     .return ()
@@ -319,7 +319,7 @@
     $S0 = substr "\n\r\t\f\a\e\0\b", $I0, 1
   addchar:
     if isrange goto addrange
-    charlist .= $S0
+    charlist = charlist . $S0
     goto scan
   addrange:
     isrange = 0
@@ -330,7 +330,7 @@
     inc $I2
     if $I2 > $I0 goto scan
     $S1 = chr $I2
-    charlist .= $S1
+    charlist = charlist . $S1
     goto addrange_1
   hyphenrange:
     if isrange goto addrange
@@ -338,7 +338,7 @@
     goto scan
   endclass:
     if isrange == 0 goto end
-    charlist .= "-"
+    charlist = charlist . "-"
     goto end
   dot:
     charlist = "\n"
@@ -353,11 +353,11 @@
   err_range:
     $S0 = 'Invalid [] range "'
     $S1 = chr $I2
-    $S0 .= $S1
-    $S0 .= '-'
+    $S0 = $S0 . $S1
+    $S0 = $S0 . '-'
     $S1 = chr $I0
-    $S0 .= $S1
-    $S0 .= '"'
+    $S0 = $S0 . $S1
+    $S0 = $S0 . '"'
     parse_error(mob, pos, $S0)
 .end
 

@@ -260,7 +260,7 @@ and someday may be refactored to a different location.
     goto scan_xco_char_digits
   scan_xco_char_end:
     $S1 = chr decnum
-    concat literal, $S1
+    literal = concat literal, $S1
     unless isbracketed goto scan_xco_end
     pos = find_not_cclass .CCLASS_WHITESPACE, target, pos, lastpos
     $S0 = substr target, pos, 1
@@ -971,9 +971,9 @@ Parses a subrule token.
     $S0 = substr target, pos, 1
     if $S0 == closedelim goto subrule_text_add
     if $S0 == "\\" goto subrule_text_add
-    textarg .= "\\"
+    textarg = textarg . "\\"
   subrule_text_add:
-    textarg .= $S0
+    textarg = textarg . $S0
     inc pos
     goto subrule_text_loop
   subrule_text_end:
@@ -1021,7 +1021,7 @@ Extract an enumerated character list.
     ##   by converting to <, <+, <-, or <!
     $S0 = substr op, -1, 1
     if $S0 != '[' goto parse_loop
-    chopn op, 1
+    op = chopn op, 1
     goto enum
 
   parse_loop:
@@ -1066,7 +1066,7 @@ Extract an enumerated character list.
     inc pos
   enum_addchar_1:
     if isrange goto enum_addrange
-    charlist .= $S0
+    charlist = charlist . $S0
     goto enum_loop
   enum_dotrange:
     ##   check if we have a .. range marker
@@ -1085,7 +1085,7 @@ Extract an enumerated character list.
     inc $I2
     if $I2 > $I0 goto enum_loop
     $S1 = chr $I2
-    charlist .= $S1
+    charlist = charlist . $S1
     goto enum_addrange_1
   enum_close:
     inc pos
@@ -1199,7 +1199,7 @@ Parses '...' literals.
     $S0 = substr target, pos, 1
   literal_add:
     inc pos
-    lit .= $S0
+    lit = lit . $S0
     goto literal_iter
   literal_end:
     inc pos
@@ -1331,7 +1331,7 @@ Parse a modifier.
     mob['isnegated'] = 1
   assert_pos:
     mob['iszerowidth'] = 1
-    concat close, '>'
+    close = concat close, '>'
     inc len
   have_close:
     $I0 = index target, close, pos
@@ -1377,16 +1377,16 @@ Parse a modifier.
     $P0 = pos
     $P0 = new 'Exception'
     $S0 = 'perl6regex parse error: '
-    $S0 .= message
-    $S0 .= ' at offset '
+    $S0 = $S0 . message
+    $S0 = $S0 . ' at offset '
     $S1 = pos
-    $S0 .= $S1
-    $S0 .= ", found '"
+    $S0 = $S0 . $S1
+    $S0 = $S0 . ", found '"
     $P1 = getattribute mob, '$.target'
     $S1 = $P1
     $S1 = substr $S1, pos, 1
-    $S0 .= $S1
-    $S0 .= "'"
+    $S0 = $S0 . $S1
+    $S0 = $S0 . "'"
     $P0 = $S0
     throw $P0
     .return ()
@@ -1840,7 +1840,7 @@ already present.
     $I0 = index code, '.sub'
     if $I0 >= 0 goto end
     code = concat ".sub anon :anon\n.param pmc match\n", code
-    code .= "\n.end\n"
+    code = code . "\n.end\n"
   end:
     .return (code)
 .end

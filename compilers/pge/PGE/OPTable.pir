@@ -377,7 +377,7 @@ Adds (or replaces) a syntactic category's defaults.
     goto key_array_1
   key_next:
     if key == '' goto token_nows
-    chopn key, 1
+    key = chopn key, 1
     goto key_loop
   token_nows:
     if pos == wspos goto oper_not_found
@@ -616,10 +616,10 @@ Adds (or replaces) a syntactic category's defaults.
   err_ternary:
     $S1 = pos
     $S0 = concat 'Ternary error at offset ', $S1
-    $S0 .= ", found '"
+    $S0 = $S0 . ", found '"
     $S1 = substr target, pos, 1
-    $S0 .= $S1
-    $S0 .= "'"
+    $S0 = $S0 . $S1
+    $S0 = $S0 . "'"
     die $S0
 .end
 

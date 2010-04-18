@@ -406,8 +406,8 @@ Throw an exception when parsing fails in goal matching.
   have_dba:
     .local string message
     message = concat "Unable to parse ", dba
-    message .= ", couldn't find final "
-    message .= goal
+    message = message . ", couldn't find final "
+    message = message . goal
     die message
 .end
 

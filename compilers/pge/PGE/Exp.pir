@@ -135,8 +135,8 @@ tree as a PIR code object that can be compiled.
     if null $P0 goto have_subid
     $S0 = code.'escape'($P0)
     pirflags = concat pirflags, ' :subid('
-    concat pirflags, $S0
-    concat pirflags, ')'
+    pirflags = concat pirflags, $S0
+    pirflags = concat pirflags, ')'
   have_subid:
 
     ##   Perform reduction/optimization on the
@@ -286,12 +286,12 @@ tree as a PIR code object that can be compiled.
     hash['m'] = $I0                                  # %m = min repetitions
     hash['n'] = $I1                                  # %n = max repetitions
     $S0 = $I0
-    $S0 .= '..'
+    $S0 = $S0 . '..'
     $S1 = $I1
-    $S0 .= $S1
-    $S0 .= ' ('
-    $S0 .= $S2
-    $S0 .= ')'
+    $S0 = $S0 . $S1
+    $S0 = $S0 . ' ('
+    $S0 = $S0 . $S2
+    $S0 = $S0 . ')'
     hash['Q'] = $S0                                  # %Q = printable quant
     hash['M'] = ''
     hash['N'] = ''
@@ -419,7 +419,7 @@ tree as a PIR code object that can be compiled.
     if $I0 != $I1 goto concat_lit_shift
     $S0 = exp0.'ast'()
     $S1 = exp1.'ast'()
-    concat $S0, $S1
+    $S0 = concat $S0, $S1
     exp0.'!make'($S0)
     goto concat_lit_loop
   concat_lit_shift:
@@ -812,8 +812,8 @@ tree as a PIR code object that can be compiled.
     if $I0 == 0 goto subarg_end
     $S0 = self['dba']
     $S0 = code.'escape'($S0)
-    subarg .= ", 'dba'=>"
-    subarg .= $S0
+    subarg = concat subarg, ", 'dba'=>"
+    subarg = concat subarg, $S0
   subarg_end:
 
     .local string cname, captgen, captsave, captback
