@@ -109,10 +109,6 @@ from $2 and $3.
 
 =cut
 
-inline op bands(inout STR, in STR) :base_core :deprecated {
-    $1 = Parrot_str_bitwise_and(interp, $1, $2);
-}
-
 inline op bands(invar PMC, in STR) :base_core {
     STRING * const a = VTABLE_get_string(interp, $1);
     STRING * const b = Parrot_str_bitwise_and(interp, a, $2);
@@ -186,10 +182,6 @@ inline op bnot(out PMC, invar PMC) :base_core {
 =item B<bnots>(out PMC, invar PMC)
 
 =cut
-
-inline op bnots(inout STR) :base_core :deprecated {
-    $1 = Parrot_str_bitwise_not(interp, $1);
-}
 
 inline op bnots(out STR, in STR) :base_core {
     $1 = Parrot_str_bitwise_not(interp, $2);
@@ -278,10 +270,6 @@ Set the bits of $1 according to the B<or> of the corresponding bits
 from $2 and $3.
 
 =cut
-
-inline op bors(inout STR, in STR) :base_core :deprecated {
-    $1 = Parrot_str_bitwise_or(interp, $1, $2);
-}
 
 inline op bors(invar PMC, in STR) :base_core {
     STRING * const a = VTABLE_get_string(interp, $1);
@@ -578,10 +566,6 @@ Set the bits of $1 according to the B<xor> of the corresponding bits
 from $2 and $3.
 
 =cut
-
-inline op bxors(inout STR, in STR) :base_core :deprecated {
-    $1 = Parrot_str_bitwise_xor(interp, $1, $2);
-}
 
 inline op bxors(invar PMC, in STR) :base_core {
     STRING * const a = VTABLE_get_string(interp, $1);
