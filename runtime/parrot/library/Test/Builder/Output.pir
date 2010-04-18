@@ -146,8 +146,7 @@ unescaped newlines.
 	eq_str first_char, '#', LINE_OK
 
 	.local string new_line
-	new_line = '# '
-	concat new_line, line
+	new_line = concat '#', line
 	lines[i] = new_line
 
   LINE_OK:
@@ -155,8 +154,8 @@ unescaped newlines.
   	inc i
 	if i < num_lines goto LOOP
 
+    push lines, "\n"
 	message = join '', lines
-	concat message, "\n"
 
 	.return( message )
 .end
@@ -183,8 +182,7 @@ unescaped newlines.
 	first_char = substr message, 0, 1
 	eq_str first_char, '#', WRITE_MESSAGE
 
-	first_char = '# '
-	concat first_char, message
+	first_char = concat '# ', message
 	message = first_char
 
   WRITE_MESSAGE:

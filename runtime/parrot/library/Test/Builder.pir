@@ -501,8 +501,8 @@ also calls C<exit>.
     bail_out = 'Bail out!'
 
     unless has_reason goto WRITE_REASON
-    bail_out .= '  '
-    bail_out .= reason
+    bail_out = bail_out . '  '
+    bail_out = bail_out . reason
 
   WRITE_REASON:
     output.'write'( bail_out )
