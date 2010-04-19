@@ -708,6 +708,10 @@ free_buffer(SHIM_INTERP,
     if (PObj_external_TEST(b))
         return;
 
+    /* If there is no allocated buffer - bail out */
+    if (!Buffer_buflen(b))
+        return;
+
     /* XXX Jarkko reported that on irix pool->mem_pool was NULL, which really
      * shouldn't happen */
     if (mem_pool) {
