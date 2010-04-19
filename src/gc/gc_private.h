@@ -172,8 +172,7 @@ typedef struct Memory_Block {
     char *start;
     char *top;
 
-    /* Actually used size. Used in compact_pool */
-    size_t used;
+    /* Amount of freed memory. Used in compact_pool */
     size_t freed;
 } Memory_Block;
 

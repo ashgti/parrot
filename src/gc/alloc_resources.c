@@ -56,14 +56,6 @@ static const char * buffer_location(PARROT_INTERP, ARGIN(const Buffer *b))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-static void calculate_blocks_usage(PARROT_INTERP,
-    ARGIN(Memory_Block *top_block),
-    ARGMOD(Buffer *buf))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*buf);
-
 static void check_fixed_size_obj_pool(ARGIN(const Fixed_Size_Pool *pool))
         __attribute__nonnull__(1);
 
@@ -168,10 +160,6 @@ static int sweep_cb_pmc(PARROT_INTERP,
 #define ASSERT_ARGS_buffer_location __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(b))
-#define ASSERT_ARGS_calculate_blocks_usage __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(top_block) \
-    , PARROT_ASSERT_ARG(buf))
 #define ASSERT_ARGS_check_fixed_size_obj_pool __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(pool))
 #define ASSERT_ARGS_check_memory_system __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
@@ -488,38 +476,14 @@ compact_pool(PARROT_INTERP,
     mem_pools->gc_collect_runs++;
 
     /* Calculate how many blocks do we have and reset used_amount */
+    // TODO Keep this number and don't recalculate it! */
     for (tmp = pool->top_block; tmp; tmp = tmp->prev) {
-        tmp->used = 0;
         ++total_blocks;
     }
 
     /* Allocate storage for skip list */
     skip_blocks = (Memory_Block**)Parrot_gc_allocate_fixed_size_storage(interp,
                         sizeof (Memory_Block**) * total_blocks);
-
-    /* Calculate blocks used amount */
-    for (j = (INTVAL)mem_pools->num_sized - 1; j >= 0; --j) {
-        Fixed_Size_Pool * const header_pool = mem_pools->sized_header_pools[j];
-        UINTVAL       object_size;
-
-        if (!header_pool)
-            continue;
-
-        object_size = header_pool->object_size;
-
-        for (cur_buffer_arena = header_pool->last_Arena;
-                cur_buffer_arena;
-                cur_buffer_arena = cur_buffer_arena->prev) {
-            Buffer *b = (Buffer *) cur_buffer_arena->start_objects;
-            UINTVAL i;
-            const size_t objects_end = cur_buffer_arena->used;
-
-            for (i = objects_end; i; --i) {
-                calculate_blocks_usage(interp, pool->top_block, b);
-                b = (Buffer *)((char *)b + object_size);
-            }
-        }
-    }
 
     /* Snag a block big enough for everything */
     total_size = pad_pool_size(pool, skip_blocks, &skip_blocks_count);
@@ -588,8 +552,9 @@ compact_pool(PARROT_INTERP,
 
     free_old_mem_blocks(mem_pools, pool, new_block, total_size, skip_blocks, skip_blocks_count);
 
-    Parrot_gc_free_fixed_size_storage(interp,
-            sizeof (Memory_Block**) * total_blocks, skip_blocks);
+    if (total_blocks)
+        Parrot_gc_free_fixed_size_storage(interp,
+                sizeof (Memory_Block**) * total_blocks, skip_blocks);
 
     --mem_pools->gc_sweep_block_level;
 }
@@ -635,14 +600,14 @@ pad_pool_size(ARGIN(const Variable_Size_Pool *pool),
     size_t skip_pos    = 0;
 
     while (cur_block) {
-        if (cur_block->size * 0.4 > (cur_block->size - cur_block->used)) {
+        if (cur_block->size * 0.2 > cur_block->freed) {
             /* Don't reclaim almost filled blocks */
             /* TODO Keep blocks ordered by block->start to use binary search */
             skip_blocks[skip_pos++] = cur_block;
         }
         else {
             //total_size += cur_block->size - cur_block->free;
-            total_size += cur_block->used;
+            total_size += cur_block->size - cur_block->freed;
         }
         cur_block   = cur_block->prev;
     }
@@ -767,58 +732,6 @@ move_one_buffer(PARROT_INTERP, ARGMOD(Buffer *old_buf), ARGMOD(char *new_pool_pt
     }
 
     return new_pool_ptr;
-}
-
-/*
-
-=item C<static void calculate_blocks_usage(PARROT_INTERP, Memory_Block
-*top_block, Buffer *buf)>
-
-To detect which Memory_Blocks should be skipped during compacting we do need
-to calculate real usage.
-
-=cut
-
-*/
-
-static void
-calculate_blocks_usage(PARROT_INTERP, ARGIN(Memory_Block *top_block), ARGMOD(Buffer *buf))
-{
-    ASSERT_ARGS(calculate_blocks_usage)
-    /* ! (on_free_list | constant | external | sysmem) */
-    if (Buffer_buflen(buf) && PObj_is_movable_TESTALL(buf)) {
-        INTVAL *ref_count = NULL;
-
-        if (PObj_is_COWable_TEST(buf)) {
-            ref_count = Buffer_bufrefcountptr(buf);
-        }
-
-        if (PObj_COW_TEST(buf)
-            && (ref_count && *ref_count & Buffer_counted_FLAG)) {
-            /* Skip counting of COWed buffers */
-            return;
-        }
-        else {
-            /* Find our block */
-            while (top_block) {
-                if (top_block->start <= (char*)Buffer_bufstart(buf)
-                    && (char*)Buffer_bufstart(buf) < top_block->top) {
-                    /* ... and update usage */
-                    top_block->used += aligned_string_size(Buffer_buflen(buf));
-                    break;
-                }
-
-                top_block = top_block->prev;
-            }
-            /* If we're COW */
-            if (PObj_COW_TEST(buf)) {
-                /* Set counted flag so we will not add it again to usage */
-                if (ref_count)
-                    *ref_count = Buffer_counted_FLAG;
-            }
-        }
-    }
-
 }
 
 /*
