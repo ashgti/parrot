@@ -124,6 +124,7 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     if $S1 == '' goto L2
     $S0 .= ' # '
     $S0 .= $S1
+    $S0 .= ' '
     $P0 = getattribute self, 'explanation'
     $S1 = $P0
     $S0 .= $S1
@@ -232,8 +233,10 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $I0 = is_cclass .CCLASS_NUMERIC, line, pos
     unless $I0 goto L5
     $I2 = find_not_cclass .CCLASS_NUMERIC, line, pos, lastpos
+    if $I2 == lastpos goto L_5
     $I0 = is_cclass .CCLASS_WHITESPACE, line, $I2
     unless $I0 goto L5
+  L_5:
     $I1 = $I2 - pos
     test_num = substr line, pos, $I1
     if $I2 == lastpos goto L4
@@ -483,9 +486,10 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .namespace ['TAP';'Parser']
 
 .sub '' :init :load :anon
+    load_bytecode 'osutils.pbc'
+
     $P0 = subclass ['TAP';'Base'], ['TAP';'Parser']
     $P0.'add_attribute'('stream')
-    $P0.'add_attribute'('results')
     $P0.'add_attribute'('skipped')
     $P0.'add_attribute'('todo')
     $P0.'add_attribute'('passed')
@@ -521,23 +525,21 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .end
 
 .sub 'init' :vtable :init
-    $P0 = new 'ResizablePMCArray'
-    setattribute self, 'results', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'skipped', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'todo', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'passed', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'failed', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'actual_failed', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'actual_passed', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableIntegerArray'
     setattribute self, 'todo_passed', $P0
-    $P0 = new 'ResizablePMCArray'
+    $P0 = new 'ResizableStringArray'
     setattribute self, 'parse_errors', $P0
     $P0 = box 0
     setattribute self, 'tests_run', $P0
@@ -547,40 +549,44 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     setattribute self, 'ok_callbacks', $P0
 .end
 
+.sub 'start_time' :method
+    $P0 = getattribute self, 'start_time'
+    .return ($P0)
+.end
+
+.sub 'end_time' :method
+    $P0 = getattribute self, 'end_time'
+    .return ($P0)
+.end
+
 .sub 'skipped' :method :nsentry
     $P0 = getattribute self, 'skipped'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'todo' :method :nsentry
     $P0 = getattribute self, 'todo'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'passed' :method :nsentry
     $P0 = getattribute self, 'passed'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'failed' :method :nsentry
     $P0 = getattribute self, 'failed'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'todo_passed' :method :nsentry
     $P0 = getattribute self, 'todo_passed'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'parse_errors' :method :nsentry
     $P0 = getattribute self, 'parse_errors'
-    $I0 = elements $P0
-    .return ($I0)
+    .return ($P0)
 .end
 
 .sub 'tests_run' :method :nsentry
@@ -615,9 +621,11 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .end
 
 .sub 'has_problems' :method
-    $I0 = self.'failed'()
+    $P0 = getattribute self, 'failed'
+    $I0 = elements $P0
     if $I0 goto L1
-    $I0 = self.'parse_errors'()
+    $P0 = getattribute self, 'parse_errors'
+    $I0 = elements $P0
     if $I0 goto L1
     $P0 = getattribute self, 'ignore_exit'
     if null $P0 goto L2
@@ -675,6 +683,14 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     push_eh _handler
     $P0.'open'(filename, 'r')
     pop_eh
+    $S0 = readline $P0
+    $I0 = index $S0, '#!'
+    unless $I0 == 0 goto L1
+    close $P0
+    $S0 = _get_exec($S0)
+    .tailcall self.'exec'($S0, filename)
+  L1:
+    seek $P0, 0, 0
     setattribute self, 'stream', $P0
     .return ()
   _handler:
@@ -688,6 +704,23 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $S0 .= ")\n"
     ex = $S0
     rethrow ex
+.end
+
+.include 'iglobals.pasm'
+
+.sub '_get_exec' :anon
+    .param string line
+    $S0 = chomp(line)
+    $I0 = length $S0
+    $I0 = find_not_cclass .CCLASS_WHITESPACE, $S0, 2, $I0
+    $S0 = substr $S0, $I0
+    .local string slash
+    $P0 = getinterp
+    $P1 = $P0[.IGLOBALS_CONFIG_HASH]
+    slash = $P1['slash']
+    $P0 = split "/", $S0
+    $S0 = join slash, $P0
+    .return ($S0)
 .end
 
 .sub 'exec' :method
@@ -713,45 +746,34 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     rethrow ex
 .end
 
-.sub 'chomp' :anon
-    .param string str
-    $I0 = index str, "\r"
-    if $I0 < 0 goto L1
-    str = substr str, 0, $I0
-  L1:
-    $I1 = index str, "\n"
-    if $I1 < 0 goto L2
-    str = substr str, 0, $I1
-  L2:
-    .return (str)
-.end
-
 .sub 'run' :method
-    .const 'Sub' next = 'next'
-    $P0 = clone next
+    .const 'Sub' $P0 = 'next'
+    $P0 = newclosure $P0
   L1:
     $P1 = $P0(self)
     unless null $P1 goto L1
 .end
 
-.sub 'next' :method :nsentry
+.sub 'next' :method :nsentry :lex
     .local pmc stream, spool
     stream = getattribute self, 'stream'
     if null stream goto L1
     $N0 = time
     $P0 = box $N0
     setattribute self, 'start_time', $P0
-    .local pmc grammar
+    .local pmc grammar, st
     grammar = new ['TAP';'Parser';'Grammar']
-    .local string st
-    st = 'INIT'
+    .const 'Sub' $P0 = 'next_state'
+    capture_lex $P0
+    st = box 'INIT'
+    .lex 'state', st
   L2:
     $S0 = readline stream
     if $S0 == '' goto L3
     $S0 = chomp($S0)
     .local pmc token
     token = grammar.'tokenize'($S0)
-    st = self.'next_state'(token, st)
+    self.'next_state'(token)
     $S0 = token.'type'()
     $P0 = self.'_callback_for'($S0)
     if null $P0 goto L4
@@ -765,6 +787,7 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     if null spool goto L6
     $S0 = token
     print spool, $S0
+    print spool, "\n"
   L6:
     .yield (token)
     goto L2
@@ -785,17 +808,18 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     die "no stream"
 .end
 
-.sub 'next_state' :method
+.sub 'next_state' :method :lex :outer('next')
     .param pmc token
-    .param string st
-    .local pmc STATES
+    .local pmc STATES, st
     STATES = get_global ['TAP';'Parser'], 'STATES'
+    st = find_lex 'state'
     .local string type
     type = token.'type'()
   REDO:
     $I0 = STATES[st]
     if $I0 goto L1
-    $S0 = "Illegal state: " . st
+    $S0 = st
+    $S0 = "Illegal state: " . $S0
     die $S0
   L1:
     $P0 = STATES[st]
@@ -810,20 +834,19 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $I0 = exists $P1['continue']
     unless $I0 goto L4
     $S0 = $P1['continue']
-    st = $S0
+    set st, $S0
     goto REDO
   L4:
     $I0 = exists $P1['goto']
     unless $I0 goto L5
     $S0 = $P1['goto']
-    st = $S0
+    set st, $S0
     goto L5
   L2:
     printerr "Unhandled token type: "
     printerr type
     printerr "\n"
   L5:
-    .return (st)
 .end
 
 .sub '_make_state_table'
@@ -919,6 +942,7 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
 .end
 
 .sub '_no_action' :method :nsentry
+    .param pmc result
     # nothing
 .end
 
@@ -989,42 +1013,35 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $I0 = result.'has_todo'()
     unless $I0 goto L31
     $P0 = getattribute self, 'todo'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
   L31:
     $I0 = result.'todo_passed'()
     unless $I0 goto L32
     $P0 = getattribute self, 'todo_passed'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
   L32:
     $I0 = result.'has_skip'()
     unless $I0 goto L33
     $P0 = getattribute self, 'skipped'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
   L33:
     $I0 = result.'is_ok'()
     unless $I0 goto L34
     $P0 = getattribute self, 'passed'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
     goto L35
   L34:
     $P0 = getattribute self, 'failed'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
   L35:
     $I0 = result.'is_actual_ok'()
     unless $I0 goto L36
     $P0 = getattribute self, 'actual_passed'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
     goto L37
   L36:
     $P0 = getattribute self, 'actual_failed'
-    $P1 = box number
-    push $P0, $P1
+    push $P0, number
   L37:
 .end
 
@@ -1194,6 +1211,13 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
   L3:
 .end
 
+.sub 'parsers' :method
+    .param string desc
+    $P0 = getattribute self, 'parser_for'
+    $P1 = $P0[desc]
+    .return ($P1)
+.end
+
 .sub 'total' :method
     $P0 = getattribute self, 'total'
     $I0 = $P0
@@ -1221,6 +1245,16 @@ See L<http://search.cpan.org/~andya/Test-Harness/>
     $N0 = time
     $P0 = box $N0
     setattribute self, 'end_time', $P0
+.end
+
+.sub 'start_time' :method
+    $P0= getattribute self, 'start_time'
+    .return ($P0)
+.end
+
+.sub 'end_time' :method
+    $P0= getattribute self, 'end_time'
+    .return ($P0)
 .end
 
 .sub 'elapsed' :method

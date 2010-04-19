@@ -32,34 +32,28 @@
 .sub 'help' :anon
     say <<"HELP"
 
-Tapir is a TAP test harness, you can use Tapir like this:
+ tapir [options] [files]
 
-        ./tapir t/*.t
+Boolean options:
 
-Currently supported arguments:
-    -v                  Print the output of each test file
-    --verbose
+ -v,  --verbose         Print all test lines.
+ -s,  --shuffle         Run the tests in random order.
+ -f,  --failures        Show failed tests.
+ -o,  --comments        Show comments.
+      --ignore-exit     Ignore exit status from test scripts.
+      --reverse         Run the tests in reverse order.
+ -q,  --quiet           Suppress some test output while running tests.
+ -Q,  --QUIET           Only print summary results.
+      --directives      Only show results with TODO or SKIP directives.
+      --normalize       Normalize TAP output in verbose output
+ -h,  --help            Display this help
+ -V,  --version         Display the version
 
-    -q
-    -quiet
+Options that take arguments:
 
-    -Q
-    -QUIET
-
-    -normalize
-
-    -a
-    --archive=file
-
-    -e
-    --exec=program      Use a given program to execute test scripts
-                        i.e. ./tapir --exec=perl t/*.t to run Perl tests
-
-    -V
-    --version           Print out the current Tapir version
-
-    -h
-    --help              This message
+ -e,  --exec            Interpreter to run the tests ('' for compiled
+                        tests.)
+ -a,  --archive         Store the resulting TAP in an archive file.
 HELP
 .end
 
@@ -75,6 +69,12 @@ HELP
     push getopts, 'quiet|q'
     push getopts, 'QUIET|Q'
     push getopts, 'normalize'
+    push getopts, 'failures|f'
+    push getopts, 'comments|o'
+    push getopts, 'directives'
+    push getopts, 'ignore-exit'
+    push getopts, 'reverse'
+    push getopts, 'shuffle|s'
     push getopts, 'version|V'
     push getopts, 'help|h'
     opts = getopts.'get_options'(argv)
@@ -84,7 +84,7 @@ HELP
 .sub 'do' :anon
     .param pmc opts
     .param pmc files
-    load_bytecode 'TAP/Harness.pir'
+    load_bytecode 'TAP/Harness.pbc'
     .local pmc harness, aggregate
     $I0 = exists opts['archive']
     if $I0 goto L1
@@ -96,11 +96,90 @@ HELP
     harness.'archive'($S0)
   L2:
     harness.'process_args'(opts)
-    aggregate = harness.'runtests'(files)
+    $P0 = _get_tests(opts, files)
+    aggregate = harness.'runtests'($P0)
     $I0 = aggregate.'has_errors'()
-    $I0 = not $I0
     exit $I0
 .end
+
+.sub '_get_tests' :anon
+    .param pmc opts
+    .param pmc files
+    .local int nb
+    nb = elements files
+    # currently, FixedStringArray hasn't the method sort.
+    # see TT #1356
+    $P0 = new 'FixedPMCArray'
+    set $P0, nb
+    $I0 = 0
+    $P1 = iter files
+  L1:
+    unless $P1 goto L2
+    $S0 = shift $P1
+    $P2 = split "\\", $S0
+    $S0 = join "/", $P2
+    $P2 = box $S0
+    $P0[$I0] = $P2
+    inc $I0
+    goto L1
+  L2:
+    $I0 = exists opts['shuffle']
+    unless $I0 goto L3
+    $P0 = _shuffle($P0)
+    goto L4
+  L3:
+    $P0.'sort'()
+    $I0 = exists opts['reverse']
+    unless $I0 goto L4
+    $P0 = _reverse($P0)
+  L4:
+    .return ($P0)
+.end
+
+.sub '_reverse' :anon
+    .param pmc array
+    .local int nb
+    nb = elements array
+    $P0 = new 'FixedPMCArray'
+    set $P0, nb
+    $I0 = 0
+    $I1 = nb - 1
+  L1:
+    unless $I0 < nb goto L2
+    $P1 = array[$I0]
+    $P0[$I1] = $P1
+    inc $I0
+    dec $I1
+    goto L1
+  L2:
+    .return ($P0)
+.end
+
+.sub '_shuffle' :anon
+    .param pmc array
+    load_bytecode 'Math/Rand.pbc'
+    .local pmc rand
+    rand = get_global [ 'Math'; 'Rand' ], 'rand'
+    .local pmc srand
+    srand = get_global [ 'Math'; 'Rand' ], 'srand'
+    $I0 = time
+    srand($I0)
+    .local int i, j
+    i = elements array
+  L1:
+    unless i > 0 goto L2
+    $I0 = rand()
+    j = $I0 % i
+    dec i
+    $P1 = array[i]
+    $P2 = array[j]
+    array[i] = $P2
+    array[j] = $P1
+    goto L1
+  L2:
+    .return (array)
+.end
+
 
 # Local Variables:
 #   mode: pir

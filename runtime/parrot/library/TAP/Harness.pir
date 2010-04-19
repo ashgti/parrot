@@ -18,8 +18,8 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
 .namespace ['TAP';'Harness']
 
 .sub '' :init :load :anon
-    load_bytecode 'TAP/Parser.pir'
-    load_bytecode 'TAP/Formatter.pir'
+    load_bytecode 'TAP/Parser.pbc'
+    load_bytecode 'TAP/Formatter.pbc'
     $P0 = subclass ['TAP';'Base'], ['TAP';'Harness']
     $P0.'add_attribute'('formatter')
     $P0.'add_attribute'('exec')
@@ -83,33 +83,39 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     $P0 = getattribute self, 'formatter'
     $P0.'prepare'(tests)
     .local string exec
-    exec = 'parrot'
+    exec = ''
     $P0 = getattribute self, 'exec'
-    if null $P0 goto L0
+    if null $P0 goto L1
     exec = $P0
-  L0:
-    $P0 = iter tests
   L1:
-    unless $P0 goto L2
+    $P0 = iter tests
+  L2:
+    unless $P0 goto L3
     $S0 = shift $P0
     .local pmc parser, session
     (parser, session) = self.'make_parser'($S0)
+    unless exec == '' goto L4
+    parser.'file'($S0)
+    goto L5
+  L4:
     parser.'exec'(exec, $S0)
-    .local pmc next, coro, result
-    next = get_hll_global ['TAP';'Parser'], 'next'
-    coro = clone next
-  L3:
+  L5:
+    .local pmc coro
+    $P1 = get_hll_global ['TAP';'Parser'], 'next'
+    coro = newclosure $P1
+  L6:
+    .local pmc result
     result = coro(parser)
-    if null result goto L4
+    if null result goto L7
     session.'result'(result)
     $I0 = isa result, ['TAP';'Parser';'Result';'Bailout']
-    unless $I0 goto L3
+    unless $I0 goto L6
     self.'_bailout'(result)
-  L4:
+  L7:
     self.'finish_parser'(parser, session)
     self.'_after_test'(aggregate, $S0, parser)
-    goto L1
-  L2:
+    goto L2
+  L3:
 .end
 
 .sub '_after_test' :method
@@ -162,9 +168,10 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     $P0 = new 'Env'
     $I0 = exists $P0['PARROT_TEST_HARNESS_DUMP_TAP']
     unless $I0 goto L1
-    $S0 = $P0['PARROT_TEST_HARNESS_DUMP_TAP']
     .local string spool
-    spool = $S0 . test
+    spool = $P0['PARROT_TEST_HARNESS_DUMP_TAP']
+    spool .= '/'
+    spool .= test
     $S0 = dirname(spool)
     mkpath($S0)
     $P0 = new 'FileHandle'
@@ -223,21 +230,94 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
   L1:
     .local string archive, dir
     archive = $P0
-    dir = './reports/'
+    dir = tempdir()
     .local pmc env
     env = new 'Env'
     env['PARROT_TEST_HARNESS_DUMP_TAP'] = dir
     .local pmc aggregate
     $P0 = get_hll_global ['TAP';'Harness'], 'runtests'
-    aggregate = $P0(files)
+    aggregate = $P0(self, files)
     .local string current_dir, cmd
     current_dir = cwd()
     chdir(dir)
-    cmd = "tar cvf " . archive
+    $S0 = self.'_mk_meta'(aggregate)
+    spew('meta.yml', $S0)
+    $I0 = length archive
+    $I0 -= 3
+    $S0 = substr archive, 0, $I0
+    cmd = "tar -cf " . current_dir
+    cmd .= "/"
+    cmd .= $S0
+    cmd .= " *"
     system(cmd)
     chdir(current_dir)
+    cmd = "gzip --best " . $S0
+    system(cmd)
+    rmtree(dir)
     .return (aggregate)
 .end
+
+.sub '_mk_meta' :method
+    .param pmc aggregate
+    $S0 = "---"
+    $S0 .= "\nfile_attributes:"
+    $P0 = aggregate.'descriptions'()
+    $P1 = iter $P0
+  L1:
+    unless $P1 goto L2
+    $S1 = shift $P1
+    .local pmc parser
+    parser = aggregate.'parsers'($S1)
+    $S0 .= "\n  -"
+    $S0 .= "\n    description: "
+    $S0 .= $S1
+    $N0 = parser.'start_time'()
+    $S0 .= "\n    start_time: "
+    $S1 = $N0
+    $S0 .= $S1
+    $N0 = parser.'end_time'()
+    $S0 .= "\n    stop_time: "
+    $S1 = $N0
+    $S0 .= $S1
+    goto L1
+  L2:
+    $S0 .= "\nfile_order:"
+    $P1 = iter $P0
+  L3:
+    unless $P1 goto L4
+    $S1 = shift $P1
+    $S0 .= "\n  - "
+    $S0 .= $S1
+    goto L3
+  L4:
+    $I0 = aggregate.'start_time'()
+    $S0 .= "\nstart_time: "
+    $S1 = $I0
+    $S0 .= $S1
+    $I0 = aggregate.'end_time'()
+    $S0 .= "\nstop_time: "
+    $S1 = $I0
+    $S0 .= $S1
+    $P0 = getattribute self, 'archive_extra_props'
+    if null $P0 goto L5
+    $S0 .= "\nextra_properties:"
+    $P1 = iter $P0
+  L6:
+    unless $P1 goto L5
+    .local string key, value
+    key = shift $P1
+    value = $P0[key]
+    if value == '' goto L6
+    $S0 .= "\n  "
+    $S0 .= key
+    $S0 .= ": "
+    $S0 .= value
+    goto L6
+  L5:
+    $S0 .= "\n"
+    .return ($S0)
+.end
+
 
 =head1 AUTHOR
 
