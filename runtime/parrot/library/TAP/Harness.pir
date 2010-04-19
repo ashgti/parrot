@@ -23,6 +23,8 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     $P0 = subclass ['TAP';'Base'], ['TAP';'Harness']
     $P0.'add_attribute'('formatter')
     $P0.'add_attribute'('exec')
+    $P0.'add_attribute'('ignore_exit')
+    $P0.'add_attribute'('merge')
     $P0.'add_attribute'('opts')
 
     $P0 = new 'Hash'
@@ -50,6 +52,20 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     $P0 = box $S0
     setattribute self, 'exec', $P0
   L1:
+    $I0 = exists opts['ignore-exit']
+    unless $I0 goto L2
+    $S0 = opts['ignore-exit']
+    $P0 = new 'Boolean'
+    set $P0, 1
+    setattribute self, 'ignore_exit', $P0
+  L2:
+    $I0 = exists opts['merge']
+    unless $I0 goto L3
+    $S0 = opts['merge']
+    $P0 = new 'Boolean'
+    set $P0, 1
+    setattribute self, 'merge', $P0
+  L3:
 .end
 
 .sub 'formatter' :method
@@ -147,6 +163,14 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     .param string desc
     .local pmc parser, session
     parser = new ['TAP';'Parser']
+    $P0 = getattribute self, 'merge'
+    if null $P0 goto L1
+    parser.'merge'($P0)
+  L1:
+    $P0 = getattribute self, 'ignore_exit'
+    if null $P0 goto L2
+    parser.'ignore_exit'($P0)
+  L2:
     self.'_open_spool'(parser, desc)
     self.'_make_callback'('made_parser', parser)
     $P0 = getattribute self, 'formatter'
@@ -242,6 +266,17 @@ end L<http://search.cpan.org/~wonko/TAP-Harness-Archive/>.
     chdir(dir)
     $S0 = self.'_mk_meta'(aggregate)
     spew('meta.yml', $S0)
+    $P0 = getattribute self, 'archive_extra_files'
+    if null $P0 goto L2
+    $P1 = iter $P0
+  L3:
+    unless $P1 goto L2
+    $S2 = shift $P1
+    $S1 = current_dir . '/'
+    $S1 .= $S2
+    cp($S1, $S2)
+    goto L3
+  L2:
     $I0 = length archive
     $I0 -= 3
     $S0 = substr archive, 0, $I0
