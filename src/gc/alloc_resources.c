@@ -600,7 +600,8 @@ pad_pool_size(ARGIN(const Variable_Size_Pool *pool),
     size_t skip_pos    = 0;
 
     while (cur_block) {
-        if (cur_block->size * 0.2 > cur_block->freed) {
+        if ((cur_block->size * 0.2 > cur_block->freed)
+            && (cur_block->free < cur_block->size * 0.2)) {
             /* Don't reclaim almost filled blocks */
             /* TODO Keep blocks ordered by block->start to use binary search */
             skip_blocks[skip_pos++] = cur_block;
