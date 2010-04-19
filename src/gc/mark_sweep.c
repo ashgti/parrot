@@ -704,13 +704,49 @@ free_buffer(SHIM_INTERP,
     ASSERT_ARGS(free_buffer)
     Variable_Size_Pool * const mem_pool = (Variable_Size_Pool *)pool->mem_pool;
 
+    /* If this is header for external buffer - bail out */
+    if (PObj_external_TEST(b))
+        return;
+
     /* XXX Jarkko reported that on irix pool->mem_pool was NULL, which really
      * shouldn't happen */
     if (mem_pool) {
-        if (!PObj_COW_TEST(b))
+        /* Update Memory_Block usage */
+        Memory_Block * block = mem_pool->top_block;
+        INTVAL *ref_count = NULL;
+
+        if (PObj_is_COWable_TEST(b)) {
+            ref_count = Buffer_bufrefcountptr(b);
+        }
+
+
+        if (!PObj_COW_TEST(b)) {
             mem_pool->guaranteed_reclaimable += Buffer_buflen(b);
-        else
+        }
+        else {
             mem_pool->possibly_reclaimable   += Buffer_buflen(b);
+
+            /* If block was already moved - skip it */
+            if (ref_count && *ref_count & Buffer_counted_FLAG)
+                return;
+
+            /* Set counted flag */
+            if (ref_count)
+                *ref_count |= Buffer_counted_FLAG;
+        }
+
+        /* Find our block */
+        while (block) {
+            if (block->start <= (char*)Buffer_bufstart(b)
+                && (char*)Buffer_bufstart(b) < block->top) {
+                /* ... and update usage */
+                block->freed += aligned_string_size(Buffer_buflen(b));
+                break;
+            }
+
+            block = block->prev;
+        }
+
     }
 
     Buffer_buflen(b) = 0;
