@@ -66,22 +66,6 @@ not already here. This allows the usage of $P0() instead of $P0($P0).
 
 L<https://trac.parrot.org/parrot/ticket/103>
 
-=item Digest dynpmcs [eligible in 2.4]
-
-The digest dynpmcs are, since the posting of this notice, available on
-http://gitorious.org/digest-dynpmcs and will no longer be distributed
-with parrot after 2.3.
-
-L<https://trac.parrot.org/parrot/ticket/1467>
-
-=item gdbmhash dynpmc [eligible in 2.4]
-
-The gdbmhash dynpmc is, since the posting of this notice, available on
-http://gitorious.org/dbm-dynpmcs and will no longer be distributed
-with parrot after 2.3.
-
-L<https://trac.parrot.org/parrot/ticket/1469>
-
 =item NCI without signature ("raw" pointers) [eligible in 2.4]
 
 No equivalent functionality is promised. You shouldn't be using this. Here be
@@ -208,6 +192,12 @@ To be replaced with new_callback_p_p_p_p_s.
 
 L<https://trac.parrot.org/parrot/ticket/1548>
 
+=item dlfunc and new_callback signature string format [eligible in 2.4]
+
+These will be changed to allow more flexibility in types.
+
+L<https://trac.parrot.org/parrot/ticket/1565>
+
 =item find_lex [eligible in 2.4]
 
 find_lex will not throw exception for non-existing lexicals.
@@ -234,6 +224,23 @@ All "inplace" string update ops are deprecated. E.g. "chopn_s", etc.
 Part of COW removal.
 
 L<https://trac.parrot.org/parrot/ticket/1540>
+
+=back
+
+=head1 Runcores
+
+=over 4
+
+=item Unused Runcores [eligible in 2.4]
+
+The following Runcores do not appear to be used.  Accordingly they will
+be eligible for removal.
+
+CGoto
+CGP
+Switch
+
+L<https://trac.parrot.org/parrot/ticket/1563>
 
 =back
 
@@ -284,14 +291,6 @@ L<https://trac.parrot.org/parrot/ticket/1103>
 =item mmd_cvt_to_types [eligible in 1.1]
 
 L<https://trac.parrot.org/parrot/ticket/907>
-
-=item Subs marked with C<:vtable>/C<:method> aren't in namespace [eligible in 1.1]
-
-Subs marked with C<:vtable> or C<:method> flags are no longer given a
-namespace entry by default.  Use the C<:nsentry> flag to cause this
-to happen.
-
-L<https://trac.parrot.org/parrot/ticket/389>
 
 =item C API coding standards cleanup [eligible in 1.1]
 
