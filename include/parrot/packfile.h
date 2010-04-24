@@ -255,7 +255,6 @@ typedef struct PackFile_ConstTable {
 
 struct PackFile_ByteCode {
     PackFile_Segment       base;
-    Prederef               prederef;    /* The predereferenced code and info */
     struct PackFile_Debug *debugs;
     PackFile_ConstTable   *const_table;
     PackFile_FixupTable   *fixups;
@@ -270,7 +269,7 @@ typedef struct PackFile_DebugFilenameMapping {
 typedef struct PackFile_Debug {
     PackFile_Segment        base;
     opcode_t                num_mappings;
-    PackFile_DebugFilenameMapping **mappings;
+    PackFile_DebugFilenameMapping *mappings;
     PackFile_ByteCode      *code;   /* where this segment belongs to */
 } PackFile_Debug;
 
@@ -582,7 +581,7 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PackFile_Segment * PackFile_find_segment(PARROT_INTERP,
     ARGIN_NULLOK(PackFile_Directory *dir),
-    ARGIN(STRING *name),
+    ARGIN(const STRING *name),
     int sub_dir)
         __attribute__nonnull__(1)
         __attribute__nonnull__(3);

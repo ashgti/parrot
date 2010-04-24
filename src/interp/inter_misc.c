@@ -237,12 +237,6 @@ interpinfo(PARROT_INTERP, INTVAL what)
             else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "fast")))
                 return PARROT_FAST_CORE;
             else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "switch")))
-                return PARROT_SWITCH_CORE;
-            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "cgp")))
-                return PARROT_CGP_CORE;
-            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "cgoto")))
-                return PARROT_CGOTO_CORE;
-            else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "exec")))
                 return PARROT_EXEC_CORE;
             else if (Parrot_str_equal(interp, name, CONST_STRING(interp, "gc_debug")))
                 return PARROT_GC_DEBUG_CORE;
@@ -283,9 +277,6 @@ interpinfo_p(PARROT_INTERP, INTVAL what)
       case CURRENT_CONT:
         {
             PMC * const cont = Parrot_pcc_get_continuation(interp, CURRENT_CONTEXT(interp));
-            if (!PMC_IS_NULL(cont) && cont->vtable->base_type ==
-                    enum_class_RetContinuation)
-                return VTABLE_clone(interp, cont);
             return cont;
         }
       case CURRENT_OBJECT:

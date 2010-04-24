@@ -41,7 +41,6 @@ my @steps = qw(
     auto::isreg
     auto::jit
     auto::frames
-    auto::cgoto
     auto::inline
     auto::gc
     auto::memalign
@@ -54,6 +53,7 @@ my @steps = qw(
     auto::readline
     auto::pcre
     auto::opengl
+    auto::zlib
     auto::gettext
     auto::snprintf
     auto::perldoc
