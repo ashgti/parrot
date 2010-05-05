@@ -153,14 +153,6 @@ PARROT_WARN_UNUSED_RESULT
 static opcode_t fetch_op_le_8(ARGIN(const unsigned char *b))
         __attribute__nonnull__(1);
 
-PARROT_WARN_UNUSED_RESULT
-static opcode_t fetch_op_mixed_be(ARGIN(const unsigned char *b))
-        __attribute__nonnull__(1);
-
-PARROT_WARN_UNUSED_RESULT
-static opcode_t fetch_op_mixed_le(ARGIN(const unsigned char *b))
-        __attribute__nonnull__(1);
-
 #define ASSERT_ARGS_cvt_num12_num16 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(dest) \
     , PARROT_ASSERT_ARG(src))
@@ -210,10 +202,6 @@ static opcode_t fetch_op_mixed_le(ARGIN(const unsigned char *b))
 #define ASSERT_ARGS_fetch_op_le_4 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(b))
 #define ASSERT_ARGS_fetch_op_le_8 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(b))
-#define ASSERT_ARGS_fetch_op_mixed_be __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(b))
-#define ASSERT_ARGS_fetch_op_mixed_le __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(b))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
@@ -323,7 +311,7 @@ nul:
         dest[7] |= 0x80;
     /* long double frac 63 bits => 52 bits
        src[7] &= 0x7f; reset integer bit */
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < 6; ++i) {
         dest[i+1] |= (i==5 ? src[7]&0x7f : src[i+2]) >> 3;
         dest[i] |= (src[i+2] & 0x1f) << 5;
     }
@@ -552,7 +540,7 @@ cvt_num16_num8(ARGOUT(unsigned char *dest), ARGIN(const unsigned char *src))
             dest[7] |= 0x80;
         /* long double frac 112 bits => 52 bits
            src[13] &= 0x7f; reset integer bit */
-        for (i = 0; i < 6; i++) {
+        for (i = 0; i < 6; ++i) {
             dest[i+1] |= (i==5 ? src[13]&0x7f : src[i+7]) >> 3;
             dest[i] |= (src[i+7] & 0x1f) << 5;
         }
@@ -817,86 +805,6 @@ cvt_num8_num16_be(ARGOUT(unsigned char *dest), ARGIN(const unsigned char *src))
     fetch_buf_be_8(b, src);
     cvt_num8_num16(dest, b);
 }
-#endif
-
-#if 0
-
-/*
-
-=item C<static opcode_t fetch_op_mixed_le(const unsigned char *b)>
-
-opcode fetch helper function
-
-This is mostly wrong or at least untested
-
-Fetch an opcode and convert to LE
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-static opcode_t
-fetch_op_mixed_le(ARGIN(const unsigned char *b))
-{
-    ASSERT_ARGS(fetch_op_mixed_le)
-#  if OPCODE_T_SIZE == 4
-    union {
-        unsigned char buf[8];
-        opcode_t o[2];
-    } u;
-    /* wordsize = 8 then */
-    fetch_buf_le_8(u.buf, b);
-    return u.o[0]; /* or u.o[1] */
-#  else
-    union {
-        unsigned char buf[4];
-        opcode_t o;
-    } u;
-
-    /* wordsize = 4 */
-    u.o = 0;
-    fetch_buf_le_4(u.buf, b);
-    return u.o;
-#  endif
-}
-
-/*
-
-=item C<static opcode_t fetch_op_mixed_be(const unsigned char *b)>
-
-Fetch an opcode and convert to BE. Determines size of opcode from
-C<OPCODE_T_SIZE> macro, and proceeds accordingly.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-static opcode_t
-fetch_op_mixed_be(ARGIN(const unsigned char *b))
-{
-    ASSERT_ARGS(fetch_op_mixed_be)
-#  if OPCODE_T_SIZE == 4
-    union {
-        unsigned char buf[8];
-        opcode_t o[2];
-    } u;
-    /* wordsize = 8 then */
-    fetch_buf_be_8(u.buf, b);
-    return u.o[1]; /* or u.o[0] */
-#  else
-    union {
-        unsigned char buf[4];
-        opcode_t o;
-    } u;
-    /* wordsize = 4 */
-    u.o = 0;
-    fetch_buf_be_4(u.buf, b);
-    return u.o;
-#  endif
-}
-
 #endif
 
 /*
@@ -1307,17 +1215,14 @@ PF_fetch_string(PARROT_INTERP, ARGIN_NULLOK(PackFile *pf), ARGIN(const opcode_t 
 {
     ASSERT_ARGS(PF_fetch_string)
     STRING   *s;
-    opcode_t  flag_charset_word;
     UINTVAL   flags;
     UINTVAL   charset_nr;
     size_t    size;
-    const int wordsize = pf ? pf->header->wordsize : sizeof (opcode_t);
+    const int wordsize          = pf ? pf->header->wordsize : sizeof (opcode_t);
+    opcode_t  flag_charset_word = PF_fetch_opcode(pf, cursor);
 
-    flag_charset_word = PF_fetch_opcode(pf, cursor);
-
-    if (flag_charset_word == -1) {
+    if (flag_charset_word == -1)
         return STRINGNULL;
-    }
 
     /* decode flags and charset */
     flags         = (flag_charset_word & 0x1 ? PObj_constant_FLAG : 0) |
@@ -1332,7 +1237,7 @@ PF_fetch_string(PARROT_INTERP, ARGIN_NULLOK(PackFile *pf), ARGIN(const opcode_t 
     TRACE_PRINTF(("size=%ld.\n", size));
 
     s = string_make_from_charset(interp, (const char *)*cursor,
-                        size, charset_nr, flags | PObj_external_FLAG);
+                        size, charset_nr, flags);
 
     /* print only printable characters */
     TRACE_PRINTF_VAL(("PF_fetch_string(): string is '%s' at 0x%x\n",

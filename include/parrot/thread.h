@@ -147,12 +147,6 @@ typedef struct _Shared_gc_info {
 /* TODO use thread pools instead */
 VAR_SCOPE Shared_gc_info *shared_gc_info;
 
-typedef struct _Sync {
-    Parrot_Interp owner;                /* that interpreter, that owns
-                                           the arena, where the PMC is in */
-    Parrot_mutex pmc_lock;              /* for wr access to PMCs content */
-} Sync;
-
 /* HEADERIZER BEGIN: src/thread.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
@@ -162,6 +156,12 @@ void Parrot_shared_gc_block(PARROT_INTERP)
 
 PARROT_EXPORT
 void Parrot_shared_gc_unblock(PARROT_INTERP)
+        __attribute__nonnull__(1);
+
+PARROT_EXPORT
+PARROT_CANNOT_RETURN_NULL
+PARROT_WARN_UNUSED_RESULT
+PMC * pt_thread_create(PARROT_INTERP, INTVAL type, INTVAL clone_flags)
         __attribute__nonnull__(1);
 
 void pt_add_to_interpreters(PARROT_INTERP,
@@ -194,6 +194,14 @@ PMC * pt_shared_fixup(PARROT_INTERP, ARGMOD(PMC *pmc))
 void pt_suspend_self_for_gc(PARROT_INTERP)
         __attribute__nonnull__(1);
 
+int pt_thread_create_run(PARROT_INTERP,
+    INTVAL type,
+    INTVAL clone_flags,
+    ARGIN(PMC *sub),
+    ARGIN_NULLOK(PMC *arg))
+        __attribute__nonnull__(1)
+        __attribute__nonnull__(4);
+
 void pt_thread_detach(UINTVAL tid);
 PARROT_CAN_RETURN_NULL
 PMC* pt_thread_join(ARGIN(Parrot_Interp parent), UINTVAL tid)
@@ -202,43 +210,13 @@ PMC* pt_thread_join(ARGIN(Parrot_Interp parent), UINTVAL tid)
 void pt_thread_kill(UINTVAL tid);
 void pt_thread_prepare_for_run(Parrot_Interp d, NULLOK(Parrot_Interp s));
 int pt_thread_run(PARROT_INTERP,
-    ARGOUT(PMC *dest_interp),
+    ARGMOD(PMC *thread_interp_pmc),
     ARGIN(PMC *sub),
     ARGIN_NULLOK(PMC *arg))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2)
         __attribute__nonnull__(3)
-        FUNC_MODIFIES(*dest_interp);
-
-int pt_thread_run_1(PARROT_INTERP,
-    ARGOUT(PMC* dest_interp),
-    ARGIN(PMC* sub),
-    ARGIN(PMC *arg))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(* dest_interp);
-
-int pt_thread_run_2(PARROT_INTERP,
-    ARGOUT(PMC* dest_interp),
-    ARGIN(PMC* sub),
-    ARGIN(PMC *arg))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(* dest_interp);
-
-int pt_thread_run_3(PARROT_INTERP,
-    ARGOUT(PMC* dest_interp),
-    ARGIN(PMC* sub),
-    ARGIN(PMC *arg))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(* dest_interp);
+        FUNC_MODIFIES(*thread_interp_pmc);
 
 void pt_thread_wait_with(PARROT_INTERP, ARGMOD(Parrot_mutex *mutex))
         __attribute__nonnull__(1)
@@ -260,6 +238,8 @@ PMC * pt_transfer_sub(
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_Parrot_shared_gc_unblock __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_thread_create __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_pt_add_to_interpreters __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 #define ASSERT_ARGS_pt_clone_code __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
@@ -279,6 +259,9 @@ PMC * pt_transfer_sub(
     , PARROT_ASSERT_ARG(pmc))
 #define ASSERT_ARGS_pt_suspend_self_for_gc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
+#define ASSERT_ARGS_pt_thread_create_run __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
+       PARROT_ASSERT_ARG(interp) \
+    , PARROT_ASSERT_ARG(sub))
 #define ASSERT_ARGS_pt_thread_detach __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_pt_thread_join __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(parent))
@@ -286,23 +269,8 @@ PMC * pt_transfer_sub(
 #define ASSERT_ARGS_pt_thread_prepare_for_run __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
 #define ASSERT_ARGS_pt_thread_run __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(dest_interp) \
+    , PARROT_ASSERT_ARG(thread_interp_pmc) \
     , PARROT_ASSERT_ARG(sub))
-#define ASSERT_ARGS_pt_thread_run_1 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(dest_interp) \
-    , PARROT_ASSERT_ARG(sub) \
-    , PARROT_ASSERT_ARG(arg))
-#define ASSERT_ARGS_pt_thread_run_2 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(dest_interp) \
-    , PARROT_ASSERT_ARG(sub) \
-    , PARROT_ASSERT_ARG(arg))
-#define ASSERT_ARGS_pt_thread_run_3 __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(dest_interp) \
-    , PARROT_ASSERT_ARG(sub) \
-    , PARROT_ASSERT_ARG(arg))
 #define ASSERT_ARGS_pt_thread_wait_with __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(mutex))

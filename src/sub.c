@@ -181,7 +181,7 @@ Parrot_Context_get_info(PARROT_INTERP, ARGIN(PMC *ctx),
 
         if (!debug)
             return 0;
-        for (i = n = 0; n < sub->seg->base.size; i++) {
+        for (i = n = 0; n < sub->seg->base.size; ++i) {
             op_info_t * const op_info = &interp->op_info_table[*pc];
             opcode_t var_args = 0;
 
@@ -233,7 +233,7 @@ Parrot_Sub_get_line_from_pc(PARROT_INTERP, ARGIN_NULLOK(PMC *subpmc), ARGIN_NULL
     base_pc            = sub->seg->base.data;
     current_annotation = pc - base_pc;
 
-    for (i = op = 0; op < debug_size; i++) {
+    for (i = op = 0; op < debug_size; ++i) {
         op_info_t * const op_info  = &interp->op_info_table[*base_pc];
         opcode_t          var_args = 0;
 
@@ -435,18 +435,6 @@ Parrot_capture_lex(PARROT_INTERP, ARGMOD(PMC *sub_pmc))
     if (PMC_IS_NULL(sub->outer_sub))
         return;
 
-#if 0
-    /* verify that the current sub is sub_pmc's :outer */
-    PMC_get_sub(interp, sub->outer_sub, outer_sub);
-    if (Parrot_str_not_equal(interp, current_sub->subid,
-                         outer_sub->subid)) {
-        Parrot_ex_throw_from_c_args(interp, NULL,
-            EXCEPTION_INVALID_OPERATION, "'%Ss' isn't the :outer of '%Ss'",
-            current_sub->name, sub->name);
-        return;
-    }
-#endif
-
     /* set the sub's outer context to the current context */
     sub->outer_ctx = ctx;
 }
@@ -549,10 +537,11 @@ PARROT_CANNOT_RETURN_NULL
 void *
 Parrot_get_sub_pmc_from_subclass(PARROT_INTERP, ARGIN(PMC *subclass)) {
     ASSERT_ARGS(Parrot_get_sub_pmc_from_subclass)
-    PMC *key, *sub_pmc;
 
     /* Ensure we really do have a subclass of sub. */
     if (VTABLE_isa(interp, subclass, CONST_STRING(interp, "Sub"))) {
+        PMC *key, *sub_pmc;
+
         /* If it's actually a PMC still, probably does the same structure
          * underneath. */
         if (!PObj_is_object_TEST(subclass)) {

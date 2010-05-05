@@ -108,7 +108,7 @@ Returns the floating-point representation of the string.
 
     VTABLE FLOATVAL get_number() {
         STRING *str_val;
-        GET_ATTR_str_val(interp, SELF, str_val);
+        GET_ATTR_str_val(INTERP, SELF, str_val);
         return Parrot_str_to_num(INTERP, str_val);
     }
 
@@ -536,12 +536,12 @@ TODO Currently overflow to BigInt is B<not> handled nor detected.
 */
 
     METHOD to_int(INTVAL base) {
-        PMC * const result = Parrot_pmc_new(INTERP, Parrot_get_ctx_HLL_type(interp,
+        PMC * const result = Parrot_pmc_new(INTERP, Parrot_get_ctx_HLL_type(INTERP,
                         enum_class_Integer));
 
         /* TODO verify encoding */
         const STRING *me  = VTABLE_get_string(INTERP, SELF);
-        char         *str = Parrot_str_to_cstring(INTERP, me);
+        char  * const str = Parrot_str_to_cstring(INTERP, me);
         UINTVAL       i   = 0;
         size_t        j   = 0;
         size_t        len = strlen(str);
@@ -567,7 +567,7 @@ TODO Currently overflow to BigInt is B<not> handled nor detected.
                 break;
 
             i = i * base + dig;
-            j++;
+            ++j;
         }
 
         if (j < len) {
@@ -690,13 +690,13 @@ Translate ascii string C<src> with entries from C<trans_table>.
         INTVAL        *tr_data;
         INTVAL         i;
 
-        const INTVAL len = Parrot_str_byte_length(interp, src);
+        const INTVAL len = Parrot_str_byte_length(INTERP, src);
 
         if (!len)
             RETURN(void);
 
         if (src->charset != Parrot_ascii_charset_ptr)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_ENCODING,
                 "Can't translate non-ascii");
 
         p = (unsigned char *)(src->strstart);
@@ -713,38 +713,6 @@ Translate ascii string C<src> with entries from C<trans_table>.
 
 /*
 
-=item C<void reverse(STRING *src)>
-
-Reverse the ascii STRING C<src> in place.
-
-=cut
-
-*/
-
-    METHOD reverse(STRING *src) {
-        INTVAL         i;
-        unsigned char *p;
-        INTVAL         len = Parrot_str_byte_length(interp, src);
-
-        if (!len)
-            RETURN(void);
-
-        if (src->charset != Parrot_ascii_charset_ptr)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
-                "Can't reverse non-ascii");
-
-        p = (unsigned char *)Buffer_bufstart(src);
-
-        for (i = 0, --len; i < len; ++i, --len) {
-            const unsigned char ch = p[len];
-
-            p[len] = p[i];
-            p[i]   = ch;
-        }
-    }
-
-/*
-
 =item C<INTEGER is_integer(STRING *src)>
 
 Checks if the ascii STRING C<str> is just an integer.
@@ -756,13 +724,13 @@ Checks if the ascii STRING C<str> is just an integer.
     METHOD is_integer(STRING *src) {
         INTVAL         i;
         unsigned char *p;
-        const INTVAL   len = Parrot_str_byte_length(interp, src);
+        const INTVAL   len = Parrot_str_byte_length(INTERP, src);
 
         if (!len)
             RETURN(INTVAL 0);
 
         if (src->charset != Parrot_ascii_charset_ptr)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_INVALID_ENCODING,
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_INVALID_ENCODING,
                 "Can't is_integer non-ascii");
 
         i = 0;
@@ -814,7 +782,7 @@ Find last occurrence of C<substring>, but not after the C<start> position.
         if (start < 0)
             RETURN(INTVAL res);
 
-        len = Parrot_str_byte_length(interp, src);
+        len = Parrot_str_byte_length(INTERP, src);
 
         if (!len)
             RETURN(INTVAL res);
@@ -822,7 +790,7 @@ Find last occurrence of C<substring>, but not after the C<start> position.
         if (start >= (INTVAL)len)
             RETURN(INTVAL res);
 
-        if (!Parrot_str_byte_length(interp, substring))
+        if (!Parrot_str_byte_length(INTERP, substring))
             RETURN(INTVAL res);
 
         res = CHARSET_RINDEX(INTERP, src, substring, (UINTVAL)start);

@@ -144,12 +144,12 @@ handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGIN(STRING *str),
             if (info->flags & FLAG_PLUS) {
                 STRING * const cs = CONST_STRING(interp, "+");
                 str = Parrot_str_concat(interp, cs, str);
-                len++;
+                ++len;
             }
             else if (info->flags & FLAG_SPACE) {
                 STRING * const cs = CONST_STRING(interp, " ");
                 str = Parrot_str_concat(interp, cs, str);
-                len++;
+                ++len;
             }
         }
 
@@ -159,20 +159,6 @@ handle_flags(PARROT_INTERP, ARGIN(const SpfInfo *info), ARGIN(STRING *str),
             len += Parrot_str_byte_length(interp, prefix);
         }
         /* XXX sharp + fill ??? */
-
-#if 0
-        /* precision - only for floats, which is handled elsewhere */
-        if (info->flags & FLAG_PREC) {
-            info->flags |= FLAG_WIDTH;
-            if (string_ord(interp, str, 0) == '-' ||
-                    string_ord(interp, str, 0) == '+') {
-                info->width = info->prec + 1;
-            }
-            else {
-                info->width = info->prec;
-            }
-        }
-#endif
     }
     else {
         /* string precision */
@@ -309,8 +295,8 @@ gen_sprintf_call(ARGOUT(char *out), ARGMOD(SpfInfo *info), int thingy)
 
 /*
 
-=item C<STRING * Parrot_sprintf_format(PARROT_INTERP, STRING *pat, SPRINTF_OBJ
-*obj)>
+=item C<STRING * Parrot_sprintf_format(PARROT_INTERP, const STRING *pat,
+SPRINTF_OBJ *obj)>
 
 This is the engine that does all the formatting.
 
@@ -321,8 +307,7 @@ This is the engine that does all the formatting.
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 STRING *
-Parrot_sprintf_format(PARROT_INTERP,
-        ARGIN(STRING *pat), ARGIN(SPRINTF_OBJ *obj))
+Parrot_sprintf_format(PARROT_INTERP, ARGIN(const STRING *pat), ARGMOD(SPRINTF_OBJ *obj))
 {
     ASSERT_ARGS(Parrot_sprintf_format)
     INTVAL i;
@@ -341,7 +326,7 @@ Parrot_sprintf_format(PARROT_INTERP,
     STRING *substr = NULL;
     char tc[PARROT_SPRINTF_BUFFER_SIZE];
 
-    for (i = 0; i < pat_len; i++) {
+    for (i = 0; i < pat_len; ++i) {
         if (string_ord(interp, pat, i) == '%') {        /* % */
             if (len) {
                 substr = Parrot_str_substr(interp, pat, old, len);
@@ -353,9 +338,9 @@ Parrot_sprintf_format(PARROT_INTERP,
             if (string_ord(interp, pat, i + 1) == '%') {
                 /* skip this one, make next the first char
                  * of literal sequence, starting at old */
-                i++;
-                old++;
-                len++;
+                ++i;
+                ++old;
+                ++len;
                 continue;
             }
             else {
@@ -460,7 +445,7 @@ Parrot_sprintf_format(PARROT_INTERP,
  *  set flags--the last does all the work.
  */
 
-                for (i++; i < pat_len && info.phase != PHASE_DONE; i++) {
+                for (++i; i < pat_len && info.phase != PHASE_DONE; ++i) {
                     const INTVAL ch = string_ord(interp, pat, i);
 
                     switch (info.phase) {
@@ -784,7 +769,7 @@ Parrot_sprintf_format(PARROT_INTERP,
                              || ch == 'e' || ch == 'E') {
                                 const size_t tclen = strlen(tc);
                                 size_t j;
-                                for (j = 0; j < tclen; j++) {
+                                for (j = 0; j < tclen; ++j) {
                                     if ((tc[j] == 'e' || tc[j] == 'E')
                                         && (tc[j+1] == '+' || tc[j+1] == '-')
                                         && tc[j+2] == '0'
@@ -832,7 +817,7 @@ Parrot_sprintf_format(PARROT_INTERP,
                                 STRING * const string = (VTABLE_get_repr(interp, tmp));
                                 STRING * const ts     = handle_flags(interp, &info,
                                                     string, 0, NULL);
-                                obj->index++;
+                                ++obj->index;
 
                                 targ = Parrot_str_concat(interp, targ, ts);
                                 break;
@@ -856,7 +841,7 @@ Parrot_sprintf_format(PARROT_INTERP,
                             /* fake the old %P and %S commands */
                             if (info.type == SIZE_PMC
                              || info.type == SIZE_PSTR) {
-                                i--;
+                                --i;
                                 goto CASE_s;
                                 /* case 's' will see the SIZE_PMC or SIZE_PSTR
                                  * and assume it was %Ps (or %Ss).  Genius,
@@ -883,10 +868,10 @@ Parrot_sprintf_format(PARROT_INTERP,
             }
 
             old = i;
-            i--;
+            --i;
         }
         else {
-            len++;
+            ++len;
         }
     }
     if (len) {

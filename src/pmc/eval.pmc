@@ -73,14 +73,14 @@ clear_fixups(PARROT_INTERP, ARGIN(const Parrot_Sub_attributes *sub_data))
     if (!ct)
         return;
 
-    for (i = 0; i < ft->fixup_count; i++) {
-        const PackFile_FixupEntry * const e = ft->fixups[i];
+    for (i = 0; i < ft->fixup_count; ++i) {
+        PackFile_FixupEntry * const e = ft->fixups + i;
 
         if (e->type == enum_fixup_sub) {
             opcode_t  ci             = e->offset;
 
             ct->constants[ci]->u.key = NULL;
-            ft->fixups[i]->type      = 0;
+            e->type                  = 0;
         }
     }
 }
@@ -112,8 +112,8 @@ get_sub(PARROT_INTERP, ARGIN(PMC *self), int idx)
     if (!ct)
         return PMCNULL;
 
-    for (i = n = 0; i < ft->fixup_count; i++) {
-        PackFile_FixupEntry *e = ft->fixups[i];
+    for (i = n = 0; i < ft->fixup_count; ++i) {
+        const PackFile_FixupEntry * const e = ft->fixups + i;
 
         if (e->type == enum_fixup_sub) {
             opcode_t ci = e->offset;
@@ -151,8 +151,8 @@ mark_subs(PARROT_INTERP, ARGIN(PMC *self))
     if (!ct)
         return;
 
-    for (i = 0; i < ft->fixup_count; i++) {
-        PackFile_FixupEntry *e = ft->fixups[i];
+    for (i = 0; i < ft->fixup_count; ++i) {
+        const PackFile_FixupEntry * const e = ft->fixups + i;
 
         if (e->type == enum_fixup_sub) {
             opcode_t  ci  = e->offset;
@@ -224,8 +224,8 @@ Invokes the first subroutine in the eval code.
         }
 
         /* XXX Quick and dirty fix for TT #995 */
-        if ((struct PackFile *)cur_cs == interp->initial_pf
-                || cur_cs == interp->code) {
+        if ((struct PackFile *)cur_cs == INTERP->initial_pf
+                || cur_cs == INTERP->code) {
             SUPER();
             return;
         }
@@ -404,7 +404,7 @@ Unarchives the code.
 
         /*
          * TT #1292 this isn't ok - it seems that the packfile
-         *     gets attached to interp->code and is
+         *     gets attached to INTERP->code and is
          *     destroyed again during interpreter destruction
          */
         /* PackFile_destroy(INTERP, pf); */
@@ -416,7 +416,7 @@ Unarchives the code.
         PackFile_ByteCode   *seg;
         PackFile_FixupTable *ft;
 
-        PMC_get_sub(interp, SELF, sub);
+        PMC_get_sub(INTERP, SELF, sub);
         seg = sub->seg;
 
         if (!seg)
@@ -426,11 +426,11 @@ Unarchives the code.
         if (!ft)
             return 0;
 
-        for (i = n = 0; i < ft->fixup_count; i++) {
-            PackFile_FixupEntry *e = ft->fixups[i];
+        for (i = n = 0; i < ft->fixup_count; ++i) {
+            const PackFile_FixupEntry * const e = ft->fixups + i;
 
             if (e->type == enum_fixup_sub)
-                n++;
+                ++n;
         }
 
         return n;

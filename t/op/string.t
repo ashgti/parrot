@@ -1,4 +1,4 @@
-#!parrot
+#!./parrot
 # Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
@@ -19,7 +19,7 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(399)
+    plan(369)
 
     set_s_s_sc()
     test_clone()
@@ -36,19 +36,19 @@ Tests Parrot string registers and operations.
     exception_substr_oob()
     len_greater_than_strlen()
     len_greater_than_strlen_neg_offset()
-    five_arg_substr_w_rep_eq_length()
-    five_arg_substr_w_replacement_gt_length()
-    five_arg_substr_w_replacement_lt_length()
-    five_arg_substr_vs_hash()
-    five_arg_substr__offset_at_end_of_string()
-    exception_five_arg_substr__offset_past_end_of_string()
-    five_arg_substr_neg_offset_repl_eq_length()
-    five_arg_substr_neg_offset_repl_gt_length()
-    five_arg_substr_neg_offset_repl_lt_length()
-    exception_five_arg_substr_neg_offset_out_of_string()
-    five_arg_substr_length_gt_strlen()
-    five_arg_substr_length_gt_strlen_neg_offset()
-    four_arg_replacement_only_substr()
+    replace_w_rep_eq_length()
+    replace_w_replacement_gt_length()
+    replace_w_replacement_lt_length()
+    replace_vs_hash()
+    replace__offset_at_end_of_string()
+    exception_replace__offset_past_end_of_string()
+    replace_neg_offset_repl_eq_length()
+    replace_neg_offset_repl_gt_length()
+    replace_neg_offset_repl_lt_length()
+    exception_replace_neg_offset_out_of_string()
+    replace_length_gt_strlen()
+    replace_length_gt_strlen_neg_offset()
+    replace_only_substr()
     three_arg_substr()
     exception_substr__pos_offset_zero_length_string()
     substr_offset_zero_zero_length_string()
@@ -57,7 +57,7 @@ Tests Parrot string registers and operations.
     zero_length_substr_zero_length_string()
     zero_length_substr_zero_length_string()
     three_arg_substr_zero_length_string()
-    five_arg_substr_zero_length_string()
+    replace_zero_length_string()
     four_arg_substr_replace_zero_length_string()
     concat_s_s_sc_null_onto_null()
     concat_s_sc_repeated_two_arg_concats()
@@ -193,9 +193,6 @@ Tests Parrot string registers and operations.
 
     clone $S1, "Bar1"
     is( $S1, "Bar1", '' )
-
-    chopn $S1, 1
-    is( $S1, "Bar", 'the contents of $S1 are no longer constant' )
 .end
 
 .sub clone_null
@@ -224,9 +221,9 @@ Tests Parrot string registers and operations.
     set $S5, "japhXYZW"
     clone $S3, $S4
     set $I1, 4
-    chopn $S4, 3
-    chopn $S4, 1
-    chopn $S5, $I1
+    $S4 = chopn $S4, 3
+    $S4 = chopn $S4, 1
+    $S5 = chopn $S5, $I1
 
     is( $S4, "JAPH", '' )
     is( $S5, "japh", '' )
@@ -235,17 +232,17 @@ Tests Parrot string registers and operations.
 
 .sub chopn_oob_values
     set $S1, "A string of length 21"
-    chopn   $S1, 0
+    $S1 = chopn $S1, 0
     is( $S1, "A string of length 21", '' )
 
-    chopn   $S1, 4
+    $S1 = chopn $S1, 4
     is( $S1, "A string of lengt", '' )
 
     # -length cuts now
-    chopn   $S1, -4
+    $S1 = chopn $S1, -4
     is( $S1, "A st", '' )
 
-    chopn   $S1, 1000
+    $S1 = chopn $S1, 1000
     is( $S1, "", '' )
 .end
 
@@ -369,43 +366,35 @@ handler:
     is( $S1, "length 21", '' )
 .end
 
-.sub five_arg_substr_w_rep_eq_length
+.sub replace_w_rep_eq_length
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, 4, 3, $S1
-    is( $S0, "abcdxyzhijk", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "efg", '' )
+    replace $S2, $S0, 4, 3, $S1
+    is( $S2, "abcdxyzhijk", '' )
 .end
 
-.sub five_arg_substr_w_replacement_gt_length
+.sub replace_w_replacement_gt_length
     set $S0, "abcdefghijk"
     set $S1, "xyz0123"
-    substr $S2, $S0, 4, 3, $S1
-    is( $S0, "abcdxyz0123hijk", '' )
-    is( $S1, "xyz0123", '' )
-    is( $S2, "efg", '' )
+    $S2 = replace $S0, 4, 3, $S1
+    is( $S2, "abcdxyz0123hijk", '' )
 .end
 
-.sub five_arg_substr_w_replacement_lt_length
+.sub replace_w_replacement_lt_length
     set $S0, "abcdefghijk"
     set $S1, "x"
-    substr $S2, $S0, 4, 3, $S1
-    is( $S0, "abcdxhijk", '' )
-    is( $S1, "x", '' )
-    is( $S2, "efg", '' )
+    $S2 = replace $S0, 4, 3, $S1
+    is( $S2, "abcdxhijk", '' )
 .end
 
-.sub five_arg_substr__offset_at_end_of_string
-  set $S0, "abcdefghijk"
-  set $S1, "xyz"
-  substr $S2, $S0, 11, 3, $S1
-    is( $S0, "abcdefghijkxyz", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "", '' )
+.sub replace__offset_at_end_of_string
+    set $S0, "abcdefghijk"
+    set $S1, "xyz"
+    $S2 = replace $S0, 11, 3, $S1
+    is( $S2, "abcdefghijkxyz", '' )
 .end
 
-.sub five_arg_substr_vs_hash
+.sub replace_vs_hash
     # Check that string hashval properly updated.
     .local pmc hash
     hash = new ['Hash']
@@ -414,80 +403,68 @@ handler:
     hash["foo"] = 42
     $S0 = replace $S0, 1, 1, ''
     $S1 = hash[$S0]
-    is( $S1, '42', 'substr behave it self')
+    is( $S1, '42', 'replace behave it self')
 .end
 
-.sub exception_five_arg_substr__offset_past_end_of_string
+.sub exception_replace__offset_past_end_of_string
     set $S0, "abcdefghijk"
     set $S1, "xyz"
     push_eh handler
-    substr $S2, $S0, 12, 3, $S1
+    $S2 = replace $S0, 12, 3, $S1
     ok(0,"no exception")
 handler:
-    .exception_is( "Cannot take substr outside string" )
+    .exception_is( "Can only replace inside string or index after end of string" )
 .end
 
-.sub five_arg_substr_neg_offset_repl_eq_length
+.sub replace_neg_offset_repl_eq_length
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, -3, 3, $S1
-    is( $S0, "abcdefghxyz", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "ijk", '' )
+    $S2 = replace $S0, -3, 3, $S1
+    is( $S2, "abcdefghxyz", '' )
 .end
 
-.sub five_arg_substr_neg_offset_repl_gt_length
+.sub replace_neg_offset_repl_gt_length
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, -6, 2, $S1
-    is( $S0, "abcdexyzhijk", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "fg", '' )
+    $S2 = replace $S0, -6, 2, $S1
+    is( $S2, "abcdexyzhijk", '' )
 .end
 
-.sub five_arg_substr_neg_offset_repl_lt_length
+.sub replace_neg_offset_repl_lt_length
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, -6, 4, $S1
-    is( $S0, "abcdexyzjk", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "fghi", '' )
+    $S2 = replace $S0, -6, 4, $S1
+    is( $S2, "abcdexyzjk", '' )
 .end
 
-.sub exception_five_arg_substr_neg_offset_out_of_string
+.sub exception_replace_neg_offset_out_of_string
     set $S0, "abcdefghijk"
     set $S1, "xyz"
     push_eh handler
-    substr $S2, $S0, -12, 4, $S1
+    $S2 = replace $S0, -12, 4, $S1
     ok(0,"no exception")
 handler:
-    .exception_is( "Cannot take substr outside string" )
+    .exception_is( "Can only replace inside string or index after end of string" )
 .end
 
-.sub five_arg_substr_length_gt_strlen
+.sub replace_length_gt_strlen
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, 3, 11, $S1
-    is( $S0, "abcxyz", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "defghijk", '' )
+    $S2 = replace $S0, 3, 11, $S1
+    is( $S2, "abcxyz", '' )
 .end
 
-.sub five_arg_substr_length_gt_strlen_neg_offset
+.sub replace_length_gt_strlen_neg_offset
     set $S0, "abcdefghijk"
     set $S1, "xyz"
-    substr $S2, $S0, -3, 11, $S1
-    is( $S0, "abcdefghxyz", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "ijk", '' )
+    $S2 = replace $S0, -3, 11, $S1
+    is( $S2, "abcdefghxyz", '' )
 .end
 
-.sub four_arg_replacement_only_substr
+.sub replace_only_substr
     set $S0, "abcdefghijk"
     set $S1, "xyz"
     $S2 = replace $S0, 3, 3, $S1
-    is( $S0, "abcdefghijk", '' )
-    is( $S1, "xyz", '' )
     is( $S2, "abcxyzghijk", '' )
 .end
 
@@ -547,34 +524,28 @@ handler:
     is( $S1, "", '' )
 .end
 
-.sub five_arg_substr_zero_length_string
+.sub replace_zero_length_string
     set $S0, ""
     set $S1, "xyz"
-    substr $S2, $S0, 0, 3, $S1
-    is( $S0, "xyz", '' )
-    is( $S1, "xyz", '' )
-    is( $S2, "", '' )
+    $S2 = replace $S0, 0, 3, $S1
+    is( $S2, "xyz", '' )
 
     set $S3, ""
     set $S4, "abcde"
-    substr $S5, $S3, 0, 0, $S4
-    is( $S3, "abcde", '' )
-    is( $S4, "abcde", '' )
-    is( $S5, "", '' )
+    $S5 = replace $S3, 0, 0, $S4
+    is( $S5, "abcde", '' )
 .end
 
 .sub four_arg_substr_replace_zero_length_string
     set $S0, ""
     set $S1, "xyz"
-    substr $S0, 0, 3, $S1
+    $S0 = replace $S0, 0, 3, $S1
     is( $S0, "xyz", '' )
-    is( $S1, "xyz", '' )
 
     set $S2, ""
     set $S3, "abcde"
-    substr $S2, 0, 0, $S3
+    $S2 = replace $S2, 0, 0, $S3
     is( $S2, "abcde", '' )
-    is( $S3, "abcde", '' )
 .end
 
 .sub concat_s_s_sc_null_onto_null
@@ -629,8 +600,8 @@ WHILE:
     set $S2, "JAPH"
     concat $S0, $S2, ""
     concat $S1, "", $S2
-    chopn $S0, 1
-    chopn $S1, 1
+    $S0 = chopn $S0, 1
+    $S1 = chopn $S1, 1
     is( $S2, "JAPH", '' )
 .end
 
@@ -724,7 +695,7 @@ WHILE:
    ord $I0,$S0
    ok( 0, 'no exception: 2-param ord, empty string register' )
  handler:
-   .exception_is( 'Cannot get character of empty string' )
+   .exception_is( 'Cannot get character of NULL string' )
 .end
 
 .sub exception_three_param_ord_empty_string
@@ -740,7 +711,7 @@ WHILE:
    ord $I0,$S0,0
    ok( 0, 'no exception: 3-param ord, empty string register' )
  handler:
-   .exception_is( 'Cannot get character of empty string' )
+   .exception_is( 'Cannot get character of NULL string' )
 .end
 
 .sub two_param_ord_one_character_string
@@ -1186,7 +1157,7 @@ WHILE:
 .sub cow_with_chopn_leaving_original_untouched
     set $S0, "ABCD"
     clone $S1, $S0
-    chopn $S0, 1
+    $S0 = chopn $S0, 1
     is( $S0, "ABC", 'COW with chopn leaving original untouched' )
     is( $S1, "ABCD", 'COW with chopn leaving original untouched' )
 .end
@@ -1486,29 +1457,29 @@ WHILE:
 .sub bands_null_string
     null $S1
     set $S2, "abc"
-    bands $S1, $S2
+    $S1 = bands $S1, $S2
     null $S3
     is( $S1, $S3, 'ok1' )
 
     set $S1, ""
-    bands $S1, $S2
+    $S1 = bands $S1, $S2
     nok( $S1, 'ok2' )
 
     null $S2
     set $S1, "abc"
-    bands $S1, $S2
+    $S1 = bands $S1, $S2
     null $S3
     is( $S1, $S3, 'ok3' )
 
     set $S2, ""
-    bands $S1, $S2
+    $S1 = bands $S1, $S2
     nok( $S1, 'ok4' )
 .end
 
 .sub bands_2
     set $S1, "abc"
     set $S2, "EE"
-    bands $S1, $S2
+    $S1 = bands $S1, $S2
     is( $S1, "A@", 'bands 2' )
     is( $S2, "EE", 'bands 2' )
 .end
@@ -1525,33 +1496,33 @@ WHILE:
 .sub bands_cow
     set $S1, "foo"
     substr $S2, $S1, 0, 3
-    bands $S1, "bar"
+    $S1 = bands $S1, "bar"
     is( $S2, "foo", 'bands COW' )
 .end
 
 .sub bors_null_string
     null $S1
     null $S2
-    bors $S1, $S2
+    $S1 = bors $S1, $S2
     null $S3
     is( $S1, $S3, 'bors NULL string' )
 
     null $S1
     set $S2, ""
-    bors $S1, $S2
+    $S1 = bors $S1, $S2
     null $S3
     is( $S1, $S3, 'bors NULL string' )
 
-    bors $S2, $S1
+    $S2 = bors $S2, $S1
     is( $S2, $S3, 'bors NULL string' )
 
     null $S1
     set $S2, "def"
-    bors $S1, $S2
+    $S1 = bors $S1, $S2
     is( $S1, "def", 'bors NULL string' )
 
     null $S2
-    bors $S1, $S2
+    $S1 = bors $S1, $S2
     is( $S1, "def", 'bors NULL string' )
 
     null $S1
@@ -1578,7 +1549,7 @@ WHILE:
 .sub bors_2
     set $S1, "abc"
     set $S2, "EE"
-    bors $S1, $S2
+    $S1 = bors $S1, $S2
     is( $S1, "egc", 'bors 2' )
     is( $S2, "EE", 'bors 2' )
 .end
@@ -1595,33 +1566,33 @@ WHILE:
 .sub bors_cow
     set $S1, "foo"
     substr $S2, $S1, 0, 3
-    bors $S1, "bar"
+    $S1 = bors $S1, "bar"
     is( $S2, "foo", 'bors COW' )
 .end
 
 .sub bxors_null_string
     null $S1
     null $S2
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     null $S3
     is( $S1, $S3, 'bxors NULL string' )
 
     null $S1
     set $S2, ""
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     null $S3
     is( $S1, $S3, 'bxors NULL string' )
 
-    bxors $S2, $S1
+    $S2 = bxors $S2, $S1
     is( $S2, $S3, 'bxors NULL string' )
 
     null $S1
     set $S2, "abc"
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     is( $S1, "abc", 'bxors NULL string' )
 
     null $S2
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     is( $S1, "abc", 'bxors NULL string' )
 
     null $S1
@@ -1648,13 +1619,13 @@ WHILE:
 .sub bxors_2
     set $S1, "a2c"
     set $S2, "Dw"
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     is( $S1, "%Ec", 'bxors 2' )
     is( $S2, "Dw", 'bxors 2' )
 
     set $S1, "abc"
     set $S2, "   X"
-    bxors $S1, $S2
+    $S1 = bxors $S1, $S2
     is( $S1, "ABCX", 'bxors 2' )
     is( $S2, "   X", 'bxors 2' )
 .end
@@ -1678,7 +1649,7 @@ WHILE:
 .sub bxors_cow
     set $S1, "foo"
     substr $S2, $S1, 0, 3
-    bxors $S1, "bar"
+    $S1 = bxors $S1, "bar"
     is( $S2, "foo", 'bxors COW' )
 .end
 
@@ -1830,9 +1801,6 @@ WHILE:
     upcase $S1, $S0
     is( $S1, "ABCD012YZ", 'upcase' )
 
-    upcase $S0
-    is( $S0, "ABCD012YZ", 'upcase inplace' )
-
     push_eh catch1
     null $S9
     null $S0
@@ -1849,7 +1817,7 @@ null1:
     push_eh catch2
     null $S9
     null $S0
-    upcase $S0
+    $S0 = upcase $S0
     pop_eh
     goto null2
 catch2:
@@ -1864,9 +1832,6 @@ null2:
     set $S0, "ABcd012YZ"
     downcase $S1, $S0
     is( $S1, "abcd012yz", 'downcase' )
-
-    downcase $S0
-    is( $S0, "abcd012yz", 'downcase inplace' )
 
     push_eh catch1
     null $S9
@@ -1884,7 +1849,7 @@ null1:
     push_eh catch2
     null $S9
     null $S0
-    downcase $S0
+    $S0 = downcase $S0
     pop_eh
     goto null2
 catch2:
@@ -1899,9 +1864,6 @@ null2:
     set $S0, "aBcd012YZ"
     titlecase $S1, $S0
     is( $S1, "Abcd012yz", 'titlecase' )
-
-    titlecase $S0
-    is( $S0, "Abcd012yz", 'titlecase inplace' )
 
     push_eh catch1
     null $S9
@@ -1919,7 +1881,7 @@ null1:
     push_eh catch2
     null $S9
     null $S0
-    titlecase $S0
+    $S0 = titlecase $S0
     pop_eh
     goto null2
 catch2:
@@ -2037,7 +1999,7 @@ null2:
     .param string s
     $I0 = index s, '::'
     is( s, "Foo::Bar", 'bug 60030' )
-    substr s, $I0, 2, "/"
+    s = replace s, $I0, 2, "/"
     is( s, "Foo/Bar", 'bug 60030' )
     collect
     is( s, "Foo/Bar", 'bug 60030' )

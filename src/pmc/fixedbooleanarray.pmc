@@ -87,7 +87,7 @@ Initializes the array.
         const size_t size_in_bytes = get_size_in_bytes(size);
 
         if (size < 0)
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_OUT_OF_BOUNDS,
+            Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
                 _("FixedBooleanArray: Cannot set array size to a negative number (%d)"), size);
 
         SET_ATTR_size(INTERP, SELF, size);
@@ -281,7 +281,7 @@ Returns the Parrot string representation of the array.
         zero = CONST_STRING(INTERP, "0");
         one  = CONST_STRING(INTERP, "1");
 
-        for (i = 0; i < elems; i++) {
+        for (i = 0; i < elems; ++i) {
             if (SELF.get_integer_keyed_int((INTVAL)i))
                 str = Parrot_str_concat(INTERP, str, one);
             else
@@ -581,13 +581,11 @@ Used to unarchive the string.
         SUPER(info);
 
         {
-            unsigned char * bit_array;
-            UINTVAL         threshold;
             const INTVAL    size      = VTABLE_shift_integer(INTERP, info);
             STRING * const  s         = VTABLE_shift_string(INTERP, info);
 
-            bit_array = (unsigned char *)Parrot_str_to_cstring(INTERP, s);
-            threshold = Parrot_str_byte_length(interp, s) * BITS_PER_CHAR;
+            unsigned char * const bit_array = (unsigned char *)Parrot_str_to_cstring(INTERP, s);
+            const UINTVAL   threshold = Parrot_str_byte_length(INTERP, s) * BITS_PER_CHAR;
 
             SET_ATTR_size(INTERP, SELF, size);
             SET_ATTR_resize_threshold(INTERP, SELF, threshold);

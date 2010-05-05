@@ -337,11 +337,9 @@ Parrot_io_read_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle),
         size_t got;
 
         if (len >= Parrot_io_get_buffer_size(interp, filehandle)) {
-            STRING     fake;
-            STRING    *sf = &fake;
-
-            Buffer_bufstart(sf) = (char *)out_buf;
-            fake.bufused        = len;
+            STRING *sf = Parrot_str_new_init(interp, (char *)out_buf, len,
+                PARROT_DEFAULT_ENCODING, PARROT_DEFAULT_CHARSET,
+                PObj_external_FLAG);
             got                 = PIO_READ(interp, filehandle, &sf);
             s->strlen           = s->bufused = current + got;
 
@@ -483,7 +481,7 @@ Parrot_io_readline_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGOUT(STRING 
     buf_start = buffer_next;
 
     for (l = 0; buffer_next < buffer_end;) {
-        l++;
+        ++l;
         if (io_is_end_of_line((char *)buffer_next)) {
             Parrot_io_set_buffer_next(interp, filehandle, ++buffer_next);
             break;
@@ -545,8 +543,8 @@ Parrot_io_readline_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGOUT(STRING 
 
 /*
 
-=item C<size_t Parrot_io_write_buffer(PARROT_INTERP, PMC *filehandle, STRING
-*s)>
+=item C<size_t Parrot_io_write_buffer(PARROT_INTERP, PMC *filehandle, const
+STRING *s)>
 
 The buffer layer's C<Write> function.
 
@@ -555,7 +553,7 @@ The buffer layer's C<Write> function.
 */
 
 size_t
-Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(STRING *s))
+Parrot_io_write_buffer(PARROT_INTERP, ARGMOD(PMC *filehandle), ARGIN(const STRING *s))
 {
     ASSERT_ARGS(Parrot_io_write_buffer)
     unsigned char * const buffer_start = Parrot_io_get_buffer_start(interp, filehandle);

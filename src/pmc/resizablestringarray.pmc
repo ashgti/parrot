@@ -43,7 +43,7 @@ Returns the Parrot string value of the element at index C<key>.
 
         STRING **str_array;
         INTVAL size;
-        GET_ATTR_size(interp, SELF, size);
+        GET_ATTR_size(INTERP, SELF, size);
 
         if (key < 0) {
             if (key < -size)
@@ -54,12 +54,12 @@ Returns the Parrot string value of the element at index C<key>.
         }
 
         if (key >= size)
-            return string_from_literal(INTERP, "");
+            return CONST_STRING(INTERP, "");
 
         GET_ATTR_str_array(INTERP, SELF, str_array);
 
         if (!str_array[key])
-            str_array[key] = Parrot_str_new(interp, NULL, 0);
+            str_array[key] = Parrot_str_new(INTERP, NULL, 0);
 
         return str_array[key];
     }
@@ -78,7 +78,7 @@ Sets the Parrot string value of the element at index C<key> to C<value>.
 
         STRING **str_array;
         INTVAL   size;
-        GET_ATTR_size(interp, SELF, size);
+        GET_ATTR_size(INTERP, SELF, size);
 
         if (key < 0) {
             if (key < -size)
@@ -108,7 +108,7 @@ the array.
 
     VTABLE void push_string(STRING *value) {
         INTVAL next_idx;
-        GET_ATTR_size(interp, SELF, next_idx);
+        GET_ATTR_size(INTERP, SELF, next_idx);
         SELF.set_string_keyed_int(next_idx, value);
     }
 
@@ -125,7 +125,7 @@ Removes and returns the last element in the array.
     VTABLE STRING *pop_string() {
         STRING *value;
         INTVAL  size;
-        GET_ATTR_size(interp, SELF, size);
+        GET_ATTR_size(INTERP, SELF, size);
 
         if (size == 0)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
@@ -222,10 +222,10 @@ Resizes the array to C<size> elements.
             /* zero out anything that was previously allocated
              * if we're growing the array */
             INTVAL old_size;
-            GET_ATTR_size(interp, SELF, old_size);
+            GET_ATTR_size(INTERP, SELF, old_size);
             if (new_size > old_size) {
                 INTVAL i;
-                for (i = old_size; i < new_size; i++)
+                for (i = old_size; i < new_size; ++i)
                     str_array[i] = NULL;
             }
 
@@ -249,7 +249,7 @@ Resizes the array to C<size> elements.
                             cur, resize_threshold, STRING*));
             GET_ATTR_str_array(INTERP, SELF, str_array);
 
-            for (; i < cur; i++)
+            for (; i < cur; ++i)
                 str_array[i] = NULL;
 
             SET_ATTR_size(INTERP, SELF, new_size);
@@ -270,7 +270,7 @@ Creates and returns a copy of the array.
     VTABLE PMC *clone() {
         PMC * const copy = SUPER();
         INTVAL size;
-        GET_ATTR_size(interp, SELF, size);
+        GET_ATTR_size(INTERP, SELF, size);
         /* copy trimmed extra space */
         SET_ATTR_resize_threshold(INTERP, copy, size);
         return copy;
@@ -289,7 +289,7 @@ Removes and returns an item from the start of the array.
     VTABLE STRING *shift_string() {
         STRING *value;
         INTVAL  size;
-        GET_ATTR_size(interp, SELF, size);
+        GET_ATTR_size(INTERP, SELF, size);
 
         if (size == 0)
             Parrot_ex_throw_from_c_args(INTERP, NULL, EXCEPTION_OUT_OF_BOUNDS,
@@ -605,7 +605,7 @@ everything via the VTABLE api.
         /* shrink the array */
         if (shift < 0) {
             /* start at offset so we don't overwrite values we'll need */
-            for (i = offset+count; i < length; i++)
+            for (i = offset+count; i < length; ++i)
                 VTABLE_set_pmc_keyed_int(INTERP, SELF, i + shift,
                     VTABLE_get_pmc_keyed_int(INTERP, SELF, i));
 
@@ -617,13 +617,13 @@ everything via the VTABLE api.
 
             /* move the existing values */
             /* start at length-1 so we don't overwrite values we'll need */
-            for (i = length - 1; i >= offset; i--)
+            for (i = length - 1; i >= offset; --i)
                 VTABLE_set_pmc_keyed_int(INTERP, SELF, i + shift,
                     VTABLE_get_pmc_keyed_int(INTERP, SELF, i));
         }
 
         /* copy the new values */
-        for (i = 0; i < elems; i++)
+        for (i = 0; i < elems; ++i)
             VTABLE_set_pmc_keyed_int(INTERP, SELF, i + offset,
                 VTABLE_get_pmc_keyed_int(INTERP, value, i));
     }

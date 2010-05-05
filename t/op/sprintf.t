@@ -202,8 +202,8 @@ tag C<all> is allowed for todo tests that should fail on any system.
     # remove /'s
     $S0 = substr expected, 0, 1
     if $S0 != "/" goto eh_bad_line
-    substr expected, 0, 1, ''
-    substr expected, -1, 1, ''
+    expected = replace expected, 0, 1, ''
+    expected = replace expected, -1, 1, ''
 
     $I0 = index $S1, expected
     if $I0 == -1 goto is_nok
@@ -411,7 +411,7 @@ tag C<all> is allowed for todo tests that should fail on any system.
     # NOTE: there can be multiple tabs between entries, so skip until
     # we have something.
     # remove the trailing newline from record
-    chopn record, 1
+    record = chopn record, 1
     $P1 = split "\t", record
     $I0 = elements $P1 # length of array
     .local int tab_number

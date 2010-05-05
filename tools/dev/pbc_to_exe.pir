@@ -248,6 +248,10 @@ MAIN
     push codestring, "\n"
     goto code_loop
   code_done:
+    # Join current strings to avoid storing too much
+    $S0 = join '', codestring
+    codestring = 0
+    push codestring, $S0
     goto read_loop
 
   read_done:
@@ -343,6 +347,10 @@ END_OF_FUNCTION
     push codestring, '"'
     goto code_loop
   code_done:
+    # Join current strings to avoid storing too much
+    $S0 = join '', codestring
+    codestring = 0
+    push codestring, $S0
     goto read_loop
 
   read_done:
@@ -378,11 +386,10 @@ END_OF_FUNCTION
     .param string new_extension
 
     $S0 = substr pbc_path, -4
-    downcase $S0
+    $S0 = downcase $S0
     if $S0 != '.pbc' goto err_pbc_path_not_pbc
     .local string base_path
-     base_path = substr pbc_path, 0
-     substr base_path, -4, 4, ''
+     base_path = replace pbc_path, -4, 4, ''
 
     .local string new_path
     new_path = substr base_path, 0
@@ -439,6 +446,7 @@ END_OF_DEFINES
 
 
     .local int pbc_size
+    $P0 = loadlib 'os'
     $P1 = new ['OS']
     $P2 = $P1.'stat'(pbc_path)
     pbc_size = $P2[7]
@@ -661,6 +669,7 @@ END_OF_FUNCTION
   check_manifest:
     # Check if there is a MSVC app manifest
     .local pmc file
+    $P0 = loadlib 'file'
     file = new 'File'
     .local string manifest_file_name
     manifest_file_name  = clone exefile

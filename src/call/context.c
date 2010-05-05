@@ -263,21 +263,21 @@ clear_regs(PARROT_INTERP, ARGMOD(Parrot_Context *ctx))
      * if the architecture has 0x := NULL and 0.0 we could memset too
      */
 
-    for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; i++) {
+    for (i = 0; i < ctx->n_regs_used[REGNO_PMC]; ++i) {
         ctx->bp_ps.regs_p[-1L - i] = PMCNULL;
     }
 
-    for (i = 0; i < ctx->n_regs_used[REGNO_STR]; i++) {
+    for (i = 0; i < ctx->n_regs_used[REGNO_STR]; ++i) {
         ctx->bp_ps.regs_s[i] = STRINGNULL;
     }
 
     if (Interp_debug_TEST(interp, PARROT_REG_DEBUG_FLAG)) {
         /* depending on -D40, set int and num to identifiable garbage values */
-        for (i = 0; i < ctx->n_regs_used[REGNO_INT]; i++) {
+        for (i = 0; i < ctx->n_regs_used[REGNO_INT]; ++i) {
             ctx->bp.regs_i[i] = -999;
         }
 
-        for (i = 0; i < ctx->n_regs_used[REGNO_NUM]; i++) {
+        for (i = 0; i < ctx->n_regs_used[REGNO_NUM]; ++i) {
             ctx->bp.regs_n[-1L - i] = -99.9;
         }
     }
@@ -523,18 +523,12 @@ Parrot_pcc_free_registers(PARROT_INTERP, ARGIN(PMC *pmcctx))
 {
     ASSERT_ARGS(Parrot_pcc_free_registers)
     Parrot_CallContext_attributes * const ctx = PARROT_CALLCONTEXT(pmcctx);
-    size_t reg_size;
 
-    if (!ctx)
-        return;
+    const size_t reg_size =
+        Parrot_pcc_calculate_registers_size(interp, ctx->n_regs_used);
 
-    reg_size = Parrot_pcc_calculate_registers_size(interp, ctx->n_regs_used);
-    if (!reg_size)
-        return;
-
-    /* Free registers */
-    Parrot_gc_free_fixed_size_storage(interp, reg_size, ctx->registers);
-
+    if (reg_size)
+        Parrot_gc_free_fixed_size_storage(interp, reg_size, ctx->registers);
 }
 
 

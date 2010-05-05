@@ -2,14 +2,9 @@
  *  Copyright (C) 2001-2008, Parrot Foundation.
  *  SVN Info
  *     $Id$
- *  Overview:
  *  Data Structure and Algorithms:
  *     Subroutine, coroutine, closure and continuation structures
  *     and related routines.
- *  History:
- *     Initial version by Melvin on on 2002/06/6
- *  Notes:
- *  References:
  */
 
 #ifndef PARROT_SUB_H_GUARD
@@ -35,9 +30,6 @@ typedef enum {
     SUB_FLAG_PF_LOAD      = PObj_private5_FLAG,
     SUB_FLAG_PF_IMMEDIATE = PObj_private6_FLAG,
     SUB_FLAG_PF_POSTCOMP  = PObj_private7_FLAG,
-
-    /* [temporary expedient.  -- rgr, 13-Jul-08.] */
-    SUB_FLAG_NEWCLOSURE   = SUB_FLAG_PF_IMMEDIATE,
 
     SUB_FLAG_PF_MASK      = SUB_FLAG_PF_ANON
                           | SUB_FLAG_PF_MAIN

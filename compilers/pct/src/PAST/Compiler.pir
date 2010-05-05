@@ -102,7 +102,8 @@ any value type.
     piropsig['splice']     = 'PPii'
     piropsig['split']      = 'Pss'
     piropsig['sub']        = 'PP+'
-    piropsig['substr']     = 'Ssiis'
+    piropsig['substr']     = 'Ssii'
+    piropsig['replace']    = 'Ssiis'
     piropsig['pow']        = 'NN+'
     piropsig['print']      = 'v*'
     piropsig['say']        = 'v*'
@@ -1150,7 +1151,7 @@ for calling a sub.
     name = node.'name'()
     if name goto call_by_name
     ##  our first child is the thing to be invoked, so make sure it's a PMC
-    substr signature, 1, 0, 'P'
+    signature = replace signature, 1, 0, 'P'
     (ops, posargs, namedargs) = self.'post_children'(node, 'signature'=>signature)
     goto children_done
   call_by_name:

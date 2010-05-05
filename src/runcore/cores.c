@@ -73,7 +73,7 @@ As its name implies, the switch core uses a gigantic C C<switch / case>
 structure to execute opcodes. Here's a brief example of how this
 architecture works:
 
-  for( ; ; current_opcode++) {
+  for( ; ; ++current_opcode) {
       switch(*current_opcode) {
           case opcode_1:
               ...
@@ -564,13 +564,9 @@ runops_trace_core(PARROT_INTERP, ARGIN(opcode_t *pc))
          * using a distinct interpreter for tracing should be ok
          * - just in case, make it easy to switch
          */
-#if 0
-        debugger = interp:
-#else
         Parrot_debugger_init(interp);
         PARROT_ASSERT(interp->pdb);
         debugger = interp->pdb->debugger;
-#endif
         PARROT_ASSERT(debugger);
 
         /* set the top of the stack so GC can trace it for GC-able pointers
@@ -640,10 +636,6 @@ runops_slow_core(PARROT_INTERP, SHIM(Parrot_runcore_t *runcore), ARGIN(opcode_t 
 
     if (Interp_trace_TEST(interp, PARROT_TRACE_OPS_FLAG))
         return runops_trace_core(interp, pc);
-#if 0
-    if (interp->debugger && interp->debugger->pdb)
-        return Parrot_debug(interp, interp->debugger, pc);
-#endif
 
     while (pc) {
         if (pc < code_start || pc >= code_end)

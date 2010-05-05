@@ -22,31 +22,34 @@ C<[eligible in 1.5]>.  If the release listed is one that has already
 shipped, this feature may be removed in B<any> upcoming release, and
 you should no longer rely on it.
 
-Whenever deprecated items are removed, information
-regarding how to cope with the removal should be added to
-L<https://trac.parrot.org/parrot/wiki/Deprecation>.
+If you find a feature you once used was removed after a deprecation
+cycle, L<https://trac.parrot.org/parrot/wiki/Deprecation>. Otherwise
+please open a documentation ticket via Trac[1].
 
-When running parrot, you can receive warnings about deprecated opcodes.
+=head1 Are you using any Deprecated Features?
+
+When running parrot, you can receive warnings about deprecations.
 Either run parrot with the C<-w> option to enable all warnings, or
-specifically by including this C<PIR> code:
+deprecations specifically by including this snippet:
+
+=begin PIR_FRAGMENT
 
  .include 'warnings.pasm'
  warningson .PARROT_WARNINGS_DEPRECATED_FLAG
+
+=end PIR_FRAGMENT
 
 =head1 PMCS
 
 =over 4
 
-=item gziphandle [experimental]
+=item GzipHandle [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/1580>
 
-=item moved to dynpmc [eligible in 1.1]
+=item PackfileDebug [experimental]
 
-AddrRegistry, CodeString, Env, Eval, File, OS, PCCMETHOD_Test, StringHandle,
-and Timer.
-
-L<https://trac.parrot.org/parrot/ticket/448>
+L<https://trac.parrot.org/parrot/ticket/1599>
 
 =item multiple dispatch within core PMCs [eligible in 1.1]
 
@@ -105,8 +108,6 @@ L<https://trac.parrot.org/parrot/ticket/1554>
 
 =item Auto-vivification of nested aggregates [eligible in 2.4]
 
-Auto-vivifation of nested aggregated is deprecated.
-
 E.g.
 
   $P0 = new ['Hash']
@@ -116,12 +117,12 @@ will not auto-vivify nested hashes and return PMCNULL early.
 
 L<https://trac.parrot.org/parrot/ticket/1561>
 
-=item PMC must use manual_attrs or auto_attrs flag [eligible in 2.4]
+=item Method lower on String [eligible in 3.1]
 
-PMCs must no longer use default value for manual/auto attribute allocation,
-manual_attrs or auto_attrs must be specified.
+Use the downcase opcode or subclass with a method name consistent with your
+HLL.
 
-L<http://trac.parrot.org/parrot/ticket/1506>
+L<http://trac.parrot.org/parrot/ticket/1606>
 
 =back
 
@@ -186,10 +187,6 @@ Ability to use non-default dynamic loading behaviour.
 
 L<https://trac.parrot.org/parrot/ticket/1583>
 
-=item pushaction, pushmark, popmark [eligible in 2.4]
-
-L<https://trac.parrot.org/parrot/ticket/876>
-
 =item new_callback_p_p_p_s [eligible in 2.4]
 
 To be replaced with new_callback_p_p_p_p_s.
@@ -207,20 +204,6 @@ L<https://trac.parrot.org/parrot/ticket/1565>
 find_lex will not throw exception for non-existing lexicals.
 
 L<https://trac.parrot.org/parrot/ticket/1207>
-
-=item substr_s_i_i_s [eligible in 2.4]
-
-This op will be replaced with replace_s_s_i_i_s op to clearly indicate
-semantic. Part of COW removal.
-
-L<https://trac.parrot.org/parrot/ticket/1540>
-
-=item substr_s_s_i_i_s [eligible in 2.4]
-
-This op is deprecated. Use replace_s_s_i_i_s or substr_s_s_i_i (or both)
-instead. Part of COW removal.
-
-L<https://trac.parrot.org/parrot/ticket/1540>
 
 =item inplace string updates. [eligible in 2.4]
 
@@ -301,18 +284,6 @@ All STRING modification functions will return a STRING pointer; capture and use
 this rather than relying on in-place modification of an existing pointer.
 
 L<https://trac.parrot.org/parrot/ticket/1584>
-
-=item STRING_is_null function [eligible in 2.4]
-
-renamed to Parrot_str_is_null
-
-L<https://trac.parrot.org/parrot/ticket/1585>
-
-=item Parrot_string_* [eligible in 2.4]
-
-rename Parrot_string_cstring to Parrot_str_cstring
-
-L<https://trac.parrot.org/parrot/ticket/1586>
 
 =item STRING COW [eligible in 2.4]
 
@@ -406,7 +377,11 @@ L<https://trac.parrot.org/parrot/ticket/1429>
 A way to provide an equivalent of -L and -I parrot command line options
 to language that doesn't support it.
 
-=item JSON, and Config;JSON [eligible in 1.5]
+=item Archive::Tar [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/1598>
+
+=item JSON and Config;JSON [eligible in 1.5]
 
 L<https://trac.parrot.org/parrot/ticket/508>
 
@@ -417,6 +392,16 @@ L<https://trac.parrot.org/parrot/ticket/754>
 =item OpenGL bindings and libraries [experimental]
 
 L<https://trac.parrot.org/parrot/ticket/852>
+
+=back
+
+=head1 Experimental
+
+=over 4
+
+=item Threads and Parallelism [experimental]
+
+L<https://trac.parrot.org/parrot/ticket/1601>
 
 =back
 
