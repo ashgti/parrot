@@ -294,6 +294,32 @@ string_rep_compatible(SHIM_INTERP,
     return NULL;
 }
 
+/*
+
+=item C<const CHARSET * Parrot_str_rep_compatible(PARROT_INTERP, const STRING
+*a, const STRING *b, const ENCODING **e)>
+
+Find the "lowest" possible charset and encoding for the given string. E.g.
+
+  ascii <op> utf8 => utf8
+                  => ascii, B<if> C<STRING *b> has ascii chars only.
+
+Returns NULL, if no compatible string representation can be found.
+
+=cut
+
+*/
+
+PARROT_INLINE
+PARROT_IGNORABLE_RESULT
+PARROT_CAN_RETURN_NULL
+const CHARSET *
+Parrot_str_rep_compatible(PARROT_INTERP,
+    ARGIN(const STRING *a), ARGIN(const STRING *b), ARGOUT(const ENCODING **e))
+{
+    ASSERT_ARGS(Parrot_str_rep_compatible)
+    return string_rep_compatible(interp, a, b, e);
+}
 
 /*
 
@@ -2213,7 +2239,7 @@ void
 Parrot_str_pin(SHIM_INTERP, ARGMOD(STRING *s))
 {
     ASSERT_ARGS(Parrot_str_pin)
-    size_t size   = Buffer_buflen(s);
+    const size_t size = Buffer_buflen(s);
     char  *memory = (char *)mem_internal_allocate(size);
 
     mem_sys_memcopy(memory, Buffer_bufstart(s), size);
@@ -3044,7 +3070,7 @@ Parrot_str_join(PARROT_INTERP, ARGIN_NULLOK(STRING *j), ARGIN(PMC *ar))
 
 /*
 
-=item C<PMC* Parrot_str_split(PARROT_INTERP, STRING *delim, STRING *str)>
+=item C<PMC* Parrot_str_split(PARROT_INTERP, const STRING *delim, STRING *str)>
 
 Splits the string C<str> at the delimiter C<delim>, returning a
 C<ResizableStringArray>, or his mapped type in the current HLL, of results.
@@ -3059,7 +3085,7 @@ PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC*
 Parrot_str_split(PARROT_INTERP,
-    ARGIN_NULLOK(STRING *delim), ARGIN_NULLOK(STRING *str))
+    ARGIN_NULLOK(const STRING *delim), ARGIN_NULLOK(STRING *str))
 {
     ASSERT_ARGS(Parrot_str_split)
     PMC    *res;

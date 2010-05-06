@@ -1,0 +1,281 @@
+/*
+Copyright (C) 2010, Parrot Foundation.
+$Id$
+
+=head1 NAME
+
+src/pmc/stringbuilder.pmc - StringBuilder PMC Class
+
+=head1 DESCRIPTION
+
+TODO: Add description here.
+
+=head2 Methods
+
+=over 4
+
+=cut
+
+*/
+
+#include "parrot/string_funcs.h"
+
+/* HEADERIZER HFILE: none */
+/* HEADERIZER BEGIN: static */
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+
+static size_t calculate_capacity(SHIM_INTERP,
+    size_t current,
+    size_t additional);
+
+#define ASSERT_ARGS_calculate_capacity __attribute__unused__ int _ASSERT_ARGS_CHECK = (0)
+/* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
+/* HEADERIZER END: static */
+
+#define INITIAL_STRING_CAPACITY 128
+
+pmclass StringBuilder provides string auto_attrs {
+    ATTR STRING *buffer;    /* Mutable string to gather results */
+
+/*
+
+=item C<void init()>
+
+Initializes the StringBuilder.
+
+=cut
+
+*/
+
+    VTABLE void init() {
+        STATICSELF.init_int(INITIAL_STRING_CAPACITY);
+    }
+
+/*
+
+=item C<void init_int()>
+
+Initializes the StringBuilder with initial size of buffer.
+
+=cut
+
+*/
+
+    VTABLE void init_int(INTVAL initial_size) {
+        STRING * const buffer = Parrot_str_new_init(INTERP, NULL, initial_size,
+                Parrot_default_encoding_ptr, Parrot_default_charset_ptr, 0);
+        SET_ATTR_buffer(INTERP, SELF, buffer);
+
+        PObj_custom_mark_SET(SELF);
+    }
+
+/*
+
+=item C<void mark()>
+
+Marks the StringBuilder as live.
+
+=cut
+
+*/
+
+    VTABLE void mark() {
+        STRING *buffer;
+
+        if (!PMC_data(SELF))
+            return;
+
+        GET_ATTR_buffer(INTERP, SELF, buffer);
+        Parrot_gc_mark_STRING_alive(INTERP, buffer);
+    }
+
+/*
+
+=item C<STRING *get_string()>
+
+Clones and returns current buffer. We need clone because outside of
+StringBuilder strings are immutable.
+
+=cut
+
+*/
+
+    VTABLE STRING *get_string() {
+        STRING *buffer;
+        GET_ATTR_buffer(INTERP, SELF, buffer);
+        return Parrot_str_clone(INTERP, buffer);
+    }
+
+/*
+
+=item C<STRING *push_string()>
+
+Append string to current buffer.
+
+=cut
+
+*/
+
+    VTABLE void push_string(STRING *s) {
+        STRING          *buffer;
+        size_t           total_size;
+        const CHARSET   *cs;
+        const ENCODING  *enc = NULL;
+
+        /* Early return on NULL strings */
+        if (STRING_IS_NULL(s))
+            return;
+
+        GET_ATTR_buffer(INTERP, SELF, buffer);
+
+        /* If strings are incompatible - convert them */
+        /* TODO Ask chromatic why in Parrot_str_join he ignored charset */
+        cs = Parrot_str_rep_compatible(interp, buffer, s, &enc);
+        if (!cs) {
+            cs = Parrot_unicode_charset_ptr;
+            enc = (buffer->encoding == Parrot_utf16_encoding_ptr
+               ||  s->encoding == Parrot_utf16_encoding_ptr
+               ||  buffer->encoding == Parrot_ucs2_encoding_ptr
+               ||  s->encoding == Parrot_ucs2_encoding_ptr)
+                ? Parrot_utf16_encoding_ptr
+                : Parrot_utf8_encoding_ptr;
+
+            buffer = Parrot_unicode_charset_ptr->to_charset(interp, buffer);
+            s      = Parrot_unicode_charset_ptr->to_charset(interp, s);
+
+            SET_ATTR_buffer(INTERP, SELF, buffer);
+        }
+
+        /* Calculate (possibly new) total size */
+        total_size = calculate_capacity(INTERP, buffer->bufused, s->bufused);
+
+        /* Reallocate if necessary */
+        if (total_size > Buffer_buflen(buffer))
+            Parrot_gc_reallocate_string_storage(INTERP, buffer, total_size);
+
+        /* Tack s on the end of buffer */
+        mem_sys_memcopy((void *)((ptrcast_t)buffer->strstart + buffer->bufused),
+                s->strstart, s->bufused);
+
+        /* Update buffer */
+        buffer->bufused += s->bufused;
+        buffer->strlen  += Parrot_str_length(INTERP, s);
+
+        PARROT_ASSERT(buffer->bufused <= Buffer_buflen(buffer));
+    }
+
+/*
+
+=item C<VTABLE i_concatenate_str()>
+
+=item C<VTABLE i_concatenate()>
+
+Append string. Synonym for push_string
+
+=cut
+
+*/
+
+    VTABLE void i_concatenate_str(STRING *s) {
+        SELF.push_string(s);
+    }
+
+    VTABLE void i_concatenate(PMC *p) {
+        SELF.push_string(VTABLE_get_string(INTERP, p));
+    }
+
+/*
+
+=item C<VTABLE set_string_native()>
+
+Set content of buffer to passed string
+
+=cut
+
+*/
+    VTABLE void set_string_native(STRING *s) {
+        SET_ATTR_buffer(INTERP, SELF, Parrot_str_clone(INTERP, s));
+    }
+
+
+/*
+
+=item C<VTABLE get_integer()>
+
+Returns current capacity of allocated buffer.
+
+For testing purpose only?
+
+=cut
+
+*/
+    INTVAL get_integer() {
+        STRING *buffer;
+        GET_ATTR_buffer(INTERP, SELF, buffer);
+        return Buffer_buflen(buffer);
+    }
+
+/*
+
+=back
+
+=cut
+
+*/
+
+}
+
+
+/*
+
+=head2 Helper functions.
+
+=over 4
+
+=cut
+
+*/
+
+/*
+
+=item C<static size_t calculate_capacity(PARROT_INTERP, size_t current, size_t
+additional)>
+
+Calculate capacity for string. Usually StringBuilders used for "large"
+strings. So capacity rounded up by next algorithm:
+  - By 128 bytes if total capacity less then 1KB
+  - By 1KB if total less than 4KB
+  - By 4KB if total less than 1MB
+  - By 1MB otherwise.
+
+This function is subject for tuning on real-world usage scenarios.
+
+=back
+
+=cut
+
+*/
+
+static size_t
+calculate_capacity(SHIM_INTERP, size_t current, size_t additional)
+{
+    ASSERT_ARGS(calculate_capacity)
+    size_t total_size = current + additional;
+    if (total_size < 1024)
+        total_size = (total_size / 128 + 1) * 128;
+    else if (total_size < 4096)
+        total_size = (total_size / 1024 + 1) * 1024;
+    else if (total_size < 1024*1024)
+        total_size = (total_size / 4096 + 1) * 4096;
+    else
+        total_size = (total_size / 1024 / 1024 + 1) * 1024 * 1024;
+
+    return total_size;
+}
+
+/*
+ * Local variables:
+ *   c-file-style: "parrot"
+ * End:
+ * vim: expandtab shiftwidth=4:
+ */
