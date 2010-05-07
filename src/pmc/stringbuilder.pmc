@@ -101,9 +101,11 @@ StringBuilder strings are immutable.
 */
 
     VTABLE STRING *get_string() {
-        STRING *buffer;
+        STRING *buffer, *retv;
         GET_ATTR_buffer(INTERP, SELF, buffer);
-        return Parrot_str_clone(INTERP, buffer);
+        retv = Parrot_str_clone(INTERP, buffer);
+        retv->hashval = 0; /* hash is invalid */
+        return retv;
     }
 
 /*
@@ -184,6 +186,10 @@ Append string. Synonym for push_string
         SELF.push_string(VTABLE_get_string(INTERP, p));
     }
 
+    VTABLE void push_pmc(PMC *p) {
+        SELF.push_string(VTABLE_get_string(INTERP, p));
+    }
+
 /*
 
 =item C<VTABLE set_string_native()>
@@ -261,14 +267,16 @@ calculate_capacity(SHIM_INTERP, size_t current, size_t additional)
 {
     ASSERT_ARGS(calculate_capacity)
     size_t total_size = current + additional;
+    size_t chunk_size = 1024*1024;
+
     if (total_size < 1024)
-        total_size = (total_size / 128 + 1) * 128;
+        chunk_size = 128;
     else if (total_size < 4096)
-        total_size = (total_size / 1024 + 1) * 1024;
+        chunk_size = 1024;
     else if (total_size < 1024*1024)
-        total_size = (total_size / 4096 + 1) * 4096;
-    else
-        total_size = (total_size / 1024 / 1024 + 1) * 1024 * 1024;
+        chunk_size = 4096;
+
+    total_size = (total_size / chunk_size + 1) * chunk_size;
 
     return total_size;
 }
