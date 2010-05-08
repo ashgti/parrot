@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2001-2009, Parrot Foundation.
+Copyright (C) 2001-2010, Parrot Foundation.
 This program is free software. It is subject to the same license as
 Parrot itself.
 $Id$
@@ -250,14 +250,24 @@ PackFile_ConstTable_rlookup(PARROT_INTERP,
     ARGIN(const PackFile_ConstTable *ct), ARGIN(PMC *key), int type)
 {
     ASSERT_ARGS(PackFile_ConstTable_rlookup)
-    int      i;
+    int      i, strings;
     FLOATVAL key_num;
     STRING  *key_str;
+    PMC     *string_list;
 
     PARROT_ASSERT(type == PFC_STRING || type == PFC_NUMBER);
 
     GETATTR_Key_str_key(interp, key, key_str);
     GETATTR_Key_num_key(interp, key, key_num);
+
+    if (type == PFC_STRING && !PMC_IS_NULL(ct->string_hash)) {
+        if (VTABLE_exists_keyed_str(interp, ct->string_hash, key_str)) {
+            return VTABLE_get_integer_keyed_str(interp, ct->string_hash, key_str);
+        }
+        else {
+            return -1;
+        }
+    }
 
     for (i = 0; i < ct->const_count; ++i) {
         PackFile_Constant *constant = ct->constants[i];
@@ -270,8 +280,9 @@ PackFile_ConstTable_rlookup(PARROT_INTERP,
                 &&  Parrot_charset_number_of_str(interp, key_str)
                 ==  Parrot_charset_number_of_str(interp, sc)
                 &&  Parrot_encoding_number_of_str(interp, key_str)
-                ==  Parrot_encoding_number_of_str(interp, sc))
+                ==  Parrot_encoding_number_of_str(interp, sc)) {
                     return i;
+                }
             }
             break;
 
