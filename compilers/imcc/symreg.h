@@ -24,8 +24,7 @@ enum VARTYPE {              /* variable type can be */
     VT_ENCODED      = VARTYPE_BIT(16),  /* unicode string constant */
     VT_OPT_FLAG     = VARTYPE_BIT(17),  /* var :opt_flag */
     VT_NAMED        = VARTYPE_BIT(18),  /* var :named(name) */
-    VT_UNIQUE_REG   = VARTYPE_BIT(19),
-    VT_CALL_SIG     = VARTYPE_BIT(20)
+    VT_CALL_SIG     = VARTYPE_BIT(19)
 };
 #undef VARTYPE_BIT
 
@@ -33,37 +32,18 @@ enum VARTYPE {              /* variable type can be */
 #define VTREGISTER (VTREG | VTIDENTIFIER | VTREGKEY | VTPASM)
 #define REG_NEEDS_ALLOC(r) ((r)->type & VTREGISTER)
 
-enum LIFEFLAG {    /* The status of a var inside a basic block can be */
-    LF_use       = 1 << 0, /* block uses the the var before defining it */
-    LF_def       = 1 << 1, /* block defines the variable */
-    LF_lv_in     = 1 << 2, /* variable is alive at the beginning of the block */
-    LF_lv_out    = 1 << 3, /* variable is alive at the end of the block */
-    LF_lv_inside = 1 << 4, /* variable is alive at some moment in the block */
-    LF_lv_all    = 1 << 5  /* variable is alive throughout the block */
-};
-
-/* Liveness represents the usage of a var inside a basic block
-   This is represented by pairs of [definition, usage] in *intervals: */
-typedef struct _Life_range {
-    int                  flags;
-    struct _Instruction *first_ins;
-    struct _Instruction *last_ins;
-} Life_range;
-
 enum USAGE {
     U_KEYED         = 1 << 0,       /* array, hash, keyed */
     U_NEW           = 1 << 1,       /* PMC was inited */
     U_GLOBAL        = 1 << 3,       /* symbol is global (fixup) */
     U_LEXICAL       = 1 << 4,       /* symbol is lexical */
     U_FIXUP         = 1 << 5,       /* maybe not global, force fixup */
-    U_NON_VOLATILE  = 1 << 6,       /* needs preserving */
-    U_SUBID_LOOKUP  = 1 << 7        /* .const 'Sub' lookup is done by subid */
+    U_SUBID_LOOKUP  = 1 << 6        /* .const 'Sub' lookup is done by subid */
 };
 
 typedef struct _SymReg {
     char                *name;
     char                *subid;
-    Life_range         **life_info;     /* Each block has a Life_range status */
     struct _SymReg      *nextkey;       /* keys */
     struct _SymReg      *reg;           /* key->register for VTREGKEYs */
     struct pcc_sub_t    *pcc_sub;       /* PCC subroutine */
@@ -266,12 +246,6 @@ SymReg * mk_ident(PARROT_INTERP, ARGIN(const char *name), int t)
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-PARROT_CANNOT_RETURN_NULL
-PARROT_IGNORABLE_RESULT
-SymReg* mk_ident_ur(PARROT_INTERP, ARGIN(const char *name), int t)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2);
-
 PARROT_WARN_UNUSED_RESULT
 PARROT_CANNOT_RETURN_NULL
 SymReg * mk_label_address(PARROT_INTERP, ARGIN(const char *name))
@@ -413,9 +387,6 @@ char * symreg_to_str(ARGIN(const SymReg *s))
 #define ASSERT_ARGS_mk_ident __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(name))
-#define ASSERT_ARGS_mk_ident_ur __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(name))
 #define ASSERT_ARGS_mk_label_address __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(name))
@@ -467,11 +438,6 @@ typedef enum {
     P_NSENTRY        = SUB_COMP_FLAG_NSENTRY  /* 1<<11 0x800 - 11       */
 } pragma_enum_t;
 
-typedef enum {
-    isNCI  =        0x01,
-    isTAIL_CALL =   0x02
-} pcc_flags_t;
-
 typedef struct pcc_sub_t {
     SymReg *sub;
     SymReg *cc;
@@ -484,8 +450,8 @@ typedef struct pcc_sub_t {
     int     nargs;
     int     nret;
     int     nmulti;
-    int     calls_a_sub;
-    int     flags;    /* isNCI, isTAIL_CALL */
+    int     yield;
+    int     tailcall;
     int     label;
     INTVAL  pragma;
 } pcc_sub_t;

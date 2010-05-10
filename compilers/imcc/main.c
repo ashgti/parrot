@@ -243,7 +243,6 @@ imcc_handle_flag(PARROT_INTERP, struct longopt_opt_info *opt,
         if (strchr(opt->opt_arg, 'c'))
             IMCC_INFO(interp)->optimizer_level |= OPT_SUB;
 
-        IMCC_INFO(interp)->allocator = IMCC_GRAPH_ALLOCATOR;
         /* currently not ok due to different register allocation */
         if (strchr(opt->opt_arg, '1')) {
             IMCC_INFO(interp)->optimizer_level |= OPT_PRE;
@@ -299,13 +298,10 @@ do_pre_process(PARROT_INTERP)
             case GOTO:          printf("goto ");break;
             case IF:            printf("if ");break;
             case UNLESS:        printf("unless ");break;
-            case INC:           printf("inc ");break;
-            case DEC:           printf("dec ");break;
             case INTV:          printf("int ");break;
             case FLOATV:        printf("float ");break;
             case STRINGV:       printf("string ");break;
             case PMCV:          printf("pmc ");break;
-            case NEW:           printf("new ");break;
             case SHIFT_LEFT:    printf(" << ");break;
             case SHIFT_RIGHT:   printf(" >> ");break;
             case SHIFT_RIGHT_U: printf(" >>> ");break;
@@ -432,7 +428,6 @@ imcc_initialize(PARROT_INTERP)
     Parrot_block_GC_sweep(interp);
 
     IMCC_INFO(interp)->yyscanner = yyscanner;
-    IMCC_INFO(interp)->allocator = IMCC_VANILLA_ALLOCATOR;
 
     /* Default optimization level is zero; see optimizer.c, imc.h */
     if (!IMCC_INFO(interp)->optimizer_level) {

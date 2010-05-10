@@ -1156,6 +1156,10 @@ create_lexinfo(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(PMC *sub_pmc),
                             "add lexical '%s' to sub name '%Ss'\n",
                             n->name, sub->name);
 
+                    if (VTABLE_exists_keyed_str(interp, lex_info, lex_name))
+                        IMCC_fataly(interp, EXCEPTION_INVALID_OPERATION,
+                            "Multiple declarations of lexical '%S'\n", lex_name);
+
                     VTABLE_set_integer_keyed_str(interp, lex_info,
                             lex_name, r->color);
 
@@ -1269,10 +1273,6 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
     IMC_Unit            * const unit  =
         IMCC_INFO(interp)->globals->cs->subs->unit;
 
-    INTVAL               type         =
-        (r->pcc_sub->calls_a_sub & ITPCCYIELD) ?
-            enum_class_Coroutine : enum_class_Sub;
-
     int                  i;
     int                  ns_const = -1;
 
@@ -1314,7 +1314,8 @@ add_const_pmc_sub(PARROT_INTERP, ARGMOD(SymReg *r), size_t offs, size_t end)
     }
     else {
         /* use a possible type mapping for the Sub PMCs, and create it */
-        type = Parrot_get_ctx_HLL_type(interp, type);
+        const INTVAL type = Parrot_get_ctx_HLL_type(interp,
+                                r->pcc_sub->yield ? enum_class_Coroutine : enum_class_Sub);
 
         /* TODO create constant - see also src/packfile.c */
         sub_pmc = Parrot_pmc_new(interp, type);

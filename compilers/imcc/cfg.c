@@ -35,22 +35,6 @@ between blocks.
 /* HEADERIZER BEGIN: static */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
-static void analyse_life_block(PARROT_INTERP,
-    ARGIN(const Basic_block* bb),
-    ARGMOD(SymReg *r))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(*r);
-
-static void analyse_life_symbol(PARROT_INTERP,
-    ARGIN(const IMC_Unit *unit),
-    ARGMOD(SymReg* r))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        FUNC_MODIFIES(* r);
-
 static void bb_add_edge(PARROT_INTERP,
     ARGMOD(IMC_Unit *unit),
     ARGIN(Basic_block *from),
@@ -137,26 +121,10 @@ static void mark_loop(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*unit);
 
-static void propagate_need(
-    ARGMOD(Basic_block *bb),
-    ARGIN(const SymReg *r),
-    int i)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*bb);
-
 static void sort_loops(PARROT_INTERP, ARGIN(IMC_Unit *unit))
         __attribute__nonnull__(1)
         __attribute__nonnull__(2);
 
-#define ASSERT_ARGS_analyse_life_block __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(bb) \
-    , PARROT_ASSERT_ARG(r))
-#define ASSERT_ARGS_analyse_life_symbol __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(unit) \
-    , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_bb_add_edge __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit) \
@@ -198,9 +166,6 @@ static void sort_loops(PARROT_INTERP, ARGIN(IMC_Unit *unit))
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit) \
     , PARROT_ASSERT_ARG(e))
-#define ASSERT_ARGS_propagate_need __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(bb) \
-    , PARROT_ASSERT_ARG(r))
 #define ASSERT_ARGS_sort_loops __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit))
@@ -696,263 +661,6 @@ edge_count(ARGIN(const IMC_Unit *unit))
     }
 
     return i;
-}
-
-
-/*
-
-=item C<void life_analysis(PARROT_INTERP, const IMC_Unit *unit)>
-
-This driver routine calls analyse_life_symbol for each reglist in the specified
-IMC_Unit.
-
-=cut
-
-*/
-
-void
-life_analysis(PARROT_INTERP, ARGIN(const IMC_Unit *unit))
-{
-    ASSERT_ARGS(life_analysis)
-    SymReg  ** const reglist = unit->reglist;
-    unsigned int     i;
-
-    IMCC_info(interp, 2, "life_analysis\n");
-
-    for (i = 0; i < unit->n_symbols; i++)
-        analyse_life_symbol(interp, unit, reglist[i]);
-}
-
-
-/*
-
-=item C<static void analyse_life_symbol(PARROT_INTERP, const IMC_Unit *unit,
-SymReg* r)>
-
-Analyzes the lifetime for a given symbol.
-
-=cut
-
-*/
-
-static void
-analyse_life_symbol(PARROT_INTERP,
-        ARGIN(const IMC_Unit *unit), ARGMOD(SymReg* r))
-{
-    ASSERT_ARGS(analyse_life_symbol)
-    unsigned int i;
-
-#if IMC_TRACE_HIGH
-    fprintf(stderr, "cfg.c: analyse_life_symbol(%s)\n", r->name);
-#endif
-
-    if (r->life_info)
-        free_life_info(unit, r);
-
-    r->life_info = mem_gc_allocate_n_zeroed_typed(interp, unit->n_basic_blocks,
-                                               Life_range *);
-
-    /* First we make a pass to each block to gather the information
-     * that can be obtained locally */
-    for (i = 0; i < unit->n_basic_blocks; i++) {
-        analyse_life_block(interp, unit->bb_list[i], r);
-    }
-
-    /* Now we need to consider the relations between blocks */
-    for (i = 0; i < unit->n_basic_blocks; i++) {
-        if (r->life_info[i]->flags & LF_use) {
-            const Instruction * const ins = unit->bb_list[i]->start;
-
-            /* if the previous instruction (the last of the previous block) was
-             * a sub call, and the symbol is live/use here, it needs allocation
-             * in the non-volatile register range */
-            if (ins->prev) {
-                const Instruction * const prev = ins->prev;
-
-                if ((prev->type  & (ITPCCSUB|ITPCCYIELD))
-                &&   prev->opnum != PARROT_OP_tailcall_p)
-                    r->usage |= U_NON_VOLATILE;
-                else if (prev->opnum == PARROT_OP_invoke_p_p
-                     ||  prev->opnum == PARROT_OP_invokecc_p)
-                    r->usage |= U_NON_VOLATILE;
-                else if (ins->type & ITADDR)
-                    r->usage |= U_NON_VOLATILE;
-            }
-
-            /* This block uses r, so it must be live at the beginning */
-            r->life_info[i]->flags |= LF_lv_in;
-
-            /* propagate this info to every predecessor */
-            propagate_need(unit->bb_list[i], r, i);
-        }
-    }
-}
-
-
-/*
-
-=item C<void free_life_info(const IMC_Unit *unit, SymReg *r)>
-
-Frees memory of the life analysis info structures.
-
-=cut
-
-*/
-
-void
-free_life_info(ARGIN(const IMC_Unit *unit), ARGMOD(SymReg *r))
-{
-    ASSERT_ARGS(free_life_info)
-#if IMC_TRACE_HIGH
-    fprintf(stderr, "free_life_into(%s)\n", r->name);
-#endif
-    if (r->life_info) {
-        unsigned int i;
-
-        for (i = 0; i < unit->n_basic_blocks; i++) {
-            mem_sys_free(r->life_info[i]);
-        }
-
-        mem_sys_free(r->life_info);
-        r->life_info = NULL;
-    }
-}
-
-
-/*
-
-=item C<static void analyse_life_block(PARROT_INTERP, const Basic_block* bb,
-SymReg *r)>
-
-Studies the state of the var r in the block bb.
-
-Its job is to set the flags LF_use, or LF_read, and record the intervals inside
-the block where the var is alive.
-
-=cut
-
-*/
-
-static void
-analyse_life_block(PARROT_INTERP, ARGIN(const Basic_block* bb), ARGMOD(SymReg *r))
-{
-    ASSERT_ARGS(analyse_life_block)
-    Life_range  * const l        = make_life_range(interp, r, bb->index);
-    Instruction         *special = NULL;
-    Instruction         *ins;
-
-    for (ins = bb->start; ins; ins = ins->next) {
-        int is_alias;
-
-        /* if we have a setp_ind opcode, it may write all PMC registers */
-        if (ins->opnum == PARROT_OP_setp_ind_i_p && r->set == 'P')
-            r->usage |= U_NON_VOLATILE;
-
-        /* restoreall and such */
-        if (ins_writes2(ins, r->set))
-            special = ins;
-
-        /*
-         * set p, p is basically a read - both are LF_use
-         *
-         * TODO live range coalescing
-         */
-        is_alias = (ins->type & ITALIAS) && ins->symregs[0] == r;
-
-        if (instruction_reads(ins, r) || is_alias) {
-            /* if instruction gets read after a special, consider the first
-             * read of this instruction, like if a write had happened at
-             * special, so that the reg doesn't pop into life */
-            if (! (l->flags & LF_def)) {
-                if (special) {
-                    l->first_ins = special;
-                    l->flags    |= LF_def;
-                    special      = NULL;
-                }
-                else {
-                    /* we read before having written before, so the var was
-                     * live at the beginning of the block */
-                    l->first_ins = bb->start;
-                    l->flags    |= LF_use;
-                }
-            }
-
-            l->last_ins = ins;
-        }
-
-        if (!is_alias && instruction_writes(ins, r)) {
-            l->flags |= LF_def;
-
-            if (!l->first_ins)
-                l->first_ins = ins;
-
-            l->last_ins = ins;
-        }
-
-        if (ins == bb->end)
-            break;
-    }
-
-    if (!l->last_ins)
-        l->last_ins = l->first_ins;
-
-    /* l->last can later be extended if it turns out that another block needs
-     * the value resulting from this computation */
-}
-
-
-/*
-
-=item C<static void propagate_need(Basic_block *bb, const SymReg *r, int i)>
-
-Follows the uses of the given symbol through all of the basic blocks of the
-unit.
-
-=cut
-
-*/
-
-static void
-propagate_need(ARGMOD(Basic_block *bb), ARGIN(const SymReg *r), int i)
-{
-    ASSERT_ARGS(propagate_need)
-    Edge        *edge;
-    Life_range  *l;
-    Basic_block *pred;
-
-    /* every predecessor of a LF_lv_in block must be in LF_lv_out
-     * and, unless itself is LV_def, this should be propagated to its
-     * predecessors themselves */
-
-    for (edge = bb->pred_list; edge; edge = edge->pred_next) {
-        pred = edge->from;
-        l    = r->life_info[pred->index];
-
-        if (l->flags & LF_lv_out) {
-            /* this node has already been visited. Ignore it */
-        }
-        else {
-            l->flags   |= LF_lv_out;
-            l->last_ins = pred->end;
-
-            if (! (l->flags & LF_def)) {
-                l->flags    |= LF_lv_in;
-                l->first_ins = pred->start;
-                l->last_ins  = pred->end;
-
-                /* we arrived at block 0
-                 *
-                 * emit a warning if -w looking at some Perl 6 examples where
-                 * this warning is emitted, there seems always to be a code
-                 * path where the var is not initialized, so this might even be
-                 * correct :)
-                 *
-                 * TT #1244: emit warning in propagate_need()
-                 */
-                propagate_need(pred, r, i);
-            }
-        }
-    }
 }
 
 
@@ -1622,28 +1330,6 @@ make_basic_block(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *ins)
     return bb;
 }
 
-
-/*
-
-=item C<Life_range * make_life_range(PARROT_INTERP, SymReg *r, int idx)>
-
-Creates and returns a Life_range for the given register at the specified index.
-
-=cut
-
-*/
-
-PARROT_MALLOC
-PARROT_CANNOT_RETURN_NULL
-Life_range *
-make_life_range(PARROT_INTERP, ARGMOD(SymReg *r), int idx)
-{
-    ASSERT_ARGS(make_life_range)
-    Life_range * const l = mem_gc_allocate_zeroed_typed(interp, Life_range);
-    r->life_info[idx]    = l;
-
-    return l;
-}
 
 /*
 

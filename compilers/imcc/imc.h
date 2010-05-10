@@ -145,25 +145,11 @@ void free_reglist(ARGMOD(IMC_Unit *unit))
         __attribute__nonnull__(1)
         FUNC_MODIFIES(*unit);
 
-void graph_coloring_reg_alloc(PARROT_INTERP, ARGMOD(IMC_Unit *unit))
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        FUNC_MODIFIES(*unit);
-
-PARROT_WARN_UNUSED_RESULT
-unsigned int ig_test(int i, int j, int N, ARGIN(unsigned int *graph))
-        __attribute__nonnull__(4);
-
 void imc_reg_alloc(PARROT_INTERP, ARGIN_NULLOK(IMC_Unit *unit))
         __attribute__nonnull__(1);
 
 #define ASSERT_ARGS_free_reglist __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(unit))
-#define ASSERT_ARGS_graph_coloring_reg_alloc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(unit))
-#define ASSERT_ARGS_ig_test __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(graph))
 #define ASSERT_ARGS_imc_reg_alloc __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp))
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
@@ -307,22 +293,6 @@ imcc_vfprintf(PARROT_INTERP,
         __attribute__nonnull__(3)
         FUNC_MODIFIES(*io);
 
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-Instruction * iNEW(PARROT_INTERP,
-    ARGMOD(IMC_Unit *unit),
-    ARGMOD(SymReg *r0),
-    ARGMOD(char *type),
-    ARGIN_NULLOK(SymReg *init),
-    int emit)
-        __attribute__nonnull__(1)
-        __attribute__nonnull__(2)
-        __attribute__nonnull__(3)
-        __attribute__nonnull__(4)
-        FUNC_MODIFIES(*unit)
-        FUNC_MODIFIES(*r0)
-        FUNC_MODIFIES(*type);
-
 PARROT_IGNORABLE_RESULT
 PARROT_CAN_RETURN_NULL
 Instruction * INS(PARROT_INTERP,
@@ -420,11 +390,6 @@ int try_find_op(PARROT_INTERP,
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(io) \
     , PARROT_ASSERT_ARG(format))
-#define ASSERT_ARGS_iNEW __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
-       PARROT_ASSERT_ARG(interp) \
-    , PARROT_ASSERT_ARG(unit) \
-    , PARROT_ASSERT_ARG(r0) \
-    , PARROT_ASSERT_ARG(type))
 #define ASSERT_ARGS_INS __attribute__unused__ int _ASSERT_ARGS_CHECK = (\
        PARROT_ASSERT_ARG(interp) \
     , PARROT_ASSERT_ARG(unit) \
@@ -544,11 +509,6 @@ typedef enum _AsmState {
     AsmInYield
 } AsmState;
 
-typedef enum _imcc_reg_allocator_t {
-    IMCC_VANILLA_ALLOCATOR = 0,
-    IMCC_GRAPH_ALLOCATOR
-} imcc_reg_allocator;
-
 PARROT_EXPORT void IMCC_push_parser_state(PARROT_INTERP);
 PARROT_EXPORT void IMCC_pop_parser_state(PARROT_INTERP, void *yyscanner);
 
@@ -622,9 +582,7 @@ typedef struct _imc_info_t {
     jmp_buf               jump_buf;        /* The jump for error  handling */
     int                   IMCC_DEBUG;
     int                   allocated;
-    int                   allocator;
     int                   cnr;
-    int                   cur_pmc_type;
     int                   debug;
     int                   dont_optimize;
     int                   emitter;

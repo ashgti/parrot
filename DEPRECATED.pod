@@ -252,6 +252,16 @@ L<https://trac.parrot.org/parrot/ticket/1091>
 
 L<https://trac.parrot.org/parrot/ticket/1103>
 
+=item :unique_reg flag [eligible in 3.1]
+
+L<https://trac.parrot.org/parrot/ticket/1622>
+
+=item .nci_call [eligible in 3.1]
+
+As of the latest PCC changes, there is nothing special about calling an NCI sub.
+
+L<https://trac.parrot.org/parrot/ticket/1623>
+
 =back
 
 =head1 Functions

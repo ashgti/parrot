@@ -12,6 +12,9 @@
 #ifndef PARROT_DYNEXT_H_GUARD
 #define PARROT_DYNEXT_H_GUARD
 
+typedef PMC *(*dynext_load_func)(PARROT_INTERP);
+typedef void (*dynext_init_func)(PARROT_INTERP, ARGIN_NULLOK(PMC *));
+
 /* HEADERIZER BEGIN: src/dynext.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
@@ -31,9 +34,8 @@ PMC * Parrot_clone_lib_into(
 PARROT_EXPORT
 PARROT_CANNOT_RETURN_NULL
 PMC * Parrot_init_lib(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *(*load_func)(PARROT_INTERP)),
-    ARGIN_NULLOK(void (*init_func)(PARROT_INTERP,
-    ARGIN_NULLOK(PMC *))))
+    NULLOK(dynext_load_func load_func),
+    NULLOK(dynext_init_func init_func))
         __attribute__nonnull__(1);
 
 PARROT_EXPORT

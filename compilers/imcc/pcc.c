@@ -258,9 +258,9 @@ pcc_get_args(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins),
     static const char item[] = {'0', 'x', 'f', 'f', 'f', 'f', ','};
     /* The list suffix includes the '\0' terminator */
     static const char subf[] = {')', '"', '\0'};
-    static unsigned int lenpref = sizeof pref;
-    static unsigned int lenitem = sizeof item;
-    static unsigned int lensubf = sizeof subf;
+    static const unsigned int lenpref = sizeof pref;
+    static const unsigned int lenitem = sizeof item;
+    static const unsigned int lensubf = sizeof subf;
     int i, flags;
     char s[16];
 
@@ -442,7 +442,7 @@ expand_pcc_sub(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGIN(Instruction *ins))
     &&  sub->pcc_sub
     && !sub->pcc_sub->object
        /* s. src/inter_call.c:119 */
-    && (sub->pcc_sub->flags & isTAIL_CALL))
+    && sub->pcc_sub->tailcall)
         return;
 
     if (unit->last_ins->type != (ITPCCSUB|ITLABEL)
@@ -535,6 +535,7 @@ pcc_reg_mov(PARROT_INTERP, unsigned char d, unsigned char s, ARGMOD(void *vinfo)
 {
     ASSERT_ARGS(pcc_reg_mov)
     static const char types[] = "INSP";
+    /* XXX non-reentrant */
     static SymReg    *temps[4];
     move_info_t      *info    = (move_info_t *)vinfo;
     SymReg           *src     = NULL;
@@ -780,7 +781,7 @@ expand_pcc_sub_call(PARROT_INTERP, ARGMOD(IMC_Unit *unit), ARGMOD(Instruction *i
         return;
     }
 
-    tail_call = (sub->pcc_sub->flags & isTAIL_CALL);
+    tail_call = sub->pcc_sub->tailcall;
 
     if (tail_call && IMCC_INFO(interp)->optimizer_level & OPT_SUB)
         if (recursive_tail_call(interp, unit, ins, sub))

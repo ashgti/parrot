@@ -368,6 +368,7 @@ mk_temp_reg(PARROT_INTERP, int t)
 {
     ASSERT_ARGS(mk_temp_reg)
     char       buf[30];
+    /* XXX non-reentrant */
     static int temp;
 
     snprintf(buf, sizeof (buf), "__imcc_temp_%d", ++temp);
@@ -664,34 +665,6 @@ mk_ident(PARROT_INTERP, ARGIN(const char *name), int t)
     }
     else
         mem_sys_free(fullname);
-
-    if (t == 'P') {
-        r->pmc_type                     = IMCC_INFO(interp)->cur_pmc_type;
-        IMCC_INFO(interp)->cur_pmc_type = 0;
-    }
-
-    return r;
-}
-
-
-/*
-
-=item C<SymReg* mk_ident_ur(PARROT_INTERP, const char *name, int t)>
-
-Creates and returns a SymReg representing a unique (non-volatile) register.
-
-=cut
-
-*/
-
-PARROT_CANNOT_RETURN_NULL
-PARROT_IGNORABLE_RESULT
-SymReg*
-mk_ident_ur(PARROT_INTERP, ARGIN(const char *name), int t)
-{
-    ASSERT_ARGS(mk_ident_ur)
-    SymReg * const r = mk_ident(interp, name, t);
-    r->usage        |= U_NON_VOLATILE;
 
     return r;
 }
@@ -1654,10 +1627,6 @@ clear_locals(ARGIN_NULLOK(IMC_Unit *unit))
 
         for (p = hsh->data[i]; p;) {
             SymReg * const next = p->next;
-
-            if (unit && p->life_info)
-                free_life_info(unit, p);
-
             free_sym(p);
             p = next;
         }
