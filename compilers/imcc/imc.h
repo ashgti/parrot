@@ -56,8 +56,11 @@ typedef struct IMC_Unit IMC_Unit;
 
 #define IMCC_THROW(a, x)  longjmp((a), (x))
 
-#define IMCC_FATAL_EXCEPTION      1
-#define IMCC_FATALY_EXCEPTION     2
+enum {
+    IMCC_FATAL_EXCEPTION     = 1,
+    IMCC_FATALY_EXCEPTION    = 2,
+    IMCC_PARSEFAIL_EXCEPTION = 3,
+};
 
 #define N_ELEMENTS(x) (sizeof (x)/sizeof ((x)[0]))
 
@@ -620,9 +623,6 @@ typedef struct macro_t {
 } macro_t;
 
 #define IMCC_INFO(i) (((Parrot_Interp)(i))->imc_info)
-
-#define IMC_TRACE      0
-#define IMC_TRACE_HIGH 0
 
 /* main.c */
 #define PBC_LOAD        (1 << 0)

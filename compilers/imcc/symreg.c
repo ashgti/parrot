@@ -1390,9 +1390,6 @@ _store_symreg(PARROT_INTERP, ARGMOD(SymHash *hsh), ARGMOD(SymReg *r))
 {
     ASSERT_ARGS(_store_symreg)
     const int i = hash_str(r->name) % hsh->size;
-#if IMC_TRACE_HIGH
-    printf("    store [%s]\n", r->name);
-#endif
     r->next      = hsh->data[i];
     hsh->data[i] = r;
 
@@ -1441,9 +1438,6 @@ _get_sym(ARGIN(const SymHash *hsh), ARGIN(const char *name))
     const unsigned int i = hash_str(name) % hsh->size;
 
     for (p = hsh->data[i]; p; p = p->next) {
-#if IMC_TRACE_HIGH
-        printf("   [%s]\n", p->name);
-#endif
         if (STREQ(name, p->name))
             return p;
     }
@@ -1576,32 +1570,6 @@ clear_sym_hash(ARGMOD(SymHash *hsh))
     hsh->data    = NULL;
     hsh->entries = 0;
     hsh->size    = 0;
-}
-
-
-/*
-
-=item C<void debug_dump_sym_hash(const SymHash *hsh)>
-
-Prints all identifiers in the specified hash table to stderr.
-
-=cut
-
-*/
-
-void
-debug_dump_sym_hash(ARGIN(const SymHash *hsh))
-{
-    ASSERT_ARGS(debug_dump_sym_hash)
-    unsigned int i;
-
-    for (i = 0; i < hsh->size; i++) {
-        const SymReg *p = hsh->data[i];
-        while (p) {
-            fprintf(stderr, "%s ", p->name);
-            p = p->next;
-        }
-    }
 }
 
 
