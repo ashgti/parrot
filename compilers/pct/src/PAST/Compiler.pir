@@ -174,9 +174,6 @@ any value type.
     controltypes['REDO'] = $P0
     set_global '%!controltypes', controltypes
 
-    $P0 = new 'CodeString'
-    set_global '%!codestring', $P0
-
     $P0 = box 11
     set_global '$!serno', $P0
 
@@ -220,9 +217,19 @@ Return C<str> as a PIR constant string.
 
 .sub 'escape' :method
     .param string str
-    $P0 = get_global '%!codestring'
-    str = $P0.'escape'(str)
-    .return (str)
+    .local string estr
+    estr = escape str
+    $I0 = index estr, "\\x"
+    if $I0 >= 0 goto unicode_prefix
+    $I0 = index estr, "\\u"
+    if $I0 >= 0 goto unicode_prefix
+    estr = concat '"', estr
+    goto done
+  unicode_prefix:
+    estr = concat 'unicode:"', estr
+  done:
+    estr = concat estr, '"'
+    .return (estr)
 .end
 
 =item unique([STR fmt])
@@ -831,9 +838,9 @@ Return the POST representation of a C<PAST::Block>.
     concat blockref, $S0
     goto have_blockref
   block_ns:
-    $P0 = get_global '%!codestring'
+    $P0 = get_hll_global ['POST'], 'Compiler'
     blockref = concat 'get_hll_global ', blockreg
-    $S0 = $P0.'key'(ns)
+    $S0 = $P0.'key_pir'(ns)
     concat blockref, ', '
     concat blockref, $S0
     $S0 = self.'escape'(name)
@@ -2168,8 +2175,8 @@ attribute.
     .tailcall $P0.'new'(name, bindpost, 'pirop'=>'set_hll_global', 'result'=>bindpost)
 
   package_ns:
-    $P1 = new 'CodeString'
-    ns = $P1.'key'(ns)
+    $P1 = get_hll_global ['POST'], 'Compiler'
+    ns = $P1.'key_pir'(ns)
     if bindpost goto package_ns_bind
     fetchop = $P0.'new'(ops, ns, name, 'pirop'=>'get_hll_global')
     storeop = $P0.'new'(ns, name, ops, 'pirop'=>'set_hll_global')

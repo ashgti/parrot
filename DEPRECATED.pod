@@ -218,6 +218,12 @@ Part of COW removal.
 
 L<https://trac.parrot.org/parrot/ticket/1540>
 
+=item find_codepoint [experimental]
+
+Intended to replace the CodeString charname_to_ord method.
+
+L<https://trac.parrot.org/parrot/ticket/1629>
+
 =back
 
 =head1 Bytecode
