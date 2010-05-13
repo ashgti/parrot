@@ -1,5 +1,5 @@
 #! perl
-# Copyright (C) 2001-2009, Parrot Foundation.
+# Copyright (C) 2001-2010, Parrot Foundation.
 # $Id$
 
 use strict;
@@ -43,7 +43,6 @@ is(
 diag("\nFound $nbad_files files with 'todo', 'fixme' or 'XXX' items.\n")
     if $nbad_files;
 }
-
 =head1 NAME
 
 t/doc/pod_todo.t - find todo items in pod files
