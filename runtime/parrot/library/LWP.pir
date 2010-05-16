@@ -21,6 +21,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
 .sub '' :init :load :anon
     load_bytecode 'HTTP/Message.pir'
     $P0 = newclass ['LWP';'UserAgent']
+    $P0.'add_attribute'('def_headers')
     $P0.'add_attribute'('show_progress')
     $P0.'add_attribute'('progress_start')
     $P0.'add_attribute'('progress_lastp')
@@ -38,8 +39,15 @@ see http://search.cpan.org/~gaas/libwww-perl/
 .end
 
 .sub 'init' :vtable :method
+    $P0 = new ['HTTP';'Headers']
+    $P0['User-Agent'] = 'libwww-parrot'
+    setattribute self, 'def_headers', $P0
     $P0 = box 7
     setattribute self, 'max_redirect', $P0
+    $P0 = box ''
+    setattribute self, 'progress_lastp', $P0
+    $P0 = box 0
+    setattribute self, 'progress_lastp', $P0
 .end
 
 .sub 'send_request' :method
@@ -69,6 +77,31 @@ see http://search.cpan.org/~gaas/libwww-perl/
     .return (response)
 .end
 
+.sub 'prepare_request' :method
+    .param pmc request
+    $P0 = request.'method'()
+    unless null $P0 goto L1
+    die "Method missing"
+  L1:
+    $P0 = request.'uri'()
+    unless null $P0 goto L2
+    die "URL missing"
+  L2:
+    $S0 = $P0.'scheme'()
+    unless $S0 == '' goto L3
+    die "URL must be absolute"
+  L3:
+    $P0 = getattribute self, 'def_headers'
+    $P1 = iter $P0
+  L4:
+    unless $P1 goto L5
+    $S0 = shift $P1
+    $S1 = $P0[$S0]
+    request.'push_header'($S0, $S1)
+    goto L4
+  L5:
+.end
+
 .sub 'simple_request' :method
     .param pmc request
     unless null request goto L1
@@ -78,6 +111,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
     if $I0 goto L2
     die "You need a ['HTTP';'Request']"
   L2:
+    self.'prepare_request'(request)
     .tailcall self.'send_request'(request)
 .end
 
@@ -170,6 +204,19 @@ see http://search.cpan.org/~gaas/libwww-perl/
     .tailcall self.'request'(request)
 .end
 
+=item put
+
+=cut
+
+.sub 'put' :method
+    .param pmc args :slurpy
+    .param pmc kv :slurpy :named
+    .local pmc request
+    $P0 = get_hll_global ['HTTP';'Request'], 'PUT'
+    request = $P0(args :flat, kv :flat :named)
+    .tailcall self.'request'(request)
+.end
+
 =item delete
 
 =cut
@@ -227,14 +274,27 @@ see http://search.cpan.org/~gaas/libwww-perl/
     goto L1
   L3:
     unless status == 'tick' goto L5
-
-    # work in progress
-
+    $P0 = getattribute self, 'progress_ani'
+    inc $P0
+    $P0 %= 4
+    $P1 = split '', '-\|/'
+    $S0 = $P1[$P0]
+    printerr $S0
+    printerr "\b"
     goto L1
   L5:
-
-    # work in progress
-
+    $N0 = status
+    $N0 *= 100
+    $P0 = new 'FixedFloatArray'
+    set $P0, 1
+    $P0[0] = $N0
+    $S1 = sprintf '%3.0f%%', $P0
+    $P0 = getattribute self, 'progress_lastp'
+    $S0 = $P0
+    if $S0 == $S1 goto L1
+    set $P0, $S1
+    printerr $S1
+    printerr "\b\b\b\b"
   L1:
 .end
 
@@ -261,6 +321,16 @@ see http://search.cpan.org/~gaas/libwww-perl/
 .sub 'show_progress' :method
     .param pmc val
     setattribute self, 'show_progress', val
+.end
+
+=item agent
+
+=cut
+
+.sub 'agent' :method
+    .param string val
+    $P0 = getattribute self, 'def_headers'
+    $P0['User-Agent'] = val
 .end
 
 =item env_provy
@@ -347,6 +417,24 @@ see http://search.cpan.org/~gaas/libwww-perl/
     setattribute protocol, 'scheme', $P0
     setattribute protocol, 'ua', ua
     .return (protocol)
+.end
+
+=item scheme
+
+=cut
+
+.sub 'scheme' :method
+    $P0 = getattribute self, 'scheme'
+    .return ($P0)
+.end
+
+=item ua
+
+=cut
+
+.sub 'ua' :method
+    $P0 = getattribute self, 'ua'
+    .return ($P0)
 .end
 
 .sub 'request' :method
@@ -459,7 +547,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
     .return (response)
 .end
 
-.sub 'POST' :method :nsentry
+.sub 'PUT' :method :nsentry
     .param pmc request
     .local pmc response
     response = new ['HTTP';'Response']
@@ -534,8 +622,165 @@ see http://search.cpan.org/~gaas/libwww-perl/
 
 .namespace ['LWP';'Protocol';'http']
 
+.include 'socket.pasm'
+
 .sub '' :init :load :anon
     $P0 = subclass ['LWP';'Protocol'], ['LWP';'Protocol';'http']
+.end
+
+.sub '_new_socket' :method
+    .param string host
+    .param int port
+    .local pmc sock, addr
+    sock = new 'Socket'
+    sock.'socket'(.PIO_PF_INET, .PIO_SOCK_STREAM, .PIO_PROTO_TCP)
+    addr = sock.'sockaddr'(host, port)
+    sock.'connect'(addr)
+    .return (sock)
+.end
+
+.sub '_fixup_header' :method
+    .param pmc headers
+    .param pmc url
+    .local string host
+    host = url.'authority'()
+    headers['Host'] = host
+.end
+
+.sub '_format_request'
+    .param string method
+    .param string uri
+    .param pmc headers
+    .param string content
+    .const string CRLF = "\r\n"
+    $P0 = new 'StringBuilder'
+    push $P0, method
+    push $P0, ' '
+    push $P0, uri
+    push $P0, ' HTTP/1.1'
+    push $P0, CRLF
+    $P1 = iter headers
+  L1:
+    unless $P1 goto L2
+    $S0 = shift $P1
+    $S1 = headers[$S0]
+    push $P0, $S0
+    push $P0, ': '
+    push $P0, $S1
+    push $P0, CRLF
+    goto L1
+  L2:
+    push $P0, CRLF
+    push $P0, content
+    .return ($P0)
+.end
+
+.sub '_parse_response_headers' :method
+    .param pmc response
+    .param string str
+    $P0 = split "\r\n\r\n", str
+    $S0 = shift $P0
+    $I0 = length $S0
+    $P1 = split "\r\n", $S0
+    .local string status_line
+    status_line = shift $P1
+    $P2 = split " ", status_line
+    $S0 = shift $P2
+    $P3 = box $S0
+    setattribute response, 'protocol', $P3
+    $S0 = shift $P2
+    $P3 = box $S0
+    setattribute response, 'code', $P3
+    $S0 = join " ", $P2
+    $P3 = box $S0
+    setattribute response, 'message', $P3
+    $P3 = new ['HTTP';'Headers']
+  L1:
+    unless $P1 goto L2
+    $S0 = shift $P1
+    $P2 = split ": ", $S0
+    $S1 = shift $P2
+    $S2 = shift $P2
+    $P3[$S1] = $S2
+    goto L1
+  L2:
+    setattribute response, 'headers', $P3
+    .return ($I0)
+.end
+
+.sub '_parse_response_content' :method
+    .param pmc response
+    .param string str
+    $P0 = split "\r\n\r\n", str
+    $S0 = $P0[1]
+    $P0 = box $S0
+    setattribute response, 'content', $P0
+.end
+
+.sub 'request' :method
+    .param pmc request
+
+    .local string method
+    method = request.'method'()
+    .local pmc url
+    url = request.'uri'()
+    .local string host, port, fullpath
+    host = url.'host'()
+    port = url.'port'()
+    fullpath = url.'path_query'()
+    $I0 = index fullpath, '/'
+    if $I0 == 0 goto L1
+    fullpath = '/' . fullpath
+  L1:
+
+    # connect to remote site
+    .local pmc sock
+    sock = self.'_new_socket'(host, port)
+
+    .local pmc request_headers
+    request_headers = request.'headers'()
+    self.'_fixup_header'(request_headers, url)
+
+    .local string content
+    content = request.'content'()
+
+    $S0 = _format_request(method, url, request_headers, content)
+
+    .local pmc ua
+    ua = self.'ua'()
+    sock.'send'($S0)
+
+    .local pmc response
+    response = new ['HTTP';'Response']
+    .local pmc buf
+    buf = new 'StringBuilder'
+    .local int header_length, content_length
+    content_length = 0
+  L21:
+    $S0 = sock.'recv'()
+    if $S0 == '' goto L22
+    push buf, $S0
+    header_length = self.'_parse_response_headers'(response, buf)
+    $I0 = response.'is_success'()
+    unless $I0 goto L22
+    $S0 = response.'get_header'('Content-Length')
+    if $S0 == '' goto L21
+    content_length = $S0
+  L23:
+    $I0 = buf
+    $I0 -= header_length
+    $N0 = $I0 / content_length
+    ua.'progress'($N0, request)
+    $S0 = sock.'recv'()
+    if $S0 == '' goto L22
+    push buf, $S0
+    goto L23
+  L22:
+    sock.'close'()
+    unless content_length goto L24
+    self.'_parse_response_content'(response, buf)
+  L24:
+    .return (response)
 .end
 
 =head1 AUTHOR
