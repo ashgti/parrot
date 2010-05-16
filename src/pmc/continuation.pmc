@@ -47,7 +47,7 @@ more information.
  * Additionally ct->current_cont has the continuation of the caller.
  */
 
-pmclass Continuation auto_attrs {
+pmclass Continuation auto_attrs provides invokable {
     /* continuation destination */
     ATTR PackFile_ByteCode *seg;             /* bytecode segment */
     ATTR opcode_t          *address;         /* start of bytecode, addr to continue */
@@ -291,6 +291,22 @@ Experimental: returns caller info as a STRING.
         return Parrot_Context_infostr(INTERP, to_ctx);
     }
 
+
+/*
+
+=item C<INTVAL rid()>
+
+Experimental: return the runloop_id value.
+
+=cut
+
+*/
+
+    METHOD rid() {
+        INTVAL runloop_id;
+        GET_ATTR_runloop_id(INTERP, SELF, runloop_id);
+        RETURN(INTVAL runloop_id);
+    }
 
 /*
 
