@@ -647,7 +647,6 @@ see http://search.cpan.org/~gaas/libwww-perl/
     .param string method
     .param string uri
     .param pmc headers
-    .param string content
     .const string CRLF = "\r\n"
     $P0 = new 'StringBuilder'
     push $P0, method
@@ -667,7 +666,6 @@ see http://search.cpan.org/~gaas/libwww-perl/
     goto L1
   L2:
     push $P0, CRLF
-    push $P0, content
     .return ($P0)
 .end
 
@@ -755,22 +753,36 @@ see http://search.cpan.org/~gaas/libwww-perl/
     request_headers = request.'headers'()
     self.'_fixup_header'(request_headers, url)
 
-    .local string content
-    content = request.'content'()
-
-    $S0 = _format_request(method, url, request_headers, content)
-
     .local pmc ua
     ua = self.'ua'()
+    $S0 = _format_request(method, url, request_headers)
     sock.'send'($S0)
+
+    .local string content
+    content = request.'content'()
+    unless content goto L11
+    .local int content_length
+    content_length = length content
+    $I0 = 0
+  L12:
+    unless $I0 < content_length goto L11
+    $S0 = substr content, $I0, 8192
+    $I1 = sock.'send'($S0)
+    $I0 += $I1
+    $N0 = $I0 / content_length
+    ua.'progress'($N0, request)
+    sleep 1
+    goto L12
+  L11:
 
     .local pmc response
     response = new ['HTTP';'Response']
     .local pmc buf
     buf = new 'StringBuilder'
-    .local int header_length, content_length
+    .local int header_length
     content_length = 0
   L21:
+    ua.'progress'('tick', request)
     $S0 = sock.'recv'()
     if $S0 == '' goto L22
     push buf, $S0
@@ -781,7 +793,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
     if $S0 == '' goto L21
     content_length = $S0
   L23:
-    $I0 = buf
+    $I0 = buf.'get_string_length'()
     $I0 -= header_length
     $N0 = $I0 / content_length
     ua.'progress'($N0, request)
@@ -791,9 +803,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
     goto L23
   L22:
     sock.'close'()
-    unless content_length goto L24
     self.'_parse_response_content'(response, buf)
-  L24:
     .return (response)
 .end
 
