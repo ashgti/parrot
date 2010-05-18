@@ -297,6 +297,12 @@ see http://search.cpan.org/~gaas/libwww-perl/
 .sub 'redirect_ok' :method
     .param pmc new_request
     .param pmc response
+    $P0 = response.'request'()
+    $S0 = $P0.'method'()
+    if $S0 == 'GET' goto L1
+    if $S0 == 'HEAD' goto L1
+    .return (0)
+  L1:
     # work in progress
     .return (1)
 .end
@@ -755,7 +761,7 @@ see http://search.cpan.org/~gaas/libwww-perl/
 
     .local pmc ua
     ua = self.'ua'()
-    $S0 = _format_request(method, url, request_headers)
+    $S0 = _format_request(method, fullpath, request_headers)
     sock.'send'($S0)
 
     .local string content
@@ -770,8 +776,6 @@ see http://search.cpan.org/~gaas/libwww-perl/
     $I1 = sock.'send'($S0)
     $I0 += $I1
     $N0 = $I0 / content_length
-    ua.'progress'($N0, request)
-    sleep 1
     goto L12
   L11:
 
