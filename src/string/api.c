@@ -2528,7 +2528,7 @@ throw_illegal_escape(PARROT_INTERP)
 /*
 
 =item C<STRING * Parrot_str_unescape_string(PARROT_INTERP, const STRING *src,
-const CHARSET *charset, const ENCODING *encoding)>
+const CHARSET *charset, const ENCODING *encoding, UINTVAL flags)>
 
 EXPERIMENTAL, see TT #1628
 
@@ -2545,12 +2545,13 @@ PARROT_CANNOT_RETURN_NULL
 STRING *
 Parrot_str_unescape_string(PARROT_INTERP, ARGIN(const STRING *src),
         ARGIN(const CHARSET *charset),
-        ARGIN(const ENCODING *encoding))
+        ARGIN(const ENCODING *encoding),
+        UINTVAL flags)
 {
     ASSERT_ARGS(Parrot_str_unescape_string)
 
     UINTVAL srclen = Parrot_str_byte_length(interp, src);
-    STRING *result = Parrot_gc_new_string_header(interp, 0);
+    STRING *result = Parrot_gc_new_string_header(interp, flags);
     String_iter itersrc;
     String_iter iterdest;
     UINTVAL reserved;
@@ -2613,13 +2614,18 @@ Parrot_str_unescape_string(PARROT_INTERP, ARGIN(const STRING *src),
                     }
                     else {
                         /* \xhh 1..2 hex digits */
-                        for (digcount = 0; digcount < 2; ++digcount) {
+                        pending = 1;
+                        for (digcount = 0; digcount < 2; ) {
                             if (!isxdigit(c))
                                 break;
                             digbuf[digcount] = c;
+                            ++digcount;
+                            if (itersrc.bytepos >= srclen) {
+                                pending = 0;
+                                break;
+                            }
                             c = itersrc.get_and_advance(interp, &itersrc);
                         }
-                        pending = 1;
                     }
                     if (digcount == 0)
                         throw_illegal_escape(interp);

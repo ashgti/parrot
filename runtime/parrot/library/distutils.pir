@@ -2110,6 +2110,8 @@ a hash
     harness.'extra_props'($P0)
   L7:
     aggregate = harness.'runtests'(files)
+    print "creat "
+    say archive
 
     smolder_post(archive, kv :flat :named)
 .end
@@ -2159,7 +2161,13 @@ a hash
     $I0 = response.'code'()
     unless $I0 == 302 goto L1
     $S0 = response.'content'()
-    say $S0
+    $I0 = index $S0, 'Report'
+    unless $I0 == 0 goto L4
+    $I0 = index $S0, "\n"
+    if $I0 < 0 goto L4
+    $S0 = substr $S0, 0, $I0
+  L4:
+    print $S0
   L1:
 .end
 
@@ -2990,6 +2998,8 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     $P0.'open'(archive_file, 'wb')
     archive.'write'($P0)
     $P0.'close'()
+    print "creat "
+    say archive_file
   L1:
 .end
 
@@ -3045,6 +3055,8 @@ On Windows calls sdist_zip, otherwise sdist_gztar
     goto L2
   L3:
     archive.'writeToFileNamed'(archive_file)
+    print "creat "
+    say archive_file
   L1:
 .end
 
