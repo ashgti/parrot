@@ -62,6 +62,7 @@ my @steps = qw(
     auto::ctags
     auto::revision
     auto::icu
+    auto::libffi
     gen::config_h
     gen::core_pmcs
     gen::opengl
