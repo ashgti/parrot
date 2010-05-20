@@ -51,25 +51,25 @@ sub runstep {
     print "\n" if $verbose;
     my $pkgconfig_exec = check_progs([ @pkgconfig_variations ], $verbose);
 
-    my $libffi_options = { ccflags => '', libs => '-lffi' };
+    my $libffi_options_cflags = '';
+    my $libffi_options_libs = '-lffi';
+    
     if ($pkgconfig_exec) {
-        my $out = capture_output($pkgconfig_exec, 'libffi --libs');
-        chomp $out;
-        $libffi_options->{'libs'} = $out;
-        $out = capture_output($pkgconfig_exec, 'libffi --cflags');
-        chomp $out;
-        $libffi_options->{'ccflags'} = $out;
-    } 
+        $libffi_options_libs = capture_output($pkgconfig_exec, 'libffi --libs');
+        chomp $libffi_options_libs;
+        $libffi_options_cflags = capture_output($pkgconfig_exec, 'libffi --cflags');
+        chomp $libffi_options_cflags;
+    }
 
     my $extra_libs = $self->_select_lib( {
         conf            => $conf,
         osname          => $osname,
         cc              => $conf->data->get('cc'),
-        default         => join(' ', values %$libffi_options),
+        default         => $libffi_options_libs . ' ' . $libffi_options_cflags,
     } );
     
     $conf->cc_gen('config/auto/libffi/test_c.in');
-    eval { $conf->cc_build( q{}, $extra_libs ) };
+    eval { $conf->cc_build( $libffi_options_cflags, $libffi_options_libs ) };
     my $has_libffi = 0;
     if ( !$@ ) {
         my $test = $conf->cc_run();
@@ -79,10 +79,10 @@ sub runstep {
 
     if ($has_libffi) {
         $conf->data->set( HAS_LIBFFI => $has_libffi);
-        $conf->data->add( ' ', ccflags => $libffi_options->{'ccflags'} );
-        $conf->data->add( ' ', libs => $libffi_options->{'libs'} );
+        $conf->data->add( ' ', ccflags => $libffi_options_cflags );
+        $conf->data->add( ' ', libs => $libffi_options_libs );
         if ($verbose) {
-            print 'libffi cflags: ', $libffi_options->{'ccflags'}, "libffi libs: ", $libffi_options->{'libs'}, "\n";
+            print 'libffi cflags: ', $libffi_options_cflags, "libffi libs: ", $libffi_options_libs, "\n";
         }
     }
     else {
@@ -96,7 +96,7 @@ sub runstep {
 
 sub _evaluate_cc_run {
     my ($output, $verbose) = @_;
-    my $has_libffi = ( $output =~ m/libffi => \d\.\d(?:\.\d)?/ ) ? 1 : 0;
+    my $has_libffi = ( $output =~ m/libffi worked/ ) ? 1 : 0;
     return $has_libffi;
 }
 
