@@ -16572,8 +16572,7 @@ static op_info_t core_op_info_table[1269] = {
 
 opcode_t *
 Parrot_end(opcode_t *cur_opcode, PARROT_INTERP)  {
-    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
-    return (opcode_t *)0;
+    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);return (opcode_t *)0;
 }
 
 opcode_t *
@@ -16638,14 +16637,12 @@ return (opcode_t *)cur_opcode + 2;}
 
 opcode_t *
 Parrot_branch_i(opcode_t *cur_opcode, PARROT_INTERP)  {
-    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
-    return (opcode_t *)cur_opcode + IREG(1);
+    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);return (opcode_t *)cur_opcode + IREG(1);
 }
 
 opcode_t *
 Parrot_branch_ic(opcode_t *cur_opcode, PARROT_INTERP)  {
-    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
-    return (opcode_t *)cur_opcode + cur_opcode[1];
+    const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);return (opcode_t *)cur_opcode + cur_opcode[1];
 }
 
 opcode_t *
