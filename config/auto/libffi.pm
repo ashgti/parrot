@@ -81,6 +81,7 @@ sub runstep {
         $conf->data->set( HAS_LIBFFI => $has_libffi);
         $conf->data->add( ' ', ccflags => $libffi_options_cflags );
         $conf->data->add( ' ', libs => $libffi_options_libs );
+        $self->set_result('yes');
         if ($verbose) {
             print 'libffi cflags: ', $libffi_options_cflags, "libffi libs: ", $libffi_options_libs, "\n";
         }
@@ -104,7 +105,7 @@ sub _evaluate_cc_run {
 
 =head1 AUTHOR
 
-Paul Cochrane <paultcochrane at gmail dot com>
+John Harrison <ash.gti at gmail dot com>
 
 =cut
 

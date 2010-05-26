@@ -77,6 +77,7 @@ our @shared_valid_options = qw{
     without-gettext
     without-gmp
     without-icu
+    without-libffi
     without-opengl
     without-pcre
     without-threads
