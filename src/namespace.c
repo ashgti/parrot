@@ -10,10 +10,6 @@ src/namespace.c
 
 Common routines for storing and finding elements in namespaces
 
-=head1 FUNCTIONS
-
-=over 4
-
 =cut
 
 */
@@ -110,6 +106,10 @@ static void store_sub_in_multi(PARROT_INTERP,
 #define INTERN_NS_CREAT 1       /* I'm a fan of the classics */
 
 /*
+
+=head1 Internal Static Functions
+
+=over 4
 
 =item C<static PMC * internal_ns_keyed_str(PARROT_INTERP, PMC *base_ns, STRING
 *key, int flags)>
@@ -258,8 +258,84 @@ internal_ns_maybe_create(PARROT_INTERP, ARGIN(PMC *ns), ARGIN(STRING *key), int 
     return sub_ns;
 }
 
+/*
+
+=item C<static PMC * get_namespace_pmc(PARROT_INTERP, PMC *sub_pmc)>
+
+Return the namespace PMC associated with the PMC C<sub>. If C<sub> is NULL,
+return the Associated HLL namespace PMC instead.
+
+=cut
+
+*/
+
+PARROT_WARN_UNUSED_RESULT
+PARROT_CAN_RETURN_NULL
+static PMC *
+get_namespace_pmc(PARROT_INTERP, ARGIN(PMC *sub_pmc))
+{
+    ASSERT_ARGS(get_namespace_pmc)
+    Parrot_Sub_attributes *sub;
+    PMC        *nsname, *nsroot;
+
+    PMC_get_sub(interp, sub_pmc, sub);
+    nsname = sub->namespace_name;
+    nsroot = Parrot_get_HLL_namespace(interp, sub->HLL_id);
+
+    /* If we have a NULL, return the HLL namespace */
+    if (PMC_IS_NULL(nsname))
+        return nsroot;
+    /* If we have a String, do a string lookup */
+    else if (nsname->vtable->base_type == enum_class_String)
+        return Parrot_ns_make_namespace_keyed_str(interp, nsroot,
+                VTABLE_get_string(interp, nsname));
+    /* Otherwise, do a PMC lookup */
+    else
+        return Parrot_ns_make_namespace_keyed(interp, nsroot, nsname);
+}
 
 /*
+
+=item C<static void store_sub_in_multi(PARROT_INTERP, PMC *sub_pmc, PMC *ns)>
+
+Adds the sub C<sub> into a mulisub of the same name in the namespace C<ns>.
+If no multisub by that name currently exists, we create one.
+
+=cut
+
+*/
+
+static void
+store_sub_in_multi(PARROT_INTERP, ARGIN(PMC *sub_pmc), ARGIN(PMC *ns))
+{
+    ASSERT_ARGS(store_sub_in_multi)
+    Parrot_Sub_attributes *sub;
+    STRING     *ns_entry_name;
+    PMC        *multisub;
+
+    PMC_get_sub(interp, sub_pmc, sub);
+    ns_entry_name = sub->ns_entry_name;
+    multisub      = VTABLE_get_pmc_keyed_str(interp, ns, ns_entry_name);
+
+    /* is there an existing MultiSub PMC? or do we need to create one? */
+    if (PMC_IS_NULL(multisub)) {
+        multisub = Parrot_pmc_new(interp,  Parrot_get_ctx_HLL_type(interp, enum_class_MultiSub));
+        /* we have to push the sub onto the MultiSub before we try to store
+        it because storing requires information from the sub */
+        VTABLE_push_pmc(interp, multisub, sub_pmc);
+        VTABLE_set_pmc_keyed_str(interp, ns, ns_entry_name, multisub);
+    }
+    else
+        VTABLE_push_pmc(interp, multisub, sub_pmc);
+}
+
+/*
+
+=back
+
+=head1 NameSpace API Functions
+
+=over 4
 
 =item C<PMC * Parrot_ns_get_namespace_keyed(PARROT_INTERP, PMC *base_ns, PMC
 *pmc_key)>
@@ -409,33 +485,20 @@ Parrot_ns_get_name(PARROT_INTERP, ARGIN(PMC *_namespace))
 
 =item C<PMC * Parrot_ns_get_global(PARROT_INTERP, PMC *ns, STRING *globalname)>
 
-Parrot_ns_get_global allows a null namespace without throwing an exception; it
-simply returns PMCNULL in that case.
-
-NOTE: At present the use of the {get, set}_global functions is mandatory due to the
-      wacky namespace typing of the default Parrot namespace.  Eventually it will be
-      safe to just use the standard hash interface (if desired).
-
 Look up the global named C<globalname> in the namespace C<ns>.  Return the
 global, or return PMCNULL if C<ns> is null or if the global is not found.
 
-KLUDGE ALERT: Currently prefers non-namespaces in case of collision.
+Parrot_ns_get_global allows a null namespace without throwing an exception; it
+simply returns PMCNULL in that case.
+
+NOTE: At present the use of the {get, set}_global functions is mandatory due
+      to the wacky namespace typing of the default Parrot namespace.
+      Eventually it will be safe to just use the standard hash interface
+      (if desired).
 
 =cut
 
 */
-
-
-/*
- * {get, set}_global.
- *
- * Parrot_ns_get_global allows a null namespace without throwing an exception; it
- * simply returns PMCNULL in that case.
- *
- * NOTE: At present the use of the {get, set}_global functions is mandatory due to the
- *       wacky namespace typing of the default Parrot namespace.  Eventually it will be
- *       safe to just use the standard hash interface (if desired).
- */
 
 PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
@@ -555,10 +618,8 @@ Parrot_find_global_s(PARROT_INTERP, ARGIN_NULLOK(STRING *str_key),
         ARGIN_NULLOK(STRING *globalname))
 {
     ASSERT_ARGS(Parrot_find_global_s)
-    PMC *const ns =
-        Parrot_ns_get_namespace_keyed_str(interp,
-                                       Parrot_get_ctx_HLL_namespace(interp),
-                                       str_key);
+    const INTVAL typeid = Parrot_get_ctx_HLL_namespace(interp);
+    PMC * const ns = Parrot_ns_get_namespace_keyed_str(interp, typeid, str_key);
     return Parrot_ns_find_namespace_global(interp, ns, globalname);
 }
 
@@ -567,7 +628,8 @@ Parrot_find_global_s(PARROT_INTERP, ARGIN_NULLOK(STRING *str_key),
 =item C<void Parrot_ns_store_global(PARROT_INTERP, PMC *ns, STRING *globalname,
 PMC *val)>
 
-Store the PMC C<val> into the namespace PMC C<ns> with name C<globalname>.
+Store the PMC C<val> into the namespace PMC C<ns> with name C<globalname>. If
+the namespace is null, do nothing.
 
 =cut
 
@@ -604,10 +666,8 @@ Parrot_store_global_s(PARROT_INTERP, ARGIN_NULLOK(STRING *str_key),
         ARGIN_NULLOK(STRING *globalname), ARGIN_NULLOK(PMC *val))
 {
     ASSERT_ARGS(Parrot_store_global_s)
-    PMC * const ns = Parrot_ns_make_namespace_keyed_str(interp,
-                                         Parrot_get_ctx_HLL_namespace(interp),
-                                         str_key);
-
+    const INTVAL typeid = Parrot_get_ctx_HLL_namespace(interp);
+    PMC * const ns = Parrot_ns_make_namespace_keyed_str(interp, typeid, str_key);
     Parrot_ns_store_global(interp, ns, globalname, val);
 
     /* TT #1225 - method cache invalidation should be a namespace function */
@@ -635,17 +695,15 @@ Parrot_ns_find_global_from_op(PARROT_INTERP, ARGIN(PMC *ns),
         ARGIN_NULLOK(STRING *globalname), ARGIN_NULLOK(void *next))
 {
     ASSERT_ARGS(Parrot_ns_find_global_from_op)
-    PMC *res;
-
     if (STRING_IS_NULL(globalname))
         Parrot_ex_throw_from_c_args(interp, next, EXCEPTION_GLOBAL_NOT_FOUND,
             "Tried to get null global");
-
-    res = Parrot_ns_find_namespace_global(interp, ns, globalname);
-    if (!res)
-        res = PMCNULL;
-
-    return res;
+    else {
+        PMC * const res = Parrot_ns_find_namespace_global(interp, ns, globalname);
+        if (!res)
+            return PMCNULL;
+        return res;
+    }
 }
 
 
@@ -672,11 +730,9 @@ Parrot_find_name_op(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
     ASSERT_ARGS(Parrot_find_name_op)
     PMC * const ctx     = CURRENT_CONTEXT(interp);
     PMC * const lex_pad = Parrot_find_pad(interp, name, ctx);
-    PMC *g;
+    PMC * g = PMCNULL;
 
-    if (PMC_IS_NULL(lex_pad))
-        g = PMCNULL;
-    else
+    if (!PMC_IS_NULL(lex_pad))
         g = VTABLE_get_pmc_keyed_str(interp, lex_pad, name);
 
     /* TT #1223 - walk up the scopes!  duh!! */
@@ -691,77 +747,6 @@ Parrot_find_name_op(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
         return PMCNULL;
     else
         return g;
-}
-
-/*
-
-=item C<static PMC * get_namespace_pmc(PARROT_INTERP, PMC *sub_pmc)>
-
-Return the namespace PMC associated with the PMC C<sub>. If C<sub> is NULL,
-return the Associated HLL namespace PMC instead.
-
-=cut
-
-*/
-
-PARROT_WARN_UNUSED_RESULT
-PARROT_CAN_RETURN_NULL
-static PMC *
-get_namespace_pmc(PARROT_INTERP, ARGIN(PMC *sub_pmc))
-{
-    ASSERT_ARGS(get_namespace_pmc)
-    Parrot_Sub_attributes *sub;
-    PMC        *nsname, *nsroot;
-
-    PMC_get_sub(interp, sub_pmc, sub);
-    nsname = sub->namespace_name;
-    nsroot = Parrot_get_HLL_namespace(interp, sub->HLL_id);
-
-    /* If we have a NULL, return the HLL namespace */
-    if (PMC_IS_NULL(nsname))
-        return nsroot;
-    /* If we have a String, do a string lookup */
-    else if (nsname->vtable->base_type == enum_class_String)
-        return Parrot_ns_make_namespace_keyed_str(interp, nsroot,
-                VTABLE_get_string(interp, nsname));
-    /* Otherwise, do a PMC lookup */
-    else
-        return Parrot_ns_make_namespace_keyed(interp, nsroot, nsname);
-}
-
-/*
-
-=item C<static void store_sub_in_multi(PARROT_INTERP, PMC *sub_pmc, PMC *ns)>
-
-Adds the sub C<sub> into a mulisub of the same name in the namespace C<ns>.
-If no multisub by that name currently exists, we create one.
-
-=cut
-
-*/
-
-static void
-store_sub_in_multi(PARROT_INTERP, ARGIN(PMC *sub_pmc), ARGIN(PMC *ns))
-{
-    ASSERT_ARGS(store_sub_in_multi)
-    Parrot_Sub_attributes *sub;
-    STRING     *ns_entry_name;
-    PMC        *multisub;
-
-    PMC_get_sub(interp, sub_pmc, sub);
-    ns_entry_name = sub->ns_entry_name;
-    multisub      = VTABLE_get_pmc_keyed_str(interp, ns, ns_entry_name);
-
-    /* is there an existing MultiSub PMC? or do we need to create one? */
-    if (PMC_IS_NULL(multisub)) {
-        multisub = Parrot_pmc_new(interp,  Parrot_get_ctx_HLL_type(interp, enum_class_MultiSub));
-        /* we have to push the sub onto the MultiSub before we try to store
-        it because storing requires information from the sub */
-        VTABLE_push_pmc(interp, multisub, sub_pmc);
-        VTABLE_set_pmc_keyed_str(interp, ns, ns_entry_name, multisub);
-    }
-    else
-        VTABLE_push_pmc(interp, multisub, sub_pmc);
 }
 
 /*
@@ -782,7 +767,7 @@ Parrot_ns_store_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
     ASSERT_ARGS(Parrot_ns_store_sub)
     const INTVAL cur_id = Parrot_pcc_get_HLL(interp, CURRENT_CONTEXT(interp));
 
-    PMC        *ns;
+    PMC *ns;
     Parrot_Sub_attributes *sub;
 
     /* PF structures aren't fully constructed yet */
@@ -810,7 +795,8 @@ Parrot_ns_store_sub(PARROT_INTERP, ARGIN(PMC *sub_pmc))
         Parrot_ns_store_global(interp, ns, ns_entry_name, sub_pmc);
 
         /* TT #1224:
-           TEMPORARY HACK - cache invalidation should be a namespace function */
+           TEMPORARY HACK - cache invalidation should be a namespace function
+         */
         if (!PMC_IS_NULL(nsname)) {
             STRING * const nsname_s = VTABLE_get_string(interp, nsname);
             Parrot_invalidate_method_cache(interp, nsname_s);
