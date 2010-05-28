@@ -27569,7 +27569,7 @@ Parrot_find_name_p_s(opcode_t *cur_opcode, PARROT_INTERP)  {
                 "Tried to find null name");return (opcode_t *)handler;
     }
 
-    PREG(1) = Parrot_find_name_op(interp, SREG(2),cur_opcode + 3);
+    PREG(1) = Parrot_ns_find_named_item(interp, SREG(2),cur_opcode + 3);
 
 return (opcode_t *)cur_opcode + 3;}
 
@@ -27582,7 +27582,7 @@ Parrot_find_name_p_sc(opcode_t *cur_opcode, PARROT_INTERP)  {
                 "Tried to find null name");return (opcode_t *)handler;
     }
 
-    PREG(1) = Parrot_find_name_op(interp, CONST(2)->u.string,cur_opcode + 3);
+    PREG(1) = Parrot_ns_find_named_item(interp, CONST(2)->u.string,cur_opcode + 3);
 
 return (opcode_t *)cur_opcode + 3;}
 
@@ -27590,7 +27590,7 @@ opcode_t *
 Parrot_find_sub_not_null_p_s(opcode_t *cur_opcode, PARROT_INTERP)  {
     const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
     opcode_t *dest =cur_opcode + 3;
-    PMC *sub = Parrot_find_name_op(interp, SREG(2), dest);
+    PMC *sub = Parrot_ns_find_named_item(interp, SREG(2), dest);
 
     if (PMC_IS_NULL(sub)) {
         opcode_t *handler = Parrot_ex_throw_from_op_args(interp, dest,
@@ -27606,7 +27606,7 @@ opcode_t *
 Parrot_find_sub_not_null_p_sc(opcode_t *cur_opcode, PARROT_INTERP)  {
     const Parrot_Context * const CUR_CTX = Parrot_pcc_get_context_struct(interp, interp->ctx);
     opcode_t *dest =cur_opcode + 3;
-    PMC *sub = Parrot_find_name_op(interp, CONST(2)->u.string, dest);
+    PMC *sub = Parrot_ns_find_named_item(interp, CONST(2)->u.string, dest);
 
     if (PMC_IS_NULL(sub)) {
         opcode_t *handler = Parrot_ex_throw_from_op_args(interp, dest,

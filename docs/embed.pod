@@ -725,7 +725,7 @@ The list may also be augmented if additional functionality is required.
 
 =item C<Parrot_find_method_with_cache>
 
-=item C<Parrot_find_name_op>
+=item C<Parrot_ns_find_named_item>
 
 =item C<Parrot_float_rand>
 

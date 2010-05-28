@@ -689,7 +689,7 @@ Parrot_store_global_s(PARROT_INTERP, ARGIN_NULLOK(STRING *str_key),
 void *next)>
 
 If the global exists in the given namespace PMC, return it.  If not, return
-PMCNULL.
+PMCNULL. Throw an exception if a NULL name is passed.
 
 =cut
 
@@ -717,7 +717,7 @@ Parrot_ns_find_global_from_op(PARROT_INTERP, ARGIN(PMC *ns),
 
 /*
 
-=item C<PMC * Parrot_find_name_op(PARROT_INTERP, STRING *name, void *next)>
+=item C<PMC * Parrot_ns_find_named_item(PARROT_INTERP, STRING *name, void *next)>
 
 TT #1223 - THIS IS BROKEN - it doesn't walk up the scopes yet
 
@@ -733,9 +733,9 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
-Parrot_find_name_op(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
+Parrot_ns_find_named_item(PARROT_INTERP, ARGIN(STRING *name), SHIM(void *next))
 {
-    ASSERT_ARGS(Parrot_find_name_op)
+    ASSERT_ARGS(Parrot_ns_find_named_item)
     PMC * const ctx     = CURRENT_CONTEXT(interp);
     PMC * const lex_pad = Parrot_find_pad(interp, name, ctx);
     PMC * g = PMCNULL;
