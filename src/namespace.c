@@ -560,7 +560,8 @@ PARROT_EXPORT
 PARROT_WARN_UNUSED_RESULT
 PARROT_CAN_RETURN_NULL
 PMC *
-Parrot_ns_find_namespace_global(PARROT_INTERP, ARGIN_NULLOK(PMC *ns), ARGIN_NULLOK(STRING *globalname))
+Parrot_ns_find_namespace_global(PARROT_INTERP,
+        ARGIN_NULLOK(PMC *ns), ARGIN_NULLOK(STRING *globalname))
 {
     ASSERT_ARGS(Parrot_ns_find_namespace_global)
     PMC *res;
