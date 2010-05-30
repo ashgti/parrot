@@ -918,7 +918,9 @@ Generic method for compilers invoked from a shell command line.
     .get_results ($P0)
     pop_eh
     $S0 = self.'backtrace'($P0)
-    print $S0
+    $P0 = getinterp
+    $P0 = $P0.'stdhandle'(2)
+    print $P0, $S0
     exit 1
 .end
 
