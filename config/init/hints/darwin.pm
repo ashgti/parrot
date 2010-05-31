@@ -207,7 +207,6 @@ sub _probe_for_fink {
 
 sub _probe_for_macports {
     my $conf = shift;
-    my $verbose = $conf->options->get( 'verbose' );
     my $ports_base_dir = $defaults{ports_base_dir};
     my $ports_lib_dir = qq{$ports_base_dir/lib};
     my $ports_include_dir = qq{$ports_base_dir/include};
@@ -233,7 +232,6 @@ sub _probe_for_libraries {
     my ($conf, $flagsref, $library) = @_;
     my $no_library_option = "darwin_no_$library";
     my $title = ucfirst(lc($library));
-    my $verbose = $conf->options->get( 'verbose' );
     unless ($conf->options->get( $no_library_option ) ) {
         my $addl_flags_ref;
         if ($library eq 'fink') {
