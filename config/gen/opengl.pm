@@ -522,18 +522,24 @@ sub runstep {
     # X freeglut only if DISPLAY is set, otherwise use native w32api GLUT
     shift @header_globs if $^O eq 'cygwin' and !$ENV{DISPLAY};
 
-    print "\nChecking for OpenGL headers using the following globs:\n\t",
-        join("\n\t", @header_globs), "\n"
-        if $verbose;
+    my $globs_str = join("\n\t", @header_globs) . "\n";
+    $conf->debug(
+        "\n",
+        "Checking for OpenGL headers using the following globs:\n",
+        "\t$globs_str"
+    );
 
     my @header_files = sort map {File::Glob::bsd_glob($_)} @header_globs;
 
     my %skip = map {($_ => 1)} @SKIP;
     @header_files = grep {my ($file) = m{([^/]+)$}; !$skip{$file}} @header_files;
 
-    print "\nFound the following OpenGL headers:\n\t",
-        join("\n\t", @header_files), "\n"
-        if $verbose;
+    my $files_str = join("\n\t", @header_files) . "\n";
+    $conf->debug(
+        "\n",
+        "Found the following OpenGL headers:\n",
+        "\t$files_str\n",
+    );
 
     die "OpenGL enabled and detected, but no OpenGL headers found!"
         unless @header_files;
@@ -550,15 +556,15 @@ HEADER
 
     $autogen_header .= "# $_\n" foreach @header_files;
 
-    $self->gen_opengl_defines ($conf, \@header_files, $autogen_header, $verbose);
-    $self->gen_opengl_wrappers($conf, \@header_files, $autogen_header, $verbose);
+    $self->gen_opengl_defines ($conf, \@header_files, $autogen_header);
+    $self->gen_opengl_wrappers($conf, \@header_files, $autogen_header);
     $self->gen_glut_callbacks ($conf);
 
     return 1;
 }
 
 sub gen_opengl_defines {
-    my ($self, $conf, $header_files, $autogen_header, $verbose) = @_;
+    my ($self, $conf, $header_files, $autogen_header) = @_;
 
     my (%defs, @macros, %non_numeric);
     my $max_len = 0;
@@ -590,7 +596,7 @@ sub gen_opengl_defines {
             }
             else {
                 $non_numeric{$F[1]}++;
-                print "\nNon-numeric value for '$F[1]': '$F[2]'\n" if $verbose;
+                $conf->debug("Non-numeric value for '$F[1]': '$F[2]'\n");
             }
         }
     }
@@ -630,7 +636,8 @@ sub gen_opengl_defines {
 }
 
 sub gen_opengl_wrappers {
-    my ($self, $conf, $header_files, $autogen_header, $verbose) = @_;
+    my ($self, $conf, $header_files, $autogen_header) = @_;
+    my $verbose = $conf->options->get('verbose') || 0;
 
     my %IGNORE = map {($_ => 1)} @IGNORE;
 
@@ -772,7 +779,8 @@ sub gen_opengl_wrappers {
             $sigs{$nci_sig}++;
             push @{$funcs{$group}}, [$name, $nci_sig];
 
-            print "$group\t$nci_sig\t$return $name($params);\n" if $verbose >= 3;
+            print "$group\t$nci_sig\t$return $name($params);\n"
+                if $verbose >= 3;
         }
     }
 

@@ -58,7 +58,7 @@ sub _get_generated {
     my ($self, $conf) = @_;
     my $generated = $conf->data->get('TEMP_generated');
     $generated = '' unless defined $generated;
-    $conf->debug(" ($generated) ");
+    $conf->debug(" ($generated) \n");
     return $generated;
 }
 
