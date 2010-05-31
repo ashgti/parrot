@@ -457,8 +457,6 @@ sub runstep {
         return 1;
     }
 
-    my $verbose = $conf->options->get('verbose') || 0;
-
     my @include_paths_win32 = grep /\S/ => split /;/ => ($ENV{INCLUDE} || '');
 
     my $osname = $conf->data->get('osname');
