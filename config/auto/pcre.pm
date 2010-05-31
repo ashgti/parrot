@@ -56,7 +56,7 @@ sub runstep {
     my $has_pcre = 0;
     if ( !$@ ) {
         my $test = $conf->cc_run();
-        $has_pcre = $self->_evaluate_cc_run($test, $conf);
+        $has_pcre = $self->_evaluate_cc_run($conf, $test);
     }
     $conf->data->set( HAS_PCRE => $has_pcre);
 
@@ -65,7 +65,7 @@ sub runstep {
 
 sub _evaluate_cc_run {
     my $self = shift;
-    my ($test, $conf) = @_;
+    my ($conf, $test) = @_;
     my $has_pcre = 0;
     if ( $test =~ /pcre (\d+\.\d+)/ ) {
         my $pcre_version = $1;
