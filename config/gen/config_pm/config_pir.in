@@ -59,7 +59,8 @@ undefined values) is undefined, and may be rather funky.
         $P0.'stat'($S0)
         goto L1
   file_not_found:
-    conf_file = "/usr/local/lib/parrot/2.4.0-devel/include/config.fpmc"
+    # Treat it as installed parrot.
+    conf_file = "@libdir@@versiondir@/include/config.fpmc"
     goto L2
   L1:
     conf_file = prefix . "/runtime/parrot/include/config.fpmc"
