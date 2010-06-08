@@ -52,10 +52,13 @@ sub runstep {
     my $pkgconfig_exec = check_progs([ @pkgconfig_variations ], $verbose);
 
     my $libffi_options_cflags = '';
-    my $libffi_options_libs = '-lffi';
+    my $libffi_options_libs = '';
+    my $libffi_options_linkflags = '';
     
     if ($pkgconfig_exec) {
-        $libffi_options_libs = capture_output($pkgconfig_exec, 'libffi --libs');
+        $libffi_options_linkflags = capture_output($pkgconfig_exec, 'libffi --libs-only-L');
+        chomp $libffi_options_linkflags;
+        $libffi_options_libs = capture_output($pkgconfig_exec, 'libffi --libs-only-l');
         chomp $libffi_options_libs;
         $libffi_options_cflags = capture_output($pkgconfig_exec, 'libffi --cflags');
         chomp $libffi_options_cflags;
@@ -81,6 +84,7 @@ sub runstep {
         $conf->data->set( HAS_LIBFFI => $has_libffi);
         $conf->data->add( ' ', ccflags => $libffi_options_cflags );
         $conf->data->add( ' ', libs => $libffi_options_libs );
+        $conf->data->add( ' ', linkflags => $libffi_options_linkflags );
         $self->set_result('yes');
         if ($verbose) {
             print 'libffi cflags: ', $libffi_options_cflags, "libffi libs: ", $libffi_options_libs, "\n";

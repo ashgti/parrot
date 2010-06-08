@@ -49,6 +49,374 @@ static void pcc_params(PARROT_INTERP,
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 /* HEADERIZER END: static */
 
+/*
+typedef struct signature_t {
+  char* sig_string;
+  unsigned int argc;
+  void* return_pmc;
+  ffi_type *return_type;
+  ffi_type **args;
+  ffi_cif cif;
+  void* arg_pmc_list; 
+} signature;
+*/
+
+#    include "ffi.h"
+
+
+INTVAL parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info);
+
+size_t parse_return(PARROT_INTERP, STRING* sig, size_t sig_length, Parrot_NCI_attributes * nci_info, ffi_type* return_type);
+
+size_t parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type **arg_types);
+
+size_t parse_identifier(PARROT_INTERP, STRING* sig, size_t start, size_t end, ffi_type** sig_obj, void* pmc_type);
+
+size_t parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t end, ffi_type** sig_obj, void* pmc_type);
+
+INTVAL parse_prefix(INTVAL c);
+
+size_t structure_length(PARROT_INTERP, STRING* sig, size_t start, size_t end);
+
+size_t count_args(PARROT_INTERP, STRING* sig, size_t start, size_t end);
+
+size_t find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, INTVAL start_character, INTVAL end_character);
+
+#define IS_DIGIT(x)               (x == '0') || (x == '1') || (x == '2') || (x == '3') || (x == '4') || (x == '5') || (x == '6') || (x == '7') || (x == '8') || (x == '9')
+#define IS_PREFIX(x)              (x == '*') || (x == 'u') || (x == 's')
+#define IS_TYPE(x)                (x == 'i') || (x == 'v') || (x == 'l') || (x == 't') || (x == 'c') || (x == 'b') || (x == 'f') || (x == 'd')
+#define IS_POSTFIX(x)             (x == '{') || IS_DIGIT(x)
+#define IS_INFIX(x)               (x == '|')
+#define IS_START_CIRCUMFIX(x)     (x == '(')
+#define IS_END_CIRCUMFIX(x)       (x == ')')
+#define IS_NOT_END_CIRCUMFIX(x)   (x != ')')
+
+#define PREFIX_POINTER  1<<0
+#define PREFIX_SIGNED      0
+#define PREFIX_UNSIGNED 1<<1
+#define PREFIX_NATIVE   1<<2
+
+INTVAL
+parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info) {
+    ffi_type *return_type;
+    ffi_type **arg_types;
+    size_t i = parse_return(interp, sig, sig_length, nci_info, return_type);
+    parse_args(interp, sig, i, sig_length, nci_info, arg_types);
+
+    if (ffi_prep_cif((ffi_cif*)&nci_info->cif, FFI_DEFAULT_ABI, nci_info->arity, return_type, arg_types) == FFI_OK) {
+        return 1;
+    }
+
+    // TODO: Throw Error here.
+    printf("Bad signature");
+    return 0;
+}
+
+size_t
+parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type* return_type) {
+    return parse_identifier(interp, sig, 0, sig_length, &return_type, nci_info->pcc_return_signature);
+}
+
+size_t 
+parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type **arg_types) {
+    size_t i = start;
+    size_t arg_count = 0;
+    size_t argc = count_args(interp, sig, start, sig_length);
+
+    /* TODO: Fix this malloc */
+    arg_types = (ffi_type**)malloc(sizeof(ffi_type*) * argc + 1);
+
+    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    while (i < sig_length) {
+        i += parse_identifier(interp, sig, i, sig_length, &arg_types[arg_count], nci_info->pcc_params_signature + arg_count);
+        arg_count += 1;
+    }
+
+    nci_info->arity = argc;
+
+    return i;
+}
+
+size_t
+parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ffi_type ** type_obj, void* type) {
+    size_t i = start;
+    INTVAL done = 0;
+
+    while (!done && i < sig_length) {
+        INTVAL c = Parrot_str_indexed(interp, sig, i);
+        int prefix = 0;
+        while (IS_PREFIX(c)) {
+            prefix |= parse_prefix(c);
+
+            i += 1;
+            c = Parrot_str_indexed(interp, sig, i);
+        }
+
+        if (IS_START_CIRCUMFIX(c)) {
+            i = parse_structure(interp, sig, i + 1, sig_length, type_obj, type);
+
+            c = Parrot_str_indexed(interp, sig, i);
+        }
+        else if (IS_TYPE(c)) {
+            if (prefix & PREFIX_POINTER) {
+                *type_obj = &ffi_type_pointer;
+            }
+            else if (prefix & PREFIX_NATIVE) {
+                if (prefix & PREFIX_UNSIGNED) {
+                    switch (c) {
+                        case 'c':
+                            *type_obj = &ffi_type_uchar;
+                            break;
+                        case 'b':
+                            *type_obj = &ffi_type_uint8;
+                            break;
+                        case 's':
+                            *type_obj = &ffi_type_ushort;
+                            break;
+                        case 'i':
+                            *type_obj = &ffi_type_uint;
+                            break;
+                        case 'l':
+                            *type_obj = &ffi_type_ulong;
+                            break;
+                        case 'q':
+                            *type_obj = &ffi_type_uint64;
+                            break;
+                        case 't':
+                            *type_obj = &ffi_type_pointer;
+                            break;
+                        case 'v':
+                            *type_obj = &ffi_type_void;
+                            break;
+                        case 'f':
+                            *type_obj = &ffi_type_float;
+                            break;
+                        case 'd':
+                            *type_obj = &ffi_type_double;
+                            break;
+                        case 'D':
+                            *type_obj = &ffi_type_longdouble;
+                            break;
+                    }
+                }
+                else {
+                    switch (c) {
+                        case 'c':
+                            *type_obj = &ffi_type_schar;
+                            break;
+                        case 'b':
+                            *type_obj = &ffi_type_sint8;
+                            break;
+                        case 's':
+                            *type_obj = &ffi_type_sshort;
+                            break;
+                        case 'i':
+                            *type_obj = &ffi_type_sint;
+                            break;
+                        case 'l':
+                            *type_obj = &ffi_type_slong;
+                            break;
+                        case 'q':
+                            *type_obj = &ffi_type_sint64;
+                            break;
+                        case 't':
+                            *type_obj = &ffi_type_pointer;
+                            break;
+                        case 'v':
+                            *type_obj = &ffi_type_void;
+                            break;
+                        case 'f':
+                            *type_obj = &ffi_type_float;
+                            break;
+                        case 'd':
+                            *type_obj = &ffi_type_double;
+                            break;
+                        case 'D':
+                            *type_obj = &ffi_type_longdouble;
+                            break;
+                    }
+                }
+            }
+            else {
+                if (prefix & PREFIX_UNSIGNED) {
+                    switch (c) {
+                        case 'c':
+                        case 'b':
+                            *type_obj = &ffi_type_uint8;
+                            break;
+                        case 's':
+                            *type_obj = &ffi_type_uint16;
+                            break;
+                        case 'i':
+                        case 'l':
+                            *type_obj = &ffi_type_uint32;
+                            break;
+                        case 'q':
+                            *type_obj = &ffi_type_uint64;
+                            break;
+                        case 't':
+                            *type_obj = &ffi_type_pointer;
+                            break;
+                        case 'v':
+                            *type_obj = &ffi_type_void;
+                            break;
+                        case 'f':
+                            *type_obj = &ffi_type_float;
+                            break;
+                        case 'd':
+                            *type_obj = &ffi_type_double;
+                            break;
+                        case 'D':
+                            *type_obj = &ffi_type_longdouble;
+                            break;
+                    }
+                }
+                else {
+                    switch (c) {
+                        case 'c':
+                        case 'b':
+                            *type_obj = &ffi_type_sint8;
+                            break;
+                        case 's':
+                            *type_obj = &ffi_type_sint16;
+                            break;
+                        case 'i':
+                        case 'l':
+                            *type_obj = &ffi_type_sint32;
+                            break;
+                        case 'q':
+                            *type_obj = &ffi_type_sint64;
+                            break;
+                        case 't':
+                            *type_obj = &ffi_type_pointer;
+                            break;
+                        case 'v':
+                            *type_obj = &ffi_type_void;
+                            break;
+                        case 'f':
+                            *type_obj = &ffi_type_float;
+                            break;
+                        case 'd':
+                            *type_obj = &ffi_type_double;
+                            break;
+                        case 'D':
+                            *type_obj = &ffi_type_longdouble;
+                            break;
+                    }
+                }
+            }
+            i += 1;
+
+            c = Parrot_str_indexed(interp, sig, i);
+        }
+        else {
+            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_JIT_ERROR, "Unknown param Signature %c", (char)c);
+        }
+
+        // Parse postfix ops
+        while (IS_POSTFIX(c)) {
+            i += 1;
+            c = Parrot_str_indexed(interp, sig, i);
+        }
+
+        // apply_modifiers(type, prefix, postfix);
+
+        if (Parrot_str_indexed(interp, sig, i+1) != (INTVAL)'|') done = 1; // Its a union, lets do something special
+    }
+
+    return i;
+}
+
+INTVAL
+parse_prefix(INTVAL c) {
+    switch (c) {
+        case '*':
+            return PREFIX_POINTER;
+        case 'u':
+            return PREFIX_UNSIGNED;
+        case 's':
+            return PREFIX_SIGNED;
+    }
+
+    return 0;
+}
+
+size_t
+parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi_type** type_obj, void* pmc_type) {
+    size_t i = start;
+    size_t struct_len = structure_length(interp, sig, start, sig_length);
+
+    // TODO: Fix Malloc
+    *type_obj = malloc(sizeof(ffi_type));
+    (*type_obj)->elements = malloc(sizeof(ffi_type*) * struct_len + 1);
+
+    (*type_obj)->size = (*type_obj)->alignment = 0;
+    (*type_obj)->type = FFI_TYPE_STRUCT;
+
+    size_t element_counter = 0;
+
+    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    while (i < sig_length && IS_NOT_END_CIRCUMFIX(c)) {
+        i += parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL);
+        element_counter += 1;
+        c = Parrot_str_indexed(interp, sig, i);
+    }
+
+    (*type_obj)->elements[struct_len] = NULL;
+
+    return i;
+}
+
+size_t 
+structure_length(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length) {
+    size_t len = 0;
+    size_t i = start;
+    INTVAL depth = 0;
+    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    while (i < sig_length && depth != -1) {
+        if (IS_START_CIRCUMFIX(c)) depth++;
+        else if (IS_END_CIRCUMFIX(c)) depth--;
+        else if (depth == 0 && (IS_TYPE(c))) len++;
+        i += 1;
+        c = Parrot_str_indexed(interp, sig, i);
+    }
+
+    return len;
+}
+
+size_t
+find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, INTVAL start_character, INTVAL end_character) {
+    size_t i = start;
+    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    while (i < sig_length && c != end_character) {
+        if (c == start_character)
+            i = find_matching(interp, sig, i, sig_length, start_character, end_character);
+        i += 1;
+        c = Parrot_str_indexed(interp, sig, i);
+    }
+
+    return i;
+}
+
+size_t
+count_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length) {
+    size_t length = 0;
+    size_t i = start;
+
+    while (i < sig_length) {
+        i += 1;
+        const INTVAL c = Parrot_str_index(interp, sig, i);    
+        if (IS_START_CIRCUMFIX(c)) {
+            i += find_matching(interp, sig, i + 1, sig_length, '(', ')');
+            length += 1;
+        }
+        else if (IS_TYPE(c)) {
+            length += 1;
+        }
+    }
+
+    return length;
+}
 
 static void
 pcc_params(PARROT_INTERP, ARGIN(STRING *sig), ARGMOD(Parrot_NCI_attributes *nci_info),
@@ -172,8 +540,8 @@ pmclass NCI auto_attrs provides invokable {
     ATTR STRING    *signature;              /* The signature. */
     ATTR void      *func;                   /* Function pointer to call. */
     ATTR PMC       *fb_info;                /* Frame-builder info */
-    ATTR void      *orig_func;              /* Function pointer
-                                             * used to create func */
+    ATTR void      *cif;                    /* Function interface */
+
     /* Parrot Sub-ish attributes */
     ATTR STRING    *pcc_params_signature;
     ATTR STRING    *pcc_return_signature;
@@ -242,19 +610,19 @@ Sets the specified function pointer and signature (C<*key>).
 */
 
     VTABLE void set_pointer(void *ptr) {
-        SET_ATTR_orig_func(INTERP, SELF, ptr);
+        SET_ATTR_cif(INTERP, SELF, ptr);
         PObj_flag_SET(private2, SELF);
     }
 
     VTABLE void *get_pointer() {
-        return PARROT_NCI(SELF)->orig_func;
+        return PARROT_NCI(SELF)->cif;
     }
 
     VTABLE void set_pointer_keyed_str(STRING *key, void *func) {
         Parrot_NCI_attributes * const nci_info   = PARROT_NCI(SELF);
 
         /* Store the original function and signature. */
-        SET_ATTR_orig_func(INTERP, SELF, func);
+        SET_ATTR_cif(INTERP, SELF, func);
 
         /* ensure that the STRING signature is constant */
         if (!PObj_constant_TEST(key)) {
@@ -303,7 +671,7 @@ Creates and returns a clone of the NCI.
     VTABLE PMC *clone() {
         Parrot_NCI_attributes * const nci_info_self = PARROT_NCI(SELF);
         Parrot_NCI_attributes *nci_info_ret;
-        void                  *orig_func;
+        void                  *cif;
 
         PMC * const ret     = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         nci_info_ret        = PARROT_NCI(ret);
@@ -314,7 +682,7 @@ Creates and returns a clone of the NCI.
          */
         nci_info_ret->func                  = nci_info_self->func;
         nci_info_ret->fb_info               = nci_info_self->fb_info;
-        nci_info_ret->orig_func             = nci_info_self->orig_func;
+        nci_info_ret->cif                   = nci_info_self->cif;
         nci_info_ret->signature             = nci_info_self->signature;
         nci_info_ret->pcc_params_signature  = nci_info_self->pcc_params_signature;
         nci_info_ret->pcc_return_signature  = nci_info_self->pcc_params_signature;
@@ -336,7 +704,7 @@ Returns whether the NCI is defined.
 
     VTABLE INTVAL defined() {
         Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
-        return nci_info->orig_func != NULL;
+        return nci_info->cif != NULL;
     }
 
 /*
@@ -355,12 +723,12 @@ class, the PMC arguments are shifted down.
         nci_thunk_t                   func;
         PMC                          *fb_info;
         char                         *sig_str;
-        void                         *orig_func;
+        void                         *cif;
         PMC                          *cont;
 
-        GET_ATTR_orig_func(INTERP, SELF, orig_func);
+        GET_ATTR_cif(INTERP, SELF, cif);
         func = PObj_flag_TEST(private2, SELF)
-            ? (nci_thunk_t) D2FPTR(orig_func)
+            ? (nci_thunk_t) D2FPTR(cif)
             : (nci_thunk_t) D2FPTR(nci_info->func);
 
         GET_ATTR_fb_info(INTERP, SELF, fb_info);
@@ -423,7 +791,7 @@ Returns the boolean value of the pointer.
 
     VTABLE INTVAL get_bool() {
         Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
-        return (0 != (INTVAL)nci_info->orig_func);
+        return (0 != (INTVAL)nci_info->cif);
     }
 
 /*
@@ -466,6 +834,8 @@ F<docs/pdds/pdd03_calling_conventions.pod>.
 
 Initial revision by sean 2002/08/04.
 
+Updates by John Harrison, Summer 2010, GSoC.
+
 =cut
 
 */
@@ -476,3 +846,4 @@ Initial revision by sean 2002/08/04.
  * End:
  * vim: expandtab shiftwidth=4:
  */
+

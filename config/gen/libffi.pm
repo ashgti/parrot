@@ -25,6 +25,8 @@ sub _init {
 
 sub runstep {
     my ( $self, $conf ) = @_;
+
+    # Copy file over...
 }
 
 # Local Variables:

@@ -74,7 +74,7 @@ parse_args(char* sig, signature* sig_obj) {
 }
 
 size_t
-parse_identifier(char* sig, ffi_type ** type_obj, void* type) {
+parse_identifier(char* sig, ffi_type ** type_obj, void* type, char ) {
   size_t i = 0;
   char done = 0;
   while (!done) {
@@ -246,7 +246,6 @@ parse_identifier(char* sig, ffi_type ** type_obj, void* type) {
 
     // Parse postfix ops
     while (IS_POSTFIX(sig[i])) {
-
     }
     
     // apply_modifiers(type, prefix, postfix);
