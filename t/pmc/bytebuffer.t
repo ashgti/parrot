@@ -21,7 +21,7 @@ Tests C<ByteBuffer> PMC..
 
 .sub 'main' :main
     .include 'test_more.pir'
-    plan(19)
+    plan(24)
 
     test_init()
     test_set_string()
@@ -29,7 +29,27 @@ Tests C<ByteBuffer> PMC..
     test_get_string()
     test_alloc()
     test_iterate()
+    test_invalid()
 .end
+
+################################################################
+# Helper subs
+
+.sub hasicu
+    $P0 = getinterp
+    $P1 = $P0[.IGLOBALS_CONFIG_HASH]
+    $I0 = $P1['has_icu']
+    .return($I0)
+.end
+
+.sub isbigendian
+    $P0 = getinterp
+    $P1 = $P0[.IGLOBALS_CONFIG_HASH]
+    $I0 = $P1['bigendian']
+    .return($I0)
+.end
+
+################################################################
 
 .sub test_init
     .local pmc bb
@@ -106,17 +126,43 @@ end:
 
 .sub test_get_string
     .local pmc bb
-    bb = new ['ByteBuffer']
-    # Upper case n tilde: codepoint 0xD1, utf8 encoding 0xC3, 0x91
-    bb = utf16:unicode:"\x{D1}"
     .local string s
-    s = bb.'get_string'('unicode', 'utf16')
     .local int n
+    .local int big
+
+    bb = new ['ByteBuffer']
+    bb = binary:"abcd"
+    s = bb.'get_string'('ascii', 'fixed_8')
+    n = length s
+    is(n, 4, "getting ascii from buffer gives correct length")
+    is(s, "abcd", "getting ascii from buffer gives correct content")
+
+    $I0 = hasicu()
+    unless $I0 goto skip_it
+
+    bb = new ['ByteBuffer']
+
+    # Upper case n tilde: codepoint 0xD1, utf8 encoding 0xC3, 0x91
+    #bb = utf16:unicode:"\x{D1}"
+    # Can't do that, or the program can't be compiled without ICU.
+    # Fill the buffer with bytes instead.
+
+    # Get endianess to set the bytes in the appropiate order.
+    # *** XXX *** Need report from big endian platforms.
+    big = isbigendian()
+    if big goto isbig
+    bb[0] = 0xD1
+    bb[1] = 0x00
+    goto doit
+isbig:
+    bb[0] = 0x00
+    bb[1] = 0xD1
+doit:
+    s = bb.'get_string'('unicode', 'utf16')
     n = length s
     is(n, 1, "getting utf16 from buffer gives correct length")
     n = ord s
     is(n, 0xD1, "getting utf16 from buffer gives correct codepoint")
-
     bb = new ['ByteBuffer']
     bb[0] = 0xC3
     bb[1] = 0x91
@@ -125,6 +171,10 @@ end:
     is(n, 1, "getting utf8 from buffer gives correct length")
     n = ord s
     is(n, 0xD1, "getting utf8 from buffer gives correct codepoint")
+    goto end
+skip_it:
+    skip(4, "this test needs ICU")
+end:
 .end
 
 .sub test_alloc
@@ -133,11 +183,12 @@ end:
     .local pmc bb
     .local int i, big, pos, b0, b1, c
 
+    $I0 = hasicu()
+    unless $I0 goto skip_it
+
     # Get endianess to set the bytes in the appropiate order.
     # *** XXX *** Need report from big endian platforms.
-    $P0 = getinterp
-    $P0 = $P0[.IGLOBALS_CONFIG_HASH]
-    big = $P0['bigendian']
+    big = isbigendian()
 
     bb = new ['ByteBuffer']
     pos = 0
@@ -181,6 +232,9 @@ loopcheck:
 failed:
     say i
     ok(0, "reallocation")
+    goto end
+skip_it:
+    skip(1, "this test needs ICU")
 end:
 .end
 
@@ -203,6 +257,47 @@ donearray:
     .local string r
     r = join '', arr
     is(r, s, 'iterate buffer content')
+.end
+
+.sub test_invalid
+    .local pmc bb, ex
+    .local string s
+    bb = new ['ByteBuffer']
+    bb = 'something'
+    push_eh catch_charset
+    s = bb.'get_string'('***INVALID cHARsET%%%%', 'fixed_8')
+    pop_eh
+    ok(0, "get_string with invalid charset should throw")
+    goto check_encoding
+catch_charset:
+    .get_results(ex)
+    finalize ex
+    pop_eh
+    ok(1, "get_string with invalid charset throws")
+check_encoding:
+    push_eh catch_encoding
+    s = bb.'get_string'('ascii', '???INVALID eNCODING===')
+    pop_eh
+    ok(0, "get_string with invalid encoding should throw")
+    goto check_content
+catch_encoding:
+    .get_results(ex)
+    finalize ex
+    pop_eh
+    ok(1, "get_string with invalid encoding throws")
+check_content:
+    bb[0] = 128 # Out of ascii range
+    push_eh catch_content
+    s = bb.'get_string'('ascii', 'fixed_8')
+    pop_eh
+    ok(0, "get_string with invalid content should throw")
+    goto end
+catch_content:
+    .get_results(ex)
+    finalize ex
+    pop_eh
+    ok(1, "get_string with invalid content throws")
+end:
 .end
 
 # Local Variables:
