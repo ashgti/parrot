@@ -61,7 +61,7 @@ typedef struct signature_t {
 } signature;
 */
 
-#include "ffi.h"
+#   include "ffi.h"
 
 INTVAL parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info);
 
@@ -128,10 +128,10 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
     size_t argc = count_args(interp, sig, start, sig_length);
 	
     /* TODO: Fix this malloc */
-    *arg_types = calloc(argc + 1, sizeof(ffi_type*));
+    *arg_types = malloc(argc + 1 * sizeof(ffi_type*));
 	
     while (i < sig_length) {
-        i = parse_identifier(interp, sig, i, sig_length, &(*arg_types[arg_count]), nci_info->pcc_params_signature + arg_count);
+        i = parse_identifier(interp, sig, i, sig_length, &(*arg_types)[arg_count], nci_info->pcc_params_signature + arg_count);
         arg_count++;
     }
 	
@@ -503,14 +503,7 @@ build_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
         printf("cif didn't work...\n");
     }
 
-    printf("%p cif \n\n", nci_info->cif);
     printf("%d arity: \n\n ", nci_info->arity);
-
-    // pcc_params(interp, key, nci_info, key_length);
-
-    /* Arity is length of that string minus one (the return type). */
-    /* nci_info->arity       = key_length - 1; i already calculated the arity in parse_sig */
-
 
     /* Build call function. */
     //nci_info->fb_info     = build_call_func(interp, key);
