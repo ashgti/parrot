@@ -61,14 +61,13 @@ typedef struct signature_t {
 } signature;
 */
 
-#    include "ffi.h"
-
+#include "ffi.h"
 
 INTVAL parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info);
 
-size_t parse_return(PARROT_INTERP, STRING* sig, size_t sig_length, Parrot_NCI_attributes * nci_info, ffi_type* return_type);
+size_t parse_return(PARROT_INTERP, STRING* sig, size_t sig_length, Parrot_NCI_attributes * nci_info, ffi_type **return_type);
 
-size_t parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type **arg_types);
+size_t parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type ***arg_types);
 
 size_t parse_identifier(PARROT_INTERP, STRING* sig, size_t start, size_t end, ffi_type** sig_obj, void* pmc_type);
 
@@ -82,348 +81,221 @@ size_t count_args(PARROT_INTERP, STRING* sig, size_t start, size_t end);
 
 size_t find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, INTVAL start_character, INTVAL end_character);
 
-#define IS_DIGIT(x)               (x == '0') || (x == '1') || (x == '2') || (x == '3') || (x == '4') || (x == '5') || (x == '6') || (x == '7') || (x == '8') || (x == '9')
-#define IS_PREFIX(x)              (x == '*') || (x == 'u') || (x == 's')
-#define IS_OLD_TYPE(x)            (x == 'P') || (x == 'J') || (x == 'N') || (x == 'S') || (x == 'O') || (x == '@') || (x == 'B') || (x == 'p') || (x == '2') || (x == '3') || (x == '4') || (x == 'U')
-#define IS_TYPE(x)                (x == 'i') || (x == 'v') || (x == 'l') || (x == 't') || (x == 'c') || (x == 'b') || (x == 'f') || (x == 'd') || IS_OLD_TYPE(x)
-#define IS_POSTFIX(x)             (x == '{') || IS_DIGIT(x)
+#define IS_DIGIT(x)               ((x == '0') || (x == '1') || (x == '2') || (x == '3') || (x == '4') || (x == '5') || (x == '6') || (x == '7') || (x == '8') || (x == '9'))
+#define IS_PREFIX(x)              ((x == '*') || (x == 'u') || (x == 's'))
+#define IS_OLD_TYPE(x)            ((x == 'P') || (x == 'J') || (x == 'N') || (x == 'S') || (x == 'O') || (x == '@') || (x == 'B') || (x == 'p') || (x == '2') || (x == '3') || (x == '4') || (x == 'U'))
+#define IS_TYPE(x)                ((x == 'i') || (x == 'v') || (x == 'l') || (x == 't') || (x == 'c') || (x == 'b') || (x == 'f') || (x == 'd') || IS_OLD_TYPE(x))
+#define IS_POSTFIX(x)             ((x == '{') || IS_DIGIT(x))
 #define IS_INFIX(x)               (x == '|')
 #define IS_START_CIRCUMFIX(x)     (x == '(')
 #define IS_END_CIRCUMFIX(x)       (x == ')')
 #define IS_NOT_END_CIRCUMFIX(x)   (x != ')')
 
-#define PREFIX_POINTER  1<<0
-#define PREFIX_SIGNED      0
-#define PREFIX_UNSIGNED 1<<1
-#define PREFIX_NATIVE   1<<2
+#define PREFIX_POINTER  (1<<0)
+#define PREFIX_SIGNED   (   0)
+#define PREFIX_UNSIGNED (1<<1)
+#define PREFIX_NATIVE   (1<<2)
 
 INTVAL
 parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info) {
     ffi_cif cif;
     ffi_type *return_type;
-    ffi_type **arg_types;
-
-    printf("H!\n\n");
-    Parrot_io_printf(interp, "s: %Ss\n", sig);
+    ffi_type **arg_types = calloc(1, sizeof(ffi_type*));
     
-    size_t i = parse_return(interp, sig, sig_length, nci_info, return_type);
-    parse_args(interp, sig, i, sig_length, nci_info, arg_types);
-
-    printf("Done parsing... \n\n");
-    
-    printf("return type: %p  and   %p\n", return_type, ffi_type_pointer);
+    size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
+    parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
+	    
     if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nci_info->arity, return_type, arg_types) == FFI_OK) {
-        printf("CIF worked\n\n");
         nci_info->cif = (void*)malloc(sizeof(ffi_cif));
         memcpy(nci_info->cif, &cif, sizeof(ffi_cif));
         return 1;
     }
-
+	
     // TODO: Throw Error here.
     printf("Bad signature\n");
     return 0;
 }
 
 size_t
-parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type* return_type) {
-    return parse_identifier(interp, sig, 0, sig_length, &return_type, nci_info->pcc_return_signature);
+parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type **return_type) {
+    return parse_identifier(interp, sig, 0, sig_length, return_type, nci_info->pcc_return_signature);
 }
 
 size_t 
-parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type **arg_types) {
+parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_NCI_attributes *nci_info, ffi_type ***arg_types) {
     size_t i = start;
     size_t arg_count = 0;
     size_t argc = count_args(interp, sig, start, sig_length);
-
+	
     /* TODO: Fix this malloc */
-    arg_types = (ffi_type**)malloc(sizeof(ffi_type*) * argc + 1);
-
-    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    *arg_types = calloc(argc + 1, sizeof(ffi_type*));
+	
     while (i < sig_length) {
-        i = parse_identifier(interp, sig, i, sig_length, &arg_types[arg_count], nci_info->pcc_params_signature + arg_count);
-        arg_count += 1;
+        i = parse_identifier(interp, sig, i, sig_length, &(*arg_types[arg_count]), nci_info->pcc_params_signature + arg_count);
+        arg_count++;
     }
-
+	
     nci_info->arity = arg_count;
-
+	
     return i;
 }
 
 size_t
-parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ffi_type ** type_obj, void* type) {
+parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ffi_type **type_obj, void *type) {
     size_t i = start;
     INTVAL done = 0;
-
+	
     while (!done && i < sig_length) {
         INTVAL c = Parrot_str_indexed(interp, sig, i);
-        printf("C: %c %d %d \n\n", (char) c, i, sig_length);
+        // printf("C: %c %d %d \n\n", (char) c, i, sig_length);
         int prefix = 0;
         while (IS_PREFIX(c)) {
             prefix |= parse_prefix(c);
-
-            i += 1;
-
+			
+            i++;
+			
             if (i < sig_length)
                 c = Parrot_str_indexed(interp, sig, i);
             else
-                c = '\0';
+                return i;
         }
-
+		
         if (IS_START_CIRCUMFIX(c)) {
             i = parse_structure(interp, sig, i + 1, sig_length, type_obj, type);
-
+            i++;
+			
             if (i < sig_length)
                 c = Parrot_str_indexed(interp, sig, i);
             else
-                c = '\0';
+                return i;
         }
         else if (IS_TYPE(c)) {
-            if (IS_OLD_TYPE(c)) {
-                switch (c) {
-                  case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
-                    break;
-                  case (INTVAL)'f':
-                  case (INTVAL)'N':
-                  case (INTVAL)'d':
-                    /* sig_buf[j++] = 'N'; */
-                    *type_obj = &ffi_type_double;
-                    break;
-                  case (INTVAL)'I':   /* INTVAL */
-                  case (INTVAL)'l':   /* long */
-                  case (INTVAL)'i':   /* int */
-                  case (INTVAL)'s':   /* short */
-                  case (INTVAL)'c':   /* char */
-                    /* sig_buf[j++] = 'I'; */
-                    *type_obj = &ffi_type_sint;
-                    break;
-                  case (INTVAL)'S':
-                  case (INTVAL)'t':   /* string, pass a cstring */
-                    /* sig_buf[j++] = 'S'; */
-                    *type_obj = &ffi_type_pointer;
-                    break;
-                  case (INTVAL)'J':   /* interpreter */
-                    break;
-                  case (INTVAL)'p':   /* push pmc->data */
-                  case (INTVAL)'P':   /* push PMC * */
-                  case (INTVAL)'V':   /* push PMC * */
-                  case (INTVAL)'2':
-                  case (INTVAL)'3':
-                  case (INTVAL)'4':
-                    /* sig_buf[j++] = 'P'; */
-                    *type_obj = &ffi_type_pointer;   
-                    break;
-                  case (INTVAL)'v':
-                    /* null return */
-                    *type_obj = &ffi_type_void;
-                    break;
-                  case (INTVAL)'O':   /* push PMC * invocant */
-                    /* TODO: Fix invocant */
-                    *type_obj = &ffi_type_pointer;
-                    /* sig_buf[j++] = 'P';
-                       sig_buf[j++] = 'i'; */
-                    break;
-                  case (INTVAL)'@':   /* push PMC * slurpy */
-                    *type_obj = &ffi_type_pointer;
-                    /* 
-                    sig_buf[j++] = 'P';
-                    sig_buf[j++] = 's'; */
-                    break;
-                  case (INTVAL)'b': /* buffer (void*) pass Buffer_bufstart(SReg) */
-                  case (INTVAL)'B': /* buffer (void**) pass &Buffer_bufstart(SReg) */
-                    /* sig_buf[j++] = 'S'; */
-                    *type_obj = &ffi_type_pointer;
-                    break;
-                  default:
-                    Parrot_ex_throw_from_c_args(interp, NULL,
-                            EXCEPTION_JIT_ERROR,
-                            "Unknown param Signature %c\n", (char)c);
-                    break;
-                }
-                
-            }
-            else if (prefix & PREFIX_POINTER) {
+			      if (prefix & PREFIX_POINTER) {
                 *type_obj = &ffi_type_pointer;
+                continue;
             }
-            else if (prefix & PREFIX_NATIVE) {
-                if (prefix & PREFIX_UNSIGNED) {
-                    switch (c) {
-                        case 'c':
-                            *type_obj = &ffi_type_uchar;
-                            break;
-                        case 'b':
-                            *type_obj = &ffi_type_uint8;
-                            break;
-                        case 's':
-                            *type_obj = &ffi_type_ushort;
-                            break;
-                        case 'i':
-                            *type_obj = &ffi_type_uint;
-                            break;
-                        case 'l':
-                            *type_obj = &ffi_type_ulong;
-                            break;
-                        case 'q':
-                            *type_obj = &ffi_type_uint64;
-                            break;
-                        case 't':
-                            *type_obj = &ffi_type_pointer;
-                            break;
-                        case 'v':
-                            *type_obj = &ffi_type_void;
-                            break;
-                        case 'f':
-                            *type_obj = &ffi_type_float;
-                            break;
-                        case 'd':
-                            *type_obj = &ffi_type_double;
-                            break;
-                        case 'D':
-                            *type_obj = &ffi_type_longdouble;
-                            break;
-                    }
-                }
-                else {
-                    switch (c) {
-                        case 'c':
-                            *type_obj = &ffi_type_schar;
-                            break;
-                        case 'b':
-                            *type_obj = &ffi_type_sint8;
-                            break;
-                        case 's':
-                            *type_obj = &ffi_type_sshort;
-                            break;
-                        case 'i':
-                            *type_obj = &ffi_type_sint;
-                            break;
-                        case 'l':
-                            *type_obj = &ffi_type_slong;
-                            break;
-                        case 'q':
-                            *type_obj = &ffi_type_sint64;
-                            break;
-                        case 't':
-                            *type_obj = &ffi_type_pointer;
-                            break;
-                        case 'v':
-                            *type_obj = &ffi_type_void;
-                            break;
-                        case 'f':
-                            *type_obj = &ffi_type_float;
-                            break;
-                        case 'd':
-                            *type_obj = &ffi_type_double;
-                            break;
-                        case 'D':
-                            *type_obj = &ffi_type_longdouble;
-                            break;
-                    }
-                }
-            }
-            else {
-                if (prefix & PREFIX_UNSIGNED) {
-                    switch (c) {
-                        case 'c':
-                        case 'b':
-                            *type_obj = &ffi_type_uint8;
-                            break;
-                        case 's':
-                            *type_obj = &ffi_type_uint16;
-                            break;
-                        case 'i':
-                        case 'l':
-                            *type_obj = &ffi_type_uint32;
-                            break;
-                        case 'q':
-                            *type_obj = &ffi_type_uint64;
-                            break;
-                        case 't':
-                            *type_obj = &ffi_type_pointer;
-                            break;
-                        case 'v':
-                            *type_obj = &ffi_type_void;
-                            break;
-                        case 'f':
-                            *type_obj = &ffi_type_float;
-                            break;
-                        case 'd':
-                            *type_obj = &ffi_type_double;
-                            break;
-                        case 'D':
-                            *type_obj = &ffi_type_longdouble;
-                            break;
-                    }
-                }
-                else {
-                    switch (c) {
-                        case 'c':
-                        case 'b':
-                            *type_obj = &ffi_type_sint8;
-                            break;
-                        case 's':
-                            *type_obj = &ffi_type_sint16;
-                            break;
-                        case 'i':
-                        case 'l':
-                            *type_obj = &ffi_type_sint32;
-                            break;
-                        case 'q':
-                            *type_obj = &ffi_type_sint64;
-                            break;
-                        case 't':
-                            *type_obj = &ffi_type_pointer;
-                            break;
-                        case 'v':
-                            *type_obj = &ffi_type_void;
-                            break;
-                        case 'f':
-                            *type_obj = &ffi_type_float;
-                            break;
-                        case 'd':
-                            *type_obj = &ffi_type_double;
-                            break;
-                        case 'D':
-                            *type_obj = &ffi_type_longdouble;
-                            break;
-                    }
-                }
-            }
-            printf("I: %d\n\n", i);
-            i += 1;
-            printf("I now: %d\n\n", i);
-
+            switch (c) {
+                case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
+                  break;
+                case (INTVAL)'c':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_uchar;
+                  }
+                  else {
+                    *type_obj = &ffi_type_schar;
+                  }
+                  break;
+                case (INTVAL)'b':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_uint8;
+                  }
+                  else {
+                    *type_obj = &ffi_type_sint8;
+                  }
+                  break;
+                case (INTVAL)'s':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_ushort;
+                  }
+                  else {
+                    *type_obj = &ffi_type_sshort;
+                  }
+                  break;
+                case (INTVAL)'I':   /* INTVAL */
+                case (INTVAL)'i':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_uint;
+                  }
+                  else {
+                    *type_obj = &ffi_type_sint;
+                  }
+                  break;
+                case (INTVAL)'l':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_ulong;
+                  }
+                  else {
+                    *type_obj = &ffi_type_slong;
+                  }
+                  break;
+                case (INTVAL)'q':
+                  if (prefix & PREFIX_UNSIGNED) {
+                    *type_obj = &ffi_type_uint64;
+                  }
+                  else {
+                    *type_obj = &ffi_type_sint64;
+                  }
+                  break;
+                case (INTVAL)'p':   /* push pmc->data */
+                case (INTVAL)'P':   /* push PMC * */
+                case (INTVAL)'V':   /* push PMC * */
+                case (INTVAL)'2':
+                case (INTVAL)'3':
+                case (INTVAL)'4':
+                case (INTVAL)'J':   /* interpreter */
+                case (INTVAL)'S':
+                case (INTVAL)'t':
+                case (INTVAL)'B':
+                  *type_obj = &ffi_type_pointer;
+                  break;
+                case (INTVAL)'v':
+                  *type_obj = &ffi_type_void;
+                  break;
+                case (INTVAL)'f':
+                  *type_obj = &ffi_type_float;
+                  break;
+                case (INTVAL)'N':
+                case (INTVAL)'d':
+                  *type_obj = &ffi_type_double;
+                  break;
+                case (INTVAL)'D':
+                  *type_obj = &ffi_type_longdouble;
+                  break;
+                case (INTVAL)'O':   /* push PMC * invocant */
+                  /* TODO: Fix invocant */
+                  *type_obj = &ffi_type_pointer;
+                  /* sig_buf[j++] = 'P';
+                   sig_buf[j++] = 'i'; */
+                  break;
+                case (INTVAL)'@':   /* push PMC * slurpy */
+                  *type_obj = &ffi_type_pointer;
+                  /* 
+                   sig_buf[j++] = 'P';
+                   sig_buf[j++] = 's'; */
+                  break;
+              }
+            i++;
+			
             if (i < sig_length)
                 c = Parrot_str_indexed(interp, sig, i);
             else
-                c = '\0';
+                return i;
         }
         else {
-            Parrot_ex_throw_from_c_args(interp, NULL, EXCEPTION_JIT_ERROR, "Unknown param Signature %c", (char)c);
+			      Parrot_ex_throw_from_c_args(interp, NULL,
+                            EXCEPTION_JIT_ERROR,
+                            "Unknown param Signature %c\n", (char)c);
         }
-
+		
         // Parse postfix ops
         // TODO: Parse postfix ops, currently I skip them.
         while (IS_POSTFIX(c)) {
-            printf("Got postfix??\n\n");
-            i += 1;
+            i++;
             if (i < sig_length)
                 c = Parrot_str_indexed(interp, sig, i);
             else
-                c = '\0';
+                return i;
         }
-
+		
         // apply_modifiers(type, prefix, postfix);
-
-        printf("ii: %d\n\n", i);
+		
         if ((i < sig_length) && (c == (INTVAL)'|')) {
             // Its a union, parse it special. 
-            printf("Its a union %c\n", c);
         } else {
-            printf("its not a union %c\n", c);
             done = 1;
         }
     }
-
+	
     return i;
 }
 
@@ -437,33 +309,33 @@ parse_prefix(INTVAL c) {
         case 's':
             return PREFIX_SIGNED;
     }
-
+	
     return 0;
 }
 
 size_t
-parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi_type** type_obj, void* pmc_type) {
+parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi_type **type_obj, void* pmc_type) {
     size_t i = start;
     size_t struct_len = structure_length(interp, sig, start, sig_length);
-
+	
     // TODO: Fix Malloc
     *type_obj = malloc(sizeof(ffi_type));
-    (*type_obj)->elements = malloc(sizeof(ffi_type*) * struct_len + 1);
-
+    (*type_obj)->elements = calloc(struct_len + 1, sizeof(ffi_type*));
+	
     (*type_obj)->size = (*type_obj)->alignment = 0;
     (*type_obj)->type = FFI_TYPE_STRUCT;
-
+	
     size_t element_counter = 0;
-
+	
     INTVAL c = Parrot_str_indexed(interp, sig, i);
     while (i < sig_length && IS_NOT_END_CIRCUMFIX(c)) {
-        i += parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL);
-        element_counter += 1;
+        i = parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL);
+        element_counter++;
         c = Parrot_str_indexed(interp, sig, i);
     }
-
+	
     (*type_obj)->elements[struct_len] = NULL;
-
+	
     return i;
 }
 
@@ -477,10 +349,10 @@ structure_length(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length) {
         if (IS_START_CIRCUMFIX(c)) depth++;
         else if (IS_END_CIRCUMFIX(c)) depth--;
         else if (depth == 0 && (IS_TYPE(c))) len++;
-        i += 1;
+        i++;
         c = Parrot_str_indexed(interp, sig, i);
     }
-
+	
     return len;
 }
 
@@ -491,10 +363,10 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, INTVA
     while (i < sig_length && c != end_character) {
         if (c == start_character)
             i = find_matching(interp, sig, i, sig_length, start_character, end_character);
-        i += 1;
+        i++;
         c = Parrot_str_indexed(interp, sig, i);
     }
-
+	
     return i;
 }
 
@@ -502,19 +374,19 @@ size_t
 count_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length) {
     size_t length = 0;
     size_t i = start;
-
+	
     while (i < sig_length) {
         const INTVAL c = Parrot_str_indexed(interp, sig, i);    
         if (IS_START_CIRCUMFIX(c)) {
-            i += find_matching(interp, sig, i + 1, sig_length, '(', ')');
-            length += 1;
+            i = find_matching(interp, sig, i + 1, sig_length, '(', ')');
+            length++;
         }
         else if (IS_TYPE(c)) {
-            length += 1;
+            length++;
         }
-        i += 1; 
+        i++; 
     }
-
+	
     return length;
 }
 
@@ -619,31 +491,30 @@ build_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
 {
     ASSERT_ARGS(build_func)
 
-    printf("Got here?!\n");
-
     STRING * const key      = nci_info->signature;
     const size_t key_length = Parrot_str_byte_length(interp, key);
 
     INTVAL r = parse_sig(interp, nci_info->signature, key_length, nci_info);
+    printf("H?\n");
     if (r) {
         printf("cif worked?!\n");
     }
     else {
         printf("cif didn't work...\n");
     }
-    printf("done parsing sig...\n\n");
 
     printf("%p cif \n\n", nci_info->cif);
     printf("%d arity: \n\n ", nci_info->arity);
 
-    pcc_params(interp, key, nci_info, key_length);
+    // pcc_params(interp, key, nci_info, key_length);
 
     /* Arity is length of that string minus one (the return type). */
-    nci_info->arity       = key_length - 1;
+    /* nci_info->arity       = key_length - 1; i already calculated the arity in parse_sig */
+
 
     /* Build call function. */
-    nci_info->fb_info     = build_call_func(interp, key);
-    nci_info->func        = F2DPTR(VTABLE_get_pointer(interp, nci_info->fb_info));
+    //nci_info->fb_info     = build_call_func(interp, key);
+    //nci_info->func        = F2DPTR(VTABLE_get_pointer(interp, nci_info->fb_info));
 
     return (nci_thunk_t)nci_info->func;
 }

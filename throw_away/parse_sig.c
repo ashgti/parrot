@@ -400,7 +400,7 @@ parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi
 	
     // TODO: Fix Malloc
     *type_obj = malloc(sizeof(ffi_type));
-    (*type_obj)->elements = calloc(struct_len, sizeof(ffi_type*));
+    (*type_obj)->elements = calloc(struct_len + 1, sizeof(ffi_type*));
 	
     (*type_obj)->size = (*type_obj)->alignment = 0;
     (*type_obj)->type = FFI_TYPE_STRUCT;
