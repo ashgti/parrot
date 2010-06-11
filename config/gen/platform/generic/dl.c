@@ -31,6 +31,9 @@ Dynlib stuff
 
 =item C<void * Parrot_dlopen(const char *filename, Parrot_dlopen_flags flags)>
 
+Wrapper around C<dlopen>.  Loads dynamic library file named by first argument
+and returns a handle to it.
+
 =cut
 
 */
@@ -50,6 +53,9 @@ Parrot_dlopen(const char *filename, Parrot_dlopen_flags flags)
 
 =item C<const char * Parrot_dlerror(void)>
 
+Wrapper around C<dlerror>.  System-dependent string that indicates most recent
+failure in use of C<Parrot_dlopen>, C<Parrot_dlclose> or C<Parrot_dlsym>.
+
 =cut
 
 */
@@ -68,6 +74,9 @@ Parrot_dlerror(void)
 
 =item C<void * Parrot_dlsym(void *handle, const char *symbol)>
 
+Wrapper around C<dlysm>.  Takes a handle returned by C<Parrot_dlopen> and
+returns address where symbol is located.
+
 =cut
 
 */
@@ -85,6 +94,9 @@ Parrot_dlsym(void *handle, const char *symbol)
 /*
 
 =item C<int Parrot_dlclose(void *handle)>
+
+Wrapper around C<dl_close>.  Releases reference to dynamic library specified
+by argument.  Returns C<0> on success and C<-1> on failure.
 
 =cut
 
