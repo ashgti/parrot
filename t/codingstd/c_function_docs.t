@@ -92,11 +92,9 @@ foreach my $path (@files) {
 
 __DATA__
 compilers/pirc/src/pircapi.c
-config/gen/platform/ansi/dl.c
 config/gen/platform/ansi/exec.c
 config/gen/platform/ansi/time.c
 config/gen/platform/darwin/memalign.c
-config/gen/platform/generic/dl.c
 config/gen/platform/generic/exec.c
 config/gen/platform/generic/math.c
 config/gen/platform/generic/memalign.c

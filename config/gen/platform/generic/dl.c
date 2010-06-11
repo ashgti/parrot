@@ -11,7 +11,7 @@ config/gen/platform/generic/dl.c
 
 =head1 DESCRIPTION
 
-Dynlib stuff
+Parrot functions which wrap around standard library functions for handling dynamic libraries.
 
 =head2 Functions
 
