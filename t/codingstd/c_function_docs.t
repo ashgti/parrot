@@ -94,7 +94,6 @@ __DATA__
 compilers/pirc/src/pircapi.c
 config/gen/platform/darwin/memalign.c
 config/gen/platform/generic/memalign.c
-examples/compilers/japhc.c
 
 # Local Variables:
 #   mode: cperl
