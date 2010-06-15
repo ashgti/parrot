@@ -18,7 +18,7 @@
 typedef PMC *(*nci_fb_func_t)(PARROT_INTERP, PMC *user_data, STRING *signature);
 typedef void (*nci_thunk_t)(PARROT_INTERP, PMC *, PMC *);
 
-#ifdef PARROT_HAS_LIBFFI
+#ifndef PARROT_HAS_LIBFFI
 
 void Parrot_nci_load_core_thunks(PARROT_INTERP);
 void Parrot_nci_load_extra_thunks(PARROT_INTERP);

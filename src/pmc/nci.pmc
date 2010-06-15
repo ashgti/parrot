@@ -18,7 +18,8 @@ The vtable functions for the native C call functions.
 
 */
 
-#   include "ffi.h"
+/* Cheat with this include, for whatever reason the space is required */
+# include "ffi.h"
 
 /* HEADERIZER HFILE: none */
 /* HEADERIZER BEGIN: static */
@@ -118,7 +119,7 @@ INTVAL
 parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info) {
     ffi_cif cif;
     ffi_type *return_type;
-    ffi_type **arg_types = calloc(1, sizeof(ffi_type*));
+    ffi_type **arg_types = (ffi_type**)calloc(1, sizeof(ffi_type*));
     
     size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
     parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
@@ -137,7 +138,7 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
 
 size_t
 parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type **return_type) {
-    char * result_sig = malloc(sizeof(char) * 2); /* Should be 1 character plus a NULL" */
+    char * result_sig = (char*)malloc(sizeof(char) * 2); /* Should be 1 character plus a NULL" */
     size_t result_length = parse_identifier(interp, sig, 0, sig_length, return_type, result_sig);
 
     nci_info->pcc_return_signature = string_make(interp, result_sig, 2, NULL, 0);
@@ -149,10 +150,10 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
     size_t i = start;
     size_t arg_count = 0;
     size_t argc = count_args(interp, sig, start, sig_length);
-    char* parrot_types =  malloc(argc + 1 * sizeof(char));
+    char* parrot_types = (char*)malloc(argc + 1 * sizeof(char));
 	
     /* TODO: Fix this malloc */
-    *arg_types   = malloc(argc + 1 * sizeof(ffi_type*));
+    *arg_types = (ffi_type**)malloc(argc + 1 * sizeof(ffi_type*));
     
     while (i < sig_length) {
         i = parse_identifier(interp, sig, i, sig_length, &(*arg_types)[arg_count], parrot_types + arg_count);
@@ -304,6 +305,10 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                  sig_buf[j++] = 'P';
                  sig_buf[j++] = 's'; */
                 break;
+	          defualt:
+		        // Throw exception
+		        printf("Exception, unknown identifier\n");
+		        break;
             }
             i++;
 			
@@ -313,7 +318,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 return i;
         }
         else {
-			      Parrot_ex_throw_from_c_args(interp, NULL,
+	    Parrot_ex_throw_from_c_args(interp, NULL,
                             EXCEPTION_JIT_ERROR,
                             "Unknown param Signature %c\n", (char)c);
         }
@@ -357,18 +362,18 @@ parse_prefix(INTVAL c) {
 size_t
 parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi_type **type_obj, char* pmc_type) {
     size_t i = start;
-    size_t struct_len = structure_length(interp, sig, start, sig_length);
+    size_t struct_len = structure_length(interp, sig, start, sig_length);	
+    size_t element_counter = 0;
+    INTVAL c;
 	
     // TODO: Fix Malloc
-    *type_obj = malloc(sizeof(ffi_type));
+    *type_obj = (ffi_type*)malloc(sizeof(ffi_type));
     (*type_obj)->elements = calloc(struct_len + 1, sizeof(ffi_type*));
 	
     (*type_obj)->size = (*type_obj)->alignment = 0;
     (*type_obj)->type = FFI_TYPE_STRUCT;
 	
-    size_t element_counter = 0;
-	
-    INTVAL c = Parrot_str_indexed(interp, sig, i);
+    c = Parrot_str_indexed(interp, sig, i);
     while (i < sig_length && IS_NOT_END_CIRCUMFIX(c)) {
         i = parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL);
         element_counter++;
@@ -642,7 +647,7 @@ Sets the specified function pointer and signature (C<*key>).
         if (!PObj_constant_TEST(key)) {
             char * const key_c      = Parrot_str_to_cstring(INTERP, key);
             const size_t key_length = Parrot_str_byte_length(interp, key);
-            key                     = Parrot_string_new_init(interp, key_c, key_length,
+            key                     = string_make(interp, key_c, key_length,
                                         NULL, PObj_constant_FLAG);
             Parrot_str_free_cstring(key_c);
         }
@@ -742,6 +747,10 @@ class, the PMC arguments are shifted down.
         void* (*func)(); // a function pointer for our function to call 
 
         if (!STRING_IS_NULL(nci_info->signature)) {
+            PMC *positional, *arg_iter;
+            void **values, *return_data;
+            size_t count;
+            
             GET_ATTR_cif(INTERP, SELF, cif);
             GET_ATTR_func(INTERP, SELF, func);
 
@@ -755,16 +764,15 @@ class, the PMC arguments are shifted down.
                         "attempt to call NULL function");
             }
             
-            PMC *positional;
 
             Parrot_pcc_fill_params_from_c_args(interp, call_object, "Ps",
                     &positional);
 
-            PMC * arg_iter = VTABLE_get_iter(interp, positional);
-            void **values = malloc(sizeof(void*) * nci_info->arity + 1);
-            void *return_data = malloc(sizeof(int) * 12); // way to big, for now...
+            arg_iter = VTABLE_get_iter(interp, positional);
+            values = malloc(sizeof(void*) * nci_info->arity + 1);
+            return_data = malloc(sizeof(int) * 12); // way to big, for now...
 
-            size_t count = 0;
+            count = 0;
             while (VTABLE_get_bool(interp, arg_iter) && count < nci_info->arity) {
                 PMC * next = VTABLE_pop_pmc(interp, arg_iter);
                 INTVAL c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);

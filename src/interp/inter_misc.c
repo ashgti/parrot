@@ -57,7 +57,7 @@ register_nci_method(PARROT_INTERP, const int type, ARGIN(void *func),
 
     /* create call func */
     VTABLE_set_pointer_keyed_str(interp, method,
-            Parrot_string_new_init(interp, proto, strlen(proto), NULL,
+            string_make(interp, proto, strlen(proto), NULL,
                 PObj_constant_FLAG|PObj_external_FLAG),
             func);
 
