@@ -23,10 +23,6 @@ typedef void (*nci_thunk_t)(PARROT_INTERP, PMC *, PMC *);
 void Parrot_nci_load_core_thunks(PARROT_INTERP);
 void Parrot_nci_load_extra_thunks(PARROT_INTERP);
 
-#else
-
-#include <ffi.h>
-
 #endif /* PARROT_HAS_LIBFFI */
 
 /* HEADERIZER BEGIN: src/nci/api.c */
