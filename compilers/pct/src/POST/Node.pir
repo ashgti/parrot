@@ -204,6 +204,12 @@ Get/set the opcode type for this node.
     .tailcall self.'attr'('outer', value, has_value)
 .end
 
+.sub 'multi' :method
+    .param pmc value           :optional
+    .param int has_value       :opt_flag
+    .tailcall self.'attr'('multi', value, has_value)
+.end
+
 
 .sub 'subid' :method
     .param pmc value           :optional
@@ -284,6 +290,21 @@ Get/set the opcode type for this node.
 
     .return ()
 .end
+
+
+.sub 'add_directive' :method
+    .param string line
+    .local string dlist
+    dlist = self['directives']
+    $I0 = index dlist, line
+    unless $I0 < 0 goto done
+    dlist = concat dlist, line
+    dlist = concat dlist, "\n"
+    self['directives'] = dlist
+  done:
+    .return ()
+.end
+
 
 =back
 

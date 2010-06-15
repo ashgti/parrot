@@ -64,9 +64,8 @@ our @EXPORT_OK = qw(
     t/op/*.t
     t/pmc/*.t
     t/oo/*.t
+    t/pir/*.t
     t/native_pbc/*.t
-    t/dynpmc/*.t
-    t/dynoplibs/*.t
 );
 
 # core tests are run unless --runcore-tests is present.  Typically
@@ -85,7 +84,9 @@ our @EXPORT_OK = qw(
     t/compilers/pge/p5regex/*.t
     t/compilers/pge/perl6regex/*.t
     t/compilers/tge/*.t
+    t/compilers/opsc/*.t
     t/compilers/data_json/*.t
+    t/dynoplibs/*.t
     t/library/*.t
     t/tools/*.t
     t/profiling/*.t

@@ -37,6 +37,33 @@ ok 1 - caught div_i_ic_ic exception
 ok 2 - caught div_n_nc_nc exception
 OUT
 
+pir_output_is( <<'CODE', <<'OUT', 'fold symbolic constants (TT #1652)');
+.sub main :main
+    .const int SECONDS_PER_MINUTE = 60
+    $I0 = 30 * SECONDS_PER_MINUTE
+    say $I0
+
+    .const num DAYS_PER_YEAR = 365.24e0
+    $N0 = DAYS_PER_YEAR * 2.96460137564761618e-03
+    'printf'("%f\n", $N0)
+
+    .const string HI = "Hello "
+    $S0 = concat HI, "World!"
+    say $S0
+.end
+
+.sub 'printf'
+    .param string fmt
+    .param pmc data :slurpy
+    $S0 = sprintf fmt, data
+    print $S0
+.end
+CODE
+1800
+1.082791
+Hello World!
+OUT
+
 pir_output_is( <<'CODE', <<'OUT', 'comments before .param(TT #1035)');
 .sub main :main
   comments(1,2)
@@ -163,19 +190,6 @@ pir_output_is( <<"CODE", <<'OUT', 'long register numbers in PIR (TT #1025)');
 CODE
 3
 OUT
-
-TODO: {
-    local $TODO = "works in PIR, not PASM";
-
-pasm_output_is( <<"CODE", <<'OUT', 'long register numbers in PASM (TT #1025)');
-      new P$register, 'Integer'
-      assign P$register, 3
-  say P$register
-CODE
-3
-OUT
-
-}
 
 pir_error_output_like( <<'CODE', <<'OUT', 'die in immediate, TT #629');
 .sub 'foo' :immediate

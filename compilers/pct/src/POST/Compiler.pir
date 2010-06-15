@@ -321,6 +321,30 @@ the sub.
     set_global '$?NAMESPACE', ns
     nskey = self.'key_pir'(ns)
 
+    .local pmc multi
+    multi = node.'multi'()
+    unless multi goto no_multi
+
+    .local pmc parts, m_iter
+    parts  = new ['ResizableStringArray']
+    m_iter = iter multi
+  multi_iter:
+    unless m_iter goto multi_iter_done
+    $P0 = shift m_iter
+    $S0 = $P0
+    if $S0 == "_" goto push_part
+    $S0 = self.'key_pir'($P0)
+  push_part:
+    push parts, $S0
+    goto multi_iter
+
+  multi_iter_done:
+    pirflags = concat pirflags, ' :multi('
+    $S0 = join ',', parts
+    pirflags = concat pirflags, $S0
+    pirflags = concat pirflags, ')'
+  no_multi:
+
   subpir_start:
     $P0 = node['loadinit']
     if null $P0 goto loadinit_done
@@ -344,6 +368,11 @@ the sub.
     subpir.'append_format'("\n.HLL %0\n", $P0)
   subpir_ns:
     subpir.'append_format'("\n.namespace %0\n", nskey)
+  subpir_directives:
+    $S0 = node['directives']
+    unless $S0 goto subpir_decl
+    subpir.'append_format'("%0", $S0)
+  subpir_decl:
     $S0 = self.'escape'(name)
     subpir.'append_format'(".sub %0 %1\n", $S0, pirflags)
     .local pmc paramlist

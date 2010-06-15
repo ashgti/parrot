@@ -14,6 +14,7 @@ See L<http://search.cpan.org/~bingos/Archive-Tar/>
 =cut
 
 .include 'stat.pasm'
+.loadlib 'io_ops'
 
 =head3 Class Archive;Tar;File
 
@@ -70,11 +71,13 @@ See L<http://search.cpan.org/~bingos/Archive-Tar/>
     .local string data
     data = $P0.'readall'(path)
     pop_eh
-    .local int uid, gid, mtime
+    .local int mode, uid, gid, mtime
+    mode = stat path, .STAT_PLATFORM_MODE
+    mode &= 0o777
     uid = stat path, .STAT_UID
     gid = stat path, .STAT_GID
     mtime = stat path, .STAT_MODIFYTIME
-    .tailcall new_from_data(path, data, uid :named('uid'), gid :named('gid'), mtime :named('mtime'))
+    .tailcall new_from_data(path, data, mode :named('mode'), uid :named('uid'), gid :named('gid'), mtime :named('mtime'))
   _handler:
     null $P0
     .return ($P0)
@@ -436,8 +439,11 @@ See L<http://search.cpan.org/~bingos/Archive-Tar/>
 .sub '_error' :method
     .param pmc args :slurpy
     $S0 = join '', args
-    printerr $S0
-    printerr "\n"
+    $P0 = getinterp
+    .include 'stdio.pasm'
+    $P1 = $P0.'stdhandle'(.PIO_STDERR_FILENO)
+    $P1.'print'($S0)
+    $P1.'print'("\n")
 .end
 
 =back

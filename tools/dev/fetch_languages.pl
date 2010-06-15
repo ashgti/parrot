@@ -48,7 +48,7 @@ my %checkout_cmd = (
 my %update_cmd = (
     SVN => [qw(svn update)],
     GIT => [qw(git pull)],
-    HG  => [qw(hg pull)],
+    HG  => [qw(hg pull --update)],
 );
 
 my @hlls = (
@@ -229,8 +229,8 @@ my @hlls = (
 
     {
         name       => 'pir',
-        scm        => 'SVN',
-        repository => 'https://svn.parrot.org/languages/pir/trunk'
+        scm        => 'GIT',
+        repository => 'http://github.com/bacek/pir.git'
     },
 
     {

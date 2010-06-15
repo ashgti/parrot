@@ -19,8 +19,6 @@ Tests Parrot string registers and operations.
 .sub main :main
     .include 'test_more.pir'
 
-    plan(374)
-
     set_s_s_sc()
     test_clone()
     clone_null()
@@ -65,7 +63,6 @@ Tests Parrot string registers and operations.
     test_concat_s_s_sc()
     concat_s_s_sc_s_sc()
     concat_ensure_copy_is_made()
-    test_clears()
 
     same_constant_twice_bug()
     exception_two_param_ord_empty_string()
@@ -109,6 +106,7 @@ Tests Parrot string registers and operations.
     index_multibyte_matching_two()
     num_to_string()
     string_to_int()
+    string_to_num()
     concat_or_substr_cow()
     constant_to_cstring()
     cow_with_chopn_leaving_original_untouched()
@@ -120,25 +118,9 @@ Tests Parrot string registers and operations.
     other_form_of_sprintf_op()
     sprintf_left_justify()
     correct_precision_for_sprintf_x()
-    test_exchange()
     test_find_encoding()
     test_assign()
     assign_and_globber()
-    bands_null_string()
-    bands_2()
-    bands_3()
-    bands_cow()
-    bors_null_string()
-    bors_2()
-    bors_3()
-    bors_cow()
-    bxors_null_string()
-    bxors_2()
-    bxors_3()
-    bxors_cow()
-    bnots_null_string()
-    bnots_2()
-    bnots_cow()
     split_on_empty_string()
     split_on_non_empty_string()
     test_join()
@@ -165,6 +147,7 @@ Tests Parrot string registers and operations.
     # END_OF_TESTS
     join_get_string_returns_a_null_string()
 
+    done_testing()
 .end
 
 .macro exception_is ( M )
@@ -605,74 +588,6 @@ WHILE:
     is( $S2, "JAPH", '' )
 .end
 
-.sub test_clears
-    set $S0, "BOO 0"
-    set $S1, "BOO 1"
-    set $S2, "BOO 2"
-    set $S3, "BOO 3"
-    set $S4, "BOO 4"
-    set $S5, "BOO 5"
-    set $S6, "BOO 6"
-    set $S7, "BOO 7"
-    set $S8, "BOO 8"
-    set $S9, "BOO 9"
-    set $S10, "BOO 10"
-    set $S11, "BOO 11"
-    set $S12, "BOO 12"
-    set $S13, "BOO 13"
-    set $S14, "BOO 14"
-    set $S15, "BOO 15"
-    set $S16, "BOO 16"
-    set $S17, "BOO 17"
-    set $S18, "BOO 18"
-    set $S19, "BOO 19"
-    set $S20, "BOO 20"
-    set $S21, "BOO 21"
-    set $S22, "BOO 22"
-    set $S23, "BOO 23"
-    set $S24, "BOO 24"
-    set $S25, "BOO 25"
-    set $S26, "BOO 26"
-    set $S27, "BOO 27"
-    set $S28, "BOO 28"
-    set $S29, "BOO 29"
-    set $S30, "BOO 30"
-    set $S31, "BOO 31"
-    clears
-    is( $S0, "", '' )
-    is( $S1, "", '' )
-    is( $S2, "", '' )
-    is( $S3, "", '' )
-    is( $S4, "", '' )
-    is( $S5, "", '' )
-    is( $S6, "", '' )
-    is( $S7, "", '' )
-    is( $S8, "", '' )
-    is( $S9, "", '' )
-    is( $S10, "", '' )
-    is( $S11, "", '' )
-    is( $S12, "", '' )
-    is( $S13, "", '' )
-    is( $S14, "", '' )
-    is( $S15, "", '' )
-    is( $S16, "", '' )
-    is( $S17, "", '' )
-    is( $S18, "", '' )
-    is( $S19, "", '' )
-    is( $S20, "", '' )
-    is( $S21, "", '' )
-    is( $S22, "", '' )
-    is( $S23, "", '' )
-    is( $S24, "", '' )
-    is( $S25, "", '' )
-    is( $S26, "", '' )
-    is( $S27, "", '' )
-    is( $S28, "", '' )
-    is( $S29, "", '' )
-    is( $S30, "", '' )
-    is( $S31, "", '' )
-.end
-
 .sub same_constant_twice_bug
    set     $S0, ""
    set     $S1, ""
@@ -844,7 +759,6 @@ WHILE:
     ok( $S0, 'string " " is true' )
 
     # An empty register should be false...
-    clears
     nok( $S1, 'empty register is false' )
 .end
 
@@ -1155,6 +1069,16 @@ WHILE:
     is( $I0, "0", 'string to int' )
 .end
 
+.sub string_to_num
+    set $S0, "6foo"
+    set $N0, $S0
+    is( $N0, "6", '6foo to num' )
+
+    set $S0, "16foo"
+    set $N0, $S0
+    is( $N0, "16", '16foo to num' )
+.end
+
 .sub concat_or_substr_cow
     set $S0, "<JA"
     set $S1, "PH>"
@@ -1437,18 +1361,6 @@ WHILE:
     is( $S1, $S0, 'Correct precision for %x' )
 .end
 
-.sub test_exchange
-    set $S0, "String #0"
-    set $S1, "String #1"
-    exchange $S0, $S1
-    is( $S0, "String #1", 'exchange' )
-    is( $S1, "String #0", 'exchange' )
-
-    set $S2, "String #2"
-    exchange $S2, $S2
-    is( $S2, "String #2", 'exchange' )
-.end
-
 .sub test_find_encoding
     skip( 4, "Pending reimplementation of find_encoding" )
     # find_encoding $I0, "singlebyte"
@@ -1474,246 +1386,6 @@ WHILE:
     assign  $S4, "Parrot"
     is( $S4, "Parrot", 'assign & globber' )
     is( $S5, "JAPH", 'assign & globber' )
-.end
-
-.sub bands_null_string
-    null $S1
-    set $S2, "abc"
-    $S1 = bands $S1, $S2
-    null $S3
-    is( $S1, $S3, 'ok1' )
-
-    set $S1, ""
-    $S1 = bands $S1, $S2
-    nok( $S1, 'ok2' )
-
-    null $S2
-    set $S1, "abc"
-    $S1 = bands $S1, $S2
-    null $S3
-    is( $S1, $S3, 'ok3' )
-
-    set $S2, ""
-    $S1 = bands $S1, $S2
-    nok( $S1, 'ok4' )
-.end
-
-.sub bands_2
-    set $S1, "abc"
-    set $S2, "EE"
-    $S1 = bands $S1, $S2
-    is( $S1, "A@", 'bands 2' )
-    is( $S2, "EE", 'bands 2' )
-.end
-
-.sub bands_3
-    set $S1, "abc"
-    set $S2, "EE"
-    bands $S0, $S1, $S2
-    is( $S0, "A@", 'bands 3' )
-    is( $S1, "abc", 'bands 3' )
-    is( $S2, "EE", 'bands 3' )
-.end
-
-.sub bands_cow
-    set $S1, "foo"
-    substr $S2, $S1, 0, 3
-    $S1 = bands $S1, "bar"
-    is( $S2, "foo", 'bands COW' )
-.end
-
-.sub bors_null_string
-    null $S1
-    null $S2
-    $S1 = bors $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bors NULL string' )
-
-    null $S1
-    set $S2, ""
-    $S1 = bors $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bors NULL string' )
-
-    $S2 = bors $S2, $S1
-    is( $S2, $S3, 'bors NULL string' )
-
-    null $S1
-    set $S2, "def"
-    $S1 = bors $S1, $S2
-    is( $S1, "def", 'bors NULL string' )
-
-    null $S2
-    $S1 = bors $S1, $S2
-    is( $S1, "def", 'bors NULL string' )
-
-    null $S1
-    null $S2
-    bors $S3, $S1, $S2
-    null $S4
-    is( $S3, $S4, 'bors NULL string' )
-
-    set $S1, ""
-    bors $S3, $S1, $S2
-    is( $S3, $S4, 'bors NULL string' )
-
-    bors $S3, $S2, $S1
-    is( $S3, $S4, 'bors NULL string' )
-
-    set $S1, "def"
-    bors $S3, $S1, $S2
-    is( $S3, "def", 'bors NULL string' )
-
-    bors $S3, $S2, $S1
-    is( $S3, "def", 'bors NULL string' )
-.end
-
-.sub bors_2
-    set $S1, "abc"
-    set $S2, "EE"
-    $S1 = bors $S1, $S2
-    is( $S1, "egc", 'bors 2' )
-    is( $S2, "EE", 'bors 2' )
-.end
-
-.sub bors_3
-    set $S1, "abc"
-    set $S2, "EE"
-    bors $S0, $S1, $S2
-    is( $S0, "egc", 'bors 3' )
-    is( $S1, "abc", 'bors 3' )
-    is( $S2, "EE", 'bors 3' )
-.end
-
-.sub bors_cow
-    set $S1, "foo"
-    substr $S2, $S1, 0, 3
-    $S1 = bors $S1, "bar"
-    is( $S2, "foo", 'bors COW' )
-.end
-
-.sub bxors_null_string
-    null $S1
-    null $S2
-    $S1 = bxors $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bxors NULL string' )
-
-    null $S1
-    set $S2, ""
-    $S1 = bxors $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bxors NULL string' )
-
-    $S2 = bxors $S2, $S1
-    is( $S2, $S3, 'bxors NULL string' )
-
-    null $S1
-    set $S2, "abc"
-    $S1 = bxors $S1, $S2
-    is( $S1, "abc", 'bxors NULL string' )
-
-    null $S2
-    $S1 = bxors $S1, $S2
-    is( $S1, "abc", 'bxors NULL string' )
-
-    null $S1
-    null $S2
-    bxors $S3, $S1, $S2
-    null $S4
-    is( $S3, $S4, 'bxors NULL string' )
-
-    set $S1, ""
-    bxors $S3, $S1, $S2
-    is( $S3, $S4, 'bxors NULL string' )
-
-    bxors $S3, $S2, $S1
-    is( $S3, $S4, 'bxors NULL string' )
-
-    set $S1, "abc"
-    bxors $S3, $S1, $S2
-    is( $S3, "abc", 'bxors NULL string' )
-
-    bxors $S3, $S2, $S1
-    is( $S3, "abc", 'bxors NULL string' )
-.end
-
-.sub bxors_2
-    set $S1, "a2c"
-    set $S2, "Dw"
-    $S1 = bxors $S1, $S2
-    is( $S1, "%Ec", 'bxors 2' )
-    is( $S2, "Dw", 'bxors 2' )
-
-    set $S1, "abc"
-    set $S2, "   X"
-    $S1 = bxors $S1, $S2
-    is( $S1, "ABCX", 'bxors 2' )
-    is( $S2, "   X", 'bxors 2' )
-.end
-
-.sub bxors_3
-    set $S1, "a2c"
-    set $S2, "Dw"
-    bxors $S0, $S1, $S2
-    is( $S0, "%Ec", 'bxors 3' )
-    is( $S1, "a2c", 'bxors 3' )
-    is( $S2, "Dw", 'bxors 3' )
-
-    set $S1, "abc"
-    set $S2, "   Y"
-    bxors $S0, $S1, $S2
-    is( $S0, "ABCY", 'bxors 3' )
-    is( $S1, "abc", 'bxors 3' )
-    is( $S2, "   Y", 'bxors 3' )
-.end
-
-.sub bxors_cow
-    set $S1, "foo"
-    substr $S2, $S1, 0, 3
-    $S1 = bxors $S1, "bar"
-    is( $S2, "foo", 'bxors COW' )
-.end
-
-.sub bnots_null_string
-    null $S1
-    null $S2
-    bnots $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bnots NULL string' )
-
-    null $S1
-    set $S2, ""
-    bnots $S1, $S2
-    null $S3
-    is( $S1, $S3, 'bnots NULL string' )
-
-    bnots $S2, $S1
-    is( $S2, $S3, 'bnots NULL string' )
-.end
-
-# This was the previous test used for t/native_pbc/string.t
-.sub bnots_2
-    skip( 4, "No unicode yet" )
-    # getstdout $P0
-    # push $P0, "utf8"
-    # set $S1, "a2c"
-    # bnots $S2, $S1
-    # is( $S1, "a2c", 'bnots 2' )
-    # is( $S2, "\xC2\x9E\xC3\x8D\xC2\x9C", 'bnots 2' )
-    #
-    # bnots $S1, $S1
-    # is( $S1, "\xC2\x9E\xC3\x8D\xC2\x9C", 'bnots 2' )
-    #
-    # bnots $S1, $S1
-    # is( $S1, "a2c", 'bnots 2' )
-.end
-
-.sub bnots_cow
-    set $S1, "foo"
-    substr $S2, $S1, 0, 3
-    bnots $S1, $S1
-    is( $S2, "foo", 'bnots COW' )
 .end
 
 .sub split_on_empty_string

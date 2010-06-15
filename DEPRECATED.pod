@@ -134,18 +134,18 @@ This is a helper method for testing of Parrot_str_unescape_string.
 
 L<https://trac.parrot.org/parrot/ticket/1628>
 
+=item logical_* vtables [eligiblie in 2.7]
+
+These can be replaced by C<get_bool> and intval ops unless you're using them for
+things that aren't really logical ops (don't do that!).
+
+L<https://trac.parrot.org/parrot/ticket/1655>
+
 =back
 
 =head1 Opcodes
 
 =over 4
-
-=item moved to dynop [eligible in 1.1]
-
-Parts or all of: bit.ops, debug.ops, io.ops, math.ops, set.ops
-(the obscure and rarely used parts), sys.ops.
-
-L<https://trac.parrot.org/parrot/ticket/449>
 
 =item get_addr and set_addr [eligible in 1.5]
 
@@ -155,15 +155,6 @@ These opcodes are being repurposed. They will always return a unique memory
 address of the PMC. Uses of get_addr and set_addr that would set label values
 for Sub, Exception, and related PMC types will instead be handled by
 get_label and set_label.
-
-=item All bitwise ops [eligible in 2.1]
-
-All bitwise ops (all ops containing C<bitwise> in their names) will be provided
-by dynops.  B<NOTE>: Before removing the bitwise ops, make sure that the
-equivalent dynops are available and that the major HLLs (Rakudo, Partcl, Lua,
-etc) have switched to using them.
-
-L<https://trac.parrot.org/parrot/ticket/1260>
 
 =item get_results opcode order and features [eligible in 2.1]
 
@@ -233,11 +224,17 @@ This op is too low level for Parrot in its current form.
 
 L<https://trac.parrot.org/parrot/ticket/1643>
 
-=item unroll [experimental]
+=item finalize [experimental]
 
-Unroll inner runloops from exception handlers.
+Finalize exception handler, unrolling inner runloops if needed.
 
 L<https://trac.parrot.org/parrot/ticket/1635>
+
+=item logical PMC ops [eligible in 2.7]
+
+These fall out from the logical vtables deprecation.
+
+L<https://trac.parrot.org/parrot/ticket/1655>
 
 =back
 
@@ -335,34 +332,18 @@ functions and all "inplace" string ops are deprecated.
 
 L<https://trac.parrot.org/parrot/ticket/1540>
 
-=item Parrot_PMC_* in src/extend.c [eligible in 2.4]
-
-These are duplicates of functions in src/extend_vtable.c. Exceptions:
-
-  Parrot_PMC_new
-  Parrot_PMC_typenum
-  Parrot_PMC_null
-  Parrot_PMC_set_vtable
-  Parrot_PMC_newclass
-
-L<https://trac.parrot.org/parrot/ticket/1587>
-
-=item Parrot_VTABLE, Parrot_get_vtable, Parrot_PMC_set_vtable [eligible in 2.4]
-
-These do not expose any functionality that should be available to code outside
-of parrot core.
-
-These might get revived in some form to allow for creating new types and adding
-vtable-overrides, if that functionality becomes desired.
-
-L<https://trac.parrot.org/parrot/ticket/1588>
-
 =item Parrot_str_unescape_string [experimental]
 
 This function is an experimental addition to enhance and maybe replace
 Parrot_str_unescape
 
 L<https://trac.parrot.org/parrot/ticket/1628>
+
+=item Parrot_get_runtime_prefix [eligible in 2.7]
+
+Use Parrot_get_runtime_path instead.
+
+L<https://trac.parrot.org/parrot/ticket/1191>
 
 =back
 
