@@ -57,7 +57,7 @@ register_nci_method(PARROT_INTERP, const int type, ARGIN(void *func),
 
     /* create call func */
     VTABLE_set_pointer_keyed_str(interp, method,
-            string_make(interp, proto, strlen(proto), NULL,
+            Parrot_string_new_init(interp, proto, strlen(proto), NULL,
                 PObj_constant_FLAG|PObj_external_FLAG),
             func);
 
@@ -87,7 +87,8 @@ register_raw_nci_method_in_ns(PARROT_INTERP, const int type, ARGIN(void *func),
     PMC    * const method      = Parrot_pmc_new(interp, enum_class_NCI);
 
     /* setup call func */
-    VTABLE_set_pointer(interp, method, func);
+    STRING * const function_signature = CONST_STRING(interp, "vJP");    
+    VTABLE_set_pointer_keyed_str(interp, method, function_signature, func);
 
     /* insert it into namespace */
     VTABLE_set_pmc_keyed_str(interp, interp->vtables[type]->_namespace,
