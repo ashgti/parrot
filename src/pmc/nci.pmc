@@ -126,7 +126,7 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
 	   
     // printf("Return type: %p %p %p\n", return_type, &ffi_type_void, &ffi_type_uint);
     if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nci_info->arity, &ffi_type_uint, arg_types) == FFI_OK) {
-        nci_info->cif = (void*)malloc(sizeof(ffi_cif));
+        nci_info->cif = (void*)mem_internal_allocate_typed(ffi_cif);
         memcpy(nci_info->cif, &cif, sizeof(ffi_cif));
         return 1;
     }
@@ -138,7 +138,7 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
 
 size_t
 parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type **return_type) {
-    char * result_sig = (char*)malloc(sizeof(char) * 2); /* Should be 1 character plus a NULL" */
+    char * result_sig = mem_allocate_n_zeroed_typed(2, char); /* Should be 1 character plus a NULL" */
     size_t result_length = parse_identifier(interp, sig, 0, sig_length, return_type, result_sig);
 
     nci_info->pcc_return_signature = string_make(interp, result_sig, 2, NULL, 0);
@@ -150,7 +150,7 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
     size_t i = start;
     size_t arg_count = 0;
     size_t argc = count_args(interp, sig, start, sig_length);
-    char* parrot_types = (char*)malloc(argc + 1 * sizeof(char));
+    char* parrot_types = mem_allocate_n_zeroed_typed(argc + 1, char);
 	
     /* TODO: Fix this malloc */
     *arg_types = (ffi_type**)malloc(argc + 1 * sizeof(ffi_type*));
