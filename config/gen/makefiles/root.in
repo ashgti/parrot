@@ -468,9 +468,9 @@ INTERP_O_FILES = \
     src/misc$(O) \
     src/multidispatch$(O) \
     src/frame_builder$(O) \
-#UNLESS(HAS_LIBFFI): src/nci/api$(O) \
-#UNLESS(HAS_LIBFFI): src/nci/core_thunks$(O) \
-#IF(has_extra_nci_thunks && !HAS_LIBFFI): src/nci/extra_thunks$(O) \
+	src/nci/api$(O) \
+	src/nci/core_thunks$(O) \
+#IF(has_extra_nci_thunks): src/nci/extra_thunks$(O) \
     src/oo$(O) \
     src/packfile$(O) \
     src/packout$(O) \
@@ -599,7 +599,7 @@ all : \
     corevm \
     docs \
 #IF(has_glut):    $(LIBGLUTCB_SO) \
-#UNLESS(HAS_LIBFFI): $(EXTRANCITHUNKS_SO) \
+	$(EXTRANCITHUNKS_SO) \
     $(DIS) \
     $(PARROT_CONFIG) \
     $(PBC_TO_EXE) \
@@ -675,7 +675,7 @@ STR_FILES = \
     src/multidispatch.str \
     src/frame_builder.str \
     src/nci/api.str \
-#UNLESS(HAS_LIBFFI)    src/nci/core_thunks.str \
+	src/nci/core_thunks.str \
 #IF(has_extra_nci_thunks): src/nci/extra_thunks.str \
     src/packfile.str \
     src/pmc.str \

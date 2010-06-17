@@ -26,7 +26,7 @@ The vtable functions for the native C call functions.
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */
 
 PARROT_IGNORABLE_RESULT
-static ffi_cif  * /*@alt void@*/
+static nci_thunk_t /*@alt void@*/
 build_func(PARROT_INTERP,
     ARGMOD(Parrot_NCI_attributes *nci_info))
         __attribute__nonnull__(1)
@@ -119,7 +119,7 @@ INTVAL
 parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info) {
     ffi_cif cif;
     ffi_type *return_type;
-    ffi_type **arg_types = (ffi_type**)calloc(1, sizeof(ffi_type*));
+    ffi_type **arg_types = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
     
     size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
     parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
@@ -153,7 +153,7 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
     char* parrot_types = mem_allocate_n_zeroed_typed(argc + 1, char);
 	
     /* TODO: Fix this malloc */
-    *arg_types = (ffi_type**)malloc(argc + 1 * sizeof(ffi_type*));
+    *arg_types = mem_internal_allocate_n_zeroed_typed(argc + 1, ffi_type*);
     
     while (i < sig_length) {
         i = parse_identifier(interp, sig, i, sig_length, &(*arg_types)[arg_count], parrot_types + arg_count);
@@ -366,9 +366,8 @@ parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi
     size_t element_counter = 0;
     INTVAL c;
 	
-    // TODO: Fix Malloc
-    *type_obj = (ffi_type*)malloc(sizeof(ffi_type));
-    (*type_obj)->elements = calloc(struct_len + 1, sizeof(ffi_type*));
+    *type_obj = mem_internal_allocate_typed(ffi_type*);
+    (*type_obj)->elements = mem_internal_allocate_n_zeroed_typed(struct_len + 1, ffi_type*);
 	
     (*type_obj)->size = (*type_obj)->alignment = 0;
     (*type_obj)->type = FFI_TYPE_STRUCT;
@@ -529,11 +528,9 @@ pcc_params(PARROT_INTERP, ARGIN(STRING *sig), ARGMOD(Parrot_NCI_attributes *nci_
         mem_sys_free(sig_buf);
 }
 
-/* actually build the NCI thunk */
-
 PARROT_IGNORABLE_RESULT
 static ffi_cif*
-build_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
+build_libffi_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
 {
     ASSERT_ARGS(build_func)
 
@@ -541,15 +538,31 @@ build_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
     const size_t key_length = Parrot_str_byte_length(interp, key);
 
     INTVAL r = parse_sig(interp, nci_info->signature, key_length, nci_info);
-    // printf("H?\n");
-    if (r) {
-        //printf("cif worked?!\n");
-    }
-    else {
-        // printf("cif didn't work...\n");
-    }
 
     return (ffi_cif*)nci_info->cif;
+}
+
+/* actually build the NCI thunk */
+
+PARROT_IGNORABLE_RESULT
+static nci_thunk_t
+build_func(PARROT_INTERP, ARGMOD(Parrot_NCI_attributes *nci_info))
+{
+    ASSERT_ARGS(build_func)
+
+    STRING * const key      = nci_info->signature;
+    const size_t key_length = Parrot_str_byte_length(interp, key);
+
+    pcc_params(interp, key, nci_info, key_length);
+
+    /* Arity is length of that string minus one (the return type). */
+    nci_info->arity       = key_length - 1;
+
+    /* Build call function. */
+    nci_info->fb_info     = build_call_func(interp, key);
+    nci_info->func        = F2DPTR(VTABLE_get_pointer(interp, nci_info->fb_info));
+
+    return (nci_thunk_t)nci_info->func;    
 }
 
 
@@ -558,6 +571,7 @@ pmclass NCI auto_attrs provides invokable {
     /* NCI thunk handling attributes */
     ATTR STRING    *signature;              /* The signature. */
     ATTR void      *func;                   /* Function pointer to call. */
+    ATTR void      *orig_func;
     ATTR PMC       *fb_info;                /* Frame-builder info */
     ATTR void      *cif;                    /* Function interface */
 
@@ -629,13 +643,12 @@ Sets the specified function pointer and signature (C<*key>).
 */
 
     VTABLE void set_pointer(void *ptr) {
-        Parrot_NCI_attributes * const nci_info   = PARROT_NCI(SELF);        
-        SET_ATTR_func(INTERP, SELF, ptr);
+        SET_ATTR_orig_func(INTERP, SELF, ptr);
         PObj_flag_SET(private2, SELF);
     }
 
     VTABLE void *get_pointer() {
-        return PARROT_NCI(SELF)->func;
+        return PARROT_NCI(SELF)->orig_func;
     }
 
     VTABLE void set_pointer_keyed_str(STRING *key, void *func) {
@@ -700,6 +713,8 @@ Creates and returns a clone of the NCI.
          * ManagedStruct or Buffer?
          */
         nci_info_ret->func                  = nci_info_self->func;
+        nci_info_ret->fb_info               = nci_info_self->fb_info;
+        nci_info_ret->orig_func             = nci_info_self->orig_func;        
         nci_info_ret->cif                   = nci_info_self->cif;
         nci_info_ret->signature             = nci_info_self->signature;
         nci_info_ret->pcc_params_signature  = nci_info_self->pcc_params_signature;
@@ -722,7 +737,7 @@ Returns whether the NCI is defined.
 
     VTABLE INTVAL defined() {
         Parrot_NCI_attributes * const nci_info = PARROT_NCI(SELF);
-        return nci_info->cif != NULL;
+        return nci_info->orig_func != NULL;
     }
 
 /*
@@ -746,7 +761,28 @@ class, the PMC arguments are shifted down.
         PMC                          *call_object = Parrot_pcc_get_signature(interp, ctx);
         void* (*func)(); // a function pointer for our function to call 
 
-        if (!STRING_IS_NULL(nci_info->signature)) {
+        if (PObj_flag_TEST(private2, SELF)) {
+            void *orig_func;      
+            PMC  *fb_info;        
+            GET_ATTR_orig_func(INTERP, SELF, orig_func);
+            GET_ATTR_fb_info(INTERP, SELF, fb_info);
+
+            func = orig_func;
+
+            if (!func) {
+                /* build the thunk only when necessary */
+                func = build_func(interp, nci_info);
+
+                if (!func)
+                    Parrot_ex_throw_from_c_args(INTERP, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "attempt to call NULL function");
+            }
+
+            func = D2FPTR(orig_func);
+            func(INTERP, SELF, fb_info);
+        }
+        else {
             PMC *positional, *arg_iter;
             void **values, *return_data;
             size_t count;
@@ -756,7 +792,7 @@ class, the PMC arguments are shifted down.
 
             if (!cif) {
                 /* build the thunk only when necessary */
-                cif = build_func(interp, nci_info);
+                cif = build_libffi_func(interp, nci_info);
 
                 if (!cif && !func)
                     Parrot_ex_throw_from_c_args(INTERP, NULL,
@@ -769,40 +805,29 @@ class, the PMC arguments are shifted down.
                     &positional);
 
             arg_iter = VTABLE_get_iter(interp, positional);
-            values = malloc(sizeof(void*) * nci_info->arity + 1);
-            return_data = malloc(sizeof(int) * 12); // way to big, for now...
+            values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
+            return_data = mem_internal_allocate_n_zeroed_typed(12, int); // way to big, for now...
 
             count = 0;
             while (VTABLE_get_bool(interp, arg_iter) && count < nci_info->arity) {
                 PMC * next = VTABLE_pop_pmc(interp, arg_iter);
                 INTVAL c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);
                 if (c == (INTVAL)'J') {
-                    // printf("It was J!\n");
                     values[count++] = &interp;
                 }
-                //printf("iter: %c %s %d\n", c, next, Parrot_str_to_cstring(interp, next->vtable->whoami), count);
                 values[count] = &next;
                 count++;
             }
 
-            //printf("Calling libffi %p %p\nreturn: %s\n\n", interp, *((Parrot_Interp*)values[0]), Parrot_str_to_cstring(interp, nci_info->pcc_return_signature)); // Parrot_str_to_cstring(interp, ((PMC*)values[1])->vtable->whoami));
+            printf("calling libffi\n");
+
             ffi_call(cif, FFI_FN(func), return_data, values);
-            //printf("done!\n\n");
-            //printf("Done calling libffi %d\n", *(INTVAL*)return_data);
 
             STRING * void_return = string_make(interp, "v", 1, "ascii", 0);
             if (Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
                 PMC * ret_object = Parrot_pcc_build_call_from_c_args(interp, call_object, Parrot_str_to_cstring(interp, nci_info->pcc_return_signature), return_data);
             }
-        }
-        else {
-            Parrot_ex_throw_from_c_args(INTERP, NULL,
-                EXCEPTION_INVALID_OPERATION,
-                "Signature of the PMC is NULL, something is wrong.");
-
-        }
-
-        //printf("Yup... done calling the function\n\n");
+        } 
 
         cont = INTERP->current_cont;
 

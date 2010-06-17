@@ -81,10 +81,9 @@ register_raw_nci_method_in_ns(PARROT_INTERP, const int type, ARGIN(void *func),
 {
     ASSERT_ARGS(register_raw_nci_method_in_ns)
     PMC    * const method             = Parrot_pmc_new(interp, enum_class_NCI);
-    STRING * const function_signature = string_make(interp, "vJP", 3, "ascii", 0);
 
     /* setup call func */
-    VTABLE_set_pointer_keyed_str(interp, method, function_signature, func);
+    VTABLE_set_pointer(interp, method, func);
 
     /* insert it into namespace */
     VTABLE_set_pmc_keyed_str(interp, interp->vtables[type]->_namespace,
