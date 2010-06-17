@@ -18,12 +18,8 @@
 typedef PMC *(*nci_fb_func_t)(PARROT_INTERP, PMC *user_data, STRING *signature);
 typedef void (*nci_thunk_t)(PARROT_INTERP, PMC *, PMC *);
 
-#ifndef PARROT_HAS_LIBFFI
-
 void Parrot_nci_load_core_thunks(PARROT_INTERP);
 void Parrot_nci_load_extra_thunks(PARROT_INTERP);
-
-#endif /* PARROT_HAS_LIBFFI */
 
 /* HEADERIZER BEGIN: src/nci/api.c */
 /* Don't modify between HEADERIZER BEGIN / HEADERIZER END.  Your changes will be lost. */

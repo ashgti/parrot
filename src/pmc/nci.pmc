@@ -819,7 +819,7 @@ class, the PMC arguments are shifted down.
                 count++;
             }
 
-            printf("calling libffi\n");
+            fprintf(stderr, "calling libffi\n");
 
             ffi_call(cif, FFI_FN(func), return_data, values);
 
