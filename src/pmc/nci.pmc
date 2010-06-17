@@ -648,8 +648,7 @@ Sets the specified function pointer and signature (C<*key>).
         if (!PObj_constant_TEST(key)) {
             char * const key_c      = Parrot_str_to_cstring(INTERP, key);
             const size_t key_length = Parrot_str_byte_length(interp, key);
-            key                     = string_make(interp, key_c, key_length,
-                                        NULL, PObj_constant_FLAG);
+            key                     = string_make(interp, key_c, key_length, NULL, 0);
             Parrot_str_free_cstring(key_c);
         }
 
@@ -791,7 +790,8 @@ class, the PMC arguments are shifted down.
             //printf("done!\n\n");
             //printf("Done calling libffi %d\n", *(INTVAL*)return_data);
 
-            if (Parrot_str_equal(interp, nci_info->pcc_return_signature, CONST_STRING(interp, "v"))) {
+            STRING * void_return = string_make(interp, "v", 1, "ascii", 0);
+            if (Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
                 PMC * ret_object = Parrot_pcc_build_call_from_c_args(interp, call_object, Parrot_str_to_cstring(interp, nci_info->pcc_return_signature), return_data);
             }
         }
