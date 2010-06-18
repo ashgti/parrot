@@ -350,10 +350,17 @@ parse_prefix(INTVAL c) {
     switch (c) {
         case '*':
             return PREFIX_POINTER;
+            break;
         case 'u':
             return PREFIX_UNSIGNED;
+            break;
         case 's':
             return PREFIX_SIGNED;
+            break;
+        default:
+            // This is not a prefix, throw an error
+            return 0;
+            break;
     }
 	
     return 0;
@@ -627,6 +634,7 @@ Initializes the NCI with a C<NULL> function pointer.
 */
 
     VTABLE void init() {
+        // fprintf(stderr, "New NCI %p\n", SELF);
         /* Mark that we're not a raw NCI. */
         PObj_flag_CLEAR(private2, SELF);
         PObj_custom_mark_SET(SELF);
@@ -705,7 +713,9 @@ Creates and returns a clone of the NCI.
         Parrot_NCI_attributes *nci_info_ret;
         void                  *cif;
 
-        PMC * const ret     = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
+        // fprintf(stderr, "%p is now %p\n", SELF, nci_info_ret);
+        
+            PMC * const ret     = Parrot_pmc_new(INTERP, SELF->vtable->base_type);
         nci_info_ret        = PARROT_NCI(ret);
 
         /* FIXME if data is malloced (JIT/i386!) then we need
@@ -784,7 +794,8 @@ class, the PMC arguments are shifted down.
         }
         else {
             PMC *positional, *arg_iter;
-            void **values, *return_data;
+            // void **values, *return_data;
+            void *return_data;
             size_t count;
             
             GET_ATTR_cif(INTERP, SELF, cif);
@@ -800,33 +811,93 @@ class, the PMC arguments are shifted down.
                         "attempt to call NULL function");
             }
             
+            // values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
 
-            Parrot_pcc_fill_params_from_c_args(interp, call_object, "Ps",
-                    &positional);
+            /*
+            ffi_cif pcc_cif;
+            
+            ffi_type **pcc_args;
+            pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
+            int i;
+            for (i = 0; i < nci_info->arity + 3; i++) {
+                pcc_args[i] = &ffi_type_pointer;
+            }
 
+            if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + nci_info->arity, &ffi_type_void, pcc_args) == FFI_OK) {
+            
+            }
+            else {
+                printf("BAD!!!\n");
+            }
+
+            void** pcc_values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, void*);
+            pcc_values[0] = &interp;
+            pcc_values[1] = &call_object;
+            pcc_values[2] = &nci_info->pcc_params_signature;
+
+            void **middle_man = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
+
+            for (i = 0; i < nci_info->arity; i++) {
+                middle_man[i] = &values[i];
+                pcc_values[i + 3] = &middle_man[i];
+            }
+
+            ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), 0, pcc_values);
+            */
+
+            void * values[3];
+            STRING * foo;
+            Parrot_pcc_fill_params_from_c_args(interp, call_object, "S", &foo);
+
+            char *t_1 = Parrot_str_to_cstring(interp, foo);
+            values[1] = &t_1;
+
+            /* 
             arg_iter = VTABLE_get_iter(interp, positional);
-            values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
             return_data = mem_internal_allocate_n_zeroed_typed(12, int); // way to big, for now...
 
             count = 0;
-            while (VTABLE_get_bool(interp, arg_iter) && count < nci_info->arity) {
-                PMC * next = VTABLE_pop_pmc(interp, arg_iter);
+            PMC *foo;
+            while (VTABLE_get_bool(interp, arg_iter)) {
+                PMC * next = VTABLE_shift_pmc(interp, arg_iter);
+                // fprintf(stderr, "Iter... %p\n", next);
                 INTVAL c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);
+                //fprintf(stderr, "C is %c\n", c);
                 if (c == (INTVAL)'J') {
+                    //fprintf(stderr, "J Found %ld\n", count);
                     values[count++] = &interp;
+                    c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);                
+                    //fprintf(stderr, "C: %c count: %ld\n", c, count);
                 }
-                values[count] = &next;
+                if (c == (INTVAL)'S') {
+                    values[count] = Parrot_str_to_cstring(interp, next);
+                    //fprintf(stderr, "Got string: %s\n", Parrot_str_to_cstring(interp, next));
+                }
+                else {
+                    //fprintf(stderr, "not S %c %ld\n", c, count);
+                }
+                values[count] = next;
                 count++;
-            }
+            } */
 
-            fprintf(stderr, "calling libffi\n");
+            Dl_info info;
+
+            dladdr(func, &info);
+
+            values[0] = &interp;
+
+            fprintf(stderr, "calling libffi %s %p   %p %p %s\n", info.dli_sname, SELF, interp, values[0]);
 
             ffi_call(cif, FFI_FN(func), return_data, values);
 
+            // fprintf(stderr, "Done calling ffi_call\n");
+
             STRING * void_return = string_make(interp, "v", 1, "ascii", 0);
-            if (Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
+            if (!Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
                 PMC * ret_object = Parrot_pcc_build_call_from_c_args(interp, call_object, Parrot_str_to_cstring(interp, nci_info->pcc_return_signature), return_data);
             }
+
+            // FREE MEMORY
         } 
 
         cont = INTERP->current_cont;
