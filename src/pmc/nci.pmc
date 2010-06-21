@@ -78,7 +78,11 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
 
 static
 size_t
-parse_identifier(PARROT_INTERP, STRING* sig, size_t start, size_t end, ffi_type** sig_obj, char* pmc_type);
+parse_identifier(PARROT_INTERP, 
+                 STRING* sig, size_t start, size_t end, 
+                 ffi_type** sig_obj, 
+                 char** pmc_type, size_t *pmc_count, 
+                 char** translation, size_t *translation_length);
 
 static
 size_t
@@ -119,13 +123,13 @@ INTVAL
 parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *nci_info) {
     ffi_cif cif;
     ffi_type *return_type;
-    ffi_type **arg_types = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
+    ffi_type **arg_types; // = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
     
     size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
     parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
 	   
     // printf("Return type: %p %p %p\n", return_type, &ffi_type_void, &ffi_type_uint);
-    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nci_info->arity, &ffi_type_uint, arg_types) == FFI_OK) {
+    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nci_info->arity, return_type, arg_types) == FFI_OK) {
         nci_info->cif = (void*)mem_internal_allocate_typed(ffi_cif);
         memcpy(nci_info->cif, &cif, sizeof(ffi_cif));
         return 1;
@@ -138,8 +142,14 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
 
 size_t
 parse_return(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes* nci_info, ffi_type **return_type) {
+    char t[16] = {0};
+    size_t j = 0, k = 0;
     char * result_sig = mem_allocate_n_zeroed_typed(2, char); /* Should be 1 character plus a NULL" */
-    size_t result_length = parse_identifier(interp, sig, 0, sig_length, return_type, result_sig);
+    size_t result_length = parse_identifier(interp, 
+                                            sig, 0, sig_length, 
+                                            return_type, 
+                                            result_sig, &j, 
+                                            t, &k);
 
     nci_info->pcc_return_signature = string_make(interp, result_sig, 2, NULL, 0);
     return result_length;
@@ -151,23 +161,38 @@ parse_args(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, Parrot_N
     size_t arg_count = 0;
     size_t argc = count_args(interp, sig, start, sig_length);
     char* parrot_types = mem_allocate_n_zeroed_typed(argc + 1, char);
+    size_t parrot_types_length = 0;
+    char* translation_types = mem_allocate_n_zeroed_typed(argc + 1, char);
+    size_t translation_length = 0;
 	
     /* TODO: Fix this malloc */
     *arg_types = mem_internal_allocate_n_zeroed_typed(argc + 1, ffi_type*);
     
     while (i < sig_length) {
-        i = parse_identifier(interp, sig, i, sig_length, &(*arg_types)[arg_count], parrot_types + arg_count);
+        ffi_type *ident;
+        i = parse_identifier(interp, 
+                             sig, i, sig_length, 
+                             &ident, 
+                             parrot_types, &parrot_types_length, 
+                             translation_types, &translation_length);
+        fprintf(stderr, "Got %p\n", ident);
+        (*arg_types)[arg_count] = ident;
         arg_count++;
     }
 	
-    nci_info->pcc_params_signature = string_make(interp, parrot_types, argc, NULL, 0);
+    nci_info->pcc_params_signature = string_make(interp, parrot_types, strlen(parrot_types), NULL, 0);
+    nci_info->arg_translation = translation_types;
     nci_info->arity = arg_count;
 	
     return i;
 }
 
 size_t
-parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ffi_type **type_obj, char *type) {
+parse_identifier(PARROT_INTERP, 
+                 STRING *sig, size_t start, size_t sig_length, 
+                 ffi_type **type_obj, 
+                 char **type, size_t *pmc_count, 
+                 char **translation, size_t *translation_count) {
     size_t i = start;
     INTVAL done = 0;
 	
@@ -199,11 +224,13 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 *type_obj = &ffi_type_pointer;
                 continue;
             }
+            translation[(*translation_count)++] = ' ';
+            fprintf(stderr, "count is: %d\n", *translation_count);
             switch (c) {
               case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
                 break;
               case (INTVAL)'c':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uchar;
                 }
@@ -212,7 +239,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 }
                 break;
               case (INTVAL)'b':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint8;
                 }
@@ -221,7 +248,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 }
                 break;
               case (INTVAL)'s':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_ushort;
                 }
@@ -231,7 +258,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 break;
               case (INTVAL)'I':   /* INTVAL */
               case (INTVAL)'i':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint;
                 }
@@ -240,7 +267,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 }
                 break;
               case (INTVAL)'l':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_ulong;
                 }
@@ -249,7 +276,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 }
                 break;
               case (INTVAL)'q':
-                *type = 'I';
+                type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint64;
                 }
@@ -258,7 +285,7 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
                 }
                 break;
               case (INTVAL)'J':   /* interpreter */
-                *type = 'J';
+                translation[(*translation_count) - 1] = 'J';
                 *type_obj = &ffi_type_pointer;
                 break;
               case (INTVAL)'p':   /* push pmc->data */
@@ -268,42 +295,44 @@ parse_identifier(PARROT_INTERP, STRING *sig, size_t start, size_t sig_length, ff
               case (INTVAL)'3':
               case (INTVAL)'4':
               case (INTVAL)'B':                
-                *type = 'P';
+                type[(*pmc_count)++] = 'P';
                 *type_obj = &ffi_type_pointer;
                 break;
               case (INTVAL)'S':
+                type[(*pmc_count)++] = 'S';
+                *type_obj = &ffi_type_pointer;
               case (INTVAL)'t':
-                *type = 'S';
+                translation[(*translation_count) - 1] = 't';
+                type[(*pmc_count)++] = 'S';
+                fprintf(stderr, "Got t\n");
                 *type_obj = &ffi_type_pointer;
                 break;
               case (INTVAL)'v':
-                *type = 'v';
+                type[(*pmc_count)++] = 'v';
                 *type_obj = &ffi_type_void;
                 break;
               case (INTVAL)'f':
-                *type = 'N';
+                type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_float;
                 break;
               case (INTVAL)'N':
               case (INTVAL)'d':
-                *type = 'N';
+                type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_double;
                 break;
               case (INTVAL)'D':
-                *type = 'N';
+                type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_longdouble;
                 break;
               case (INTVAL)'O':   /* push PMC * invocant */
-                /* TODO: Fix invocant */
                 *type_obj = &ffi_type_pointer;
-                /* sig_buf[j++] = 'P';
-                 sig_buf[j++] = 'i'; */
+                type[(*pmc_count)++] = 'P';
+                type[(*pmc_count)++] = 'i';
                 break;
               case (INTVAL)'@':   /* push PMC * slurpy */
                 *type_obj = &ffi_type_pointer;
-                /* 
-                 sig_buf[j++] = 'P';
-                 sig_buf[j++] = 's'; */
+                type[(*pmc_count)++] = 'P';
+                type[(*pmc_count)++] = 's';
                 break;
 	          defualt:
 		        // Throw exception
@@ -381,7 +410,7 @@ parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length, ffi
 	
     c = Parrot_str_indexed(interp, sig, i);
     while (i < sig_length && IS_NOT_END_CIRCUMFIX(c)) {
-        i = parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL);
+        i = parse_identifier(interp, sig, i, sig_length, &(*type_obj)->elements[element_counter], NULL, 0, NULL, 0);
         element_counter++;
         c = Parrot_str_indexed(interp, sig, i);
     }
@@ -585,6 +614,7 @@ pmclass NCI auto_attrs provides invokable {
     /* Parrot Sub-ish attributes */
     ATTR STRING    *pcc_params_signature;
     ATTR STRING    *pcc_return_signature;
+    ATTR void      *arg_translation;
     ATTR INTVAL     arity;                  /* Cached arity of the NCI. */
 
     /* MMD fields */
@@ -764,7 +794,6 @@ class, the PMC arguments are shifted down.
     VTABLE opcode_t *invoke(void *next) {
         Parrot_NCI_attributes * const nci_info    = PARROT_NCI(SELF);
         char                         *sig_str;
-        void                         *cif;
         PMC                          *cont;
         INTVAL                        return_size = sizeof(void*);
         PMC                          *ctx         = CURRENT_CONTEXT(interp);
@@ -794,9 +823,12 @@ class, the PMC arguments are shifted down.
         }
         else {
             PMC *positional, *arg_iter;
-            // void **values, *return_data;
+            void **values;
             void *return_data;
-            size_t count;
+            size_t count, i;
+            ffi_cif *cif, pcc_cif;            
+            ffi_type **pcc_args;
+
             
             GET_ATTR_cif(INTERP, SELF, cif);
             GET_ATTR_func(INTERP, SELF, func);
@@ -811,14 +843,9 @@ class, the PMC arguments are shifted down.
                         "attempt to call NULL function");
             }
             
-            // values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
-
-            /*
-            ffi_cif pcc_cif;
-            
-            ffi_type **pcc_args;
+            values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
             pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
-            int i;
+
             for (i = 0; i < nci_info->arity + 3; i++) {
                 pcc_args[i] = &ffi_type_pointer;
             }
@@ -842,43 +869,22 @@ class, the PMC arguments are shifted down.
                 pcc_values[i + 3] = &middle_man[i];
             }
 
-            ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), 0, pcc_values);
-            */
+            ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
 
-            void * values[3];
-            STRING * foo;
-            Parrot_pcc_fill_params_from_c_args(interp, call_object, "S", &foo);
-
-            char *t_1 = Parrot_str_to_cstring(interp, foo);
-            values[1] = &t_1;
-
-            /* 
-            arg_iter = VTABLE_get_iter(interp, positional);
-            return_data = mem_internal_allocate_n_zeroed_typed(12, int); // way to big, for now...
-
-            count = 0;
-            PMC *foo;
-            while (VTABLE_get_bool(interp, arg_iter)) {
-                PMC * next = VTABLE_shift_pmc(interp, arg_iter);
-                // fprintf(stderr, "Iter... %p\n", next);
-                INTVAL c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);
-                //fprintf(stderr, "C is %c\n", c);
-                if (c == (INTVAL)'J') {
-                    //fprintf(stderr, "J Found %ld\n", count);
-                    values[count++] = &interp;
-                    c = Parrot_str_indexed(interp, nci_info->pcc_params_signature, count);                
-                    //fprintf(stderr, "C: %c count: %ld\n", c, count);
+            // Apply Transformations
+            for (i = 0; i < nci_info->arity; i++) {
+                switch ((INTVAL)((INTVAL*)nci_info->arg_translation)[i]) {
+                  case (INTVAL)'J':
+                    values[i] = &interp;
+                    break;
+                  case (INTVAL)'t':
+                    values[i] = Parrot_str_to_cstring(interp, pcc_values[i]);
+                    break;
+                  case (INTVAL)' ':
+                  default:
+                    break;
                 }
-                if (c == (INTVAL)'S') {
-                    values[count] = Parrot_str_to_cstring(interp, next);
-                    //fprintf(stderr, "Got string: %s\n", Parrot_str_to_cstring(interp, next));
-                }
-                else {
-                    //fprintf(stderr, "not S %c %ld\n", c, count);
-                }
-                values[count] = next;
-                count++;
-            } */
+            } 
 
             Dl_info info;
 
@@ -886,11 +892,11 @@ class, the PMC arguments are shifted down.
 
             values[0] = &interp;
 
-            fprintf(stderr, "calling libffi %s %p   %p %p %s\n", info.dli_sname, SELF, interp, values[0]);
+            fprintf(stderr, "calling libffi %s %p   %p %p\n", info.dli_sname, SELF, interp, values[0]);
 
             ffi_call(cif, FFI_FN(func), return_data, values);
 
-            // fprintf(stderr, "Done calling ffi_call\n");
+            fprintf(stderr, "Done calling ffi_call\n");
 
             STRING * void_return = string_make(interp, "v", 1, "ascii", 0);
             if (!Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
