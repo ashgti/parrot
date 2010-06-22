@@ -67,6 +67,7 @@ my @steps = qw(
     gen::opengl
     gen::makefiles
     gen::platform
+    gen::libffi
     gen::config_pm
 );
 
