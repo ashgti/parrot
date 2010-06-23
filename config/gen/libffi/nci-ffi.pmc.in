@@ -972,9 +972,10 @@ class, the PMC arguments are shifted down.
         }
         else {
             PMC *positional, *arg_iter;
+            STRING *void_return;
             void **values, **middle_man, **pcc_values, **translation_pointers;
             void *return_data, *return_pointer;
-            size_t count, i;
+            size_t count, i, j_offset;
             char *tmp_sig;
             ffi_cif *cif, pcc_cif;
             ffi_type **pcc_args;
@@ -1019,7 +1020,7 @@ class, the PMC arguments are shifted down.
             /* Fill in arg references, J is magically inserted, so we need
              * to offset the other variables if a J is supposed to be used
              */
-            int j_offset = 0;
+            j_offset = 0;
             for (i = 0; i < nci_info->arity; i++) {
                 if (((INTVAL*)nci_info->arg_translation)[i] == 'J')
                     j_offset++;
@@ -1067,7 +1068,7 @@ class, the PMC arguments are shifted down.
 
             ffi_call(cif, FFI_FN(func), &return_pointer, values);
 
-            STRING * void_return = string_make(interp, "v", 1, "ascii", 0);
+            void_return = string_make(interp, "v", 1, "ascii", 0);
             if (!Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
                 char *s = Parrot_str_to_cstring(interp, nci_info->pcc_return_signature);
                 PMC *ret_object = Parrot_pcc_build_call_from_c_args(interp,
