@@ -71,8 +71,8 @@ size_t
 parse_identifier(PARROT_INTERP,
                  STRING* sig, size_t start, size_t end,
                  ffi_type** sig_obj,
-                 char** pmc_type, size_t *pmc_count,
-                 char** translation, size_t *translation_length);
+                 char* pmc_type, size_t *pmc_count,
+                 char* translation, size_t *translation_length);
 
 static
 size_t
@@ -142,7 +142,15 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
     ffi_type **arg_types;
 
     size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
-    parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
+    if (i < sig_length)
+        parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
+    else {
+        arg_types       = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
+        arg_types[0]    = &ffi_type_void;
+        nci_info->pcc_params_signature = string_make(interp, "", 1, NULL, 0);
+        nci_info->arg_translation = "";
+        nci_info->arity = 0;
+    }
 
     if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI,
                      nci_info->arity, return_type, arg_types) == FFI_OK) {
@@ -179,7 +187,7 @@ See C<parse_identifier> to see how a single identifer is parsed.
 static size_t
 parse_return(PARROT_INTERP, STRING *sig, size_t sig_length,
              Parrot_NCI_attributes* nci_info, ffi_type **return_type) {
-    char t[16] = {0};
+    char *t = mem_allocate_n_zeroed_typed(2, char);
     size_t j = 0, k = 0;
     /* Should be 1 character plus a NULL" */
     char * result_sig = mem_allocate_n_zeroed_typed(2, char);
@@ -190,6 +198,7 @@ parse_return(PARROT_INTERP, STRING *sig, size_t sig_length,
                                             t, &k);
 
     nci_info->pcc_return_signature = string_make(interp, result_sig, 2, NULL, 0);
+    nci_info->return_translation = (void*)t;
     mem_sys_free(result_sig);
     return result_length;
 }
@@ -263,8 +272,8 @@ static size_t
 parse_identifier(PARROT_INTERP,
                  STRING *sig, size_t start, size_t sig_length,
                  ffi_type **type_obj,
-                 char **type, size_t *pmc_count,
-                 char **translation, size_t *translation_count) {
+                 char *type, size_t *pmc_count,
+                 char *translation, size_t *translation_count) {
     size_t i = start;
     INTVAL done = 0;
 
@@ -359,6 +368,7 @@ parse_identifier(PARROT_INTERP,
                 *type_obj = &ffi_type_pointer;
                 break;
               case (INTVAL)'p':   /* push pmc->data */
+                translation[(*translation_count) - 1] = 'p';
               case (INTVAL)'P':   /* push PMC * */
               case (INTVAL)'V':   /* push PMC * */
               case (INTVAL)'2':
@@ -495,7 +505,7 @@ parse_structure(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
     size_t element_counter = 0;
     INTVAL c;
 
-    *type_obj = mem_internal_allocate_typed(ffi_type*);
+    *type_obj = (ffi_type*)mem_internal_allocate_typed(ffi_type*);
     (*type_obj)->elements = mem_internal_allocate_n_zeroed_typed(struct_len + 1, ffi_type*);
 
     (*type_obj)->size = (*type_obj)->alignment = 0;
@@ -747,6 +757,7 @@ pmclass NCI auto_attrs provides invokable {
     ATTR STRING    *pcc_params_signature;
     ATTR STRING    *pcc_return_signature;
     ATTR void      *arg_translation;
+    ATTR void      *return_translation;
     ATTR INTVAL     arity;                  /* Cached arity of the NCI. */
 
     /* MMD fields */
@@ -875,6 +886,7 @@ Free all of the memory used internally to store various things, like libffi call
             mem_sys_free(nci_info->cif);
             mem_sys_free(nci_info->arg_translation);
             mem_sys_free(nci_info->arg_types);
+            mem_sys_free(nci_info->return_translation);
         }
     }
 
@@ -955,11 +967,11 @@ class, the PMC arguments are shifted down.
             GET_ATTR_orig_func(INTERP, SELF, orig_func);
             GET_ATTR_fb_info(INTERP, SELF, fb_info);
 
-            func = orig_func;
+            func = FFI_FN(orig_func);
 
             if (!func) {
                 /* build the thunk only when necessary */
-                func = build_func(interp, nci_info);
+                func = FFI_FN(build_func(interp, nci_info));
 
                 if (!func)
                     Parrot_ex_throw_from_c_args(INTERP, NULL,
@@ -967,20 +979,20 @@ class, the PMC arguments are shifted down.
                         "attempt to call NULL function");
             }
 
-            func = D2FPTR(orig_func);
+            func = FFI_FN(D2FPTR(orig_func));
             func(INTERP, SELF, fb_info);
         }
         else {
             PMC *positional, *arg_iter;
             STRING *void_return;
             void **values, **middle_man, **pcc_values, **translation_pointers;
-            void *return_data, *return_pointer;
+            void *return_data;
             size_t count, i, j_offset;
             char *tmp_sig;
             ffi_cif *cif, pcc_cif;
             ffi_type **pcc_args;
 
-            GET_ATTR_cif(INTERP, SELF, cif);
+            cif = nci_info->cif;
             GET_ATTR_func(INTERP, SELF, func);
 
             if (!cif) {
@@ -993,87 +1005,135 @@ class, the PMC arguments are shifted down.
                         "attempt to call NULL function");
             }
 
-            values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
-            pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
+            if (nci_info->arity > 0) {
+                /* Function has arguments */
+                values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
+                pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
 
-            for (i = 0; i < nci_info->arity + 3; i++) {
-                pcc_args[i] = &ffi_type_pointer;
-            }
-
-            if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + nci_info->arity,
-                             &ffi_type_void, pcc_args) != FFI_OK) {
-                Parrot_ex_throw_from_c_args(INTERP, NULL,
-                    EXCEPTION_INVALID_OPERATION,
-                    "Bad signature generated for Parrot_pcc_fill_params_from_c_args in NCI");
-            }
-
-            pcc_values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, void*);
-            tmp_sig = Parrot_str_to_cstring(interp, nci_info->pcc_params_signature);
-
-            /* Setup Parrot_pcc_fill_params_from_c_args required arguments */
-            pcc_values[0] = &interp;
-            pcc_values[1] = &call_object;
-            pcc_values[2] = &tmp_sig;
-
-            middle_man = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
-
-            /* Fill in arg references, J is magically inserted, so we need
-             * to offset the other variables if a J is supposed to be used
-             */
-            j_offset = 0;
-            for (i = 0; i < nci_info->arity; i++) {
-                if (((INTVAL*)nci_info->arg_translation)[i] == 'J')
-                    j_offset++;
-                middle_man[i] = &values[i + j_offset];
-                pcc_values[i + 3] = &middle_man[i];
-            }
-
-            ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
-            Parrot_str_free_cstring(tmp_sig);
-
-            /*
-             *  Apply Argument Transformations
-             *   this is mostly to transform STRING* into char*
-             *   and add the parrot interp argument if it needs it
-             *   but other transformations might apply later, like packing an
-             *   object into a ManagedStruct
-             */
-            translation_pointers = mem_internal_allocate_n_zeroed_typed(nci_info->arity, void*);
-            for (i = 0; i < nci_info->arity; i++) {
-                switch ((INTVAL)((INTVAL*)nci_info->arg_translation)[i]) {
-                  case (INTVAL)'J':
-                    values[i] = &interp;
-                    break;
-                  case (INTVAL)'t':
-                    if (STRING_IS_NULL((STRING*)middle_man[i])) {
-                        translation_pointers[i] = (char*) NULL;
-                    }
-                    else {
-                        translation_pointers[i] = Parrot_str_to_cstring(interp, values[i]);
-                    }
-                    values[i] = &translation_pointers[i];
-                    break;
-                  case (INTVAL)' ':
-                  default:
-                    break;
+                for (i = 0; i < nci_info->arity + 3; i++) {
+                    pcc_args[i] = &ffi_type_pointer;
                 }
+
+                if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + nci_info->arity,
+                                 &ffi_type_void, pcc_args) != FFI_OK) {
+                    Parrot_ex_throw_from_c_args(INTERP, NULL,
+                        EXCEPTION_INVALID_OPERATION,
+                        "Bad signature generated for Parrot_pcc_fill_params_from_c_args in NCI");
+                }
+
+                pcc_values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, void*);
+                if (nci_info->pcc_params_signature)
+                    tmp_sig = Parrot_str_to_cstring(interp, nci_info->pcc_params_signature);
+
+                /* Setup Parrot_pcc_fill_params_from_c_args required arguments */
+                pcc_values[0] = &interp;
+                pcc_values[1] = &call_object;
+                pcc_values[2] = &tmp_sig;
+
+                middle_man = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
+
+                /* Fill in arg references, J is magically inserted, so we need
+                 * to offset the other variables if a J is supposed to be used
+                 */
+                j_offset = 0;
+                for (i = 0; i < nci_info->arity; i++) {
+                    if (((char*)nci_info->arg_translation)[i] == 'J')
+                        j_offset++;
+                    middle_man[i] = &values[i + j_offset];
+                    pcc_values[i + 3] = &middle_man[i];
+                }
+
+
+                ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
+                Parrot_str_free_cstring(tmp_sig);
+
+                /*
+                 *  Apply Argument Transformations
+                 *   this is mostly to transform STRING* into char*
+                 *   and add the parrot interp argument if it needs it
+                 *   but other transformations might apply later, like packing an
+                 *   object into a ManagedStruct
+                 */
+                translation_pointers = mem_internal_allocate_n_zeroed_typed(nci_info->arity, void*);
+                for (i = 0; i < nci_info->arity; i++) {
+                    switch ((INTVAL)((char*)nci_info->arg_translation)[i]) {
+                      case 'J':
+                        values[i] = &interp;
+                        break;
+                      case 't':
+                        if (values[i] == NULL || STRING_IS_NULL((STRING*)values[i])) {
+                            translation_pointers[i] = (char*) NULL;
+                        }
+                        else {
+                            translation_pointers[i] = Parrot_str_to_cstring(interp, (STRING*)values[i]);
+                        }
+                        values[i] = &translation_pointers[i];
+                        break;
+                      case ' ':
+                      default:
+                        break;
+                    }
+                }
+
+                
+                if (pcc_args) {
+                    mem_sys_free(pcc_args);
+                }
+                if (pcc_values) {
+                    mem_sys_free(pcc_values);
+                }
+                if (middle_man) {
+                    mem_sys_free(middle_man);
+                }
+
+            }
+            else {
+                /* No arguments */
+                values = NULL;
             }
 
             /*
              *  This will allow for any type of datat to be returned.
              *  Including one day Structures
              */
-            return_data = mem_internal_allocate(cif->rtype->size);
-            return_pointer = &return_data;
+            return_data = mem_internal_allocate_zeroed(cif->rtype->size);
 
-            ffi_call(cif, FFI_FN(func), &return_pointer, values);
+            fprintf(stderr, "allocing %ld memory for return\n", cif->rtype->size);
 
-            void_return = string_make(interp, "v", 1, "ascii", 0);
-            if (!Parrot_str_equal(interp, nci_info->pcc_return_signature, void_return)) {
-                char *s = Parrot_str_to_cstring(interp, nci_info->pcc_return_signature);
-                PMC *ret_object = Parrot_pcc_build_call_from_c_args(interp,
-                                                                    call_object,
-                                                                    s, return_pointer);
+            ffi_call(cif, FFI_FN(func), return_data, values);
+
+            if (cif->rtype != &ffi_type_void) {
+                char *s;
+                PMC *ret_object;
+                s = Parrot_str_to_cstring(interp, nci_info->pcc_return_signature);
+                
+                switch (*(char*)nci_info->return_translation) {
+                    case 'p':
+                        {
+                        PMC *final_destination;
+                        final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
+                        VTABLE_set_pointer(interp, final_destination, *(void**)return_data);
+
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                                   call_object,
+                                                                   s, final_destination);
+                        }
+                        break;
+                    case 't':
+                        {
+                        STRING *final_destination = Parrot_str_new(interp, *(char**)return_data, 0);
+                    
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                                   call_object,
+                                                                   s, final_destination);
+                        }
+                        break;
+                    default:
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp, 
+                                                                   call_object,
+                                                                   s, *(void**)return_data);
+                        break;
+                }
                 Parrot_str_free_cstring(s);
             }
 
@@ -1096,17 +1156,8 @@ class, the PMC arguments are shifted down.
             if (return_data) {
                 mem_sys_free(return_data);
             }
-            if (pcc_args) {
-                mem_sys_free(pcc_args);
-            }
-            if (pcc_values) {
-                mem_sys_free(pcc_values);
-            }
             if (values) {
                 mem_sys_free(values);
-            }
-            if (middle_man) {
-                mem_sys_free(middle_man);
             }
         }
 
