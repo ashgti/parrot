@@ -100,7 +100,7 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
                                 || ((x) == '4') || ((x) == '5') || ((x) == '6') || ((x) == '7') \
                                 || ((x) == '8') || ((x) == '9'))
 
-#define IS_PREFIX(x)              (((x) == '*') || ((x) == 'u') || ((x) == 's'))
+#define IS_PREFIX(x)              (((x) == '*') || ((x) == 'u'))
 
 #define IS_OLD_TYPE(x)            (((x) == 'P') || ((x) == 'J') || ((x) == 'N') || ((x) == 'S') \
                                 || ((x) == 'O') || ((x) == '@') || ((x) == 'B') || ((x) == 'p') \
@@ -108,7 +108,7 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
 
 #define IS_TYPE(x)                (((x) == 'i') || ((x) == 'v') || ((x) == 'l') || ((x) == 't') \
                                 || ((x) == 'c') || ((x) == 'b') || ((x) == 'f') || ((x) == 'd') \
-                                || IS_OLD_TYPE(x))
+                                || ((x) == 's') || IS_OLD_TYPE(x))
 
 #define IS_POSTFIX(x)             (((x) == '{') || IS_DIGIT(x))
 #define IS_INFIX(x)               ((x) == '|')
@@ -279,6 +279,7 @@ parse_identifier(PARROT_INTERP,
 
     while (!done && i < sig_length) {
         INTVAL c = Parrot_str_indexed(interp, sig, i);
+        
         int prefix = 0;
         while (IS_PREFIX(c)) {
             prefix |= parse_prefix(c);
@@ -307,6 +308,7 @@ parse_identifier(PARROT_INTERP,
             translation[(*translation_count)++] = ' ';
             switch (c) {
               case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
+              case (INTVAL)' ':    /* ignore the space */
                 break;
               case (INTVAL)'c':
                 type[(*pmc_count)++] = 'I';
@@ -390,15 +392,24 @@ parse_identifier(PARROT_INTERP,
                 type[(*pmc_count)++] = 'v';
                 *type_obj = &ffi_type_void;
                 break;
+#if (DOUBLE_SIZE == 4) /* FLOATVAL is a float */
+              case (INTVAL)'N':
+#endif
               case (INTVAL)'f':
+                translation[(*translation_count) - 1] = 'f';
                 type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_float;
                 break;
+#if (DOUBLE_SIZE == 8) /* FLOATVAL is a double */
               case (INTVAL)'N':
+#endif
               case (INTVAL)'d':
                 type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_double;
                 break;
+#if (DOUBLE_SIZE > 8) /* FLOATVAL is a long double */
+              case (INTVAL)'N':
+#endif
               case (INTVAL)'D':
                 type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_longdouble;
@@ -468,18 +479,19 @@ Parse a prefix character.
 static INTVAL
 parse_prefix(INTVAL c) {
     switch (c) {
-        case '*':
-            return PREFIX_POINTER;
-            break;
-        case 'u':
-            return PREFIX_UNSIGNED;
-            break;
-        case 's':
-            return PREFIX_SIGNED;
-            break;
-        default:
-            return 0;
-            break;
+      case '*':
+        return PREFIX_POINTER;
+        break;
+      case 'u':
+        return PREFIX_UNSIGNED;
+        break;
+/*      case 's':
+ *       return PREFIX_SIGNED;
+ *       break; 
+ */
+      default:
+        return 0;
+        break;
     }
 
     return 0;
@@ -985,8 +997,8 @@ class, the PMC arguments are shifted down.
         else {
             PMC *positional, *arg_iter;
             STRING *void_return;
-            void **values, **middle_man, **pcc_values, **translation_pointers;
-            void *return_data;
+            char *values, *return_data; /* char's are used here because the represent the smallest data type */
+            void **middle_man, **pcc_values, **translation_pointers;
             size_t count, i, j_offset;
             char *tmp_sig;
             ffi_cif *cif, pcc_cif;
@@ -1006,22 +1018,33 @@ class, the PMC arguments are shifted down.
             }
 
             if (nci_info->arity > 0) {
+                size_t value_length = 0, value_offset, pcc_arity = nci_info->arity;
+                
+                for (i = 0; i < nci_info->arity; i++) {
+                    if (((char*)nci_info->arg_translation)[i] == 'J') {
+                        pcc_arity--;
+                    }
+                    value_length += ((ffi_type**)nci_info->arg_types)[i]->size;
+                }
+
+                fprintf(stderr, "allocing %ld\n", value_length);
+                
                 /* Function has arguments */
-                values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
-                pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
+                values = mem_internal_allocate_n_zeroed_typed(value_length, char);
+                pcc_args = mem_internal_allocate_n_zeroed_typed(pcc_arity + 4, ffi_type*);
 
                 for (i = 0; i < nci_info->arity + 3; i++) {
                     pcc_args[i] = &ffi_type_pointer;
                 }
 
-                if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + nci_info->arity,
+                if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + pcc_arity,
                                  &ffi_type_void, pcc_args) != FFI_OK) {
                     Parrot_ex_throw_from_c_args(INTERP, NULL,
                         EXCEPTION_INVALID_OPERATION,
                         "Bad signature generated for Parrot_pcc_fill_params_from_c_args in NCI");
                 }
 
-                pcc_values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, void*);
+                pcc_values = mem_internal_allocate_n_zeroed_typed(pcc_arity + 4, void*);
                 if (nci_info->pcc_params_signature)
                     tmp_sig = Parrot_str_to_cstring(interp, nci_info->pcc_params_signature);
 
@@ -1036,13 +1059,21 @@ class, the PMC arguments are shifted down.
                  * to offset the other variables if a J is supposed to be used
                  */
                 j_offset = 0;
-                for (i = 0; i < nci_info->arity; i++) {
-                    if (((char*)nci_info->arg_translation)[i] == 'J')
+                value_offset = 0;
+                i = 0;
+                while (i + j_offset < nci_info->arity) {
+                    if (((char*)nci_info->arg_translation)[i + j_offset] == 'J') {
+                        value_offset += sizeof(void*);
                         j_offset++;
-                    middle_man[i] = &values[i + j_offset];
-                    pcc_values[i + 3] = &middle_man[i];
+                    }
+                    else {
+                        fprintf(stderr, "v: %p and %p\n", values, values + value_offset);
+                        middle_man[i + j_offset] = (void*)(values + value_offset);
+                        pcc_values[i + 3] = &middle_man[i + j_offset];
+                        value_offset += ((ffi_type**)nci_info->arg_types)[i + j_offset]->size;                        
+                        i++;
+                    }
                 }
-
 
                 ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
                 Parrot_str_free_cstring(tmp_sig);
@@ -1055,28 +1086,31 @@ class, the PMC arguments are shifted down.
                  *   object into a ManagedStruct
                  */
                 translation_pointers = mem_internal_allocate_n_zeroed_typed(nci_info->arity, void*);
+                value_offset = 0;
                 for (i = 0; i < nci_info->arity; i++) {
-                    switch ((INTVAL)((char*)nci_info->arg_translation)[i]) {
+                    switch (((char*)nci_info->arg_translation)[i]) {
                       case 'J':
-                        values[i] = &interp;
+                        memcpy(values + value_offset, &interp, sizeof(void*));
                         break;
                       case 't':
-                        if (values[i] == NULL || STRING_IS_NULL((STRING*)values[i])) {
+                        if (STRING_IS_NULL(*(STRING**)middle_man[i])) {
                             translation_pointers[i] = (char*) NULL;
                         }
                         else {
-                            translation_pointers[i] = Parrot_str_to_cstring(interp, (STRING*)values[i]);
+                            translation_pointers[i] = Parrot_str_to_cstring(interp, *(STRING**)middle_man[i]);
                         }
-                        values[i] = &translation_pointers[i];
+                        memcpy(values + value_offset, &translation_pointers[i], sizeof(void*));
+                        fprintf(stderr, "And string was: %p %p \n %s\n\nand%s\n\n", &translation_pointers[i], values + value_offset, translation_pointers[i], values + value_offset);
                         break;
                       case ' ':
                       default:
                         break;
                     }
+                    value_offset += ((ffi_type**)nci_info->arg_types)[i]->size; 
                 }
 
                 
-                if (pcc_args) {
+               /* if (pcc_args) {
                     mem_sys_free(pcc_args);
                 }
                 if (pcc_values) {
@@ -1085,7 +1119,7 @@ class, the PMC arguments are shifted down.
                 if (middle_man) {
                     mem_sys_free(middle_man);
                 }
-
+*/
             }
             else {
                 /* No arguments */
@@ -1098,8 +1132,6 @@ class, the PMC arguments are shifted down.
              */
             return_data = mem_internal_allocate_zeroed(cif->rtype->size);
 
-            fprintf(stderr, "allocing %ld memory for return\n", cif->rtype->size);
-
             ffi_call(cif, FFI_FN(func), return_data, values);
 
             if (cif->rtype != &ffi_type_void) {
@@ -1108,31 +1140,53 @@ class, the PMC arguments are shifted down.
                 s = Parrot_str_to_cstring(interp, nci_info->pcc_return_signature);
                 
                 switch (*(char*)nci_info->return_translation) {
-                    case 'p':
-                        {
-                        PMC *final_destination;
-                        final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
-                        VTABLE_set_pointer(interp, final_destination, *(void**)return_data);
+                  case 'p':
+                    {
+                    PMC *final_destination;
+                    final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
+                    VTABLE_set_pointer(interp, final_destination, *(void**)return_data);
 
-                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
-                                                                   call_object,
-                                                                   s, final_destination);
-                        }
-                        break;
-                    case 't':
-                        {
-                        STRING *final_destination = Parrot_str_new(interp, *(char**)return_data, 0);
+                    ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                                call_object,
+                                                                s, final_destination);
+                    }
+                    break;
+                  case 't':
+                    {
+                    STRING *final_destination = Parrot_str_new(interp, *(char**)return_data, 0);
                     
+                    ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                                call_object,
+                                                                s, final_destination);
+                    }
+                    break;
+                  case 'f':
+                    {
+                    FLOATVAL final_destination = *(float*)return_data;
+
+                    ret_object = Parrot_pcc_build_call_from_c_args(interp, 
+                                                                call_object, 
+                                                                s, final_destination);
+                    }
+                    break;
+                  default:
+                    switch (s[0]) {
+                      case 'N':
                         ret_object = Parrot_pcc_build_call_from_c_args(interp,
-                                                                   call_object,
-                                                                   s, final_destination);
-                        }
-                        break;
-                    default:
-                        ret_object = Parrot_pcc_build_call_from_c_args(interp, 
-                                                                   call_object,
-                                                                   s, *(void**)return_data);
-                        break;
+                                                               call_object,
+                                                               s, *(FLOATVAL*)return_data);
+                      case 'I':
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                               call_object,
+                                                               s, *(INTVAL*)return_data);
+                      case 'P':
+                      case 'S':
+                      default:
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                               call_object,
+                                                               s, *(void**)return_data);
+                    }
+                    break;
                 }
                 Parrot_str_free_cstring(s);
             }
