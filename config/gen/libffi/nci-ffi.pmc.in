@@ -279,7 +279,6 @@ parse_identifier(PARROT_INTERP,
 
     while (!done && i < sig_length) {
         INTVAL c = Parrot_str_indexed(interp, sig, i);
-        
         int prefix = 0;
         while (IS_PREFIX(c)) {
             prefix |= parse_prefix(c);
@@ -308,9 +307,9 @@ parse_identifier(PARROT_INTERP,
             translation[(*translation_count)++] = ' ';
             switch (c) {
               case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
-              case (INTVAL)' ':    /* ignore the space */
                 break;
               case (INTVAL)'c':
+                translation[(*translation_count) - 1] = 'c';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uchar;
@@ -320,6 +319,7 @@ parse_identifier(PARROT_INTERP,
                 }
                 break;
               case (INTVAL)'b':
+                translation[(*translation_count) - 1] = 'b';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint8;
@@ -329,6 +329,7 @@ parse_identifier(PARROT_INTERP,
                 }
                 break;
               case (INTVAL)'s':
+                translation[(*translation_count) - 1] = 's';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_ushort;
@@ -339,6 +340,7 @@ parse_identifier(PARROT_INTERP,
                 break;
               case (INTVAL)'I':   /* INTVAL */
               case (INTVAL)'i':
+                translation[(*translation_count) - 1] = 'i';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint;
@@ -348,6 +350,7 @@ parse_identifier(PARROT_INTERP,
                 }
                 break;
               case (INTVAL)'l':
+                translation[(*translation_count) - 1] = 'l';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_ulong;
@@ -357,6 +360,7 @@ parse_identifier(PARROT_INTERP,
                 }
                 break;
               case (INTVAL)'q':
+                translation[(*translation_count) - 1] = 'q';
                 type[(*pmc_count)++] = 'I';
                 if (prefix & PREFIX_UNSIGNED) {
                   *type_obj = &ffi_type_uint64;
@@ -404,13 +408,15 @@ parse_identifier(PARROT_INTERP,
               case (INTVAL)'N':
 #endif
               case (INTVAL)'d':
+                translation[(*translation_count) - 1] = 'd';
                 type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_double;
                 break;
-#if (DOUBLE_SIZE > 8) /* FLOATVAL is a long double */
+#if (DOUBEL_SIZE > 8) /* FLOATVAL is a long double */
               case (INTVAL)'N':
 #endif
               case (INTVAL)'D':
+                translation[(*translation_count) - 1] = 'D';
                 type[(*pmc_count)++] = 'N';
                 *type_obj = &ffi_type_longdouble;
                 break;
@@ -485,10 +491,6 @@ parse_prefix(INTVAL c) {
       case 'u':
         return PREFIX_UNSIGNED;
         break;
-/*      case 's':
- *       return PREFIX_SIGNED;
- *       break; 
- */
       default:
         return 0;
         break;
@@ -997,8 +999,8 @@ class, the PMC arguments are shifted down.
         else {
             PMC *positional, *arg_iter;
             STRING *void_return;
-            char *values, *return_data; /* char's are used here because the represent the smallest data type */
-            void **middle_man, **pcc_values, **translation_pointers;
+            void **values, **middle_man, **pcc_values, **translation_pointers;
+            void *return_data;
             size_t count, i, j_offset;
             char *tmp_sig;
             ffi_cif *cif, pcc_cif;
@@ -1018,33 +1020,22 @@ class, the PMC arguments are shifted down.
             }
 
             if (nci_info->arity > 0) {
-                size_t value_length = 0, value_offset, pcc_arity = nci_info->arity;
-                
-                for (i = 0; i < nci_info->arity; i++) {
-                    if (((char*)nci_info->arg_translation)[i] == 'J') {
-                        pcc_arity--;
-                    }
-                    value_length += ((ffi_type**)nci_info->arg_types)[i]->size;
-                }
-
-                fprintf(stderr, "allocing %ld\n", value_length);
-                
                 /* Function has arguments */
-                values = mem_internal_allocate_n_zeroed_typed(value_length, char);
-                pcc_args = mem_internal_allocate_n_zeroed_typed(pcc_arity + 4, ffi_type*);
+                values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 1, void*);
+                pcc_args = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, ffi_type*);
 
                 for (i = 0; i < nci_info->arity + 3; i++) {
                     pcc_args[i] = &ffi_type_pointer;
                 }
 
-                if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + pcc_arity,
+                if (ffi_prep_cif(&pcc_cif, FFI_DEFAULT_ABI, 3 + nci_info->arity,
                                  &ffi_type_void, pcc_args) != FFI_OK) {
                     Parrot_ex_throw_from_c_args(INTERP, NULL,
                         EXCEPTION_INVALID_OPERATION,
                         "Bad signature generated for Parrot_pcc_fill_params_from_c_args in NCI");
                 }
 
-                pcc_values = mem_internal_allocate_n_zeroed_typed(pcc_arity + 4, void*);
+                pcc_values = mem_internal_allocate_n_zeroed_typed(nci_info->arity + 4, void*);
                 if (nci_info->pcc_params_signature)
                     tmp_sig = Parrot_str_to_cstring(interp, nci_info->pcc_params_signature);
 
@@ -1059,21 +1050,13 @@ class, the PMC arguments are shifted down.
                  * to offset the other variables if a J is supposed to be used
                  */
                 j_offset = 0;
-                value_offset = 0;
-                i = 0;
-                while (i + j_offset < nci_info->arity) {
-                    if (((char*)nci_info->arg_translation)[i + j_offset] == 'J') {
-                        value_offset += sizeof(void*);
+                for (i = 0; i < nci_info->arity; i++) {
+                    if (((char*)nci_info->arg_translation)[i] == 'J')
                         j_offset++;
-                    }
-                    else {
-                        fprintf(stderr, "v: %p and %p\n", values, values + value_offset);
-                        middle_man[i + j_offset] = (void*)(values + value_offset);
-                        pcc_values[i + 3] = &middle_man[i + j_offset];
-                        value_offset += ((ffi_type**)nci_info->arg_types)[i + j_offset]->size;                        
-                        i++;
-                    }
+                    middle_man[i] = &values[i + j_offset];
+                    pcc_values[i + 3] = &middle_man[i];
                 }
+
 
                 ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
                 Parrot_str_free_cstring(tmp_sig);
@@ -1086,31 +1069,62 @@ class, the PMC arguments are shifted down.
                  *   object into a ManagedStruct
                  */
                 translation_pointers = mem_internal_allocate_n_zeroed_typed(nci_info->arity, void*);
-                value_offset = 0;
                 for (i = 0; i < nci_info->arity; i++) {
-                    switch (((char*)nci_info->arg_translation)[i]) {
+                    switch ((INTVAL)((char*)nci_info->arg_translation)[i]) {
                       case 'J':
-                        memcpy(values + value_offset, &interp, sizeof(void*));
+                        values[i] = &interp;
                         break;
                       case 't':
-                        if (STRING_IS_NULL(*(STRING**)middle_man[i])) {
+                        if (values[i] == NULL || STRING_IS_NULL((STRING*)values[i])) {
                             translation_pointers[i] = (char*) NULL;
                         }
                         else {
-                            translation_pointers[i] = Parrot_str_to_cstring(interp, *(STRING**)middle_man[i]);
+                            translation_pointers[i] = Parrot_str_to_cstring(interp, (STRING*)values[i]);
                         }
-                        memcpy(values + value_offset, &translation_pointers[i], sizeof(void*));
-                        fprintf(stderr, "And string was: %p %p \n %s\n\nand%s\n\n", &translation_pointers[i], values + value_offset, translation_pointers[i], values + value_offset);
+                        values[i] = &translation_pointers[i];
+                        break;
+                      case 'c':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(char);
+                        *((char**)translation_pointers)[i] = (char)*(INTVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 's':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(short);
+                        *((short**)translation_pointers)[i] = (short)*(INTVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 'i':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(int);
+                        *((int**)translation_pointers)[i] = (int)*(INTVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 'l':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(long);
+                        *((long**)translation_pointers)[i] = (long)*(INTVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 'q':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(long long);
+                        *((long long**)translation_pointers)[i] = (long long)*(INTVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 'f':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(float);
+                        *((float**)translation_pointers)[i] = (float)*(FLOATVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
+                        break;
+                      case 'd':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(double);
+                        *((double**)translation_pointers)[i] = *(FLOATVAL*)middle_man[i];
+                        values[i] = translation_pointers[i];
                         break;
                       case ' ':
                       default:
                         break;
                     }
-                    value_offset += ((ffi_type**)nci_info->arg_types)[i]->size; 
                 }
-
                 
-               /* if (pcc_args) {
+                if (pcc_args) {
                     mem_sys_free(pcc_args);
                 }
                 if (pcc_values) {
@@ -1119,7 +1133,7 @@ class, the PMC arguments are shifted down.
                 if (middle_man) {
                     mem_sys_free(middle_man);
                 }
-*/
+
             }
             else {
                 /* No arguments */
@@ -1187,7 +1201,7 @@ class, the PMC arguments are shifted down.
                                                                s, *(void**)return_data);
                     }
                     break;
-                }
+                }                
                 Parrot_str_free_cstring(s);
             }
 
@@ -1202,6 +1216,10 @@ class, the PMC arguments are shifted down.
                         Parrot_str_free_cstring(translation_pointers[i]);
                     }
                     break;
+                  case (INTVAL)'d':
+                    if (translation_pointers[i]) {
+                        mem_sys_free(translation_pointers[i]);
+                    }
                   default:
                     break;
                 }
