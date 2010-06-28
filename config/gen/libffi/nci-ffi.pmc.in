@@ -110,7 +110,7 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
                                 || ((x) == 'c') || ((x) == 'b') || ((x) == 'f') || ((x) == 'd') \
                                 || ((x) == 's') || IS_OLD_TYPE(x))
 
-#define IS_POSTFIX(x)             (((x) == '{') || IS_DIGIT(x))
+#define IS_POSTFIX(x)             ((x) == '{') /*  || IS_DIGIT(x)) */
 #define IS_INFIX(x)               ((x) == '|')
 #define IS_START_CIRCUMFIX(x)     ((x) == '(')
 #define IS_END_CIRCUMFIX(x)       ((x) == ')')
@@ -375,11 +375,26 @@ parse_identifier(PARROT_INTERP,
                 break;
               case (INTVAL)'p':   /* push pmc->data */
                 translation[(*translation_count) - 1] = 'p';
+                type[(*pmc_count)++] = 'P';
+                *type_obj = &ffi_type_pointer;
+                break;
+              case (INTVAL)'2':
+                translation[(*translation_count) - 1] = '2';
+                type[(*pmc_count)++] = 'P';
+                *type_obj = &ffi_type_pointer;
+                break;
+              case (INTVAL)'3':
+                translation[(*translation_count) - 1] = '3';
+                type[(*pmc_count)++] = 'P';
+                *type_obj = &ffi_type_pointer;
+                break;
+              case (INTVAL)'4':
+                translation[(*translation_count) - 1] = '4';
+                type[(*pmc_count)++] = 'P';
+                *type_obj = &ffi_type_pointer;
+                break;
               case (INTVAL)'P':   /* push PMC * */
               case (INTVAL)'V':   /* push PMC * */
-              case (INTVAL)'2':
-              case (INTVAL)'3':
-              case (INTVAL)'4':
               case (INTVAL)'B':
                 type[(*pmc_count)++] = 'P';
                 *type_obj = &ffi_type_pointer;
@@ -1057,7 +1072,6 @@ class, the PMC arguments are shifted down.
                     pcc_values[i + 3] = &middle_man[i];
                 }
 
-
                 ffi_call(&pcc_cif, FFI_FN(Parrot_pcc_fill_params_from_c_args), NULL, pcc_values);
                 Parrot_str_free_cstring(tmp_sig);
 
@@ -1075,7 +1089,7 @@ class, the PMC arguments are shifted down.
                         values[i] = &interp;
                         break;
                       case 't':
-                        if (values[i] == NULL || STRING_IS_NULL((STRING*)values[i])) {
+                        if (STRING_IS_NULL((STRING*)values[i])) {
                             translation_pointers[i] = (char*) NULL;
                         }
                         else {
@@ -1088,15 +1102,30 @@ class, the PMC arguments are shifted down.
                         *((char**)translation_pointers)[i] = (char)*(INTVAL*)middle_man[i];
                         values[i] = translation_pointers[i];
                         break;
+                      case '2':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(short);
+                        *((short**)translation_pointers)[i] = (short)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &translation_pointers[i];
+                        break;
                       case 's':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(short);
                         *((short**)translation_pointers)[i] = (short)*(INTVAL*)middle_man[i];
                         values[i] = translation_pointers[i];
                         break;
+                      case '3':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(int);
+                        *((int**)translation_pointers)[i] = (int)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &translation_pointers[i];
+                        break;
                       case 'i':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(int);
                         *((int**)translation_pointers)[i] = (int)*(INTVAL*)middle_man[i];
                         values[i] = translation_pointers[i];
+                        break;
+                      case '4':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(long);
+                        *((long**)translation_pointers)[i] = (long)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &translation_pointers[i];
                         break;
                       case 'l':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(long);
@@ -1123,7 +1152,7 @@ class, the PMC arguments are shifted down.
                         break;
                     }
                 }
-                
+
                 if (pcc_args) {
                     mem_sys_free(pcc_args);
                 }
@@ -1152,7 +1181,6 @@ class, the PMC arguments are shifted down.
                 char *s;
                 PMC *ret_object;
                 s = Parrot_str_to_cstring(interp, nci_info->pcc_return_signature);
-                
                 switch (*(char*)nci_info->return_translation) {
                   case 'p':
                     {
@@ -1168,7 +1196,6 @@ class, the PMC arguments are shifted down.
                   case 't':
                     {
                     STRING *final_destination = Parrot_str_new(interp, *(char**)return_data, 0);
-                    
                     ret_object = Parrot_pcc_build_call_from_c_args(interp,
                                                                 call_object,
                                                                 s, final_destination);
@@ -1201,7 +1228,7 @@ class, the PMC arguments are shifted down.
                                                                s, *(void**)return_data);
                     }
                     break;
-                }                
+                }
                 Parrot_str_free_cstring(s);
             }
 
@@ -1217,9 +1244,18 @@ class, the PMC arguments are shifted down.
                     }
                     break;
                   case (INTVAL)'d':
+                  case (INTVAL)'c':
+                  case (INTVAL)'s':
+                  case (INTVAL)'i':
+                  case (INTVAL)'l':
+                  case (INTVAL)'q':
+                  case (INTVAL)'2':
+                  case (INTVAL)'3':
+                  case (INTVAL)'4':
                     if (translation_pointers[i]) {
                         mem_sys_free(translation_pointers[i]);
                     }
+                    break;
                   default:
                     break;
                 }
@@ -1335,4 +1371,5 @@ Updates by John Harrison, Summer 2010, GSoC.
  * End:
  * vim: expandtab shiftwidth=4:
  */
+
 
