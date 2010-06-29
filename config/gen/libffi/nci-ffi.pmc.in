@@ -121,6 +121,11 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
 #define PREFIX_UNSIGNED (1<<1)
 #define PREFIX_NATIVE   (1<<2)
 
+typedef struct pmc_holder_t {
+    PMC* p;
+    INTVAL* val;
+} pmc_holder_t;
+
 /*
 
 =item C<static INTVAL parse_sig(PARROT_INTERP, STRING *sig,
@@ -1021,6 +1026,8 @@ class, the PMC arguments are shifted down.
             ffi_cif *cif, pcc_cif;
             ffi_type **pcc_args;
 
+            PMC * pmc_3;
+
             cif = nci_info->cif;
             GET_ATTR_func(INTERP, SELF, func);
 
@@ -1103,9 +1110,11 @@ class, the PMC arguments are shifted down.
                         values[i] = translation_pointers[i];
                         break;
                       case '2':
-                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(short);
-                        *((short**)translation_pointers)[i] = (short)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
-                        values[i] = &translation_pointers[i];
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(pmc_holder_t);
+                        ((pmc_holder_t*)translation_pointers[i])->p = *(PMC**)middle_man[i];
+                        ((pmc_holder_t*)translation_pointers[i])->val = mem_internal_allocate_zeroed_typed(short);
+                        *((pmc_holder_t*)translation_pointers[i])->val = (short)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &((pmc_holder_t*)translation_pointers[i])->val;
                         break;
                       case 's':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(short);
@@ -1113,9 +1122,11 @@ class, the PMC arguments are shifted down.
                         values[i] = translation_pointers[i];
                         break;
                       case '3':
-                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(int);
-                        *((int**)translation_pointers)[i] = (int)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
-                        values[i] = &translation_pointers[i];
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(pmc_holder_t);
+                        ((pmc_holder_t*)translation_pointers[i])->p = *(PMC**)middle_man[i];
+                        ((pmc_holder_t*)translation_pointers[i])->val = mem_internal_allocate_zeroed_typed(int);
+                        *((pmc_holder_t*)translation_pointers[i])->val = (int)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &((pmc_holder_t*)translation_pointers[i])->val;
                         break;
                       case 'i':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(int);
@@ -1123,9 +1134,11 @@ class, the PMC arguments are shifted down.
                         values[i] = translation_pointers[i];
                         break;
                       case '4':
-                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(long);
-                        *((long**)translation_pointers)[i] = (long)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
-                        values[i] = &translation_pointers[i];
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(pmc_holder_t);
+                        ((pmc_holder_t*)translation_pointers[i])->p = *(PMC**)middle_man[i];
+                        ((pmc_holder_t*)translation_pointers[i])->val = mem_internal_allocate_zeroed_typed(long);
+                        *((pmc_holder_t*)translation_pointers[i])->val = (long)VTABLE_get_integer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &((pmc_holder_t*)translation_pointers[i])->val;
                         break;
                       case 'l':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(long);
@@ -1159,10 +1172,6 @@ class, the PMC arguments are shifted down.
                 if (pcc_values) {
                     mem_sys_free(pcc_values);
                 }
-                if (middle_man) {
-                    mem_sys_free(middle_man);
-                }
-
             }
             else {
                 /* No arguments */
@@ -1237,10 +1246,28 @@ class, the PMC arguments are shifted down.
              * and any other translations that use temporary memory
              */
             for (i = 0; i < nci_info->arity; i++) {
-                switch ((INTVAL)((INTVAL*)nci_info->arg_translation)[i]) {
+                switch ((INTVAL)((char*)nci_info->arg_translation)[i]) {
                   case (INTVAL)'t':
                     if (translation_pointers[i]) {
                         Parrot_str_free_cstring(translation_pointers[i]);
+                    }
+                    break;
+                  case (INTVAL)'2':
+                    VTABLE_set_integer_native(interp, ((pmc_holder_t*)translation_pointers[i])->p, (INTVAL)*(short*)((pmc_holder_t*)translation_pointers[i])->val);
+                    if (translation_pointers[i]) {
+                        mem_sys_free(translation_pointers[i]);
+                    }
+                    break;
+                  case (INTVAL)'3':
+                    VTABLE_set_integer_native(interp, ((pmc_holder_t*)translation_pointers[i])->p, (INTVAL)*(int*)((pmc_holder_t*)translation_pointers[i])->val);
+                    if (translation_pointers[i]) {
+                        mem_sys_free(translation_pointers[i]);
+                    }
+                    break;
+                  case (INTVAL)'4':
+                    VTABLE_set_integer_native(interp, ((pmc_holder_t*)translation_pointers[i])->p, (INTVAL)*(long*)((pmc_holder_t*)translation_pointers[i])->val);
+                    if (translation_pointers[i]) {
+                        mem_sys_free(translation_pointers[i]);
                     }
                     break;
                   case (INTVAL)'d':
@@ -1249,9 +1276,6 @@ class, the PMC arguments are shifted down.
                   case (INTVAL)'i':
                   case (INTVAL)'l':
                   case (INTVAL)'q':
-                  case (INTVAL)'2':
-                  case (INTVAL)'3':
-                  case (INTVAL)'4':
                     if (translation_pointers[i]) {
                         mem_sys_free(translation_pointers[i]);
                     }
@@ -1261,6 +1285,9 @@ class, the PMC arguments are shifted down.
                 }
             }
 
+            if (nci_info->arity > 0 && middle_man) {
+                mem_sys_free(middle_man);
+            }
             if (return_data) {
                 mem_sys_free(return_data);
             }
