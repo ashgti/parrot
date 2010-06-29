@@ -311,6 +311,7 @@ parse_identifier(PARROT_INTERP,
             }
             translation[(*translation_count)++] = ' ';
             switch (c) {
+              case (INTVAL)' ':
               case (INTVAL)'0':    /* null ptr or such - doesn't consume a reg */
                 break;
               case (INTVAL)'c':
@@ -323,6 +324,7 @@ parse_identifier(PARROT_INTERP,
                   *type_obj = &ffi_type_schar;
                 }
                 break;
+              /* 
               case (INTVAL)'b':
                 translation[(*translation_count) - 1] = 'b';
                 type[(*pmc_count)++] = 'I';
@@ -332,6 +334,17 @@ parse_identifier(PARROT_INTERP,
                 else {
                   *type_obj = &ffi_type_sint8;
                 }
+                break;
+               */
+              case (INTVAL)'B':
+                translation[(*translation_count) - 1] = 'B';
+                type[(*pmc_count)++] = 'S';
+                *type_obj = &ffi_type_pointer;
+                break;
+              case (INTVAL)'b':
+                translation[(*translation_count) - 1] = 'b';
+                type[(*pmc_count)++] = 'S';
+                *type_obj = &ffi_type_pointer;
                 break;
               case (INTVAL)'s':
                 translation[(*translation_count) - 1] = 's';
@@ -400,7 +413,6 @@ parse_identifier(PARROT_INTERP,
                 break;
               case (INTVAL)'P':   /* push PMC * */
               case (INTVAL)'V':   /* push PMC * */
-              case (INTVAL)'B':
                 type[(*pmc_count)++] = 'P';
                 *type_obj = &ffi_type_pointer;
                 break;
@@ -1103,6 +1115,12 @@ class, the PMC arguments are shifted down.
                             translation_pointers[i] = Parrot_str_to_cstring(interp, (STRING*)values[i]);
                         }
                         values[i] = &translation_pointers[i];
+                        break;
+                      case 'B':
+
+                        break;
+                      case 'b':
+                        values[i] = &Buffer_bufstart((STRING*)values[i]);
                         break;
                       case 'c':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(char);
