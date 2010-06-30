@@ -104,7 +104,8 @@ find_matching(PARROT_INTERP, STRING* sig, size_t start, size_t sig_length,
 
 #define IS_OLD_TYPE(x)            (((x) == 'P') || ((x) == 'J') || ((x) == 'N') || ((x) == 'S') \
                                 || ((x) == 'O') || ((x) == '@') || ((x) == 'B') || ((x) == 'p') \
-                                || ((x) == '2') || ((x) == '3') || ((x) == '4') || ((x) == 'U'))
+                                || ((x) == '2') || ((x) == '3') || ((x) == '4') || ((x) == 'U') \
+                                || ((x) == 'V'))
 
 #define IS_TYPE(x)                (((x) == 'i') || ((x) == 'v') || ((x) == 'l') || ((x) == 't') \
                                 || ((x) == 'c') || ((x) == 'b') || ((x) == 'f') || ((x) == 'd') \
@@ -146,12 +147,22 @@ parse_sig(PARROT_INTERP, STRING *sig, size_t sig_length, Parrot_NCI_attributes *
     ffi_type *return_type;
     ffi_type **arg_types;
 
-    size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
-    if (i < sig_length)
-        parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
+    if (sig_length) {
+        size_t i = parse_return(interp, sig, sig_length, nci_info, &return_type);
+        if (i < sig_length)
+            parse_args(interp, sig, i, sig_length, nci_info, &arg_types);
+        else {
+            arg_types       = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
+            arg_types[0]    = &ffi_type_void;
+            nci_info->pcc_params_signature = string_make(interp, "", 1, NULL, 0);
+            nci_info->arg_translation = "";
+            nci_info->arity = 0;
+        }
+    }
     else {
         arg_types       = mem_internal_allocate_n_zeroed_typed(1, ffi_type*);
         arg_types[0]    = &ffi_type_void;
+        return_type     = &ffi_type_void;
         nci_info->pcc_params_signature = string_make(interp, "", 1, NULL, 0);
         nci_info->arg_translation = "";
         nci_info->arity = 0;
@@ -410,9 +421,14 @@ parse_identifier(PARROT_INTERP,
                 translation[(*translation_count) - 1] = '4';
                 type[(*pmc_count)++] = 'P';
                 *type_obj = &ffi_type_pointer;
-                break;
+                break; 
               case (INTVAL)'P':   /* push PMC * */
+                translation[(*translation_count) - 1] = 'P';
+                type[(*pmc_count)++] = 'P';
+                *type_obj = &ffi_type_pointer;
+                break;
               case (INTVAL)'V':   /* push PMC * */
+                translation[(*translation_count) - 1] = 'V';
                 type[(*pmc_count)++] = 'P';
                 *type_obj = &ffi_type_pointer;
                 break;
@@ -1117,7 +1133,14 @@ class, the PMC arguments are shifted down.
                         values[i] = &translation_pointers[i];
                         break;
                       case 'B':
-
+                        if (STRING_IS_NULL((STRING*)values[i])) {
+                            translation_pointers[i] = (char*) NULL;
+                        }
+                        else {
+                            translation_pointers[i] = Parrot_str_to_cstring(interp, (STRING*)values[i]);
+                        }
+                        middle_man[i] = &translation_pointers[i];
+                        values[i] = &middle_man[i];
                         break;
                       case 'b':
                         values[i] = &Buffer_bufstart((STRING*)values[i]);
@@ -1168,6 +1191,20 @@ class, the PMC arguments are shifted down.
                         *((long long**)translation_pointers)[i] = (long long)*(INTVAL*)middle_man[i];
                         values[i] = translation_pointers[i];
                         break;
+                      case 'P':
+                        middle_man[i] = NULL;
+                        break;
+                      case 'V':
+                        translation_pointers[i] = mem_internal_allocate_zeroed_typed(pmc_holder_t);
+                        ((pmc_holder_t*)translation_pointers[i])->p = *(PMC**)middle_man[i];
+                        ((pmc_holder_t*)translation_pointers[i])->val = mem_internal_allocate_zeroed_typed(void*);
+                        *((pmc_holder_t*)translation_pointers[i])->val = (void*)VTABLE_get_pointer(interp, *(PMC**)middle_man[i]);
+                        values[i] = &((pmc_holder_t*)translation_pointers[i])->val;
+                        break;
+                      case 'p':
+                        translation_pointers[i] = PMC_IS_NULL((PMC*)values[i]) ? (void *)NULL : VTABLE_get_pointer(interp, (PMC*)values[i]);
+                        values[i] = &translation_pointers[i];
+                        break;
                       case 'f':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(float);
                         *((float**)translation_pointers)[i] = (float)*(FLOATVAL*)middle_man[i];
@@ -1211,13 +1248,17 @@ class, the PMC arguments are shifted down.
                 switch (*(char*)nci_info->return_translation) {
                   case 'p':
                     {
-                    PMC *final_destination;
-                    final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
-                    VTABLE_set_pointer(interp, final_destination, *(void**)return_data);
+                        PMC *final_destination = PMCNULL;
+                        
+                        if (*(void**)return_data != NULL) {
+                            final_destination = Parrot_pmc_new(interp, enum_class_UnManagedStruct);
+                            VTABLE_set_pointer(interp, final_destination, *(void**)return_data);
+                            
+                        }
+                        ret_object = Parrot_pcc_build_call_from_c_args(interp,
+                                                                        call_object,
+                                                                        s, final_destination);
 
-                    ret_object = Parrot_pcc_build_call_from_c_args(interp,
-                                                                call_object,
-                                                                s, final_destination);
                     }
                     break;
                   case 't':
@@ -1265,6 +1306,11 @@ class, the PMC arguments are shifted down.
              */
             for (i = 0; i < nci_info->arity; i++) {
                 switch ((INTVAL)((char*)nci_info->arg_translation)[i]) {
+                  case (INTVAL)'B':
+                    if (translation_pointers[i]) {
+                        Parrot_str_free_cstring(translation_pointers[i]);
+                    }
+                    break;
                   case (INTVAL)'t':
                     if (translation_pointers[i]) {
                         Parrot_str_free_cstring(translation_pointers[i]);
@@ -1284,6 +1330,12 @@ class, the PMC arguments are shifted down.
                     break;
                   case (INTVAL)'4':
                     VTABLE_set_integer_native(interp, ((pmc_holder_t*)translation_pointers[i])->p, (INTVAL)*(long*)((pmc_holder_t*)translation_pointers[i])->val);
+                    if (translation_pointers[i]) {
+                        mem_sys_free(translation_pointers[i]);
+                    }
+                    break;
+                  case (INTVAL)'V':
+                    VTABLE_set_pointer(interp, ((pmc_holder_t*)translation_pointers[i])->p, (void*)*(void**)((pmc_holder_t*)translation_pointers[i])->val);
                     if (translation_pointers[i]) {
                         mem_sys_free(translation_pointers[i]);
                     }
@@ -1378,11 +1430,16 @@ Return the arity of the NCI (the number of arguments).
         INTVAL arity = 0;
 
         if (nci_info) {
-            if (!nci_info->func)
-                build_func(INTERP, nci_info);
-            if (nci_info->func) {
-                arity = nci_info->arity;
-                RETURN(INTVAL arity);
+            if (PObj_flag_TEST(private2, SELF)) {
+            }
+            else {
+                if (!nci_info->cif) {
+                    nci_info->cif = build_libffi_func(interp, nci_info);
+                }
+                if (nci_info->cif) {
+                    arity = nci_info->arity;
+                    RETURN(INTVAL arity);
+                }
             }
         }
 
