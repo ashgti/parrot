@@ -1191,15 +1191,16 @@ class, the PMC arguments are shifted down.
                         *((long long**)translation_pointers)[i] = (long long)*(INTVAL*)middle_man[i];
                         values[i] = translation_pointers[i];
                         break;
-                      case 'P':
-                        middle_man[i] = NULL;
-                        break;
                       case 'V':
                         translation_pointers[i] = mem_internal_allocate_zeroed_typed(pmc_holder_t);
                         ((pmc_holder_t*)translation_pointers[i])->p = *(PMC**)middle_man[i];
                         ((pmc_holder_t*)translation_pointers[i])->val = mem_internal_allocate_zeroed_typed(void*);
                         *((pmc_holder_t*)translation_pointers[i])->val = (void*)VTABLE_get_pointer(interp, *(PMC**)middle_man[i]);
                         values[i] = &((pmc_holder_t*)translation_pointers[i])->val;
+                        break;
+                      case 'P':
+                        translation_pointers[i] = values[i];
+                        values[i] = &translation_pointers[i];
                         break;
                       case 'p':
                         translation_pointers[i] = PMC_IS_NULL((PMC*)values[i]) ? (void *)NULL : VTABLE_get_pointer(interp, (PMC*)values[i]);
